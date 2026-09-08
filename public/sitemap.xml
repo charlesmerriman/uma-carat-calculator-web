@@ -4,8 +4,9 @@
   be more moving parts than the thing it generates. Add a line here when you add
   a public route.
 
-  /login and /auth/callback are deliberately absent - they are excluded in
-  robots.txt and carry no content.
+  /login and /auth/callback are deliberately absent - they carry no content and
+  set a noindex meta tag. They are NOT excluded in robots.txt; see the comment
+  there for why disallowing them would defeat the noindex.
 
   The absolute URLs below do NOT survive a domain move. Update them together
   with the Sitemap line in robots.txt and the og:url / og:image / twitter:image
