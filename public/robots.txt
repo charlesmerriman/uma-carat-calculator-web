@@ -1,15 +1,20 @@
 # Uma Musume Carat Calculator
 #
-# Everything here is public and safe to index. The two excluded paths are
-# transient auth plumbing, not content: /login is a staff-only form and
-# /auth/callback only ever holds a single-use OAuth code in its query string.
-# Neither has anything for a crawler to read, and /auth/callback appearing in
-# search results would be actively confusing.
+# Nothing is disallowed here, deliberately.
+#
+# /login and /auth/callback are auth plumbing rather than content and should not
+# appear in search results — but that is enforced by the <meta name="robots"
+# content="noindex"> tag those two routes set (see src/hooks/useDocumentMeta.ts),
+# NOT here. The two mechanisms cannot be combined: a Disallow blocks the crawl,
+# so a crawler never fetches the page and never sees the noindex. That is what
+# earned the "Indexed, though blocked by robots.txt" warning from Search Console
+# on 2026-09-08 — Google found /login through the navbar and homepage links,
+# could not read it, and indexed the bare URL with no title or description.
+#
+# Letting both be crawled is what lets the noindex actually take effect.
 
 User-agent: *
 Allow: /
-Disallow: /login
-Disallow: /auth/callback
 
 # NOTE: absolute URL required by the sitemap spec, so this line does not survive
 # a domain move. Update it together with public/sitemap.xml and the og:url /
