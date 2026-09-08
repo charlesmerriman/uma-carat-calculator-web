@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { CalendarDays, Calculator as CalculatorIcon, LogIn, LogOut, Save, Sparkles, UserRound } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
-import { userLogout } from "../../services/userServices"
+import { useAccount } from "../../services/AuthContext"
 import {
 	toBannerPayload,
 	toPurchasePayload,
@@ -30,20 +30,20 @@ export const Navbar = () => {
 		? {}
 		: { onMouseEnter: prefetchCalculatorData, onFocus: prefetchCalculatorData }
 
-	const isLoggedIn = !!localStorage.getItem("authToken")
+	// Was read straight from localStorage here. Going through the provider means
+	// a token dropped ELSEWHERE — the calculator's 401 recovery, or a sign-out in
+	// another tab — re-renders this button, instead of leaving it offering
+	// "Logout" to someone the server no longer recognises.
+	const { isLoggedIn, signOut } = useAccount()
 
 	const handleLogout = async (): Promise<void> => {
-		try {
-			await userLogout()
-		} catch {
-			console.error("Logout failed")
-		} finally {
-			localStorage.removeItem("authToken")
-			// Full reload rather than navigate(): we're usually already on
-			// /app, so a client-side navigation wouldn't remount the provider
-			// and the logged-out user would keep seeing their account data.
-			window.location.href = "/app"
-		}
+		// signOut() owns the API call and clearing the token; what stays here is
+		// the navigation, which is a navbar decision rather than an auth one.
+		await signOut()
+		// Full reload rather than navigate(): we're usually already on
+		// /app, so a client-side navigation wouldn't remount the provider
+		// and the logged-out user would keep seeing their account data.
+		window.location.href = "/app"
 	}
 
 	// Guest's path to saving: snapshot the in-memory plan into sessionStorage

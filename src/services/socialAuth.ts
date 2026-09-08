@@ -17,6 +17,7 @@
  */
 
 import { ApiError } from "./userServices"
+import { setAuthToken } from "./authToken"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -189,5 +190,7 @@ export async function completeSocialLogin(
 		throw new ApiError("Could not complete sign in. Please try again.")
 	}
 
-	localStorage.setItem("authToken", data.token)
+	// Goes through the token module so AuthProvider notices the sign-in and
+	// fetches the account, rather than waiting for the next page load.
+	setAuthToken(data.token)
 }
