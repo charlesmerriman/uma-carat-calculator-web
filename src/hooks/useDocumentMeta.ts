@@ -67,7 +67,9 @@ export function useDocumentMeta(
 	title: string | null,
 	description: string,
 	/** Keeps a page out of search results. For pages that are plumbing rather
-	 *  than content — see robots.txt, which blocks the same two paths. */
+	 *  than content. This tag is the ONLY thing keeping them out: robots.txt
+	 *  deliberately disallows nothing, because a Disallow would stop the crawl
+	 *  and the crawler would never get far enough to read this. */
 	noindex = false,
 ): void {
 	const { pathname } = useLocation()
