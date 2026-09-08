@@ -1,12 +1,12 @@
 /**
- * Google / Discord sign-in.
+ * Google / Discord / Patreon sign-in.
  *
  * The OAuth2 authorization-code flow, from this side:
  *
  *   1. startSocialLogin()   — ask our API for the provider's consent URL,
  *                             remember the `state` it minted, send the browser
  *                             to the provider.
- *   2. ...user approves on accounts.google.com / discord.com...
+ *   2. ...user approves on accounts.google.com / discord.com / patreon.com...
  *   3. Provider redirects back to /auth/callback?code=…&state=…
  *   4. completeSocialLogin() — check the returned state matches what we saved,
  *                              hand the code to our API, store the token.
@@ -21,7 +21,7 @@ import { setAuthToken } from "./authToken"
 
 const API_URL = import.meta.env.VITE_API_URL
 
-export const SOCIAL_PROVIDERS = ["google", "discord"] as const
+export const SOCIAL_PROVIDERS = ["google", "discord", "patreon"] as const
 export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number]
 
 /**

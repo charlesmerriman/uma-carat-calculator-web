@@ -25,6 +25,14 @@ const DiscordMark: React.FC = () => (
 	</svg>
 )
 
+/** Patreon's rounded "P" (their 2023 mark). Inline for the same reason as the
+ *  two above: a strict CSP blocks remote brand assets and lucide ships none. */
+const PatreonMark: React.FC = () => (
+	<svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true" focusable="false">
+		<path d="M22.957 7.21c-.004-3.064-2.391-5.576-5.191-6.482-3.478-1.125-8.064-.962-11.384.604C2.357 3.231 1.093 7.391 1.046 11.54c-.039 3.411.302 12.396 5.369 12.46 3.765.047 4.326-4.804 6.068-7.141 1.24-1.662 2.836-2.132 4.801-2.618 3.376-.836 5.678-3.501 5.673-7.031Z" />
+	</svg>
+)
+
 export const Login: React.FC = () => {
 	useDocumentMeta("Sign In", "Staff sign-in for the Uma Musume Carat Calculator.", true)
 
@@ -105,7 +113,27 @@ export const Login: React.FC = () => {
 							<DiscordMark />
 							{pendingProvider === "discord" ? "Redirecting…" : "Continue with Discord"}
 						</button>
+
+						<button
+							type="button"
+							onClick={() => void handleSignIn("patreon")}
+							disabled={pendingProvider !== null}
+							className={`${buttonBase} bg-[#FF424D] text-white hover:bg-[#E03A44]`}
+						>
+							<PatreonMark />
+							{pendingProvider === "patreon" ? "Redirecting…" : "Continue with Patreon"}
+						</button>
 					</div>
+
+					{/* Signing in with Patreon is just a third way in — it does NOT
+					    find an existing plan made under Google or Discord. Someone
+					    who already has an account should sign in the way they did
+					    before and link Patreon from there, or they land in a second
+					    empty account and think their plan is gone. */}
+					<p className="mt-4 text-center text-xs leading-relaxed text-gray-500">
+						Already have a plan? Sign in the way you did before — you can add Patreon
+						to your account afterwards.
+					</p>
 
 					{/* The point of the whole flow — worth saying out loud, since
 					    "sign in with Google" usually implies handing over an email. */}
