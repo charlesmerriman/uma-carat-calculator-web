@@ -187,6 +187,16 @@ whatever was captured when it was created.
 **Guest mode is unaffected.** No route requires an account; the provider only
 describes one when it exists. See "Guest mode" above.
 
-`supporter` is a stub returning `is_supporter: false` for everyone until Phase 2
-of `patreon-accounts-plan.md` — the block ships now so the contract does not
-change when entitlement becomes real.
+`supporter` is real as of Phase 2: the server derives it per request from the
+linked Patreon supporter row. When there is no entitlement the block is
+`{ is_supporter: false }` and **nothing else** — `tier` and `benefits` are
+absent rather than null, so neither can be misread as a checked-and-empty
+answer.
+
+**Gate on a benefit key, never on the tier name.** `benefits` is a list of
+capability keys (`"ad_free"`, …) and the server decides which tiers earn which;
+matching on `tier` would put a copy of the paywall in the bundle, free to
+disagree with the real one, and would break the day a tier is renamed on
+Patreon. `AuthProvider` already exposes `isSupporter` derived from
+`account?.supporter.is_supporter ?? false`, which is the fail-closed default —
+paired with `status`, that is what lets Phase 3's ad loader fail *open*.

@@ -97,7 +97,7 @@ describe('AuthProvider', () => {
 	it('exposes supporter status from the response', async () => {
 		localStorage.setItem('authToken', 'a-real-token')
 		mockedFetch.mockResolvedValue(
-			accountResponse({ supporter: { is_supporter: true, tier_name: 'Classic Class' } })
+			accountResponse({ supporter: { is_supporter: true, tier: 'Classic Class', benefits: ['ad_free'] } })
 		)
 
 		renderProvider()

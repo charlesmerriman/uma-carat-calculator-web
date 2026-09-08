@@ -19,22 +19,29 @@ export interface LinkedProvider {
 }
 
 /**
- * Patreon entitlement.
+ * Patreon entitlement, derived by the server on every request.
  *
- * `is_supporter` is the ONLY key the API sends today, and it is always false —
- * nothing can be a supporter until the backend can match a site account to a
- * patron (Phase 2 of patreon-accounts-plan.md).
+ * `tier` and `benefits` are optional because they are genuinely ABSENT rather
+ * than null: when there is no entitlement the API sends `is_supporter` and
+ * nothing else, so a client cannot read an empty tier as a tier or an empty
+ * benefits list as "checked, and they have none". TypeScript makes you handle
+ * the absence.
  *
- * The tier fields below are optional because they are genuinely absent rather
- * than null: the API omits them entirely when there is no entitlement, so that
- * a client cannot read an empty tier as a tier. Declaring them now means Phase 2
- * changes no types and TypeScript already forces callers to handle the absence.
+ * There is no tier ORDER here on purpose. Ordering tiers is internal
+ * arithmetic, and the server has already done it to produce `benefits` — a
+ * client comparing numbers would be a second implementation of the paywall,
+ * free to disagree with the real one.
  */
 export interface SupporterStatus {
 	is_supporter: boolean
-	tier_name?: string
-	tier_order?: number
-	since?: string
+	/** The tier's display name, for a badge. Absent unless `is_supporter`. */
+	tier?: string
+	/**
+	 * Keys of the capabilities this account has, e.g. "ad_free". Gate on a key
+	 * being present, never on the tier name — renaming a tier on Patreon is the
+	 * page owner's business and must not turn a feature off.
+	 */
+	benefits?: string[]
 }
 
 export interface Account {
