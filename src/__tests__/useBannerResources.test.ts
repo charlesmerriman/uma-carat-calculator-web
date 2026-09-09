@@ -10,6 +10,7 @@ import type {
   LeagueOfHeroesRank,
   UserPlannedBanner,
   BannerTimeline,
+  Uma,
   AnniversaryEvent,
   UserPlannedPurchase,
   IncomeLedgerRow,
@@ -107,6 +108,19 @@ function umaBanner(
       free_pulls: 0,
       banner_timeline: timeline(id, startDay, endDay),
     },
+  }
+}
+
+function featuredUma(id: number, name: string): Uma {
+  return {
+    id,
+    name,
+    image: '',
+    admin_comments: '',
+    recommendation: '',
+    first_jp_date: '2020-01-01T00:00:00Z',
+    is_time_limited: false,
+    is_three_star: true,
   }
 }
 
@@ -522,6 +536,40 @@ describe('step-up rows', () => {
     // display on the next row, and the red input comes from maxPossibleSteps.
     expect(results[0].maxPossibleSteps).toBe(1)
     expect(results[1].paidCarats).toBe(0)
+  })
+
+  it('lets a selector fund a reserve off a selectable featured uma', () => {
+    const banner = umaBanner(1, 1, 10)
+    banner.reserved_copies = 1
+    banner.banner_uma!.umas = [featuredUma(1, 'Ordinary')]
+    const [row] = render([banner], { uma_selector_ticket: 2 })
+    expect(row.reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+  })
+
+  it('refuses to fund a reserve when every featured uma is barred', () => {
+    // The ticket here is UNRESTRICTED (a stat-held selector carries a null
+    // cutoff), so the date gate waves everything through. Only the intrinsic
+    // gate can stop it — and it must, because no selector can take this unit.
+    const banner = umaBanner(1, 1, 10)
+    banner.reserved_copies = 1
+    banner.banner_uma!.umas = [
+      { ...featuredUma(1, 'Limited'), is_time_limited: true },
+    ]
+    const [row] = render([banner], { uma_selector_ticket: 2 })
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('still funds when a barred uma sits alongside a selectable one', () => {
+    // A selector reaches ONE card and the user picks which, so a barred unit
+    // must not poison its siblings.
+    const banner = umaBanner(1, 1, 10)
+    banner.reserved_copies = 1
+    banner.banner_uma!.umas = [
+      { ...featuredUma(1, 'Limited'), is_time_limited: true },
+      featuredUma(2, 'Ordinary'),
+    ]
+    const [row] = render([banner], { uma_selector_ticket: 2 })
+    expect(row.reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
   })
 
   it('ignores reserved copies, which are disabled on step-up rows in v1', () => {

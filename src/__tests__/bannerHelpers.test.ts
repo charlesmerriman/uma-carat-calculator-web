@@ -576,10 +576,40 @@ describe('allocateReservedCopies', () => {
     reservedCopies: 0,
     isUmaBanner: false,
     oldestFeaturedJpDate: OLD as string | null,
+    selectorsBarred: false,
     umaSelectorTickets: [] as SelectorTicketBucket[],
     supportSelectorTickets: [] as SelectorTicketBucket[],
     ssrCrystals: 0,
   }
+
+  it('spends no selector when every featured card is barred', () => {
+    // An UNRESTRICTED ticket, which skips the date check entirely — so this is
+    // the case oldestFeaturedJpDate alone cannot express.
+    const result = allocateReservedCopies({
+      ...base,
+      isUmaBanner: true,
+      reservedCopies: 2,
+      selectorsBarred: true,
+      oldestFeaturedJpDate: null,
+      umaSelectorTickets: [{ jpCutoff: null, count: 3 }],
+    })
+    expect(result.funding).toEqual({ selectors: 0, crystals: 0, unfunded: 2 })
+    // The tickets are untouched — unspendable here, still spendable elsewhere.
+    expect(result.umaSelectorTickets).toEqual([{ jpCutoff: null, count: 3 }])
+  })
+
+  it('still lets crystals cover a barred banner', () => {
+    // The intrinsic gate is uma-side; a crystal takes anything.
+    const result = allocateReservedCopies({
+      ...base,
+      reservedCopies: 2,
+      selectorsBarred: true,
+      supportSelectorTickets: [{ jpCutoff: null, count: 3 }],
+      ssrCrystals: 5,
+    })
+    expect(result.funding).toEqual({ selectors: 0, crystals: 2, unfunded: 0 })
+    expect(result.ssrCrystals).toBe(3)
+  })
 
   it('spends nothing for a zero reserve', () => {
     const result = allocateReservedCopies({ ...base, ssrCrystals: 5 })

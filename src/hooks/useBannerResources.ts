@@ -55,7 +55,7 @@ import {
 } from "../utils/bannerHelpers"
 import type { PullStrategyResult } from "../utils/bannerHelpers"
 import { purchaseCarats } from "../utils/campaignPurchases"
-import { addSelectorTickets } from "../utils/selectorTickets"
+import { addSelectorTickets, isCardSelectable } from "../utils/selectorTickets"
 import type { SelectorTicketBucket } from "../utils/selectorTickets"
 import { EMPTY_BANNER_RESOURCES } from "./bannerResources"
 import type { BannerResources } from "./bannerResources"
@@ -411,13 +411,25 @@ export function useBannerResources({
 			// single card and the user picks which — so the OLDEST featured card
 			// sets the bar. Cards with no known release date are skipped, so an
 			// unknown neither qualifies a banner nor blocks one.
+			//
+			// Cards barred from selectors outright (time-limited, not ★3) drop
+			// out FIRST, before the date is read: otherwise a banner whose only
+			// old featured unit is time-limited reads as selector-fundable off a
+			// card no selector can actually grant. Filtering rather than
+			// blocking keeps the ONE-card rule intact — barred units sit
+			// alongside ordinary ones, and the siblings still qualify the banner.
 			const featured =
 				target.type === "Uma"
 					? target.banner.umas
 					: target.type === "Support"
 					? target.banner.support_cards
 					: []
-			const oldestFeaturedJpDate = featured.reduce<string | null>(
+			const selectable = featured.filter(isCardSelectable)
+			// Only a banner that HAS featured cards, none of them takeable, bars
+			// selectors. An empty list is a data gap, not a bar — see
+			// ReservedCopiesInput.selectorsBarred.
+			const selectorsBarred = featured.length > 0 && selectable.length === 0
+			const oldestFeaturedJpDate = selectable.reduce<string | null>(
 				(oldest, card) => {
 					if (!card.first_jp_date) return oldest
 					return !oldest || card.first_jp_date < oldest
@@ -435,6 +447,7 @@ export function useBannerResources({
 				reservedCopies: stepUp ? 0 : banner.reserved_copies,
 				isUmaBanner,
 				oldestFeaturedJpDate,
+				selectorsBarred,
 				umaSelectorTickets,
 				supportSelectorTickets,
 				ssrCrystals,

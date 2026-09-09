@@ -16,6 +16,15 @@
  * cutoff falls before its own banners, so a selector granted at an anniversary
  * essentially never covers that anniversary's featured unit. Selectors are for
  * older and rerun banners; SSR crystals cover the rest.
+ *
+ * TWO GATES, NOT ONE
+ * ------------------
+ * The cutoff above is the TEMPORAL gate. There is a second, INTRINSIC one — an
+ * uma that is time-limited or not ★3 can never be taken by a selector at any
+ * cutoff. That one is stored on the row (`is_time_limited` / `is_three_star`)
+ * rather than derived, and it bites even under an unrestricted (null) cutoff
+ * which the temporal gate waves through. Mirrors the backend's
+ * calculatorapi/eligibility.py; keep the two in step.
  */
 
 export interface SelectorTicketBucket {
@@ -80,6 +89,40 @@ export function isCardEligible(
 	// calendar days — the release date carries a time of day and the cutoff
 	// does not, so a raw instant compare would drop same-day releases.
 	return firstJpDate.slice(0, 10) <= jpCutoff.slice(0, 10)
+}
+
+/**
+ * The fields the intrinsic gate reads. Structural rather than importing `Uma`,
+ * so this module stays free of the API types — and OPTIONAL because a
+ * `SupportCard` carries neither. Absent means "no such restriction exists for
+ * this kind of card", which is also what the model defaults encode.
+ */
+export interface IntrinsicallyGatedCard {
+	/**
+	 * Not read — present so the type is not "weak". TypeScript rejects an
+	 * all-optional target that shares no property with its argument, and a
+	 * `SupportCard` has neither flag, so without a common property every
+	 * support-side call site would fail to compile. Both card types carry an id.
+	 */
+	id: number
+	is_time_limited?: boolean
+	is_three_star?: boolean
+}
+
+/**
+ * Can a selector EVER take this card, at any cutoff?
+ *
+ * The intrinsic gate, and it is deliberately separate from `isCardEligible`:
+ * the two fail for unrelated reasons, and a caller must pass BOTH. Anything
+ * offering a card to a picker, or letting a selector ticket pay for a banner,
+ * has to check this one as well as the date.
+ *
+ * `is_three_star` is compared against `false` rather than coerced, so an
+ * absent field (a support card) reads as unrestricted rather than as ★1.
+ */
+export function isCardSelectable(card: IntrinsicallyGatedCard): boolean {
+	if (card.is_time_limited) return false
+	return card.is_three_star !== false
 }
 
 export interface SelectorSpendResult {

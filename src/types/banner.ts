@@ -76,9 +76,26 @@ export interface Uma extends JpDated {
 	image: string
 	admin_comments: string
 	recommendation: string
+	/**
+	 * The INTRINSIC selector gates, stored server-side rather than derived —
+	 * both of these units sit on ordinary banners and are indistinguishable
+	 * from a selectable one from the client's side.
+	 *
+	 * Unlike `first_jp_date` these are independent of any cutoff and bite even
+	 * under an unrestricted (null) one. Never read them directly; go through
+	 * `isCardSelectable` in utils/selectorTickets.
+	 */
+	is_time_limited: boolean
+	is_three_star: boolean
 }
 
-/** A support card that can appear on a banner */
+/**
+ * A support card that can appear on a banner.
+ *
+ * Deliberately has no `is_time_limited` / `is_three_star`: those gates are an
+ * uma-side concept (★3 has no support equivalent — supports are SSR/SR), so a
+ * support card is only ever gated on its cutoff date.
+ */
 export interface SupportCard extends JpDated {
 	id: number
 	name: string

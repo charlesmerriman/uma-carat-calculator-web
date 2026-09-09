@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { isCardEligible } from "../utils/selectorTickets"
+import { isCardEligible, isCardSelectable } from "../utils/selectorTickets"
 import type { BannerUma, BannerSupport, Uma, SupportCard } from "../types"
 
 /** One selectable card, flattened out of the banner catalogues. */
@@ -37,7 +37,8 @@ export function isGachaBanner(name: string): boolean {
 
 /**
  * The catalogue of cards a selector ticket or a step-up may pick from: every
- * card on a real gacha banner, deduplicated, filtered to a JP cutoff, newest
+ * card on a real gacha banner, deduplicated, filtered to a JP cutoff AND to the
+ * intrinsic gate (time-limited / non-★3 umas are never selectable), newest
  * release first.
  *
  * WHY THIS IS A HOOK AND NOT INLINE
@@ -91,6 +92,10 @@ export function buildEligibleCardCatalogue({
 	const addEligibleCards = (cards: (Uma | SupportCard)[]): void => {
 		for (const card of cards) {
 			if (seen.has(card.id)) continue
+			// BOTH gates. The intrinsic one first because it is unconditional —
+			// a time-limited or non-★3 uma is off the list even when the cutoff
+			// is null and every date qualifies.
+			if (!isCardSelectable(card)) continue
 			if (!isCardEligible(card.first_jp_date, jpCutoffDate)) continue
 			seen.set(card.id, {
 				label: card.name,

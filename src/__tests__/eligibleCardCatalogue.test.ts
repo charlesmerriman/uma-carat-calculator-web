@@ -39,6 +39,8 @@ const makeUma = (name: string, firstJpDate: string | null): Uma => ({
   admin_comments: '',
   recommendation: '',
   first_jp_date: firstJpDate,
+  is_time_limited: false,
+  is_three_star: true,
 })
 
 const makeSupport = (name: string, firstJpDate: string | null): SupportCard => ({
@@ -166,6 +168,42 @@ describe('buildEligibleCardCatalogue', () => {
   })
 
   // ── Ordering ────────────────────────────────────────────────────────────
+
+  it('excludes a time-limited uma', () => {
+    const limited = { ...makeUma('Limited', '2020-01-01'), is_time_limited: true }
+    const ordinary = makeUma('Ordinary', '2020-01-01')
+    const catalogue = buildEligibleCardCatalogue({
+      pool: 'uma',
+      jpCutoffDate: '2026-01-01',
+      umaBannerData: [umaBanner('Debut', [limited, ordinary])],
+      supportBannerData: [],
+    })
+    expect(catalogue.map((c) => c.label)).toEqual(['Ordinary'])
+  })
+
+  it('excludes a uma that is not three star', () => {
+    const twoStar = { ...makeUma('Two Star', '2020-01-01'), is_three_star: false }
+    const ordinary = makeUma('Ordinary', '2020-01-01')
+    const catalogue = buildEligibleCardCatalogue({
+      pool: 'uma',
+      jpCutoffDate: '2026-01-01',
+      umaBannerData: [umaBanner('Debut', [twoStar, ordinary])],
+      supportBannerData: [],
+    })
+    expect(catalogue.map((c) => c.label)).toEqual(['Ordinary'])
+  })
+
+  it('excludes a time-limited uma even when the cutoff is null', () => {
+    // A null cutoff relaxes the date gate only — the intrinsic one still holds.
+    const limited = { ...makeUma('Limited', '2020-01-01'), is_time_limited: true }
+    const catalogue = buildEligibleCardCatalogue({
+      pool: 'uma',
+      jpCutoffDate: null,
+      umaBannerData: [umaBanner('Debut', [limited])],
+      supportBannerData: [],
+    })
+    expect(catalogue).toEqual([])
+  })
 
   it('sorts newest JP release first', () => {
     const cards = build('uma', null, [
