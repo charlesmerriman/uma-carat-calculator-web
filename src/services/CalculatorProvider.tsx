@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CalculatorContext } from "./CalculatorContext"
+import { clearAuthToken, getAuthToken } from "./authToken"
 import type {
 	CalculatorData,
 	UserStats,
@@ -115,7 +116,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	const performSave = useCallback(async (): Promise<void> => {
 		// Guests never PATCH — their plan is in-memory only. The auto-save
 		// timer is already gated, but saveNow could still land here.
-		if (!localStorage.getItem("authToken")) return
+		if (!getAuthToken()) return
 		try {
 			const response = await userCalculatorDataPatch(
 					userStatsData,
@@ -244,8 +245,8 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 			// Drop the stale token and retry as a guest instead of stranding
 			// the user on the error screen.
 			let response = await initialCalculatorDataFetch(controller.signal)
-			if (response.status === 401 && localStorage.getItem("authToken")) {
-				localStorage.removeItem("authToken")
+			if (response.status === 401 && getAuthToken()) {
+				clearAuthToken()
 				response = await initialCalculatorDataFetch(controller.signal)
 			}
 			if (!response.ok) {
@@ -260,7 +261,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 			const stash = readGuestPlanStash()
 			if (
 				stash &&
-				localStorage.getItem("authToken") &&
+				getAuthToken() &&
 				!didMigrateRef.current
 			) {
 				didMigrateRef.current = true
@@ -340,7 +341,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		if (wasEmpty) return
 		// Guests have nothing to save to the server. Never arming the timer
 		// also suppresses the pending-save icon and the beforeunload warning.
-		if (!localStorage.getItem("authToken")) return
+		if (!getAuthToken()) return
 		startTimer()
 	}, [startTimer, userStatsData, userPlannedBannerData, userPlannedPurchaseData,
 		userStepUpSelectionData])

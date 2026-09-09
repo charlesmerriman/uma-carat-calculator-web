@@ -19,6 +19,7 @@
  */
 
 import { plannedBannerTarget } from "../utils/bannerHelpers"
+import { authHeaders, getAuthToken } from "./authToken"
 import type {
 	UserStats,
 	UserPlannedBanner,
@@ -79,15 +80,6 @@ export interface StepUpSelectionPayload {
 	support: number | null
 	slot: number
 	is_target: boolean
-}
-
-/**
- * Builds the Authorization header only when a token exists. Guests send
- * no header at all — sending "Token null" would make the backend 401.
- */
-function authHeaders(): Record<string, string> {
-	const token = localStorage.getItem("authToken")
-	return token ? { Authorization: `Token ${token}` } : {}
 }
 
 /**
@@ -244,7 +236,7 @@ function prefetchIsUsable(record: PrefetchRecord): boolean {
 	// EMPTY PLAN — their saved banners apparently gone. A token that has
 	// changed in either direction (signed in, signed out, or swapped accounts)
 	// invalidates the prefetch.
-	if (record.token !== localStorage.getItem("authToken")) return false
+	if (record.token !== getAuthToken()) return false
 	return Date.now() - record.startedAt < PREFETCH_MAX_AGE_MS
 }
 
@@ -278,7 +270,7 @@ export function prefetchCalculatorData(): void {
 
 	prefetched = {
 		promise,
-		token: localStorage.getItem("authToken"),
+		token: getAuthToken(),
 		startedAt: Date.now()
 	}
 }

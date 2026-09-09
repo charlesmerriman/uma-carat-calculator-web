@@ -85,6 +85,13 @@ export type {
 } from "./supporters"
 
 export type {
+	Account,
+	AccountStatus,
+	LinkedProvider,
+	SupporterStatus
+} from "./account"
+
+export type {
 	AnniversaryEvent,
 	AnniversaryEventType,
 	AnniversaryEventProduct,

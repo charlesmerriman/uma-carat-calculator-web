@@ -40,6 +40,7 @@ describe('isSocialProvider', () => {
   it('accepts only the supported providers', () => {
     expect(isSocialProvider('google')).toBe(true)
     expect(isSocialProvider('discord')).toBe(true)
+    expect(isSocialProvider('patreon')).toBe(true)
     expect(isSocialProvider('facebook')).toBe(false)
     expect(isSocialProvider(null)).toBe(false)
   })
