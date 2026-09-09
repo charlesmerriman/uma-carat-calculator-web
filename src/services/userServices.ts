@@ -15,6 +15,8 @@
  * Rule of thumb: use .tsx ONLY for files that contain JSX elements.
  */
 
+import { authHeaders } from "./authToken"
+
 const API_URL = import.meta.env.VITE_API_URL
 
 /**
@@ -49,13 +51,11 @@ interface LogoutResponse {
 }
 
 export async function userLogout(): Promise<LogoutResponse> {
-	const token = localStorage.getItem("authToken")
-
 	const response = await fetch(`${API_URL}/logout`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Token ${token}`
+			...authHeaders()
 		}
 	})
 

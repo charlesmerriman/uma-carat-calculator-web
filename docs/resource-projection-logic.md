@@ -230,6 +230,22 @@ figure dripped as `monthly / 30`.
 - **A selector only has to reach ONE card on a banner.** The engine derives
   `oldestFeaturedJpDate`; gating on the newest let a single recent unit make a
   whole multi-uma banner read as unfundable.
+- **Barred umas are filtered out BEFORE that date is taken.** An uma flagged
+  `is_time_limited`, or not `is_three_star`, can never be taken by a selector at
+  any cutoff, so it must not set the bar for one — otherwise a banner whose only
+  old featured unit is time-limited reads as fundable off a card no selector can
+  grant. Filtering rather than blocking keeps the ONE-card rule intact: barred
+  units sit alongside ordinary ones and the siblings still qualify the banner.
+  Go through `isCardSelectable` (`utils/selectorTickets.ts`), which mirrors the
+  backend's `eligibility.is_intrinsically_selectable`.
+- **`selectorsBarred` is a separate input to `allocateReservedCopies`, and has
+  to be.** `oldestFeaturedJpDate` cannot carry "nothing here is takeable":
+  an unrestricted (`null`-cutoff) ticket short-circuits `isCardEligible` before
+  it reads the date, so a `null` date still funds. Null there means "no dated
+  card", which an unrestricted ticket is right to ignore; `selectorsBarred`
+  means "no card a selector could take at all", which it must not. A banner with
+  an EMPTY featured list is not barred — that is a data gap, and unknowns here
+  neither qualify a banner nor block one.
 - **A step-up spends paid carats and nothing else** — never free carats, never
   tickets, never free pulls. Its deficit stays on the paid balance (floored at 0
   for display on the next row, the sheet's `MAX(0, N43)`) rather than becoming a

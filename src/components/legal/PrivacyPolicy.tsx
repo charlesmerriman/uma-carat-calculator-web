@@ -42,14 +42,15 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Information We Collect</h2>
 					<p className={paragraph}>
 						You can use the calculator without an account at all. If you choose to create
-						one, you sign in through Google or Discord, and we deliberately collect as
-						little as possible:
+						one, you sign in through Google, Discord, or Patreon, and we deliberately
+						collect as little as possible:
 					</p>
 					<ul className={list}>
 						<li>
-							An anonymous account reference supplied by Google or Discord. This is an
-							opaque identifier that lets us recognize you when you return. It is
-							specific to this Site and cannot be used to identify you elsewhere.
+							An anonymous account reference supplied by Google, Discord, or Patreon.
+							This is an opaque identifier that lets us recognize you when you return.
+							It is specific to this Site and cannot be used to identify you elsewhere.
+							You may link more than one of these to the same account.
 						</li>
 						<li>
 							A randomly generated username, such as <code>user_a3f9c1</code>, created
@@ -59,10 +60,12 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						We do <strong>not</strong> collect or store your email address, your real
 						name, your provider display name or avatar, or any password. We never see
-						your Google or Discord password — those services verify it and only confirm
-						to us that the sign-in succeeded. We request the narrowest permission each
-						provider offers, so your email address is never sent to us in the first
-						place.
+						your Google, Discord, or Patreon password — those services verify it and
+						only confirm to us that the sign-in succeeded. We request the narrowest
+						permission each provider offers, so your email address is never sent to us
+						in the first place. In Patreon&apos;s case that means we can see that an
+						account exists and, if you link it, whether it currently supports us — never
+						your email address, your pledge amount, or your billing details.
 					</p>
 					<p className={paragraph}>
 						When you use the calculator, we store the planning data you enter, including
@@ -89,8 +92,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Account Recovery</h2>
 					<p className={paragraph}>
 						Because we store no email address, there is no password reset and no way for
-						us to verify your identity if you lose access to the Google or Discord
-						account you signed in with. If that happens, your saved plan cannot be
+						us to verify your identity if you lose access to every Google, Discord, or
+						Patreon account you signed in with. If that happens, your saved plan cannot be
 						recovered, and you would need to start a new plan. This is a deliberate
 						trade-off in exchange for holding none of your personal data.
 					</p>

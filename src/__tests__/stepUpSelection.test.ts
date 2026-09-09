@@ -220,6 +220,8 @@ describe('findGuaranteedCardArt', () => {
     admin_comments: '',
     recommendation: '',
     first_jp_date: '2025-06-01',
+    is_time_limited: false,
+    is_three_star: true,
   }
   const support = {
     id: 201,

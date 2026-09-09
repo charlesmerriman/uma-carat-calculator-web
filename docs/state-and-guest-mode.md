@@ -131,6 +131,72 @@ objects. All types live in `src/types/` and are barrel-exported from `src/types/
 
 ---
 
-## Auth token
+## Auth token and the account
 
-Stored in `localStorage` and attached to requests only when present.
+Two layers, and the split matters.
+
+### `services/authToken.ts` — owns the stored token
+
+The **only** module that touches the `authToken` key. `getAuthToken()`,
+`setAuthToken()`, `clearAuthToken()`, and `authHeaders()` (an empty object for a
+guest — sending `Token null` would make the backend reject an otherwise valid
+guest request).
+
+Writes **notify subscribers**, and that is the reason the module exists rather
+than being a convenience wrapper. Before it, the calculator could drop a stale
+token after a 401 and nothing else found out, so the navbar carried on offering
+"Logout" to someone the server no longer recognised. A `storage` listener covers
+the same change made in another tab.
+
+**Always clear through `clearAuthToken()`**, never `localStorage.removeItem`, or
+`AuthProvider` keeps serving a signed-in answer.
+
+### `services/AuthProvider.tsx` + `AuthContext.ts` — owns the account
+
+Wraps every route in `App.tsx` (not just `/app`) because the navbar needs it on
+the home page, and the Phase 3 ad loader will need it everywhere. `useAccount()`
+gives:
+
+| Value | Meaning |
+|---|---|
+| `isLoggedIn` | Is a token present. **Synchronous**, correct on the first render. |
+| `status` | `anonymous` / `loading` / `ready` / `error` — how far `GET /account` got. |
+| `account` | The summary, or `null` until it loads. |
+| `isSupporter` | Convenience gate. Always `false` today. |
+| `refresh()` | Re-read `/account` after something that could change entitlement. |
+| `signOut()` | Deletes the server-side token, then clears it locally. |
+
+**`isLoggedIn` and `account` answer different questions on different schedules,
+deliberately.** Making `isLoggedIn` wait for `/account` would flash "Login" at
+every returning user on every page load; trusting the token to imply a valid
+account would show a signed-in shell to someone whose token was revoked. Keeping
+both is what avoids each.
+
+**`status` is not decoration.** "We don't know yet" and "not a supporter" must
+never collapse into one value: anything that has to *fail open* on uncertainty —
+the ad loader — can only express that by checking `status` as well as
+`isSupporter`.
+
+**A guest makes no request.** No token means `status` goes straight to
+`anonymous`. Most traffic is anonymous and must not pay for a supporter feature.
+
+Inside async callbacks, prefer `getAuthToken()` over the context value —
+`CalculatorProvider` does — because a closure wants the live answer rather than
+whatever was captured when it was created.
+
+**Guest mode is unaffected.** No route requires an account; the provider only
+describes one when it exists. See "Guest mode" above.
+
+`supporter` is real as of Phase 2: the server derives it per request from the
+linked Patreon supporter row. When there is no entitlement the block is
+`{ is_supporter: false }` and **nothing else** — `tier` and `benefits` are
+absent rather than null, so neither can be misread as a checked-and-empty
+answer.
+
+**Gate on a benefit key, never on the tier name.** `benefits` is a list of
+capability keys (`"ad_free"`, …) and the server decides which tiers earn which;
+matching on `tier` would put a copy of the paywall in the bundle, free to
+disagree with the real one, and would break the day a tier is renamed on
+Patreon. `AuthProvider` already exposes `isSupporter` derived from
+`account?.supporter.is_supporter ?? false`, which is the fail-closed default —
+paired with `status`, that is what lets Phase 3's ad loader fail *open*.

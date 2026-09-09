@@ -8,6 +8,7 @@
  */
 
 import type { FeedbackPayload } from "../types/feedback"
+import { authHeaders } from "./authToken"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -16,16 +17,15 @@ export function feedbackSubmit(
 	payload: FeedbackPayload,
 	signal?: AbortSignal
 ): Promise<Response> {
-	const token = localStorage.getItem("authToken")
-
 	return fetch(`${API_URL}/feedback`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 			// Optional by design: a guest posts without one and is stored with
-			// no account linkage. Spreading conditionally keeps the header off
-			// the request entirely rather than sending "Token null".
-			...(token ? { Authorization: `Token ${token}` } : {}),
+			// no account linkage. authHeaders() yields an empty object for a
+			// guest, keeping the header off the request entirely rather than
+			// sending "Token null".
+			...authHeaders(),
 		},
 		body: JSON.stringify(payload),
 		signal,
