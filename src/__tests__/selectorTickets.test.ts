@@ -3,6 +3,7 @@
 import {
   addSelectorTickets,
   isCardEligible,
+  isCardSelectable,
   spendSelectorTickets,
   totalSelectorTickets,
 } from '../utils/selectorTickets'
@@ -50,6 +51,32 @@ describe('totalSelectorTickets', () => {
 
   it('is zero for an empty pool', () => {
     expect(totalSelectorTickets([])).toBe(0)
+  })
+})
+
+describe('isCardSelectable', () => {
+  it('admits an ordinary uma', () => {
+    expect(isCardSelectable({ id: 1, is_time_limited: false, is_three_star: true })).toBe(true)
+  })
+
+  it('refuses a time-limited uma', () => {
+    expect(isCardSelectable({ id: 1, is_time_limited: true, is_three_star: true })).toBe(false)
+  })
+
+  it('refuses a uma that is not three star', () => {
+    expect(isCardSelectable({ id: 1, is_time_limited: false, is_three_star: false })).toBe(false)
+  })
+
+  it('treats a card with neither flag as unrestricted', () => {
+    // A support card carries no intrinsic gate. Absent must not read as ★1.
+    expect(isCardSelectable({ id: 1 })).toBe(true)
+  })
+
+  it('is independent of any cutoff', () => {
+    // The whole point of the second gate: an unrestricted (null) cutoff makes
+    // isCardEligible wave everything through, and this must still refuse.
+    expect(isCardEligible('2020-01-01', null)).toBe(true)
+    expect(isCardSelectable({ id: 1, is_time_limited: true })).toBe(false)
   })
 })
 

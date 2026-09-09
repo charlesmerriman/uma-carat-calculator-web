@@ -459,6 +459,21 @@ export interface ReservedCopiesInput {
 	 * yields null, which selectors refuse under a real cutoff.
 	 */
 	oldestFeaturedJpDate: string | null
+	/**
+	 * True when this banner features cards and EVERY one of them is barred from
+	 * selectors outright (time-limited, or not ★3).
+	 *
+	 * A separate signal because `oldestFeaturedJpDate` cannot carry it: an
+	 * UNRESTRICTED (null-cutoff) ticket short-circuits `isCardEligible` before
+	 * it ever looks at the date, so a null date still funds. Null there means
+	 * "no dated card", which an unrestricted ticket is right to ignore — this
+	 * means "no card a selector could take at all", which it must not.
+	 *
+	 * An EMPTY featured list is not barred. That is a data gap (banners exist
+	 * with no cards linked yet), and the rule for unknowns everywhere else here
+	 * is that they neither qualify a banner nor block one.
+	 */
+	selectorsBarred: boolean
 	umaSelectorTickets: SelectorTicketBucket[]
 	supportSelectorTickets: SelectorTicketBucket[]
 	/** SSR crystals available. Support banners only — there is no uma crystal. */
@@ -503,11 +518,13 @@ export function allocateReservedCopies(
 	const pool = input.isUmaBanner
 		? input.umaSelectorTickets
 		: input.supportSelectorTickets
-	const { buckets, spent } = spendSelectorTickets(
-		pool,
-		wanted,
-		input.oldestFeaturedJpDate
-	)
+	// Nothing on this banner is takeable, so no ticket qualifies — not even an
+	// unrestricted one, which would otherwise skip the date check entirely.
+	// Crystals below are unaffected: they take anything, and the intrinsic gate
+	// is uma-side only.
+	const { buckets, spent } = input.selectorsBarred
+		? { buckets: pool, spent: 0 }
+		: spendSelectorTickets(pool, wanted, input.oldestFeaturedJpDate)
 	result.funding.selectors = spent
 	if (input.isUmaBanner) {
 		result.umaSelectorTickets = buckets
