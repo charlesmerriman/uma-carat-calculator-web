@@ -42,6 +42,7 @@ const umaBanner: BannerUma = {
   admin_comments: '',
   umas: [],
   free_pulls: 0,
+  is_recommended: false,
 }
 
 const userStats: UserStats = {

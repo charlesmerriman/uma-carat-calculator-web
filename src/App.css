@@ -547,6 +547,184 @@
 	}
 }
 
+/* ── Recommended banner: the SSR panel ────────────────────────────────────
+   A Timeline feature panel ("Featured Umamusume" / "Featured Support Cards")
+   whose banner an editor has ticked as Recommended, dressed as an SSR pull: a
+   gold surface, a prismatic foil edge, a slow light sweep and a few glints.
+
+   EVERY LAYER IS ZERO-LAYOUT — the constraint this whole block is built
+   around. The panel keeps its 1px border (only the paint changes), its padding
+   and its children; the sweep and the glints are absolutely positioned
+   pseudo-elements; the glow is a box-shadow. A recommended card is exactly as
+   tall as the same card unticked.
+
+   FeaturePanel SWAPS its bg-gray-800 / border-gray-600 / shadow-sm utilities
+   for this class rather than layering it over them, so nothing here has to win
+   a specificity fight with Tailwind.
+
+   Same @apply restriction as the category chip below: the --color-ssr-* and
+   --color-recommended-* tokens live in index.css's @theme. */
+.ssr-panel {
+	/* One four-point glint, reused by every ::before layer. Pale gold for the
+	   dark surface; the light theme swaps in a deeper one below. */
+	--ssr-glint: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff6d5' d='M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z'/%3E%3C/svg%3E");
+	position: relative;
+	/* Keeps the pseudo-elements' z-index local to this panel. */
+	isolation: isolate;
+	/* Clips the sweep and the glints to the rounded corners. Nothing a panel
+	   holds is meant to escape it: the band scroller already clips, and the
+	   purpose overlay lives inside each tile for exactly this reason. */
+	overflow: hidden;
+	border-color: transparent;
+	/* Two backgrounds on one box: the surface stops at the padding edge, and
+	   the prism shows through the transparent 1px border around it. That is how
+	   the foil edge costs no width. The prism stops are deliberately NOT theme
+	   tokens — a foil looks the same whatever it is printed on. */
+	background:
+		linear-gradient(
+			135deg,
+			var(--color-ssr-deep) 0%,
+			var(--color-ssr-mid) 55%,
+			var(--color-ssr-deep) 100%
+		) padding-box,
+		linear-gradient(
+			115deg,
+			#f8d66d 0%,
+			#ff9ecf 25%,
+			#9ee7ff 50%,
+			#b9a3ff 75%,
+			#f8d66d 100%
+		) border-box;
+	/* Kept tight on purpose: .card-panel is overflow-hidden with only 8px of
+	   padding on a phone, so any wider outer glow is sheared off at its edge. */
+	box-shadow:
+		0 0 6px var(--color-ssr-glow),
+		inset 0 0 14px rgb(255 214 102 / 12%);
+}
+
+/* The panel's own content sits above the surface and below the sweep and the
+   glints. `relative` with no offsets moves nothing. */
+.ssr-panel > * {
+	position: relative;
+	z-index: 1;
+}
+
+/* The shine: a soft diagonal band crossing the panel — tiles and all, the way
+   light crosses a foil card. Animated on TRANSFORM ONLY, so the compositor
+   slides it without repainting the panel every frame; animating a
+   background-position instead would repaint on every tick. */
+.ssr-panel::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+	background: linear-gradient(
+		105deg,
+		transparent 38%,
+		rgb(255 255 255 / 20%) 48%,
+		rgb(255 244 214 / 8%) 54%,
+		transparent 62%
+	);
+	transform: translateX(-100%);
+	animation: ssr-sweep 6s ease-in-out infinite;
+}
+
+/* The glints, on the panel's thin edge band so they sit over the foil rather
+   than over anyone's art. Twinkle on opacity alone, for the same compositor
+   reason as the sweep. */
+.ssr-panel::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+	background-image: var(--ssr-glint), var(--ssr-glint), var(--ssr-glint), var(--ssr-glint);
+	background-repeat: no-repeat;
+	background-size: 12px 12px, 8px 8px, 10px 10px, 7px 7px;
+	background-position:
+		right 3px top 3px,
+		left 2px top 42%,
+		right 2px top 68%,
+		left 4px bottom 3px;
+	opacity: 0.85;
+	animation: ssr-twinkle 2.6s ease-in-out infinite;
+}
+
+[data-theme="light"] .ssr-panel {
+	--ssr-glint: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c98a12' d='M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z'/%3E%3C/svg%3E");
+}
+
+/* The stylesheets' first keyframes. Most of the sweep's cycle is rest: a shine
+   that never stops reads as a loading state rather than a highlight. */
+@keyframes ssr-sweep {
+	0%,
+	60% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes ssr-twinkle {
+	0%,
+	100% {
+		opacity: 0.35;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+/* Motion off, foil kept. An ended banner is still a record of a good pull, but
+   it is no longer something to draw the eye to; and the reduced-motion query is
+   the same courtesy useBackToTop pays. At rest the sweep sits off the panel,
+   so switching the animation off hides it rather than freezing it mid-card. */
+.ssr-panel--still::before,
+.ssr-panel--still::after {
+	animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ssr-panel::before,
+	.ssr-panel::after {
+		animation: none;
+	}
+}
+
+/* The "★ Recommended" chip in a recommended panel's title line.
+
+   SIZED TO THE TITLE'S LINE BOX: 16px of line-height plus 2px of padding top
+   and bottom, and no border, is exactly the 20px a text-sm title already
+   occupies — so the chip can never make the row taller. It shrinks (label
+   first, via its own truncation) rather than wrapping the title onto a second
+   line, which would.
+
+   It is also the signal that doesn't depend on colour: the SSR surface says
+   "special" to a sighted reader, the word says it to everyone. */
+.recommended-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	min-width: 0;
+	margin-left: auto;
+	border-radius: 9999px;
+	padding: 0.125rem 0.5rem;
+	font-size: 0.6875rem;
+	line-height: 1rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--color-recommended-ink);
+	background: linear-gradient(
+		135deg,
+		#fff1b8 0%,
+		var(--color-recommended-fill) 45%,
+		#e0a526 100%
+	);
+	box-shadow: 0 0 6px var(--color-ssr-glow);
+}
+
 /* Icon-only delete button on the right edge. Width comes from .banner-grid's
    last track — this is a table cell, not a free-standing button. */
 .banner-delete-btn {

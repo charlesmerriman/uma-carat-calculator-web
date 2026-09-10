@@ -321,11 +321,11 @@ describe('plannedBannerTarget — the narrowing seam', () => {
 
   const umaBanner: BannerUma = {
     id: 1, banner_timeline: timeline, name: 'Uma', admin_comments: '',
-    umas: [], free_pulls: 3,
+    umas: [], free_pulls: 3, is_recommended: false,
   }
   const supportBanner: BannerSupport = {
     id: 2, banner_timeline: timeline, name: 'Support', admin_comments: '',
-    support_cards: [], free_pulls: 5,
+    support_cards: [], free_pulls: 5, is_recommended: false,
   }
   const stepUpBanner: BannerStepUp = {
     id: 3, banner_timeline: timeline, anniversary_event: 14,
@@ -433,13 +433,13 @@ describe('comparePlannedBanners — the planner sheet row order', () => {
   const umaRow = (start: string): Partial<UserPlannedBanner> => ({
     banner_uma: {
       id: 1, banner_timeline: timelineAt(start, 1), name: 'Uma',
-      admin_comments: '', umas: [], free_pulls: 3,
+      admin_comments: '', umas: [], free_pulls: 3, is_recommended: false,
     } as BannerUma,
   })
   const supportRow = (start: string): Partial<UserPlannedBanner> => ({
     banner_support: {
       id: 2, banner_timeline: timelineAt(start, 2), name: 'Support',
-      admin_comments: '', support_cards: [], free_pulls: 5,
+      admin_comments: '', support_cards: [], free_pulls: 5, is_recommended: false,
     } as BannerSupport,
   })
   const stepUpRow = (
