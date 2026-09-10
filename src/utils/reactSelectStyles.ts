@@ -191,3 +191,40 @@ export const mobileBannerSelectStyles: AnyOptionStyles = {
 		textOverflow: "ellipsis",
 	}),
 }
+
+/**
+ * Wraps a style set so the options `isRecommended` picks out get the planner's
+ * "Recommended" treatment: a gold wash and a gold bar down the left edge.
+ *
+ * One helper for both banner selects (BannerRow and StagedBannerRow), which
+ * render the same dropdown and would otherwise drift apart copy by copy.
+ *
+ * - The wash is painted as a background IMAGE over the existing
+ *   background-color, not as a new color. The gray underneath keeps following
+ *   the theme and the focused/selected gray-600 hover state, and the wash needs
+ *   no color-mix() support.
+ * - The bar is an inset box-shadow rather than a border, so it takes no width
+ *   and a recommended label never sits a few pixels right of its neighbours.
+ *
+ * The caller decides what counts — including that a muted "(in calculator)" /
+ * "(staged)" option does NOT get the wash, because that greying has to win.
+ */
+export function withRecommendedOption<Option>(
+	styles: StylesConfig<Option, false>,
+	isRecommended: (option: Option) => boolean
+): StylesConfig<Option, false> {
+	const baseOption = styles.option
+	return {
+		...styles,
+		option: (provided, state) => {
+			const styled = baseOption ? baseOption(provided, state) : provided
+			if (!isRecommended(state.data)) return styled
+			return {
+				...styled,
+				backgroundImage:
+					"linear-gradient(var(--color-recommended-tint), var(--color-recommended-tint))",
+				boxShadow: "inset 3px 0 0 var(--color-recommended)",
+			}
+		},
+	}
+}

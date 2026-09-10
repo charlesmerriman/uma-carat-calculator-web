@@ -38,6 +38,7 @@ const makeUma = (name: string, firstJpDate: string | null): Uma => ({
   image: `${name}.png`,
   admin_comments: '',
   recommendation: '',
+  purpose: '',
   first_jp_date: firstJpDate,
   is_time_limited: false,
   is_three_star: true,
@@ -49,6 +50,7 @@ const makeSupport = (name: string, firstJpDate: string | null): SupportCard => (
   image: `${name}.png`,
   admin_comments: '',
   recommendation: '',
+  purpose: '',
   first_jp_date: firstJpDate,
 })
 
@@ -59,6 +61,7 @@ const umaBanner = (bannerName: string, umas: Uma[]): BannerUma => ({
   admin_comments: '',
   umas,
   free_pulls: 0,
+  is_recommended: false,
 })
 
 const supportBanner = (bannerName: string, cards: SupportCard[]): BannerSupport => ({
@@ -68,6 +71,7 @@ const supportBanner = (bannerName: string, cards: SupportCard[]): BannerSupport 
   admin_comments: '',
   support_cards: cards,
   free_pulls: 0,
+  is_recommended: false,
 })
 
 const build = (

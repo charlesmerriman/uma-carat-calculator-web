@@ -200,6 +200,23 @@ this header to ellipsis. That is why the gutters around it are as tight as they 
 they were retuned to hand the name back the ~14px the border cost it. Widen any of them
 and the name starts truncating a word earlier.
 
+#### Recommended banners in the select
+
+A banner an editor has ticked as Recommended gets a filled gold star before its name, in
+the open menu and on the chosen value alike (`RecommendedMark`), and its menu row gets a
+gold wash with a gold bar down the left (`withRecommendedOption` in
+`utils/reactSelectStyles.ts` — one helper for both rows, so the two selects can't drift).
+The list stays in date order: the star is how a pick stands out, not its position.
+
+- The wash is a background *image* over the option's existing gray, and the bar an inset
+  box-shadow. The gray keeps following the theme and the hover state, and the bar takes
+  no width, so a starred label never sits a few pixels right of its neighbours.
+- The "(in calculator)" / "(staged)" greying wins: such an option keeps a muted star and
+  gets no wash, because a banner already in the plan is no longer a suggestion.
+- Read the flag through `isRecommendedBanner(banner, rowType)`, never
+  `banner.is_recommended`. It narrows on the row kind (a step-up has no flag), and reads a
+  missing field as `false` for the deploy window where the frontend runs ahead of the API.
+
 #### The phone card is four bands, and each one owns its own padding
 
 `MobileBannerCard` stacks four full-bleed bands: the coloured identity header, a
@@ -749,6 +766,35 @@ writer, so the filter resets clear it as well. A restored page that now exceeds
 the fetch hasn't resolved on the first render, and resetting state there would both flash
 the wrong list and permanently discard the saved position. Search text and the past/future
 toggle deliberately do *not* persist.
+
+### Recommended panels and purpose overlays — both zero-layout
+
+Two editorial layers sit on a banner section, and neither may move anything: a recommended
+card is exactly as tall as the same card unticked.
+
+**A recommended banner's feature panel becomes an SSR card** (`.ssr-panel` in `App.css`,
+switched on by `FeaturePanel`'s `recommended`): a gold surface, a prismatic foil edge, a
+slow light sweep and a few glints, plus a solid gold "★ Recommended" chip in the title line.
+
+- The panel *swaps* its `bg-gray-800 border-gray-600 shadow-sm` for the class rather than
+  layering over them, so nothing has to win a specificity fight with Tailwind.
+- The foil is the existing 1px border made transparent with a gradient painted under it
+  (`padding-box` / `border-box`); the sweep and glints are absolutely positioned
+  pseudo-elements; the glow is a box-shadow. None of it takes space.
+- The glow stays within 6px: `.card-panel` is `overflow-hidden` with only 8px of padding on a
+  phone, so anything wider is sheared off at the card's edge.
+- Only `transform` and `opacity` animate, which the compositor handles without a per-frame
+  repaint. Reduced motion, and ended banners (`ssr-panel--still`), keep the static foil and
+  drop the motion.
+- The chip is sized to the title's 20px line box, and truncates its own label before it lets
+  the title wrap — a wrapped title is a taller row.
+
+**A card's `purpose` is an overlay on its own tile art** (`FeaturedTileArt`), revealed on
+hover, keyboard focus (`:focus-visible`) or a touch tap. It lives *inside* the art box
+because three ancestors clip — the band scroller, a recommended panel's `overflow: hidden`
+and the card — so a floating tooltip would need a portal and a positioning library. The
+field's 100-character cap is what keeps the text inside the narrowest tile. An empty purpose
+renders the tile exactly as before: no overlay, no tab stop, no handlers.
 
 ### Infinite scroll — the reveal-count dependency is intentional
 

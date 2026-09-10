@@ -219,6 +219,7 @@ describe('findGuaranteedCardArt', () => {
     image: 'kiseki.png',
     admin_comments: '',
     recommendation: '',
+    purpose: '',
     first_jp_date: '2025-06-01',
     is_time_limited: false,
     is_three_star: true,
@@ -229,15 +230,19 @@ describe('findGuaranteedCardArt', () => {
     image: 'fuku.png',
     admin_comments: '',
     recommendation: '',
+    purpose: '',
     first_jp_date: '2025-06-01',
   }
   const umaBanners: BannerUma[] = [
-    { id: 1, banner_timeline: timeline, name: 'B', admin_comments: '', umas: [uma], free_pulls: 0 },
+    {
+      id: 1, banner_timeline: timeline, name: 'B', admin_comments: '', umas: [uma],
+      free_pulls: 0, is_recommended: false,
+    },
   ]
   const supportBanners: BannerSupport[] = [
     {
       id: 2, banner_timeline: timeline, name: 'B', admin_comments: '',
-      support_cards: [support], free_pulls: 0,
+      support_cards: [support], free_pulls: 0, is_recommended: false,
     },
   ]
 

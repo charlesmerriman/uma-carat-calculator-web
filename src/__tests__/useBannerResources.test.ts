@@ -106,6 +106,7 @@ function umaBanner(
       admin_comments: '',
       umas: [],
       free_pulls: 0,
+      is_recommended: false,
       banner_timeline: timeline(id, startDay, endDay),
     },
   }
@@ -118,6 +119,7 @@ function featuredUma(id: number, name: string): Uma {
     image: '',
     admin_comments: '',
     recommendation: '',
+    purpose: '',
     first_jp_date: '2020-01-01T00:00:00Z',
     is_time_limited: false,
     is_three_star: true,
@@ -375,6 +377,7 @@ describe('result shape', () => {
         admin_comments: '',
         umas: [],
         free_pulls: 0,
+        is_recommended: false,
         banner_timeline: undefined as unknown as BannerTimeline,
       },
     }
