@@ -77,6 +77,13 @@ export interface Uma extends JpDated {
 	admin_comments: string
 	recommendation: string
 	/**
+	 * The card's public one-liner ("Great pace parent"), shown as an overlay on
+	 * its Timeline tile on hover, keyboard focus or tap. Card-level, unlike
+	 * `recommendation`, which is per banner. "" means none, and the tile then
+	 * renders exactly as it would without the field.
+	 */
+	purpose: string
+	/**
 	 * The INTRINSIC selector gates, stored server-side rather than derived —
 	 * both of these units sit on ordinary banners and are indistinguishable
 	 * from a selectable one from the client's side.
@@ -102,6 +109,8 @@ export interface SupportCard extends JpDated {
 	image: string
 	admin_comments: string
 	recommendation: string
+	/** See Uma.purpose. */
+	purpose: string
 }
 
 /** An uma gacha banner — contains one or more featured umas */
@@ -112,6 +121,16 @@ export interface BannerUma {
 	admin_comments: string
 	umas: Uma[]
 	free_pulls: number
+	/**
+	 * The editorial "Recommended" flag: a gold star in the planner's dropdown,
+	 * and the SSR treatment on this banner's Timeline panel. Presentation only;
+	 * nothing in the projection reads it. Per banner — the uma and support
+	 * banners sharing a window are flagged independently.
+	 *
+	 * Read it through `isRecommendedBanner`, which also answers for a step-up
+	 * (never recommended; it has no such flag).
+	 */
+	is_recommended: boolean
 }
 
 /** A support card gacha banner — contains one or more featured support cards */
@@ -122,6 +141,8 @@ export interface BannerSupport {
 	admin_comments: string
 	support_cards: SupportCard[]
 	free_pulls: number
+	/** See BannerUma.is_recommended. */
+	is_recommended: boolean
 }
 
 /**

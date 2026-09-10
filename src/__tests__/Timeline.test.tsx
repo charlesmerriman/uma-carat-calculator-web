@@ -192,6 +192,7 @@ function card<T extends Uma | SupportCard>(id: number, name: string): T {
     image: `${name}.png`,
     admin_comments: '',
     recommendation: '',
+    purpose: '',
     first_jp_date: null,
   } as T
 }
@@ -223,6 +224,7 @@ function categorised(
             admin_comments: '',
             umas: umas.map((n, i) => card<Uma>(i + 1, n)),
             free_pulls: 0,
+            is_recommended: false,
           },
         ]
       : [],
@@ -235,6 +237,7 @@ function categorised(
             admin_comments: '',
             support_cards: supports.map((n, i) => card<SupportCard>(i + 1, n)),
             free_pulls: 0,
+            is_recommended: false,
           },
         ]
       : [],
@@ -933,6 +936,96 @@ describe('Timeline banner categories', () => {
  * revivals keeps the ordinary banner sharing that card rather than presenting a
  * week that looks emptier than it was.
  */
+describe('Timeline recommended banners and card purposes', () => {
+  /** The feature panel — the <section> — a named card's tile sits in. */
+  function panelFor(name: string): HTMLElement {
+    const panel = screen.getByAltText(name).closest('section')
+    expect(panel, `no panel around ${name}`).not.toBeNull()
+    return panel as HTMLElement
+  }
+
+  /** A one-uma window whose uma carries a purpose note. */
+  function withPurpose(name: string, purpose: string): BannerTimelineForViewing {
+    const banner = categorised(1, 'standard', [name])
+    banner.banner_umas[0].umas[0].purpose = purpose
+    return banner
+  }
+
+  it('dresses only the recommended side of a window as an SSR panel', () => {
+    const banner = categorised(1, 'standard', ['Rice Shower'], ['Kitasan Black'])
+    banner.banner_umas[0].is_recommended = true
+    events = [banner]
+    renderTimeline()
+
+    const umaPanel = panelFor('Rice Shower')
+    expect(umaPanel).toHaveClass('ssr-panel')
+    expect(umaPanel.querySelector('.recommended-chip')).toHaveTextContent('Recommended')
+
+    // Per banner: the support side of the same window keeps its ordinary surface.
+    const supportPanel = panelFor('Kitasan Black')
+    expect(supportPanel).not.toHaveClass('ssr-panel')
+    expect(supportPanel).toHaveClass('bg-gray-800')
+    expect(document.querySelectorAll('.recommended-chip')).toHaveLength(1)
+  })
+
+  it('leaves an unrecommended window exactly as it was', () => {
+    events = [categorised(1, 'standard', ['Yukino Bijin'], ['Smart Falcon'])]
+    renderTimeline()
+
+    expect(document.querySelector('.ssr-panel')).toBeNull()
+    expect(document.querySelector('.recommended-chip')).toBeNull()
+  })
+
+  it('reads a banner from before the field existed as not recommended', () => {
+    const banner = categorised(1, 'standard', ['Rice Shower'])
+    // A frontend deployed ahead of the API receives banners without the field.
+    Reflect.deleteProperty(banner.banner_umas[0], 'is_recommended')
+    events = [banner]
+    renderTimeline()
+
+    expect(document.querySelector('.ssr-panel')).toBeNull()
+  })
+
+  it("puts a card's purpose on its art, reachable by keyboard and screen reader", () => {
+    events = [withPurpose('Gold Ship', 'Great pace parent.')]
+    renderTimeline()
+
+    const tile = screen.getByRole('group', { name: 'Gold Ship' })
+    expect(tile).toHaveAttribute('tabindex', '0')
+    // Faded, never unmounted, so aria-describedby always has something to read.
+    expect(tile).toHaveAccessibleDescription('Great pace parent.')
+  })
+
+  it('renders a card with no purpose exactly as before', () => {
+    events = [categorised(1, 'standard', ['Yukino Bijin'])]
+    renderTimeline()
+
+    const artBox = screen.getByAltText('Yukino Bijin').parentElement as HTMLElement
+    expect(artBox).not.toHaveAttribute('tabindex')
+    expect(artBox).not.toHaveAttribute('aria-describedby')
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('toggles the note on a touch tap, and ignores a mouse click', () => {
+    events = [withPurpose('Gold Ship', 'Great pace parent.')]
+    renderTimeline()
+
+    const tile = screen.getByRole('group', { name: 'Gold Ship' })
+    const note = screen.getByRole('tooltip')
+    expect(note).toHaveClass('opacity-0')
+
+    // A mouse is served by :hover in CSS; the tap state is for touch alone.
+    fireEvent.pointerUp(tile, { pointerType: 'mouse' })
+    expect(note).toHaveClass('opacity-0')
+
+    fireEvent.pointerUp(tile, { pointerType: 'touch' })
+    expect(note).toHaveClass('opacity-100')
+
+    fireEvent.pointerUp(tile, { pointerType: 'touch' })
+    expect(note).toHaveClass('opacity-0')
+  })
+})
+
 describe('Timeline category filter', () => {
   // Renamed from "filter by banner type" when the marker kinds joined it — the
   // control spans two axes now and naming it after one of them was misleading.

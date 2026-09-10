@@ -9,10 +9,15 @@ import Select from "react-select"
 import type { SingleValue } from "react-select"
 import { toast } from "sonner"
 import { MobileBannerCard } from "./MobileBannerCard"
+import { RecommendedMark } from "./RecommendedMark"
 import { NumberField } from "../NumberField"
 import { CountStepper } from "./CountStepper"
 import { buildCountChips } from "../../utils/countChips"
-import { compactSelectStyles, mobileBannerSelectStyles } from "../../utils/reactSelectStyles"
+import {
+	compactSelectStyles,
+	mobileBannerSelectStyles,
+	withRecommendedOption,
+} from "../../utils/reactSelectStyles"
 import { formatDate } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import {
@@ -21,6 +26,7 @@ import {
 	bannersForRowType,
 	getPullCountStatus,
 	getStepCountStatus,
+	isRecommendedBanner,
 	isSelectableBanner,
 	plannedBannerKey,
 	plannedBannerRowType,
@@ -206,13 +212,22 @@ export const StagedBannerRow = ({
 
 	const bannerTimeline = plannedBannerTimeline(stagedBanner)
 
+	// See BannerRow: an option that is unavailable here (in the calculator, or
+	// staged in another row) keeps its greying and gets no gold wash.
+	const isWashedOption = (option: BannerOption): boolean =>
+		isRecommendedBanner(option.value, bannerType) &&
+		!unavailableBanners.has(optionKey(option))
+
 	const renderBannerSelect = (styles: import("react-select").StylesConfig<BannerOption, false>) => (
 		<Select<BannerOption>
 			className="w-full"
-			styles={{
-				...styles,
-				menuPortal: (base) => ({ ...base, zIndex: 9999 })
-			}}
+			styles={withRecommendedOption<BannerOption>(
+				{
+					...styles,
+					menuPortal: (base) => ({ ...base, zIndex: 9999 })
+				},
+				isWashedOption
+			)}
 			menuPortalTarget={document.body}
 			menuPosition="fixed"
 			// Phrased as the action, not as a heading. "Target Support Banner" is a
@@ -230,6 +245,10 @@ export const StagedBannerRow = ({
 				const conflict = unavailableBanners.get(optionKey(option))
 				return (
 					<span className={conflict ? "text-gray-500" : ""}>
+						{/* The same mark in the open menu and on the chosen value. */}
+						{isRecommendedBanner(option.value, bannerType) && (
+							<RecommendedMark muted={!!conflict} />
+						)}
 						{option.label}
 						{conflict && (
 							<span className="ml-1 text-xs">

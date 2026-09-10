@@ -282,6 +282,23 @@ export function isSelectableBanner(banner: PlannableBanner, now: Date): boolean 
 	return new Date(banner.banner_timeline.end_date) > now
 }
 
+/**
+ * Whether an editor has ticked this banner as Recommended — the gold star in
+ * the planner's dropdown.
+ *
+ * Narrowed on the row's KIND, the same tag bannersForRowType() picks the
+ * catalogue by, never on the banner's shape. A step-up has no such flag and is
+ * never recommended.
+ *
+ * `=== true` rather than a truthiness read: during a deploy the frontend can
+ * briefly run against an API that doesn't send the field yet, and a banner
+ * missing it has to read as "not recommended".
+ */
+export function isRecommendedBanner(banner: PlannableBanner, type: BannerRowType): boolean {
+	if (type === "StepUp") return false
+	return (banner as BannerUma | BannerSupport).is_recommended === true
+}
+
 export interface StepUpStrategyInput {
 	/** Steps the user planned. Not clamped by the caller — see below. */
 	plannedSteps: number

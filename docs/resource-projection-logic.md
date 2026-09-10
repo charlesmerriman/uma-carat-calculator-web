@@ -151,7 +151,10 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   League of Heroes has no lead time. The offset lives server-side
   (`RACE_REWARD_LEAD_TIME`) so nothing on the client re-derives it.
 - **Race rows carry no amounts.** They are indicators; what a placement pays
-  depends on the user's rank, which only the client knows.
+  depends on the user's rank, which only the client knows. Once, it depends on
+  the event too: League of Heroes #1 only ran to Platinum 1, so it pays at
+  `min(user's rank, Platinum 1)`. Rows say which event they are via
+  `event_number`; the rule lives in `RACE_RANK_CAPS` (`utils/incomeLedger.ts`).
 - **`throughout_end` is the linked banner's end**, with the game-event buffer
   already removed, because the decay curve runs over the banner rather than the
   event. The client no longer keeps its own copy of that constant.

@@ -69,6 +69,7 @@ const umaBanner: BannerUma = {
   admin_comments: '',
   umas: [],
   free_pulls: 0,
+  is_recommended: false,
 }
 
 const supportBanner: BannerSupport = {
@@ -78,6 +79,7 @@ const supportBanner: BannerSupport = {
   admin_comments: '',
   support_cards: [],
   free_pulls: 0,
+  is_recommended: false,
 }
 
 const userStats: UserStats = {

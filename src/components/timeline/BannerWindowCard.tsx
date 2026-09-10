@@ -10,6 +10,7 @@ import {
 	Ticket,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { useId, useState } from "react"
 import PredictedBadge from "../PredictedBadge"
 import { bannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
@@ -234,6 +235,104 @@ type FeaturedCard = {
 	name: string
 	image: string
 	recommendation: string
+	/**
+	 * The card's public one-liner, shown over its art on hover, focus or tap.
+	 * Optional HERE only because a frontend deployed ahead of the backend can
+	 * briefly receive cards without it; the API always sends a string.
+	 */
+	purpose?: string
+}
+
+/**
+ * A featured tile's art, with the card's purpose note overlaid on it.
+ *
+ * THE OVERLAY LIVES INSIDE THE TILE'S OWN ART BOX, on purpose. A tooltip
+ * floating outside it would be cut off by any of three clipping ancestors — the
+ * band's scroller, a recommended panel's `overflow: hidden`, and the card
+ * itself — and would need portalling plus a positioning library to escape them.
+ * Inside the box nothing can clip it and it takes no layout: the tile is the
+ * same size with or without a note. The field's 100-character cap is what keeps
+ * the text inside the narrowest tile.
+ *
+ * A card with no purpose renders exactly what the tile always rendered — no
+ * overlay, not focusable, no handlers.
+ *
+ * Three ways to reveal it, each for a reason:
+ * - hover, the ordinary desktop case (`group-hover`);
+ * - keyboard focus: the tile becomes a tab stop, and the overlay follows
+ *   `:focus-visible`, so a mouse click doesn't pin it open;
+ * - touch: a tap toggles it. Mobile Safari applies neither :hover nor :focus
+ *   reliably to a tapped non-button, so this one is state rather than CSS.
+ *   pointerup rather than click, because a touch that becomes a scroll cancels
+ *   the pointer and never fires it — scrolling past a tile can't open it.
+ */
+function FeaturedTileArt({
+	item,
+	tileAspectClass,
+}: {
+	item: FeaturedCard
+	tileAspectClass: string
+}) {
+	const overlayId = useId()
+	const [tapped, setTapped] = useState(false)
+	const purpose = (item.purpose ?? "").trim()
+
+	const recommendationBadge = item.recommendation && (
+		<div className="absolute left-2 top-2 z-10 rounded border border-gray-600 bg-gray-700/95 px-2 py-1 text-xs font-semibold text-brand">
+			{item.recommendation}
+		</div>
+	)
+	const art = (
+		<img
+			src={item.image}
+			alt={item.name}
+			loading="lazy"
+			decoding="async"
+			className={`block h-auto w-full object-contain ${tileAspectClass}`}
+		/>
+	)
+
+	if (!purpose) {
+		return (
+			<div className="relative shrink-0 overflow-hidden bg-gray-700">
+				{recommendationBadge}
+				{art}
+			</div>
+		)
+	}
+
+	return (
+		<div
+			role="group"
+			aria-label={item.name}
+			aria-describedby={overlayId}
+			tabIndex={0}
+			onPointerUp={(event) => {
+				if (event.pointerType === "touch") setTapped((open) => !open)
+			}}
+			onBlur={() => setTapped(false)}
+			// ring-inset: the tile clips its overflow, so an outset ring would be
+			// shaved off at the rounded corners.
+			className="group relative shrink-0 overflow-hidden bg-gray-700 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+		>
+			{recommendationBadge}
+			{art}
+			{/* Always in the DOM, faded out rather than unmounted, so a screen
+			    reader gets the note through aria-describedby whether or not anyone
+			    is hovering. White on a black scrim rather than theme tokens: it
+			    sits on arbitrary card art — the same reasoning as
+			    mobileBannerSelectStyles. */}
+			<div
+				id={overlayId}
+				role="tooltip"
+				className={`pointer-events-none absolute inset-0 z-20 flex items-end bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+					tapped ? "opacity-100" : "opacity-0"
+				}`}
+			>
+				<p className="line-clamp-6 break-words">{purpose}</p>
+			</div>
+		</div>
+	)
 }
 
 function getBannerCardStatus(
@@ -288,6 +387,12 @@ type FeaturePanelProps = {
 	status: BannerCardStatus
 	actionIcon: LucideIcon
 	onAdd: () => void
+	/**
+	 * The banner is editorially Recommended: the panel gets the SSR treatment
+	 * (.ssr-panel in App.css) and a "Recommended" chip in its title line. Every
+	 * part of that is zero-layout — see the note on .ssr-panel.
+	 */
+	recommended?: boolean
 }
 
 function FeaturePanel({
@@ -303,6 +408,7 @@ function FeaturePanel({
 	status,
 	actionIcon: ActionIcon,
 	onAdd,
+	recommended = false,
 }: FeaturePanelProps) {
 	// Count drives the layout. A narrow column tops out at two tiles across and
 	// grows downwards; a band is always exactly one line — see BAND_TILE.
@@ -331,20 +437,7 @@ function FeaturePanel({
 			<div
 				className={`flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg bg-gray-700 text-left shadow-sm ${tileWidthClass}`}
 			>
-				<div className="relative shrink-0 overflow-hidden bg-gray-700">
-					{item.recommendation && (
-						<div className="absolute left-2 top-2 z-10 rounded border border-gray-600 bg-gray-700/95 px-2 py-1 text-xs font-semibold text-brand">
-							{item.recommendation}
-						</div>
-					)}
-					<img
-						src={item.image}
-						alt={item.name}
-						loading="lazy"
-						decoding="async"
-						className={`block h-auto w-full object-contain ${tileAspectClass}`}
-					/>
-				</div>
+				<FeaturedTileArt item={item} tileAspectClass={tileAspectClass} />
 				<div className="flex min-h-16 flex-1 items-center justify-center p-2">
 					<div
 						className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${nameClass}`}
@@ -369,11 +462,32 @@ function FeaturePanel({
 		)
 	})
 
+	// A recommended panel SWAPS its ordinary surface for the SSR one rather than
+	// layering over it — see .ssr-panel in App.css. An ended banner keeps the foil
+	// and loses the motion: still a record of a good pull, no longer something
+	// to draw the eye to.
+	const surfaceClass = recommended
+		? `ssr-panel ${status === "expired" ? "ssr-panel--still" : ""}`
+		: "border-gray-600 bg-gray-800 shadow-sm"
+
 	return (
-		<section className="flex min-w-0 flex-col rounded-xl border border-gray-600 bg-gray-800 px-1.5 py-1.5 shadow-sm">
-			<div className="mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold text-brand">
+		<section className={`flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
+			<div
+				className={`mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
+					recommended ? "text-recommended" : "text-brand"
+				}`}
+			>
 				<Icon className="h-4 w-4" />
-				<span>{title}</span>
+				{/* With a chip to make room for, the title holds its width and the chip
+				    gives way instead (its label truncates). A title wrapping onto a
+				    second line would make the row taller, and nothing here may. */}
+				<span className={recommended ? "shrink-0 whitespace-nowrap" : undefined}>{title}</span>
+				{recommended && (
+					<span className="recommended-chip">
+						<Star aria-hidden="true" fill="currentColor" className="h-3 w-3 shrink-0" />
+						<span className="truncate">Recommended</span>
+					</span>
+				)}
 			</div>
 			{hasBanner ? (
 				<div className="flex flex-1 flex-col gap-1.5">
@@ -406,6 +520,10 @@ function FeaturePanel({
 						disabled={status !== "available"}
 						className={`flex shrink-0 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-medium leading-tight transition ${getBannerStatusClasses(status)} ${
 							status === "available" ? "cursor-pointer" : "cursor-not-allowed"
+						} ${
+							// A solid backing on the SSR surface: the button's brand text is
+							// measured against the card's gray-800, never against gold.
+							recommended ? "bg-gray-800" : ""
 						}`}
 					>
 						<ActionIcon className="h-3.5 w-3.5" />
@@ -519,6 +637,10 @@ function BannerSection({
 			status={getBannerCardStatus(!!umaBanner, umaExpired, umaPlanned, umaStaged)}
 			actionIcon={Star}
 			onAdd={() => umaBanner && onAddBanner(umaBanner, "Uma")}
+			// Per banner: the uma and support sides of a window are flagged
+			// independently. `=== true` so a payload from before the field existed
+			// reads as not recommended.
+			recommended={umaBanner?.is_recommended === true}
 		/>
 	)
 
@@ -544,6 +666,7 @@ function BannerSection({
 			)}
 			actionIcon={Ticket}
 			onAdd={() => supportBanner && onAddBanner(supportBanner, "Support")}
+			recommended={supportBanner?.is_recommended === true}
 		/>
 	)
 

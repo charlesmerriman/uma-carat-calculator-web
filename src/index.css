@@ -176,6 +176,34 @@
 	   violet action separate from the normal brand buttons across themes. */
 	--color-step-up: #c4b5fd;
 	--color-step-up-border: #c084fc;
+
+	/* ── Recommended banner accent ─────────────────────────────────────────
+	   The editorial "Recommended" flag: the SSR panel on the Timeline
+	   (.ssr-panel / .recommended-chip in App.css) and the gold star and wash in
+	   the planner's banner dropdown (RecommendedMark, withRecommendedOption).
+
+	   Gold, and deliberately NOT the brand gold. On the gold and gilded themes a
+	   brand-derived accent would vanish into every other brand label; what keeps
+	   this one distinct there is the TREATMENT as much as the hue — a solid gold
+	   chip with dark ink and a filled gold surface, where the brand only ever
+	   appears as coloured text on a dark card.
+
+	   Tokens for the same reason as the colours above: the theme blocks only
+	   override the brand and the gray ramp. Measured across all six dark themes:
+	   the star clears 5.5:1 on the menu surfaces (gray-700, and the focused
+	   gray-600), option text on the washed row stays above 5.9:1, the panel title
+	   is 9.9:1 on --color-ssr-deep and 5.8:1 at the gradient's lightest stop, and
+	   the chip's ink is 7.7:1 on the darkest stop of its fill.
+
+	   -fill and -ink are theme-independent (a foil is a foil); the rest are
+	   redrawn under [data-theme="light"]. */
+	--color-recommended: #f5c542;
+	--color-recommended-fill: #f5c542;
+	--color-recommended-ink: #2a1a00;
+	--color-recommended-tint: rgb(245 197 66 / 14%);
+	--color-ssr-deep: #2b2008;
+	--color-ssr-mid: #5a4312;
+	--color-ssr-glow: rgb(255 214 102 / 55%);
 }
 
 /* ===== THEME OVERRIDES =====
@@ -338,6 +366,19 @@
 	   at 5.32:1 (border 4.51:1) while staying recognisably the same rose. */
 	--color-category-revival: #a3325c;
 	--color-category-revival-border: #c04a78;
+
+	/* Recommended accent, redrawn for light surfaces. The dark default is a
+	   bright mid-gold meant for a near-black card and all but vanishes on these
+	   warm grays; #7a4f00 is the same gold burnt down until it clears 5.9:1 on the
+	   menu surface (gray-700) and 4.7:1 on the focused gray-600. The SSR surface
+	   inverts to pale champagne, where that ink reads 6.6:1 at the lightest stop
+	   and 5.3:1 at the deepest. -fill and -ink inherit: the chip is the same
+	   solid gold with dark ink on every theme. */
+	--color-recommended: #7a4f00;
+	--color-recommended-tint: rgb(122 79 0 / 16%);
+	--color-ssr-deep: #fff5d9;
+	--color-ssr-mid: #f5dc93;
+	--color-ssr-glow: rgb(201 138 18 / 45%);
 }
 
 /* Blue/orange is distinguishable for the common red-green colour vision

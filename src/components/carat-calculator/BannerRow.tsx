@@ -28,6 +28,7 @@ import {
 	getPullCountStatus,
 	getReservedStatus,
 	getStepCountStatus,
+	isRecommendedBanner,
 	isSelectableBanner,
 	plannedBannerKey,
 	plannedBannerRowType,
@@ -50,7 +51,12 @@ import { buildEligibleCardCatalogue } from "../../hooks/useEligibleCardCatalogue
 import type { CalculationConstants } from "../../types/constants"
 import type { BannerResources } from "../../hooks/bannerResources"
 import { PULLS_PER_PITY_COPY } from "../../utils/probabilityCalculations"
-import { compactSelectStyles, mobileBannerSelectStyles } from "../../utils/reactSelectStyles"
+import {
+	compactSelectStyles,
+	mobileBannerSelectStyles,
+	withRecommendedOption,
+} from "../../utils/reactSelectStyles"
+import { RecommendedMark } from "./RecommendedMark"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
 import { BannerTypeBadge } from "./BannerTypeBadge"
 import { CountStepper } from "./CountStepper"
@@ -435,13 +441,22 @@ export const BannerRow = ({
 		? stepUpCopyDistribution(resources.chargeableSteps ?? 0, constants)
 		: undefined
 
+	// Which options get the gold wash. An option already in the calculator keeps
+	// its greying instead: it is no longer a suggestion.
+	const isWashedOption = (option: BannerOption): boolean =>
+		isRecommendedBanner(option.value, bannerType) &&
+		!alreadyPlannedBannerKeys.has(optionKey(option))
+
 	const renderBannerSelect = (styles: import("react-select").StylesConfig<BannerOption, false>) => (
 		<Select<BannerOption>
 			className="w-full"
-			styles={{
-				...styles,
-				menuPortal: (base) => ({ ...base, zIndex: 9999 })
-			}}
+			styles={withRecommendedOption<BannerOption>(
+				{
+					...styles,
+					menuPortal: (base) => ({ ...base, zIndex: 9999 })
+				},
+				isWashedOption
+			)}
 			menuPortalTarget={document.body}
 			menuPosition="fixed"
 			// Phrased as the action, not as a heading. "Target Support Banner" is a
@@ -455,14 +470,19 @@ export const BannerRow = ({
 					: null
 			}
 			onChange={handleBannerSelect}
-			formatOptionLabel={(option) => (
-				<span className={alreadyPlannedBannerKeys.has(optionKey(option)) ? "text-gray-500" : ""}>
-					{option.label}
-					{alreadyPlannedBannerKeys.has(optionKey(option)) && (
-						<span className="ml-1 text-xs">(in calculator)</span>
-					)}
-				</span>
-			)}
+			formatOptionLabel={(option) => {
+				const planned = alreadyPlannedBannerKeys.has(optionKey(option))
+				return (
+					<span className={planned ? "text-gray-500" : ""}>
+						{/* The same mark in the open menu and on the chosen value. */}
+						{isRecommendedBanner(option.value, bannerType) && (
+							<RecommendedMark muted={planned} />
+						)}
+						{option.label}
+						{planned && <span className="ml-1 text-xs">(in calculator)</span>}
+					</span>
+				)
+			}}
 			options={targetBannerData
 				.filter((banner) => isSelectableBanner(banner, currentDate))
 				.map((banner) => ({
