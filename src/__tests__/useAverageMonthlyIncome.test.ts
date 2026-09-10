@@ -72,6 +72,7 @@ const ledgerRow = (overrides: Partial<IncomeLedgerRow>): IncomeLedgerRow => ({
   name: 'Event',
   is_predicted: false,
   throughout_end: null,
+  event_number: null,
   carats: 0,
   carats_throughout: 0,
   uma_tickets: 0,
@@ -113,6 +114,28 @@ describe('useAverageMonthlyIncome', () => {
       incomeLedger: [ledgerRow({ carats: 5000 })],
     })
     expect(withEvent.carats - baseline.carats).toBe(5000 / WINDOW_MONTHS)
+  })
+
+  it('pays League of Heroes #1 at its capped rank, same as the banner rows', () => {
+    // The tiles' side of the LoH #1 cap (Platinum 1). Both hooks read one
+    // engine; this and the matching useBannerResources test pin that the rows
+    // and the tiles cannot disagree about it.
+    const ladder = [
+      { id: 8, name: 'Platinum 3', income_amount: 2800, ...zeroRankRewards },
+      { id: 7, name: 'Platinum 1', income_amount: 1800, ...zeroRankRewards },
+    ] as LeagueOfHeroesRank[]
+    const tiles = (firstEvent: number) =>
+      render({ league_of_heroes_rank: 8 }, {
+        leagueOfHeroesRankData: ladder,
+        incomeLedger: [
+          ledgerRow({ kind: 'league_of_heroes', date: daysFromNow(30), event_number: firstEvent }),
+          ledgerRow({ kind: 'league_of_heroes', date: daysFromNow(60), event_number: firstEvent + 1 }),
+        ],
+      }).carats
+    // The capped pair pays 1000 less: 200 a month over the five-month window.
+    // Exact despite the rounding, because both totals differ from the
+    // baseline by a multiple of five.
+    expect(tiles(2) - tiles(1)).toBe(1000 / WINDOW_MONTHS)
   })
 
   it('ignores income landing beyond the window', () => {

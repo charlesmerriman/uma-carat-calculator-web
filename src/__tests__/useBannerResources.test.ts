@@ -260,6 +260,7 @@ describe('ledger rewards', () => {
     name: 'Event',
     is_predicted: false,
     throughout_end: null,
+    event_number: null,
     carats: 0,
     carats_throughout: 0,
     uma_tickets: 0,
@@ -302,6 +303,28 @@ describe('ledger rewards', () => {
     const withRace = render([umaBanner(1, 1, 30)], {}, rankedIncome)
     expect(withRace[0].freeCarats - baseline[0].freeCarats).toBe(1250)
     expect(withRace[0].umaTickets).toBe(2)
+  })
+
+  it('pays League of Heroes #1 at Platinum 1 for a player ranked above it', () => {
+    // The rows' side of the LoH #1 cap: that event only ran to Platinum 1, so a
+    // Platinum 3 player earns 1800 from it and 2800 from every later one. The
+    // tiles have the matching test in useAverageMonthlyIncome.test.ts.
+    const platinumLadder = [
+      { id: 8, name: 'Platinum 3', income_amount: 2800, ...zeroRankRewards },
+      { id: 7, name: 'Platinum 1', income_amount: 1800, ...zeroRankRewards },
+    ] as LeagueOfHeroesRank[]
+    // The same two dates every time; only WHICH events they are changes.
+    const withLeagues = (firstEvent: number) =>
+      render([umaBanner(1, 1, 30)], { league_of_heroes_rank: 8 }, {
+        ...noIncome,
+        leagueOfHeroesRankData: platinumLadder,
+        incomeLedger: [
+          ledgerRow({ kind: 'league_of_heroes', date: daysFromNow(5, 'T21:59:59Z'), event_number: firstEvent }),
+          ledgerRow({ kind: 'league_of_heroes', date: daysFromNow(10, 'T21:59:59Z'), event_number: firstEvent + 1 }),
+        ],
+      })[0].freeCarats
+    // #2 + #3 pay 2800 + 2800; #1 + #2 pay 1800 + 2800.
+    expect(withLeagues(2) - withLeagues(1)).toBe(1000)
   })
 })
 

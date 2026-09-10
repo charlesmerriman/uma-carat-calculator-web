@@ -38,8 +38,8 @@ import {
 	cumulativeTrainingPassIncome,
 } from "../utils/cumulativeIncome"
 import {
-	countRaceEvents,
 	cumulativeEventRewards,
+	cumulativeRaceRewards,
 	cumulativeThroughoutCarats,
 	parseLedger,
 } from "../utils/incomeLedger"
@@ -205,8 +205,16 @@ export function useBannerResources({
 		 */
 		const incomeTo = (end: Date) => {
 			const events = cumulativeEventRewards(ledger, now, end)
-			const cmCount = countRaceEvents(ledger, "champions_meeting", today, end)
-			const lohCount = countRaceEvents(ledger, "league_of_heroes", today, end)
+			// Valued per event, not count x rank amount: an event can pay below
+			// the user's rank (League of Heroes #1 only ran to Platinum 1).
+			const cmRewards = cumulativeRaceRewards(
+				ledger, "champions_meeting", today, end,
+				championsMeetingRank, championsMeetingRankData
+			)
+			const lohRewards = cumulativeRaceRewards(
+				ledger, "league_of_heroes", today, end,
+				leagueOfHeroesRank, leagueOfHeroesRankData
+			)
 			const pack = userStatsData.daily_carat
 				? cumulativeDailyCaratPack(today, end, constants)
 				: { freeCarats: 0, paidCarats: 0 }
@@ -234,8 +242,8 @@ export function useBannerResources({
 			const freeCarats =
 				events.carats +
 				cumulativeThroughoutCarats(ledger, now, end, constants) +
-				cmCount * (championsMeetingRank?.income_amount ?? 0) +
-				lohCount * (leagueOfHeroesRank?.income_amount ?? 0) +
+				cmRewards.carats +
+				lohRewards.carats +
 				cumulativeDailyCarats(today, end, constants) +
 				cumulativeTeamTrialsCarats(today, end, teamTrialsRank?.income_amount ?? 0) +
 				cumulativeClubRankCarats(today, end, clubRank?.income_amount ?? 0) +
@@ -256,21 +264,21 @@ export function useBannerResources({
 
 			const umaTickets =
 				events.umaTickets +
-				cmCount * (championsMeetingRank?.uma_ticket_amount ?? 0) +
-				lohCount * (leagueOfHeroesRank?.uma_ticket_amount ?? 0) +
+				cmRewards.umaTickets +
+				lohRewards.umaTickets +
 				shop.umaTickets +
 				pass.umaTickets
 			const supportTickets =
 				events.supportTickets +
-				cmCount * (championsMeetingRank?.support_ticket_amount ?? 0) +
-				lohCount * (leagueOfHeroesRank?.support_ticket_amount ?? 0) +
+				cmRewards.supportTickets +
+				lohRewards.supportTickets +
 				shop.supportTickets +
 				pass.supportTickets
 
 			const ssrShards =
 				events.ssrShards +
-				cmCount * (championsMeetingRank?.ssr_shard_amount ?? 0) +
-				lohCount * (leagueOfHeroesRank?.ssr_shard_amount ?? 0) +
+				cmRewards.ssrShards +
+				lohRewards.ssrShards +
 				pass.ssrShards
 
 			return {
