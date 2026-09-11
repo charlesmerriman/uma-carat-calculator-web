@@ -31,16 +31,28 @@
  * alone, because silently killing a process we don't recognise is worse than
  * refusing to start.
  *
+ * The one exception is a `--mode live` server. That is usually a window someone
+ * is watching, signed in to production, so it is never treated as stale: every
+ * script refuses and says so, and DEV_FORCE=1 is the deliberate override. The
+ * rules live in dev-preflight-decision.mjs, which has no side effects so it can
+ * be unit tested; this file only does the I/O.
+ *
  * Usage:  node scripts/dev-preflight.mjs <port> [--stop-only]
+ *         DEV_FORCE=1 npm run dev:stop      # stop even a live server
  */
 
 import { execSync } from "node:child_process"
 import { readFileSync, readlinkSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { decide, isLiveMode, modeOf } from "./dev-preflight-decision.mjs"
 
 const port = Number(process.argv[2])
 const stopOnly = process.argv.includes("--stop-only")
+// An env var rather than a --force flag: npm runs this file as the `predev` /
+// `predev:live` hook, and a hook never receives the arguments given to the main
+// script -- `npm run dev -- --force` would reach Vite, not us.
+const force = process.env.DEV_FORCE === "1"
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 
 if (!Number.isInteger(port) || port <= 0) {
@@ -72,7 +84,7 @@ function listenerPids() {
 	return [...pids]
 }
 
-/** Reads /proc to work out what a PID actually is. Null if it's already gone. */
+/** Reads /proc to work out what a PID actually is. Null if it's gone or unreadable. */
 function inspect(pid) {
 	try {
 		return {
@@ -84,27 +96,6 @@ function inspect(pid) {
 	} catch {
 		return null
 	}
-}
-
-/**
- * Is this one of OUR dev servers?
- *
- * Deliberately strict: it must be a Vite launched from this checkout. We test
- * the resolved binary path as well as the cwd, because npm scripts inherit the
- * package directory as cwd but a process started elsewhere might not.
- */
-function isOwnViteServer(proc) {
-	const joined = proc.argv.join(" ")
-	const looksLikeVite = /(^|[/\s])vite(\s|$|\.js|\.mjs)/.test(joined)
-	const belongsToUs = proc.cwd === projectRoot || joined.includes(projectRoot)
-	return looksLikeVite && belongsToUs
-}
-
-/** "dev:live" or "dev" -- whichever npm script this process came from. */
-function modeOf(proc) {
-	const argv = proc.argv
-	const i = argv.indexOf("--mode")
-	return i !== -1 && argv[i + 1] === "live" ? "npm run dev:live" : "npm run dev"
 }
 
 /** Busy-wait (without async plumbing) until the port frees up or we time out. */
@@ -122,30 +113,43 @@ function waitForPortRelease(timeoutMs) {
 	return listenerPids().length === 0
 }
 
-const pids = listenerPids()
+// A PID we can't read (it exited mid-scan, or belongs to another user) stays in the
+// list as an unknown process, so it counts as foreign: refuse rather than guess.
+const holders = listenerPids().map((pid) => inspect(pid) ?? { pid, cwd: null, argv: [] })
+const decision = decide({ holders, projectRoot, stopOnly, force })
 
-if (pids.length === 0) {
-	if (stopOnly) console.log(`[dev] nothing is listening on port ${port}.`)
+if (decision.action === "nothing") {
+	console.log(`[dev] nothing is listening on port ${port}.`)
 	process.exit(0)
 }
 
-const holders = pids.map(inspect).filter(Boolean)
-const ours = holders.filter(isOwnViteServer)
-const foreign = holders.filter((p) => !isOwnViteServer(p))
+if (decision.action === "start") process.exit(0)
 
-// Something we don't recognise owns the port. Refuse rather than guess.
-if (ours.length === 0) {
+if (decision.action === "refuse" && decision.reason === "foreign") {
 	console.error(`\n[dev] Port ${port} is in use by a process this script does not recognise:\n`)
-	for (const p of foreign) {
-		console.error(`        pid ${p.pid}  ${p.argv.slice(0, 4).join(" ")}`)
-		console.error(`        cwd ${p.cwd}\n`)
+	for (const p of decision.blockers) {
+		console.error(`        pid ${p.pid}  ${p.argv.slice(0, 4).join(" ") || "(unreadable)"}`)
+		console.error(`        cwd ${p.cwd ?? "(unreadable)"}\n`)
 	}
 	console.error(`      Not killing it. Free the port yourself, then retry.\n`)
 	process.exit(1)
 }
 
-for (const p of ours) {
-	console.log(`[dev] Reclaiming port ${port} from a stale dev server (pid ${p.pid}, ${modeOf(p)}).`)
+if (decision.action === "refuse" && decision.reason === "live") {
+	const pids = decision.blockers.map((p) => p.pid).join(", ")
+	console.error(`\n[dev] Port ${port} is held by a LIVE dev server (pid ${pids}, npm run dev:live).`)
+	console.error(`      Leaving it alone: it is usually a window someone is watching, signed in to production.`)
+	console.error(`      Use that server, stop it with Ctrl+C in its own terminal, or override with:`)
+	console.error(`        DEV_FORCE=1 npm run dev:stop\n`)
+	process.exit(1)
+}
+
+// decision.action === "kill"
+for (const p of decision.victims) {
+	// Only a DEV_FORCE=1 run can get here with a live server, so say so plainly
+	// rather than calling someone's live window "stale".
+	const what = isLiveMode(p) ? "the LIVE dev server (DEV_FORCE=1)" : "a stale dev server"
+	console.log(`[dev] Reclaiming port ${port} from ${what} (pid ${p.pid}, ${modeOf(p)}).`)
 	try {
 		// SIGTERM first so Vite can close its watchers and sockets cleanly.
 		process.kill(p.pid, "SIGTERM")
@@ -155,7 +159,7 @@ for (const p of ours) {
 }
 
 if (!waitForPortRelease(3000)) {
-	for (const p of ours) {
+	for (const p of decision.victims) {
 		try {
 			process.kill(p.pid, "SIGKILL")
 		} catch {

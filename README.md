@@ -150,6 +150,9 @@ that lets `dev:live` sign in. Vite's default is to slide to 5174 when 5173 is bu
 looks fine until a request fails preflight or a sign-in returns to whatever else holds the
 port. So both scripts run with `--strictPort`, and `scripts/dev-preflight.mjs` first reclaims
 the port from a stale Vite belonging to this checkout. `npm run dev:stop` frees it by hand.
+A `dev:live` server is the exception: it's usually a window someone is watching, signed in to
+production, so all three scripts refuse to touch it and say why. `DEV_FORCE=1 npm run dev:stop`
+is the deliberate override.
 
 ## Commands
 
