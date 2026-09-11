@@ -1,138 +1,182 @@
-# Uma Musume Carat Calculator — Frontend
+# Uma Carat Calculator (Web)
 
-A React SPA where players plan which Uma Musume Pretty Derby gacha banners to pull on and see a per-banner breakdown of carats and tickets they can expect to have saved by that banner's start date.
+**Live at [umacaratcalculator.com](https://umacaratcalculator.com).** Tens of thousands of
+visitors since the September 2026 launch, and dozens of Patreon supporters.
 
-## Tech Stack
+[![CI](https://github.com/charlesmerriman/uma-carat-calculator-web/actions/workflows/ci.yml/badge.svg)](https://github.com/charlesmerriman/uma-carat-calculator-web/actions/workflows/ci.yml)
 
-| Tool | Purpose |
-|---|---|
-| React 19 + TypeScript | UI and type safety |
-| Vite 7 | Dev server and production bundler |
-| Tailwind CSS 4 | Utility-first styling |
-| Framer Motion | Animations and transitions |
-| Sonner | Toast notifications (save feedback, auth errors) |
-| react-router-dom v7 | Client-side routing |
-| react-hook-form | Form state and validation |
-| react-select | Searchable dropdown components |
-| date-fns | Date arithmetic for the resource projection engine |
+The React frontend of a gacha resource planner for Uma Musume Pretty Derby. The API it talks
+to is [uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api).
 
-### Dev tooling
-
-| Tool | Purpose |
-|---|---|
-| Vitest | Unit test runner (shares Vite config, runs instantly) |
-| React Testing Library | Hook and component testing utilities |
-| @vitest/coverage-v8 | V8-based coverage reports |
+Players enter what they hold and which income applies to their account. The calculator
+projects carats and tickets forward and shows what they will have on the day each banner they
+plan to pull on ends, before they spend rather than after. It also plans step-up banners,
+tracks which cards a selector ticket can still reach, accounts for campaign purchases, and
+lays the upcoming banner and event schedule out on a timeline.
 
 ## Architecture
 
-### State management
+One site, two repositories, both deployed by DigitalOcean App Platform on every push to
+`master`:
 
-All server state lives in a single `CalculatorProvider` context (`services/CalculatorProvider.tsx`), fetched once on mount via a single aggregated API call. Components consume it through the `useCalculatorData()` hook and stay free of fetch logic.
+- **Web** (this repo): a React 19 + TypeScript single-page app, built by Vite and served as a static site.
+- **API** ([uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api)): Django 6 and Django REST Framework, served from the same domain under `/api`.
+- **Data**: managed PostgreSQL, with banner and card images on DigitalOcean Spaces behind its CDN.
+- **Accounts**: sign-in through Google, Discord or Patreon OAuth, exchanged for a DRF token. Player accounts store no email, name or password.
+- **Maths**: every projection runs in the browser. The API assembles and dates the reference data, including a flat income ledger, but never computes a forecast.
+- **Content**: banners, events and rewards are maintained by hand in the Django admin, which doubles as the CMS.
 
-### Resource projection (`useBannerResources`)
+## About this project
 
-The core business logic hook. For each planned banner it walks forward in time from today to the banner's end date, accumulating:
+- In continuous development since December 2025, live in open beta since September 2026, and actively maintained.
+- The resource model follows [Henry's resource spreadsheet](https://docs.google.com/spreadsheets/d/100t3hnYl5Qm2UR8RtPlH-8Xd9KQbBlxEdXUOIR4d394/), the community reference built by Daptrius that this site grew out of. The application is my own work: the projection engine, authentication, admin and deployment.
 
-- Daily base income (75 carats/day + weekday bonuses)
-- Weekly rank payouts (Team Trials, every Monday)
-- Monthly rank payouts (Club rank)
-- Champions Meeting event payouts
-- `GameEvent` reward fields filtered to the relevant date range, plus a prorated share of each event's `carats_throughout`
-- Free pulls granted by the banner itself
+## Tech stack
 
-The result is a per-banner forecast of carats and tickets available at the banner's end date.
+| Tool | Used for |
+|---|---|
+| React 19 + TypeScript | UI and type safety |
+| Vite 7 | Dev server and production bundle |
+| Tailwind CSS 4 | Styling |
+| Framer Motion | Animation |
+| react-router-dom 7 | Routing |
+| react-hook-form, react-select | Forms and searchable pickers |
+| Sonner | Toasts |
+| date-fns | Date helpers |
+| lucide-react | Icons |
+| Vitest + React Testing Library | Unit, hook and component tests (jsdom) |
+| ESLint + typescript-eslint | Linting |
 
-### Guest mode
+## How it works
 
-The whole app works without an account. Anonymous visitors get the full reference payload from the API (with `user_stats_data: null`), are seeded with local default stats (`DEFAULT_GUEST_STATS` in `services/guestMigration.ts`), and plan entirely in memory — a refresh discards the plan. When a guest clicks **Sign in to save**, their plan is snapshotted into sessionStorage (key `guestPlanMigration.v1`), and after login/register the provider migrates it to the account: existing account banners are preserved, guest banners are appended, and guest stats are only sent if they were actually edited from the defaults.
+### One provider, one request
 
-### Auto-save
+All server state lives in `CalculatorProvider` (`services/CalculatorProvider.tsx`). It fills
+itself with a single `GET /calculator-data` on mount, and components read it through
+`useCalculatorData()` with no fetch logic of their own. The auth token has exactly one owner,
+`services/authToken.ts`, whose setters notify `AuthProvider`, so the navbar never offers
+"Logout" to someone the server no longer recognises.
 
-For logged-in users, changes trigger a 5-second debounced `PATCH` via the `useAutoSave` hook. A save-indicator in the UI reflects pending state, and an `onbeforeunload` guard warns if a save is in flight when the user tries to leave. Guests never arm the timer — their plan is in-memory only.
+### The projection engine
 
-### Type system
+The engine is entered through `hooks/useBannerResources.ts` (the per-banner rows) and
+`hooks/useAverageMonthlyIncome.ts` (the income tiles above them). Both read the same engine,
+so two numbers a player sees side by side cannot disagree.
 
-Planned banners use a **discriminated union**:
-- `SavedPlannedBanner` — has `id` (synced to the database)
-- `LocalPlannedBanner` — has `tempId` (client-only, before first save)
+The API serves every reward as one flat, dated income ledger. For each planned banner the
+engine asks that ledger for the total income from today up to the banner's end date, using a
+closed form per income source, then subtracts what the banners resolving before it have
+already spent. Income is a pure function of a banner's end date; the order of the plan only
+decides who spends first.
 
-`isSavedBanner()` / `isLocalBanner()` type guards enforce the distinction at compile time. All types are barrel-exported from `src/types/index.ts`.
+Date arithmetic runs in UTC through `utils/utcDates.ts`, which reproduces the source
+spreadsheet's `DATEDIF`, `EOMONTH`, `WEEKDAY` and `CEILING` so the two can be checked against
+each other. Step-up banners, selector tickets and campaign purchases each add their own rules;
+[docs/resource-projection-logic.md](docs/resource-projection-logic.md) covers all of it.
 
-## Views
+### Guest mode and saving
 
-| Route | Component | Description |
-|---|---|---|
-| `/` | `CaratCalculator` | Main planner — current resources, pull plan, per-banner forecasts |
-| `/timeline` | `Timeline` | Banner and Champions Meeting calendar |
+No page needs an account. Guests get the full public payload, start from default stats and
+plan in memory. **Sign in to save** snapshots the guest plan into `sessionStorage`, and after
+the OAuth round trip the provider merges it into the account: the account's existing banners
+stay, the guest's are appended, and the guest's stats are sent only if they were edited.
+Signed-in changes save through a debounced `PATCH /calculator-data`, with an unload guard
+while a save is in flight.
 
-All routes are public — the calculator works for guests, and an account is only needed to save a plan (see Guest mode above). The auth token is stored in `localStorage` and attached to requests only when present.
+### Types
 
-## Local Setup
+Planned banners are a discriminated union twice over: saved or local (`isSavedBanner()` /
+`isLocalBanner()`), and uma, support or step-up (`plannedBannerTarget()`). Timeline events
+narrow on the backend's `event_type` tag with `isRaceEvent()` / `isBannerTimeline()`. Nothing
+inspects an object's shape to decide what it is.
+
+## Routes
+
+| Route | Page |
+|---|---|
+| `/` | Home |
+| `/app` | The planner: current resources, pull plan, per-banner forecast |
+| `/app/timeline` | Banner, event and campaign calendar |
+| `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
+| `/faq` | Every income source, explained |
+| `/changelog` | Patch notes |
+| `/feedback` | Bug reports and suggestions |
+| `/about` | Who makes the site and where its numbers come from |
+| `/privacy-policy`, `/terms` | Legal |
+| `/login` | Sign in with Google, Discord or Patreon (`noindex`) |
+| `/auth/callback` | OAuth return (`noindex`) |
+
+Any other path renders `NotFound`, routed at `*` in both `App.tsx` and the nested `/app/*`
+routes. A static host can't answer with a real 404, so the page states it with `noindex`
+instead.
+
+## Local setup
+
+Requires Node 20 or newer.
 
 ```bash
-cd frontend
-
-# Install dependencies
 npm install
-
-# Create a .env file
-echo "VITE_API_URL=http://localhost:8000" > .env
-
-# Start the dev server (calls the local Django backend)
 npm run dev
 ```
 
-## Choosing a backend
+`npm run dev` serves http://localhost:5173 against a local API on :8000, set up from the
+[API repo](https://github.com/charlesmerriman/uma-carat-calculator-api#local-setup). The
+committed `.env` holds only that public default; personal overrides go in `.env.local`, which
+git ignores.
 
-Two dev commands, differing only in which API they read:
-
-```bash
-npm run dev         # local Django on :8000  — full read/write, sign-in works
-npm run dev:live    # live production API    — real content, read-only
-```
-
-`dev:live` is `vite --mode live`, which loads [.env.live](.env.live) and
-overrides `VITE_API_URL` for that run only. Flipping is just stopping one and
-starting the other — nothing to edit, nothing to remember to put back. A
-**LIVE DATA** badge appears bottom-left so the two are never confused.
-
-Use `dev:live` for frontend work that needs realistic content: the local
-database has no seeding path any more (see
-[../backend/README.md](../backend/README.md#there-is-no-seeding-step--a-fresh-local-database-starts-empty)),
-and production content is edited through the admin panel, so the live API is the
-only accurate source for it.
-
-**It cannot write to production.** Saving requires an auth token, and you cannot
-obtain one here — the backend derives its OAuth redirect from its own
-`FRONTEND_URL`, so a sign-in round-trip lands on the deployed site instead of
-localhost. Everything the calculator does in guest mode works; anything that
-would persist is simply unavailable. Use `npm run dev` when you need to test
-sign-in or saving.
-
-### Why `dev:live` pins the port
-
-The live backend accepts these requests because Django's `CORS_ALLOWED_ORIGINS`
-defaults to `http://localhost:5173` and production does not override it. That
-origin is matched **exactly**, port included — so if Vite were allowed to fall
-back to `5174` because `5173` was busy, every request would die in preflight
-with a CORS error that looks like the API being down.
-
-Hence `--port 5173 --strictPort`: it fails immediately with "Port 5173 is already
-in use" instead of starting on a port the server will reject. If you hit that,
-stop the other dev server rather than changing the port here.
-
-Two related notes: if a `CORS_ORIGIN_WHITELIST` is ever set on the DigitalOcean
-component, add the localhost origin back or `dev:live` stops working. And plain
-`npm run dev` has no such constraint — a local backend you control can be told
-about any origin.
-
-Other useful commands:
+### Choosing a backend
 
 ```bash
-npx tsc --noEmit    # Type check
-npm run lint        # ESLint
-npm run build       # Production build → dist/
-npm test            # Vitest in watch mode
-npm run coverage    # Single-pass test run with V8 coverage report
+npm run dev         # local Django on :8000
+npm run dev:live    # the production API: real content and a real sign-in
 ```
+
+`dev:live` is `vite --mode live`, which loads [.env.live](.env.live) and points
+`VITE_API_URL` at the live API for that run only. A "LIVE DATA · writes are real" badge sits in
+the bottom-left corner so the two modes are never confused.
+
+Use it for frontend work that needs real content, since a fresh local database starts empty
+([why](https://github.com/charlesmerriman/uma-carat-calculator-api#a-fresh-database-starts-empty)).
+Sign-in works and is a real production sign-in, because the API allowlists
+`http://localhost:5173/auth/callback` as an OAuth redirect. Signed in, saving a plan writes to
+the live database under your own account.
+
+### Why both modes pin port 5173
+
+`http://localhost:5173` is an exact string in more than one place: the production CORS
+allowlist, the OAuth redirect URI registered with the providers, and the redirect allowlist
+that lets `dev:live` sign in. Vite's default is to slide to 5174 when 5173 is busy, which
+looks fine until a request fails preflight or a sign-in returns to whatever else holds the
+port. So both scripts run with `--strictPort`, and `scripts/dev-preflight.mjs` first reclaims
+the port from a stale Vite belonging to this checkout. `npm run dev:stop` frees it by hand.
+
+## Commands
+
+```bash
+npx tsc --noEmit -p tsconfig.app.json    # type-check the app
+npx tsc --noEmit -p tsconfig.node.json   # type-check vite.config.ts
+npm run lint
+npx vitest run                           # tests (npm test starts watch mode)
+npm run coverage
+npm run build                            # production bundle in dist/
+```
+
+The `-p` matters: `tsconfig.json` is solution-style (`files: []`), so a bare
+`npx tsc --noEmit` checks nothing. `npm run build` doesn't type-check either. CI runs both
+configs, the linter and the tests on every push.
+
+## Documentation
+
+Deeper reference lives in [`docs/`](docs/):
+
+- [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the ledger engine and pull strategy to step-ups, selector tickets and campaign purchases
+- [carat-income-explained.md](docs/carat-income-explained.md): every income source in plain language
+- [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, the auth token and the core types
+- [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline, and the planner layout
+
+The data model, endpoints, auth design and income schedule are documented in the
+[API repo's docs](https://github.com/charlesmerriman/uma-carat-calculator-api/tree/HEAD/docs).
+
+## License
+
+[MIT](LICENSE)
