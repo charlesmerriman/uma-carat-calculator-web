@@ -1,8 +1,11 @@
 {
-  "name": "calculatorcapstoneclient",
+  "name": "uma-carat-calculator-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.2.1",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "predev": "node scripts/dev-preflight.mjs 5173",
     "dev": "vite --port 5173 --strictPort",

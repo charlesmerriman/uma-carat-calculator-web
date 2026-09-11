@@ -497,6 +497,7 @@ describe('bannerKey / plannedBannerKey', () => {
   const timeline = {
     id: 1,
     name: 'Shared Window',
+    banner_category: 'standard' as const,
     start_date: '2099-01-01T22:00:00Z',
     end_date: '2099-02-01T21:59:59Z',
     is_predicted: false,
@@ -504,6 +505,8 @@ describe('bannerKey / plannedBannerKey', () => {
     jp_end_date: null,
     global_start_date: '2099-01-01T22:00:00Z',
     global_end_date: '2099-02-01T21:59:59Z',
+    schedule_offset_days: 0,
+    applied_offset_days: 0,
     image: '',
   }
 
@@ -514,6 +517,7 @@ describe('bannerKey / plannedBannerKey', () => {
     admin_comments: '',
     umas: [],
     free_pulls: 0,
+    is_recommended: false,
   }
 
   const supportBanner: BannerSupport = {
@@ -523,6 +527,7 @@ describe('bannerKey / plannedBannerKey', () => {
     admin_comments: '',
     support_cards: [],
     free_pulls: 0,
+    is_recommended: false,
   }
 
   it('never collides an uma banner with a support banner of the same id', () => {
@@ -725,13 +730,19 @@ describe('getReservedStatus', () => {
 
 describe('nextTempId', () => {
   it('clears every id in play, staged and on the sheet alike', () => {
-    const sheet = [{ id: 7, number_of_pulls: 0, reserved_copies: 0 }]
+    const sheet = [{ id: 7, user: 1, number_of_pulls: 0, reserved_copies: 0 }]
     const staged = [{ tempId: 12, number_of_pulls: 0, reserved_copies: 0 }]
     expect(nextTempId(sheet, staged)).toBe(13)
   })
 
   it('prefers tempId over a stale server id on the same row', () => {
-    const sheet = [{ id: 3, tempId: 40, number_of_pulls: 0, reserved_copies: 0 }]
+    const sheet: UserPlannedBanner[] = [
+      // The union rules out a row carrying both ids (a saved row's tempId is
+      // `undefined`), so this fixture has to step outside the type. It covers
+      // the runtime `tempId ?? id` fallback for when such a row turns up anyway.
+      // @ts-expect-error -- deliberately impossible shape, see above
+      { id: 3, tempId: 40, number_of_pulls: 0, reserved_copies: 0 },
+    ]
     expect(nextTempId(sheet)).toBe(41)
   })
 
@@ -744,7 +755,7 @@ describe('nextTempId', () => {
   // handler selects its row by tempId.
   it('keeps issuing distinct ids as rows accumulate', () => {
     let staged: UserPlannedBanner[] = []
-    const sheet: UserPlannedBanner[] = [{ id: 2, number_of_pulls: 0, reserved_copies: 0 }]
+    const sheet: UserPlannedBanner[] = [{ id: 2, user: 1, number_of_pulls: 0, reserved_copies: 0 }]
 
     for (let i = 0; i < 3; i++) {
       staged = [...staged, { tempId: nextTempId(sheet, staged), number_of_pulls: 0, reserved_copies: 0 }]
