@@ -19,12 +19,11 @@ jobs:
         run: npm ci
 
       # tsconfig.json is solution-style (`files: []` plus references), so a bare
-      # `tsc --noEmit` type-checks nothing and always passes. Check each
-      # referenced project explicitly: the app, then vite.config.ts.
+      # `tsc --noEmit` type-checks nothing and always passes. `npm run typecheck`
+      # checks each referenced project explicitly: the app, then vite.config.ts.
+      # Using the script keeps CI and a local run identical.
       - name: Type check
-        run: |
-          npx tsc --noEmit -p tsconfig.app.json
-          npx tsc --noEmit -p tsconfig.node.json
+        run: npm run typecheck
 
       - name: Lint
         run: npm run lint

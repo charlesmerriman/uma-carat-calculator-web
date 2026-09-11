@@ -14,6 +14,8 @@
     "dev:stop": "node scripts/dev-preflight.mjs 5173 --stop-only",
     "build": "vite build",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json --incremental false && tsc --noEmit -p tsconfig.node.json --incremental false",
+    "check": "npm run typecheck && npm run lint && vitest run",
     "preview": "vite preview",
     "test": "vitest",
     "coverage": "vitest run --coverage"
