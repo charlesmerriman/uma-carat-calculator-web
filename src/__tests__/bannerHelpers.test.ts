@@ -517,6 +517,7 @@ describe('bannerKey / plannedBannerKey', () => {
     admin_comments: '',
     umas: [],
     free_pulls: 0,
+    is_recommended: false,
   }
 
   const supportBanner: BannerSupport = {
@@ -526,6 +527,7 @@ describe('bannerKey / plannedBannerKey', () => {
     admin_comments: '',
     support_cards: [],
     free_pulls: 0,
+    is_recommended: false,
   }
 
   it('never collides an uma banner with a support banner of the same id', () => {
