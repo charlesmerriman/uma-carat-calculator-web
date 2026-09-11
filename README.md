@@ -112,7 +112,8 @@ instead.
 
 ## Local setup
 
-Requires Node 20 or newer.
+Requires Node 24, the version `package.json` pins under `engines`. The production build and
+CI both read that field.
 
 ```bash
 npm install
