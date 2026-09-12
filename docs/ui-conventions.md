@@ -1129,37 +1129,66 @@ at module scope.
 a *transition* into view, then stays silent) and is what makes the infinite-scroll stall
 regression detectable.
 
-### Every page route sets its own `<head>` tags
+### Every public route is prerendered, and sets its own `<head>` tags
 
-This is a single-page app, so `index.html` is served for every URL and React only
-replaces `#root`. Nothing updates `<head>` unless a component does it, and before
-`useDocumentMeta` all ten routes shared one title and one description.
+`npm run build` does three things: the client build (`dist/`), a server build of
+`src/entry-server.ts` (`dist-ssr/`, deleted afterwards), and `scripts/prerender.mjs`,
+which renders every route in `src/prerenderRoutes.ts` to `dist/<route>/index.html` **and**
+`dist/<route>.html` (static hosts disagree about which one a bare `/about` means; both
+guarantees the prerendered document is what gets served — see `outputPathsFor`) with
+that route's own `<title>`, description, canonical, `og:` and `twitter:` tags baked in.
+The untouched template is kept as `dist/spa.html`, the App Platform catch-all for any
+path without a document. A crawler or a link unfurler fetching `/faq` therefore gets the
+FAQ's words and tags without running JavaScript — which is what the AdSense "low value
+content" rejection of 2026-09-12 was about: the words existed, but every URL served the
+same empty `#root`.
 
-**A new page route must call `useDocumentMeta(title, description)` as its first
-statement**, or it silently inherits whatever the previously visited route set.
-Pass `null` as the title only for the homepage, which should read as the site name
-rather than "Home | …". The third argument, `noindex`, is for pages that are
-plumbing rather than content — `/login` and `/auth/callback` — and those two paths
-are also `Disallow`ed in `public/robots.txt`; change one and change the other.
-`NotFound` passes it too, and there it is load-bearing rather than tidiness: a
-static bundle answers every unmatched path with `index.html` and a **200**, so
-`noindex` is the only way the page can tell a crawler what its status code cannot.
+**Adding a public route** means four things, and the build or a test fails on each one
+you forget: the `<Route>` in `App.tsx`; `useDocumentMeta(title, description)` as the
+page's first statement (the prerender throws "No page reported document meta"); the
+path in `PRERENDER_ROUTES`; and the URL in `public/sitemap.xml` (`sitemapRoutes.test.ts`
+holds the two lists equal). Pass `null` as the title only for the homepage, which reads
+as the site name rather than "Home | …".
+
+**Render-time code must not touch the browser.** Everything outside the `/app` loading
+gate renders in Node at build time: no `window`, `document`, `localStorage` or
+`matchMedia` in a `useState` initialiser, a `useMemo`, or the render body. Read them in
+an effect, or through `useSyncExternalStore` with a server snapshot, which is how
+`ThemeProvider` (`services/themeStore.ts`) and `AuthProvider` do it. Inside the gate
+(`ApplicationViews`) the planner components never render on the server, so their
+`document.body` portals are fine. `entryServer.test.tsx` runs the render in the node
+environment and is what catches a regression; `hydration.test.tsx` then hydrates that
+markup with the client tree and fails on any recoverable hydration error.
+
+`useDocumentMeta` serves both sides: during a server render it reports its values
+through `HeadMetaContext` (which nothing provides in the browser), and in the browser
+its effect writes the same values onto the live `<head>`, which is what keeps them right
+across client-side navigation. `main.tsx` hydrates only when the document's
+`data-prerendered` marker matches the current path (`hydrationTarget.ts`); the empty
+shell, or a prerendered document served for a path it was not built for, is rendered
+from scratch.
+
+The third argument, `noindex`, is for pages that are plumbing rather than content —
+`/login`, `/auth/callback` and `NotFound`. Those are not prerendered, and the tag is
+the ONLY thing keeping them out of the index: `public/robots.txt` deliberately disallows
+nothing, because a Disallow stops the crawl before the crawler can read the tag (that
+is what earned the "Indexed, though blocked by robots.txt" warning on 2026-09-08). A
+static host answers every unmatched path with the catch-all and a **200**, so for
+`NotFound` the tag is load-bearing rather than tidiness.
 
 The canonical URL is built from `SITE_ORIGIN`, a **constant** in the hook, not from
 `window.location.origin`. App Platform keeps serving the same bundle on its generated
 `*.ondigitalocean.app` hostname and that cannot be switched off, so a runtime origin
 made every page served there declare *itself* canonical — two complete, equally
 authoritative copies of the site competing. The constant points the DigitalOcean host
-at the real domain, which is what consolidates them. It is therefore a **third**
-absolute URL that does not survive a domain move; see the note below.
+at the real domain, which is what consolidates them.
 
-**The hook cannot fix link previews.** Discord, Slack, Reddit and Twitter fetch the
-raw HTML and never run JavaScript, so they only ever see the static `og:` tags in
-`index.html`. Those are a site-wide default; per-route previews would need
-prerendering. `index.html` still has no `og:image` — it wants a 1200x630 PNG,
-the same branding gap as the stock Vite favicon.
+The theme is applied before first paint by an inline script in `index.html`, not by
+React: a prerendered page paints before the bundle arrives, and without the script a
+saved theme would flash the default palette on every load. The script duplicates the
+ids and storage keys from `themeStore.ts` by necessity; `themeScript.test.ts` fails when
+they disagree.
 
-`public/robots.txt` and `public/sitemap.xml` are real static files that Vite copies
-to `dist/`, where they match before the DigitalOcean catch-all. They carry absolute
-URLs that **do not survive a domain move** — update them together with `SITE_ORIGIN`
-in `useDocumentMeta` and the `og:`/`twitter:` URLs in `index.html`.
+`public/robots.txt`, `public/sitemap.xml`, `SITE_ORIGIN` and the `og:`/`twitter:` URLs
+in `index.html` all carry the absolute domain and **do not survive a domain move** —
+update them together.

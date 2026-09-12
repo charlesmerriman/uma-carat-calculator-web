@@ -19,13 +19,17 @@ import { Link } from "react-router-dom"
  * no-scroll design. See the plan/CLAUDE.md for the rationale.
  */
 export const Footer = () => {
-	// Computed at render so the copyright year never goes stale.
+	// Computed at render so the copyright year never goes stale. On a prerendered
+	// page it is the year of the BUILD, and suppressHydrationWarning below keeps
+	// React from treating a January visit to a December build as a broken page:
+	// the server text is kept until the next deploy or client-side navigation,
+	// which is exactly right for a copyright line.
 	const year = new Date().getFullYear()
 
 	return (
 		<footer className="shrink-0 border-t border-gray-700 bg-gray-900 px-4 py-2 text-center text-xs text-gray-500">
 			<div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-				<span>© {year} Uma Musume Carat Calculator</span>
+				<span suppressHydrationWarning>© {year} Uma Musume Carat Calculator</span>
 				<span aria-hidden="true">·</span>
 				<Link to="/about" className="text-gray-400 transition hover:text-brand">
 					About

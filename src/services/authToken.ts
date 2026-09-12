@@ -34,8 +34,11 @@ function notify(): void {
 	for (const listener of listeners) listener()
 }
 
-/** The raw token, or null for a guest. */
+/** The raw token, or null for a guest. Also null where there is no storage at
+ *  all — a build-time render — so a stray call there reads as a guest rather
+ *  than a crash. */
 export function getAuthToken(): string | null {
+	if (typeof localStorage === "undefined") return null
 	return localStorage.getItem(STORAGE_KEY)
 }
 

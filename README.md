@@ -19,7 +19,7 @@ lays the upcoming banner and event schedule out on a timeline.
 One site, two repositories, both deployed by DigitalOcean App Platform on every push to
 `master`:
 
-- **Web** (this repo): a React 19 + TypeScript single-page app, built by Vite and served as a static site.
+- **Web** (this repo): a React 19 + TypeScript app, built by Vite and served as a static site. Every public route is prerendered to its own HTML document at build time and hydrated in the browser, so crawlers and link previews see real content.
 - **API** ([uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api)): Django 6 and Django REST Framework, served from the same domain under `/api`.
 - **Data**: managed PostgreSQL, with banner and card images on DigitalOcean Spaces behind its CDN.
 - **Accounts**: sign-in through Google, Discord or Patreon OAuth, exchanged for a DRF token. Player accounts store no email, name or password.
@@ -107,9 +107,10 @@ inspects an object's shape to decide what it is.
 | `/login` | Sign in with Google, Discord or Patreon (`noindex`) |
 | `/auth/callback` | OAuth return (`noindex`) |
 
-Any other path renders `NotFound`, routed at `*` in both `App.tsx` and the nested `/app/*`
-routes. A static host can't answer with a real 404, so the page states it with `noindex`
-instead.
+Every route above except the two `noindex` ones is prerendered at build time
+(`src/prerenderRoutes.ts`). Any other path is served the empty shell `dist/spa.html` and
+renders `NotFound`, routed at `*` in both `App.tsx` and the nested `/app/*` routes. A static
+host can't answer with a real 404, so the page states it with `noindex` instead.
 
 ## Local setup
 
@@ -163,7 +164,8 @@ npx tsc --noEmit -p tsconfig.node.json   # type-check vite.config.ts
 npm run lint
 npx vitest run                           # tests (npm test starts watch mode)
 npm run coverage
-npm run build                            # production bundle in dist/
+npm run build                            # client build + server build + prerender, all into dist/
+npm run preview                          # serve dist/ on :4173 — curl /about to see a prerendered document
 ```
 
 The `-p` matters: `tsconfig.json` is solution-style (`files: []`), so a bare

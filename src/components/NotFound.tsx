@@ -15,8 +15,9 @@ import { useDocumentMeta } from "../hooks/useDocumentMeta"
  *
  * This page cannot return a real 404 STATUS, and nothing client-side can. The
  * site is a static bundle on DigitalOcean App Platform, whose catch-all hands
- * index.html to every unmatched path with a 200 before React exists at all
- * (visible as `x-do-static-catchall-document: index.html` on any response).
+ * the empty shell (dist/spa.html) to every unmatched path with a 200 before
+ * React exists at all (visible as `x-do-static-catchall-document` on the
+ * response). Prerendered routes never reach this page; see prerenderRoutes.ts.
  * The `noindex` argument below is therefore the load-bearing part: it states
  * to the crawler what the status code cannot.
  */
