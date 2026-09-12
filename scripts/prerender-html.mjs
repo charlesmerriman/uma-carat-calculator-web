@@ -119,13 +119,21 @@ export function rewriteHeadTags(template, meta) {
 /**
  * Where a route's document goes inside dist/, for a given hosting layout.
  *
- *   dir   /about → about/index.html   (the layout App Platform is expected to resolve)
+ *   dir   /about → about/index.html
  *   flat  /about → about.html
- *   both  both files — used by the deploy probe to answer which layout the host serves
+ *   both  both files — THE DEFAULT, and deliberately so
+ *
+ * Static hosts disagree about what a bare "/about" means. Some serve the directory
+ * index, some try "about.html", and Vite's own preview server only tries the latter.
+ * A throwaway App Platform deploy on 2026-09-12 served the prerendered document for a
+ * bare path when BOTH files were present, and which one it chose was not
+ * distinguishable. Emitting both costs eleven small duplicate files and guarantees the
+ * canonical URL never falls through to the empty shell on any host; every copy carries
+ * the same <link rel="canonical">, so search engines consolidate the URL forms.
  *
  * "/" is always index.html.
  */
-export function outputPathsFor(route, layout = 'dir') {
+export function outputPathsFor(route, layout = 'both') {
 	const clean = normaliseRoute(route)
 	if (clean === '/') return ['index.html']
 	const stem = clean.slice(1)

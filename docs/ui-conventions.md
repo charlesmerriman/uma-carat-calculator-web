@@ -1133,7 +1133,9 @@ regression detectable.
 
 `npm run build` does three things: the client build (`dist/`), a server build of
 `src/entry-server.ts` (`dist-ssr/`, deleted afterwards), and `scripts/prerender.mjs`,
-which renders every route in `src/prerenderRoutes.ts` to `dist/<route>/index.html` with
+which renders every route in `src/prerenderRoutes.ts` to `dist/<route>/index.html` **and**
+`dist/<route>.html` (static hosts disagree about which one a bare `/about` means; both
+guarantees the prerendered document is what gets served — see `outputPathsFor`) with
 that route's own `<title>`, description, canonical, `og:` and `twitter:` tags baked in.
 The untouched template is kept as `dist/spa.html`, the App Platform catch-all for any
 path without a document. A crawler or a link unfurler fetching `/faq` therefore gets the

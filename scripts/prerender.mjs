@@ -5,7 +5,8 @@
  * Runs as the last step of `npm run build`, after the client build (dist/) and the
  * server build (dist-ssr/entry-server.js). For every route in PRERENDER_ROUTES it
  * renders the app, injects the markup into the client's index.html and rewrites the
- * head tags for that route, then writes dist/<route>/index.html. The untouched
+ * head tags for that route, then writes dist/<route>/index.html AND dist/<route>.html
+ * (see outputPathsFor for why both). The untouched
  * template is kept as dist/spa.html, which is what App Platform serves for any path
  * that has no document — the catch-all.
  *
@@ -24,7 +25,7 @@
  * shells would put the site straight back where it started, silently.
  *
  * Usage: node scripts/prerender.mjs
- *   PRERENDER_LAYOUT=dir|flat|both  (default dir) — see outputPathsFor in prerender-html.mjs
+ *   PRERENDER_LAYOUT=dir|flat|both  (default both) — see outputPathsFor in prerender-html.mjs
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
@@ -35,7 +36,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dist = join(root, "dist")
 const ssrDir = join(root, "dist-ssr")
 const entry = join(ssrDir, "entry-server.js")
-const layout = process.env.PRERENDER_LAYOUT ?? "dir"
+const layout = process.env.PRERENDER_LAYOUT ?? "both"
 
 function fail(message) {
 	console.error(`prerender: ${message}`)
