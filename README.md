@@ -19,7 +19,7 @@ lays the upcoming banner and event schedule out on a timeline.
 One site, two repositories, both deployed by DigitalOcean App Platform on every push to
 `master`:
 
-- **Web** (this repo): a React 19 + TypeScript single-page app, built by Vite and served as a static site.
+- **Web** (this repo): a React 19 + TypeScript app, built by Vite and served as a static site. Every public route is prerendered to its own HTML document at build time and hydrated in the browser, so crawlers and link previews see real content.
 - **API** ([uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api)): Django 6 and Django REST Framework, served from the same domain under `/api`.
 - **Data**: managed PostgreSQL, with banner and card images on DigitalOcean Spaces behind its CDN.
 - **Accounts**: sign-in through Google, Discord or Patreon OAuth, exchanged for a DRF token. Player accounts store no email, name or password.
@@ -99,6 +99,7 @@ inspects an object's shape to decide what it is.
 | `/app/timeline` | Banner, event and campaign calendar |
 | `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
 | `/faq` | Every income source, explained |
+| `/guides/carat-income` | How the calculator works out your carats, in plain language |
 | `/changelog` | Patch notes |
 | `/feedback` | Bug reports and suggestions |
 | `/about` | Who makes the site and where its numbers come from |
@@ -106,9 +107,10 @@ inspects an object's shape to decide what it is.
 | `/login` | Sign in with Google, Discord or Patreon (`noindex`) |
 | `/auth/callback` | OAuth return (`noindex`) |
 
-Any other path renders `NotFound`, routed at `*` in both `App.tsx` and the nested `/app/*`
-routes. A static host can't answer with a real 404, so the page states it with `noindex`
-instead.
+Every route above except the two `noindex` ones is prerendered at build time
+(`src/prerenderRoutes.ts`). Any other path is served the empty shell `dist/spa.html` and
+renders `NotFound`, routed at `*` in both `App.tsx` and the nested `/app/*` routes. A static
+host can't answer with a real 404, so the page states it with `noindex` instead.
 
 ## Local setup
 
@@ -150,6 +152,9 @@ that lets `dev:live` sign in. Vite's default is to slide to 5174 when 5173 is bu
 looks fine until a request fails preflight or a sign-in returns to whatever else holds the
 port. So both scripts run with `--strictPort`, and `scripts/dev-preflight.mjs` first reclaims
 the port from a stale Vite belonging to this checkout. `npm run dev:stop` frees it by hand.
+A `dev:live` server is the exception: it's usually a window someone is watching, signed in to
+production, so all three scripts refuse to touch it and say why. `DEV_FORCE=1 npm run dev:stop`
+is the deliberate override.
 
 ## Commands
 
@@ -159,7 +164,8 @@ npx tsc --noEmit -p tsconfig.node.json   # type-check vite.config.ts
 npm run lint
 npx vitest run                           # tests (npm test starts watch mode)
 npm run coverage
-npm run build                            # production bundle in dist/
+npm run build                            # client build + server build + prerender, all into dist/
+npm run preview                          # serve dist/ on :4173 — curl /about to see a prerendered document
 ```
 
 The `-p` matters: `tsconfig.json` is solution-style (`files: []`), so a bare
@@ -171,7 +177,7 @@ configs, the linter and the tests on every push.
 Deeper reference lives in [`docs/`](docs/):
 
 - [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the ledger engine and pull strategy to step-ups, selector tickets and campaign purchases
-- [carat-income-explained.md](docs/carat-income-explained.md): every income source in plain language
+- [carat-income-explained.md](docs/carat-income-explained.md): every income source in plain language. Rendered on the site at `/guides/carat-income` (imported with `?raw`), so an edit here ships to the page with the next deploy
 - [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, the auth token and the core types
 - [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline, and the planner layout
 

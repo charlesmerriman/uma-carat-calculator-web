@@ -1,26 +1,31 @@
-import { useEffect } from "react"
+import { useContext, useEffect } from "react"
 import { useLocation } from "react-router-dom"
+import { HeadMetaContext } from "../services/HeadMetaContext"
 
 /**
  * Per-route <title>, description, canonical and robots tags.
  *
- * This is a single-page app: every URL is served the same index.html, and React
- * only ever replaces the contents of #root. Nothing touches <head> unless we do
- * it by hand, so without this hook all eight routes present one identical title
- * and description to browser tabs, to Google, and to anything else reading the
- * document.
+ * Every public route is prerendered to its own HTML document at build time
+ * (src/prerenderRoutes.ts, scripts/prerender.mjs), so a crawler or a link unfurler
+ * fetching /about gets About's tags without running any JavaScript. This hook is
+ * where those tags come from, in both places they are needed:
+ *
+ *   - At build time, `renderToString` runs no effects, so the hook reports its values
+ *     through HeadMetaContext and the prerender script writes them into the document.
+ *   - In the browser, the effect below writes the same values onto the live <head> —
+ *     which is what keeps them right across client-side navigation, where no new
+ *     document is ever fetched.
  *
  * Deliberately not react-helmet-async. That earns its place when titles are
  * dynamic and numerous (a page per record); here the route set is fixed and
  * small, and this is the whole implementation.
  *
- * NOTE ON LINK PREVIEWS: this cannot fix them. Discord, Slack, Twitter and
- * friends fetch the raw HTML and never execute JavaScript, so they only ever see
- * the static tags in index.html. Those are set there as a site-wide default. Real
- * per-route previews would need prerendering or SSR.
+ * A route that never calls this hook fails the build ("No page reported document
+ * meta"), which is the point: the old failure mode was a page silently inheriting
+ * whatever the previously visited route had set.
  */
 
-const SITE_NAME = "Uma Musume Carat Calculator"
+export const SITE_NAME = "Uma Musume Carat Calculator"
 
 /**
  * Canonical origin, hardcoded rather than read from window.location.
@@ -41,7 +46,7 @@ const SITE_NAME = "Uma Musume Carat Calculator"
  * public/robots.txt, public/sitemap.xml, and the og:url / og:image /
  * twitter:image tags in index.html.
  */
-const SITE_ORIGIN = "https://umacaratcalculator.com"
+export const SITE_ORIGIN = "https://umacaratcalculator.com"
 
 /**
  * Finds a <head> tag or creates it, so we reuse the tags already present in
@@ -74,8 +79,19 @@ export function useDocumentMeta(
 ): void {
 	const { pathname } = useLocation()
 
+	const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME
+	// pathname only: query strings and hashes are never the canonical form of
+	// a page here. See SITE_ORIGIN for why the origin is a constant and not
+	// window.location.origin.
+	const canonical = `${SITE_ORIGIN}${pathname}`
+
+	// Build-time render: hand the values to whoever is collecting them. Null in
+	// the browser, where nothing provides the context.
+	const report = useContext(HeadMetaContext)
+	if (report) report({ title: fullTitle, description, canonical, noindex })
+
 	useEffect(() => {
-		document.title = title ? `${title} | ${SITE_NAME}` : SITE_NAME
+		document.title = fullTitle
 
 		upsertTag<HTMLMetaElement>('meta[name="description"]', () => {
 			const tag = document.createElement("meta")
@@ -83,14 +99,11 @@ export function useDocumentMeta(
 			return tag
 		}).content = description
 
-		// pathname only: query strings and hashes are never the canonical form of
-		// a page here. See SITE_ORIGIN for why the origin is a constant and not
-		// window.location.origin.
 		upsertTag<HTMLLinkElement>('link[rel="canonical"]', () => {
 			const tag = document.createElement("link")
 			tag.rel = "canonical"
 			return tag
-		}).href = `${SITE_ORIGIN}${pathname}`
+		}).href = canonical
 
 		// Add or remove rather than set/unset: an empty robots tag is not the same
 		// as no robots tag, and a stale noindex left behind by a previous route
@@ -106,5 +119,5 @@ export function useDocumentMeta(
 		} else {
 			robots?.remove()
 		}
-	}, [title, description, noindex, pathname])
+	}, [fullTitle, description, canonical, noindex])
 }
