@@ -17,6 +17,7 @@ import { Terms } from "./components/legal/Terms.js"
 import { Changelog } from "./components/info/Changelog.js"
 import { About } from "./components/info/About.js"
 import { Faq } from "./components/info/Faq.js"
+import { CaratIncomeGuide } from "./components/info/CaratIncomeGuide.js"
 import { Feedback } from "./components/info/Feedback.js"
 import { NotFound } from "./components/NotFound.js"
 import { recordVisit } from "./services/visitBeacon.js"
@@ -61,6 +62,8 @@ function App() {
 						<Route path="/about" element={<About />} />
 						<Route path="/changelog" element={<Changelog />} />
 						<Route path="/faq" element={<Faq />} />
+						{/* Long-form companion to the FAQ, rendered from docs/carat-income-explained.md. */}
+						<Route path="/guides/carat-income" element={<CaratIncomeGuide />} />
 						<Route path="/feedback" element={<Feedback />} />
 						{/* Public since guest mode: the calculator works without an
 						    account; logging in is only needed to save a plan. The

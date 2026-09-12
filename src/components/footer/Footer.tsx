@@ -3,7 +3,8 @@ import { Link } from "react-router-dom"
 /**
  * Compact, reusable site footer shown on every page.
  *
- * Fixed ~53px band (shrink-0 + small padding/text) in every layout. Each layout gives
+ * One line on desktop, wrapping to two or three on a phone (shrink-0 + small
+ * padding/text) in every layout. Each layout gives
  * the region ABOVE this a `flex-1` so leftover viewport height collects there: on a
  * short page the footer sits at the bottom of the screen, and on a long one it is
  * pushed past the fold and scrolls away with the content. Slack must never land below
@@ -28,6 +29,22 @@ export const Footer = () => {
 				<span aria-hidden="true">·</span>
 				<Link to="/about" className="text-gray-400 transition hover:text-brand">
 					About
+				</Link>
+				<span aria-hidden="true">·</span>
+				<Link to="/faq" className="text-gray-400 transition hover:text-brand">
+					FAQ
+				</Link>
+				<span aria-hidden="true">·</span>
+				<Link to="/guides/carat-income" className="text-gray-400 transition hover:text-brand">
+					Carat Guide
+				</Link>
+				<span aria-hidden="true">·</span>
+				<Link to="/changelog" className="text-gray-400 transition hover:text-brand">
+					Changelog
+				</Link>
+				<span aria-hidden="true">·</span>
+				<Link to="/feedback" className="text-gray-400 transition hover:text-brand">
+					Feedback
 				</Link>
 				<span aria-hidden="true">·</span>
 				<Link to="/privacy-policy" className="text-gray-400 transition hover:text-brand">

@@ -99,6 +99,7 @@ inspects an object's shape to decide what it is.
 | `/app/timeline` | Banner, event and campaign calendar |
 | `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
 | `/faq` | Every income source, explained |
+| `/guides/carat-income` | How the calculator works out your carats, in plain language |
 | `/changelog` | Patch notes |
 | `/feedback` | Bug reports and suggestions |
 | `/about` | Who makes the site and where its numbers come from |
@@ -174,7 +175,7 @@ configs, the linter and the tests on every push.
 Deeper reference lives in [`docs/`](docs/):
 
 - [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the ledger engine and pull strategy to step-ups, selector tickets and campaign purchases
-- [carat-income-explained.md](docs/carat-income-explained.md): every income source in plain language
+- [carat-income-explained.md](docs/carat-income-explained.md): every income source in plain language. Rendered on the site at `/guides/carat-income` (imported with `?raw`), so an edit here ships to the page with the next deploy
 - [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, the auth token and the core types
 - [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline, and the planner layout
 

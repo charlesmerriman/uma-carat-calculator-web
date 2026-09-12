@@ -78,11 +78,15 @@ export const About: React.FC = () => {
 						<Link to="/changelog" className={link}>
 							Changelog
 						</Link>
-						, and the{" "}
+						, the{" "}
 						<Link to="/faq" className={link}>
 							FAQ
 						</Link>{" "}
-						explains each income source in detail.
+						explains each income source, and the{" "}
+						<Link to="/guides/carat-income" className={link}>
+							carat income guide
+						</Link>{" "}
+						walks through the projection step by step.
 					</p>
 					<p className={paragraph}>
 						Everything the site produces is an <strong>estimate</strong>. Reward amounts
