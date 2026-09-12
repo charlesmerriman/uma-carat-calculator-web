@@ -7,6 +7,7 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
+import { AppRouteIntro } from "./AppRouteIntro"
 
 /* The page area while the initial fetch is still out. Sized to roughly fill the
    space the calculator will occupy, so the footer doesn't ride up under the
@@ -123,6 +124,11 @@ export const ApplicationViews = () => {
 									<Outlet />
 								)}
 							</div>
+							{/* Outside the gate above on purpose: it owns the page's document
+							    title and carries the only prose on these routes that exists
+							    before the data does. Below the tool so the first screen is
+							    unchanged; see AppRouteIntro. */}
+							<AppRouteIntro />
 							<Footer />
 						</div>
 					</div>

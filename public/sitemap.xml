@@ -38,6 +38,11 @@
 		<loc>https://umacaratcalculator.com/faq</loc>
 		<priority>0.7</priority>
 	</url>
+	<!-- The income guide: ~2,500 words rendered from docs/carat-income-explained.md. -->
+	<url>
+		<loc>https://umacaratcalculator.com/guides/carat-income</loc>
+		<priority>0.6</priority>
+	</url>
 	<!-- Updated whenever content lands. -->
 	<url>
 		<loc>https://umacaratcalculator.com/changelog</loc>

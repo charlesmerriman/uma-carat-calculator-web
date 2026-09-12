@@ -2,6 +2,8 @@
 
 *A plain-English guide. No coding knowledge needed.*
 
+*Last updated: September 12, 2026*
+
 ---
 
 ## The one-sentence version
@@ -129,21 +131,22 @@ Events (anniversaries, story campaigns, collabs) can pay two ways, and many pay 
 
 ### Misc Earnings — *your toggle, on by default*
 
-A flat **60 carats a day** standing in for all the small stuff the calculator doesn't
+A flat **90 carats a day** standing in for all the small stuff the calculator doesn't
 model individually: gifts, career mode clears, odd bits of Team Trials, and so on.
 
 It doesn't start straight away — you have to play for **30 days** first, so nothing is
 credited before then and the drip begins on day 31. After that every extra day in your
-plan is worth another 60, with no jumps.
+plan is worth another 90, with no jumps.
 
 ### 50-Day Login Campaign — always on
 
 **150 carats every 50 days.** First payout is 50 days from today. No toggle; everyone
 gets it.
 
-### Valentine's Day — always on
+### Valentine's Day and White Day — always on
 
-**500 carats every February 14**, if your plan reaches that far.
+**500 carats every February 14, and another 500 every March 14**, if your plan reaches
+that far.
 
 ### Training Pass — *your toggle*
 
@@ -207,7 +210,7 @@ That's a 14-day window: 30 July through 12 August.
 | Team Trials Class 5 | two Mondays (3 Aug, 10 Aug) | 450 |
 | Misc Earnings | drip doesn't start until 29 Aug — after the window | 0 |
 | 50-Day Login | first one due 17 Sep — after the window | 0 |
-| Valentine's / Training Pass | not in range | 0 |
+| Valentine's / White Day / Training Pass | not in range | 0 |
 
 **Total shown on the banner card:**
 
@@ -287,8 +290,9 @@ Two things follow from that:
   not a "what will I have?" number.
 
 One quirk: because the window is a fixed five months, once-a-year income like
-Valentine's Day only shows up in the average when that window happens to cover
-14 February. The figure will visibly rise and fall as the date rolls past.
+Valentine's Day and White Day only shows up in the average when that window happens to
+cover 14 February or 14 March — and being a month apart, five months usually catches
+both or neither. The figure will visibly rise and fall as the date rolls past.
 
 ---
 
