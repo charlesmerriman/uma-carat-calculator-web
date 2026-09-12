@@ -3,6 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <!--
+      Theme before first paint. Public routes are served as prerendered HTML, so
+      the page paints before the bundle arrives; without this a saved theme would
+      flash the default palette on every load. Parser-blocking on purpose and
+      tiny. The ids and keys duplicate src/services/themeStore.ts, and a test
+      fails if the two ever disagree. If a CSP is ever added, this needs a nonce.
+    -->
+    <script>
+      (function () {
+        try {
+          var themes = ["gold", "gilded", "midnight", "race-day", "violet", "teal", "light"];
+          var theme = localStorage.getItem("uma-planner-theme");
+          var root = document.documentElement;
+          root.setAttribute("data-theme", themes.indexOf(theme) >= 0 ? theme : "gold");
+          root.setAttribute(
+            "data-colorblind-mode",
+            localStorage.getItem("uma-planner-colorblind-mode") === "true" ? "true" : "false"
+          );
+        } catch (e) {}
+      })();
+    </script>
+    <!--
       Umagon face icon set. favicon.ico carries 16/24/32/48/64 for browsers that
       still request /favicon.ico by default; the PNG links cover everything
       modern, and the 192/512 pair is what Android reaches for when a page is
@@ -20,11 +41,11 @@
     <meta name="description" content="Plan your Uma Musume gacha pulls and predict carat and ticket availability based on your rank income and upcoming events." />
 
     <!--
-      Site-wide social defaults. These are the ONLY tags link unfurlers ever see:
-      Discord, Reddit, Slack and Twitter fetch this raw HTML and never run the JS
-      that sets per-route titles, so a shared link to any page previews with the
-      text below. useDocumentMeta handles tabs and search engines; this handles
-      the preview card. Per-route previews would need prerendering.
+      Site-wide defaults for the title, description and social tags. Every public
+      route is prerendered at build time and scripts/prerender.mjs rewrites these
+      per route from the page's useDocumentMeta call, so a shared link to /faq
+      unfurls as the FAQ. What is written here is what the empty shell
+      (dist/spa.html, served for unknown paths) and the dev server carry.
 
       og:image is the umagon face on an opaque dark ground, NOT one of the
       favicon PNGs directly. Those are 45% transparent, and unfurlers flatten
@@ -39,7 +60,7 @@
 
       NOTE: absolute URL required — unfurlers do not resolve relative paths.
       This does not survive a domain move; update it together with
-      public/sitemap.xml and public/robots.txt.
+      public/sitemap.xml, public/robots.txt and SITE_ORIGIN in useDocumentMeta.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Uma Musume Carat Calculator" />

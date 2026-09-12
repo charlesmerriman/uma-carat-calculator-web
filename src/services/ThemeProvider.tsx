@@ -1,66 +1,56 @@
-import { useEffect, useState } from "react"
+import { useEffect, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { ThemeContext } from "./ThemeContext"
-import type { ThemeConfig } from "./ThemeContext"
+import {
+	THEMES,
+	applyThemeAttributes,
+	getServerColorblindMode,
+	getServerTheme,
+	readColorblindMode,
+	readTheme,
+	subscribeToTheme,
+	writeColorblindMode,
+	writeTheme,
+} from "./themeStore"
 
-const STORAGE_KEY = "uma-planner-theme"
-const COLORBLIND_MODE_STORAGE_KEY = "uma-planner-colorblind-mode"
-const DEFAULT_THEME = "gold"
-
-// To add a new theme: add one entry here AND add a [data-theme="x"] block in index.css
-const THEMES: ThemeConfig[] = [
-	{ id: "gold",     label: "Default",  swatch: "#E6D28A" },
-	{ id: "gilded",   label: "Gilded",   swatch: "#f1cf75" },
-	{ id: "midnight", label: "Midnight", swatch: "#F6C84F" },
-	{ id: "race-day", label: "Pace",     swatch: "#7cc8ff" },
-	{ id: "violet",   label: "Violet",   swatch: "#C4B5FD" },
-	{ id: "teal",     label: "Teal",     swatch: "#5EEAD4" },
-	{ id: "light",    label: "Light",    swatch: "#fbf2ed" },
-]
-
+/**
+ * Exposes the theme settings to React. The settings themselves live in themeStore.ts
+ * — see the note there on why they are an external store rather than useState.
+ *
+ * The visible theme is NOT set here on first load. The inline script in index.html
+ * sets the <html> attributes before first paint, from the same storage keys, so a
+ * prerendered page never flashes the default palette while the bundle loads. What
+ * this component's state drives is the picker's pressed swatch and the toast theme,
+ * which are free to catch up a frame later.
+ */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-	const [activeTheme, setActiveTheme] = useState<string>(() => {
-		const stored = localStorage.getItem(STORAGE_KEY)
-		const id = THEMES.some((t) => t.id === stored) ? stored! : DEFAULT_THEME
-		// Set synchronously before first paint so there's no color flash on load
-		document.documentElement.setAttribute("data-theme", id)
-		return id
-	})
-	const [colorblindMode, setColorblindModeState] = useState<boolean>(() => {
-		const enabled = localStorage.getItem(COLORBLIND_MODE_STORAGE_KEY) === "true"
-		// Keep the status palette in place before the app first paints, just like
-		// the selected theme above.
-		document.documentElement.setAttribute("data-colorblind-mode", String(enabled))
-		return enabled
-	})
+	const activeTheme = useSyncExternalStore(subscribeToTheme, readTheme, getServerTheme)
+	const colorblindMode = useSyncExternalStore(
+		subscribeToTheme,
+		readColorblindMode,
+		getServerColorblindMode,
+	)
 
+	// Mount-only sync of the <html> attributes, reading the STORE rather than the
+	// React state above. During hydration the state still holds the server
+	// snapshot (the default), and writing that would undo the inline script's
+	// work for anyone with a saved theme. Reading the store is idempotent with
+	// the script, and it is what puts the attributes in place under test, where
+	// index.html's script never ran.
 	useEffect(() => {
-		document.documentElement.setAttribute("data-theme", activeTheme)
-	}, [activeTheme])
-
-	useEffect(() => {
-		document.documentElement.setAttribute("data-colorblind-mode", String(colorblindMode))
-	}, [colorblindMode])
-
-	const setTheme = (id: string) => {
-		if (!THEMES.some((t) => t.id === id)) return
-		localStorage.setItem(STORAGE_KEY, id)
-		setActiveTheme(id)
-	}
-
-	const setColorblindMode = (enabled: boolean) => {
-		localStorage.setItem(COLORBLIND_MODE_STORAGE_KEY, String(enabled))
-		setColorblindModeState(enabled)
-	}
+		applyThemeAttributes(readTheme(), readColorblindMode())
+	}, [])
 
 	return (
-		<ThemeContext.Provider value={{
-			activeTheme,
-			themes: THEMES,
-			setTheme,
-			colorblindMode,
-			setColorblindMode
-		}}>
+		<ThemeContext.Provider
+			value={{
+				activeTheme,
+				themes: THEMES,
+				setTheme: writeTheme,
+				colorblindMode,
+				setColorblindMode: writeColorblindMode,
+			}}
+		>
 			{children}
 		</ThemeContext.Provider>
 	)

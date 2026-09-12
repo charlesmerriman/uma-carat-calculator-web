@@ -13,9 +13,15 @@
  * "Am I signed in?" and "who am I?" are not the same question and must not be
  * answered on the same schedule:
  *
- *   isLoggedIn  is derived from the token being present. Synchronous, correct
- *               on the first render, and exactly what the old localStorage
- *               check meant. The navbar draws the right button with no flicker.
+ *   isLoggedIn  is derived from the token being present. Read synchronously
+ *               on a normal client render, so the navbar draws the right
+ *               button with no flicker — exactly what the old localStorage
+ *               check meant. The one exception is a prerendered page: the
+ *               static HTML was built as a guest, so React hydrates as a
+ *               guest too (the server snapshot below) and corrects itself in
+ *               the first commit after. That swap is inherent to static HTML
+ *               — the "Login" button was on screen before the bundle even
+ *               arrived — and it is bounded by the bundle load, not a fetch.
  *
  *   account     requires a round trip. Null until it lands.
  *
@@ -29,7 +35,7 @@
  * for a feature aimed at supporters.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { AuthContext } from "./AuthContext"
 import { accountFetch } from "./accountFetchCalls"
@@ -37,23 +43,24 @@ import { clearAuthToken, getAuthToken, subscribeToAuthToken } from "./authToken"
 import { userLogout } from "./userServices"
 import type { Account, AccountStatus } from "../types/account"
 
+// Module-level so `useSyncExternalStore` sees stable function identities.
+const hasTokenNow = (): boolean => getAuthToken() !== null
+// What a build-time render and a hydration render see: nobody is signed in to a
+// static file. See the docblock above for why that is right rather than a bug.
+const hasTokenOnServer = (): boolean => false
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-	// Mirrors the token's presence. State rather than a direct read at render
-	// time so that a change — sign-in, sign-out, a 401 elsewhere, another tab —
-	// actually re-renders the consumers.
-	const [hasToken, setHasToken] = useState<boolean>(() => getAuthToken() !== null)
+	// Mirrors the token's presence and re-renders the consumers when it changes —
+	// sign-in, sign-out, a 401 elsewhere, another tab — via authToken's notify.
+	const hasToken = useSyncExternalStore(subscribeToAuthToken, hasTokenNow, hasTokenOnServer)
 	const [account, setAccount] = useState<Account | null>(null)
 	const [status, setStatus] = useState<AccountStatus>(() =>
-		getAuthToken() !== null ? "loading" : "anonymous"
+		hasToken ? "loading" : "anonymous"
 	)
 	// Bumped to re-run the fetch effect. A counter rather than calling the
 	// fetch directly keeps one code path responsible for the request, so a
 	// refresh cannot race the mount load into an inconsistent state.
 	const [reloadNonce, setReloadNonce] = useState(0)
-
-	useEffect(() => {
-		return subscribeToAuthToken(() => setHasToken(getAuthToken() !== null))
-	}, [])
 
 	useEffect(() => {
 		if (!hasToken) {

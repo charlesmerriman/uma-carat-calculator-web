@@ -159,7 +159,7 @@ gives:
 
 | Value | Meaning |
 |---|---|
-| `isLoggedIn` | Is a token present. **Synchronous**, correct on the first render. |
+| `isLoggedIn` | Is a token present. **Synchronous** on a normal client render. On a prerendered page it is `false` in the static HTML and during hydration (the build ran as a guest) and corrects itself in the first commit after — see the `AuthProvider` docblock. |
 | `status` | `anonymous` / `loading` / `ready` / `error` — how far `GET /account` got. |
 | `account` | The summary, or `null` until it loads. |
 | `isSupporter` | Convenience gate. Always `false` today. |
