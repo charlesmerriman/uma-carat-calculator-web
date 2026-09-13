@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Footer } from "../footer/Footer"
 import { Wordmark } from "../Wordmark"
+import { OguriSpinner } from "../OguriSpinner"
 import { completeSocialLogin, peekPendingLoginProvider } from "../../services/socialAuth"
 import { completeAccountLink, peekPendingLinkProvider } from "../../services/accountLinking"
 import { useAccount } from "../../services/AuthContext"
@@ -163,10 +164,7 @@ export const OAuthCallback: React.FC = () => {
 						</>
 					) : (
 						<div className="flex flex-col items-center gap-4 py-6" role="status" aria-live="polite">
-							<div
-								className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-brand"
-								aria-hidden="true"
-							/>
+							<OguriSpinner />
 							<p className="text-sm text-gray-400">
 								{isLinking ? "Connecting your account…" : "Signing you in…"}
 							</p>

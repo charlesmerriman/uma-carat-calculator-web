@@ -7,14 +7,16 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
+import { OguriSpinner } from "../components/OguriSpinner"
 import { AppRouteIntro } from "./AppRouteIntro"
 
 /* The page area while the initial fetch is still out. Sized to roughly fill the
    space the calculator will occupy, so the footer doesn't ride up under the
    navbar and then jump down when the data lands. */
 const PageLoading = () => (
-	<div className="flex min-h-[60vh] items-center justify-center">
-		<div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-600 border-t-brand" />
+	<div className="flex min-h-[60vh] items-center justify-center" role="status" aria-live="polite">
+		<OguriSpinner />
+		<span className="sr-only">Loading your plan…</span>
 	</div>
 )
 
