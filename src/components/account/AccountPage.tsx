@@ -157,15 +157,20 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 	// The display-name field is a draft of the stored value. Re-seeded when the
 	// account re-reads (after a save, or a refresh from elsewhere) so the field
 	// never shows a stale edit as if it were saved.
-	const [nameDraft, setNameDraft] = useState(account.display_name)
-	useEffect(() => setNameDraft(account.display_name), [account.display_name])
+	const [nameDraft, setNameDraft] = useState(account.display_name ?? "")
+	useEffect(() => setNameDraft(account.display_name ?? ""), [account.display_name])
 	const [savingName, setSavingName] = useState(false)
 	const [pickerOpen, setPickerOpen] = useState(false)
 	const [savingAvatar, setSavingAvatar] = useState(false)
 	const trimmedName = nameDraft.trim()
-	const nameChanged = trimmedName !== account.display_name
+	// `?? ""` / `?? null`: an API from before these fields exist sends neither,
+	// and the page must read that as "no preference set", not as a pick. Same
+	// tolerance CalculatorProvider gives keys that arrived after the rest.
+	const storedName = account.display_name ?? ""
+	const avatarUma = account.avatar_uma ?? null
+	const nameChanged = trimmedName !== storedName
 	// What the header and the avatar fallback go by: the chosen name, else the handle.
-	const shownName = account.display_name || account.username
+	const shownName = storedName || account.username
 
 	const linkedFor = (provider: SocialProvider) =>
 		account.linked_providers.find((row) => row.provider === provider)
@@ -306,11 +311,11 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					</div>
 					{/* The handle stays on the page when a chosen name is shown: it is
 					    the account's identity, and what to quote when asking for help. */}
-					{account.display_name && (
+					{storedName && (
 						<div className="mt-0.5 font-mono text-xs text-gray-500">{account.username}</div>
 					)}
 					<p className="mt-1 text-xs leading-relaxed text-gray-500">
-						{account.avatar_uma !== null
+						{avatarUma !== null
 							? "Your picture is the uma you picked."
 							: "Your picture comes from the provider you last signed in with."}{" "}
 						We never store your real name or email.
@@ -323,9 +328,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 							className={`${BUTTON_GHOST} inline-flex items-center gap-1.5`}
 						>
 							<ImageIcon className="h-4 w-4" aria-hidden="true" />
-							{account.avatar_uma !== null ? "Change uma" : "Pick an uma"}
+							{avatarUma !== null ? "Change uma" : "Pick an uma"}
 						</button>
-						{account.avatar_uma !== null && (
+						{avatarUma !== null && (
 							<button
 								type="button"
 								onClick={() => void handleResetAvatar()}
@@ -341,7 +346,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 
 			<UmaAvatarPicker
 				open={pickerOpen}
-				currentId={account.avatar_uma}
+				currentId={avatarUma}
 				onClose={() => setPickerOpen(false)}
 				onChoose={handleChooseAvatar}
 			/>
