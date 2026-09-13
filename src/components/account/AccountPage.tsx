@@ -2,7 +2,7 @@ import { useState } from "react"
 import type React from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowUpRight, Heart, LogOut } from "lucide-react"
+import { ArrowUpRight, Heart, LogOut, Trash2 } from "lucide-react"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { Avatar } from "./Avatar"
@@ -10,6 +10,8 @@ import { PROVIDERS } from "../../constants/providers"
 import { useAccount } from "../../services/AuthContext"
 import { SOCIAL_PROVIDERS, type SocialProvider } from "../../services/socialAuth"
 import { startAccountLink, unlinkProvider } from "../../services/accountLinking"
+import { accountDelete } from "../../services/accountFetchCalls"
+import { clearAuthToken } from "../../services/authToken"
 import { ApiError } from "../../services/userServices"
 import { PATREON_URL } from "../../constants/links"
 import { formatDate } from "../../utils/dateFormat"
@@ -49,6 +51,14 @@ const BUTTON_PRIMARY =
 	"rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
 const BUTTON_GHOST =
 	"rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+// Red is the one status colour that means the same thing in every theme here,
+// and it is used only for this button — see the semantic-colour note in
+// frontend/docs/ui-conventions.md.
+const BUTTON_DANGER =
+	"rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-500/10"
+
+/** What the person has to type before the delete button arms. */
+const DELETE_PHRASE = "delete"
 
 function messageFrom(e: unknown, fallback: string): string {
 	return e instanceof ApiError ? e.message : fallback
@@ -114,6 +124,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 	// Which provider has an action in flight, so only that row shows it.
 	const [pending, setPending] = useState<SocialProvider | null>(null)
 	const [signingOut, setSigningOut] = useState(false)
+	const [deletePhrase, setDeletePhrase] = useState("")
+	const [deleting, setDeleting] = useState(false)
+	const deleteArmed = deletePhrase.trim().toLowerCase() === DELETE_PHRASE
 
 	const linkedFor = (provider: SocialProvider) =>
 		account.linked_providers.find((row) => row.provider === provider)
@@ -156,6 +169,29 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 		// A full load so every provider starts over as a guest; the home page is
 		// the natural place to land from here.
 		window.location.assign("/")
+	}
+
+	const handleDelete = async (): Promise<void> => {
+		if (!deleteArmed) return
+		setDeleting(true)
+		try {
+			const response = await accountDelete()
+			if (response.status === 403) {
+				toast.error("Staff accounts are managed in the admin.")
+				return
+			}
+			if (!response.ok) throw new Error(`Account delete failed: ${response.status}`)
+			// The token now refers to nothing. Clearing it through the token
+			// module tells AuthProvider, and the full load below starts every
+			// provider over as a guest on the home page.
+			clearAuthToken()
+			window.location.assign("/")
+		} catch (err) {
+			console.error(err)
+			toast.error("Could not delete your account. Please try again.")
+		} finally {
+			setDeleting(false)
+		}
 	}
 
 	const benefitLabels = (supporter.benefits ?? [])
@@ -341,6 +377,48 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					<LogOut className="h-4 w-4" aria-hidden="true" />
 					{signingOut ? "Signing out…" : "Sign out"}
 				</button>
+			</section>
+
+			{/* Delete account. Irreversible, so the button arms only after the
+			    phrase is typed — there is no email on file to send a recovery
+			    link to, by design, which makes the confirmation the only guard. */}
+			<section className={`${CARD} mt-4 border-red-500/30`} aria-labelledby="delete-account">
+				<h2 id="delete-account" className={CARD_TITLE}>
+					Delete account
+				</h2>
+				<p className="mt-1 text-sm leading-relaxed text-gray-400">
+					This permanently removes your saved plan, your connected sign-in methods and
+					your profile picture. It can't be undone. Feedback you've sent stays, with no
+					link to you, and a Patreon pledge is unaffected — it belongs to your Patreon
+					account, not to this one.
+				</p>
+				<form
+					className="mt-4 flex flex-wrap items-end gap-3"
+					onSubmit={(event) => {
+						event.preventDefault()
+						void handleDelete()
+					}}
+				>
+					<label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-gray-400">
+						Type <span className="font-mono text-gray-200">{DELETE_PHRASE}</span> to confirm
+						<input
+							type="text"
+							value={deletePhrase}
+							onChange={(event) => setDeletePhrase(event.target.value)}
+							autoComplete="off"
+							spellCheck={false}
+							className="rounded-lg border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-gray-100 outline-none transition focus:border-red-400/70"
+						/>
+					</label>
+					<button
+						type="submit"
+						disabled={!deleteArmed || deleting}
+						className={`${BUTTON_DANGER} inline-flex items-center gap-2`}
+					>
+						<Trash2 className="h-4 w-4" aria-hidden="true" />
+						{deleting ? "Deleting…" : "Delete my account"}
+					</button>
+				</form>
 			</section>
 		</>
 	)

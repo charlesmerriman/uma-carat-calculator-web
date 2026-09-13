@@ -105,7 +105,7 @@ inspects an object's shape to decide what it is.
 | `/about` | Who makes the site and where its numbers come from |
 | `/privacy-policy`, `/terms` | Legal |
 | `/login` | Sign in with Google, Discord or Patreon (`noindex`) |
-| `/account` | Connected sign-in providers, Patreon supporter status, sign out (`noindex`) |
+| `/account` | Connected sign-in providers, Patreon supporter status, sign out, delete account (`noindex`) |
 | `/auth/callback` | OAuth return (`noindex`) |
 
 Every route above except the two `noindex` ones is prerendered at build time

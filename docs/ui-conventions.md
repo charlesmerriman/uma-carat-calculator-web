@@ -583,7 +583,9 @@ appear anywhere public; the supporters list on the home page is names only.
 prerendered** — a build-time render is a guest card, which is not the page.
 The sign-in methods list draws each provider with the marks in
 `components/auth/ProviderMarks.tsx` and the labels in
-`constants/providers.ts`; the page is the only UI that calls the link endpoints.
+`constants/providers.ts`; the page is the only UI that calls the link endpoints,
+and the only one that calls `DELETE /account` — behind a typed confirmation
+phrase, because there is no email on file to send a recovery link to.
 Supporter-gated UI goes through one component, `<SupporterOnly benefit="…">`
 (`components/account/SupporterOnly.tsx`), which keys on a benefit from
 `account.supporter.benefits` and fails closed while the account is unknown.

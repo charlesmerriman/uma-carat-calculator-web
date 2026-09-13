@@ -107,6 +107,15 @@ export const PrivacyPolicy: React.FC = () => {
 						trade-off in exchange for holding none of your personal data.
 					</p>
 
+					<h2 className={heading}>Deleting Your Account</h2>
+					<p className={paragraph}>
+						You can delete your account at any time from the Account page. This
+						permanently removes your saved plan, your connected sign-in methods and the
+						address of your profile picture. Feedback you have sent stays, with no link to
+						you. If you support us on Patreon, your place on the supporters list is
+						unaffected &mdash; it reflects your pledge, not your account here.
+					</p>
+
 					<h2 className={heading}>Feedback You Send Us</h2>
 					<p className={paragraph}>
 						If you use the feedback form, we store the message you write and the category

@@ -10,12 +10,15 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountPage } from '../components/account/AccountPage'
 import { startAccountLink, unlinkProvider } from '../services/accountLinking'
+import { accountDelete } from '../services/accountFetchCalls'
+import { getAuthToken, setAuthToken } from '../services/authToken'
 import type { Account, AccountStatus } from '../types/account'
 
 vi.mock('../services/accountLinking', () => ({
 	startAccountLink: vi.fn(),
 	unlinkProvider: vi.fn(),
 }))
+vi.mock('../services/accountFetchCalls', () => ({ accountDelete: vi.fn() }))
 // Navbar and Footer pull in contexts this page does not need under test.
 vi.mock('../components/navbar/Navbar', () => ({ Navbar: () => <nav /> }))
 vi.mock('../components/footer/Footer', () => ({ Footer: () => null }))
@@ -33,6 +36,7 @@ vi.mock('../services/AuthContext', () => ({ useAccount: () => auth }))
 
 const mockedStart = vi.mocked(startAccountLink)
 const mockedUnlink = vi.mocked(unlinkProvider)
+const mockedDelete = vi.mocked(accountDelete)
 
 function account(overrides: Partial<Account> = {}): Account {
 	return {
@@ -66,6 +70,8 @@ beforeEach(() => {
 	auth.signOut.mockReset().mockResolvedValue(undefined)
 	mockedStart.mockReset()
 	mockedUnlink.mockReset()
+	mockedDelete.mockReset()
+	localStorage.clear()
 })
 
 describe('AccountPage states', () => {
@@ -209,5 +215,60 @@ describe('AccountPage sign out', () => {
 
 		await waitFor(() => expect(auth.signOut).toHaveBeenCalled())
 		await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+	})
+})
+
+describe('AccountPage delete account', () => {
+	function stubLocation() {
+		const assign = vi.fn()
+		Object.defineProperty(window, 'location', {
+			configurable: true,
+			value: { ...window.location, assign },
+		})
+		return assign
+	}
+
+	it('arms the button only once the phrase is typed', () => {
+		signedIn(account())
+
+		renderPage()
+		const button = screen.getByRole('button', { name: /delete my account/i })
+		expect(button).toBeDisabled()
+
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'delet' } })
+		expect(button).toBeDisabled()
+
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: ' Delete ' } })
+		expect(button).toBeEnabled()
+	})
+
+	it('deletes, forgets the token and leaves for the home page', async () => {
+		signedIn(account())
+		setAuthToken('T0K3N')
+		mockedDelete.mockResolvedValue({ ok: true, status: 204 } as unknown as Response)
+		const assign = stubLocation()
+
+		renderPage()
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'delete' } })
+		fireEvent.click(screen.getByRole('button', { name: /delete my account/i }))
+
+		await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
+		await waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+		expect(getAuthToken()).toBeNull()
+	})
+
+	it('keeps the token when the server refuses', async () => {
+		signedIn(account())
+		setAuthToken('T0K3N')
+		mockedDelete.mockResolvedValue({ ok: false, status: 403 } as unknown as Response)
+		const assign = stubLocation()
+
+		renderPage()
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'delete' } })
+		fireEvent.click(screen.getByRole('button', { name: /delete my account/i }))
+
+		await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
+		expect(assign).not.toHaveBeenCalled()
+		expect(getAuthToken()).toBe('T0K3N')
 	})
 })
