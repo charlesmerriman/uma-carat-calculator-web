@@ -29,8 +29,10 @@ import type React from "react"
  * itself. The CALLER owns the accessible loading state — a `role="status"`
  * wrapper with visible or `sr-only` text — because the wording differs per slot.
  *
- * `motion-reduce:animate-none` honours the OS "reduce motion" setting; a face
- * spinning at 1 rev/s is exactly the kind of animation that setting exists for.
+ * `animate-spin-slow` is our own `@theme` token in index.css (one turn per 2s on
+ * Tailwind's stock `spin` keyframes) — the 1s default turned the face into a
+ * blur. `motion-reduce:animate-none` honours the OS "reduce motion" setting; a
+ * perpetually spinning face is exactly the kind of animation it exists for.
  */
 
 type OguriSpinnerProps = {
@@ -50,6 +52,6 @@ export const OguriSpinner: React.FC<OguriSpinnerProps> = ({ size = "lg", classNa
 		alt=""
 		aria-hidden="true"
 		draggable={false}
-		className={`${SIZE_CLASS[size]} shrink-0 select-none animate-spin motion-reduce:animate-none ${className}`.trim()}
+		className={`${SIZE_CLASS[size]} shrink-0 select-none animate-spin-slow motion-reduce:animate-none ${className}`.trim()}
 	/>
 )
