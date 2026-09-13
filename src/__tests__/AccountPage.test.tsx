@@ -49,8 +49,9 @@ function account(overrides: Partial<Account> = {}): Account {
 		username: 'user_a3f9c1',
 		display_name: '',
 		avatar_url: null,
-		avatar_uma: null,
-		linked_providers: [{ provider: 'google', linked_at: '2026-07-02', avatar_url: '' }],
+		oshis: [],
+		oshi_slots: 0,
+		linked_providers: [{ provider: 'google', linked_at: '2026-07-02' }],
 		supporter: { is_supporter: false },
 		...overrides,
 	}
@@ -161,8 +162,8 @@ describe('AccountPage sign-in methods', () => {
 		signedIn(
 			account({
 				linked_providers: [
-					{ provider: 'google', linked_at: '2026-07-02', avatar_url: '' },
-					{ provider: 'patreon', linked_at: '2026-09-08', avatar_url: '' },
+					{ provider: 'google', linked_at: '2026-07-02' },
+					{ provider: 'patreon', linked_at: '2026-09-08' },
 				],
 			}),
 		)
@@ -182,8 +183,8 @@ describe('AccountPage supporter block', () => {
 		signedIn(
 			account({
 				linked_providers: [
-					{ provider: 'google', linked_at: '2026-07-02', avatar_url: '' },
-					{ provider: 'patreon', linked_at: '2026-09-08', avatar_url: '' },
+					{ provider: 'google', linked_at: '2026-07-02' },
+					{ provider: 'patreon', linked_at: '2026-09-08' },
 				],
 				supporter: { is_supporter: true, tier: 'Junior Class', benefits: ['ad_free', 'unknown_key'] },
 			}),
@@ -201,8 +202,8 @@ describe('AccountPage supporter block', () => {
 		signedIn(
 			account({
 				linked_providers: [
-					{ provider: 'google', linked_at: '2026-07-02', avatar_url: '' },
-					{ provider: 'patreon', linked_at: '2026-09-08', avatar_url: '' },
+					{ provider: 'google', linked_at: '2026-07-02' },
+					{ provider: 'patreon', linked_at: '2026-09-08' },
 				],
 			}),
 		)
@@ -278,73 +279,142 @@ describe('AccountPage display name', () => {
 	})
 })
 
-describe('AccountPage uma avatar', () => {
-	it('opens the picker, lists umas from /umas and saves the pick', async () => {
+describe('AccountPage oshis', () => {
+	const SPECIAL_WEEK = { position: 0, id: 7, name: 'Special Week', image: UMAS[0].image }
+	const GOLD_SHIP = { position: 1, id: 9, name: 'Gold Ship', image: UMAS[1].image }
+
+	it('shows a free account the locked tile and the Patreon link, with nothing to pick', () => {
 		signedIn(account())
+
+		renderPage()
+
+		expect(screen.getByText(/pictures are a patreon supporter perk/i)).toBeInTheDocument()
+		expect(screen.getByText(/supporters only/i)).toBeInTheDocument()
+		expect(screen.queryByRole('button', { name: /pick/i })).toBeNull()
+		expect(screen.getByRole('link', { name: /support the site on patreon/i })).toHaveAttribute(
+			'href',
+			expect.stringContaining('patreon.com'),
+		)
+	})
+
+	it('lets a one-slot supporter pick their picture from /umas and saves the list', async () => {
+		signedIn(account({ oshi_slots: 1, supporter: { is_supporter: true, tier: 'Junior Class', benefits: ['oshi'] } }))
 		mockedUmas.mockResolvedValue(response(200, UMAS))
 		mockedPatch.mockResolvedValue(response(200))
 
 		renderPage()
-		fireEvent.click(screen.getByRole('button', { name: /pick an uma/i }))
-		const dialog = await screen.findByRole('dialog')
+		expect(screen.getByText('Your oshi')).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: /pick your picture/i }))
+		const dialog = await screen.findByRole('dialog', { name: /choose an oshi/i })
 		fireEvent.click(await within(dialog).findByRole('button', { name: /gold ship/i }))
 
-		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ avatar_uma: 9 }))
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [9] }))
 		await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+		expect(mockedToast.success).toHaveBeenCalledWith('Your picture is now Gold Ship.')
 		expect(auth.refresh).toHaveBeenCalled()
 	})
 
-	it('filters the grid by the search box and marks the current pick', async () => {
-		signedIn(account({ avatar_uma: 7 }))
+	it('appends to a later slot and disables umas already picked', async () => {
+		signedIn(account({ oshi_slots: 3, oshis: [SPECIAL_WEEK], avatar_url: SPECIAL_WEEK.image }))
 		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedPatch.mockResolvedValue(response(200))
 
 		renderPage()
-		fireEvent.click(screen.getByRole('button', { name: /change uma/i }))
+		expect(screen.getByText('Your oshis')).toBeInTheDocument()
+		expect(screen.getByText(/your picture is special week/i)).toBeInTheDocument()
+		// Two empty tiles for the two uncovered slots; none of them is "your picture".
+		const empties = screen.getAllByRole('button', { name: /^pick an oshi$/i })
+		expect(empties).toHaveLength(2)
+		fireEvent.click(empties[0])
+		const dialog = await screen.findByRole('dialog')
+		expect(await within(dialog).findByRole('button', { name: /special week/i })).toBeDisabled()
+		fireEvent.click(within(dialog).getByRole('button', { name: /gold ship/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [7, 9] }))
+		expect(mockedToast.success).toHaveBeenCalledWith('Gold Ship added to your oshis.')
+	})
+
+	it('makes a later oshi the picture by moving it first', async () => {
+		signedIn(account({ oshi_slots: 3, oshis: [SPECIAL_WEEK, GOLD_SHIP], avatar_url: SPECIAL_WEEK.image }))
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		// The first oshi already is the picture, so only the second offers it.
+		expect(screen.queryByRole('button', { name: /make special week your picture/i })).toBeNull()
+		fireEvent.click(screen.getByRole('button', { name: /make gold ship your picture/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [9, 7] }))
+		expect(mockedToast.success).toHaveBeenCalledWith('Your picture is now Gold Ship.')
+	})
+
+	it('removes an oshi by saving the list without it', async () => {
+		signedIn(account({ oshi_slots: 3, oshis: [SPECIAL_WEEK, GOLD_SHIP], avatar_url: SPECIAL_WEEK.image }))
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		fireEvent.click(screen.getByRole('button', { name: /remove special week/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [9] }))
+		expect(mockedToast.success).toHaveBeenCalledWith('Special Week removed from your oshis.')
+	})
+
+	it('replaces the picture in place through Change, marking the current tile', async () => {
+		signedIn(account({ oshi_slots: 1, oshis: [SPECIAL_WEEK], avatar_url: SPECIAL_WEEK.image }))
+		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		fireEvent.click(screen.getByRole('button', { name: /change special week/i }))
 		const dialog = await screen.findByRole('dialog')
 		expect(await within(dialog).findByRole('button', { name: /special week/i })).toHaveAttribute(
 			'aria-pressed',
 			'true',
 		)
-
 		fireEvent.change(within(dialog).getByRole('searchbox'), { target: { value: 'gold' } })
 		expect(within(dialog).queryByRole('button', { name: /special week/i })).toBeNull()
-		expect(within(dialog).getByRole('button', { name: /gold ship/i })).toBeInTheDocument()
+		fireEvent.click(within(dialog).getByRole('button', { name: /gold ship/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [9] }))
 	})
 
 	it('keeps the picker open when the server refuses the pick', async () => {
-		signedIn(account())
+		signedIn(account({ oshi_slots: 1 }))
 		mockedUmas.mockResolvedValue(response(200, UMAS))
-		mockedPatch.mockResolvedValue(response(400, { avatar_uma: ['Invalid pk "9" - object does not exist.'] }))
+		mockedPatch.mockResolvedValue(response(400, { oshis: ['Your tier covers 1 oshi.'] }))
 
 		renderPage()
-		fireEvent.click(screen.getByRole('button', { name: /pick an uma/i }))
+		fireEvent.click(screen.getByRole('button', { name: /pick your picture/i }))
 		const dialog = await screen.findByRole('dialog')
 		fireEvent.click(await within(dialog).findByRole('button', { name: /gold ship/i }))
 
-		await waitFor(() => expect(mockedToast.error).toHaveBeenCalled())
+		await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith('Your tier covers 1 oshi.'))
 		expect(screen.getByRole('dialog')).toBeInTheDocument()
 		expect(auth.refresh).not.toHaveBeenCalled()
 	})
 
-	it('offers the provider picture as the way back once an uma is chosen', async () => {
-		signedIn(account({ avatar_uma: 7, avatar_url: UMAS[0].image }))
-		mockedPatch.mockResolvedValue(response(200))
+	it('puts a lapsed supporter\'s oshis on hold: kept, removable, not changeable', () => {
+		signedIn(account({ oshi_slots: 0, oshis: [SPECIAL_WEEK, GOLD_SHIP], avatar_url: null }))
 
 		renderPage()
-		expect(screen.getByText(/the uma you picked/i)).toBeInTheDocument()
-		fireEvent.click(screen.getByRole('button', { name: /use my provider picture/i }))
 
-		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ avatar_uma: null }))
-		await waitFor(() => expect(auth.refresh).toHaveBeenCalled())
+		expect(screen.getByText(/on hold/i)).toBeInTheDocument()
+		expect(screen.getAllByText(/not covered/i)).toHaveLength(2)
+		expect(screen.queryByRole('button', { name: /^change/i })).toBeNull()
+		expect(screen.queryByRole('button', { name: /make .* your picture/i })).toBeNull()
+		expect(screen.getByRole('button', { name: /remove gold ship/i })).toBeInTheDocument()
+		expect(screen.getByRole('link', { name: /renew on patreon/i })).toBeInTheDocument()
 	})
 
-	it('has no way back while the provider picture is in use', () => {
-		signedIn(account())
+	it('greys out what a downgrade stopped covering and offers no Change on it', () => {
+		signedIn(account({ oshi_slots: 1, oshis: [SPECIAL_WEEK, GOLD_SHIP], avatar_url: SPECIAL_WEEK.image }))
 
 		renderPage()
 
-		expect(screen.queryByRole('button', { name: /use my provider picture/i })).toBeNull()
-		expect(screen.getByText(/provider you last signed in with/i)).toBeInTheDocument()
+		expect(screen.getByText(/greyed ones are kept/i)).toBeInTheDocument()
+		expect(screen.getByText(/not covered/i)).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: /change special week/i })).toBeInTheDocument()
+		expect(screen.queryByRole('button', { name: /change gold ship/i })).toBeNull()
+		expect(screen.getByRole('button', { name: /remove gold ship/i })).toBeInTheDocument()
 	})
 })
 

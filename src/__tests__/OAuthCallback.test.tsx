@@ -148,7 +148,7 @@ describe('OAuthCallback finishing an account link', () => {
   it('completes the LINK, re-reads the account and lands on /account', async () => {
     auth.isLoggedIn = true
     parkLink()
-    mockedLink.mockResolvedValue({ provider: 'patreon', linked_at: '2026-09-12', avatar_url: '' })
+    mockedLink.mockResolvedValue({ provider: 'patreon', linked_at: '2026-09-12' })
 
     renderAt('?code=CODE&state=LINK-ST8')
 

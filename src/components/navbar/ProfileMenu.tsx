@@ -15,9 +15,9 @@ import { NAV_POPOVER, NAV_PROFILE_TRIGGER } from "./navStyles"
  * 2026-09-13. Sign-out moved one step further away on purpose — it is the
  * rarest action in the bar, and the slot it held is better spent telling the
  * person WHO is signed in. That matters more now that an account can hold
- * several providers and a chosen name: the picture is the uma they picked or
- * the provider they last signed in with, and the name is the one they chose
- * (or their handle), which together answer "which account am I in?".
+ * several providers and a chosen name: the picture is a supporter's first
+ * oshi (free accounts get the quiet default), and the name is the one they
+ * chose (or their handle), which together answer "which account am I in?".
  *
  * THE PILL IS DESKTOP-ONLY (`desktop-nav:`). At 390px the app-mode cluster is
  * already save + settings + theme + this, and a name does not fit; a phone
@@ -25,7 +25,7 @@ import { NAV_POPOVER, NAV_PROFILE_TRIGGER } from "./navStyles"
  *
  * The avatar renders from the first paint. `isLoggedIn` is synchronous, so the
  * button is there immediately; the picture and name arrive with /account and
- * the Avatar shows a neutral silhouette until then (see Avatar.tsx). The name
+ * the Avatar shows its default silhouette until then (see Avatar.tsx). The name
  * span is omitted rather than left empty while loading, so the pill widens
  * once instead of jumping from a placeholder.
  *
@@ -90,7 +90,7 @@ export const ProfileMenu = () => {
 					open ? "border-brand/70" : "border-gray-600 hover:border-gray-400 hover:bg-gray-800"
 				}`}
 			>
-				<Avatar src={account?.avatar_url} name={name} size="md" />
+				<Avatar src={account?.avatar_url} size="md" />
 				<span className="hidden items-center gap-1 desktop-nav:flex">
 					{name && <span className="max-w-36 truncate text-sm font-medium text-gray-200">{name}</span>}
 					<ChevronDown
@@ -103,7 +103,7 @@ export const ProfileMenu = () => {
 			{open && (
 				<div role="menu" aria-label="Account" className={`${NAV_POPOVER} absolute right-0 top-full z-50 mt-1.5 w-60 p-1.5`}>
 					<div className="flex items-center gap-3 px-2 py-2">
-						<Avatar src={account?.avatar_url} name={name} size="sm" />
+						<Avatar src={account?.avatar_url} size="sm" />
 						<div className="min-w-0">
 							<div className="truncate text-sm font-semibold text-gray-100">{name || "Signed in"}</div>
 							{/* The handle stays visible when a chosen name is shown above it:

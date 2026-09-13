@@ -3,15 +3,21 @@ import { createPortal } from "react-dom"
 import { Search, X } from "lucide-react"
 import { OguriSpinner } from "../OguriSpinner"
 import { umasFetch } from "../../services/umasFetchCalls"
-import type { AvatarUmaOption } from "../../types/account"
+import type { OshiOption } from "../../types/account"
 
 /**
- * The modal for choosing an uma as the account picture: a search box over a
- * grid of art tiles, the same browse-and-search shape as the Selectors page's
- * card pickers (SelectorTargetPicker, StepUpSelectionPicker). Those two are
- * bound to the calculator's banner catalogue and to a ticket; this one is
- * bound to GET /umas and to nothing else, which is why it is its own
- * component rather than a third caller of theirs.
+ * The modal for choosing an oshi: a search box over a grid of art tiles, the
+ * same browse-and-search shape as the Selectors page's card pickers
+ * (SelectorTargetPicker, StepUpSelectionPicker). Those two are bound to the
+ * calculator's banner catalogue and to a ticket; this one is bound to GET /umas
+ * and to nothing else, which is why it is its own component rather than a
+ * third caller of theirs.
+ *
+ * Opened for ONE slot at a time. `currentId` is the uma already in that slot
+ * (marked, still clickable — a no-op pick is harmless); `takenIds` are the umas
+ * in the person's other slots, which are disabled rather than hidden, so the
+ * grid does not appear to be missing anyone. The server refuses a duplicate
+ * anyway; the disabled tile just saves the round trip.
  *
  * The catalogue is fetched when the dialog first opens, not when the page
  * mounts: most visits to /account never open it, and a few hundred rows are
@@ -28,21 +34,32 @@ import type { AvatarUmaOption } from "../../types/account"
  * nothing here runs during a prerender (the page is not prerendered anyway).
  */
 
-interface UmaAvatarPickerProps {
+interface OshiPickerProps {
 	open: boolean
-	/** The uma currently in use, to mark its tile. */
+	/** The uma already in the slot being edited, to mark its tile. */
 	currentId: number | null
+	/** Umas in the person's other slots: shown, but not pickable twice. */
+	takenIds: number[]
+	/** One line under the title saying what this pick becomes. */
+	description: string
 	onClose: () => void
-	onChoose: (uma: AvatarUmaOption) => Promise<boolean>
+	onChoose: (uma: OshiOption) => Promise<boolean>
 }
 
 type Catalogue =
 	| { state: "idle" }
 	| { state: "loading" }
 	| { state: "error" }
-	| { state: "ready"; options: AvatarUmaOption[] }
+	| { state: "ready"; options: OshiOption[] }
 
-export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentId, onClose, onChoose }) => {
+export const OshiPicker: React.FC<OshiPickerProps> = ({
+	open,
+	currentId,
+	takenIds,
+	description,
+	onClose,
+	onChoose,
+}) => {
 	const [catalogue, setCatalogue] = useState<Catalogue>({ state: "idle" })
 	const [search, setSearch] = useState("")
 	const [saving, setSaving] = useState<number | null>(null)
@@ -57,7 +74,7 @@ export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentI
 			try {
 				const response = await umasFetch(controller.signal)
 				if (!response.ok) throw new Error(`GET /umas failed: ${response.status}`)
-				setCatalogue({ state: "ready", options: (await response.json()) as AvatarUmaOption[] })
+				setCatalogue({ state: "ready", options: (await response.json()) as OshiOption[] })
 			} catch {
 				if (!controller.signal.aborted) setCatalogue({ state: "error" })
 			}
@@ -77,7 +94,7 @@ export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentI
 
 	if (!open) return null
 
-	const choose = async (option: AvatarUmaOption): Promise<void> => {
+	const choose = async (option: OshiOption): Promise<void> => {
 		setSaving(option.id)
 		try {
 			if (await onChoose(option)) onClose()
@@ -118,18 +135,22 @@ export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentI
 			<div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-3">
 				{matching.map((option) => {
 					const isCurrent = option.id === currentId
+					const isTaken = !isCurrent && takenIds.includes(option.id)
 					const isSaving = option.id === saving
 					return (
 						<button
 							key={option.id}
 							type="button"
 							aria-pressed={isCurrent}
-							disabled={saving !== null}
+							disabled={saving !== null || isTaken}
+							title={isTaken ? "Already one of your oshis" : undefined}
 							onClick={() => void choose(option)}
-							className={`group flex min-w-0 flex-col items-center rounded-lg border p-2 text-center transition disabled:cursor-wait ${
-								isCurrent
-									? "border-brand bg-brand/10"
-									: "border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700"
+							className={`group flex min-w-0 flex-col items-center rounded-lg border p-2 text-center transition ${
+								isTaken
+									? "cursor-not-allowed border-gray-700 bg-gray-800 opacity-50"
+									: isCurrent
+										? "border-brand bg-brand/10 disabled:cursor-wait"
+										: "border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700 disabled:cursor-wait"
 							}`}
 						>
 							{/* Round, like the avatar it becomes, so the person sees the crop they will get. */}
@@ -143,6 +164,7 @@ export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentI
 							<span className="mt-2 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">
 								{option.name}
 							</span>
+							{isTaken && <span className="text-[10px] text-gray-400">Already picked</span>}
 						</button>
 					)
 				})}
@@ -160,14 +182,15 @@ export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentI
 			<section
 				role="dialog"
 				aria-modal="true"
-				aria-label="Choose an uma as your picture"
+				aria-label="Choose an oshi"
 				className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-800 shadow-2xl"
 			>
 				<header className="flex flex-wrap items-center gap-3 border-b border-gray-700 bg-gray-800/80 px-4 py-3">
 					<div className="min-w-0 flex-1">
-						<h2 className="text-base font-semibold text-gray-100">Choose an uma</h2>
+						<h2 className="text-base font-semibold text-gray-100">Choose an oshi</h2>
 						<p className="text-xs text-gray-400">
-							{catalogue.state === "ready" ? `${options.length} umas` : "Your picture in the menu and on this page"}
+							{description}
+							{catalogue.state === "ready" ? ` ${options.length} umas.` : ""}
 						</p>
 					</div>
 					<label className="relative w-full sm:w-64">
@@ -184,7 +207,7 @@ export const UmaAvatarPicker: React.FC<UmaAvatarPickerProps> = ({ open, currentI
 					</label>
 					<button
 						type="button"
-						aria-label="Close uma picker"
+						aria-label="Close oshi picker"
 						onClick={onClose}
 						className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 					>

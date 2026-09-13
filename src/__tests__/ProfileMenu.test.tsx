@@ -28,8 +28,9 @@ function account(overrides: Partial<Account> = {}): Account {
 		username: 'user_a3f9c1',
 		display_name: '',
 		avatar_url: null,
-		avatar_uma: null,
-		linked_providers: [{ provider: 'google', linked_at: '2026-07-02', avatar_url: '' }],
+		oshis: [],
+		oshi_slots: 0,
+		linked_providers: [{ provider: 'google', linked_at: '2026-07-02' }],
 		supporter: { is_supporter: false },
 		...overrides,
 	}
