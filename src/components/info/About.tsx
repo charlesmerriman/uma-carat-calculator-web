@@ -44,26 +44,26 @@ export const About: React.FC = () => {
 
 					<p className={paragraph}>
 						The Uma Musume Carat Calculator is a free, unofficial planning tool for
-						players of Cygames&apos; <em>Uma Musume Pretty Derby</em>. It answers one
-						question the game makes surprisingly hard to answer in your head:{" "}
-						<strong>will I be able to afford the banner I actually want?</strong>
+						players of Cygames&apos; <em>Uma Musume Pretty Derby</em>. It answers a
+						question that is hard to work out in your head:{" "}
+						<strong>will I be able to afford the banner I want?</strong>
 					</p>
 
 					<h2 className={heading}>What it does</h2>
 					<p className={paragraph}>
-						Carats arrive from dozens of separate sources, each on its own schedule —
-						daily logins, Team Trials on Mondays, club rank on the 1st, Champions
-						Meeting when finals open, League of Heroes on its end date, plus every
-						event, login bonus and mission the game runs. Banners come and go on a
-						two-week cycle that lines up with none of it.
+						Carats come from dozens of sources, each on its own schedule: daily
+						logins, Team Trials on Mondays, club rank on the 1st, Champions Meeting
+						and League of Heroes on the day each event ends, plus every event, login
+						bonus and mission the game runs. Banners come and go on a two-week cycle
+						that lines up with none of it.
 					</p>
 					<p className={paragraph}>
-						You tell the calculator what you hold right now and which income applies to
-						your account. It walks the calendar forward day by day and shows what your
-						wallet looks like on the day each banner you care about ends — before you
-						spend, rather than after. It also plans step-up banners, tracks which
-						characters and support cards a selector ticket can still reach, and shows
-						the upcoming banner and event schedule on a timeline.
+						You tell the calculator what you have right now and which income applies to
+						your account. It walks the calendar forward day by day and shows what you
+						will have on the day each banner ends, so you know before you spend. It
+						also plans step-up banners, tracks which characters and support cards a
+						selector ticket can still reach, and shows the upcoming banner and event
+						schedule on a timeline.
 					</p>
 
 					<h2 className={heading}>Where the numbers come from</h2>
@@ -90,9 +90,9 @@ export const About: React.FC = () => {
 					</p>
 					<p className={paragraph}>
 						Everything the site produces is an <strong>estimate</strong>. Reward amounts
-						and schedules are announced late or change, and one toggle set differently
-						from how you actually play moves the total. Treat a projection as a
-						well-informed forecast, not a promise.
+						and schedules get announced late or change, and one toggle set differently
+						from how you play will move the total. Treat a projection as a forecast,
+						not a promise.
 					</p>
 
 					<h2 className={heading}>Who makes it</h2>
@@ -101,42 +101,42 @@ export const About: React.FC = () => {
 						<a href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className={link}>
 							Henry Handsome Derby
 						</a>{" "}
-						YouTube channel and the spreadsheet above. There is no company behind it —
+						YouTube channel and the spreadsheet above. There is no company behind it,
 						just a couple of players:
 					</p>
 					<ul className={list}>
 						<li>
-							<strong>Daboochy</strong> — built the site and keeps it running: the
-							calculator itself, the projection engine behind it, and the banner and
-							event data it runs on.
+							<strong>Daboochy</strong> built the site and keeps it running: the
+							calculator, the projection engine behind it, and the banner and event
+							data it runs on.
 						</li>
 						<li>
-							<strong>Daptrius</strong> — the person behind the resource spreadsheet this
-							site grew out of, and the source of much of the maths and data its numbers
-							rest on.
+							<strong>Daptrius</strong> made the resource spreadsheet this site grew
+							out of. Much of the maths and data behind the numbers comes from that
+							work.
 						</li>
 					</ul>
 					<p className={paragraph}>
-						Corrections and bug reports genuinely do get read and acted on.
+						Corrections and bug reports do get read and acted on.
 					</p>
 
 					<h2 className={heading}>What it costs, and what it asks of you</h2>
 					<ul className={list}>
 						<li>
-							It is free, and it always has been. Advertising, if and when it runs, is
-							what pays for hosting.
+							It is free and always has been. Hosting is paid for by Patreon
+							supporters, and by advertising if and when it runs.
 						</li>
 						<li>
-							No account is needed. The full calculator works as a guest; signing in
+							No account is needed. The whole calculator works as a guest. Signing in
 							only lets you save a plan and pick it up on another device.
 						</li>
 						<li>
 							If you do sign in, we hold no email address, no real name and no
-							password — see the{" "}
+							password. The{" "}
 							<Link to="/privacy-policy" className={link}>
 								Privacy Policy
 							</Link>{" "}
-							for exactly what is stored and why.
+							lists what is stored, why, and how to delete it.
 						</li>
 					</ul>
 
@@ -154,8 +154,8 @@ export const About: React.FC = () => {
 						<Link to="/feedback" className={link}>
 							Feedback
 						</Link>{" "}
-						form — no account required. For anything else, including press or business
-						enquiries, email{" "}
+						form. No account is required. For anything else, including press or
+						business enquiries, email{" "}
 						<a href="mailto:Henryhandsomederby@gmail.com" className={link}>
 							Henryhandsomederby@gmail.com
 						</a>

@@ -106,7 +106,7 @@ export const Changelog: React.FC = () => {
 
 					{/* Empty */}
 					{!isLoading && !error && entries.length === 0 && (
-						<p className="mt-10 text-center text-gray-400">No updates yet — check back soon.</p>
+						<p className="mt-10 text-center text-gray-400">No updates yet. Check back soon.</p>
 					)}
 
 					{/* Entries */}

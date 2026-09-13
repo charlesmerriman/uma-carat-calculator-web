@@ -10,7 +10,7 @@ import { ApiError } from "../../services/userServices"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 
 export const Login: React.FC = () => {
-	useDocumentMeta("Sign In", "Staff sign-in for the Uma Musume Carat Calculator.", true)
+	useDocumentMeta("Sign In", "Sign in to the Uma Musume Carat Calculator with Google, Discord or Patreon to save your plan.", true)
 
 	// Which provider is mid-redirect, so only that button shows a pending state.
 	const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null)
@@ -93,7 +93,7 @@ export const Login: React.FC = () => {
 					    before and link Patreon from there, or they land in a second
 					    empty account and think their plan is gone. */}
 					<p className="mt-4 text-center text-xs leading-relaxed text-gray-500">
-						Already have a plan? Sign in the way you did before — you can add Patreon
+						Already have a plan? Sign in the way you did before. You can add Patreon
 						to your account afterwards.
 					</p>
 
@@ -103,7 +103,7 @@ export const Login: React.FC = () => {
 					    because the consent screen will show it being shared. */}
 					<p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
 						We never see your password, and we don't store your email address or
-						name — only an anonymous ID and your profile picture from your provider.{" "}
+						name. We keep only an anonymous ID and your profile picture from your provider.{" "}
 						<Link to="/privacy-policy" className="text-gray-400 underline hover:text-gray-300">
 							Privacy policy
 						</Link>

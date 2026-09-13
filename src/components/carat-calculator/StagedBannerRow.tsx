@@ -158,10 +158,10 @@ export const StagedBannerRow = ({
 		: getPullCountStatus(stagedBanner.number_of_pulls, Infinity)
 	const countStatusHint = isStepUp
 		? countStatus === "ok"
-			? "A completed ladder — every carat bought a full banner, guarantee included"
+			? "A completed ladder: every carat bought a full banner, guarantee included"
 			: `Stops part-way up a ladder (${STEPS_PER_ROUND} steps complete one)`
 		: countStatus === "ok"
-		? "On a pity threshold — no carats stranded in a partial counter"
+		? "On a pity threshold, with no carats left in a partial counter"
 		: `Not on a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"
 
@@ -282,7 +282,7 @@ export const StagedBannerRow = ({
 			<div>End: <span className="text-gray-100">{formatDate(bannerTimeline.end_date)}</span></div>
 		</div>
 	) : (
-		<span className="text-xs text-gray-600">—</span>
+		<span className="text-xs text-gray-600">–</span>
 	)
 
 	// Wrapped rather than bare: MobileBannerCard's summary slot is edge-to-edge
@@ -412,7 +412,7 @@ export const StagedBannerRow = ({
 						<span>End: <span className="text-gray-100">{formatDate(bannerTimeline.end_date)}</span></span>
 					</>
 				) : (
-					<span className="text-gray-600">—</span>
+					<span className="text-gray-600">–</span>
 				)}
 			</div>
 

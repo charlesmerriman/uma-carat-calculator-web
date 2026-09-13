@@ -149,7 +149,7 @@ export const Selectors = () => {
 					</h1>
 					<p className="mt-1 text-sm text-gray-400">
 						Plan what you'd spend at each anniversary. Prices are for reference
-						only — nothing here buys anything.
+						only. Nothing here buys anything.
 					</p>
 				</div>
 
@@ -181,7 +181,7 @@ export const Selectors = () => {
 						<span className="min-w-0 text-sm text-gray-300">
 							Include these purchases in the calculator
 							<span className="block text-xs text-gray-500">
-								Off by default — your banner estimates don't change until you
+								Off by default. Your banner estimates don't change until you
 								switch this on.
 							</span>
 						</span>

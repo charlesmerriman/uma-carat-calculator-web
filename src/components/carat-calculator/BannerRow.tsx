@@ -521,7 +521,7 @@ export const BannerRow = ({
 			)}
 		</div>
 	) : (
-		<span className="text-xs text-gray-600">—</span>
+		<span className="text-xs text-gray-600">–</span>
 	)
 
 	// Single source of truth for the derived-stats strip. Both the mobile card
@@ -575,7 +575,7 @@ export const BannerRow = ({
 			? {
 					label: "Max Steps",
 					value: String(maxPossibleSteps),
-					title: "The most steps you could climb here — whichever runs out first, your paid carats or the campaign's banners",
+					title: "The most steps you could climb here before your paid carats or the campaign's banners run out",
 			  }
 			: {
 					label: "Max Pulls",
@@ -660,12 +660,12 @@ export const BannerRow = ({
 		? countStatus === "over"
 			? `More steps than you can afford here (max ${stepUpperBound})`
 			: countStatus === "ok"
-			? "A completed ladder — every carat bought a full banner, guarantee included"
+			? "A completed ladder: every carat bought a full banner, guarantee included"
 			: `Stops part-way up a ladder (${STEPS_PER_ROUND} steps complete one)`
 		: countStatus === "over"
 		? `More pulls than you can afford here (max ${pullUpperBound})`
 		: countStatus === "ok"
-		? "On a pity threshold — no carats stranded in a partial counter"
+		? "On a pity threshold, with no carats left in a partial counter"
 		: `Not on a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"
@@ -821,7 +821,7 @@ export const BannerRow = ({
 						<span>End: <span className="text-gray-100">{formatDate(bannerTimeline.end_date)}</span></span>
 					</>
 				) : (
-					<span className="text-gray-600">—</span>
+					<span className="text-gray-600">–</span>
 				)}
 			</div>
 

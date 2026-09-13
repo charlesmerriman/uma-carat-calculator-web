@@ -133,7 +133,7 @@ export const StepUpSelectionPicker = ({
 							stale
 						</span>
 					) : (
-						<span className="text-xs text-gray-600">—</span>
+						<span className="text-xs text-gray-600">–</span>
 					)}
 				</div>
 				{selection ? (
@@ -180,7 +180,7 @@ export const StepUpSelectionPicker = ({
 				// first-time user meets — the tile being inert needs a reason.
 				title={
 					!isChosen && isFull
-						? `All ${SELECTION_SLOTS} slots are taken — clear one to pick ${option.label}`
+						? `All ${SELECTION_SLOTS} slots are taken. Clear one to pick ${option.label}`
 						: undefined
 				}
 				className={`group flex min-w-0 flex-col items-center rounded-lg border p-2 text-center transition disabled:cursor-not-allowed disabled:opacity-40 ${
@@ -271,7 +271,7 @@ export const StepUpSelectionPicker = ({
 					{staleCount > 0 && (
 						<p className="mt-1 text-xs text-amber-400">
 							{staleCount} pick{staleCount === 1 ? "" : "s"} no longer eligible
-							under this campaign's cutoff — clear and re-pick{" "}
+							under this campaign's cutoff. Clear and re-pick{" "}
 							{staleCount === 1 ? "it" : "them"}.
 						</p>
 					)}

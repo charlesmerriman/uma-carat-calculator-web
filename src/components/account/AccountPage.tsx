@@ -215,7 +215,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					</div>
 					<p className="mt-1 text-xs leading-relaxed text-gray-500">
 						Your picture comes from the provider you last signed in with. We never store
-						your name or email — only this handle and your picture.
+						your name or email, only this handle and your picture.
 					</p>
 				</div>
 			</div>
@@ -367,7 +367,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					Session
 				</h2>
 				<p className="mt-1 text-sm text-gray-400">
-					Signing out forgets this browser. Your plan stays saved to your account.
+					Signing out only affects this browser. Your plan stays saved to your account.
 				</p>
 				<button
 					type="button"
@@ -390,7 +390,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				<p className="mt-1 text-sm leading-relaxed text-gray-400">
 					This permanently removes your saved plan, your connected sign-in methods and
 					your profile picture. It can't be undone. Feedback you've sent stays, with no
-					link to you, and a Patreon pledge is unaffected — it belongs to your Patreon
+					link to you. A Patreon pledge is unaffected, since it belongs to your Patreon
 					account, not to this one.
 				</p>
 				<form
