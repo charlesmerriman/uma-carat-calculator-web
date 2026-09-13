@@ -55,14 +55,45 @@ export interface Account {
 	/** The generated handle ("user_a3f9c1"). Never a real name — see the API. */
 	username: string
 	/**
-	 * The picture for the navbar, chosen by the server: the one from the
-	 * provider most recently signed in with. `null` when no linked provider
-	 * has a picture — null rather than "" so a component branches to its
+	 * The name they chose on the account page, or "" when they have not. Never
+	 * null: "" is the stored value, and the UI shows the handle in its place.
+	 * Shown to the owner alone; the server never puts it on a public route.
+	 */
+	display_name: string
+	/**
+	 * The picture for the navbar, chosen by the server: the uma they picked if
+	 * any, else the one from the provider most recently signed in with. `null`
+	 * when neither exists — null rather than "" so a component branches to its
 	 * fallback instead of trying to load an empty `src`.
 	 */
 	avatar_url: string | null
+	/**
+	 * The id of the uma they picked as their picture, or null when the provider
+	 * picture is in use. The page needs it to show the current pick and to
+	 * offer the provider picture as the way back.
+	 */
+	avatar_uma: number | null
 	linked_providers: LinkedProvider[]
 	supporter: SupporterStatus
+}
+
+/**
+ * The body of PATCH /account. Partial: send only what changed. The server
+ * writes these two fields and ignores anything else in the body.
+ */
+export interface AccountPreferencesPatch {
+	display_name?: string
+	avatar_uma?: number | null
+}
+
+/**
+ * One row of GET /umas: what the avatar picker needs to draw a tile. The route
+ * lists only umas that have an image, so `image` is never "".
+ */
+export interface AvatarUmaOption {
+	id: number
+	name: string
+	image: string
 }
 
 /**

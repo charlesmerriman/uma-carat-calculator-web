@@ -1,5 +1,6 @@
 /**
- * API fetch calls for /account: GET (who am I) and DELETE (remove me).
+ * API fetch calls for /account: GET (who am I), PATCH (my preferences) and
+ * DELETE (remove me).
  *
  * Same convention as supportersFetchCalls.ts and changelogFetchCalls.ts: this
  * returns the raw Response and the caller does the `.ok` check and `.json()`.
@@ -8,6 +9,7 @@
  */
 
 import { authHeaders } from "./authToken"
+import type { AccountPreferencesPatch } from "../types/account"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -20,6 +22,24 @@ export function accountFetch(signal?: AbortSignal): Promise<Response> {
 			...authHeaders(),
 		},
 		signal,
+	})
+}
+
+/**
+ * PATCH /account — change the display name and/or the uma used as the picture.
+ * 200 with the full account summary (same shape as GET) on success; 400 with
+ * DRF's per-field errors ({"display_name": ["…"]}) when a value is refused.
+ * The caller re-reads the account through AuthProvider's refresh() afterwards
+ * so every consumer (the navbar included) sees the change.
+ */
+export function accountPatch(body: AccountPreferencesPatch): Promise<Response> {
+	return fetch(`${API_URL}/account`, {
+		method: "PATCH",
+		headers: {
+			"Content-Type": "application/json",
+			...authHeaders(),
+		},
+		body: JSON.stringify(body),
 	})
 }
 

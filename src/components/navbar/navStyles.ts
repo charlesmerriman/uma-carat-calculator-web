@@ -28,5 +28,17 @@ export const NAV_ICON_BUTTON =
 export const NAV_SAVE_BUTTON =
 	"flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-gray-700"
 
+/**
+ * The signed-in trigger: the avatar as the left cap of a pill, with the name
+ * and a chevron beside it on desktop. One step taller than the other controls
+ * (h-10 against their h-9) because it holds a picture rather than text, and
+ * still inside the 56px mobile bar with the breathing room the rest get.
+ * `p-px` plus the 1px border leaves exactly 36px inside, which is the `md`
+ * Avatar. Below `desktop-nav:` the tail is hidden and this is the ring alone
+ * (see ProfileMenu.tsx for why the pill is desktop-only).
+ */
+export const NAV_PROFILE_TRIGGER =
+	"flex h-10 items-center rounded-full border p-px transition desktop-nav:gap-2 desktop-nav:pr-2.5"
+
 /** A popover panel anchored under one of the buttons above. */
 export const NAV_POPOVER = "rounded-xl border border-gray-700 bg-gray-800 shadow-lg"

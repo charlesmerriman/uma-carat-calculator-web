@@ -1,27 +1,29 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type React from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowUpRight, Heart, LogOut, Trash2 } from "lucide-react"
+import { ArrowUpRight, Heart, ImageIcon, LogOut, Trash2 } from "lucide-react"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { OguriSpinner } from "../OguriSpinner"
 import { Avatar } from "./Avatar"
+import { UmaAvatarPicker } from "./UmaAvatarPicker"
 import { PROVIDERS } from "../../constants/providers"
 import { useAccount } from "../../services/AuthContext"
 import { SOCIAL_PROVIDERS, type SocialProvider } from "../../services/socialAuth"
 import { startAccountLink, unlinkProvider } from "../../services/accountLinking"
-import { accountDelete } from "../../services/accountFetchCalls"
+import { accountDelete, accountPatch } from "../../services/accountFetchCalls"
 import { clearAuthToken } from "../../services/authToken"
 import { ApiError } from "../../services/userServices"
 import { PATREON_URL } from "../../constants/links"
 import { formatDate } from "../../utils/dateFormat"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
-import type { Account } from "../../types/account"
+import type { Account, AccountPreferencesPatch, AvatarUmaOption } from "../../types/account"
 
 /**
- * /account — the signed-in person's account: which providers are connected,
- * whether they are a Patreon supporter, and sign-out.
+ * /account — the signed-in person's account: their picture and display name,
+ * which providers are connected, whether they are a Patreon supporter, and
+ * sign-out.
  *
  * This is what makes linking REACHABLE. The link endpoints shipped with Patreon
  * sign-in and sat unused until this page called them; before it, someone with a
@@ -58,11 +60,34 @@ const BUTTON_GHOST =
 const BUTTON_DANGER =
 	"rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-500/10"
 
+const INPUT =
+	"rounded-lg border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-gray-100 outline-none transition focus:border-brand"
+
 /** What the person has to type before the delete button arms. */
 const DELETE_PHRASE = "delete"
 
+/** The server's cap (CustomUser.display_name); mirrored on the input so the field stops at it. */
+const DISPLAY_NAME_MAX = 32
+
 function messageFrom(e: unknown, fallback: string): string {
 	return e instanceof ApiError ? e.message : fallback
+}
+
+/**
+ * The message to show for a refused PATCH /account. DRF answers a form with
+ * per-field errors ({"display_name": ["…"]}); the first message of the first
+ * field is the one worth a toast. Anything else falls back to a generic line.
+ */
+async function patchErrorMessage(response: Response): Promise<string> {
+	try {
+		const data = (await response.json()) as Record<string, unknown>
+		for (const value of Object.values(data)) {
+			if (Array.isArray(value) && typeof value[0] === "string") return value[0]
+		}
+	} catch {
+		// Not JSON: a proxy error page, or an empty body.
+	}
+	return "Could not save your changes. Please try again."
 }
 
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -129,6 +154,19 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 	const [deleting, setDeleting] = useState(false)
 	const deleteArmed = deletePhrase.trim().toLowerCase() === DELETE_PHRASE
 
+	// The display-name field is a draft of the stored value. Re-seeded when the
+	// account re-reads (after a save, or a refresh from elsewhere) so the field
+	// never shows a stale edit as if it were saved.
+	const [nameDraft, setNameDraft] = useState(account.display_name)
+	useEffect(() => setNameDraft(account.display_name), [account.display_name])
+	const [savingName, setSavingName] = useState(false)
+	const [pickerOpen, setPickerOpen] = useState(false)
+	const [savingAvatar, setSavingAvatar] = useState(false)
+	const trimmedName = nameDraft.trim()
+	const nameChanged = trimmedName !== account.display_name
+	// What the header and the avatar fallback go by: the chosen name, else the handle.
+	const shownName = account.display_name || account.username
+
 	const linkedFor = (provider: SocialProvider) =>
 		account.linked_providers.find((row) => row.provider === provider)
 	// The server refuses to remove the last sign-in method of a password-less
@@ -161,6 +199,59 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 			toast.error(messageFrom(e, `Could not disconnect ${PROVIDERS[provider].label}.`))
 		} finally {
 			setPending(null)
+		}
+	}
+
+	/**
+	 * One writer for both preferences. Resolves true on success, after asking
+	 * AuthProvider to re-read the account so the navbar picks the change up too.
+	 */
+	const savePreferences = async (body: AccountPreferencesPatch, success: string): Promise<boolean> => {
+		try {
+			const response = await accountPatch(body)
+			if (!response.ok) {
+				toast.error(await patchErrorMessage(response))
+				return false
+			}
+			toast.success(success)
+			refresh()
+			return true
+		} catch (err) {
+			console.error(err)
+			toast.error("Could not save your changes. Please try again.")
+			return false
+		}
+	}
+
+	const handleSaveName = async (): Promise<void> => {
+		if (!nameChanged) return
+		setSavingName(true)
+		try {
+			await savePreferences(
+				{ display_name: trimmedName },
+				trimmedName ? "Display name saved." : "Display name cleared."
+			)
+		} finally {
+			setSavingName(false)
+		}
+	}
+
+	// Resolves to whether it saved: the picker closes itself only on true.
+	const handleChooseAvatar = async (uma: AvatarUmaOption): Promise<boolean> => {
+		setSavingAvatar(true)
+		try {
+			return await savePreferences({ avatar_uma: uma.id }, `Your picture is now ${uma.name}.`)
+		} finally {
+			setSavingAvatar(false)
+		}
+	}
+
+	const handleResetAvatar = async (): Promise<void> => {
+		setSavingAvatar(true)
+		try {
+			await savePreferences({ avatar_uma: null }, "Back to your provider picture.")
+		} finally {
+			setSavingAvatar(false)
 		}
 	}
 
@@ -201,27 +292,96 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 
 	return (
 		<>
-			{/* Identity */}
-			<div className="mt-6 flex items-center gap-4">
-				<Avatar src={account.avatar_url} name={account.username} size="lg" />
+			{/* Identity: the picture, the name they go by, the tier. */}
+			<div className="mt-6 flex items-start gap-4">
+				<Avatar src={account.avatar_url} name={shownName} size="lg" />
 				<div className="min-w-0">
 					<div className="flex flex-wrap items-center gap-2">
-						<span className="truncate text-lg font-semibold text-gray-100">{account.username}</span>
+						<span className="truncate text-lg font-semibold text-gray-100">{shownName}</span>
 						{supporter.is_supporter && supporter.tier && (
 							<span className="rounded-full border border-brand/55 bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
 								{supporter.tier}
 							</span>
 						)}
 					</div>
+					{/* The handle stays on the page when a chosen name is shown: it is
+					    the account's identity, and what to quote when asking for help. */}
+					{account.display_name && (
+						<div className="mt-0.5 font-mono text-xs text-gray-500">{account.username}</div>
+					)}
 					<p className="mt-1 text-xs leading-relaxed text-gray-500">
-						Your picture comes from the provider you last signed in with. We never store
-						your name or email, only this handle and your picture.
+						{account.avatar_uma !== null
+							? "Your picture is the uma you picked."
+							: "Your picture comes from the provider you last signed in with."}{" "}
+						We never store your real name or email.
 					</p>
+					<div className="mt-2.5 flex flex-wrap gap-2">
+						<button
+							type="button"
+							onClick={() => setPickerOpen(true)}
+							disabled={savingAvatar}
+							className={`${BUTTON_GHOST} inline-flex items-center gap-1.5`}
+						>
+							<ImageIcon className="h-4 w-4" aria-hidden="true" />
+							{account.avatar_uma !== null ? "Change uma" : "Pick an uma"}
+						</button>
+						{account.avatar_uma !== null && (
+							<button
+								type="button"
+								onClick={() => void handleResetAvatar()}
+								disabled={savingAvatar}
+								className={BUTTON_GHOST}
+							>
+								{savingAvatar ? "Saving…" : "Use my provider picture"}
+							</button>
+						)}
+					</div>
 				</div>
 			</div>
 
+			<UmaAvatarPicker
+				open={pickerOpen}
+				currentId={account.avatar_uma}
+				onClose={() => setPickerOpen(false)}
+				onChoose={handleChooseAvatar}
+			/>
+
+			{/* Display name */}
+			<section className={`${CARD} mt-6`} aria-labelledby="display-name">
+				<h2 id="display-name" className={CARD_TITLE}>
+					Display name
+				</h2>
+				<p className="mt-1 text-sm text-gray-400">
+					Shown to you alone, in the menu and on this page. Leave it blank to go by your
+					handle, <span className="font-mono text-gray-300">{account.username}</span>.
+				</p>
+				<form
+					className="mt-4 flex flex-wrap items-end gap-3"
+					onSubmit={(event) => {
+						event.preventDefault()
+						void handleSaveName()
+					}}
+				>
+					<label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-gray-400">
+						Display name
+						<input
+							type="text"
+							value={nameDraft}
+							onChange={(event) => setNameDraft(event.target.value)}
+							maxLength={DISPLAY_NAME_MAX}
+							autoComplete="nickname"
+							spellCheck={false}
+							className={INPUT}
+						/>
+					</label>
+					<button type="submit" disabled={!nameChanged || savingName} className={BUTTON_PRIMARY}>
+						{savingName ? "Saving…" : "Save"}
+					</button>
+				</form>
+			</section>
+
 			{/* Sign-in methods */}
-			<section className={`${CARD} mt-6`} aria-labelledby="sign-in-methods">
+			<section className={`${CARD} mt-4`} aria-labelledby="sign-in-methods">
 				<h2 id="sign-in-methods" className={CARD_TITLE}>
 					Sign-in methods
 				</h2>
@@ -388,8 +548,8 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					Delete account
 				</h2>
 				<p className="mt-1 text-sm leading-relaxed text-gray-400">
-					This permanently removes your saved plan, your connected sign-in methods and
-					your profile picture. It can't be undone. Feedback you've sent stays, with no
+					This permanently removes your saved plan, your connected sign-in methods, your
+					display name and your picture. It can't be undone. Feedback you've sent stays, with no
 					link to you. A Patreon pledge is unaffected, since it belongs to your Patreon
 					account, not to this one.
 				</p>

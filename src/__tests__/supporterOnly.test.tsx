@@ -16,7 +16,9 @@ vi.mock('../services/AuthContext', () => ({ useAccount: () => auth }))
 function account(benefits?: string[]): Account {
 	return {
 		username: 'user_a3f9c1',
+		display_name: '',
 		avatar_url: null,
+		avatar_uma: null,
 		linked_providers: [],
 		supporter: benefits ? { is_supporter: true, tier: 'Junior Class', benefits } : { is_supporter: false },
 	}
