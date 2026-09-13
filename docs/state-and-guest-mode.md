@@ -115,6 +115,40 @@ otherwise replay a spent code and show an error to a user who actually signed in
 Server-side flow, scopes, and the privacy constraints:
 [../../backend/docs/auth-and-privacy.md](../../backend/docs/auth-and-privacy.md).
 
+## Account linking, client side
+
+`services/accountLinking.ts` attaches another provider to the account that is
+**already signed in** — the same OAuth round trip against `/account/link/*`
+instead of `/auth/*`, authenticated, and it never signs anyone in or creates an
+account.
+
+- `startAccountLink(provider)` parks `{provider, state, createdAt}` under
+  **`accountLinkState.v1`** — deliberately a different key from sign-in's
+  `oauthState.v1`, mirroring the two salts on the server. One key with a mode
+  flag would be one bad branch away from finishing the wrong flow.
+- `completeAccountLink` consumes that entry (single-use) and resolves to the new
+  `LinkedProvider` row; a 409 passes the **server's** message through, because
+  it says which conflict it was ("already linked to a different account" vs
+  "this account already has a google login").
+- `unlinkProvider` DELETEs. The server refuses to remove the **last** sign-in
+  method of a password-less account (400, with a message); the account page
+  disables the button as a courtesy, but the rule lives on the server.
+
+`components/auth/OAuthCallback.tsx` is **shared by both flows**. At mount it asks
+`peekPendingLinkProvider()` (non-consuming) — but only while `isLoggedIn`,
+because a link can only have been started by someone signed in, and a parked
+link in a token-less tab is stale. A link then finishes with `refresh()` and
+lands on `/account`; otherwise it is the sign-in flow exactly as before. The
+flow is latched in a `useState` initialiser so the error screen cannot flip to
+sign-in copy after the pending entry has been consumed — this is the one
+render-time storage read outside the `/app` gate, allowed because this route is
+never prerendered or hydrated.
+
+`components/account/AccountPage.tsx` (`/account`, noindex, **not** prerendered —
+like `/login`) is where linking is reachable from: connected providers with
+connect/disconnect, supporter status and named benefits, sign-out. A guest sees
+a sign-in card, never a redirect; no route requires an account.
+
 ---
 
 ## Type system
@@ -161,8 +195,8 @@ gives:
 |---|---|
 | `isLoggedIn` | Is a token present. **Synchronous** on a normal client render. On a prerendered page it is `false` in the static HTML and during hydration (the build ran as a guest) and corrects itself in the first commit after — see the `AuthProvider` docblock. |
 | `status` | `anonymous` / `loading` / `ready` / `error` — how far `GET /account` got. |
-| `account` | The summary, or `null` until it loads. |
-| `isSupporter` | Convenience gate. Always `false` today. |
+| `account` | The summary, or `null` until it loads. Includes `avatar_url`: the picture from the provider most recently signed in with, or `null` — the one profile attribute an account holds (2026-09-12). `components/account/Avatar.tsx` draws it and falls back to a handle-derived colour and initials on `null` or a broken image. |
+| `isSupporter` | `account.supporter.is_supporter`, false until positively known. For gating UI use `useHasBenefit(key)` / `<SupporterOnly benefit=…>` — they key on a **benefit**, not on this flag or the tier name. |
 | `refresh()` | Re-read `/account` after something that could change entitlement. |
 | `signOut()` | Deletes the server-side token, then clears it locally. |
 

@@ -16,6 +16,13 @@ export interface LinkedProvider {
 	provider: string
 	/** ISO date (not a timestamp) — the API deliberately emits day precision. */
 	linked_at: string
+	/**
+	 * The picture this provider holds for the person: an https URL on the
+	 * provider's own CDN, or "" when they have none there. The server refreshes
+	 * it on every sign-in or link through this provider, so it follows the
+	 * picture they currently have rather than the first one we saw.
+	 */
+	avatar_url: string
 }
 
 /**
@@ -47,6 +54,13 @@ export interface SupporterStatus {
 export interface Account {
 	/** The generated handle ("user_a3f9c1"). Never a real name — see the API. */
 	username: string
+	/**
+	 * The picture for the navbar, chosen by the server: the one from the
+	 * provider most recently signed in with. `null` when no linked provider
+	 * has a picture — null rather than "" so a component branches to its
+	 * fallback instead of trying to load an empty `src`.
+	 */
+	avatar_url: string | null
 	linked_providers: LinkedProvider[]
 	supporter: SupporterStatus
 }
