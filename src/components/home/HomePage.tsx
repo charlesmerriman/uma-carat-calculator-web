@@ -129,20 +129,15 @@ export const HomePage = () => {
 	}, [])
 
 	return (
-		<div className="home-canvas-shell flex min-h-dvh flex-col bg-gray-900">
-			{/* .home-canvas-shell above lines this navbar's wordmark up with the "P"
-			    of the hero heading below it — see App.css. The `bg-gray-900` on this
-			    root is what the per-theme `#root > .bg-gray-900` glows in index.css
-			    hook onto; keep it. */}
+		<div className="flex min-h-dvh flex-col bg-gray-900">
+			{/* The `bg-gray-900` on this root is what the per-theme
+			    `#root > .bg-gray-900` glows in index.css hook onto; keep it. */}
 			<Navbar />
 			{/* Normal block flow rather than `flex items-center`, which would
 			    vertically centre a single screenful and leave no room below the fold
 			    for the sections that explain the tool to a first-time visitor. */}
 			<main className="flex-1">
 				<div className="mx-auto w-full max-w-[104rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-5">
-					{/* Horizontal padding here is load-bearing: .home-canvas-shell's
-					    57px inset counts this card's border + sm:px-6 to sit the navbar
-					    wordmark over the "P" of the heading. Change one, change both. */}
 					<section className={`${HOME_CARD} px-5 py-5 sm:px-6`}>
 						<div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 							<div>

@@ -655,33 +655,16 @@ Independently of the wordmark, that nav was **already** over-full at ≤900px �
 of the nav and into the calculator page bought back one centre link's worth of room, but
 the wrap point has not been re-measured since.
 
-### Why the desktop wordmark is indented, and by a calc
+### The wordmark sits on the plain edge gutter, everywhere
 
-Inside the app shell the wordmark's **"U" sits directly above the "I" of
-INCOME & RESOURCES**, at every width; on the home page it sits above the **"P" of "Plan
-your pulls"**. Neither is a fixed indent — each canvas is centred once the viewport
-passes its cap, so the target moves with the window.
-
-A page opts in by setting `--nav-inset` for its own canvas, and a page that doesn't
-(the FAQ, the changelog, the legal pages, `NotFound`) keeps the plain edge gutter. That
-is why the wordmark shifts when you cross between the home page and the app: two
-different canvases, each aligned to itself.
-
-Three pieces, and all three have to stay together:
-
-| Where | What |
-|---|---|
-| `.nav-brand-inset` (App.css) | the branding cell's `padding-left`, `var(--nav-inset, 1.25rem)`. The fallback is the plain edge gutter the home page, FAQ and the other standalone-navbar pages keep — their containers are narrower and each one different, so there is nothing there to line up with. |
-| `.app-canvas-shell` (App.css) | sets `--nav-inset` on the app shell: `max(0px, (100cqw - var(--shell-scrollbar) - 96rem) / 2) + 33px`. The `33px` is the page gutter + panel border + section-header padding; change any of those and change it too. |
-| `.home-canvas-shell` (App.css) | the same idea for the home page's own canvas — the "U" over the **"P"** of "Plan your pulls" — with that page's numbers: a 104rem cap and `+ 57px` (32px `lg:px-8` + 1px hero-card border + 24px `sm:px-6`). No scrollbar term: that page has no inner scroller, so the navbar and the hero already share a box. |
-| `ApplicationViews` | measures `--shell-scrollbar` with a `ResizeObserver` on the scroller. |
-
-The scrollbar term is the non-obvious half. The navbar is a **sibling** of the app
-shell's scroll container, so it spans the full viewport while the pages inside it are
-laid out in a box one scrollbar narrower — half of which is enough to knock the wordmark
-visibly off the heading. No CSS length can see a sibling's scrollbar, hence the measured
-custom property; `cqw` (against the `@container` on the `<nav>`) rather than `vw` for the
-same reason, which is also why that `<nav>` must carry no horizontal padding of its own.
+Since 2026-09-13 the desktop navbar is a plain `px-5` bar on every page, and the branding
+cell has no indent of its own. Until then it was indented per page by a calc
+(`--nav-inset` from `.app-canvas-shell` / `.home-canvas-shell`, a `--shell-scrollbar`
+measured by a `ResizeObserver` in `ApplicationViews`, and a `@container` on the `<nav>`
+so `cqw` could see the content box) to sit the wordmark's "U" over the calculator's
+INCOME & RESOURCES heading or the home hero's "P". The owner asked for it flush left
+instead, and the whole mechanism went with it. Don't reintroduce a page-specific inset:
+the navbar is a shared frame, and the pages under it change independently of it.
 
 ---
 
