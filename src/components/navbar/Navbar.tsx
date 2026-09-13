@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { CalendarDays, Calculator as CalculatorIcon, LogIn, LogOut, Save, Sparkles, UserRound } from "lucide-react"
+import { CalendarDays, Calculator as CalculatorIcon, LogIn, Save, Sparkles } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
@@ -12,7 +12,8 @@ import { stashGuestPlan } from "../../services/guestMigration"
 import { Wordmark } from "../Wordmark"
 import { ThemePicker } from "./ThemePicker"
 import { SettingsMenu } from "./SettingsMenu"
-import { NAV_BUTTON, NAV_ICON_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
+import { ProfileMenu } from "./ProfileMenu"
+import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 
 export const Navbar = () => {
 	const navigate = useNavigate()
@@ -33,19 +34,10 @@ export const Navbar = () => {
 
 	// Was read straight from localStorage here. Going through the provider means
 	// a token dropped ELSEWHERE — the calculator's 401 recovery, or a sign-out in
-	// another tab — re-renders this button, instead of leaving it offering
-	// "Logout" to someone the server no longer recognises.
-	const { isLoggedIn, signOut } = useAccount()
-
-	const handleLogout = async (): Promise<void> => {
-		// signOut() owns the API call and clearing the token; what stays here is
-		// the navigation, which is a navbar decision rather than an auth one.
-		await signOut()
-		// Full reload rather than navigate(): we're usually already on
-		// /app, so a client-side navigation wouldn't remount the provider
-		// and the logged-out user would keep seeing their account data.
-		window.location.href = "/app"
-	}
+	// another tab — re-renders this slot, instead of leaving it showing a
+	// signed-in avatar to someone the server no longer recognises. Sign-out
+	// itself lives in ProfileMenu now.
+	const { isLoggedIn } = useAccount()
 
 	// Guest's path to saving: snapshot the in-memory plan into sessionStorage
 	// (the provider unmounts on route change, taking its state with it), then
@@ -119,18 +111,10 @@ export const Navbar = () => {
 		</button>
 	)
 
-	// Auth button shown on the right side when outside the app (home mode)
+	// Auth slot shown on the right side when outside the app (home mode): the
+	// avatar menu for a signed-in person, a Login link for a guest.
 	const authButton = isLoggedIn ? (
-		<button
-			onClick={handleLogout}
-			aria-label="Logout"
-			title="Logout"
-			className={NAV_BUTTON}
-		>
-			<UserRound className="w-4 h-4" />
-			Logout
-			<LogOut className="w-4 h-4" />
-		</button>
+		<ProfileMenu />
 	) : (
 		<Link
 			to="/login"
@@ -167,14 +151,7 @@ export const Navbar = () => {
 										)}
 									</div>
 									{navControls}
-									<button
-										onClick={handleLogout}
-										aria-label="Logout"
-										title="Logout"
-										className={NAV_ICON_BUTTON}
-									>
-										<LogOut className="h-4 w-4" />
-									</button>
+									<ProfileMenu />
 								</>
 							) : (
 								<>
@@ -240,7 +217,7 @@ export const Navbar = () => {
 					</Link>
 				</div>
 
-				{/* Right: Save indicator + Theme Picker + Logout/Login */}
+				{/* Right: Save indicator + settings + theme picker + avatar menu / Login */}
 				<div className="flex items-center justify-end gap-2 pr-5">
 					{calculatorData ? (
 						isLoggedIn ? (
@@ -259,14 +236,7 @@ export const Navbar = () => {
 									)}
 								</div>
 								{navControls}
-								<button
-									onClick={handleLogout}
-									className={NAV_BUTTON}
-								>
-									<UserRound className="w-4 h-4" />
-									Logout
-									<LogOut className="w-4 h-4" />
-								</button>
+								<ProfileMenu />
 							</>
 						) : (
 							<>

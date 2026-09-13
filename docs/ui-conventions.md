@@ -560,6 +560,36 @@ and `layout` props on banner list items animate reordering.
 
 ---
 
+## The profile menu and the account page
+
+Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: the
+account's avatar as a round button, opening a menu with **Account** and **Sign
+out** (since 2026-09-12; sign-out used to be a bare button in the bar). A guest
+still sees the Login link. The menu is the same popover idiom as ThemePicker and
+SettingsMenu and is always the LAST control, so right-anchoring never runs it off
+a narrow screen.
+
+**The avatar is the provider's picture, not ours.** `Avatar.tsx` shows
+`account.avatar_url` — the server picks the provider most recently signed in
+with — with `referrerPolicy="no-referrer"` (Google's image CDN refuses some
+referrers, and a provider has no business learning which page is open). On
+`null` or a broken image it falls back to a colour hashed from the **handle**
+plus the handle's first two characters: stable, theme-independent (an inline
+`hsl()`, like the theme swatches), and derived from nothing the provider sent.
+While the account is still loading it is a neutral silhouette. Avatars never
+appear anywhere public; the supporters list on the home page is names only.
+
+`/account` (`components/account/AccountPage.tsx`) is noindex and **not
+prerendered** — a build-time render is a guest card, which is not the page.
+The sign-in methods list draws each provider with the marks in
+`components/auth/ProviderMarks.tsx` and the labels in
+`constants/providers.ts`; the page is the only UI that calls the link endpoints,
+and the only one that calls `DELETE /account` — behind a typed confirmation
+phrase, because there is no email on file to send a recovery link to.
+Supporter-gated UI goes through one component, `<SupporterOnly benefit="…">`
+(`components/account/SupporterOnly.tsx`), which keys on a benefit from
+`account.supporter.benefits` and fails closed while the account is unknown.
+
 ## Brand mark and display font
 
 The site's brand mark is **text, not an image**. `components/Wordmark.tsx` renders
@@ -1169,7 +1199,7 @@ shell, or a prerendered document served for a path it was not built for, is rend
 from scratch.
 
 The third argument, `noindex`, is for pages that are plumbing rather than content —
-`/login`, `/auth/callback` and `NotFound`. Those are not prerendered, and the tag is
+`/login`, `/auth/callback`, `/account` and `NotFound`. Those are not prerendered, and the tag is
 the ONLY thing keeping them out of the index: `public/robots.txt` deliberately disallows
 nothing, because a Disallow stops the crawl before the crawler can read the tag (that
 is what earned the "Indexed, though blocked by robots.txt" warning on 2026-09-08). A

@@ -3,8 +3,7 @@ import { ArrowUpRight, Heart } from "lucide-react"
 import { supportersFetch } from "../../services/supportersFetchCalls"
 import type { PatreonSupporter, SupportersResponse } from "../../types"
 import { HOME_CARD } from "./homeStyles"
-
-const PATREON_URL = "https://www.patreon.com/cw/UmaCaratCalculator"
+import { PATREON_URL } from "../../constants/links"
 
 /**
  * Chip emphasis by tier, strongest first. Indexed by a tier's POSITION in the

@@ -27,6 +27,7 @@ const mockedLogout = vi.mocked(userLogout)
 function accountResponse(overrides: Partial<Account> = {}, status = 200): Response {
 	const body: Account = {
 		username: 'user_a3f9c1',
+		avatar_url: null,
 		linked_providers: [],
 		supporter: { is_supporter: false },
 		...overrides,

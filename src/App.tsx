@@ -5,6 +5,7 @@ import { Toaster } from "sonner"
 import { ApplicationViews } from "./views/ApplicationViews.js"
 import { Login } from "./components/auth/Login.js"
 import { OAuthCallback } from "./components/auth/OAuthCallback.js"
+import { AccountPage } from "./components/account/AccountPage.js"
 import { CalculatorProvider } from "./services/CalculatorProvider.js"
 import { ErrorBoundary } from "./components/ErrorBoundary.js"
 import { ApiSourceBadge } from "./components/ApiSourceBadge.js"
@@ -57,6 +58,10 @@ function App() {
 						    OAUTH_REDIRECT_URI on the backend and the redirect URI
 						    registered in each provider's console, exactly. */}
 						<Route path="/auth/callback" element={<OAuthCallback />} />
+						{/* Connected providers, supporter status, sign-out. Not prerendered
+						    and noindex, like /login: it describes one signed-in person, and
+						    a guest gets a sign-in card rather than a redirect. */}
+						<Route path="/account" element={<AccountPage />} />
 						<Route path="/privacy-policy" element={<PrivacyPolicy />} />
 						<Route path="/terms" element={<Terms />} />
 						<Route path="/about" element={<About />} />

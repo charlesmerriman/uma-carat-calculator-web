@@ -31,7 +31,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: August 24, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: September 12, 2026</p>
 
 					<p className={paragraph}>
 						This Privacy Policy explains what information the Uma Musume Carat Calculator
@@ -56,16 +56,25 @@ export const PrivacyPolicy: React.FC = () => {
 							A randomly generated username, such as <code>user_a3f9c1</code>, created
 							by us. You are not asked to choose one.
 						</li>
+						<li>
+							The web address of your profile picture at the provider you sign in with
+							&mdash; the address only, not a copy of the image. It is shown to you alone,
+							in the Site&apos;s menu and on your account page, is refreshed each time you
+							sign in through that provider, and is removed when you disconnect the
+							provider from your account.
+						</li>
 					</ul>
 					<p className={paragraph}>
 						We do <strong>not</strong> collect or store your email address, your real
-						name, your provider display name or avatar, or any password. We never see
-						your Google, Discord, or Patreon password — those services verify it and
-						only confirm to us that the sign-in succeeded. We request the narrowest
-						permission each provider offers, so your email address is never sent to us
-						in the first place. In Patreon&apos;s case that means we can see that an
-						account exists and, if you link it, whether it currently supports us — never
-						your email address, your pledge amount, or your billing details.
+						name, your provider display name, or any password. We never see your
+						Google, Discord, or Patreon password — those services verify it and only
+						confirm to us that the sign-in succeeded. We request the narrowest
+						permission each provider offers that includes your profile picture, so your
+						email address is never sent to us in the first place; where a provider sends
+						your name alongside the picture, we discard it without storing it. In
+						Patreon&apos;s case that means we can see that an account exists and, if you
+						link it, whether it currently supports us — never your email address, your
+						pledge amount, or your billing details.
 					</p>
 					<p className={paragraph}>
 						When you use the calculator, we store the planning data you enter, including
@@ -96,6 +105,15 @@ export const PrivacyPolicy: React.FC = () => {
 						Patreon account you signed in with. If that happens, your saved plan cannot be
 						recovered, and you would need to start a new plan. This is a deliberate
 						trade-off in exchange for holding none of your personal data.
+					</p>
+
+					<h2 className={heading}>Deleting Your Account</h2>
+					<p className={paragraph}>
+						You can delete your account at any time from the Account page. This
+						permanently removes your saved plan, your connected sign-in methods and the
+						address of your profile picture. Feedback you have sent stays, with no link to
+						you. If you support us on Patreon, your place on the supporters list is
+						unaffected &mdash; it reflects your pledge, not your account here.
 					</p>
 
 					<h2 className={heading}>Feedback You Send Us</h2>

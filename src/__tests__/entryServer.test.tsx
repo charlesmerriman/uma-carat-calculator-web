@@ -52,6 +52,14 @@ describe("entry-server render()", () => {
 		expect(render("/login").meta.noindex).toBe(true)
 	})
 
+	it("reports noindex for the account page, and renders it as a guest card", () => {
+		// Not prerendered for the same reason as /login: a build-time render is
+		// a guest, so the static document would never be the page itself.
+		const { html, meta } = render("/account")
+		expect(meta.noindex).toBe(true)
+		expect(html).toContain("not signed in")
+	})
+
 	it("renders the 404 page for an unknown path and marks it noindex", () => {
 		const { html, meta } = render("/definitely-not-a-page")
 		expect(meta.title).toBe(`Page not found | ${SITE_NAME}`)
