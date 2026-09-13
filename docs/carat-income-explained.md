@@ -150,8 +150,8 @@ that far.
 
 ### Training Pass — *your toggle*
 
-This feature doesn't exist in the game until **15 August 2027**, so nothing is counted
-before that date. After it launches:
+This feature doesn't exist in the game until **9 August 2027** (the date at the time of
+writing; it is admin-editable), so nothing is counted before that date. After it launches:
 
 - **Free tier:** 500 carats on the 1st of each month.
 - **Paid tier:** 2,200 carats on the **24th** instead — split as 1,850 free + 350 paid.

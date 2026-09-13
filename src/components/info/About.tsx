@@ -53,7 +53,7 @@ export const About: React.FC = () => {
 					<p className={paragraph}>
 						Carats arrive from dozens of separate sources, each on its own schedule —
 						daily logins, Team Trials on Mondays, club rank on the 1st, Champions
-						Meeting when finals open, League of Heroes on its end date, plus every
+						Meeting and League of Heroes on the day each event ends, plus every
 						event, login bonus and mission the game runs. Banners come and go on a
 						two-week cycle that lines up with none of it.
 					</p>
@@ -123,8 +123,8 @@ export const About: React.FC = () => {
 					<h2 className={heading}>What it costs, and what it asks of you</h2>
 					<ul className={list}>
 						<li>
-							It is free, and it always has been. Advertising, if and when it runs, is
-							what pays for hosting.
+							It is free, and it always has been. Patreon supporters, and advertising
+							if and when it runs, are what pay for hosting.
 						</li>
 						<li>
 							No account is needed. The full calculator works as a guest; signing in
@@ -136,7 +136,7 @@ export const About: React.FC = () => {
 							<Link to="/privacy-policy" className={link}>
 								Privacy Policy
 							</Link>{" "}
-							for exactly what is stored and why.
+							for exactly what is stored, why, and how to delete it.
 						</li>
 					</ul>
 

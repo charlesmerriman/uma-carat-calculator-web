@@ -143,7 +143,7 @@ export const SupportersSection = () => {
 			</div>
 
 			<p className="mt-2 max-w-3xl text-gray-400">
-				This calculator is free and ad-supported. Thank you to everyone keeping it running.
+				This calculator is free to use. Thank you to everyone on Patreon helping to keep it running.
 			</p>
 
 			<div className={`${HOME_CARD} mt-5 p-4`}>

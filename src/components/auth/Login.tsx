@@ -10,7 +10,7 @@ import { ApiError } from "../../services/userServices"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 
 export const Login: React.FC = () => {
-	useDocumentMeta("Sign In", "Staff sign-in for the Uma Musume Carat Calculator.", true)
+	useDocumentMeta("Sign In", "Sign in to the Uma Musume Carat Calculator with Google, Discord or Patreon to save your plan.", true)
 
 	// Which provider is mid-redirect, so only that button shows a pending state.
 	const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null)

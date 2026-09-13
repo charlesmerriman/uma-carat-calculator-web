@@ -34,7 +34,7 @@ export const Terms: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Terms of Service</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: September 1, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: September 12, 2026</p>
 
 					<p className={paragraph}>
 						These terms govern your use of the Uma Musume Carat Calculator (&quot;the
@@ -99,10 +99,12 @@ export const Terms: React.FC = () => {
 					<h2 className={heading}>Accounts and Your Data</h2>
 					<p className={paragraph}>
 						An account is optional; the calculator works fully as a guest. If you sign
-						in through Google or Discord, we create an anonymous account holding no
-						email address, no real name and no password. Because we hold no way to
-						verify who you are, <strong>a lost account cannot be recovered</strong> and
-						the plan saved to it is gone with it. What we store and why is set out in
+						in through Google, Discord or Patreon, we create an anonymous account holding
+						no email address, no real name and no password. You may connect more than one
+						of those sign-ins to it, and you can delete it yourself at any time from the
+						Account page. Because we hold no way to verify who you are,{" "}
+						<strong>an account whose every sign-in is lost cannot be recovered</strong>,
+						and the plan saved to it is gone with it. What we store and why is set out in
 						the{" "}
 						<Link to="/privacy-policy" className={link}>
 							Privacy Policy
@@ -128,7 +130,7 @@ export const Terms: React.FC = () => {
 					<h2 className={heading}>Advertising and Third-Party Links</h2>
 					<p className={paragraph}>
 						The Site may display advertising and link to third-party sites, including
-						YouTube and Google Sheets. We do not control that content and are not
+						YouTube, Google Sheets and Patreon. We do not control that content and are not
 						responsible for it. How advertising partners handle cookies, and how to opt
 						out, is covered in the{" "}
 						<Link to="/privacy-policy" className={link}>

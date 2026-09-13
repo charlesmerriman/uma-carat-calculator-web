@@ -135,8 +135,9 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Cookies and Local Storage</h2>
 					<p className={paragraph}>
 						The Site stores an authentication token in your browser&apos;s local storage to
-						keep you signed in. The Site also uses cookies. In addition, once advertising is
-						enabled, third-party ad partners (see below) may set cookies on your device.
+						keep you signed in, along with display preferences such as your chosen theme.
+						The Site sets no cookies of its own. Third-party advertising partners (see
+						below) may set cookies on your device.
 					</p>
 
 					<h2 className={heading}>Traffic Measurement</h2>

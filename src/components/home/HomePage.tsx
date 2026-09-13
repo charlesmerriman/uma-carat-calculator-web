@@ -67,9 +67,8 @@ const steps = [
 ]
 
 // `caption` is the tile's default subtitle. Changelog overrides it below with the live
-// "Updated <relative date>" once that has loaded; the rest are static. Carrying the text
-// per-link keeps "Coming soon" attached to the one page that is actually still coming,
-// rather than falling out of an else-branch onto every non-changelog tile.
+// "Updated <relative date>" once that has loaded; the rest are static. Carried per-link
+// rather than derived, so a tile's caption is one line here and not an else-branch.
 const infoLinks = [
 	{ to: "/changelog", icon: ScrollText, label: "Changelog", caption: "View updates" },
 	{ to: "/faq", icon: HelpCircle, label: "FAQ", caption: "Common questions" },
