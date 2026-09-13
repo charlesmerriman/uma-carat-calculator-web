@@ -574,22 +574,34 @@ because the image is `aria-hidden` and the caller owns the accessible name.
 
 ## The profile menu and the account page
 
-Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: the
-account's avatar as a round button, opening a menu with **Account** and **Sign
-out** (since 2026-09-12; sign-out used to be a bare button in the bar). A guest
-still sees the Login link. The menu is the same popover idiom as ThemePicker and
-SettingsMenu and is always the LAST control, so right-anchoring never runs it off
-a narrow screen.
+Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: a
+pill (`NAV_PROFILE_TRIGGER` in `navStyles.ts`) with the account's avatar as its
+left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
+opening a menu with **Account** and **Sign out** (since 2026-09-12; sign-out used
+to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
+`desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
+is already save + settings + theme + this. A guest still sees the Login link. The
+menu is the same popover idiom as ThemePicker and SettingsMenu and is always the
+LAST control, so right-anchoring never runs it off a narrow screen.
 
-**The avatar is the provider's picture, not ours.** `Avatar.tsx` shows
-`account.avatar_url` — the server picks the provider most recently signed in
-with — with `referrerPolicy="no-referrer"` (Google's image CDN refuses some
-referrers, and a provider has no business learning which page is open). On
-`null` or a broken image it falls back to a colour hashed from the **handle**
-plus the handle's first two characters: stable, theme-independent (an inline
+**The name is the one they chose, else the handle.** `account.display_name`
+(set on `/account`) or `account.username`. The menu header shows the handle in
+mono under a chosen name, because the handle is the account's identity and what
+an admin would ask for. The name span is omitted while `/account` is in flight,
+so the pill widens once rather than jumping from a placeholder.
+
+**The avatar is the uma they picked, else the provider's picture.** `Avatar.tsx`
+shows `account.avatar_url` — the server resolves the chosen uma's art first, then
+the provider most recently signed in with — with `referrerPolicy="no-referrer"`
+(Google's image CDN refuses some referrers, and a provider has no business
+learning which page is open). On `null` or a broken image it falls back to a
+colour hashed from the **name it was given** (the display name if set, else the
+handle) plus its first two characters: stable, theme-independent (an inline
 `hsl()`, like the theme swatches), and derived from nothing the provider sent.
-While the account is still loading it is a neutral silhouette. Avatars never
-appear anywhere public; the supporters list on the home page is names only.
+While the account is still loading it is a neutral silhouette. Three sizes:
+`sm` (menu rows), `md` (the navbar trigger, 36px inside the 40px pill), `lg`
+(the account header). Avatars never appear anywhere public; the supporters list
+on the home page is names only.
 
 `/account` (`components/account/AccountPage.tsx`) is noindex and **not
 prerendered** — a build-time render is a guest card, which is not the page.
@@ -601,6 +613,18 @@ phrase, because there is no email on file to send a recovery link to.
 Supporter-gated UI goes through one component, `<SupporterOnly benefit="…">`
 (`components/account/SupporterOnly.tsx`), which keys on a benefit from
 `account.supporter.benefits` and fails closed while the account is unknown.
+
+The page also owns the two **preferences**, both written through one
+`PATCH /account` (`accountPatch` in `services/accountFetchCalls.ts`) followed
+by `refresh()`, so the navbar picks the change up: a display-name form (32
+characters, the server's cap, mirrored as `maxLength`; blank clears it) and the
+uma picker. `components/account/UmaAvatarPicker.tsx` is a search-and-grid modal
+in the same shape as the Selectors page's card pickers, fed by `GET /umas`
+(`services/umasFetchCalls.ts`) and fetched on first open, not on mount — most
+visits never open it. Tiles are round, so the person sees the crop they will
+get. The parent owns the write; the dialog closes only once the PATCH succeeds,
+so a refused pick leaves the grid open. "Use my provider picture" sends
+`avatar_uma: null`.
 
 ## Brand mark and display font
 

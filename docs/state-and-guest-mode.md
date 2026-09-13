@@ -195,7 +195,7 @@ gives:
 |---|---|
 | `isLoggedIn` | Is a token present. **Synchronous** on a normal client render. On a prerendered page it is `false` in the static HTML and during hydration (the build ran as a guest) and corrects itself in the first commit after — see the `AuthProvider` docblock. |
 | `status` | `anonymous` / `loading` / `ready` / `error` — how far `GET /account` got. |
-| `account` | The summary, or `null` until it loads. Includes `avatar_url`: the picture from the provider most recently signed in with, or `null` — the one profile attribute an account holds (2026-09-12). `components/account/Avatar.tsx` draws it and falls back to a handle-derived colour and initials on `null` or a broken image. |
+| `account` | The summary, or `null` until it loads. Includes `avatar_url` — the uma the person picked (`avatar_uma`), else the picture from the provider most recently signed in with, else `null` — and `display_name`, the name they chose or `""`. `components/account/Avatar.tsx` draws the picture and falls back to a colour and initials derived from the name it is given (display name, else handle) on `null` or a broken image. Both preferences are written by `accountPatch()` (`PATCH /account`) from the account page, which then calls `refresh()`. |
 | `isSupporter` | `account.supporter.is_supporter`, false until positively known. For gating UI use `useHasBenefit(key)` / `<SupporterOnly benefit=…>` — they key on a **benefit**, not on this flag or the tier name. |
 | `refresh()` | Re-read `/account` after something that could change entitlement. |
 | `signOut()` | Deletes the server-side token, then clears it locally. |

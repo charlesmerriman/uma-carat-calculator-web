@@ -5,12 +5,14 @@
  * the last sign-in method, and the page should make that refusal unsurprising
  * rather than let someone click into a 400.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountPage } from '../components/account/AccountPage'
 import { startAccountLink, unlinkProvider } from '../services/accountLinking'
-import { accountDelete } from '../services/accountFetchCalls'
+import { accountDelete, accountPatch } from '../services/accountFetchCalls'
+import { umasFetch } from '../services/umasFetchCalls'
 import { getAuthToken, setAuthToken } from '../services/authToken'
 import type { Account, AccountStatus } from '../types/account'
 
@@ -18,7 +20,8 @@ vi.mock('../services/accountLinking', () => ({
 	startAccountLink: vi.fn(),
 	unlinkProvider: vi.fn(),
 }))
-vi.mock('../services/accountFetchCalls', () => ({ accountDelete: vi.fn() }))
+vi.mock('../services/accountFetchCalls', () => ({ accountDelete: vi.fn(), accountPatch: vi.fn() }))
+vi.mock('../services/umasFetchCalls', () => ({ umasFetch: vi.fn() }))
 // Navbar and Footer pull in contexts this page does not need under test.
 vi.mock('../components/navbar/Navbar', () => ({ Navbar: () => <nav /> }))
 vi.mock('../components/footer/Footer', () => ({ Footer: () => null }))
@@ -37,16 +40,31 @@ vi.mock('../services/AuthContext', () => ({ useAccount: () => auth }))
 const mockedStart = vi.mocked(startAccountLink)
 const mockedUnlink = vi.mocked(unlinkProvider)
 const mockedDelete = vi.mocked(accountDelete)
+const mockedPatch = vi.mocked(accountPatch)
+const mockedUmas = vi.mocked(umasFetch)
+const mockedToast = vi.mocked(toast)
 
 function account(overrides: Partial<Account> = {}): Account {
 	return {
 		username: 'user_a3f9c1',
+		display_name: '',
 		avatar_url: null,
+		avatar_uma: null,
 		linked_providers: [{ provider: 'google', linked_at: '2026-07-02', avatar_url: '' }],
 		supporter: { is_supporter: false },
 		...overrides,
 	}
 }
+
+/** A Response-shaped stub: the fetch modules hand back the raw Response. */
+function response(status: number, body: unknown = {}): Response {
+	return { ok: status < 400, status, json: async () => body } as unknown as Response
+}
+
+const UMAS = [
+	{ id: 7, name: 'Special Week', image: 'https://cdn.example/umas/special-week.png' },
+	{ id: 9, name: 'Gold Ship', image: 'https://cdn.example/umas/gold-ship.png' },
+]
 
 function signedIn(acct: Account) {
 	auth.isLoggedIn = true
@@ -71,6 +89,10 @@ beforeEach(() => {
 	mockedStart.mockReset()
 	mockedUnlink.mockReset()
 	mockedDelete.mockReset()
+	mockedPatch.mockReset()
+	mockedUmas.mockReset()
+	mockedToast.success.mockReset()
+	mockedToast.error.mockReset()
 	localStorage.clear()
 })
 
@@ -201,6 +223,131 @@ describe('AccountPage supporter block', () => {
 	})
 })
 
+describe('AccountPage display name', () => {
+	it('shows the chosen name in the header with the handle beneath it', () => {
+		signedIn(account({ display_name: 'Rhondal' }))
+
+		renderPage()
+
+		expect(screen.getByText('Rhondal')).toBeInTheDocument()
+		// Once in the header, once in the display-name blurb.
+		expect(screen.getAllByText('user_a3f9c1').length).toBeGreaterThanOrEqual(2)
+	})
+
+	it('saves a trimmed name and re-reads the account', async () => {
+		signedIn(account())
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		const save = screen.getByRole('button', { name: /^save$/i })
+		expect(save).toBeDisabled()
+		fireEvent.change(screen.getByRole('textbox', { name: /display name/i }), {
+			target: { value: '  Rhondal  ' },
+		})
+		expect(save).toBeEnabled()
+		fireEvent.click(save)
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ display_name: 'Rhondal' }))
+		await waitFor(() => expect(auth.refresh).toHaveBeenCalled())
+		expect(mockedToast.success).toHaveBeenCalledWith('Display name saved.')
+	})
+
+	it('clears the name by saving it blank', async () => {
+		signedIn(account({ display_name: 'Rhondal' }))
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		fireEvent.change(screen.getByRole('textbox', { name: /display name/i }), { target: { value: '' } })
+		fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ display_name: '' }))
+		expect(mockedToast.success).toHaveBeenCalledWith('Display name cleared.')
+	})
+
+	it("shows the server's reason when the name is refused, and does not re-read", async () => {
+		signedIn(account())
+		const reason = "That name has characters that can't be shown."
+		mockedPatch.mockResolvedValue(response(400, { display_name: [reason] }))
+
+		renderPage()
+		fireEvent.change(screen.getByRole('textbox', { name: /display name/i }), { target: { value: 'bad' } })
+		fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+		await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith(reason))
+		expect(auth.refresh).not.toHaveBeenCalled()
+	})
+})
+
+describe('AccountPage uma avatar', () => {
+	it('opens the picker, lists umas from /umas and saves the pick', async () => {
+		signedIn(account())
+		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		fireEvent.click(screen.getByRole('button', { name: /pick an uma/i }))
+		const dialog = await screen.findByRole('dialog')
+		fireEvent.click(await within(dialog).findByRole('button', { name: /gold ship/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ avatar_uma: 9 }))
+		await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+		expect(auth.refresh).toHaveBeenCalled()
+	})
+
+	it('filters the grid by the search box and marks the current pick', async () => {
+		signedIn(account({ avatar_uma: 7 }))
+		mockedUmas.mockResolvedValue(response(200, UMAS))
+
+		renderPage()
+		fireEvent.click(screen.getByRole('button', { name: /change uma/i }))
+		const dialog = await screen.findByRole('dialog')
+		expect(await within(dialog).findByRole('button', { name: /special week/i })).toHaveAttribute(
+			'aria-pressed',
+			'true',
+		)
+
+		fireEvent.change(within(dialog).getByRole('searchbox'), { target: { value: 'gold' } })
+		expect(within(dialog).queryByRole('button', { name: /special week/i })).toBeNull()
+		expect(within(dialog).getByRole('button', { name: /gold ship/i })).toBeInTheDocument()
+	})
+
+	it('keeps the picker open when the server refuses the pick', async () => {
+		signedIn(account())
+		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedPatch.mockResolvedValue(response(400, { avatar_uma: ['Invalid pk "9" - object does not exist.'] }))
+
+		renderPage()
+		fireEvent.click(screen.getByRole('button', { name: /pick an uma/i }))
+		const dialog = await screen.findByRole('dialog')
+		fireEvent.click(await within(dialog).findByRole('button', { name: /gold ship/i }))
+
+		await waitFor(() => expect(mockedToast.error).toHaveBeenCalled())
+		expect(screen.getByRole('dialog')).toBeInTheDocument()
+		expect(auth.refresh).not.toHaveBeenCalled()
+	})
+
+	it('offers the provider picture as the way back once an uma is chosen', async () => {
+		signedIn(account({ avatar_uma: 7, avatar_url: UMAS[0].image }))
+		mockedPatch.mockResolvedValue(response(200))
+
+		renderPage()
+		expect(screen.getByText(/the uma you picked/i)).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: /use my provider picture/i }))
+
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ avatar_uma: null }))
+		await waitFor(() => expect(auth.refresh).toHaveBeenCalled())
+	})
+
+	it('has no way back while the provider picture is in use', () => {
+		signedIn(account())
+
+		renderPage()
+
+		expect(screen.queryByRole('button', { name: /use my provider picture/i })).toBeNull()
+		expect(screen.getByText(/provider you last signed in with/i)).toBeInTheDocument()
+	})
+})
+
 describe('AccountPage sign out', () => {
 	it('signs out through the provider and leaves for the home page', async () => {
 		signedIn(account())
@@ -235,10 +382,10 @@ describe('AccountPage delete account', () => {
 		const button = screen.getByRole('button', { name: /delete my account/i })
 		expect(button).toBeDisabled()
 
-		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'delet' } })
+		fireEvent.change(screen.getByRole('textbox', { name: /to confirm/i }), { target: { value: 'delet' } })
 		expect(button).toBeDisabled()
 
-		fireEvent.change(screen.getByRole('textbox'), { target: { value: ' Delete ' } })
+		fireEvent.change(screen.getByRole('textbox', { name: /to confirm/i }), { target: { value: ' Delete ' } })
 		expect(button).toBeEnabled()
 	})
 
@@ -249,7 +396,7 @@ describe('AccountPage delete account', () => {
 		const assign = stubLocation()
 
 		renderPage()
-		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'delete' } })
+		fireEvent.change(screen.getByRole('textbox', { name: /to confirm/i }), { target: { value: 'delete' } })
 		fireEvent.click(screen.getByRole('button', { name: /delete my account/i }))
 
 		await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
@@ -264,7 +411,7 @@ describe('AccountPage delete account', () => {
 		const assign = stubLocation()
 
 		renderPage()
-		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'delete' } })
+		fireEvent.change(screen.getByRole('textbox', { name: /to confirm/i }), { target: { value: 'delete' } })
 		fireEvent.click(screen.getByRole('button', { name: /delete my account/i }))
 
 		await waitFor(() => expect(mockedDelete).toHaveBeenCalled())

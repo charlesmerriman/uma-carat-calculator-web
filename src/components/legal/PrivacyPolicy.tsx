@@ -63,6 +63,11 @@ export const PrivacyPolicy: React.FC = () => {
 							sign in through that provider, and is removed when you disconnect the
 							provider from your account.
 						</li>
+						<li>
+							A display name, if you choose one on your account page. It is shown to you
+							alone, never appears anywhere else on the Site, and you can change or clear
+							it whenever you like.
+						</li>
 					</ul>
 					<p className={paragraph}>
 						We do <strong>not</strong> collect or store your email address, your real
@@ -110,9 +115,9 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Deleting Your Account</h2>
 					<p className={paragraph}>
 						You can delete your account at any time from the Account page. This
-						permanently removes your saved plan, your connected sign-in methods and the
-						address of your profile picture. Feedback you have sent stays, with no link to
-						you. If you support us on Patreon, your place on the supporters list is
+						permanently removes your saved plan, your connected sign-in methods, your
+						display name and the address of your profile picture. Feedback you have sent
+						stays, with no link to you. If you support us on Patreon, your place on the supporters list is
 						unaffected. It reflects your pledge, not your account here.
 					</p>
 
