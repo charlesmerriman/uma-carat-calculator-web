@@ -196,7 +196,7 @@ export const HomePage = () => {
 									<ArrowUpRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 								</a>
 								<div className="aspect-video bg-gray-900">
-									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/videoseries?list=${YOUTUBE_UPLOADS_PLAYLIST_ID}`} title="Henry Handsome Derby — latest video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/videoseries?list=${YOUTUBE_UPLOADS_PLAYLIST_ID}`} title="Henry Handsome Derby's latest video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
 								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -262,24 +262,24 @@ export const HomePage = () => {
 						<h2 className={sectionHeadingClass}>What this is</h2>
 						<div className="mt-3 max-w-3xl space-y-3 leading-relaxed text-pretty text-gray-400">
 							<p>
-								Uma Musume Pretty Derby is a gacha game: you spend a currency called{" "}
+								Uma Musume Pretty Derby is a gacha game. You spend a currency called{" "}
 								<span className="font-semibold text-gray-300">carats</span> to pull for
 								characters and support cards on banners that run for a week or two and then
-								go away. Carats arrive slowly, from dozens of separate sources on their own
-								schedules, which makes &quot;can I afford the banner after this one?&quot; a
-								genuinely hard question to answer in your head.
+								go away. Carats come in slowly, from dozens of sources on their own
+								schedules, so &quot;can I afford the banner after this one?&quot; is a hard
+								question to answer in your head.
 							</p>
 							<p>
-								This is a planner for exactly that question. Tell it what you hold now and
-								which income applies to you, add the banners you care about, and it walks
-								the calendar forward day by day to show what your wallet looks like on the
-								day each one ends, before you commit rather than after.
+								This planner answers that question. Tell it what you have now and which
+								income applies to you, add the banners you care about, and it walks the
+								calendar forward day by day to show what you will have on the day each one
+								ends, before you spend.
 							</p>
 						</div>
 
 						<h3 className="mt-8 text-base font-semibold text-gray-100">What the forecast accounts for</h3>
 						<p className="mt-1 max-w-3xl text-sm text-pretty text-gray-400">
-							Income is added on the day the game actually pays it, not averaged across the
+							Income is added on the day the game pays it rather than averaged across the
 							month, so the projection lines up with real banner end dates.
 						</p>
 						{/* Four across on the wide canvas: the cards are short and the row

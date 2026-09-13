@@ -59,8 +59,8 @@ export const Terms: React.FC = () => {
 						Every figure the Site produces is an estimate based on published schedules,
 						historical reward patterns and the settings you choose. Reward amounts and
 						event dates are announced late, change, or differ from what was expected,
-						and a single toggle set differently from how you actually play will move
-						the result. <strong>Do not treat a projection as a guarantee</strong>, and
+						and a single toggle set differently from how you play will move the
+						result. <strong>Do not treat a projection as a guarantee</strong>, and
 						do not make a purchase decision on the assumption that it will hold. You
 						are solely responsible for how you spend your time and money in the game.
 					</p>
@@ -83,7 +83,7 @@ export const Terms: React.FC = () => {
 						</li>
 						<li>
 							Use automated tools to scrape or bulk-download the Site&apos;s content or
-							hammer its API. Reasonable personal or research use is fine — if you
+							hammer its API. Reasonable personal or research use is fine. If you
 							need the data in bulk, ask.
 						</li>
 						<li>
@@ -121,8 +121,8 @@ export const Terms: React.FC = () => {
 					<p className={paragraph}>
 						The Site is a hobby project maintained in spare time. It is provided
 						&quot;as is&quot; and &quot;as available&quot;, with no warranty of any
-						kind. We may change, suspend, or discontinue any part of it — including
-						saved plans — at any time and without notice. To the fullest extent
+						kind. We may change, suspend, or discontinue any part of it, including
+						saved plans, at any time and without notice. To the fullest extent
 						permitted by law, we are not liable for any loss arising from your use of,
 						or inability to use, the Site.
 					</p>

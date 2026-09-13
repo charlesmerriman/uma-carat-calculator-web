@@ -111,8 +111,8 @@ const INTROS: Record<"/app" | "/app/timeline" | "/app/selectors", RouteIntro> = 
 				Choose a target for each ticket to see what it would get you.
 			</>,
 			<>
-				Selector tickets never enter the pull forecast on the calculator: they buy a specific
-				card rather than a roll. The {faqLink} explains why a selector cannot be used on some
+				Selector tickets are not part of the pull forecast on the calculator, because they
+				buy a specific card instead of a roll. The {faqLink} explains why a selector cannot be used on some
 				cards, and the {guideLink} covers how the carats themselves are projected.
 			</>,
 		],

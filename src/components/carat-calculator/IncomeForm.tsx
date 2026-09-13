@@ -550,7 +550,7 @@ export const IncomeForm = () => {
 												title={
 													userStatsData.daily_carat
 														? "Daily Carat Pack: +50 carats every day, plus 500 paid carats each time it is re-bought (every 30 days, starting 30 days from today)"
-														: "Daily Carat Pack disabled — no daily carats and no paid carats from repurchases"
+														: "Daily Carat Pack off: no daily carats and no paid carats from repurchases"
 												}
 											/>
 											{/* Carats only — the pass's ticket income is projected but not
