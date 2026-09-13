@@ -19,13 +19,14 @@ export const NAV_ICON_BUTTON =
 	"flex h-9 w-9 items-center justify-center rounded-lg border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
 
 /**
- * The "save now" button, in brand so it reads as a pending action rather than a
- * setting. Its own recipe instead of NAV_ICON_BUTTON plus overrides: two
- * text-colour utilities on one element resolve by stylesheet order, not by
- * their order in the class string.
+ * The "save now" button. Its content is the spinning Oguri image, not an icon,
+ * so it carries no border (a box around a spinning head looked like a cage)
+ * and no text colour; the hover fill is what says it is clickable. Its own
+ * recipe rather than NAV_ICON_BUTTON minus overrides, because there is no
+ * "un-border" utility — the recipe has to be written without it.
  */
 export const NAV_SAVE_BUTTON =
-	"flex h-9 w-9 items-center justify-center rounded-lg border border-gray-600 text-brand transition hover:border-brand/70 hover:bg-gray-700"
+	"flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-gray-700"
 
 /** A popover panel anchored under one of the buttons above. */
 export const NAV_POPOVER = "rounded-xl border border-gray-700 bg-gray-800 shadow-lg"

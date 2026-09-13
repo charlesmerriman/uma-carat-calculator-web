@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { ArrowUpRight, Heart, LogOut, Trash2 } from "lucide-react"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
+import { OguriSpinner } from "../OguriSpinner"
 import { Avatar } from "./Avatar"
 import { PROVIDERS } from "../../constants/providers"
 import { useAccount } from "../../services/AuthContext"
@@ -99,7 +100,7 @@ const GuestCard: React.FC = () => (
 
 const Loading: React.FC = () => (
 	<div className="flex min-h-[40vh] items-center justify-center" role="status" aria-live="polite">
-		<div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-600 border-t-brand" aria-hidden="true" />
+		<OguriSpinner />
 		<span className="sr-only">Loading your account…</span>
 	</div>
 )

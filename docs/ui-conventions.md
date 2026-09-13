@@ -560,6 +560,18 @@ and `layout` props on banner list items animate reordering.
 
 ---
 
+### Loading indicator (`components/OguriSpinner.tsx`)
+
+Every in-flight state spins the same image: a derpy Oguri Cap head, served from `public/`
+by root-absolute path like the game-resource icons. Two sizes — `sm` (32px) inside a 36px
+control such as the navbar's pending-save button and the Timeline's "loading more" row,
+`lg` (80px) for page-level loaders — spinning on the `animate-spin-slow` token declared in
+`index.css` (one turn per 2s on Tailwind's stock `spin` keyframes; the 1s default was a
+blur), with `motion-reduce:animate-none` so the OS reduce-motion setting stills it. Don't hand-roll a CSS ring (`animate-spin rounded-full
+border-t-brand`) or reach for lucide's `Loader2` for a new loading state; render
+`<OguriSpinner />` inside your own `role="status"` wrapper with visible or `sr-only` text,
+because the image is `aria-hidden` and the caller owns the accessible name.
+
 ## The profile menu and the account page
 
 Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: the

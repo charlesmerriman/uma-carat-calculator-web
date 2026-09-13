@@ -5,11 +5,11 @@ import {
 	ChevronRight,
 	History,
 	Infinity as InfinityIcon,
-	Loader2,
 	Search,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
+import { OguriSpinner } from "../OguriSpinner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { nextTempId, plannedBannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
@@ -995,7 +995,7 @@ export const Timeline = () => {
 								role="status"
 								className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-400"
 							>
-								<Loader2 className="h-4 w-4 animate-spin text-brand" />
+								<OguriSpinner size="sm" />
 								Loading more events...
 							</div>
 						) : timelineRows.length > 0 ? (

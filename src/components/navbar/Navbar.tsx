@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { CalendarDays, Calculator as CalculatorIcon, LogIn, Save, Sparkles } from "lucide-react"
+import { CalendarDays, Calculator as CalculatorIcon, LogIn, Sparkles } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
@@ -10,6 +10,7 @@ import {
 } from "../../services/calculatorFetchCalls"
 import { stashGuestPlan } from "../../services/guestMigration"
 import { Wordmark } from "../Wordmark"
+import { OguriSpinner } from "../OguriSpinner"
 import { ThemePicker } from "./ThemePicker"
 import { SettingsMenu } from "./SettingsMenu"
 import { ProfileMenu } from "./ProfileMenu"
@@ -146,7 +147,7 @@ export const Navbar = () => {
 												title="Click to save now"
 												className={NAV_SAVE_BUTTON}
 											>
-												<Save className="h-4 w-4" />
+												<OguriSpinner size="sm" />
 											</button>
 										)}
 									</div>
@@ -231,7 +232,7 @@ export const Navbar = () => {
 											title="Click to save now"
 											className={NAV_SAVE_BUTTON}
 										>
-											<Save className="h-4 w-4" />
+											<OguriSpinner size="sm" />
 										</button>
 									)}
 								</div>
