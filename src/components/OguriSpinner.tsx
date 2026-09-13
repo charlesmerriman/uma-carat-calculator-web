@@ -17,13 +17,11 @@ import type React from "react"
  *
  * Two sizes because the slots are shaped very differently:
  *  - "sm" — 32px, for inside a 36px control: the navbar save button and the
- *           timeline's "Loading more events" row. The square's CORNERS are
- *           transparent, but the flat-cut bottom of the hair puts the farthest
- *           opaque pixel ~0.6 of the side from centre (measured), so while
- *           spinning the head sweeps a ~38px circle and a hair corner overlaps
- *           the button's 1px border for a few frames per turn. Deliberate:
- *           28px is the largest size that stays fully inside, and it read as
- *           a small face floating in a big box. The button does not clip.
+ *           timeline's "Loading more events" row. The flat-cut bottom of the
+ *           hair puts the farthest opaque pixel ~0.6 of the side from centre
+ *           (measured), so while spinning the head sweeps a ~38px circle —
+ *           1px past the 36px button on the worst frames. Fine because the
+ *           save button has no border to cross and nothing clips it.
  *  - "lg" — 80px, the page-level loader (calculator gate, changelog, account,
  *           OAuth callback).
  *
