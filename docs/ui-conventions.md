@@ -590,18 +590,19 @@ mono under a chosen name, because the handle is the account's identity and what
 an admin would ask for. The name span is omitted while `/account` is in flight,
 so the pill widens once rather than jumping from a placeholder.
 
-**The avatar is the uma they picked, else the provider's picture.** `Avatar.tsx`
-shows `account.avatar_url` — the server resolves the chosen uma's art first, then
-the provider most recently signed in with — with `referrerPolicy="no-referrer"`
-(Google's image CDN refuses some referrers, and a provider has no business
-learning which page is open). On `null` or a broken image it falls back to a
-colour hashed from the **name it was given** (the display name if set, else the
-handle) plus its first two characters: stable, theme-independent (an inline
-`hsl()`, like the theme swatches), and derived from nothing the provider sent.
-While the account is still loading it is a neutral silhouette. Three sizes:
-`sm` (menu rows), `md` (the navbar trigger, 36px inside the 40px pill), `lg`
-(the account header). Avatars never appear anywhere public; the supporters list
-on the home page is names only.
+**The avatar is a supporter's first oshi, and free accounts have none.**
+`Avatar.tsx` shows `account.avatar_url` — the server sends the first oshi's art
+while the tier covers at least one slot, else `null` — and on `null` or a broken
+image draws the quiet default: a muted `UserRound` silhouette on a `bg-gray-700`
+disc, styled like the settings and theme icon buttons beside it so it reads as
+one more control. The same default for everyone and for the loading state, on
+purpose: the avatar is only ever shown to its owner, so two free accounts have
+no reason to look different, and the initials-on-a-hue circle it replaced
+(2026-09-13) was loud in an otherwise grey bar. No provider picture is ever held
+or shown. Three sizes: `sm` (menu rows), `md` (the navbar trigger, 36px inside
+the 40px pill), `lg` (the account header and the oshi tiles). Avatars never
+appear anywhere public today; the supporters list on the home page is names
+only. (Oshis will be shown publicly by a future feature.)
 
 `/account` (`components/account/AccountPage.tsx`) is noindex and **not
 prerendered** — a build-time render is a guest card, which is not the page.
@@ -618,13 +619,31 @@ The page also owns the two **preferences**, both written through one
 `PATCH /account` (`accountPatch` in `services/accountFetchCalls.ts`) followed
 by `refresh()`, so the navbar picks the change up: a display-name form (32
 characters, the server's cap, mirrored as `maxLength`; blank clears it) and the
-uma picker. `components/account/UmaAvatarPicker.tsx` is a search-and-grid modal
-in the same shape as the Selectors page's card pickers, fed by `GET /umas`
+**oshi card**.
+
+**The oshi card draws what the server says.** `account.oshi_slots` (5 / 3 / 1 /
+0, already resolved by the server; the page does no tier arithmetic) is how many
+tiles are offered, and `account.oshis` (every stored pick, covered or not) fills
+them. Slot 0 is tagged "Your picture". Tiles past the slot count render greyed
+with "Not covered" — a downgrade keeps the rows — and offer only Remove, never
+Change or "Make picture", because a swap-in past the count is an ADD the server
+would refuse; the page avoids offering the refused button, the rule itself
+lives in the serializer. A free account with nothing held sees one locked
+"Supporters only" tile and a Patreon link; a lapsed supporter with rows sees
+them on hold with a "Renew" link. Every write sends the **whole ordered list**
+(`oshis: number[]`): picking fills or appends a slot, "Make picture" moves an
+id to the front, Remove filters it out, so the client never has to know the
+server's renumbering.
+
+`components/account/OshiPicker.tsx` is a search-and-grid modal in the same
+shape as the Selectors page's card pickers, fed by `GET /umas`
 (`services/umasFetchCalls.ts`) and fetched on first open, not on mount — most
-visits never open it. Tiles are round, so the person sees the crop they will
-get. The parent owns the write; the dialog closes only once the PATCH succeeds,
-so a refused pick leaves the grid open. "Use my provider picture" sends
-`avatar_uma: null`.
+visits never open it. It is opened for **one slot**: `currentId` marks the uma
+already there, `takenIds` disables the umas in the other slots ("Already
+picked") rather than hiding them. Tiles are round, so the person sees the crop
+they will get. The parent owns the write; the dialog closes only once the PATCH
+succeeds, so a refused pick leaves the grid open with the server's reason
+toasted ("Your tier covers 3 oshis.").
 
 ## Brand mark and display font
 

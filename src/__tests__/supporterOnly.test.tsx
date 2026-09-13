@@ -18,7 +18,8 @@ function account(benefits?: string[]): Account {
 		username: 'user_a3f9c1',
 		display_name: '',
 		avatar_url: null,
-		avatar_uma: null,
+		oshis: [],
+		oshi_slots: 0,
 		linked_providers: [],
 		supporter: benefits ? { is_supporter: true, tier: 'Junior Class', benefits } : { is_supporter: false },
 	}

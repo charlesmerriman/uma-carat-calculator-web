@@ -16,13 +16,22 @@ export interface LinkedProvider {
 	provider: string
 	/** ISO date (not a timestamp) — the API deliberately emits day precision. */
 	linked_at: string
-	/**
-	 * The picture this provider holds for the person: an https URL on the
-	 * provider's own CDN, or "" when they have none there. The server refreshes
-	 * it on every sign-in or link through this provider, so it follows the
-	 * picture they currently have rather than the first one we saw.
-	 */
-	avatar_url: string
+}
+
+/**
+ * One of a supporter's oshis: a uma they picked, in the order they picked
+ * them. The first is their picture. The server lists EVERY stored row, covered
+ * by the current tier or not, so the page can grey out the ones a downgrade
+ * stopped covering rather than pretend they are gone; `oshi_slots` on the
+ * account says how many are covered.
+ */
+export interface Oshi {
+	/** 0-based rank in the list. 0 is the picture. */
+	position: number
+	id: number
+	name: string
+	/** The storage URL of the uma's art, or "" if an editor has since cleared it. */
+	image: string
 }
 
 /**
@@ -61,18 +70,23 @@ export interface Account {
 	 */
 	display_name: string
 	/**
-	 * The picture for the navbar, chosen by the server: the uma they picked if
-	 * any, else the one from the provider most recently signed in with. `null`
-	 * when neither exists — null rather than "" so a component branches to its
-	 * fallback instead of trying to load an empty `src`.
+	 * The picture for the navbar, chosen by the server: the first oshi's art
+	 * while the account's tier covers at least one slot, else `null`. Free
+	 * accounts always get null — the picture IS the supporter perk. Null rather
+	 * than "" so a component branches to its default instead of trying to load
+	 * an empty `src`. No provider picture is ever held or served.
 	 */
 	avatar_url: string | null
+	/** Every oshi they hold, first to last. Empty for a free account. */
+	oshis: Oshi[]
 	/**
-	 * The id of the uma they picked as their picture, or null when the provider
-	 * picture is in use. The page needs it to show the current pick and to
-	 * offer the provider picture as the way back.
+	 * How many oshis the current tier covers: 5, 3 or 1 by tier, 0 for a free
+	 * account. A count the server has already resolved from its ladder, not a
+	 * tier order — draw this many tiles and do no arithmetic. Top-level rather
+	 * than inside `supporter` because 0 is a real answer the page needs even
+	 * when there is no entitlement block to put it in.
 	 */
-	avatar_uma: number | null
+	oshi_slots: number
 	linked_providers: LinkedProvider[]
 	supporter: SupporterStatus
 }
@@ -80,17 +94,22 @@ export interface Account {
 /**
  * The body of PATCH /account. Partial: send only what changed. The server
  * writes these two fields and ignores anything else in the body.
+ *
+ * `oshis` is the WHOLE ordered list of uma ids, replacing what is stored; the
+ * first becomes the picture and `[]` clears them. The server refuses a list
+ * that adds past `oshi_slots` (a subset of what is already held may always be
+ * reordered or trimmed) and answers with the reason in DRF's per-field shape.
  */
 export interface AccountPreferencesPatch {
 	display_name?: string
-	avatar_uma?: number | null
+	oshis?: number[]
 }
 
 /**
- * One row of GET /umas: what the avatar picker needs to draw a tile. The route
+ * One row of GET /umas: what the oshi picker needs to draw a tile. The route
  * lists only umas that have an image, so `image` is never "".
  */
-export interface AvatarUmaOption {
+export interface OshiOption {
 	id: number
 	name: string
 	image: string

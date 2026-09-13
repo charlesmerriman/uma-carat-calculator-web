@@ -131,7 +131,7 @@ describe('peekPendingLinkProvider', () => {
 })
 
 describe('completeAccountLink', () => {
-	const row = { provider: 'patreon', linked_at: '2026-09-12', avatar_url: 'https://c10.patreonusercontent.com/a.png' }
+	const row = { provider: 'patreon', linked_at: '2026-09-12' }
 
 	it('posts the code with the token and resolves to the linked row', async () => {
 		pendingLink()

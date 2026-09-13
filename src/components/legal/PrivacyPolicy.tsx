@@ -31,7 +31,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: September 12, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: September 13, 2026</p>
 
 					<p className={paragraph}>
 						This Privacy Policy explains what information the Uma Musume Carat Calculator
@@ -57,26 +57,24 @@ export const PrivacyPolicy: React.FC = () => {
 							by us. You are not asked to choose one.
 						</li>
 						<li>
-							The web address of your profile picture at the provider you sign in with.
-							This is the address only, not a copy of the image. It is shown to you alone,
-							in the Site&apos;s menu and on your account page, is refreshed each time you
-							sign in through that provider, and is removed when you disconnect the
-							provider from your account.
-						</li>
-						<li>
 							A display name, if you choose one on your account page. It is shown to you
 							alone, never appears anywhere else on the Site, and you can change or clear
 							it whenever you like.
 						</li>
+						<li>
+							If you support the Site on Patreon, the favourite characters you pick on your
+							account page (your &quot;oshis&quot;). These are picks from the Site&apos;s own
+							catalogue, not anything about you, and the first one is used as your picture.
+						</li>
 					</ul>
 					<p className={paragraph}>
 						We do <strong>not</strong> collect or store your email address, your real
-						name, your provider display name, or any password. We never see your
-						Google, Discord, or Patreon password. Those services verify it and only
-						confirm to us that the sign-in succeeded. We request the narrowest
-						permission each provider offers that includes your profile picture, so your
-						email address is never sent to us in the first place; where a provider sends
-						your name alongside the picture, we discard it without storing it. In
+						name, your provider display name, your profile picture, or any password. We
+						never see your Google, Discord, or Patreon password. Those services verify it
+						and only confirm to us that the sign-in succeeded. We request the narrowest
+						permission each provider offers, so your email address and profile details
+						are never sent to us in the first place; where a provider includes something
+						about you anyway, such as a username, we discard it without storing it. In
 						Patreon&apos;s case that means we can see that an account exists and, if you
 						link it, whether it currently supports us. We never see your email address,
 						your pledge amount, or your billing details.
@@ -116,7 +114,7 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						You can delete your account at any time from the Account page. This
 						permanently removes your saved plan, your connected sign-in methods, your
-						display name and the address of your profile picture. Feedback you have sent
+						display name and your oshis. Feedback you have sent
 						stays, with no link to you. If you support us on Patreon, your place on the supporters list is
 						unaffected. It reflects your pledge, not your account here.
 					</p>
