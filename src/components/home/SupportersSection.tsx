@@ -2,8 +2,8 @@ import { useEffect, useState } from "react"
 import { ArrowUpRight, Heart } from "lucide-react"
 import { supportersFetch } from "../../services/supportersFetchCalls"
 import type { PatreonSupporter, SupportersResponse } from "../../types"
-
-const PATREON_URL = "https://www.patreon.com/cw/UmaCaratCalculator"
+import { HOME_CARD } from "./homeStyles"
+import { PATREON_URL } from "../../constants/links"
 
 /**
  * Chip emphasis by tier, strongest first. Indexed by a tier's POSITION in the
@@ -127,7 +127,7 @@ export const SupportersSection = () => {
 	return (
 		<section id="supporters" className="mt-10 scroll-mt-20 border-t border-gray-800 pt-8">
 			<div className="flex flex-wrap items-baseline justify-between gap-3">
-				<h2 className="flex items-center gap-2 text-xl font-bold text-gray-100">
+				<h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-gray-100">
 					<Heart className="h-5 w-5 text-brand" aria-hidden="true" />
 					Patreon supporters
 				</h2>
@@ -143,10 +143,10 @@ export const SupportersSection = () => {
 			</div>
 
 			<p className="mt-2 max-w-3xl text-gray-400">
-				This calculator is free and ad-supported. Thank you to everyone keeping it running.
+				This calculator is free to use. Thank you to everyone on Patreon helping to keep it running.
 			</p>
 
-			<div className="mt-5 rounded-xl border border-gray-700 bg-gray-800 p-4 shadow-md">
+			<div className={`${HOME_CARD} mt-5 p-4`}>
 				{groups.map((group, index) => (
 					<div
 						key={group.key}

@@ -31,7 +31,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: August 24, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: September 13, 2026</p>
 
 					<p className={paragraph}>
 						This Privacy Policy explains what information the Uma Musume Carat Calculator
@@ -42,8 +42,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Information We Collect</h2>
 					<p className={paragraph}>
 						You can use the calculator without an account at all. If you choose to create
-						one, you sign in through Google, Discord, or Patreon, and we deliberately
-						collect as little as possible:
+						one, you sign in through Google, Discord, or Patreon, and we collect as
+						little as possible:
 					</p>
 					<ul className={list}>
 						<li>
@@ -56,16 +56,28 @@ export const PrivacyPolicy: React.FC = () => {
 							A randomly generated username, such as <code>user_a3f9c1</code>, created
 							by us. You are not asked to choose one.
 						</li>
+						<li>
+							A display name, if you choose one on your account page. It is shown to you
+							alone, never appears anywhere else on the Site, and you can change or clear
+							it whenever you like.
+						</li>
+						<li>
+							If you support the Site on Patreon, the favourite characters you pick on your
+							account page (your &quot;oshis&quot;). These are picks from the Site&apos;s own
+							catalogue, not anything about you, and the first one is used as your picture.
+						</li>
 					</ul>
 					<p className={paragraph}>
 						We do <strong>not</strong> collect or store your email address, your real
-						name, your provider display name or avatar, or any password. We never see
-						your Google, Discord, or Patreon password — those services verify it and
-						only confirm to us that the sign-in succeeded. We request the narrowest
-						permission each provider offers, so your email address is never sent to us
-						in the first place. In Patreon&apos;s case that means we can see that an
-						account exists and, if you link it, whether it currently supports us — never
-						your email address, your pledge amount, or your billing details.
+						name, your provider display name, your profile picture, or any password. We
+						never see your Google, Discord, or Patreon password. Those services verify it
+						and only confirm to us that the sign-in succeeded. We request the narrowest
+						permission each provider offers, so your email address and profile details
+						are never sent to us in the first place; where a provider includes something
+						about you anyway, such as a username, we discard it without storing it. In
+						Patreon&apos;s case that means we can see that an account exists and, if you
+						link it, whether it currently supports us. We never see your email address,
+						your pledge amount, or your billing details.
 					</p>
 					<p className={paragraph}>
 						When you use the calculator, we store the planning data you enter, including
@@ -81,9 +93,9 @@ export const PrivacyPolicy: React.FC = () => {
 						We use your account reference and planning data to operate the Site: to
 						recognize you when you sign in, to save and display your resource
 						projections, and to keep your plan synced across sessions. We also analyze
-						planning data in aggregate, anonymized form — for example, the percentage of
-						users who enable certain income options, or the overall popularity of banners
-						— to understand how the Site is used and to improve it. These statistics
+						planning data in aggregate, anonymized form (for example, the percentage of
+						users who enable certain income options, or the overall popularity of
+						banners) to understand how the Site is used and to improve it. These statistics
 						never identify individual users. We do not sell your personal information,
 						and because we hold no contact details, we cannot send you marketing of any
 						kind.
@@ -94,14 +106,23 @@ export const PrivacyPolicy: React.FC = () => {
 						Because we store no email address, there is no password reset and no way for
 						us to verify your identity if you lose access to every Google, Discord, or
 						Patreon account you signed in with. If that happens, your saved plan cannot be
-						recovered, and you would need to start a new plan. This is a deliberate
-						trade-off in exchange for holding none of your personal data.
+						recovered, and you would need to start a new plan. That is the trade-off
+						for holding none of your personal data.
+					</p>
+
+					<h2 className={heading}>Deleting Your Account</h2>
+					<p className={paragraph}>
+						You can delete your account at any time from the Account page. This
+						permanently removes your saved plan, your connected sign-in methods, your
+						display name and your oshis. Feedback you have sent
+						stays, with no link to you. If you support us on Patreon, your place on the supporters list is
+						unaffected. It reflects your pledge, not your account here.
 					</p>
 
 					<h2 className={heading}>Feedback You Send Us</h2>
 					<p className={paragraph}>
 						If you use the feedback form, we store the message you write and the category
-						you pick, so we can read and act on it. The form deliberately has{" "}
+						you pick, so we can read and act on it. The form has{" "}
 						<strong>no contact field</strong>. We do not ask for your email address or any
 						other way to reach you, which also means we cannot reply to what you send. If
 						you are signed in, the message is linked to your anonymous account reference so
@@ -117,8 +138,9 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Cookies and Local Storage</h2>
 					<p className={paragraph}>
 						The Site stores an authentication token in your browser&apos;s local storage to
-						keep you signed in. The Site also uses cookies. In addition, once advertising is
-						enabled, third-party ad partners (see below) may set cookies on your device.
+						keep you signed in, along with display preferences such as your chosen theme.
+						The Site sets no cookies of its own. Third-party advertising partners (see
+						below) may set cookies on your device.
 					</p>
 
 					<h2 className={heading}>Traffic Measurement</h2>
@@ -138,8 +160,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						The scrambling changes at the start of every calendar month, so the value
 						representing you in one month bears no relation to the next. In practice this
-						means we can recognize a repeat visit within a single month — that is what
-						lets us report how many people used the Site that month — but we{" "}
+						means we can recognize a repeat visit within a single month, which is what
+						lets us report how many people used the Site that month. We{" "}
 						<strong>cannot</strong> follow anyone from one month into the next, or build
 						a long-term picture of any individual&apos;s activity. The scrambled values
 						are deleted after 90 days; only anonymous totals are kept.
@@ -147,8 +169,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						This counting uses no cookie and no identifier stored on your device, so it
 						cannot be linked to you on any other website, or to anything else we hold. We
-						never see who you are — only that some visitor, distinguishable from other
-						visitors for the remainder of the month, was here.
+						never see who you are, only that some visitor, distinguishable from other
+						visitors for the rest of the month, was here.
 					</p>
 
 					<h2 className={heading}>Third-Party Advertising</h2>

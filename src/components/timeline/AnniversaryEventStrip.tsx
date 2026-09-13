@@ -61,7 +61,7 @@ export const AnniversaryEventStrip = ({
 			)}
 			{stepUpChip && (
 				<span
-					title="Select Step-Up banners run during this campaign — a discounted, paid-carats-only ladder that guarantees a card you choose"
+					title="Select Step-Up banners run during this campaign: a discounted, paid-carats-only ladder that guarantees a card you choose"
 					className="rounded-full border border-purple-400/50 bg-purple-400/15 px-2 py-0.5 text-[11px] font-semibold text-purple-200"
 				>
 					{stepUpChip}

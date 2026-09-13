@@ -27,6 +27,11 @@
 @custom-variant app-shell (@media (min-width: 64rem) and (min-height: 32rem));
 
 @theme {
+	/* The loading spinner's turn rate (components/OguriSpinner.tsx). Tailwind's
+	   stock animate-spin is one turn per second, which made the Oguri head a
+	   blur; one turn every 2s reads as a face. Reuses Tailwind's own `spin`
+	   keyframes, so only the timing is ours. */
+	--animate-spin-slow: spin 2s linear infinite;
 	/* The exact width at which the banner table stops fitting, and therefore the
 	   single number governing the card/table switch. Both sides of that switch
 	   read THIS token, so they cannot disagree:

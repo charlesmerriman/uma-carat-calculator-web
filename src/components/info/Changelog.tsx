@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
+import { OguriSpinner } from "../OguriSpinner"
 import { changelogFetch } from "../../services/changelogFetchCalls"
 import { formatDate } from "../../utils/dateFormat"
 import type { ChangeCategory, ChangelogEntry } from "../../types"
@@ -81,8 +82,9 @@ export const Changelog: React.FC = () => {
 
 					{/* Loading */}
 					{isLoading && (
-						<div className="mt-10 flex justify-center">
-							<div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-600 border-t-brand" />
+						<div className="mt-10 flex justify-center" role="status" aria-live="polite">
+							<OguriSpinner />
+							<span className="sr-only">Loading the changelog…</span>
 						</div>
 					)}
 
@@ -104,7 +106,7 @@ export const Changelog: React.FC = () => {
 
 					{/* Empty */}
 					{!isLoading && !error && entries.length === 0 && (
-						<p className="mt-10 text-center text-gray-400">No updates yet — check back soon.</p>
+						<p className="mt-10 text-center text-gray-400">No updates yet. Check back soon.</p>
 					)}
 
 					{/* Entries */}

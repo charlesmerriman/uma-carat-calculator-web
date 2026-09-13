@@ -18,9 +18,12 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	"/changelog": { title: `Changelog | ${SITE_NAME}`, phrase: "Changelog" },
 	"/feedback": { title: `Feedback | ${SITE_NAME}`, phrase: "<form" },
 	"/guides/carat-income": { title: `Carat Income Guide | ${SITE_NAME}`, phrase: "running balance" },
-	"/app": { title: `Calculator | ${SITE_NAME}`, phrase: "How to read the calculator" },
-	"/app/timeline": { title: `Banner Timeline | ${SITE_NAME}`, phrase: "How to read the timeline" },
-	"/app/selectors": { title: `Selector Tickets | ${SITE_NAME}`, phrase: "How to read the selector planner" },
+	// The tool itself renders behind the data gate, so a build-time render of these
+	// three is the app shell: navbar, the loading state, footer. The route identity
+	// is in the head tags (asserted below), not in the body.
+	"/app": { title: `Calculator | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/timeline": { title: `Banner Timeline | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/selectors": { title: `Selector Tickets | ${SITE_NAME}`, phrase: "Loading your plan" },
 }
 
 describe("entry-server render()", () => {
@@ -50,6 +53,14 @@ describe("entry-server render()", () => {
 
 	it("reports noindex for the sign-in page, which is why it is not prerendered", () => {
 		expect(render("/login").meta.noindex).toBe(true)
+	})
+
+	it("reports noindex for the account page, and renders it as a guest card", () => {
+		// Not prerendered for the same reason as /login: a build-time render is
+		// a guest, so the static document would never be the page itself.
+		const { html, meta } = render("/account")
+		expect(meta.noindex).toBe(true)
+		expect(html).toContain("not signed in")
 	})
 
 	it("renders the 404 page for an unknown path and marks it noindex", () => {

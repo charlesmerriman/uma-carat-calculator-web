@@ -72,6 +72,41 @@ export function isSocialProvider(value: unknown): value is SocialProvider {
 	)
 }
 
+/** A stored pending login, or null if it is missing, malformed or stale. */
+function parsePendingLogin(raw: string | null): PendingLogin | null {
+	if (!raw) return null
+	try {
+		const parsed = JSON.parse(raw) as Partial<PendingLogin>
+		if (
+			!isSocialProvider(parsed.provider) ||
+			typeof parsed.state !== "string" ||
+			typeof parsed.createdAt !== "number" ||
+			Date.now() - parsed.createdAt > STATE_MAX_AGE_MS
+		) {
+			return null
+		}
+		return parsed as PendingLogin
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Which provider a sign-in is pending for, WITHOUT consuming the entry.
+ *
+ * /auth/callback is shared between sign-in and account linking (see
+ * accountLinking.ts), so the page has to know which flow it is finishing
+ * before it calls the consuming function for that flow. Reading here does not
+ * spend the state; only completeSocialLogin does.
+ */
+export function peekPendingLoginProvider(): SocialProvider | null {
+	try {
+		return parsePendingLogin(sessionStorage.getItem(STATE_KEY))?.provider ?? null
+	} catch {
+		return null
+	}
+}
+
 /**
  * Reads and validates the pending login, clearing it either way.
  *
@@ -88,22 +123,7 @@ function takePendingLogin(): PendingLogin | null {
 	} catch {
 		return null
 	}
-	if (!raw) return null
-
-	try {
-		const parsed = JSON.parse(raw) as Partial<PendingLogin>
-		if (
-			!isSocialProvider(parsed.provider) ||
-			typeof parsed.state !== "string" ||
-			typeof parsed.createdAt !== "number" ||
-			Date.now() - parsed.createdAt > STATE_MAX_AGE_MS
-		) {
-			return null
-		}
-		return parsed as PendingLogin
-	} catch {
-		return null
-	}
+	return parsePendingLogin(raw)
 }
 
 /**

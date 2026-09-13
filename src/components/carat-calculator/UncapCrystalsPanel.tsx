@@ -30,7 +30,7 @@ const CrystalCell = ({ value, selected, green, unit, className = "" }: { value: 
 			className,
 		].join(" ")}
 	>
-		{selected ? `${value.toLocaleString()} ${unit}${value === 1 ? "" : "s"}` : "—"}
+		{selected ? `${value.toLocaleString()} ${unit}${value === 1 ? "" : "s"}` : "–"}
 	</div>
 )
 

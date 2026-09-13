@@ -560,6 +560,91 @@ and `layout` props on banner list items animate reordering.
 
 ---
 
+### Loading indicator (`components/OguriSpinner.tsx`)
+
+Every in-flight state spins the same image: a derpy Oguri Cap head, served from `public/`
+by root-absolute path like the game-resource icons. Two sizes — `sm` (32px) inside a 36px
+control such as the navbar's pending-save button and the Timeline's "loading more" row,
+`lg` (80px) for page-level loaders — spinning on the `animate-spin-slow` token declared in
+`index.css` (one turn per 2s on Tailwind's stock `spin` keyframes; the 1s default was a
+blur), with `motion-reduce:animate-none` so the OS reduce-motion setting stills it. Don't hand-roll a CSS ring (`animate-spin rounded-full
+border-t-brand`) or reach for lucide's `Loader2` for a new loading state; render
+`<OguriSpinner />` inside your own `role="status"` wrapper with visible or `sr-only` text,
+because the image is `aria-hidden` and the caller owns the accessible name.
+
+## The profile menu and the account page
+
+Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: a
+pill (`NAV_PROFILE_TRIGGER` in `navStyles.ts`) with the account's avatar as its
+left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
+opening a menu with **Account** and **Sign out** (since 2026-09-12; sign-out used
+to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
+`desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
+is already save + settings + theme + this. A guest still sees the Login link. The
+menu is the same popover idiom as ThemePicker and SettingsMenu and is always the
+LAST control, so right-anchoring never runs it off a narrow screen.
+
+**The name is the one they chose, else the handle.** `account.display_name`
+(set on `/account`) or `account.username`. The menu header shows the handle in
+mono under a chosen name, because the handle is the account's identity and what
+an admin would ask for. The name span is omitted while `/account` is in flight,
+so the pill widens once rather than jumping from a placeholder.
+
+**The avatar is a supporter's first oshi, and free accounts have none.**
+`Avatar.tsx` shows `account.avatar_url` — the server sends the first oshi's art
+while the tier covers at least one slot, else `null` — and on `null` or a broken
+image draws the quiet default: a muted `UserRound` silhouette on a `bg-gray-700`
+disc, styled like the settings and theme icon buttons beside it so it reads as
+one more control. The same default for everyone and for the loading state, on
+purpose: the avatar is only ever shown to its owner, so two free accounts have
+no reason to look different, and the initials-on-a-hue circle it replaced
+(2026-09-13) was loud in an otherwise grey bar. No provider picture is ever held
+or shown. Three sizes: `sm` (menu rows), `md` (the navbar trigger, 36px inside
+the 40px pill), `lg` (the account header and the oshi tiles). Avatars never
+appear anywhere public today; the supporters list on the home page is names
+only. (Oshis will be shown publicly by a future feature.)
+
+`/account` (`components/account/AccountPage.tsx`) is noindex and **not
+prerendered** — a build-time render is a guest card, which is not the page.
+The sign-in methods list draws each provider with the marks in
+`components/auth/ProviderMarks.tsx` and the labels in
+`constants/providers.ts`; the page is the only UI that calls the link endpoints,
+and the only one that calls `DELETE /account` — behind a typed confirmation
+phrase, because there is no email on file to send a recovery link to.
+Supporter-gated UI goes through one component, `<SupporterOnly benefit="…">`
+(`components/account/SupporterOnly.tsx`), which keys on a benefit from
+`account.supporter.benefits` and fails closed while the account is unknown.
+
+The page also owns the two **preferences**, both written through one
+`PATCH /account` (`accountPatch` in `services/accountFetchCalls.ts`) followed
+by `refresh()`, so the navbar picks the change up: a display-name form (32
+characters, the server's cap, mirrored as `maxLength`; blank clears it) and the
+**oshi card**.
+
+**The oshi card draws what the server says.** `account.oshi_slots` (5 / 3 / 1 /
+0, already resolved by the server; the page does no tier arithmetic) is how many
+tiles are offered, and `account.oshis` (every stored pick, covered or not) fills
+them. Slot 0 is tagged "Your picture". Tiles past the slot count render greyed
+with "Not covered" — a downgrade keeps the rows — and offer only Remove, never
+Change or "Make picture", because a swap-in past the count is an ADD the server
+would refuse; the page avoids offering the refused button, the rule itself
+lives in the serializer. A free account with nothing held sees one locked
+"Supporters only" tile and a Patreon link; a lapsed supporter with rows sees
+them on hold with a "Renew" link. Every write sends the **whole ordered list**
+(`oshis: number[]`): picking fills or appends a slot, "Make picture" moves an
+id to the front, Remove filters it out, so the client never has to know the
+server's renumbering.
+
+`components/account/OshiPicker.tsx` is a search-and-grid modal in the same
+shape as the Selectors page's card pickers, fed by `GET /umas`
+(`services/umasFetchCalls.ts`) and fetched on first open, not on mount — most
+visits never open it. It is opened for **one slot**: `currentId` marks the uma
+already there, `takenIds` disables the umas in the other slots ("Already
+picked") rather than hiding them. Tiles are round, so the person sees the crop
+they will get. The parent owns the write; the dialog closes only once the PATCH
+succeeds, so a refused pick leaves the grid open with the server's reason
+toasted ("Your tier covers 3 oshis.").
+
 ## Brand mark and display font
 
 The site's brand mark is **text, not an image**. `components/Wordmark.tsx` renders
@@ -589,33 +674,16 @@ Independently of the wordmark, that nav was **already** over-full at ≤900px �
 of the nav and into the calculator page bought back one centre link's worth of room, but
 the wrap point has not been re-measured since.
 
-### Why the desktop wordmark is indented, and by a calc
+### The wordmark sits on the plain edge gutter, everywhere
 
-Inside the app shell the wordmark's **"U" sits directly above the "I" of
-INCOME & RESOURCES**, at every width; on the home page it sits above the **"P" of "Plan
-your pulls"**. Neither is a fixed indent — each canvas is centred once the viewport
-passes its cap, so the target moves with the window.
-
-A page opts in by setting `--nav-inset` for its own canvas, and a page that doesn't
-(the FAQ, the changelog, the legal pages, `NotFound`) keeps the plain edge gutter. That
-is why the wordmark shifts when you cross between the home page and the app: two
-different canvases, each aligned to itself.
-
-Three pieces, and all three have to stay together:
-
-| Where | What |
-|---|---|
-| `.nav-brand-inset` (App.css) | the branding cell's `padding-left`, `var(--nav-inset, 1.25rem)`. The fallback is the plain edge gutter the home page, FAQ and the other standalone-navbar pages keep — their containers are narrower and each one different, so there is nothing there to line up with. |
-| `.app-canvas-shell` (App.css) | sets `--nav-inset` on the app shell: `max(0px, (100cqw - var(--shell-scrollbar) - 96rem) / 2) + 33px`. The `33px` is the page gutter + panel border + section-header padding; change any of those and change it too. |
-| `.home-canvas-shell` (App.css) | the same idea for the home page's own canvas — the "U" over the **"P"** of "Plan your pulls" — with that page's numbers: a 104rem cap and `+ 57px` (32px `lg:px-8` + 1px hero-card border + 24px `sm:px-6`). No scrollbar term: that page has no inner scroller, so the navbar and the hero already share a box. |
-| `ApplicationViews` | measures `--shell-scrollbar` with a `ResizeObserver` on the scroller. |
-
-The scrollbar term is the non-obvious half. The navbar is a **sibling** of the app
-shell's scroll container, so it spans the full viewport while the pages inside it are
-laid out in a box one scrollbar narrower — half of which is enough to knock the wordmark
-visibly off the heading. No CSS length can see a sibling's scrollbar, hence the measured
-custom property; `cqw` (against the `@container` on the `<nav>`) rather than `vw` for the
-same reason, which is also why that `<nav>` must carry no horizontal padding of its own.
+Since 2026-09-13 the desktop navbar is a plain `px-5` bar on every page, and the branding
+cell has no indent of its own. Until then it was indented per page by a calc
+(`--nav-inset` from `.app-canvas-shell` / `.home-canvas-shell`, a `--shell-scrollbar`
+measured by a `ResizeObserver` in `ApplicationViews`, and a `@container` on the `<nav>`
+so `cqw` could see the content box) to sit the wordmark's "U" over the calculator's
+INCOME & RESOURCES heading or the home hero's "P". The owner asked for it flush left
+instead, and the whole mechanism went with it. Don't reintroduce a page-specific inset:
+the navbar is a shared frame, and the pages under it change independently of it.
 
 ---
 
@@ -1169,7 +1237,7 @@ shell, or a prerendered document served for a path it was not built for, is rend
 from scratch.
 
 The third argument, `noindex`, is for pages that are plumbing rather than content —
-`/login`, `/auth/callback` and `NotFound`. Those are not prerendered, and the tag is
+`/login`, `/auth/callback`, `/account` and `NotFound`. Those are not prerendered, and the tag is
 the ONLY thing keeping them out of the index: `public/robots.txt` deliberately disallows
 nothing, because a Disallow stops the crawl before the crawler can read the tag (that
 is what earned the "Indexed, though blocked by robots.txt" warning on 2026-09-08). A

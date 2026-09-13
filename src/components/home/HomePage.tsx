@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import {
+	ArrowRight,
 	ArrowUpRight,
 	CalendarPlus,
 	Carrot,
@@ -16,6 +17,7 @@ import {
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { SupportersSection } from "./SupportersSection"
+import { HOME_CARD, HOME_ICON_CHIP, HOME_TILE } from "./homeStyles"
 import { changelogFetch } from "../../services/changelogFetchCalls"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { formatRelativeDate } from "../../utils/relativeDate"
@@ -65,14 +67,22 @@ const steps = [
 ]
 
 // `caption` is the tile's default subtitle. Changelog overrides it below with the live
-// "Updated <relative date>" once that has loaded; the rest are static. Carrying the text
-// per-link keeps "Coming soon" attached to the one page that is actually still coming,
-// rather than falling out of an else-branch onto every non-changelog tile.
+// "Updated <relative date>" once that has loaded; the rest are static. Carried per-link
+// rather than derived, so a tile's caption is one line here and not an else-branch.
 const infoLinks = [
 	{ to: "/changelog", icon: ScrollText, label: "Changelog", caption: "View updates" },
 	{ to: "/faq", icon: HelpCircle, label: "FAQ", caption: "Common questions" },
 	{ to: "/feedback", icon: MessageSquare, label: "Feedback", caption: "Report a bug" },
 ]
+
+// The four quick-link tiles under the video share one shape: icon chip, bold
+// label, muted caption. Built once here so the external sheet link and the three
+// internal routes cannot end up a pixel apart.
+const tileClass = `${HOME_TILE} flex min-w-0 items-center gap-2.5 px-3 py-2.5 text-left`
+
+// The below-the-fold sections all open the same way: a divider, then a heading.
+const sectionClass = "mt-10 border-t border-gray-800 pt-8"
+const sectionHeadingClass = "text-xl font-bold tracking-tight text-gray-100"
 
 export const HomePage = () => {
 	useDocumentMeta(null, "Plan your Uma Musume gacha pulls. Forecast how many carats and tickets you will have for any upcoming banner, based on your rank income, events and campaigns.")
@@ -99,7 +109,7 @@ export const HomePage = () => {
 	//
 	// On idle rather than immediately: this is a ~1MB response and the home
 	// page's own content comes first. requestIdleCallback runs it in a gap
-	// instead of competing for bandwidth with the hero image and the changelog
+	// instead of competing for bandwidth with the video embed and the changelog
 	// fetch above. Safari only shipped requestIdleCallback recently, hence the
 	// timeout fallback.
 	//
@@ -119,58 +129,114 @@ export const HomePage = () => {
 	}, [])
 
 	return (
-		<div className="home-canvas-shell flex min-h-dvh flex-col bg-gray-900">
-			{/* .home-canvas-shell above lines this navbar's wordmark up with the "P"
-			    of the hero heading below it — see App.css. */}
+		<div className="flex min-h-dvh flex-col bg-gray-900">
+			{/* The `bg-gray-900` on this root is what the per-theme
+			    `#root > .bg-gray-900` glows in index.css hook onto; keep it. */}
 			<Navbar />
-			{/* Normal block flow rather than the previous `flex items-center`, which
-			    vertically centred a single screenful. That centring is what forced the
-			    page to explain nothing and to truncate the copy it did have: there was
-			    no room below the fold because there was no below the fold. The hero and
-			    the two-column band above are unchanged — everything added sits under
-			    them, so a returning visitor's first screen looks exactly as it did. */}
+			{/* Normal block flow rather than `flex items-center`, which would
+			    vertically centre a single screenful and leave no room below the fold
+			    for the sections that explain the tool to a first-time visitor. */}
 			<main className="flex-1">
-				<div className="mx-auto w-full max-w-[104rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-4">
-					<section className="rounded-2xl border border-gray-700 bg-gray-800/75 px-5 py-4 shadow-lg shadow-black/10 sm:px-6">
-						<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div className="mx-auto w-full max-w-[104rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-5">
+					<section className={`${HOME_CARD} px-5 py-5 sm:px-6`}>
+						<div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 							<div>
-								<h1 className="text-2xl font-bold tracking-tight text-gray-100 sm:text-3xl">Plan your pulls. Know your carats.</h1>
-								<p className="mt-1 text-sm text-gray-400 sm:text-base">A simple planner for your Uma Musume banners, income, and pull goals.</p>
+								<h1 className="text-3xl font-bold tracking-tight text-balance text-gray-100 sm:text-4xl">Plan your pulls. Know your carats.</h1>
+								<p className="mt-2 max-w-2xl text-base text-pretty text-gray-400">A simple planner for your Uma Musume banners, income, and pull goals.</p>
 							</div>
 							<div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
-								<Link to="/app" className="rounded-lg bg-brand px-4 py-2 text-center text-sm font-bold text-black transition hover:brightness-110" onMouseEnter={prefetchCalculatorData} onFocus={prefetchCalculatorData}>Open the calculator</Link>
-								<Link to="/login" className="rounded-lg border border-gray-600 px-4 py-2 text-center text-sm font-semibold text-gray-200 transition hover:border-gray-400 hover:bg-gray-700">Sign in to save a plan</Link>
+								<Link
+									to="/app"
+									className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-bold text-black transition hover:brightness-110"
+									onMouseEnter={prefetchCalculatorData}
+									onFocus={prefetchCalculatorData}
+								>
+									Open the calculator
+									<ArrowRight className="h-4 w-4" aria-hidden="true" />
+								</Link>
+								<Link
+									to="/login"
+									className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-gray-700"
+								>
+									Sign in to save a plan
+								</Link>
 							</div>
 						</div>
 					</section>
 
 					<div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:items-stretch">
-						<section className="min-w-0">
-							<a href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 transition hover:border-red-500/60 hover:bg-gray-700">
-								<span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-100 sm:text-base"><PlayCircle className="h-5 w-5 shrink-0 text-red-500" aria-hidden="true" /><span className="truncate">Henry Handsome Derby's latest video</span></span>
-								<ArrowUpRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-							</a>
-							<div className="mt-3 aspect-video overflow-hidden rounded-xl border border-gray-700 bg-gray-800 shadow-md">
-								<iframe className="h-full w-full" src={`https://www.youtube.com/embed/videoseries?list=${YOUTUBE_UPLOADS_PLAYLIST_ID}`} title="Henry Handsome Derby — latest video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+						<section className="flex min-w-0 flex-col">
+							{/* The channel link is the panel's header strip and the embed
+							    its body: one card, not a link bar stacked on a video box.
+							    overflow-hidden clips the iframe to the rounded corners. */}
+							<div className={`${HOME_CARD} overflow-hidden`}>
+								<a
+									href={YOUTUBE_CHANNEL_URL}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="flex items-center justify-between gap-3 border-b border-gray-700 px-4 py-3 transition hover:bg-gray-700/60"
+								>
+									<span className="flex min-w-0 items-center gap-3">
+										{/* YouTube's red rather than the brand tint: this is
+										    the one chip that points off-site, and the colour
+										    says so before the arrow does. */}
+										<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-500/10 text-red-500">
+											<PlayCircle className="h-4 w-4" aria-hidden="true" />
+										</span>
+										<span className="min-w-0">
+											<span className="block truncate text-sm font-semibold text-gray-100">Henry Handsome Derby's latest video</span>
+											<span className="block truncate text-xs text-gray-500">Open the channel on YouTube</span>
+										</span>
+									</span>
+									<ArrowUpRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+								</a>
+								<div className="aspect-video bg-gray-900">
+									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/videoseries?list=${YOUTUBE_UPLOADS_PLAYLIST_ID}`} title="Henry Handsome Derby's latest video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-								<a href={HENRY_SHEET_URL} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-left transition hover:border-gray-500 hover:bg-gray-700">
-									<FileText className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /><span className="min-w-0"><span className="block truncate text-xs font-semibold text-gray-100">Henry's Sheet</span><span className="block truncate text-[11px] text-gray-500">Resource guide</span></span>
+								<a href={HENRY_SHEET_URL} target="_blank" rel="noopener noreferrer" className={tileClass}>
+									<span className={HOME_ICON_CHIP}><FileText className="h-4 w-4" aria-hidden="true" /></span>
+									<span className="min-w-0"><span className="block truncate text-sm font-semibold text-gray-100">Henry's Sheet</span><span className="block truncate text-xs text-gray-500">Resource guide</span></span>
 								</a>
 								{infoLinks.map((item) => {
 									const Icon = item.icon
 									const caption = item.to === "/changelog" && latestChangelogDate ? `Updated ${formatRelativeDate(latestChangelogDate)}` : item.caption
-									return <Link key={item.to} to={item.to} className="flex min-w-0 items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-left transition hover:border-gray-500 hover:bg-gray-700"><Icon className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /><span className="min-w-0"><span className="block truncate text-xs font-semibold text-gray-100">{item.label}</span><span className="block truncate text-[11px] text-gray-500">{caption}</span></span></Link>
+									return (
+										<Link key={item.to} to={item.to} className={tileClass}>
+											<span className={HOME_ICON_CHIP}><Icon className="h-4 w-4" aria-hidden="true" /></span>
+											<span className="min-w-0"><span className="block truncate text-sm font-semibold text-gray-100">{item.label}</span><span className="block truncate text-xs text-gray-500">{caption}</span></span>
+										</Link>
+									)
 								})}
 							</div>
 						</section>
 
-						<section className="flex h-full flex-col rounded-xl border border-gray-700 bg-gray-800 p-4 shadow-md">
-							<div className="flex items-baseline justify-between gap-3"><div><h2 className="text-lg font-bold text-gray-100">How it works</h2><p className="mt-0.5 text-sm text-gray-400">From your stash to a clear pull plan.</p></div><span className="text-xs font-medium text-brand">5 steps</span></div>
-							<ol className="mt-3 flex flex-1 flex-col divide-y divide-gray-700 rounded-lg border border-gray-700 bg-gray-900/40">
+						<section className={`${HOME_CARD} flex h-full flex-col p-4`}>
+							<div className="flex items-baseline justify-between gap-3">
+								<div>
+									<h2 className="text-lg font-bold tracking-tight text-gray-100">How it works</h2>
+									<p className="mt-0.5 text-sm text-gray-400">From your stash to a clear pull plan.</p>
+								</div>
+								<span className="shrink-0 rounded-full border border-gray-700 bg-gray-900/60 px-2.5 py-0.5 text-xs font-medium text-gray-400">5 steps</span>
+							</div>
+							{/* Rows sit directly on the card, divided by rules, rather than in
+							    a second bordered box inside it. `flex-1` on the list and on
+							    each row spreads the five steps over the panel's full height
+							    so it matches the video column beside it. */}
+							<ol className="mt-3 flex flex-1 flex-col divide-y divide-gray-700 border-t border-gray-700">
 								{steps.map((step, index) => {
 									const Icon = step.icon
-									return <li key={step.title} className="flex flex-1 items-center gap-3 px-3 py-2.5"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[11px] font-bold text-brand">{index + 1}</span><Icon className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /><div className="min-w-0"><h3 className="text-sm font-semibold text-gray-100">{step.title}</h3><p className="text-xs text-gray-400">{step.body}</p></div></li>
+									return (
+										<li key={step.title} className="flex flex-1 items-center gap-3 py-2.5">
+											<span className={`${HOME_ICON_CHIP} text-xs font-bold`}>{index + 1}</span>
+											<Icon className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+											<div className="min-w-0">
+												<h3 className="text-sm font-semibold text-gray-100">{step.title}</h3>
+												<p className="text-xs text-gray-400">{step.body}</p>
+											</div>
+										</li>
+									)
 								})}
 							</ol>
 						</section>
@@ -181,60 +247,60 @@ export const HomePage = () => {
 					    know what this is. Someone who did clicks a CTA in the hero and
 					    never reaches it. */}
 
-					<section className="mt-10 border-t border-gray-800 pt-8">
-						<h2 className="text-xl font-bold text-gray-100">What this is</h2>
-						<div className="mt-3 max-w-3xl space-y-3 leading-relaxed text-gray-400">
+					<section className={sectionClass}>
+						{/* The pitch and the coverage grid are ONE section on purpose. As its
+						    own section the prose was a heading, two paragraphs and then a
+						    full-width divider, which made the empty right half of the 104rem
+						    canvas the most visible thing about it. As the intro to the grid
+						    below it reads the way every other section here does: heading,
+						    short left-aligned lead, then content that fills the width. */}
+						<h2 className={sectionHeadingClass}>What this is</h2>
+						<div className="mt-3 max-w-3xl space-y-3 leading-relaxed text-pretty text-gray-400">
 							<p>
-								Uma Musume Pretty Derby is a gacha game: you spend a currency called{" "}
+								Uma Musume Pretty Derby is a gacha game. You spend a currency called{" "}
 								<span className="font-semibold text-gray-300">carats</span> to pull for
 								characters and support cards on banners that run for a week or two and then
-								go away. Carats arrive slowly, from dozens of separate sources on their own
-								schedules, which makes &quot;can I afford the banner after this one?&quot; a
-								genuinely hard question to answer in your head.
+								go away. Carats come in slowly, from dozens of sources on their own
+								schedules, so &quot;can I afford the banner after this one?&quot; is a hard
+								question to answer in your head.
 							</p>
 							<p>
-								This is a planner for exactly that question. Tell it what you hold now and
-								which income applies to you, add the banners you care about, and it walks
-								the calendar forward day by day to show what your wallet looks like on the
-								day each one ends, before you commit rather than after.
+								This planner answers that question. Tell it what you have now and which
+								income applies to you, add the banners you care about, and it walks the
+								calendar forward day by day to show what you will have on the day each one
+								ends, before you spend.
 							</p>
 						</div>
-					</section>
 
-					<section className="mt-10 border-t border-gray-800 pt-8">
-						<h2 className="text-xl font-bold text-gray-100">What the forecast accounts for</h2>
-						<p className="mt-2 max-w-3xl text-gray-400">
-							Income is added on the day the game actually pays it, not averaged across the
+						<h3 className="mt-8 text-base font-semibold text-gray-100">What the forecast accounts for</h3>
+						<p className="mt-1 max-w-3xl text-sm text-pretty text-gray-400">
+							Income is added on the day the game pays it rather than averaged across the
 							month, so the projection lines up with real banner end dates.
 						</p>
-						<div className="mt-5 grid gap-4 sm:grid-cols-2">
+						{/* Four across on the wide canvas: the cards are short and the row
+						    reads as one line of coverage rather than two stacked pairs. */}
+						<div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 							{COVERAGE.map((item) => (
-								<div
-									key={item.title}
-									className="rounded-xl border border-gray-700 bg-gray-800 p-4 shadow-md"
-								>
-									<h3 className="text-sm font-semibold text-brand">{item.title}</h3>
+								<div key={item.title} className={`${HOME_CARD} p-4`}>
+									<h4 className="text-sm font-semibold text-brand">{item.title}</h4>
 									<p className="mt-1.5 text-sm leading-relaxed text-gray-400">{item.body}</p>
 								</div>
 							))}
 						</div>
 					</section>
 
-					<section className="mt-10 border-t border-gray-800 pt-8">
+					<section className={sectionClass}>
 						<div className="flex flex-wrap items-baseline justify-between gap-3">
-							<h2 className="text-xl font-bold text-gray-100">Common questions</h2>
+							<h2 className={sectionHeadingClass}>Common questions</h2>
 							<Link to="/faq" className="text-sm font-semibold text-brand transition hover:text-brand/75">
 								See all questions →
 							</Link>
 						</div>
-						<div className="mt-5 space-y-4">
+						<div className="mt-5 grid gap-4 lg:grid-cols-3">
 							{/* Only the first answer paragraph — the teaser is a taste, and the
 							    full answer is one click away at its own anchor. */}
 							{faqItemsByIds(HOMEPAGE_FAQ_IDS).map((item) => (
-								<div
-									key={item.id}
-									className="rounded-xl border border-gray-700 bg-gray-800 p-4 shadow-md"
-								>
+								<div key={item.id} className={`${HOME_CARD} p-4`}>
 									<h3 className="text-sm font-semibold text-gray-100">
 										<Link to={`/faq#${item.id}`} className="transition hover:text-brand">
 											{item.question}
