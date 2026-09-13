@@ -11,15 +11,20 @@ import type React from "react"
  *
  * Served from `public/` by root-absolute path, the same convention the game
  * resource icons follow (see ui-conventions.md, "Column labels may be icons").
- * The PNG is a 192px square with a transparent background, pre-centred so the
- * head rotates about its own middle rather than wobbling.
+ * The PNG is a 256px square with a transparent background, cropped tight to the
+ * head (the ear tips lose ~6% a side) so it fills its box instead of floating
+ * in transparent bands, and centred so it rotates about its own middle.
  *
  * Two sizes because the slots are shaped very differently:
- *  - "sm" — 24px, for inside a 36px control: the navbar save button and the
- *           timeline's "Loading more events" row. A rotating square's corners
- *           reach ~17px from centre at 45°, which still clears the button's
- *           18px half-width, so nothing clips at the border.
- *  - "lg" — 48px, the page-level loader (calculator gate, changelog, account,
+ *  - "sm" — 32px, for inside a 36px control: the navbar save button and the
+ *           timeline's "Loading more events" row. The square's CORNERS are
+ *           transparent, but the flat-cut bottom of the hair puts the farthest
+ *           opaque pixel ~0.6 of the side from centre (measured), so while
+ *           spinning the head sweeps a ~38px circle and a hair corner overlaps
+ *           the button's 1px border for a few frames per turn. Deliberate:
+ *           28px is the largest size that stays fully inside, and it read as
+ *           a small face floating in a big box. The button does not clip.
+ *  - "lg" — 80px, the page-level loader (calculator gate, changelog, account,
  *           OAuth callback).
  *
  * Always decorative: `alt=""` + `aria-hidden` so screen readers skip the image
@@ -37,8 +42,8 @@ type OguriSpinnerProps = {
 }
 
 const SIZE_CLASS: Record<NonNullable<OguriSpinnerProps["size"]>, string> = {
-	sm: "h-6 w-6",
-	lg: "h-12 w-12",
+	sm: "h-8 w-8",
+	lg: "h-20 w-20",
 }
 
 export const OguriSpinner: React.FC<OguriSpinnerProps> = ({ size = "lg", className = "" }) => (
