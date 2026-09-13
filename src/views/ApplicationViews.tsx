@@ -1,4 +1,3 @@
-import { useLayoutEffect, useRef } from "react"
 import { Outlet, Route, Routes } from "react-router-dom"
 import { useCalculatorData } from "../services/CalculatorContext"
 import { Navbar } from "../components/navbar/Navbar.tsx"
@@ -8,7 +7,7 @@ import { Selectors } from "../components/selectors/Selectors"
 import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
 import { OguriSpinner } from "../components/OguriSpinner"
-import { AppRouteIntro } from "./AppRouteIntro"
+import { AppRouteMeta } from "./AppRouteMeta"
 
 /* The page area while the initial fetch is still out. Sized to roughly fill the
    space the calculator will occupy, so the footer doesn't ride up under the
@@ -34,49 +33,17 @@ const PageError = () => (
 )
 
 export const ApplicationViews = () => {
-	const shellRef = useRef<HTMLDivElement | null>(null)
-	const scrollerRef = useRef<HTMLDivElement | null>(null)
 	// Gates the page area only. The navbar and footer around it render
 	// immediately, so /app is visibly the app while the payload is still in
 	// flight rather than a spinner on a blank background.
 	const { isLoading, fetchError } = useCalculatorData()
-
-	// The navbar is a SIBLING of the scroller, so it spans the full viewport
-	// while every page inside it is laid out in a box one scrollbar narrower.
-	// Half that scrollbar is the difference between the wordmark sitting above
-	// the "I" of INCOME & RESOURCES and sitting just off it (.app-canvas-shell in
-	// App.css), and no CSS length can see a sibling's scrollbar — so measure it
-	// and publish it on the shell, the one element that contains both.
-	//
-	// A layout effect rather than a passive one: it feeds a padding, and a passive
-	// effect paints the wordmark in the wrong place for a frame first.
-	useLayoutEffect(() => {
-		const shell = shellRef.current
-		const scroller = scrollerRef.current
-		if (!shell || !scroller) return
-
-		const sync = (): void => {
-			shell.style.setProperty("--shell-scrollbar", `${scroller.offsetWidth - scroller.clientWidth}px`)
-		}
-
-		sync()
-		// Observed rather than listened for on `resize`: the gutter also appears and
-		// disappears when the CONTENT grows past the shell or shrinks back inside it
-		// — adding a banner row, collapsing the income panel — and the window never
-		// moves for either. jsdom implements neither the observer nor layout, so
-		// under test this stays at the 0px the first sync writes.
-		if (typeof ResizeObserver !== "function") return
-		const observer = new ResizeObserver(sync)
-		observer.observe(scroller)
-		return () => observer.disconnect()
-	}, [])
 
 	return (
 		<Routes>
 			<Route
 				path="/"
 				element={
-					<div ref={shellRef} className="app-canvas-shell flex min-h-dvh flex-col bg-gray-900 app-shell:h-dvh app-shell:overflow-hidden">
+					<div className="flex min-h-dvh flex-col bg-gray-900 app-shell:h-dvh app-shell:overflow-hidden">
 						<Navbar />
 						{/* The footer sits INSIDE the scroll region, not as a sibling of it: on
 						    desktop this shell is a fixed-height, no-scroll frame (app-shell:h-dvh
@@ -110,7 +77,7 @@ export const ApplicationViews = () => {
 						    Making this element the containing block fixes the whole class of
 						    bug rather than that one span. It creates no stacking context
 						    (no z-index) and does not affect `fixed` descendants. */}
-						<div ref={scrollerRef} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+						<div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
 							{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
 							    timeline keep a normal block formatting context and don't become
 							    flex items themselves. flex-1 grows it into the slack; min-height:auto
@@ -127,10 +94,9 @@ export const ApplicationViews = () => {
 								)}
 							</div>
 							{/* Outside the gate above on purpose: it owns the page's document
-							    title and carries the only prose on these routes that exists
-							    before the data does. Below the tool so the first screen is
-							    unchanged; see AppRouteIntro. */}
-							<AppRouteIntro />
+							    title, which has to be right while the spinner shows and in a
+							    build-time render. Renders nothing; see AppRouteMeta. */}
+							<AppRouteMeta />
 							<Footer />
 						</div>
 					</div>

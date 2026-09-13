@@ -69,57 +69,6 @@
 	@apply justify-center w-full bg-gray-900 lg:max-w-[96rem] mx-auto;
 }
 
-/* The navbar's left gutter, as a value the PAGE gets to set.
-
-   The default is the plain edge gutter the marketing and info pages want —
-   their containers are narrower and each one different (max-w-3xl on the FAQ,
-   104rem on the home page), so there is nothing there worth lining the wordmark
-   up with. The app shell overrides it below. */
-.nav-brand-inset {
-	padding-left: var(--nav-inset, 1.25rem);
-}
-
-/* Inside the app shell there IS something to line up with, and this is it: the
-   wordmark's "U" sits directly above the "I" of INCOME & RESOURCES, at every
-   width and on both sides of the 96rem cap.
-
-   Two terms:
-     max(0px, …)  the canvas's own left margin — zero while the page is
-                  narrower than the 96rem cap that CaratCalculator and
-                  .page-container share, half the leftover slack once it isn't.
-     33px         what sits between the canvas edge and that first character:
-                  16px page gutter (CaratCalculator's sm:mx-4) + 1px panel
-                  border + 16px section-header padding (IncomeForm's px-4).
-                  Change any of those three and change this with them.
-
-   --shell-scrollbar is the term the navbar cannot see for itself. It sits ABOVE
-   the shell's scroll container rather than in it, so it spans a viewport the
-   pages below never get: they are laid out in a box one scrollbar narrower,
-   which lands the wordmark half a scrollbar right of the heading on any page
-   long enough to scroll. ApplicationViews measures it onto the shell.
-
-   The unit is cqw rather than vw for the same reason — vw counts a scrollbar
-   the layout doesn't have. It resolves against the `@container` on the <nav>,
-   which must therefore carry no horizontal padding: cqw is the CONTENT box, so
-   padding there would silently shrink this by half of it. */
-.app-canvas-shell {
-	--nav-inset: calc(max(0px, (100cqw - var(--shell-scrollbar, 0px) - 96rem) / 2) + 33px);
-}
-
-/* The same alignment on the home page, against ITS canvas: the wordmark's "U"
-   over the "P" of "Plan your pulls". Different numbers, because the hero is a
-   different box — a 104rem cap, and 57px of chrome inside it: 32px page gutter
-   (lg:px-8) + 1px hero-card border + 24px card padding (sm:px-6).
-
-   No --shell-scrollbar term, and that is not an oversight: this page has no
-   inner scroll container, so the navbar and the hero are laid out in the same
-   box and cqw already excludes the document's scrollbar for both. Only the
-   `lg` values appear because the desktop navbar starts at 64rem — below that
-   the stacked mobile navbar renders instead and this inset is unused. */
-.home-canvas-shell {
-	--nav-inset: calc(max(0px, (100cqw - 104rem) / 2) + 57px);
-}
-
 /* Neutral card panel (used in IncomeForm, BannerRow, Timeline) */
 .card-panel {
 	@apply bg-gray-800 rounded-xl border border-gray-600 shadow-md;
