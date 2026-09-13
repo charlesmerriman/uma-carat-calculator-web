@@ -375,8 +375,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					Display name
 				</h2>
 				<p className="mt-1 text-sm text-gray-400">
-					Shown to you alone, in the menu and on this page. Leave it blank to go by your
-					handle, <span className="font-mono text-gray-300">{account.username}</span>.
+					The name you go by here. Names are unique, so one that someone else already uses
+					will be refused. Leave it blank to go by your handle,{" "}
+					<span className="font-mono text-gray-300">{account.username}</span>.
 				</p>
 				<form
 					className="mt-4 flex flex-wrap items-end gap-3"
