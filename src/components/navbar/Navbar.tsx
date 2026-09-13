@@ -12,6 +12,7 @@ import { stashGuestPlan } from "../../services/guestMigration"
 import { Wordmark } from "../Wordmark"
 import { ThemePicker } from "./ThemePicker"
 import { SettingsMenu } from "./SettingsMenu"
+import { NAV_BUTTON, NAV_ICON_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 
 export const Navbar = () => {
 	const navigate = useNavigate()
@@ -78,17 +79,20 @@ export const Navbar = () => {
 	// True only inside /app, while the initial fetch is still out.
 	const planIsLoading = calculatorData?.isLoading ?? false
 
+	// The active pill is a brand tint with a brand edge and nothing else. It
+	// used to carry `shadow-sm`, which every theme block in index.css re-skins
+	// into a 14px drop shadow — on a 36px tab that read as a floating chip.
 	const mobileNavClass = (active: boolean) =>
 		`flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition ${
 			active
-				? "border-brand/70 bg-brand/10 text-brand shadow-sm"
-				: "border-transparent text-gray-400 hover:border-gray-600 hover:bg-gray-700/70 hover:text-gray-100"
+				? "border-brand/50 bg-brand/10 text-brand"
+				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 		}`
 	const desktopNavClass = (active: boolean) =>
 		`flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm font-medium transition ${
 			active
-				? "border-brand/70 bg-brand/10 text-brand shadow-sm"
-				: "border-transparent text-gray-400 hover:border-gray-600 hover:bg-gray-700/70 hover:text-gray-100"
+				? "border-brand/50 bg-brand/10 text-brand"
+				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 		}`
 
 	// Shared logo element used in both mobile and desktop navs
@@ -108,7 +112,7 @@ export const Navbar = () => {
 			disabled={planIsLoading}
 			aria-label="Sign in to save"
 			title="Sign in to save your plan to an account"
-			className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-600 rounded text-sm text-gray-300 hover:border-gray-400 hover:bg-gray-700 hover:text-gray-100 transition disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+			className={NAV_BUTTON}
 		>
 			<LogIn className="w-4 h-4" />
 			Sign in to save
@@ -121,7 +125,7 @@ export const Navbar = () => {
 			onClick={handleLogout}
 			aria-label="Logout"
 			title="Logout"
-			className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-600 rounded text-sm text-gray-300 hover:border-gray-400 hover:bg-gray-700 hover:text-gray-100 transition"
+			className={NAV_BUTTON}
 		>
 			<UserRound className="w-4 h-4" />
 			Logout
@@ -130,7 +134,7 @@ export const Navbar = () => {
 	) : (
 		<Link
 			to="/login"
-			className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-600 rounded text-sm text-gray-300 hover:border-gray-400 hover:bg-gray-700 hover:text-gray-100 transition"
+			className={NAV_BUTTON}
 		>
 			<LogIn className="w-4 h-4" />
 			Login
@@ -140,7 +144,7 @@ export const Navbar = () => {
 	return (
 		<div className="z-50 shrink-0">
 			{/* Mobile nav */}
-			<nav className="border-b border-gray-600 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-sm desktop-nav:hidden">
+			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
 				<div className="flex h-14 items-center justify-between gap-3 px-3">
 					<div className="flex min-w-0 items-center">
 						{logo}
@@ -156,7 +160,7 @@ export const Navbar = () => {
 												onClick={calculatorData.saveNow}
 												aria-label="Save now"
 												title="Click to save now"
-												className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-brand transition hover:border-brand/70 hover:bg-gray-700"
+												className={NAV_SAVE_BUTTON}
 											>
 												<Save className="h-4 w-4" />
 											</button>
@@ -167,7 +171,7 @@ export const Navbar = () => {
 										onClick={handleLogout}
 										aria-label="Logout"
 										title="Logout"
-										className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
+										className={NAV_ICON_BUTTON}
 									>
 										<LogOut className="h-4 w-4" />
 									</button>
@@ -184,7 +188,7 @@ export const Navbar = () => {
 					</div>
 				</div>
 
-				<div className="grid grid-cols-3 gap-1 border-t border-gray-700/80 bg-gray-900/30 px-2 py-2">
+				<div className="grid grid-cols-3 gap-1 border-t border-gray-700 px-2 py-2">
 					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="h-4 w-4 shrink-0" />
 						<span className="truncate">Calculator</span>
@@ -209,7 +213,7 @@ export const Navbar = () => {
 			    .app-canvas-shell in App.css), and padding here would come out of that
 			    measurement. The right-hand cell carries the gutter that used to be
 			    px-5 instead. */}
-			<nav className="@container hidden h-16 grid-cols-[1fr_auto_1fr] items-center border-b border-gray-600 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-sm desktop-nav:grid">
+			<nav className="@container hidden h-16 grid-cols-[1fr_auto_1fr] items-center border-b border-gray-700 bg-gray-900 desktop-nav:grid">
 				{/* Left: Branding. Its indent is the page's to set (.nav-brand-inset):
 				    inside the app shell it follows the calculator canvas, so the
 				    wordmark's "U" lines up with the "I" of INCOME & RESOURCES below it,
@@ -221,7 +225,7 @@ export const Navbar = () => {
 				</div>
 
 				{/* Center: Nav links */}
-				<div className="flex items-center justify-center rounded-xl border border-gray-600/80 bg-gray-900/50 p-1 shadow-inner">
+				<div className="flex items-center justify-center gap-0.5 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
 					<Link to="/app" className={desktopNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="w-4 h-4" />
 						Calculator
@@ -237,7 +241,7 @@ export const Navbar = () => {
 				</div>
 
 				{/* Right: Save indicator + Theme Picker + Logout/Login */}
-				<div className="flex items-center justify-end gap-3 pr-5">
+				<div className="flex items-center justify-end gap-2 pr-5">
 					{calculatorData ? (
 						isLoggedIn ? (
 							<>
@@ -246,17 +250,18 @@ export const Navbar = () => {
 									{timerIsGoing && (
 										<button
 											onClick={calculatorData.saveNow}
-											className="cursor-pointer hover:opacity-70 transition-opacity"
+											aria-label="Save now"
 											title="Click to save now"
+											className={NAV_SAVE_BUTTON}
 										>
-											<Save className="h-5 w-5 text-brand" />
+											<Save className="h-4 w-4" />
 										</button>
 									)}
 								</div>
 								{navControls}
 								<button
 									onClick={handleLogout}
-									className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-600 rounded text-sm text-gray-300 hover:border-gray-400 hover:bg-gray-700 hover:text-gray-100 transition"
+									className={NAV_BUTTON}
 								>
 									<UserRound className="w-4 h-4" />
 									Logout

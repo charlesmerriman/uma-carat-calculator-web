@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Palette } from "lucide-react"
 import { useTheme } from "../../services/ThemeContext"
+import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 
 const PRIMARY_THEME_IDS = new Set(["gold", "light"])
 
@@ -17,7 +18,7 @@ export const ThemePicker = () => {
 			onClick={() => { setTheme(theme.id); setOpen(false) }}
 			aria-label={`Switch to ${theme.label} theme`}
 			aria-pressed={activeTheme === theme.id}
-			className={`flex items-center gap-2 rounded px-2 py-1.5 text-xs transition ${
+			className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition ${
 				activeTheme === theme.id
 					? "bg-gray-700 text-gray-100"
 					: "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
@@ -50,13 +51,13 @@ export const ThemePicker = () => {
 				onClick={() => setOpen((prev) => !prev)}
 				aria-label="Change color theme"
 				title="Change color theme"
-				className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
+				className={NAV_ICON_BUTTON}
 			>
 				<Palette className="h-4 w-4" />
 			</button>
 
 			{open && (
-				<div className="absolute right-0 top-full mt-1.5 z-50 flex min-w-44 flex-col gap-1 rounded border border-gray-600 bg-gray-800 p-2 shadow-lg">
+				<div className={`${NAV_POPOVER} absolute right-0 top-full z-50 mt-1.5 flex min-w-44 flex-col gap-1 p-2`}>
 					<p className="px-2 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Primary themes</p>
 					<div className="grid grid-cols-2 gap-1">
 						{primaryThemes.map(renderThemeButton)}
@@ -71,7 +72,7 @@ export const ThemePicker = () => {
 									aria-label={`Switch to ${theme.label} theme`}
 									aria-pressed={activeTheme === theme.id}
 									title={theme.label}
-									className={`flex h-6 w-6 items-center justify-center rounded transition ${
+									className={`flex h-6 w-6 items-center justify-center rounded-md transition ${
 										activeTheme === theme.id ? "bg-gray-700 ring-1 ring-gray-400" : "hover:bg-gray-700"
 									}`}
 								>
@@ -86,7 +87,7 @@ export const ThemePicker = () => {
 							role="switch"
 							aria-checked={colorblindMode}
 							onClick={() => setColorblindMode(!colorblindMode)}
-							className="flex w-full items-center justify-between gap-3 rounded px-2 py-2 text-left text-xs text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+							className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-xs text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 						>
 							<span className="font-medium">Colorblind mode</span>
 							<span aria-hidden="true" className={`relative h-5 w-9 rounded-full transition ${colorblindMode ? "bg-brand" : "bg-gray-600"}`}>

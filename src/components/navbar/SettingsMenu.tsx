@@ -3,6 +3,7 @@ import { Settings } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { DEFAULT_CONSTANTS } from "../../constants/gameConstants"
+import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 import type { CalculationConstants, UserStats } from "../../types"
 
 /** The boolean-valued keys of UserStats — the only fields these toggles set. */
@@ -84,7 +85,7 @@ export const SettingsMenu = () => {
 				onClick={() => setOpen((prev) => !prev)}
 				aria-label="Projection settings"
 				title="Projection settings"
-				className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
+				className={NAV_ICON_BUTTON}
 			>
 				<Settings className="h-4 w-4" />
 			</button>
@@ -100,7 +101,7 @@ export const SettingsMenu = () => {
 				// max-h + scroll is for landscape phones: this panel is fixed at top-16
 				// in a viewport barely 390px tall, so unbounded its lower toggles fall
 				// off the bottom of the screen with no way to reach them.
-				<div className="fixed left-1/2 top-16 z-50 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 overflow-y-auto rounded border border-gray-600 bg-gray-800 p-3 shadow-lg desktop-nav:absolute desktop-nav:left-auto desktop-nav:top-full desktop-nav:right-0 desktop-nav:mt-1.5 desktop-nav:max-w-none desktop-nav:translate-x-0">
+				<div className={`${NAV_POPOVER} fixed left-1/2 top-16 z-50 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 overflow-y-auto p-3 desktop-nav:absolute desktop-nav:left-auto desktop-nav:top-full desktop-nav:right-0 desktop-nav:mt-1.5 desktop-nav:max-w-none desktop-nav:translate-x-0`}>
 					<h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-brand">
 						Projection Settings
 					</h3>
@@ -108,7 +109,7 @@ export const SettingsMenu = () => {
 						{SETTINGS.map(({ key, label, description }) => (
 							<div
 								key={key}
-								className="flex items-start justify-between gap-3 rounded px-1 py-2 hover:bg-gray-700/50"
+								className="flex items-start justify-between gap-3 rounded-md px-1 py-2 hover:bg-gray-700/50"
 							>
 								<div className="min-w-0">
 									<div className="text-sm text-gray-100">{label}</div>
