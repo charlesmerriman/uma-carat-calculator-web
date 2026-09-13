@@ -13,15 +13,19 @@ import type React from "react"
  * resource icons follow (see ui-conventions.md, "Column labels may be icons").
  * The PNG is a 256px square with a transparent background, cropped tight to the
  * head (the ear tips lose ~6% a side) so it fills its box instead of floating
- * in transparent bands, and centred so it rotates about its own middle.
+ * in transparent bands. It is placed with its alpha CENTROID on the canvas
+ * centre, not its bounding box: the top of the head is a thin ahoge and the
+ * bottom a full-width flat cut, so the visual mass sits ~5% below the
+ * geometric middle and a box-centred head visibly wobbled while spinning.
+ * That costs a ~9% transparent band under the neck (the head is 95% of the
+ * box wide), which is the price of a rotation that looks pinned.
  *
  * Two sizes because the slots are shaped very differently:
  *  - "sm" — 32px, for inside a 36px control: the navbar save button and the
- *           timeline's "Loading more events" row. The flat-cut bottom of the
- *           hair puts the farthest opaque pixel ~0.6 of the side from centre
- *           (measured), so while spinning the head sweeps a ~38px circle —
- *           1px past the 36px button on the worst frames. Fine because the
- *           save button has no border to cross and nothing clips it.
+ *           timeline's "Loading more events" row. The farthest opaque pixel
+ *           is ~0.55 of the side from the centre (measured), so while spinning
+ *           the head sweeps a ~35px circle — inside the 36px button at every
+ *           angle, with nothing to clip it anyway.
  *  - "lg" — 80px, the page-level loader (calculator gate, changelog, account,
  *           OAuth callback).
  *
