@@ -129,22 +129,42 @@ const COLUMN_TILE_CAPACITY = 2
  */
 const BAND_TILE = "flex flex-1 justify-center"
 
-/** Image | umas | supports. Support-led inverts the last two weights. */
+/**
+ * THE ART TRACK IS THE SAME IN EVERY TEMPLATE: `minmax(360px,var(--timeline-art-width))`.
+ *
+ * `--timeline-art-width` (App.css) is the ordinary row's 1.28-of-2.94fr share
+ * written as a length, so it is the width the art has always had in that row
+ * and now the width it has in every other shape too — the support-led and
+ * one-panel rows below, the art-only branch, and the marker cards. The 360px
+ * floor is the old track's, kept for the narrow end of xl.
+ *
+ * Spelled out in full in each template rather than interpolated from a shared
+ * constant, because Tailwind finds classes by scanning the source for complete
+ * strings: a `${ART_TRACK}` template literal generates no CSS at all, and the
+ * grid silently falls back to a single stacked column. (Measured: every
+ * ordinary row's art went to the 41rem cap when it was interpolated.)
+ */
+
+/**
+ * Image | umas | supports. The panels split what the art track leaves, at the
+ * same 0.88 : 0.78 weights as before (support-led inverts them), so the
+ * ordinary row renders exactly as it did when the art was 1.28fr.
+ */
 const SECTION_COLUMNS =
-	"xl:grid-cols-[minmax(360px,1.28fr)_minmax(260px,0.88fr)_minmax(260px,0.78fr)]"
+	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(260px,0.88fr)_minmax(260px,0.78fr)]"
 const SECTION_COLUMNS_SUPPORT_LED =
-	"xl:grid-cols-[minmax(300px,1fr)_minmax(200px,0.5fr)_minmax(420px,1.7fr)]"
+	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(200px,0.5fr)_minmax(420px,1.7fr)]"
 /**
  * Image | one panel, for when the other panel has banded away below.
  *
- * TWO EQUAL HALVES: art hard left in the first, panel hard right in the second.
- * Not the weighted split this used to be — that handed the art 1.6 of 2.3fr
- * (~1030px) against the panel's 0.7 (~450px), which worked only while the art
- * filled whatever column it was given. Once BANNER_ART capped the width the two
- * stopped agreeing, leaving the art adrift in an oversized column and the lone
- * uma tile flush against the section's right edge.
+ * The art track, then the rest: art hard left at the shared width, panel hard
+ * right in what remains (PAIR_PANEL_CELL). This was two equal halves, which
+ * handed the art ~740px and left BANNER_ART's 41rem cap to catch it — about
+ * 20px wider than the art in the ordinary row above it, which is exactly the
+ * kind of mismatch the shared track exists to end.
  */
-const SECTION_COLUMNS_PAIR = "xl:grid-cols-2"
+const SECTION_COLUMNS_PAIR =
+	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(0,1fr)]"
 
 /**
  * The lone panel's cell in the PAIR shape. It sits hard right rather than
@@ -181,7 +201,11 @@ const PAIR_PANEL_CELL = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
  *
  * 41rem/656px is just above the three-column ceiling, so ordinary rows render
  * exactly as they did and only the over-wide shapes clamp — landing them at
- * ~369px tall, i.e. matching the ordinary row instead of dwarfing it.
+ * ~369px tall, i.e. matching the ordinary row instead of dwarfing it. That
+ * "just above" is also why the cap alone was not enough: a shape that hit it
+ * was still ~20px wider than the ordinary row, so from xl up every shape now
+ * sizes its art by `--timeline-art-width` instead, and the cap
+ * is the ceiling for the single-column layouts below xl.
  *
  * The art sits HARD LEFT in whatever cell it lands in, so the cap only ever
  * eats into the space on its right. That keeps its left edge on the section's
@@ -222,9 +246,11 @@ const BANNER_ART =
 /**
  * The art-only branch: every panel banded, so the art has a full-width row to
  * itself and nothing beside it. Here there is no column edge to align to, so
- * hard left just reads as a layout bug and the art is centred instead.
+ * hard left just reads as a layout bug and the art is centred instead — but
+ * at the shared width, not the cap, so it is the same size as the art in the
+ * rows around it.
  */
-const BANNER_ART_ALONE = `${BANNER_ART} mx-auto`
+const BANNER_ART_ALONE = `${BANNER_ART} mx-auto xl:w-[var(--timeline-art-width)]`
 
 /**
  * The fields a featured tile actually renders. Both Uma and SupportCard
@@ -857,7 +883,7 @@ export function BannerWindowCard({
 				<AnniversaryEventStrip event={attachedEvent} stepUps={stepUps} />
 			)}
 			<div
-				className={`card-panel w-full overflow-hidden p-2 sm:p-3 ${
+				className={`card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
 					attachedEvent ? "card-panel-joined-top" : ""
 				} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
 			>
