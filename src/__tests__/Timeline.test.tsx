@@ -1026,6 +1026,47 @@ describe('Timeline recommended banners and card purposes', () => {
   })
 })
 
+describe('Timeline free pulls', () => {
+  /** The feature panel — the <section> — a named card's tile sits in. */
+  function panelFor(name: string): HTMLElement {
+    const panel = screen.getByAltText(name).closest('section')
+    expect(panel, `no panel around ${name}`).not.toBeNull()
+    return panel as HTMLElement
+  }
+
+  it('captions a side of the window with its free pulls, and only that side', () => {
+    const banner = categorised(1, 'standard', ['Rice Shower'], ['Kitasan Black'])
+    banner.banner_umas[0].free_pulls = 30
+    events = [banner]
+    renderTimeline()
+
+    const chip = panelFor('Rice Shower').querySelector('.free-pulls-chip')
+    expect(chip).toHaveTextContent('30 free pulls')
+    expect(chip).toHaveAttribute('title', '30 free pulls on this banner')
+    // Per banner: the support side of the same window has none.
+    expect(panelFor('Kitasan Black').querySelector('.free-pulls-chip')).toBeNull()
+  })
+
+  it('renders nothing at all for a banner with no free pulls', () => {
+    events = [categorised(1, 'standard', ['Yukino Bijin'], ['Smart Falcon'])]
+    renderTimeline()
+
+    expect(document.querySelector('.free-pulls-chip')).toBeNull()
+  })
+
+  it('sits beside the Recommended chip rather than displacing it', () => {
+    const banner = categorised(1, 'standard', ['Rice Shower'])
+    banner.banner_umas[0].is_recommended = true
+    banner.banner_umas[0].free_pulls = 10
+    events = [banner]
+    renderTimeline()
+
+    const panel = panelFor('Rice Shower')
+    expect(panel.querySelector('.recommended-chip')).toHaveTextContent('Recommended')
+    expect(panel.querySelector('.free-pulls-chip')).toHaveTextContent('10 free pulls')
+  })
+})
+
 describe('Timeline category filter', () => {
   // Renamed from "filter by banner type" when the marker kinds joined it — the
   // control spans two axes now and naming it after one of them was misleading.

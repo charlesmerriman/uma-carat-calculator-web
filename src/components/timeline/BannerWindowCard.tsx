@@ -4,6 +4,7 @@ import {
 	Clock3,
 	Dumbbell,
 	Flower2,
+	Gift,
 	Repeat,
 	Sparkles,
 	Star,
@@ -393,6 +394,13 @@ type FeaturePanelProps = {
 	 * part of that is zero-layout — see the note on .ssr-panel.
 	 */
 	recommended?: boolean
+	/**
+	 * Pulls the game hands out free on this banner (`free_pulls` on the
+	 * BannerUma / BannerSupport, which the planner already subtracts from a
+	 * row's pull count). Zero, the common case, renders nothing. Shown as a
+	 * chip in the title line under the same zero-layout rule as `recommended`.
+	 */
+	freePulls?: number
 }
 
 function FeaturePanel({
@@ -409,6 +417,7 @@ function FeaturePanel({
 	actionIcon: ActionIcon,
 	onAdd,
 	recommended = false,
+	freePulls = 0,
 }: FeaturePanelProps) {
 	// Count drives the layout. A narrow column tops out at two tiles across and
 	// grows downwards; a band is always exactly one line — see BAND_TILE.
@@ -470,10 +479,18 @@ function FeaturePanel({
 		? `ssr-panel ${status === "expired" ? "ssr-panel--still" : ""}`
 		: "border-gray-600 bg-gray-800 shadow-sm"
 
+	// Whether anything shares the title line. Both chips are sized to the
+	// title's 20px line box, so the line is exactly as tall with them as without.
+	const hasChip = recommended || freePulls > 0
+
 	return (
 		<section className={`flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
+			{/* `@container` so the free-pulls chip can size itself to THIS line's
+			    width rather than the viewport's — see its note below. Inline-size
+			    containment only stops the line from ever pushing its column wider,
+			    which nothing relied on: every column has an explicit minimum. */}
 			<div
-				className={`mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
+				className={`@container mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
 					recommended ? "text-recommended" : "text-brand"
 				}`}
 			>
@@ -481,11 +498,38 @@ function FeaturePanel({
 				{/* With a chip to make room for, the title holds its width and the chip
 				    gives way instead (its label truncates). A title wrapping onto a
 				    second line would make the row taller, and nothing here may. */}
-				<span className={recommended ? "shrink-0 whitespace-nowrap" : undefined}>{title}</span>
+				<span className={hasChip ? "shrink-0 whitespace-nowrap" : undefined}>{title}</span>
 				{recommended && (
 					<span className="recommended-chip">
 						<Star aria-hidden="true" fill="currentColor" className="h-3 w-3 shrink-0" />
 						<span className="truncate">Recommended</span>
+					</span>
+				)}
+				{/* The free-pulls chip never truncates ("10 fr…" says nothing); it
+				    steps down instead, keyed to the title line's own width:
+				      from 23rem   "[gift] 10 free pulls" — every band, every phone, an
+				                   ordinary column from about 1440px up
+				      from 16rem   "[gift] 10 free"       — an ordinary column at 1280px
+				      below that   nothing                — the ~200px uma column beside
+				                   a race-prep batch, where the title alone fills the line
+				    The floor is deliberate: in that narrowest column even the
+				    Recommended star has nowhere to go, and a chip poking out past the
+				    panel's border is worse than one that steps aside. The word "pulls"
+				    stays in the accessibility tree at every width. Trailing the
+				    Recommended chip, which already carries the `margin-left: auto`
+				    that pushes both to the right edge. */}
+				{freePulls > 0 && (
+					<span
+						className={`free-pulls-chip hidden @min-[16rem]:inline-flex ${
+							recommended ? "" : "ml-auto"
+						}`}
+						title={`${freePulls} free pulls on this banner`}
+					>
+						<Gift aria-hidden="true" className="h-3 w-3 shrink-0 text-brand" />
+						<span>
+							{freePulls} free
+							<span className="sr-only @min-[23rem]:not-sr-only"> pulls</span>
+						</span>
 					</span>
 				)}
 			</div>
@@ -641,6 +685,7 @@ function BannerSection({
 			// independently. `=== true` so a payload from before the field existed
 			// reads as not recommended.
 			recommended={umaBanner?.is_recommended === true}
+			freePulls={umaBanner?.free_pulls ?? 0}
 		/>
 	)
 
@@ -667,6 +712,7 @@ function BannerSection({
 			actionIcon={Ticket}
 			onAdd={() => supportBanner && onAddBanner(supportBanner, "Support")}
 			recommended={supportBanner?.is_recommended === true}
+			freePulls={supportBanner?.free_pulls ?? 0}
 		/>
 	)
 
