@@ -1110,8 +1110,11 @@ the same UTC day and renders as `EventMarkerPairCard`.
   than banners, so a scenario card stranded in a list of reruns answers a question nobody
   asked — the same reasoning that drops race events there.
 - **A missing image is the expected state**, not a degraded one: scenarios get entered
-  before the art exists. `BannerArtPlaceholder` is the designed fallback, as with the
-  step-up rows in the planner. Build and review the card with no image first.
+  before the art exists. A marker card with no image **collapses** to its chip, name and
+  dates rather than reserving a 16:9 `BannerArtPlaceholder`: a marker card has nothing
+  beside its art, so the placeholder was a card-wide empty box between two banners. The
+  banner card keeps its placeholder because there it is a third of a row beside real
+  content. Build and review the card with no image first.
 
 ---
 

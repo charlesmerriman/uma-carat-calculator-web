@@ -1,6 +1,5 @@
 import { Sparkles } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
-import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { formatDate } from "../../utils/dateFormat"
 import { TIMELINE_FOCUS_HIGHLIGHT } from "./timelineShared"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
@@ -17,9 +16,12 @@ import type { TimelineFocusProps, TimelineMarker } from "./timelineShared"
  * close), while a campaign states its window.
  *
  * A missing image is the expected state, not a degraded one — scenarios get
- * entered while a feature is being built and the art lands later. The
- * placeholder is a designed fallback, the same call the step-up rows already
- * made in the planner.
+ * entered while a feature is being built and the art lands later. With no
+ * image the card COLLAPSES to its chip, name and dates rather than reserving
+ * a 16:9 placeholder: a marker card has nothing beside the art, so the
+ * placeholder was a card-wide empty box with "coming soon" in the middle,
+ * three hundred pixels of nothing between two banners. The banner card keeps
+ * its placeholder because there it is a third of a row beside real content.
  */
 
 /**
@@ -106,14 +108,16 @@ const EventMarkerBody = ({
 				{marker.isPredicted && <PredictedBadge />}
 			</div>
 
-			<p className="mb-3 text-sm text-gray-300">
+			{/* The bottom margin belongs to the art below, so it goes when the art does. */}
+			<p className={`text-sm text-gray-300 ${marker.image ? "mb-3" : ""}`}>
 				{marker.endDate
 					? `${formatDate(marker.startDate)} through ${formatDate(marker.endDate)}`
 					// No end, and none is coming — see TimelineMarker.endDate.
 					: `Releases ${formatDate(marker.startDate)}`}
 			</p>
 
-			{/*
+			{marker.image && (
+			/*
 			 * Capped on WIDTH and never on height: the art is 16:9, and a height
 			 * clamp on a definite percentage width squashes the picture rather
 			 * than fitting it. Same rule as the banner art.
@@ -129,24 +133,21 @@ const EventMarkerBody = ({
 			 * through its `@container`, so it holds inside the pair's half-width
 			 * column too. Below xl the cap matches BANNER_ART, so a marker's art
 			 * is never wider than a banner's there either.
-			 */}
+			 */
 			<div
 				className={`max-w-[41rem] xl:w-[var(--timeline-art-width)] ${
 					artAlign === "center" ? "mx-auto" : ""
 				}`}
 			>
-				{marker.image ? (
-					<img
-						src={marker.image}
-						alt={marker.name}
-						loading="lazy"
-						decoding="async"
-						className="aspect-[16/9] h-auto w-full object-contain rounded-xl"
-					/>
-				) : (
-					<BannerArtPlaceholder />
-				)}
+				<img
+					src={marker.image}
+					alt={marker.name}
+					loading="lazy"
+					decoding="async"
+					className="aspect-[16/9] h-auto w-full object-contain rounded-xl"
+				/>
 			</div>
+			)}
 		</>
 	)
 }
