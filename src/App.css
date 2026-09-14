@@ -74,6 +74,30 @@
 	@apply bg-gray-800 rounded-xl border border-gray-600 shadow-md;
 }
 
+/* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
+
+   The ordinary banner row is image | umas | supports at 1.28fr | 0.88fr |
+   0.78fr with two 1rem gaps, so its art is (row - 2rem) * 1.28/2.94 wide.
+   Every other shape used to size its art some other way: the one-panel row
+   gave it half the row, the art-only and marker cards gave it the whole row,
+   and each then hit the 41rem cap somewhere the ordinary row never reaches.
+   Side by side down the list that read as four different banner sizes.
+
+   This is that ordinary fraction, written once as a length so the other
+   shapes can ask for it. 100cqw rather than 100%, because a percentage
+   resolves against the element's own parent and the marker pair's art sits
+   in a half-width column: cqw measures the nearest `@container` instead,
+   which every timeline card panel declares, so the art is the same width
+   however deeply it is nested inside the panel. Read where it is used, not
+   where it is declared: var() substitutes the expression into the using
+   element and cqw resolves there.
+
+   The 41rem cap on the art stays as the ceiling for the single-column
+   layouts below xl, where this variable is not applied. */
+:root {
+	--timeline-art-width: calc((100cqw - 2rem) * 0.4354);
+}
+
 /* A card welded to a strip sitting flush above it (AnniversaryEventStrip): the
    top corners square off so the two read as one box instead of two with a seam.
 
@@ -672,6 +696,30 @@
 		#e0a526 100%
 	);
 	box-shadow: 0 0 6px var(--color-ssr-glow);
+}
+
+/* The free-pulls chip that can share the title line with it: the same 20px
+   box (0.125rem padding around a 1rem line), so it is zero-layout in the same
+   way. The 1px ring is an inset shadow rather than a border because a border
+   would add 2px to the box, and to the title line with it.
+
+   No `display` here on purpose. The chip hides and shows through
+   container-query utilities on the element, and a display set in this file
+   would outrank them — these rules are unlayered, Tailwind's utilities are not. */
+.free-pulls-chip {
+	align-items: center;
+	gap: 0.25rem;
+	flex-shrink: 0;
+	border-radius: 9999px;
+	padding: 0.125rem 0.5rem;
+	font-size: 0.6875rem;
+	line-height: 1rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+	color: var(--color-gray-100);
+	background-color: var(--color-gray-800);
+	box-shadow: inset 0 0 0 1px var(--color-gray-600);
 }
 
 /* Icon-only delete button on the right edge. Width comes from .banner-grid's

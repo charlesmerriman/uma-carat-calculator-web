@@ -15,20 +15,25 @@ import { nextTempId, plannedBannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { RaceEventCard } from "./RaceEventCard"
 import { BannerWindowCard } from "./BannerWindowCard"
-import { EventMarkerCard } from "./EventMarkerCard"
+import { EventMarkerCard, EventMarkerPairCard } from "./EventMarkerCard"
 import { BackToTopButton, FloatingBackToTop } from "../BackToTop"
 import {
 	CATEGORY_LABELS,
 	CATEGORY_ORDER,
 	MARKER_LABELS,
 	MARKER_ORDER,
+	bannerWindowHasRecommended,
+	buildMarkerRows,
 	buildTimelineMarkers,
 	groupTimelineEvents,
-	mergeTimelineMarkers,
+	markerRowMatchesKind,
+	markerRowMatchesSearch,
 	rowMatchesFocus,
+	spliceMarkerRows,
 	timelineRowKey,
+	timelineRowStart,
 } from "./timelineShared"
-import type { TimelineFocusProps, TimelineMarker } from "./timelineShared"
+import type { TimelineFocusProps, TimelineMarker, TimelineRow } from "./timelineShared"
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
 import { useBackToTop } from "../../hooks/useBackToTop"
 import { TIMELINE_FOCUS_PARAM, parseTimelineFocus } from "../../utils/timelineFocus"
@@ -152,24 +157,29 @@ const categorySelectClass =
 	"inline-flex min-h-10 items-center rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 shadow-sm transition hover:border-gray-500 hover:bg-gray-700 focus:border-gray-500 focus:outline-none md:min-h-0 md:py-1.5"
 
 /**
- * The filter's value: the absence of a filter, a banner category, or a marker
- * kind.
+ * The filter's value: the absence of a filter, a banner category, a marker
+ * kind, or "recommended only".
  *
- * Three sources in one string, which is what a `<select>` gives you, so the two
- * real axes have to stay tellable apart. Marker kinds are namespaced with a
+ * Four sources in one string, which is what a `<select>` gives you, so the
+ * axes have to stay tellable apart. Marker kinds are namespaced with a
  * `marker:` prefix rather than sitting bare alongside the categories — a
  * scenario has no `banner_category` and never will, and an unprefixed
  * `"scenario"` would be one added BannerCategory away from quietly meaning both
  * things at once. The prefix also makes narrowing a string test instead of a
  * membership check against a list that has to be kept in sync.
  *
+ * `RECOMMENDED_FILTER` needs no such prefix: it names no BannerCategory or
+ * marker kind and never will, since "recommended" is an editorial flag on a
+ * banner rather than a value either axis could take.
+ *
  * `"all"` is neither axis: it's the only value that keeps race events, and the
  * only one that shows banners and markers together.
  */
 const MARKER_FILTER_PREFIX = "marker:"
+const RECOMMENDED_FILTER = "recommended"
 
 type MarkerFilter = `${typeof MARKER_FILTER_PREFIX}${TimelineMarker["kind"]}`
-type EventFilter = "all" | BannerCategory | MarkerFilter
+type EventFilter = "all" | BannerCategory | MarkerFilter | typeof RECOMMENDED_FILTER
 
 /** The marker kind a filter selects, or null when it selects banners. */
 function markerFilterKind(filter: EventFilter): TimelineMarker["kind"] | null {
@@ -410,30 +420,32 @@ export const Timeline = () => {
 		// once it has launched it belongs behind you in the calendar, even though
 		// it is still playable. That is a deliberate reading of an endless event,
 		// not an oversight.
-		const matchingMarkers = (): TimelineMarker[] =>
-			buildTimelineMarkers(scenarioData, anniversaryEventData)
-				.filter((marker) =>
+		//
+		// Rows are built (sorted and PAIRED) before any of these filters run, and
+		// the filters judge a pair by either half. Filtering the markers first
+		// would strip a pair's other half, so the same launch would be one row
+		// under "All events" and a different row, with a different key, under
+		// "Scenarios" — and the key is what holds the reader's place when the
+		// filter is lifted. See rowMarkers.
+		const matchingMarkerRows = (): TimelineRow[] => {
+			const query = searchQuery.toLowerCase()
+			return buildMarkerRows(buildTimelineMarkers(scenarioData, anniversaryEventData))
+				.filter((row) =>
 					showPast
-						? new Date(marker.startDate) < today
-						: new Date(marker.startDate) >= today
+						? timelineRowStart(row) < today.getTime()
+						: timelineRowStart(row) >= today.getTime()
 				)
-				.filter(
-					(marker) =>
-						searchQuery === "" ||
-						marker.name.toLowerCase().includes(searchQuery.toLowerCase())
-				)
+				.filter((row) => query === "" || markerRowMatchesSearch(row, query))
+		}
 
 		// A marker filter drops the banner stream entirely, so it returns before
 		// any of the event work below: asking for scenarios means asking for
-		// scenarios, not for the banners that happen to open alongside them.
-		// Merging into an empty row list is just the chronological sort — there
-		// is nothing left to splice between.
+		// scenarios, not for the banners that happen to open alongside them. The
+		// marker rows are already in chronological order, so there is nothing to
+		// splice them between.
 		const markerKind = markerFilterKind(eventFilter)
 		if (markerKind !== null) {
-			return mergeTimelineMarkers(
-				[],
-				matchingMarkers().filter((marker) => marker.kind === markerKind)
-			)
+			return matchingMarkerRows().filter((row) => markerRowMatchesKind(row, markerKind))
 		}
 
 		const rows = groupTimelineEvents(
@@ -449,16 +461,27 @@ export const Timeline = () => {
 		if (eventFilter === "all") {
 			// Markers merge in AFTER grouping, on the final row order — running
 			// earlier would let one land inside a window that later folds together.
-			return mergeTimelineMarkers(rows, matchingMarkers())
+			return spliceMarkerRows(rows, matchingMarkerRows())
 		}
 
-		// Markers are deliberately absent under a BANNER CATEGORY filter: they are
-		// cross-cutting context rather than banners, so a scenario card stranded
-		// in a list of reruns would answer a question nobody asked. The marker
-		// filters above are how you ask for them. Race events drop out below for
-		// the same reason.
+		// Markers are deliberately absent under a BANNER CATEGORY or RECOMMENDED
+		// filter: they are cross-cutting context rather than banners, so a
+		// scenario card stranded in a list of reruns (or of recommended picks)
+		// would answer a question nobody asked. The marker filters above are how
+		// you ask for them. Race events drop out below for the same reason.
 		//
-		// Applied AFTER grouping, and a group survives if ANY constituent matches.
+		// Applied AFTER grouping, and a group survives if ANY constituent matches
+		// — a revival window with an ordinary banner alongside it stays on screen
+		// under "Recommended only" if either half carries the star, the same rule
+		// the category filter uses just below.
+		if (eventFilter === RECOMMENDED_FILTER) {
+			return rows.filter(
+				(row) =>
+					row.kind === "banner_window" &&
+					row.group.banners.some(bannerWindowHasRecommended)
+			)
+		}
+
 		// Filtering the events first would drop the ordinary banner that shares a
 		// revival's window, leaving a card that misrepresents the week — the
 		// reader would see the revival alone and conclude nothing else was on.
@@ -490,6 +513,17 @@ export const Timeline = () => {
 		}
 		return CATEGORY_ORDER.filter((category) => present.has(category))
 	}, [organizedTimelineData])
+
+	// Same rule, a third axis over: only offer "Recommended only" once some
+	// banner on the timeline actually carries the flag, so the option is never
+	// a dead end back to "No events found."
+	const hasRecommendedBanner = useMemo(
+		() =>
+			organizedTimelineData.some(
+				(event) => !isRaceEvent(event) && bannerWindowHasRecommended(event)
+			),
+		[organizedTimelineData]
+	)
 
 	// Same rule, one axis over: only offer a marker kind the data can actually
 	// produce a card for. Asked of buildTimelineMarkers rather than counted off
@@ -878,10 +912,13 @@ export const Timeline = () => {
 					    view-mode toggles on the far side of the bar. */}
 					<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end md:w-auto md:justify-self-end">
 						{/* Hidden only when there is nothing to choose between — a
-						    single-option filter is just clutter. Counted across both
-						    axes: one banner category plus one marker kind is still a
-						    real choice. */}
-						{availableCategories.length + availableMarkerKinds.length > 1 && (
+						    single-option filter is just clutter. Counted across all three
+						    axes: one banner category plus one marker kind is still a real
+						    choice, and so is "Recommended only" plus nothing else. */}
+						{availableCategories.length +
+							availableMarkerKinds.length +
+							(hasRecommendedBanner ? 1 : 0) >
+							1 && (
 							<>
 								<label className="sr-only" htmlFor="timeline-event-filter">
 									Filter events
@@ -893,6 +930,13 @@ export const Timeline = () => {
 									onChange={(e) => handleFilterChange(e.target.value as EventFilter)}
 								>
 									<option value="all">All events</option>
+									{/* Ungrouped, sitting beside "All events" rather than in
+									    either optgroup below: recommended is an editorial flag
+									    that cuts across every category, not a value either axis
+									    below can take. */}
+									{hasRecommendedBanner && (
+										<option value={RECOMMENDED_FILTER}>Recommended only</option>
+									)}
 									{/* Grouped, because the two lists answer different
 									    questions and a flat run of options would read as one
 									    list of banner categories with two odd entries at the
@@ -971,6 +1015,13 @@ export const Timeline = () => {
 						/>
 					) : row.kind === "marker" ? (
 						<EventMarkerCard key={rowKey} marker={row.marker} {...focusProps} />
+					) : row.kind === "marker_pair" ? (
+						<EventMarkerPairCard
+							key={rowKey}
+							scenario={row.scenario}
+							anniversary={row.anniversary}
+							{...focusProps}
+						/>
 					) : (
 						<BannerWindowCard
 							key={rowKey}

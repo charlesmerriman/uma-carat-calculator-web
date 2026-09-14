@@ -515,11 +515,11 @@ export const IncomeForm = () => {
 								{/* Separator */}
 								<div className="hidden w-px bg-gray-700 self-stretch my-2 @income-wide:block" />
 
-								{/* Purchases / Bonuses */}
+								{/* Purchases */}
 								<div className="flex min-w-0 flex-col">
 									<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Gift className={iconCls} />
-										Purchases / Bonuses
+										Purchases
 									</h3>
 									{/* ONE ROW: Daily Carat Pack left, Training Pass right. Stacked, the
 									    pair cost two full rows of a block that spans the whole panel at
@@ -576,6 +576,22 @@ export const IncomeForm = () => {
 											/>
 										</div>
 									</div>
+									{/* Same setting as the toggle on the Selectors page, surfaced here
+									    too so it's visible right alongside the other things that change
+									    the projection, without switching tabs. */}
+									<label className="mt-3 flex items-center justify-center gap-3 border-t border-gray-700 pt-3">
+										<ToggleSwitch
+											ariaLabel="Include purchases in the calculator projection"
+											checked={userStatsData.include_purchases_in_projection}
+											onChange={(checked) =>
+												setUserStatsData({
+													...userStatsData,
+													include_purchases_in_projection: checked,
+												})
+											}
+										/>
+										<span className="text-sm text-gray-300">Include Selector Purchases</span>
+									</label>
 								</div>
 							</div>
 						</div>

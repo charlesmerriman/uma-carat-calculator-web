@@ -10,6 +10,7 @@
 import type { RefObject } from "react"
 import { differenceInCalendarDays } from "date-fns"
 import { parseApiDate } from "../../utils/dateFormat"
+import { startOfUtcDay } from "../../utils/utcDates"
 import { isRaceEvent } from "../../types"
 import type { TimelineFocus } from "../../utils/timelineFocus"
 import type {
@@ -58,8 +59,8 @@ export function getCountdownLabel(startDate: string, endDate: string, today: Dat
  */
 export const CATEGORY_LABELS: Record<BannerCategory, string> = {
 	standard: "Standard",
-	golden_week_revival: "Golden Week Revival",
-	race_prep_support: "Race Prep Support",
+	golden_week_revival: "Golden Week",
+	race_prep_support: "10 Select 2 Scout",
 	rerun: "Rerun",
 }
 
@@ -140,6 +141,7 @@ export type TimelineRow =
 	| { kind: "race"; event: RaceEvent }
 	| { kind: "banner_window"; group: BannerWindowGroup }
 	| { kind: "marker"; marker: TimelineMarker }
+	| { kind: "marker_pair"; scenario: TimelineMarker; anniversary: TimelineMarker }
 
 /**
  * A scenario launch or a campaign opening, rendered as its own card in the
@@ -198,6 +200,12 @@ export function timelineRowKey(row: TimelineRow): string {
 	if (row.kind === "marker") {
 		return row.marker.key
 	}
+	if (row.kind === "marker_pair") {
+		// Both halves' keys, so the pair is distinct from either marker on its own
+		// (a kind filter renders the halves as lone markers, and the two lists
+		// must not share a key).
+		return `${row.scenario.key}+${row.anniversary.key}`
+	}
 	return `win-${row.group.start_date}`
 }
 
@@ -211,10 +219,12 @@ export function timelineRowKey(row: TimelineRow): string {
  * A banner focus matches a WINDOW containing that BannerTimeline, not a row
  * whose id equals it: concurrent banners merge into one card (see
  * BannerWindowGroup), so the card a reader lands on is routinely shared with a
- * banner they did not click. Race events can never match — nothing links to
- * one — and they are excluded by falling through rather than by a guard, so a
- * fourth row kind is a compile error at the switch above rather than a silent
- * "never focusable" here.
+ * banner they did not click. A marker focus likewise matches the PAIR row
+ * holding that marker when it launched alongside its other half (see
+ * pairSameDayMarkers) — the shared panel is the card the reader lands on. Race
+ * events can never match — nothing links to one — and they are excluded by
+ * falling through rather than by a guard, so a new row kind is a compile error
+ * at the switch above rather than a silent "never focusable" here.
  */
 export function rowMatchesFocus(row: TimelineRow, focus: TimelineFocus): boolean {
 	if (focus.kind === "banner") {
@@ -223,11 +233,13 @@ export function rowMatchesFocus(row: TimelineRow, focus: TimelineFocus): boolean
 			row.group.banners.some((banner) => banner.id === focus.id)
 		)
 	}
-	return (
-		row.kind === "marker" &&
-		row.marker.kind === focus.kind &&
-		row.marker.sourceId === focus.id
-	)
+	const matchesMarker = (marker: TimelineMarker): boolean =>
+		marker.kind === focus.kind && marker.sourceId === focus.id
+	if (row.kind === "marker") return matchesMarker(row.marker)
+	if (row.kind === "marker_pair") {
+		return matchesMarker(row.scenario) || matchesMarker(row.anniversary)
+	}
+	return false
 }
 
 /**
@@ -398,56 +410,181 @@ export function buildTimelineMarkers(
 }
 
 /**
- * Splice marker rows into an already-grouped, already-sorted row list.
+ * Whether any uma or support banner in this window carries the editorial
+ * Recommended flag — the gold star from the planner's dropdown (see
+ * RecommendedMark, isRecommendedBanner in utils/bannerHelpers.ts). Mirrored
+ * here rather than reused, because that helper reads a `PlannableBanner` (the
+ * planner's own union) and a window holds the raw nested arrays instead.
  *
- * Must run AFTER groupTimelineEvents, for the same reason grouping runs after
- * filtering: it consumes the final row order and inserts against it, so running
- * earlier would let a marker land inside a window that later folds together.
- *
- * A marker sits before the first row starting at or after it, and a scenario
- * sorts above a campaign at the same instant — the same rule the calculator's
- * section bands use, so the two surfaces agree. Markers past the last row are
- * appended, unlike in the planner: the timeline is the whole calendar, so
- * there is no "between" to fall outside of.
+ * A step-up has no such flag, matching isRecommendedBanner. `=== true` rather
+ * than a truthiness read, for the same reason: a banner missing the field
+ * (a deploy in progress) reads as not recommended.
  */
-export function mergeTimelineMarkers(
-	rows: TimelineRow[],
-	markers: TimelineMarker[]
-): TimelineRow[] {
-	if (markers.length === 0) return rows
+export function bannerWindowHasRecommended(banner: BannerTimelineForViewing): boolean {
+	return (
+		banner.banner_umas.some((uma) => uma.is_recommended === true) ||
+		banner.banner_supports.some((support) => support.is_recommended === true)
+	)
+}
 
-	const rowStart = (row: TimelineRow): number => {
-		const iso =
-			row.kind === "race" ? row.event.start_date
-				: row.kind === "banner_window" ? row.group.start_date
-					: row.marker.startDate
-		const ms = new Date(iso).getTime()
-		return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms
+/**
+ * Fold a scenario and a campaign that land on the same UTC day into one row.
+ *
+ * Scenarios almost always debut alongside an anniversary (the planner's section
+ * band makes the same observation), and two full-width cards stacked for what
+ * a player experiences as one launch read as two events on two dates. The
+ * shared panel says "these arrived together" the way BannerWindowGroup does
+ * for concurrent banners — and, as there, the fold is render-side only: the
+ * Scenario and AnniversaryEvent rows stay separate in the data.
+ *
+ * Same calendar DAY rather than the same instant, deliberately. Either date
+ * can be a prediction, and a predicted campaign resolved a few hours off a
+ * real scenario launch is still the same launch. UTC, like every other date
+ * comparison in the projection.
+ *
+ * Only the scenario + campaign pairing exists: two campaigns on one day, or
+ * two scenarios, stay separate cards. The pair layout knows which half is
+ * which, and a third combination would need its own design, not a silent
+ * reuse of this one.
+ *
+ * Expects markers sorted the way buildMarkerRows sorts them (by instant,
+ * scenario before campaign), so a pair is always two NEIGHBOURS with the
+ * scenario first and one pass over adjacent entries finds every one.
+ */
+export function pairSameDayMarkers(sortedMarkers: TimelineMarker[]): TimelineRow[] {
+	const utcDay = (iso: string): number => startOfUtcDay(new Date(iso)).getTime()
+
+	const rows: TimelineRow[] = []
+	for (let index = 0; index < sortedMarkers.length; index += 1) {
+		const marker = sortedMarkers[index]
+		const following = sortedMarkers[index + 1]
+		if (
+			marker.kind === "scenario" &&
+			following?.kind === "anniversary" &&
+			utcDay(marker.startDate) === utcDay(following.startDate)
+		) {
+			rows.push({ kind: "marker_pair", scenario: marker, anniversary: following })
+			index += 1
+			continue
+		}
+		rows.push({ kind: "marker", marker })
 	}
+	return rows
+}
 
-	const pending = [...markers].sort((a, b) => {
+/**
+ * The markers a row holds: one for a marker row, both for a pair, none for a
+ * banner window or a race.
+ *
+ * Every filter the timeline applies to markers goes through this, so a pair is
+ * judged by EITHER half — the same "a group survives if any constituent
+ * matches" rule the banner windows use. Filtering the markers before pairing
+ * instead would strip the other half first, so the same launch would be a
+ * pair under "All events" and a lone card under "Scenarios". That is not only
+ * inconsistent to look at: the row's KEY changes with it, and the key is what
+ * the list anchors on when a filter is lifted (see anchorRowKey in Timeline),
+ * so the reader would lose their place on the way back to "All".
+ */
+export function rowMarkers(row: TimelineRow): TimelineMarker[] {
+	if (row.kind === "marker") return [row.marker]
+	if (row.kind === "marker_pair") return [row.scenario, row.anniversary]
+	return []
+}
+
+/** Whether a marker row holds a marker of `kind` — a pair holds both. */
+export function markerRowMatchesKind(
+	row: TimelineRow,
+	kind: TimelineMarker["kind"]
+): boolean {
+	return rowMarkers(row).some((marker) => marker.kind === kind)
+}
+
+/** Whether any marker in the row is named by the (already lowercased) query. */
+export function markerRowMatchesSearch(row: TimelineRow, query: string): boolean {
+	return rowMarkers(row).some((marker) => marker.name.toLowerCase().includes(query))
+}
+
+/**
+ * A row's opening instant in ms, or +Infinity for one that cannot be parsed
+ * (which sorts it last rather than throwing the splice off).
+ *
+ * A pair answers with its scenario's instant: the scenario is the earlier half
+ * by construction (see buildMarkerRows' sort), so the pair sits where the
+ * scenario alone would have — and the past/future split judges the pair by
+ * that same instant, so two halves a few hours apart across today can never
+ * land on different sides of the toggle.
+ */
+export function timelineRowStart(row: TimelineRow): number {
+	const iso =
+		row.kind === "race" ? row.event.start_date
+			: row.kind === "banner_window" ? row.group.start_date
+				: row.kind === "marker" ? row.marker.startDate
+					: row.scenario.startDate
+	const ms = new Date(iso).getTime()
+	return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms
+}
+
+/**
+ * Markers to rows: sorted, then paired.
+ *
+ * A scenario sorts above a campaign at the same instant — the same rule the
+ * calculator's section bands use, so the two surfaces agree — and that order
+ * is what lets pairSameDayMarkers find every pair among neighbours.
+ *
+ * This runs BEFORE any filter, deliberately; see rowMarkers for why.
+ */
+export function buildMarkerRows(markers: TimelineMarker[]): TimelineRow[] {
+	const sorted = [...markers].sort((a, b) => {
 		const byTime =
 			new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
 		if (byTime !== 0) return byTime
 		if (a.kind !== b.kind) return a.kind === "scenario" ? -1 : 1
 		return a.name.localeCompare(b.name)
 	})
+	return pairSameDayMarkers(sorted)
+}
+
+/**
+ * Splice already-sorted marker rows into an already-grouped, already-sorted
+ * row list.
+ *
+ * Must run AFTER groupTimelineEvents, for the same reason grouping runs after
+ * filtering: it consumes the final row order and inserts against it, so running
+ * earlier would let a marker land inside a window that later folds together.
+ *
+ * A marker row sits before the first row starting at or after it. Markers
+ * past the last row are appended, unlike in the planner: the timeline is the
+ * whole calendar, so there is no "between" to fall outside of.
+ */
+export function spliceMarkerRows(
+	rows: TimelineRow[],
+	markerRows: TimelineRow[]
+): TimelineRow[] {
+	if (markerRows.length === 0) return rows
 
 	const out: TimelineRow[] = []
 	let next = 0
 	for (const row of rows) {
-		const start = rowStart(row)
-		while (
-			next < pending.length &&
-			new Date(pending[next].startDate).getTime() <= start
-		) {
-			out.push({ kind: "marker", marker: pending[next] })
+		const start = timelineRowStart(row)
+		while (next < markerRows.length && timelineRowStart(markerRows[next]) <= start) {
+			out.push(markerRows[next])
 			next += 1
 		}
 		out.push(row)
 	}
-	for (; next < pending.length; next += 1) {
-		out.push({ kind: "marker", marker: pending[next] })
+	for (; next < markerRows.length; next += 1) {
+		out.push(markerRows[next])
 	}
 	return out
+}
+
+/**
+ * buildMarkerRows then spliceMarkerRows, for a caller with nothing to filter
+ * in between.
+ */
+export function mergeTimelineMarkers(
+	rows: TimelineRow[],
+	markers: TimelineMarker[]
+): TimelineRow[] {
+	return spliceMarkerRows(rows, buildMarkerRows(markers))
 }

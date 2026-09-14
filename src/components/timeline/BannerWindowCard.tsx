@@ -4,6 +4,7 @@ import {
 	Clock3,
 	Dumbbell,
 	Flower2,
+	Gift,
 	Repeat,
 	Sparkles,
 	Star,
@@ -128,35 +129,63 @@ const COLUMN_TILE_CAPACITY = 2
  */
 const BAND_TILE = "flex flex-1 justify-center"
 
-/** Image | umas | supports. Support-led inverts the last two weights. */
+/**
+ * THE ART TRACK IS THE SAME IN EVERY TEMPLATE: `minmax(360px,var(--timeline-art-width))`.
+ *
+ * `--timeline-art-width` (App.css) is the ordinary row's 1.28-of-2.94fr share
+ * written as a length, so it is the width the art has always had in that row
+ * and now the width it has in every other shape too — the support-led and
+ * one-panel rows below, the art-only branch, and the marker cards. The 360px
+ * floor is the old track's, kept for the narrow end of xl.
+ *
+ * Spelled out in full in each template rather than interpolated from a shared
+ * constant, because Tailwind finds classes by scanning the source for complete
+ * strings: a `${ART_TRACK}` template literal generates no CSS at all, and the
+ * grid silently falls back to a single stacked column. (Measured: every
+ * ordinary row's art went to the 41rem cap when it was interpolated.)
+ */
+
+/**
+ * Image | umas | supports. The panels split what the art track leaves, at the
+ * same 0.88 : 0.78 weights as before (support-led inverts them), so the
+ * ordinary row renders exactly as it did when the art was 1.28fr.
+ */
 const SECTION_COLUMNS =
-	"xl:grid-cols-[minmax(360px,1.28fr)_minmax(260px,0.88fr)_minmax(260px,0.78fr)]"
+	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(260px,0.88fr)_minmax(260px,0.78fr)]"
 const SECTION_COLUMNS_SUPPORT_LED =
-	"xl:grid-cols-[minmax(300px,1fr)_minmax(200px,0.5fr)_minmax(420px,1.7fr)]"
+	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(200px,0.5fr)_minmax(420px,1.7fr)]"
 /**
  * Image | one panel, for when the other panel has banded away below.
  *
- * TWO EQUAL HALVES: art hard left in the first, panel hard right in the second.
- * Not the weighted split this used to be — that handed the art 1.6 of 2.3fr
- * (~1030px) against the panel's 0.7 (~450px), which worked only while the art
- * filled whatever column it was given. Once BANNER_ART capped the width the two
- * stopped agreeing, leaving the art adrift in an oversized column and the lone
- * uma tile flush against the section's right edge.
+ * The art track, then the rest: art hard left at the shared width, panel hard
+ * right in what remains (PAIR_PANEL_CELL). This was two equal halves, which
+ * handed the art ~740px and left BANNER_ART's 41rem cap to catch it — about
+ * 20px wider than the art in the ordinary row above it, which is exactly the
+ * kind of mismatch the shared track exists to end.
  */
-const SECTION_COLUMNS_PAIR = "xl:grid-cols-2"
+const SECTION_COLUMNS_PAIR =
+	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(0,1fr)]"
 
 /**
- * The lone panel's cell in the PAIR shape. It sits hard right rather than
- * filling its half, so the cap is what holds it to the width it has in an
- * ordinary three-column row (~438px) instead of ballooning into a 740px box
- * around a single tile.
+ * The lone panel's cell in the PAIR shape. It sits hard against ONE edge
+ * rather than filling its half, so the cap is what holds it to the width it
+ * has in an ordinary three-column row (~438px) instead of ballooning into a
+ * 740px box around a single tile.
+ *
+ * WHICH edge depends on which panel it is, so the panel lands where it sits
+ * in the ordinary three-column row: the uma panel is the middle column,
+ * immediately right of the art, so it stays LEFT (`mr-auto`) when it's the
+ * one left standing. The support panel is the rightmost column, so it stays
+ * RIGHT (`ml-auto`) — the uma panel banded away, support didn't, and support
+ * should still read as "the far column" rather than drifting toward the art.
  *
  * `grid` so the panel inside still stretches to the row height, as it does when
  * it is the grid item itself. xl-only throughout: below that breakpoint every
  * template collapses to one stacked column, where the panel should still fill
  * the width.
  */
-const PAIR_PANEL_CELL = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
+const PAIR_PANEL_CELL_LEFT = "grid min-w-0 xl:mr-auto xl:w-full xl:max-w-[28rem]"
+const PAIR_PANEL_CELL_RIGHT = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
 
 /**
  * BANNER ART IS BOUNDED BY ITS WIDTH, AND THE HEIGHT FOLLOWS.
@@ -180,7 +209,11 @@ const PAIR_PANEL_CELL = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
  *
  * 41rem/656px is just above the three-column ceiling, so ordinary rows render
  * exactly as they did and only the over-wide shapes clamp — landing them at
- * ~369px tall, i.e. matching the ordinary row instead of dwarfing it.
+ * ~369px tall, i.e. matching the ordinary row instead of dwarfing it. That
+ * "just above" is also why the cap alone was not enough: a shape that hit it
+ * was still ~20px wider than the ordinary row, so from xl up every shape now
+ * sizes its art by `--timeline-art-width` instead, and the cap
+ * is the ceiling for the single-column layouts below xl.
  *
  * The art sits HARD LEFT in whatever cell it lands in, so the cap only ever
  * eats into the space on its right. That keeps its left edge on the section's
@@ -221,9 +254,11 @@ const BANNER_ART =
 /**
  * The art-only branch: every panel banded, so the art has a full-width row to
  * itself and nothing beside it. Here there is no column edge to align to, so
- * hard left just reads as a layout bug and the art is centred instead.
+ * hard left just reads as a layout bug and the art is centred instead — but
+ * at the shared width, not the cap, so it is the same size as the art in the
+ * rows around it.
  */
-const BANNER_ART_ALONE = `${BANNER_ART} mx-auto`
+const BANNER_ART_ALONE = `${BANNER_ART} mx-auto xl:w-[var(--timeline-art-width)]`
 
 /**
  * The fields a featured tile actually renders. Both Uma and SupportCard
@@ -393,6 +428,13 @@ type FeaturePanelProps = {
 	 * part of that is zero-layout — see the note on .ssr-panel.
 	 */
 	recommended?: boolean
+	/**
+	 * Pulls the game hands out free on this banner (`free_pulls` on the
+	 * BannerUma / BannerSupport, which the planner already subtracts from a
+	 * row's pull count). Zero, the common case, renders nothing. Shown as a
+	 * chip in the title line under the same zero-layout rule as `recommended`.
+	 */
+	freePulls?: number
 }
 
 function FeaturePanel({
@@ -409,6 +451,7 @@ function FeaturePanel({
 	actionIcon: ActionIcon,
 	onAdd,
 	recommended = false,
+	freePulls = 0,
 }: FeaturePanelProps) {
 	// Count drives the layout. A narrow column tops out at two tiles across and
 	// grows downwards; a band is always exactly one line — see BAND_TILE.
@@ -470,10 +513,18 @@ function FeaturePanel({
 		? `ssr-panel ${status === "expired" ? "ssr-panel--still" : ""}`
 		: "border-gray-600 bg-gray-800 shadow-sm"
 
+	// Whether anything shares the title line. Both chips are sized to the
+	// title's 20px line box, so the line is exactly as tall with them as without.
+	const hasChip = recommended || freePulls > 0
+
 	return (
 		<section className={`flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
+			{/* `@container` so the free-pulls chip can size itself to THIS line's
+			    width rather than the viewport's — see its note below. Inline-size
+			    containment only stops the line from ever pushing its column wider,
+			    which nothing relied on: every column has an explicit minimum. */}
 			<div
-				className={`mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
+				className={`@container mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
 					recommended ? "text-recommended" : "text-brand"
 				}`}
 			>
@@ -481,11 +532,38 @@ function FeaturePanel({
 				{/* With a chip to make room for, the title holds its width and the chip
 				    gives way instead (its label truncates). A title wrapping onto a
 				    second line would make the row taller, and nothing here may. */}
-				<span className={recommended ? "shrink-0 whitespace-nowrap" : undefined}>{title}</span>
+				<span className={hasChip ? "shrink-0 whitespace-nowrap" : undefined}>{title}</span>
 				{recommended && (
 					<span className="recommended-chip">
 						<Star aria-hidden="true" fill="currentColor" className="h-3 w-3 shrink-0" />
 						<span className="truncate">Recommended</span>
+					</span>
+				)}
+				{/* The free-pulls chip never truncates ("10 fr…" says nothing); it
+				    steps down instead, keyed to the title line's own width:
+				      from 23rem   "[gift] 10 free pulls" — every band, every phone, an
+				                   ordinary column from about 1440px up
+				      from 16rem   "[gift] 10 free"       — an ordinary column at 1280px
+				      below that   nothing                — the ~200px uma column beside
+				                   a race-prep batch, where the title alone fills the line
+				    The floor is deliberate: in that narrowest column even the
+				    Recommended star has nowhere to go, and a chip poking out past the
+				    panel's border is worse than one that steps aside. The word "pulls"
+				    stays in the accessibility tree at every width. Trailing the
+				    Recommended chip, which already carries the `margin-left: auto`
+				    that pushes both to the right edge. */}
+				{freePulls > 0 && (
+					<span
+						className={`free-pulls-chip hidden @min-[16rem]:inline-flex ${
+							recommended ? "" : "ml-auto"
+						}`}
+						title={`${freePulls} free pulls on this banner`}
+					>
+						<Gift aria-hidden="true" className="h-3 w-3 shrink-0 text-brand" />
+						<span>
+							{freePulls} free
+							<span className="sr-only @min-[23rem]:not-sr-only"> pulls</span>
+						</span>
 					</span>
 				)}
 			</div>
@@ -615,7 +693,7 @@ function BannerSection({
 	// A panel keeps its column if it isn't banded — and, once anything IS banded,
 	// only if it has a banner to show. That second clause is what stops a revival
 	// (umas banded, no support banner at all) from spending a full-width row on an
-	// empty "No support banner in this window." panel. With nothing banded the
+	// empty "No Support Banner" panel. With nothing banded the
 	// empty states still render, because then they're the whole section.
 	const umaInColumn = !umaBanded && (!!umaBanner || !hasBand)
 	const supportInColumn = !supportBanded && (!!supportBanner || !hasBand)
@@ -627,7 +705,7 @@ function BannerSection({
 			title="Featured Umamusume"
 			items={umaBanner?.umas ?? []}
 			hasBanner={!!umaBanner}
-			emptyText="No Umamusume banner in this window."
+			emptyText="No Umamusume banner"
 			tileWidthClass="max-w-[10rem] 2xl:max-w-[13.5rem]"
 			tileAspectClass="aspect-square"
 			// 7rem × 9 + gaps still fits the launch banner's umas on one unscrolled
@@ -641,6 +719,7 @@ function BannerSection({
 			// independently. `=== true` so a payload from before the field existed
 			// reads as not recommended.
 			recommended={umaBanner?.is_recommended === true}
+			freePulls={umaBanner?.free_pulls ?? 0}
 		/>
 	)
 
@@ -650,7 +729,7 @@ function BannerSection({
 			title="Featured Support Cards"
 			items={supportBanner?.support_cards ?? []}
 			hasBanner={!!supportBanner}
-			emptyText="No support banner in this window."
+			emptyText="No Support Banner"
 			tileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
 			tileAspectClass="aspect-[3/4]"
 			// A race-prep batch's ten cards fit unscrolled from about 1050px up.
@@ -667,6 +746,7 @@ function BannerSection({
 			actionIcon={Ticket}
 			onAdd={() => supportBanner && onAddBanner(supportBanner, "Support")}
 			recommended={supportBanner?.is_recommended === true}
+			freePulls={supportBanner?.free_pulls ?? 0}
 		/>
 	)
 
@@ -732,7 +812,7 @@ function BannerSection({
 						    the ordinary three-column templates apply and each panel is
 						    the grid item directly. */}
 						{columnPanelCount === 1 ? (
-							<div className={PAIR_PANEL_CELL}>
+							<div className={umaInColumn ? PAIR_PANEL_CELL_LEFT : PAIR_PANEL_CELL_RIGHT}>
 								{umaInColumn ? umaPanel : supportPanel}
 							</div>
 						) : (
@@ -811,7 +891,7 @@ export function BannerWindowCard({
 				<AnniversaryEventStrip event={attachedEvent} stepUps={stepUps} />
 			)}
 			<div
-				className={`card-panel w-full overflow-hidden p-2 sm:p-3 ${
+				className={`card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
 					attachedEvent ? "card-panel-joined-top" : ""
 				} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
 			>

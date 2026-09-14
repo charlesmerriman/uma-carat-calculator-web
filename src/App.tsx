@@ -22,6 +22,7 @@ import { CaratIncomeGuide } from "./components/info/CaratIncomeGuide.js"
 import { Feedback } from "./components/info/Feedback.js"
 import { NotFound } from "./components/NotFound.js"
 import { recordVisit } from "./services/visitBeacon.js"
+import { useScrollReset } from "./hooks/useScrollReset.js"
 
 const ThemedToaster = () => {
 	const { activeTheme } = useTheme()
@@ -29,6 +30,12 @@ const ThemedToaster = () => {
 }
 
 function App() {
+	// Gives every page its own scroll position instead of one shared by the whole
+	// site. Here rather than in ApplicationViews because the sharing crosses the
+	// two halves of the app: /app scrolls a div, /about and /terms scroll the
+	// document, and a navigation between them carried the offset either way.
+	useScrollReset()
+
 	// Traffic beacon. Deliberately here rather than inside a route element: this
 	// is the only place that sees EVERY visitor, since CalculatorProvider
 	// below only wraps /app. Counting further in would miss everyone who lands
