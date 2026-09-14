@@ -3,6 +3,9 @@ import {
   buildTimelineMarkers,
   groupTimelineEvents,
   mergeTimelineMarkers,
+  buildMarkerRows,
+  markerRowMatchesKind,
+  markerRowMatchesSearch,
   timelineRowKey,
   formatStepUpChip,
 } from '../components/timeline/timelineShared'
@@ -458,19 +461,86 @@ describe('mergeTimelineMarkers', () => {
     ])
   })
 
-  it('sorts a scenario above a campaign at the same instant', () => {
+  it('folds a scenario and a campaign on the same day into one pair row', () => {
     const merged = mergeTimelineMarkers(
       [windowRow('2028-06-01T00:00:00Z')],
       [
-        marker('ann-1', 'anniversary', 'Campaign', '2028-03-01T00:00:00Z'),
+        // Deliberately out of order, and a few hours apart: the pairing runs on
+        // the sorted list and on the calendar day, not the exact instant.
+        marker('ann-1', 'anniversary', 'Campaign', '2028-03-01T05:00:00Z'),
         marker('sce-1', 'scenario', 'Scenario', '2028-03-01T00:00:00Z'),
       ],
     )
-    expect(merged.map((r) => (r.kind === 'marker' ? r.marker.name : 'row'))).toEqual([
+    expect(merged.map((r) => r.kind)).toEqual(['marker_pair', 'banner_window'])
+    const pair = merged[0]
+    if (pair.kind !== 'marker_pair') throw new Error('expected a pair')
+    expect(pair.scenario.name).toBe('Scenario')
+    expect(pair.anniversary.name).toBe('Campaign')
+  })
+
+  it('keeps a scenario and a campaign on different days as separate rows', () => {
+    const merged = mergeTimelineMarkers(
+      [],
+      [
+        marker('sce-1', 'scenario', 'Scenario', '2028-03-01T23:00:00Z'),
+        marker('ann-1', 'anniversary', 'Campaign', '2028-03-02T01:00:00Z'),
+      ],
+    )
+    expect(merged.map((r) => (r.kind === 'marker' ? r.marker.name : r.kind))).toEqual([
       'Scenario',
       'Campaign',
-      'row',
     ])
+  })
+
+  it('only pairs a scenario with a campaign, never two of a kind', () => {
+    const merged = mergeTimelineMarkers(
+      [],
+      [
+        marker('ann-1', 'anniversary', 'A', '2028-03-01T00:00:00Z'),
+        marker('ann-2', 'anniversary', 'B', '2028-03-01T00:00:00Z'),
+      ],
+    )
+    expect(merged.map((r) => r.kind)).toEqual(['marker', 'marker'])
+  })
+
+  it('places a pair where the scenario alone would have gone', () => {
+    const merged = mergeTimelineMarkers(
+      [windowRow('2028-01-01T00:00:00Z'), windowRow('2028-06-01T00:00:00Z')],
+      [
+        marker('sce-1', 'scenario', 'Scenario', '2028-03-01T00:00:00Z'),
+        marker('ann-1', 'anniversary', 'Campaign', '2028-03-01T00:00:00Z'),
+      ],
+    )
+    expect(merged.map((r) => r.kind)).toEqual(['banner_window', 'marker_pair', 'banner_window'])
+  })
+
+  it('keeps the pair, and its key, under either kind filter and a one-sided search', () => {
+    // The row is built BEFORE filtering, so the same launch is the same row
+    // under "All", "Scenarios" and "Campaigns" — and the key the list anchors
+    // on when a filter is lifted is the same in every list.
+    const rows = buildMarkerRows([
+      marker('sce-1', 'scenario', 'Project L\'Arc', '2028-03-01T00:00:00Z'),
+      marker('ann-1', 'anniversary', '2.5th Anniversary', '2028-03-01T00:00:00Z'),
+    ])
+    expect(rows.map((r) => r.kind)).toEqual(['marker_pair'])
+    const [pair] = rows
+    expect(markerRowMatchesKind(pair, 'scenario')).toBe(true)
+    expect(markerRowMatchesKind(pair, 'anniversary')).toBe(true)
+    expect(markerRowMatchesSearch(pair, "l'arc")).toBe(true)
+    expect(markerRowMatchesSearch(pair, 'anniversary')).toBe(true)
+    expect(markerRowMatchesSearch(pair, 'mecha')).toBe(false)
+    expect(timelineRowKey(pair)).toBe('sce-1+ann-1')
+  })
+
+  it('keys a pair on both halves so it never collides with a lone marker', () => {
+    const merged = mergeTimelineMarkers(
+      [],
+      [
+        marker('sce-1', 'scenario', 'Scenario', '2028-03-01T00:00:00Z'),
+        marker('ann-1', 'anniversary', 'Campaign', '2028-03-01T00:00:00Z'),
+      ],
+    )
+    expect(timelineRowKey(merged[0])).toBe('sce-1+ann-1')
   })
 
   it('appends a marker later than every row, unlike the planner bands', () => {

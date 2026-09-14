@@ -917,7 +917,8 @@ card per campaign with no filtering.
   capture happens only on the transition *into* it; a move between two narrow values
   degrades on its own, because the row simply won't resolve in the new list.
 - **Cards key off `timelineRowKey(row)`** — `cm-` / `loh-` + id for race events, `win-` +
-  the shared start date for a banner window. Ids are unique only *within* a model, and
+  the shared start date for a banner window, `sce-` / `ann-` + id for a marker and
+  `sce-N+ann-M` for a paired one. Ids are unique only *within* a model, and
   positional keys make React reuse a card's DOM — including decoded images — for a
   different event when the list grows or re-filters. A window keys on its date rather than
   its first banner's id so the key survives the API reordering banners inside a group.
@@ -1026,8 +1027,8 @@ lifted (see "Narrowing restarts the list" above). Everything downstream — `rev
 read one index rather than each learning about both sources. The URL wins where both
 exist, though in practice they cannot: typing in the search box drops the deep link.
 
-- **The anchor is a `timelineRowKey`, not a `TimelineFocus`.** A key exists for all three
-  row kinds where a focus cannot name a race event at all, and a search matches race
+- **The anchor is a `timelineRowKey`, not a `TimelineFocus`.** A key exists for every
+  row kind where a focus cannot name a race event at all, and a search matches race
   events — so one is routinely on screen when the box is cleared. It also stays out of the
   URL, leaving `utils/timelineFocus.ts` to the one job it was written for.
 - **The row is found by measuring, once, at the moment of the lift** — `measureAnchorRow`
@@ -1057,6 +1058,8 @@ Covered by `src/__tests__/timelineFocus.test.ts`, the "Timeline deep links" suit
 
 `EventMarkerCard` is the timeline's third card, fed by a third `TimelineRow` kind
 (`{ kind: "marker" }`) and built by `buildTimelineMarkers` / `mergeTimelineMarkers`.
+A fourth kind, `{ kind: "marker_pair" }`, holds a scenario and a campaign that land on
+the same UTC day and renders as `EventMarkerPairCard`.
 
 - **The marker row kind is a FRONTEND union member, not a backend one.**
   `organizedTimelineData` narrows on the backend's `event_type` tag, but
@@ -1066,6 +1069,29 @@ Covered by `src/__tests__/timelineFocus.test.ts`, the "Timeline deep links" suit
 - **`mergeTimelineMarkers` runs AFTER `groupTimelineEvents`**, for the same reason grouping
   runs after filtering: it inserts against the final row order, so running earlier would
   let a marker land inside a window that later folds together.
+- **A scenario and a campaign on the same day are ONE row.** Scenarios almost always
+  debut alongside an anniversary, and two full-width cards for one launch read as two
+  events on two dates. `pairSameDayMarkers` folds the sorted markers into a pair row
+  before splicing, so the pair is one card, one page slot and one scroll anchor —
+  `measureAnchorRow` still maps DOM children to rows one-for-one. The panel shows the
+  campaign on the left and the scenario on the right (stacked in that order on a phone),
+  and `rowMatchesFocus` answers for either half, so a deep link to either lands on the
+  shared panel. Only that combination pairs; two campaigns or two scenarios on one day
+  stay separate. The data stays separate too, as with `BannerWindowGroup` — the fold is
+  render-side only.
+- **Marker rows are built before they are filtered, and a pair passes a filter if EITHER
+  half does** (`rowMarkers`, `markerRowMatchesKind`, `markerRowMatchesSearch`). The
+  Scenarios filter, the Campaigns filter and a search that names one half all show the
+  same pair as "All events" does. Filtering the markers first would strip the other half,
+  so the same launch would be a pair under All and a lone marker under Scenarios — a
+  different row with a different key, and the key is what `anchorRowKey` holds the
+  reader's place with when a filter is lifted. The past/future toggle judges a pair by
+  its scenario's instant (`timelineRowStart`), so halves a few hours apart can't split.
+- **The marker cards share the banner card's boxes class for class**: the outer `my-3
+  w-full px-2` wrapper carries the ref and scroll margin, the `card-panel` inside it is
+  padded `p-2 sm:p-3` and carries the ring. That is what lines the panel edges up down
+  the list. Art is centred in a lone card (nothing beside it) and hard left in a pair
+  (a column edge beside it), the same rule as `BANNER_ART_ALONE`.
 - **A scenario has no end date and never will** — it stays playable after release. The card
   branches on the *presence* of an end date rather than on the kind, showing
   "Releases &lt;date&gt;" instead of a range. The past/future toggle classifies a scenario by

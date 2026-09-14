@@ -15,20 +15,24 @@ import { nextTempId, plannedBannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { RaceEventCard } from "./RaceEventCard"
 import { BannerWindowCard } from "./BannerWindowCard"
-import { EventMarkerCard } from "./EventMarkerCard"
+import { EventMarkerCard, EventMarkerPairCard } from "./EventMarkerCard"
 import { BackToTopButton, FloatingBackToTop } from "../BackToTop"
 import {
 	CATEGORY_LABELS,
 	CATEGORY_ORDER,
 	MARKER_LABELS,
 	MARKER_ORDER,
+	buildMarkerRows,
 	buildTimelineMarkers,
 	groupTimelineEvents,
-	mergeTimelineMarkers,
+	markerRowMatchesKind,
+	markerRowMatchesSearch,
 	rowMatchesFocus,
+	spliceMarkerRows,
 	timelineRowKey,
+	timelineRowStart,
 } from "./timelineShared"
-import type { TimelineFocusProps, TimelineMarker } from "./timelineShared"
+import type { TimelineFocusProps, TimelineMarker, TimelineRow } from "./timelineShared"
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
 import { useBackToTop } from "../../hooks/useBackToTop"
 import { TIMELINE_FOCUS_PARAM, parseTimelineFocus } from "../../utils/timelineFocus"
@@ -410,30 +414,32 @@ export const Timeline = () => {
 		// once it has launched it belongs behind you in the calendar, even though
 		// it is still playable. That is a deliberate reading of an endless event,
 		// not an oversight.
-		const matchingMarkers = (): TimelineMarker[] =>
-			buildTimelineMarkers(scenarioData, anniversaryEventData)
-				.filter((marker) =>
+		//
+		// Rows are built (sorted and PAIRED) before any of these filters run, and
+		// the filters judge a pair by either half. Filtering the markers first
+		// would strip a pair's other half, so the same launch would be one row
+		// under "All events" and a different row, with a different key, under
+		// "Scenarios" — and the key is what holds the reader's place when the
+		// filter is lifted. See rowMarkers.
+		const matchingMarkerRows = (): TimelineRow[] => {
+			const query = searchQuery.toLowerCase()
+			return buildMarkerRows(buildTimelineMarkers(scenarioData, anniversaryEventData))
+				.filter((row) =>
 					showPast
-						? new Date(marker.startDate) < today
-						: new Date(marker.startDate) >= today
+						? timelineRowStart(row) < today.getTime()
+						: timelineRowStart(row) >= today.getTime()
 				)
-				.filter(
-					(marker) =>
-						searchQuery === "" ||
-						marker.name.toLowerCase().includes(searchQuery.toLowerCase())
-				)
+				.filter((row) => query === "" || markerRowMatchesSearch(row, query))
+		}
 
 		// A marker filter drops the banner stream entirely, so it returns before
 		// any of the event work below: asking for scenarios means asking for
-		// scenarios, not for the banners that happen to open alongside them.
-		// Merging into an empty row list is just the chronological sort — there
-		// is nothing left to splice between.
+		// scenarios, not for the banners that happen to open alongside them. The
+		// marker rows are already in chronological order, so there is nothing to
+		// splice them between.
 		const markerKind = markerFilterKind(eventFilter)
 		if (markerKind !== null) {
-			return mergeTimelineMarkers(
-				[],
-				matchingMarkers().filter((marker) => marker.kind === markerKind)
-			)
+			return matchingMarkerRows().filter((row) => markerRowMatchesKind(row, markerKind))
 		}
 
 		const rows = groupTimelineEvents(
@@ -449,7 +455,7 @@ export const Timeline = () => {
 		if (eventFilter === "all") {
 			// Markers merge in AFTER grouping, on the final row order — running
 			// earlier would let one land inside a window that later folds together.
-			return mergeTimelineMarkers(rows, matchingMarkers())
+			return spliceMarkerRows(rows, matchingMarkerRows())
 		}
 
 		// Markers are deliberately absent under a BANNER CATEGORY filter: they are
@@ -971,6 +977,13 @@ export const Timeline = () => {
 						/>
 					) : row.kind === "marker" ? (
 						<EventMarkerCard key={rowKey} marker={row.marker} {...focusProps} />
+					) : row.kind === "marker_pair" ? (
+						<EventMarkerPairCard
+							key={rowKey}
+							scenario={row.scenario}
+							anniversary={row.anniversary}
+							{...focusProps}
+						/>
 					) : (
 						<BannerWindowCard
 							key={rowKey}

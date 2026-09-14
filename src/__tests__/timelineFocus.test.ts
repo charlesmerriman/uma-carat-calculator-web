@@ -101,6 +101,22 @@ describe('rowMatchesFocus', () => {
     expect(rowMatchesFocus(race, { kind: 'scenario', id: 3 })).toBe(false)
   })
 
+  it('matches a pair row through either of its halves', () => {
+    const scenario = markerRow('scenario', 3)
+    const anniversary = markerRow('anniversary', 7)
+    if (scenario.kind !== 'marker' || anniversary.kind !== 'marker') throw new Error()
+    const pair: TimelineRow = {
+      kind: 'marker_pair',
+      scenario: scenario.marker,
+      anniversary: anniversary.marker,
+    }
+    expect(rowMatchesFocus(pair, { kind: 'scenario', id: 3 })).toBe(true)
+    expect(rowMatchesFocus(pair, { kind: 'anniversary', id: 7 })).toBe(true)
+    // The ids are not interchangeable across halves.
+    expect(rowMatchesFocus(pair, { kind: 'scenario', id: 7 })).toBe(false)
+    expect(rowMatchesFocus(pair, { kind: 'anniversary', id: 3 })).toBe(false)
+  })
+
   it('does not confuse a banner id with a marker id', () => {
     expect(rowMatchesFocus(bannerRow(3), { kind: 'scenario', id: 3 })).toBe(false)
     expect(rowMatchesFocus(markerRow('scenario', 3), { kind: 'banner', id: 3 })).toBe(false)
