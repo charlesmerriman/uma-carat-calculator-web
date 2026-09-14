@@ -77,7 +77,12 @@ export const ApplicationViews = () => {
 						    Making this element the containing block fixes the whole class of
 						    bug rather than that one span. It creates no stacking context
 						    (no z-index) and does not affect `fixed` descendants. */}
-						<div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+						{/* `data-app-scroller` is how hooks/useScrollReset.ts finds this
+						    element. It cannot query for the scroller generically: below
+						    the app-shell breakpoint this same div still carries
+						    overflow-y-auto but never scrolls internally, so "has an
+						    overflow style" would not identify the live scroller. */}
+						<div data-app-scroller className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
 							{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
 							    timeline keep a normal block formatting context and don't become
 							    flex items themselves. flex-1 grows it into the slack; min-height:auto
