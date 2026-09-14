@@ -410,6 +410,24 @@ export function buildTimelineMarkers(
 }
 
 /**
+ * Whether any uma or support banner in this window carries the editorial
+ * Recommended flag — the gold star from the planner's dropdown (see
+ * RecommendedMark, isRecommendedBanner in utils/bannerHelpers.ts). Mirrored
+ * here rather than reused, because that helper reads a `PlannableBanner` (the
+ * planner's own union) and a window holds the raw nested arrays instead.
+ *
+ * A step-up has no such flag, matching isRecommendedBanner. `=== true` rather
+ * than a truthiness read, for the same reason: a banner missing the field
+ * (a deploy in progress) reads as not recommended.
+ */
+export function bannerWindowHasRecommended(banner: BannerTimelineForViewing): boolean {
+	return (
+		banner.banner_umas.some((uma) => uma.is_recommended === true) ||
+		banner.banner_supports.some((support) => support.is_recommended === true)
+	)
+}
+
+/**
  * Fold a scenario and a campaign that land on the same UTC day into one row.
  *
  * Scenarios almost always debut alongside an anniversary (the planner's section
