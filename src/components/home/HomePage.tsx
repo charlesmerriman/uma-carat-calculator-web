@@ -17,6 +17,7 @@ import {
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { SupportersSection } from "./SupportersSection"
+import { FloatingBackToTop } from "../BackToTop"
 import { HOME_CARD, HOME_ICON_CHIP, HOME_TILE } from "./homeStyles"
 import { changelogFetch } from "../../services/changelogFetchCalls"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
@@ -24,6 +25,7 @@ import { formatRelativeDate } from "../../utils/relativeDate"
 import { HOMEPAGE_FAQ_IDS, faqItemsByIds } from "../../constants/faqContent"
 import type { ChangelogEntry } from "../../types"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
+import { useBackToTop } from "../../hooks/useBackToTop"
 
 const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@HenryHandsomeDerby"
 const YOUTUBE_UPLOADS_PLAYLIST_ID = "UUbKJl479CjOtg57eF-GhUDw"
@@ -87,6 +89,7 @@ const sectionHeadingClass = "text-xl font-bold tracking-tight text-gray-100"
 export const HomePage = () => {
 	useDocumentMeta(null, "Plan your Uma Musume gacha pulls. Forecast how many carats and tickets you will have for any upcoming banner, based on your rank income, events and campaigns.")
 
+	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 	const [latestChangelogDate, setLatestChangelogDate] = useState<string | null>(null)
 
 	useEffect(() => {
@@ -132,6 +135,10 @@ export const HomePage = () => {
 		<div className="flex min-h-dvh flex-col bg-gray-900">
 			{/* The `bg-gray-900` on this root is what the per-theme
 			    `#root > .bg-gray-900` glows in index.css hook onto; keep it. */}
+			{/* Scroll anchor for "back to top" — zero-height, so it costs no layout.
+			    First child, above the navbar, so returning to it returns to the very
+			    top of the page rather than just below the header. */}
+			<div ref={topRef} aria-hidden="true" />
 			<Navbar />
 			{/* Normal block flow rather than `flex items-center`, which would
 			    vertically centre a single screenful and leave no room below the fold
@@ -321,6 +328,7 @@ export const HomePage = () => {
 				</div>
 			</main>
 			<Footer />
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} />
 		</div>
 	)
 }

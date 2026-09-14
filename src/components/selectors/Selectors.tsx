@@ -4,12 +4,14 @@ import { Sparkles } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { useSelectorPlanner } from "../../hooks/useSelectorPlanner"
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
+import { useBackToTop } from "../../hooks/useBackToTop"
 import {
 	SELECTORS_CAMPAIGN_PARAM,
 	parseCampaignFocus,
 } from "../../utils/selectorsFocus"
 import { formatUsd } from "../../utils/formatCurrency"
 import { ToggleSwitch } from "../ToggleSwitch"
+import { FloatingBackToTop } from "../BackToTop"
 import { CampaignCard } from "./CampaignCard"
 import type { PlannedProduct } from "../../hooks/useSelectorPlanner"
 import type { UserPlannedPurchase } from "../../types"
@@ -50,6 +52,8 @@ export const Selectors = () => {
 		userPlannedPurchaseData,
 		userStatsData
 	)
+
+	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 
 	// The campaign a timeline strip's "Plan purchases" link named, if any.
 	const [searchParams] = useSearchParams()
@@ -141,6 +145,10 @@ export const Selectors = () => {
 
 	return (
 		<div className="mx-auto my-3 flex w-[calc(100%-1rem)] max-w-[96rem] flex-col gap-4 sm:w-[calc(100%-2rem)]">
+			{/* Scroll anchor for "back to top" — zero-height, so it costs no layout.
+			    First child, above the header, so returning to it returns to the top
+			    of the page. */}
+			<div ref={topRef} aria-hidden="true" />
 			<header className="flex flex-col gap-3">
 				<div>
 					<h1 className="flex items-center gap-2 text-xl font-bold text-brand">
@@ -227,6 +235,8 @@ export const Selectors = () => {
 
 			{/* Room to scroll the last card to the top. aria-hidden: nothing to read. */}
 			{focusNeedsTailroom && <div aria-hidden="true" className={FOCUS_TAILROOM} />}
+
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} />
 		</div>
 	)
 }
