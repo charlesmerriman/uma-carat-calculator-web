@@ -58,8 +58,8 @@ export function getCountdownLabel(startDate: string, endDate: string, today: Dat
  */
 export const CATEGORY_LABELS: Record<BannerCategory, string> = {
 	standard: "Standard",
-	golden_week_revival: "Golden Week Revival",
-	race_prep_support: "Race Prep Support",
+	golden_week_revival: "Golden Week",
+	race_prep_support: "10 Select 2 Scout",
 	rerun: "Rerun",
 }
 

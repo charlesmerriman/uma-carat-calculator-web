@@ -329,7 +329,7 @@ function renderTimeline(initialUrl = '/app/timeline') {
 
 /** One per rendered event card. */
 function cardCount(): number {
-  return screen.getAllByText('No Umamusume banner in this window.').length
+  return screen.getAllByText('No Umamusume banner').length
 }
 
 /**
@@ -784,7 +784,7 @@ describe('Timeline banner categories', () => {
     // Exactly one — a badge on every card would be noise, not signal.
     const chips = document.querySelectorAll('.category-chip')
     expect(chips).toHaveLength(1)
-    expect(chips[0]).toHaveTextContent('Golden Week Revival')
+    expect(chips[0]).toHaveTextContent('Golden Week')
   })
 
   it('opens a revival into one row of tiles, with no cap and no clip', () => {
@@ -812,7 +812,7 @@ describe('Timeline banner categories', () => {
 
     expect(screen.queryByText('Banner art coming soon')).not.toBeInTheDocument()
     expect(
-      screen.queryByText('No support banner in this window.'),
+      screen.queryByText('No Support Banner'),
     ).not.toBeInTheDocument()
   })
 
@@ -844,8 +844,8 @@ describe('Timeline banner categories', () => {
     ]
     renderTimeline()
 
-    expect(screen.getByText('Race Prep Support')).toBeInTheDocument()
-    expect(screen.getByText('No Umamusume banner in this window.')).toBeInTheDocument()
+    expect(screen.getByText('10 Select 2 Scout')).toBeInTheDocument()
+    expect(screen.getByText('No Umamusume banner')).toBeInTheDocument()
     expect(screen.getByAltText('Super Creek')).toBeInTheDocument()
   })
 
@@ -883,7 +883,7 @@ describe('Timeline banner categories', () => {
     // full-width panel.
     expect(screen.getByAltText('Satono Crown').closest('div.overflow-x-auto')).toBeNull()
     expect(gridFor('Satono Crown')).toBeInTheDocument()
-    expect(screen.getByText('Race Prep Support')).toBeInTheDocument()
+    expect(screen.getByText('10 Select 2 Scout')).toBeInTheDocument()
   })
 
   it('drops the support column that banded away, rather than emptying it', () => {
@@ -894,7 +894,7 @@ describe('Timeline banner categories', () => {
     renderTimeline()
 
     expect(
-      screen.queryByText('No support banner in this window.'),
+      screen.queryByText('No Support Banner'),
     ).not.toBeInTheDocument()
     // Exactly one support panel on the card — the band.
     expect(screen.getAllByText('Featured Support Cards')).toHaveLength(1)
@@ -1089,7 +1089,7 @@ describe('Timeline category filter', () => {
       screen.getByLabelText(FILTER).querySelectorAll('option'),
     ).map((o) => o.textContent)
 
-    expect(options).toEqual(['All events', 'Standard', 'Golden Week Revival'])
+    expect(options).toEqual(['All events', 'Standard', 'Golden Week'])
   })
 
   it('hides itself when there is nothing to choose between', () => {

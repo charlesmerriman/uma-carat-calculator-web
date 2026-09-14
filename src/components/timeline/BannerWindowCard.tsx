@@ -659,7 +659,7 @@ function BannerSection({
 	// A panel keeps its column if it isn't banded — and, once anything IS banded,
 	// only if it has a banner to show. That second clause is what stops a revival
 	// (umas banded, no support banner at all) from spending a full-width row on an
-	// empty "No support banner in this window." panel. With nothing banded the
+	// empty "No Support Banner" panel. With nothing banded the
 	// empty states still render, because then they're the whole section.
 	const umaInColumn = !umaBanded && (!!umaBanner || !hasBand)
 	const supportInColumn = !supportBanded && (!!supportBanner || !hasBand)
@@ -671,7 +671,7 @@ function BannerSection({
 			title="Featured Umamusume"
 			items={umaBanner?.umas ?? []}
 			hasBanner={!!umaBanner}
-			emptyText="No Umamusume banner in this window."
+			emptyText="No Umamusume banner"
 			tileWidthClass="max-w-[10rem] 2xl:max-w-[13.5rem]"
 			tileAspectClass="aspect-square"
 			// 7rem × 9 + gaps still fits the launch banner's umas on one unscrolled
@@ -695,7 +695,7 @@ function BannerSection({
 			title="Featured Support Cards"
 			items={supportBanner?.support_cards ?? []}
 			hasBanner={!!supportBanner}
-			emptyText="No support banner in this window."
+			emptyText="No Support Banner"
 			tileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
 			tileAspectClass="aspect-[3/4]"
 			// A race-prep batch's ten cards fit unscrolled from about 1050px up.
