@@ -857,6 +857,14 @@ slow light sweep and a few glints, plus a solid gold "★ Recommended" chip in t
 - The chip is sized to the title's 20px line box, and truncates its own label before it lets
   the title wrap — a wrapped title is a taller row.
 
+**A banner's free pulls are a chip on the same title line** (`.free-pulls-chip`, fed by
+`free_pulls` on the `BannerUma` / `BannerSupport`), under the same rule: the 20px line box,
+and an inset ring instead of a border because a border is 2px of height. It never truncates;
+it steps down with the title line's own width instead (the line is a `@container`): the full
+"10 free pulls" from 23rem, "10 free" from 16rem, and nothing below that — which is only the
+~200px uma column beside a race-prep batch, where the title already fills the line. The word
+"pulls" stays in the accessibility tree at every width, and zero renders no chip at all.
+
 **A card's `purpose` is an overlay on its own tile art** (`FeaturedTileArt`), revealed on
 hover, keyboard focus (`:focus-visible`) or a touch tap. It lives *inside* the art box
 because three ancestors clip — the band scroller, a recommended panel's `overflow: hidden`
