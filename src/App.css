@@ -74,6 +74,30 @@
 	@apply bg-gray-800 rounded-xl border border-gray-600 shadow-md;
 }
 
+/* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
+
+   The ordinary banner row is image | umas | supports at 1.28fr | 0.88fr |
+   0.78fr with two 1rem gaps, so its art is (row - 2rem) * 1.28/2.94 wide.
+   Every other shape used to size its art some other way: the one-panel row
+   gave it half the row, the art-only and marker cards gave it the whole row,
+   and each then hit the 41rem cap somewhere the ordinary row never reaches.
+   Side by side down the list that read as four different banner sizes.
+
+   This is that ordinary fraction, written once as a length so the other
+   shapes can ask for it. 100cqw rather than 100%, because a percentage
+   resolves against the element's own parent and the marker pair's art sits
+   in a half-width column: cqw measures the nearest `@container` instead,
+   which every timeline card panel declares, so the art is the same width
+   however deeply it is nested inside the panel. Read where it is used, not
+   where it is declared: var() substitutes the expression into the using
+   element and cqw resolves there.
+
+   The 41rem cap on the art stays as the ceiling for the single-column
+   layouts below xl, where this variable is not applied. */
+:root {
+	--timeline-art-width: calc((100cqw - 2rem) * 0.4354);
+}
+
 /* A card welded to a strip sitting flush above it (AnniversaryEventStrip): the
    top corners square off so the two read as one box instead of two with a seam.
 

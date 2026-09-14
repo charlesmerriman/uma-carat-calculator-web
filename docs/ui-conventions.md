@@ -745,6 +745,19 @@ revival (4), launch banner (1) — and any change here should be checked against
 - Two column panels implies nothing banded — a banded panel is by definition not in a column
   — so `SECTION_COLUMNS` is only ever reached by the ordinary case and can be reasoned about
   as such.
+- **From `xl` up, every piece of timeline art is ONE width: `--timeline-art-width`.** It is
+  the ordinary three-column row's art share, `(row - 2rem) * 1.28/2.94`, declared once in
+  `App.css` and used as the first track of every banner template, as the width
+  of the art-only branch, and as the width of the marker cards' art, paired or alone. The
+  length is in `cqw` against the card panel's `@container`, not `%`, so it resolves to the
+  same pixels however deeply the art is nested — the marker pair's art sits in a half-width
+  column and a percentage there would be half the size. Before this the one-panel row gave
+  the art half the row and the marker cards gave it the whole row, and each hit the 41rem cap
+  at a width the ordinary row never reaches: four visibly different banner sizes down one
+  list. Below `xl` the templates collapse to one column and the cap below is the rule.
+  The track is spelled out in full in each of the three templates, never interpolated from
+  a constant: Tailwind generates a class only where it finds the complete string in the
+  source, and an interpolated template literal quietly yields a single stacked column.
 - **Banner art is capped on its WIDTH (`BANNER_ART`, 41rem), never its height, and it sits
   hard left.** The assets are 16:9, so an uncapped `w-full` makes the height a function of
   whichever column template the section landed in: ~358px on an ordinary three-column row,
@@ -759,19 +772,16 @@ revival (4), launch banner (1) — and any change here should be checked against
   distribute, and centring the capped shapes was what put them out of line with it.
   `BANNER_ART_ALONE` is the sole exception: the art-only branch (every panel banded, e.g.
   race-prep with no uma) has a full-width row and no column edge to align to, so it centres.
-- **`SECTION_COLUMNS_PAIR` is two EQUAL halves, and both occupants are pinned to an outer
-  edge** — art hard left, panel hard right (`PAIR_PANEL_CELL`) and capped at 28rem, the width
-  it has in a three-column row, rather than filling its half. It was a weighted 1.6fr/0.7fr
-  split, which only worked while the art expanded to fill whatever column it was handed; once
-  the art was width-capped the two stopped agreeing, leaving the art adrift mid-column beside
-  a panel flush right. Pinning both is what makes that right edge read as deliberate instead
-  of accidental — the slack collects in one span between them rather than in three uneven
-  ones. Both caps are `xl`-only: below that every template collapses to one stacked column
-  and both should fill it.
-  - The trade is that the slack is *large* — ~390px at a 1573px viewport, sitting above four
-    support tiles in the band below. Equal halves make the split easy to reason about, but if
-    that void ever needs closing, size the first track to the art (`xl:grid-cols-[41rem_1fr]`)
-    rather than re-centring either occupant.
+- **`SECTION_COLUMNS_PAIR` is the art track then the rest, and both occupants are pinned to
+  an outer edge** — art hard left at the shared width, panel hard right (`PAIR_PANEL_CELL`)
+  and capped at 28rem, the width it has in a three-column row, rather than filling what is
+  left. It was two equal halves before the shared track, and a weighted 1.6fr/0.7fr split
+  before that, which only worked while the art expanded to fill whatever column it was
+  handed; once the art was width-capped the two stopped agreeing, leaving the art adrift
+  mid-column beside a panel flush right. Pinning both is what makes that right edge read as
+  deliberate instead of accidental — the slack collects in one span between them rather than
+  in three uneven ones. Both caps are `xl`-only: below that every template collapses to one
+  stacked column and both should fill it.
 - **A band is exactly one line at every width, and nothing about it is breakpoint-driven.**
 - The line is a flex row, and the card count sets a **minimum** tile width rather than an
   exact one: each tile grows to an equal share of the row, refuses to shrink past

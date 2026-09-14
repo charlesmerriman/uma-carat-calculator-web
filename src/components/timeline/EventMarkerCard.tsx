@@ -58,7 +58,7 @@ const CARD_WRAPPER = `my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`
  * so does a pair, because a pair always holds one.
  */
 const panelClass = (tinted: boolean, isFocused: boolean): string =>
-	`card-panel w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
+	`card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
 		tinted ? "border-brand/40" : ""
 	} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`
 
@@ -122,11 +122,19 @@ const EventMarkerBody = ({
 			 * loads and nothing below it moves when it does — see BANNER_ART in
 			 * BannerWindowCard for why that matters to the planner's deep links.
 			 *
-			 * Centred or hard left per `artAlign`; see the component note. The
-			 * cap matches BANNER_ART so a marker's art is never wider than a
-			 * banner's.
+			 * Centred or hard left per `artAlign`; see the component note.
+			 *
+			 * From xl up the art is `--timeline-art-width`, the width every
+			 * banner card's art has (see App.css): resolved against the panel
+			 * through its `@container`, so it holds inside the pair's half-width
+			 * column too. Below xl the cap matches BANNER_ART, so a marker's art
+			 * is never wider than a banner's there either.
 			 */}
-			<div className={artAlign === "center" ? "mx-auto max-w-[41rem]" : "max-w-[41rem]"}>
+			<div
+				className={`max-w-[41rem] xl:w-[var(--timeline-art-width)] ${
+					artAlign === "center" ? "mx-auto" : ""
+				}`}
+			>
 				{marker.image ? (
 					<img
 						src={marker.image}

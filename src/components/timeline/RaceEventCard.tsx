@@ -77,7 +77,7 @@ export function RaceEventCard({
 
 	return (
 		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
-			<div className="card-panel w-full overflow-hidden rounded-xl p-2 sm:p-3">
+			<div className="card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3">
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex min-w-0 items-center gap-3">
 						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
@@ -106,9 +106,17 @@ export function RaceEventCard({
 					</div>
 				)}
 
+				{/*
+				 * The art track is `--timeline-art-width`, the same width the banner
+				 * cards' art has (see App.css and BANNER_ART). This used to be the
+				 * banner row's 1.28fr weight against one gap instead of two, which
+				 * came out 6px wider than the banners above and below it. The
+				 * details panel takes the rest. Without details the art sits alone
+				 * and centred, still at the shared width from xl up.
+				 */}
 				<div className={hasEventDetails
-					? "grid gap-4 xl:grid-cols-[minmax(360px,1.28fr)_minmax(500px,1.66fr)] xl:items-stretch"
-					: "mx-auto max-w-[34rem]"}
+					? "grid gap-4 xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(500px,1fr)] xl:items-stretch"
+					: "mx-auto max-w-[41rem] xl:w-[var(--timeline-art-width)]"}
 				>
 					<div className="min-w-0">
 						{event.image ? (
