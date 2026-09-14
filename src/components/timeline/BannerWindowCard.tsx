@@ -167,17 +167,25 @@ const SECTION_COLUMNS_PAIR =
 	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(0,1fr)]"
 
 /**
- * The lone panel's cell in the PAIR shape. It sits hard right rather than
- * filling its half, so the cap is what holds it to the width it has in an
- * ordinary three-column row (~438px) instead of ballooning into a 740px box
- * around a single tile.
+ * The lone panel's cell in the PAIR shape. It sits hard against ONE edge
+ * rather than filling its half, so the cap is what holds it to the width it
+ * has in an ordinary three-column row (~438px) instead of ballooning into a
+ * 740px box around a single tile.
+ *
+ * WHICH edge depends on which panel it is, so the panel lands where it sits
+ * in the ordinary three-column row: the uma panel is the middle column,
+ * immediately right of the art, so it stays LEFT (`mr-auto`) when it's the
+ * one left standing. The support panel is the rightmost column, so it stays
+ * RIGHT (`ml-auto`) — the uma panel banded away, support didn't, and support
+ * should still read as "the far column" rather than drifting toward the art.
  *
  * `grid` so the panel inside still stretches to the row height, as it does when
  * it is the grid item itself. xl-only throughout: below that breakpoint every
  * template collapses to one stacked column, where the panel should still fill
  * the width.
  */
-const PAIR_PANEL_CELL = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
+const PAIR_PANEL_CELL_LEFT = "grid min-w-0 xl:mr-auto xl:w-full xl:max-w-[28rem]"
+const PAIR_PANEL_CELL_RIGHT = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
 
 /**
  * BANNER ART IS BOUNDED BY ITS WIDTH, AND THE HEIGHT FOLLOWS.
@@ -804,7 +812,7 @@ function BannerSection({
 						    the ordinary three-column templates apply and each panel is
 						    the grid item directly. */}
 						{columnPanelCount === 1 ? (
-							<div className={PAIR_PANEL_CELL}>
+							<div className={umaInColumn ? PAIR_PANEL_CELL_LEFT : PAIR_PANEL_CELL_RIGHT}>
 								{umaInColumn ? umaPanel : supportPanel}
 							</div>
 						) : (
