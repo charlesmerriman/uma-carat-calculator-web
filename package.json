@@ -16,6 +16,7 @@
     "build:client": "vite build",
     "build:ssr": "vite build --ssr src/entry-server.ts --outDir dist-ssr",
     "prerender": "node scripts/prerender.mjs",
+    "content:pull": "node scripts/content-pull.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json --incremental false && tsc --noEmit -p tsconfig.node.json --incremental false",
     "check": "npm run typecheck && npm run lint && vitest run",

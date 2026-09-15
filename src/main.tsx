@@ -9,14 +9,36 @@ import './index.css'
 import App from './App.tsx'
 import { BrowserRouter } from 'react-router-dom'
 import { shouldHydrate } from './hydrationTarget.ts'
+import { SiteContentProvider } from './services/SiteContentProvider.tsx'
+import { EMBED_ELEMENT_ID } from './services/siteContent.ts'
+import type { SiteContent } from './types/siteContent.ts'
 
 const container = document.getElementById('root')!
 
+/**
+ * The site content the prerender embedded in this document, if any. A
+ * prerendered page carries the rows it rendered with, so that the first client
+ * render matches the markup byte for byte and hydration attaches cleanly. The
+ * empty shell carries none; SiteContentProvider then fetches it. Client-only
+ * code, so reading `document` here is fine.
+ */
+function readEmbeddedContent(): SiteContent | null {
+  const element = document.getElementById(EMBED_ELEMENT_ID)
+  if (!element?.textContent) return null
+  try {
+    return JSON.parse(element.textContent) as SiteContent
+  } catch {
+    return null
+  }
+}
+
 const app = (
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <SiteContentProvider initial={readEmbeddedContent()}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </SiteContentProvider>
   </StrictMode>
 )
 

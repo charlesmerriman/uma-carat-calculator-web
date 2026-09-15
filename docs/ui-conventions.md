@@ -1307,3 +1307,46 @@ they disagree.
 `public/robots.txt`, `public/sitemap.xml`, `SITE_ORIGIN` and the `og:`/`twitter:` URLs
 in `index.html` all carry the absolute domain and **do not survive a domain move** —
 update them together.
+
+### Site content: the pages the admin edits, and how they reach the prerender
+
+The About page, the carat income guide and the FAQ are rows in the API's admin
+(**Site content → Pages / FAQ**), served by `GET /site-content` as markdown. Nothing
+about them lives in this repo except the plumbing, and the words are still in the
+prerendered HTML: the prerender fetches the endpoint first and renders every route with
+it. Terms and the Privacy Policy stay as components on purpose; they make claims the
+code has to keep true.
+
+Three sources feed one context, in this order:
+
+1. **Build time.** `scripts/prerender.mjs` loads the content (from the API the bundle
+   was built against, or `src/content/snapshot.json` under `PRERENDER_CONTENT=snapshot`)
+   and passes it to `render(url, content)`. The render is **strict**: a page reading a
+   row the content lacks throws, and the build fails rather than baking a loading state.
+   As pages read, `buildSiteContentValue`'s reporter records which keys they touched
+   (`page:about`, `faq`), the same trick `HeadMetaContext` uses for the head tags, and
+   `selectEmbedded` cuts the response down to those. The About document carries the About
+   row, the homepage and `/faq` carry the FAQ, `/terms` carries `{}`.
+2. **The embedded block.** `injectContent` writes that subset into each document as
+   `<script id="site-content" type="application/json">`, with every `<` as `\u003c` so
+   an answer containing `</script>` cannot end it. `main.tsx` reads it back and hands it
+   to `SiteContentProvider` as `initial`, so the first client render reads the same rows
+   the build did and hydration is byte-identical. `hydration.test.tsx` hydrates from
+   `rendered.content`, not the whole snapshot, which is what proves the subset is enough.
+3. **The runtime fetch.** From an effect, never during render, the provider fetches
+   `/site-content` once. It fills in what the document did not embed (a client-side
+   navigation to `/about` from the homepage) and revalidates what it did, so an admin
+   edit shows on the next page load rather than the next rebuild. Unchanged content is
+   dropped before it reaches state (`sameContent`), so nothing re-renders for nothing.
+
+Pages read `useSiteContent().page(slug)` / `.faq()`, and `null` is the loading state:
+`ContentLoading` shows until the fetch lands. A page must still call `useDocumentMeta`
+first and unconditionally, with a fallback title for that state; the fallback is never
+what a prerendered load sees, because the row is always present there. `MarkdownContent`
+is the one renderer for all of it, and it turns a site-relative href into a router
+`<Link>` so `[FAQ](/faq#anchor)` typed in the admin navigates client-side. It relies on
+react-markdown's default of not rendering raw HTML; do not add `rehype-raw`.
+
+The "Last updated" line formats `updated_at.slice(0, 10)`, the date half only. The build
+renders in UTC and the browser in local time, and an instant near midnight would
+otherwise format to different days on the two sides of hydration.
