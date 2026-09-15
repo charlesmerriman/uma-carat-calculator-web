@@ -14,6 +14,9 @@
 
 const ROOT_PLACEHOLDER = '<div id="root"></div>'
 
+/** The id of the JSON block each document carries. Mirrors EMBED_ELEMENT_ID in src/services/siteContent.ts. */
+export const CONTENT_ELEMENT_ID = 'site-content'
+
 /** Every head tag the template must carry exactly once for `rewriteHeadTags` to work. */
 const REQUIRED_META = [
 	['name', 'description'],
@@ -79,6 +82,12 @@ export function assertTemplate(template) {
 	if (/<link rel="canonical"/.test(template)) {
 		throw new Error('template must not carry a canonical link; the prerender inserts one per route')
 	}
+	if (count(/<\/body>/) !== 1) {
+		throw new Error('template must contain exactly one </body>')
+	}
+	if (template.includes(`id="${CONTENT_ELEMENT_ID}"`)) {
+		throw new Error(`template must not already carry #${CONTENT_ELEMENT_ID}; the prerender inserts it per route`)
+	}
 }
 
 /** Puts the rendered markup inside #root and marks which route it was built for. */
@@ -86,6 +95,24 @@ export function injectRoot(template, route, html) {
 	return template.replace(
 		ROOT_PLACEHOLDER,
 		() => `<div id="root" data-prerendered="${escapeHtml(normaliseRoute(route))}">${html}</div>`,
+	)
+}
+
+/**
+ * Embeds the site content a route rendered with, as a JSON data block just before
+ * </body>, so the client's first render reads the same rows the build did and
+ * hydration attaches cleanly (main.tsx reads it back by id).
+ *
+ * Every "<" in the JSON is written as \u003c. That is still valid JSON, and it is
+ * what stops a "</script>" inside an admin-written answer from ending the data
+ * block early; "<!--" is covered by the same substitution. The block's type is not
+ * a script MIME type, so the browser never executes it whatever it contains.
+ */
+export function injectContent(template, content) {
+	const json = JSON.stringify(content).replace(/</g, '\\u003c')
+	return template.replace(
+		'</body>',
+		() => `<script id="${CONTENT_ELEMENT_ID}" type="application/json">${json}</script>\n  </body>`,
 	)
 }
 
@@ -169,8 +196,48 @@ export function validateRendered(route, rendered, { siteName, siteOrigin }) {
 	if (meta.noindex) throw new Error(`${clean}: a noindex page must not be prerendered`)
 }
 
-/** One route, start to finish: validate, inject, rewrite. */
+/** One route, start to finish: validate, inject the markup and its content, rewrite the head. */
 export function buildPage(template, route, rendered, site) {
 	validateRendered(route, rendered, site)
-	return rewriteHeadTags(injectRoot(template, route, rendered.html), rendered.meta)
+	const withRoot = injectRoot(template, route, rendered.html)
+	return injectContent(rewriteHeadTags(withRoot, rendered.meta), rendered.content ?? {})
+}
+
+/**
+ * Where the prerender gets its site content from, given the environment.
+ *
+ *   (unset)    fetch `${apiUrl}/site-content`: the API the bundle was built against,
+ *              which on App Platform is the live one. A failed fetch fails the build,
+ *              the same policy as every other check here. The default, so that
+ *              production can never bake a stale snapshot.
+ *   snapshot   read src/content/snapshot.json, committed and refreshed by
+ *              `npm run content:pull`. For CI and for a local build with no API.
+ */
+export function resolveContentSource(env, apiUrl) {
+	const mode = env.PRERENDER_CONTENT ?? 'api'
+	switch (mode) {
+		case 'api':
+			if (!apiUrl) throw new Error('VITE_API_URL is not set; the prerender has nowhere to fetch site content from')
+			return { kind: 'api', url: `${apiUrl.replace(/\/+$/, '')}/site-content` }
+		case 'snapshot':
+			return { kind: 'snapshot', path: 'src/content/snapshot.json' }
+		default:
+			throw new Error(`unknown PRERENDER_CONTENT "${mode}" (expected api or snapshot)`)
+	}
+}
+
+/**
+ * Refuses content the pages cannot be built from. The shape check is shallow on
+ * purpose: the render is strict about the rows it reads, so a missing page fails
+ * there with the page's name.
+ */
+export function assertContent(content, source) {
+	if (!content || typeof content !== 'object' || Array.isArray(content)) {
+		throw new Error(`site content from ${source} is not an object`)
+	}
+	if (!Array.isArray(content.pages) || !Array.isArray(content.faq)) {
+		throw new Error(`site content from ${source} must carry "pages" and "faq" arrays`)
+	}
+	if (content.pages.length === 0) throw new Error(`site content from ${source} has no pages`)
+	if (content.faq.length === 0) throw new Error(`site content from ${source} has no FAQ`)
 }

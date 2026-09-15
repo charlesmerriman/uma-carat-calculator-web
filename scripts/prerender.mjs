@@ -24,13 +24,31 @@
  * CI and the deploy. That is deliberate: a build that "succeeds" by shipping empty
  * shells would put the site straight back where it started, silently.
  *
+ * SITE CONTENT
+ *
+ * The About page, the carat income guide and the FAQ are rows the team edits in the
+ * API's admin. Before rendering anything, this fetches GET /site-content from the API
+ * the bundle was built against and hands it to every render; each document then
+ * embeds the rows it used, so hydration sees the same words. Unreachable means the
+ * build fails, by the policy above. PRERENDER_CONTENT=snapshot reads the committed
+ * src/content/snapshot.json instead, for CI and for a local build with no API.
+ *
  * Usage: node scripts/prerender.mjs
  *   PRERENDER_LAYOUT=dir|flat|both  (default both) — see outputPathsFor in prerender-html.mjs
+ *   PRERENDER_CONTENT=api|snapshot  (default api)  — see resolveContentSource
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { assertTemplate, buildPage, normaliseRoute, outputPathsFor, stripComments } from "./prerender-html.mjs"
+import {
+	assertContent,
+	assertTemplate,
+	buildPage,
+	normaliseRoute,
+	outputPathsFor,
+	resolveContentSource,
+	stripComments,
+} from "./prerender-html.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dist = join(root, "dist")
@@ -46,8 +64,53 @@ function fail(message) {
 if (!existsSync(join(dist, "index.html"))) fail("dist/index.html is missing; run the client build first")
 if (!existsSync(entry)) fail("dist-ssr/entry-server.js is missing; run the server build first")
 
-const { render, PRERENDER_ROUTES, SITE_NAME, SITE_ORIGIN } = await import(pathToFileURL(entry).href)
+const { render, PRERENDER_ROUTES, SITE_NAME, SITE_ORIGIN, API_URL } = await import(pathToFileURL(entry).href)
 const site = { siteName: SITE_NAME, siteOrigin: SITE_ORIGIN }
+
+const content = await loadContent()
+
+async function loadContent() {
+	let source
+	try {
+		source = resolveContentSource(process.env, API_URL)
+	} catch (error) {
+		fail(error.message)
+	}
+	let loaded
+	let label
+	if (source.kind === "snapshot") {
+		label = source.path
+		try {
+			loaded = JSON.parse(readFileSync(join(root, source.path), "utf8"))
+		} catch (error) {
+			fail(`could not read ${label}: ${error.message}; run npm run content:pull`)
+		}
+	} else {
+		label = source.url
+		let response
+		try {
+			response = await fetch(source.url)
+		} catch (error) {
+			fail(
+				`could not fetch site content from ${label}: ${error.cause?.message ?? error.message}. ` +
+					"Is the API up? For a build without it, set PRERENDER_CONTENT=snapshot.",
+			)
+		}
+		if (!response.ok) fail(`site content fetch from ${label} answered ${response.status}`)
+		try {
+			loaded = await response.json()
+		} catch (error) {
+			fail(`site content from ${label} is not JSON: ${error.message}`)
+		}
+	}
+	try {
+		assertContent(loaded, label)
+	} catch (error) {
+		fail(error.message)
+	}
+	console.log(`prerender: site content from ${label} (${loaded.pages.length} pages, ${loaded.faq.length} FAQ categories)`)
+	return loaded
+}
 
 const template = stripComments(readFileSync(join(dist, "index.html"), "utf8"))
 try {
@@ -64,7 +127,7 @@ const written = []
 for (const route of PRERENDER_ROUTES) {
 	let page
 	try {
-		page = buildPage(template, route, render(route), site)
+		page = buildPage(template, route, render(route, content), site)
 	} catch (error) {
 		fail(`${route}: ${error.message}`)
 	}

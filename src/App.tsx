@@ -74,7 +74,7 @@ function App() {
 						<Route path="/about" element={<About />} />
 						<Route path="/changelog" element={<Changelog />} />
 						<Route path="/faq" element={<Faq />} />
-						{/* Long-form companion to the FAQ, rendered from docs/carat-income-explained.md. */}
+						{/* Long-form companion to the FAQ. Its words are the admin's "carat-income-guide" page. */}
 						<Route path="/guides/carat-income" element={<CaratIncomeGuide />} />
 						<Route path="/feedback" element={<Feedback />} />
 						{/* Public since guest mode: the calculator works without an

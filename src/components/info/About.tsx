@@ -1,36 +1,32 @@
 import type React from "react"
-import { Link } from "react-router-dom"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
-
-// Same text-style vocabulary as PrivacyPolicy and Faq, so the public content pages stay
-// visually consistent without a shared layout component.
-const heading = "mt-8 text-xl font-semibold text-gray-100"
-const paragraph = "mt-3 leading-relaxed text-gray-300"
-const list = "mt-3 list-disc space-y-1 pl-6 leading-relaxed text-gray-300"
-const link = "text-brand transition hover:text-brand/75"
-
-// Duplicated from HomePage rather than shared: two constants in two files is cheaper than
-// a constants module whose only job is to hold a URL, and the comment there about NOT
-// using the vanity domain applies here too.
-const HENRY_SHEET_URL =
-	"https://docs.google.com/spreadsheets/d/100t3hnYl5Qm2UR8RtPlH-8Xd9KQbBlxEdXUOIR4d394/"
-const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@HenryHandsomeDerby"
+import { useSiteContent } from "../../services/SiteContentContext"
+import { formatDate } from "../../utils/dateFormat"
+import { MarkdownContent } from "./MarkdownContent"
+import { ContentLoading } from "./ContentLoading"
 
 /**
  * Public About page (route: /about).
  *
- * Deliberately short. It exists to answer the three questions a first-time visitor (or an
- * ad-network reviewer) asks about an unfamiliar site — what is this, who runs it, and is it
- * official — and to point at the pages that answer everything else. Anything longer belongs
- * in the FAQ, which is where the detail already lives.
+ * The words are the `about` row of the admin's Site content -> Pages, written in
+ * markdown and served by /site-content. The page itself is only the frame: title,
+ * "Last updated", the rendered body. Every factual claim in that row should be one
+ * the FAQ or the privacy policy already makes; three pages disagreeing about what
+ * the site stores is worse than no About page.
  *
- * Every factual claim here is one the FAQ or the privacy policy already makes. Keep it that
- * way: three pages disagreeing about what the site stores is worse than no About page.
+ * The fallbacks passed to useDocumentMeta are for the loading state only. At build
+ * time the row is always present (the render is strict), and a hydrating page reads
+ * the row its document embedded, so the head tags never actually fall back on a
+ * prerendered load.
  */
 export const About: React.FC = () => {
-	useDocumentMeta("About", "What the Uma Musume Carat Calculator is, who makes it, and where its carat and ticket numbers come from. An unofficial fan project, not affiliated with Cygames.")
+	const page = useSiteContent().page("about")
+	useDocumentMeta(
+		page?.title ?? "About",
+		page?.meta_description ?? "What the Uma Musume Carat Calculator is, who makes it, and where its numbers come from.",
+	)
 
 	return (
 		// Mirrors PrivacyPolicy: flex-1 on <main> absorbs leftover viewport height so the
@@ -40,135 +36,21 @@ export const About: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">About</h1>
-
-					<p className={paragraph}>
-						The Uma Musume Carat Calculator is a free, unofficial planning tool for
-						players of Cygames&apos; <em>Uma Musume Pretty Derby</em>. It answers a
-						question that is hard to work out in your head:{" "}
-						<strong>will I be able to afford the banner I want?</strong>
-					</p>
-
-					<h2 className={heading}>What it does</h2>
-					<p className={paragraph}>
-						Carats come from dozens of sources, each on its own schedule: daily
-						logins, Team Trials on Mondays, club rank on the 1st, Champions Meeting
-						and League of Heroes on the day each event ends, plus every event, login
-						bonus and mission the game runs. Banners come and go on a two-week cycle
-						that lines up with none of it.
-					</p>
-					<p className={paragraph}>
-						You tell the calculator what you have right now and which income applies to
-						your account. It walks the calendar forward day by day and shows what you
-						will have on the day each banner ends, so you know before you spend. It
-						also plans step-up banners, tracks which characters and support cards a
-						selector ticket can still reach, and shows the upcoming banner and event
-						schedule on a timeline.
-					</p>
-
-					<h2 className={heading}>Where the numbers come from</h2>
-					<p className={paragraph}>
-						Banner dates, event rewards and income rates are maintained here by hand and
-						updated as the game announces them. The underlying methodology follows{" "}
-						<a href={HENRY_SHEET_URL} target="_blank" rel="noopener noreferrer" className={link}>
-							Henry&apos;s resource spreadsheet
-						</a>
-						, the community reference this site grew out of. Recent data and feature
-						changes are listed on the{" "}
-						<Link to="/changelog" className={link}>
-							Changelog
-						</Link>
-						, the{" "}
-						<Link to="/faq" className={link}>
-							FAQ
-						</Link>{" "}
-						explains each income source, and the{" "}
-						<Link to="/guides/carat-income" className={link}>
-							carat income guide
-						</Link>{" "}
-						walks through the projection step by step.
-					</p>
-					<p className={paragraph}>
-						Everything the site produces is an <strong>estimate</strong>. Reward amounts
-						and schedules get announced late or change, and one toggle set differently
-						from how you play will move the total. Treat a projection as a forecast,
-						not a promise.
-					</p>
-
-					<h2 className={heading}>Who makes it</h2>
-					<p className={paragraph}>
-						It is a small fan project, run alongside the{" "}
-						<a href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className={link}>
-							Henry Handsome Derby
-						</a>{" "}
-						YouTube channel and the spreadsheet above. There is no company behind it,
-						just a couple of players:
-					</p>
-					<ul className={list}>
-						<li>
-							<strong>Daboochy</strong> built the site and keeps it running: the
-							calculator, the projection engine behind it, and the banner and event
-							data it runs on.
-						</li>
-						<li>
-							<strong>Daptrius</strong> made the resource spreadsheet this site grew
-							out of. Much of the maths and data behind the numbers comes from that
-							work.
-						</li>
-					</ul>
-					<p className={paragraph}>
-						Corrections and bug reports do get read and acted on.
-					</p>
-
-					<h2 className={heading}>What it costs, and what it asks of you</h2>
-					<ul className={list}>
-						<li>
-							It is free and always has been. Hosting is paid for by Patreon
-							supporters, and by advertising if and when it runs.
-						</li>
-						<li>
-							No account is needed. The whole calculator works as a guest. Signing in
-							only lets you save a plan and pick it up on another device.
-						</li>
-						<li>
-							If you do sign in, we hold no email address, no real name and no
-							password. The{" "}
-							<Link to="/privacy-policy" className={link}>
-								Privacy Policy
-							</Link>{" "}
-							lists what is stored, why, and how to delete it.
-						</li>
-					</ul>
-
-					<h2 className={heading}>Not affiliated with Cygames</h2>
-					<p className={paragraph}>
-						This site is unofficial and has no connection to Cygames or{" "}
-						<em>Uma Musume Pretty Derby</em>. All game names, characters and assets
-						belong to their respective owners. Nothing here is an official statement
-						about the game, and no projection it produces should be read as one.
-					</p>
-
-					<h2 className={heading}>Get in touch</h2>
-					<p className={paragraph}>
-						Bug reports, data corrections and feature ideas are best sent through the{" "}
-						<Link to="/feedback" className={link}>
-							Feedback
-						</Link>{" "}
-						form. No account is required. For anything else, including press or
-						business enquiries, email{" "}
-						<a href="mailto:Henryhandsomederby@gmail.com" className={link}>
-							Henryhandsomederby@gmail.com
-						</a>
-						.
-					</p>
-
-					<p className={`${paragraph} text-sm text-gray-500`}>
-						See also our{" "}
-						<Link to="/terms" className={link}>
-							Terms of Service
-						</Link>
-						.
-					</p>
+					{page ? (
+						<>
+							<h1 className="text-3xl font-bold text-gray-100">{page.title}</h1>
+							{/* The date half only: the build renders in UTC and the browser
+							    in local time, and an instant near midnight would otherwise
+							    format to different days on the two sides of hydration. */}
+							<p className="mt-2 text-sm text-gray-500">Last updated: {formatDate(page.updated_at.slice(0, 10))}</p>
+							<MarkdownContent markdown={page.body} />
+						</>
+					) : (
+						<>
+							<h1 className="text-3xl font-bold text-gray-100">About</h1>
+							<ContentLoading what="the page" />
+						</>
+					)}
 				</div>
 			</main>
 			<Footer />

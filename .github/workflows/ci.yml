@@ -32,6 +32,10 @@ jobs:
         run: npx vitest run
 
       # Production runs this same build on the same Node, so a bundle that
-      # won't build fails here rather than in a deploy.
+      # won't build fails here rather than in a deploy. The one difference:
+      # production prerenders from the live API's site content, and CI has no
+      # API, so it prerenders from the committed snapshot instead.
       - name: Build
         run: npm run build
+        env:
+          PRERENDER_CONTENT: snapshot

@@ -22,7 +22,10 @@ import { HOME_CARD, HOME_ICON_CHIP, HOME_TILE } from "./homeStyles"
 import { changelogFetch } from "../../services/changelogFetchCalls"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { formatRelativeDate } from "../../utils/relativeDate"
-import { HOMEPAGE_FAQ_IDS, faqItemsByIds } from "../../constants/faqContent"
+import { useSiteContent } from "../../services/SiteContentContext"
+import { homepageFaqItems } from "../../services/siteContent"
+import { firstParagraph } from "../../utils/guideMarkdown"
+import { MarkdownContent } from "../info/MarkdownContent"
 import type { ChangelogEntry } from "../../types"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 import { useBackToTop } from "../../hooks/useBackToTop"
@@ -90,6 +93,10 @@ export const HomePage = () => {
 	useDocumentMeta(null, "Plan your Uma Musume gacha pulls. Forecast how many carats and tickets you will have for any upcoming banner, based on your rank income, events and campaigns.")
 
 	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
+	// The FAQ teaser. Null only on the empty shell before the fetch lands; the
+	// prerendered homepage embeds the FAQ, so a normal load always has it.
+	const faq = useSiteContent().faq()
+	const teaserItems = faq ? homepageFaqItems(faq) : []
 	const [latestChangelogDate, setLatestChangelogDate] = useState<string | null>(null)
 
 	useEffect(() => {
@@ -296,6 +303,7 @@ export const HomePage = () => {
 						</div>
 					</section>
 
+					{teaserItems.length > 0 && (
 					<section className={sectionClass}>
 						<div className="flex flex-wrap items-baseline justify-between gap-3">
 							<h2 className={sectionHeadingClass}>Common questions</h2>
@@ -305,21 +313,24 @@ export const HomePage = () => {
 						</div>
 						<div className="mt-5 grid gap-4 lg:grid-cols-3">
 							{/* Only the first answer paragraph — the teaser is a taste, and the
-							    full answer is one click away at its own anchor. */}
-							{faqItemsByIds(HOMEPAGE_FAQ_IDS).map((item) => (
-								<div key={item.id} className={`${HOME_CARD} p-4`}>
+							    full answer is one click away at its own anchor. Which questions
+							    appear is the admin's "Show on homepage" tick, in FAQ order. */}
+							{teaserItems.map((item) => (
+								<div key={item.slug} className={`${HOME_CARD} p-4`}>
 									<h3 className="text-sm font-semibold text-gray-100">
-										<Link to={`/faq#${item.id}`} className="transition hover:text-brand">
+										<Link to={`/faq#${item.slug}`} className="transition hover:text-brand">
 											{item.question}
 										</Link>
 									</h3>
-									<p className="mt-1.5 text-sm leading-relaxed text-gray-400">
-										{item.answer[0]}
-									</p>
+									<MarkdownContent
+										markdown={firstParagraph(item.answer)}
+										paragraphClassName="mt-1.5 text-sm leading-relaxed text-gray-400"
+									/>
 								</div>
 							))}
 						</div>
 					</section>
+					)}
 
 					{/* Last section on the page: it thanks people rather than explaining
 					    anything, so it sits below the pitch and the FAQ teaser. Renders
