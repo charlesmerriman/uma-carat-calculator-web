@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Search, X } from "lucide-react"
 import { OguriSpinner } from "../OguriSpinner"
@@ -63,25 +63,37 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 	const [catalogue, setCatalogue] = useState<Catalogue>({ state: "idle" })
 	const [search, setSearch] = useState("")
 	const [saving, setSaving] = useState<number | null>(null)
+	// Whether the catalogue has ever arrived, as a ref rather than read from
+	// `catalogue` inside the effect. The effect below must NOT depend on the
+	// catalogue state: it used to, and setting "loading" then re-ran the effect,
+	// whose cleanup aborted the request it had just started. The abort was
+	// swallowed as expected, nothing ever left "loading", and the spinner was
+	// permanent. Reproduced by AccountPage.test's abort-aware umas mock.
+	const loaded = useRef(false)
+	// Bumped by the Retry button to run the effect again after an error.
+	const [attempt, setAttempt] = useState(0)
 
 	// Load once, on first open. A failed load is retried from the button in the
 	// error state rather than on every open, so a dead API is not hammered.
+	// Closing mid-load aborts; the next open starts a fresh request.
 	useEffect(() => {
-		if (!open || catalogue.state !== "idle") return undefined
+		if (!open || loaded.current) return undefined
 		const controller = new AbortController()
 		setCatalogue({ state: "loading" })
 		const load = async (): Promise<void> => {
 			try {
 				const response = await umasFetch(controller.signal)
 				if (!response.ok) throw new Error(`GET /umas failed: ${response.status}`)
-				setCatalogue({ state: "ready", options: (await response.json()) as OshiOption[] })
+				const options = (await response.json()) as OshiOption[]
+				loaded.current = true
+				setCatalogue({ state: "ready", options })
 			} catch {
 				if (!controller.signal.aborted) setCatalogue({ state: "error" })
 			}
 		}
 		void load()
 		return () => controller.abort()
-	}, [open, catalogue.state])
+	}, [open, attempt])
 
 	useEffect(() => {
 		if (!open) return undefined
@@ -121,7 +133,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 				<p>Couldn't load the umas. The server may be down.</p>
 				<button
 					type="button"
-					onClick={() => setCatalogue({ state: "idle" })}
+					onClick={() => setAttempt((n) => n + 1)}
 					className="rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
 				>
 					Retry
