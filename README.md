@@ -166,6 +166,8 @@ npm run lint
 npx vitest run                           # tests (npm test starts watch mode)
 npm run coverage
 npm run build                            # client build + server build + prerender, all into dist/
+PRERENDER_CONTENT=snapshot npm run build # the same, prerendering from src/content/snapshot.json (no API needed)
+npm run content:pull                     # refresh that snapshot from the live API
 npm run preview                          # serve dist/ on :4173 — curl /about to see a prerendered document
 ```
 
@@ -173,12 +175,24 @@ The `-p` matters: `tsconfig.json` is solution-style (`files: []`), so a bare
 `npx tsc --noEmit` checks nothing. `npm run build` doesn't type-check either. CI runs both
 configs, the linter and the tests on every push.
 
+### Site content at build time
+
+The About page, the carat income guide and the FAQ are not in this repo. They are rows the
+team edits in the API's admin, served by `GET /site-content`. The prerender fetches that
+endpoint from the API the bundle was built against (`VITE_API_URL`) and bakes the words into
+each document, then embeds the rows a page used in a `<script id="site-content">` block so
+hydration matches. A build that cannot reach the API fails on purpose.
+
+`PRERENDER_CONTENT=snapshot` prerenders from the committed `src/content/snapshot.json`
+instead. CI's build step sets it, and so should a local build with no API running. The
+snapshot also feeds the tests; `npm run content:pull` refreshes it from the live API. Drift is
+harmless, since production never reads it.
+
 ## Documentation
 
 Deeper reference lives in [`docs/`](docs/):
 
 - [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the ledger engine and pull strategy to step-ups, selector tickets and campaign purchases
-- [carat-income-explained.md](docs/carat-income-explained.md): every income source in plain language. Rendered on the site at `/guides/carat-income` (imported with `?raw`), so an edit here ships to the page with the next deploy
 - [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, the auth token and the core types
 - [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline, and the planner layout
 

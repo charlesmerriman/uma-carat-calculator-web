@@ -57,6 +57,22 @@ function account(overrides: Partial<Account> = {}): Account {
 	}
 }
 
+/**
+ * A umasFetch that behaves like the real fetch about its AbortSignal: it settles
+ * with the response on the next tick unless the signal is aborted first, in which
+ * case it rejects with an AbortError. A mock that ignored the signal hid a bug where
+ * the picker aborted its own request and showed a spinner forever.
+ */
+function abortableUmas(res: Response) {
+	return (signal?: AbortSignal): Promise<Response> =>
+		new Promise((resolve, reject) => {
+			const abort = () => reject(new DOMException('aborted', 'AbortError'))
+			if (signal?.aborted) return abort()
+			signal?.addEventListener('abort', abort)
+			setTimeout(() => resolve(res), 0)
+		})
+}
+
 /** A Response-shaped stub: the fetch modules hand back the raw Response. */
 function response(status: number, body: unknown = {}): Response {
 	return { ok: status < 400, status, json: async () => body } as unknown as Response
@@ -299,7 +315,7 @@ describe('AccountPage oshis', () => {
 
 	it('lets a one-slot supporter pick their picture from /umas and saves the list', async () => {
 		signedIn(account({ oshi_slots: 1, supporter: { is_supporter: true, tier: 'Junior Class', benefits: ['oshi'] } }))
-		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedUmas.mockImplementation(abortableUmas(response(200, UMAS)))
 		mockedPatch.mockResolvedValue(response(200))
 
 		renderPage()
@@ -316,7 +332,7 @@ describe('AccountPage oshis', () => {
 
 	it('appends to a later slot and disables umas already picked', async () => {
 		signedIn(account({ oshi_slots: 3, oshis: [SPECIAL_WEEK], avatar_url: SPECIAL_WEEK.image }))
-		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedUmas.mockImplementation(abortableUmas(response(200, UMAS)))
 		mockedPatch.mockResolvedValue(response(200))
 
 		renderPage()
@@ -360,7 +376,7 @@ describe('AccountPage oshis', () => {
 
 	it('replaces the picture in place through Change, marking the current tile', async () => {
 		signedIn(account({ oshi_slots: 1, oshis: [SPECIAL_WEEK], avatar_url: SPECIAL_WEEK.image }))
-		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedUmas.mockImplementation(abortableUmas(response(200, UMAS)))
 		mockedPatch.mockResolvedValue(response(200))
 
 		renderPage()
@@ -379,7 +395,7 @@ describe('AccountPage oshis', () => {
 
 	it('keeps the picker open when the server refuses the pick', async () => {
 		signedIn(account({ oshi_slots: 1 }))
-		mockedUmas.mockResolvedValue(response(200, UMAS))
+		mockedUmas.mockImplementation(abortableUmas(response(200, UMAS)))
 		mockedPatch.mockResolvedValue(response(400, { oshis: ['Your tier covers 1 oshi.'] }))
 
 		renderPage()

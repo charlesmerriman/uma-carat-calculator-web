@@ -5,12 +5,15 @@
 // whole reason the rules live in a module with no file system in it.
 import { describe, expect, it } from "vitest"
 import {
+	assertContent,
 	assertTemplate,
 	buildPage,
 	escapeHtml,
+	injectContent,
 	injectRoot,
 	normaliseRoute,
 	outputPathsFor,
+	resolveContentSource,
 	rewriteHeadTags,
 	stripComments,
 	validateRendered,
@@ -177,5 +180,67 @@ describe("buildPage", () => {
 		expect(page).toContain('href="https://example.test/about"')
 		// The bundle reference from the client build survives untouched.
 		expect(page).toContain('src="/assets/index-abc123.js"')
+	})
+})
+
+describe("injectContent", () => {
+	it("embeds the content as a JSON data block before </body>", () => {
+		const html = injectContent(TEMPLATE, { pages: [{ slug: "about" }] })
+		expect(html).toContain('<script id="site-content" type="application/json">{"pages":[{"slug":"about"}]}</script>\n  </body>')
+		expect(html.match(/<\/body>/g)).toHaveLength(1)
+	})
+
+	it("cannot be broken out of by a </script> or a comment opener in the content", () => {
+		const html = injectContent(TEMPLATE, { body: 'x</script><!--<img src=x>' })
+		const block = html.match(/<script id="site-content"[^>]*>([^]*?)<\/script>/)[1]
+		expect(block).not.toContain("</script")
+		expect(block).not.toContain("<!--")
+		expect(JSON.parse(block)).toEqual({ body: 'x</script><!--<img src=x>' })
+	})
+})
+
+describe("assertTemplate, for the content block", () => {
+	it("refuses a template that already carries the block, or has no body end", () => {
+		expect(() => assertTemplate(injectContent(TEMPLATE, {}))).toThrow(/site-content/)
+		expect(() => assertTemplate(TEMPLATE.replace("</body>", ""))).toThrow(/<\/body>/)
+	})
+})
+
+describe("buildPage, with content", () => {
+	it("embeds the render's content, and an empty block when it read none", () => {
+		const withFaq = rendered({ meta: meta({ canonical: "https://example.test/faq" }), content: { faq: [] } })
+		expect(buildPage(TEMPLATE, "/faq", withFaq, SITE)).toContain('type="application/json">{"faq":[]}</script>')
+		expect(buildPage(TEMPLATE, "/about", rendered(), SITE)).toContain('type="application/json">{}</script>')
+	})
+})
+
+describe("resolveContentSource", () => {
+	it("defaults to the API the bundle was built against", () => {
+		expect(resolveContentSource({}, "https://example.test/api/")).toEqual({
+			kind: "api",
+			url: "https://example.test/api/site-content",
+		})
+	})
+
+	it("reads the committed snapshot when asked", () => {
+		expect(resolveContentSource({ PRERENDER_CONTENT: "snapshot" }, undefined)).toEqual({
+			kind: "snapshot",
+			path: "src/content/snapshot.json",
+		})
+	})
+
+	it("refuses an API build with no API URL, and an unknown mode", () => {
+		expect(() => resolveContentSource({}, "")).toThrow(/VITE_API_URL/)
+		expect(() => resolveContentSource({ PRERENDER_CONTENT: "cache" }, "x")).toThrow(/unknown PRERENDER_CONTENT/)
+	})
+})
+
+describe("assertContent", () => {
+	it("accepts pages and a FAQ, and refuses anything less", () => {
+		expect(() => assertContent({ pages: [{}], faq: [{}] }, "src")).not.toThrow()
+		expect(() => assertContent(null, "src")).toThrow(/not an object/)
+		expect(() => assertContent({ pages: [{}] }, "src")).toThrow(/"pages" and "faq"/)
+		expect(() => assertContent({ pages: [], faq: [{}] }, "src")).toThrow(/no pages/)
+		expect(() => assertContent({ pages: [{}], faq: [] }, "src")).toThrow(/no FAQ/)
 	})
 })

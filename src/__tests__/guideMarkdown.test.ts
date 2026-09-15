@@ -1,43 +1,40 @@
 // @vitest-environment node
 import { createElement } from "react"
 import { describe, expect, it } from "vitest"
-import { childrenToText, extractH2s, slugify, splitGuideHeader } from "../utils/guideMarkdown"
-import guide from "../../docs/carat-income-explained.md?raw"
+import { childrenToText, extractH2s, firstParagraph, slugify, splitLeadingSubtitle } from "../utils/guideMarkdown"
+import SNAPSHOT from "../content/snapshot.json"
+import type { SiteContent } from "../types/siteContent"
 
 // The helpers are pure strings-in, strings-out, so they run in the node
 // environment — which is also the environment a build-time render uses.
 
-describe("splitGuideHeader", () => {
-	it("separates the H1, subtitle and last-updated line from the body", () => {
-		const header = splitGuideHeader(
-			"# A Title\n\n*A subtitle.*\n\n*Last updated: March 1, 2026*\n\n---\n\n## First section\n\nBody.\n",
-		)
-		expect(header.title).toBe("A Title")
-		expect(header.subtitle).toBe("A subtitle.")
-		expect(header.lastUpdated).toBe("March 1, 2026")
-		expect(header.body).toBe("## First section\n\nBody.\n")
-	})
+const guide = (SNAPSHOT as SiteContent).pages!.find((page) => page.slug === "carat-income-guide")!.body
 
-	it("tolerates a missing subtitle, a missing date and no closing rule", () => {
-		const header = splitGuideHeader("# Only a title\n\nBody starts here.\n")
-		expect(header).toEqual({
-			title: "Only a title",
-			subtitle: null,
-			lastUpdated: null,
-			body: "Body starts here.\n",
+describe("splitLeadingSubtitle", () => {
+	it("separates a lone italic first line from the body", () => {
+		expect(splitLeadingSubtitle("\n*A subtitle.*\n\n## First section\n\nBody.\n")).toEqual({
+			subtitle: "A subtitle.",
+			body: "## First section\n\nBody.\n",
 		})
 	})
 
-	it("throws when the document does not start with an H1", () => {
-		expect(() => splitGuideHeader("Just prose.\n")).toThrow(/level-one heading/)
+	it("leaves a body that starts with prose or a heading alone", () => {
+		expect(splitLeadingSubtitle("Body starts here.\n")).toEqual({ subtitle: null, body: "Body starts here.\n" })
+		expect(splitLeadingSubtitle("\n\n## Heading\n")).toEqual({ subtitle: null, body: "## Heading\n" })
 	})
 
 	it("parses the real guide", () => {
-		const header = splitGuideHeader(guide)
-		expect(header.title).toBe("How the Calculator Works Out Your Carats")
+		const header = splitLeadingSubtitle(guide)
 		expect(header.subtitle).toMatch(/plain-English guide/)
-		expect(header.lastUpdated).toMatch(/\d{4}$/)
 		expect(header.body.startsWith("## The one-sentence version")).toBe(true)
+	})
+})
+
+describe("firstParagraph", () => {
+	it("returns everything up to the first blank line", () => {
+		expect(firstParagraph("One **bold**\nstill one.\n\nTwo.\n")).toBe("One **bold**\nstill one.")
+		expect(firstParagraph("\n\nOnly.\n")).toBe("Only.")
+		expect(firstParagraph("")).toBe("")
 	})
 })
 
@@ -61,7 +58,7 @@ describe("extractH2s", () => {
 	})
 
 	it("finds every numbered section of the real guide", () => {
-		const sections = extractH2s(splitGuideHeader(guide).body)
+		const sections = extractH2s(splitLeadingSubtitle(guide).body)
 		expect(sections.map((s) => s.id)).toEqual([
 			"the-one-sentence-version",
 			"it-s-a-running-balance-not-a-formula",

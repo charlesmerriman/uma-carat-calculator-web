@@ -2,80 +2,56 @@ import { Children, isValidElement } from "react"
 import type { ReactNode } from "react"
 
 /**
- * Helpers for pages that render a markdown document from `docs/` as site content
- * (today: the carat income guide at /guides/carat-income).
+ * Helpers for pages that render admin-authored markdown as site content (the carat
+ * income guide at /guides/carat-income, the FAQ teaser on the homepage).
  *
- * The markdown file is the single source. It is a repo doc AND, imported with Vite's
- * `?raw`, the page copy — so an edit to the doc ships to the page with the next deploy
- * and there is no second copy to drift. These helpers pull the page-level pieces
- * (title, subtitle, last-updated line) out of the top of the document so the component
- * can render them in the site's own heading styles, and build heading ids the same way
- * for the jump list and for the rendered headings, so a pill and its target never
- * disagree.
+ * The markdown is a row of the admin's Site content, served by /site-content. These
+ * helpers pull the page-level pieces out of a body (a leading italic subtitle, the
+ * first paragraph) and build heading ids the same way for a jump list and for the
+ * rendered headings, so a pill and its target never disagree.
  *
  * Pure string functions, no DOM: they run in node-environment tests and at build time.
  */
 
-export interface GuideHeader {
-	/** The `# H1` text, rendered as the page heading. */
-	title: string
-	/** The italic line under the H1, if any. */
+export interface GuideBody {
+	/** A lone italic line at the top of the body, if the author wrote one. */
 	subtitle: string | null
-	/** The `*Last updated: …*` line, if any, without its label. */
-	lastUpdated: string | null
-	/** Everything after the header block, ready for the markdown renderer. */
+	/** Everything else, ready for the markdown renderer. */
 	body: string
 }
 
 /**
- * Splits the document header from its body.
+ * Splits a leading subtitle from a body.
  *
- * The header is: an H1 on the first non-blank line; then, in any order, an optional
- * italic subtitle line and an optional italic `*Last updated: …*` line; then an optional
- * `---` rule. Blank lines between them are ignored. The first line that is none of
- * those ends the header, and everything from there on is the body.
- *
- * Throws if the document does not start with an H1 — a guide without a title is a
- * broken page, and the build should say so rather than render "undefined".
+ * The guide's row opens with `*A plain-English guide. No coding knowledge needed.*`,
+ * which the page shows under the H1 in its own style rather than as the first
+ * paragraph. Only a lone italic line on the first non-blank line counts, so a body
+ * that starts with prose or a heading comes back untouched. The title and the date
+ * are not in the body at all: they are the row's `title` and `updated_at`.
  */
-export function splitGuideHeader(markdown: string): GuideHeader {
+export function splitLeadingSubtitle(markdown: string): GuideBody {
 	const lines = markdown.split("\n")
 	let index = 0
-	const skipBlank = (): void => {
-		while (index < lines.length && lines[index].trim() === "") index++
-	}
+	while (index < lines.length && lines[index].trim() === "") index++
 
-	skipBlank()
-	const h1 = /^#\s+(.+?)\s*$/.exec(lines[index] ?? "")
-	if (!h1) throw new Error("Guide markdown must start with a level-one heading")
-	const title = h1[1]
-	index++
-
-	let subtitle: string | null = null
-	let lastUpdated: string | null = null
-	for (;;) {
-		skipBlank()
-		const line = (lines[index] ?? "").trim()
-		const italic = /^[*_](.+)[*_]$/.exec(line)
-		if (italic) {
-			const updated = /^Last updated:\s*(.+)$/i.exec(italic[1])
-			if (updated) lastUpdated = updated[1].trim()
-			else if (subtitle === null) subtitle = italic[1].trim()
-			else break // a second plain italic line is body text, not header
-			index++
-			continue
-		}
-		// The rule that closes the header block, if the author drew one.
-		if (/^-{3,}$/.test(line)) index++
-		break
-	}
+	const italic = /^[*_](.+)[*_]$/.exec((lines[index] ?? "").trim())
+	if (!italic) return { subtitle: null, body: markdown.replace(/^\n+/, "") }
 
 	return {
-		title,
-		subtitle,
-		lastUpdated,
-		body: lines.slice(index).join("\n").replace(/^\n+/, ""),
+		subtitle: italic[1].trim(),
+		body: lines
+			.slice(index + 1)
+			.join("\n")
+			.replace(/^\n+/, ""),
 	}
+}
+
+/**
+ * The first paragraph of a markdown body: everything up to the first blank line.
+ * For the homepage FAQ teaser, which shows a taste of an answer rather than all of it.
+ */
+export function firstParagraph(markdown: string): string {
+	return markdown.trim().split(/\n\s*\n/)[0] ?? ""
 }
 
 /**
