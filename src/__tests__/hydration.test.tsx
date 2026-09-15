@@ -9,6 +9,11 @@
  * hydrates it the way main.tsx does, and fails on any such report — including with a
  * saved theme and a stored token, the two per-user values the markup must not depend
  * on.
+ *
+ * The site content follows the same path as in production: the build renders with the
+ * whole response, the document embeds the subset that page read, and the client
+ * hydrates from that subset. Hydrating from `rendered.content` rather than the whole
+ * snapshot is what proves the subset is enough.
  */
 import { act } from "@testing-library/react"
 import { hydrateRoot } from "react-dom/client"
@@ -17,6 +22,11 @@ import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import App from "../App"
 import { PRERENDER_ROUTES, render } from "../entry-server"
+import { SiteContentProvider } from "../services/SiteContentProvider"
+import SNAPSHOT from "../content/snapshot.json"
+import type { SiteContent } from "../types/siteContent"
+
+const CONTENT = SNAPSHOT as SiteContent
 
 let roots: Root[] = []
 let container: HTMLDivElement
@@ -39,7 +49,7 @@ afterEach(() => {
 })
 
 function hydrate(route: string): { recoverable: ReturnType<typeof vi.fn>; errors: string[] } {
-	const { html } = render(route)
+	const { html, content } = render(route, CONTENT)
 	container.innerHTML = html
 
 	const errors: string[] = []
@@ -52,9 +62,11 @@ function hydrate(route: string): { recoverable: ReturnType<typeof vi.fn>; errors
 		roots.push(
 			hydrateRoot(
 				container,
-				<MemoryRouter initialEntries={[route]}>
-					<App />
-				</MemoryRouter>,
+				<SiteContentProvider initial={content}>
+					<MemoryRouter initialEntries={[route]}>
+						<App />
+					</MemoryRouter>
+				</SiteContentProvider>,
 				{ onRecoverableError: recoverable },
 			),
 		)

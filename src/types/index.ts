@@ -109,3 +109,11 @@ export {
 	isLocalPurchase,
 	isSelectorProduct
 } from "./anniversary"
+
+export type {
+	SiteContent,
+	SitePage,
+	SitePageSlug,
+	FaqCategory,
+	FaqItem
+} from "./siteContent"
