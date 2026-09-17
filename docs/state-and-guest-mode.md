@@ -119,7 +119,14 @@ the switcher is hidden and saves omit `plan_id`, which the server reads as the a
 only plan. Guest migration is unchanged and sends `data.active_plan_id`, so a guest's rows
 join the active plan.
 
-The switcher's menu is portalled to `<body>` like `CountStepper`'s pad. The planner box is
+`PlanSwitcher` is a header bar in the Income & Resources style with **one tab per plan**, a
+"New" button and a "..." menu for the open plan. Below `@min-[40rem]` (a container query on
+the planner box, like `@banner-table:`) the tabs give way to a single dropdown, because five
+names do not fit a phone. Both layouts are always in the DOM and CSS shows one, so nothing
+in JS knows which is visible: each opener records what the popover should show and which
+control it hangs from.
+
+The popover is portalled to `<body>` like `CountStepper`'s pad. The planner box is
 `overflow-hidden` and an `@container`, which clips even a fixed-position child, and a new
 plan has no rows to make the box taller than the menu.
 
