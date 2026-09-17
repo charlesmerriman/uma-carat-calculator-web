@@ -22,6 +22,7 @@ import {
 	CATEGORY_ORDER,
 	MARKER_LABELS,
 	MARKER_ORDER,
+	bannerWindowHasFreePulls,
 	bannerWindowHasRecommended,
 	buildMarkerRows,
 	buildTimelineMarkers,
@@ -158,9 +159,9 @@ const categorySelectClass =
 
 /**
  * The filter's value: the absence of a filter, a banner category, a marker
- * kind, or "recommended only".
+ * kind, "recommended only" or "free pulls".
  *
- * Four sources in one string, which is what a `<select>` gives you, so the
+ * Five sources in one string, which is what a `<select>` gives you, so the
  * axes have to stay tellable apart. Marker kinds are namespaced with a
  * `marker:` prefix rather than sitting bare alongside the categories — a
  * scenario has no `banner_category` and never will, and an unprefixed
@@ -170,16 +171,24 @@ const categorySelectClass =
  *
  * `RECOMMENDED_FILTER` needs no such prefix: it names no BannerCategory or
  * marker kind and never will, since "recommended" is an editorial flag on a
- * banner rather than a value either axis could take.
+ * banner rather than a value either axis could take. `FREE_PULLS_FILTER` is
+ * the same kind of thing: a fact about a banner (it gives pulls away), true of
+ * banners in any category.
  *
  * `"all"` is neither axis: it's the only value that keeps race events, and the
  * only one that shows banners and markers together.
  */
 const MARKER_FILTER_PREFIX = "marker:"
 const RECOMMENDED_FILTER = "recommended"
+const FREE_PULLS_FILTER = "free_pulls"
 
 type MarkerFilter = `${typeof MARKER_FILTER_PREFIX}${TimelineMarker["kind"]}`
-type EventFilter = "all" | BannerCategory | MarkerFilter | typeof RECOMMENDED_FILTER
+type EventFilter =
+	| "all"
+	| BannerCategory
+	| MarkerFilter
+	| typeof RECOMMENDED_FILTER
+	| typeof FREE_PULLS_FILTER
 
 /** The marker kind a filter selects, or null when it selects banners. */
 function markerFilterKind(filter: EventFilter): TimelineMarker["kind"] | null {
@@ -482,6 +491,16 @@ export const Timeline = () => {
 			)
 		}
 
+		// "Free pulls" is the same cut on a different fact: a window stays if
+		// either side of any banner in it hands some out.
+		if (eventFilter === FREE_PULLS_FILTER) {
+			return rows.filter(
+				(row) =>
+					row.kind === "banner_window" &&
+					row.group.banners.some(bannerWindowHasFreePulls)
+			)
+		}
+
 		// Filtering the events first would drop the ordinary banner that shares a
 		// revival's window, leaving a card that misrepresents the week — the
 		// reader would see the revival alone and conclude nothing else was on.
@@ -521,6 +540,15 @@ export const Timeline = () => {
 		() =>
 			organizedTimelineData.some(
 				(event) => !isRaceEvent(event) && bannerWindowHasRecommended(event)
+			),
+		[organizedTimelineData]
+	)
+
+	// And again for "Free pulls": most stretches of the calendar have none.
+	const hasFreePullsBanner = useMemo(
+		() =>
+			organizedTimelineData.some(
+				(event) => !isRaceEvent(event) && bannerWindowHasFreePulls(event)
 			),
 		[organizedTimelineData]
 	)
@@ -914,10 +942,11 @@ export const Timeline = () => {
 						{/* Hidden only when there is nothing to choose between — a
 						    single-option filter is just clutter. Counted across all three
 						    axes: one banner category plus one marker kind is still a real
-						    choice, and so is "Recommended only" plus nothing else. */}
+						    choice, and so is "Recommended only" or "Free pulls" plus nothing else. */}
 						{availableCategories.length +
 							availableMarkerKinds.length +
-							(hasRecommendedBanner ? 1 : 0) >
+							(hasRecommendedBanner ? 1 : 0) +
+							(hasFreePullsBanner ? 1 : 0) >
 							1 && (
 							<>
 								<label className="sr-only" htmlFor="timeline-event-filter">
@@ -936,6 +965,9 @@ export const Timeline = () => {
 									    below can take. */}
 									{hasRecommendedBanner && (
 										<option value={RECOMMENDED_FILTER}>Recommended only</option>
+									)}
+									{hasFreePullsBanner && (
+										<option value={FREE_PULLS_FILTER}>Free pulls</option>
 									)}
 									{/* Grouped, because the two lists answer different
 									    questions and a flat run of options would read as one

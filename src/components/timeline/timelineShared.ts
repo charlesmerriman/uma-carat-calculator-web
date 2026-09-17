@@ -428,6 +428,21 @@ export function bannerWindowHasRecommended(banner: BannerTimelineForViewing): bo
 }
 
 /**
+ * Does either side of this banner window hand out free pulls?
+ *
+ * The same question as bannerWindowHasRecommended above, asked of `free_pulls`:
+ * it lives on each junction row (the uma side and the support side are counted
+ * apart), so a window qualifies when any of them carries some. `> 0` rather
+ * than truthiness so a payload from before the field existed reads as none.
+ */
+export function bannerWindowHasFreePulls(banner: BannerTimelineForViewing): boolean {
+	return (
+		banner.banner_umas.some((uma) => uma.free_pulls > 0) ||
+		banner.banner_supports.some((support) => support.free_pulls > 0)
+	)
+}
+
+/**
  * Fold a scenario and a campaign that land on the same UTC day into one row.
  *
  * Scenarios almost always debut alongside an anniversary (the planner's section

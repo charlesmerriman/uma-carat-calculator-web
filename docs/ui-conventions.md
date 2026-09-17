@@ -869,11 +869,35 @@ slow light sweep and a few glints, plus a solid gold "★ Recommended" chip in t
 
 **A banner's free pulls are a chip on the same title line** (`.free-pulls-chip`, fed by
 `free_pulls` on the `BannerUma` / `BannerSupport`), under the same rule: the 20px line box,
-and an inset ring instead of a border because a border is 2px of height. It never truncates;
-it steps down with the title line's own width instead (the line is a `@container`): the full
-"10 free pulls" from 23rem, "10 free" from 16rem, and nothing below that — which is only the
-~200px uma column beside a race-prep batch, where the title already fills the line. The word
-"pulls" stays in the accessibility tree at every width, and zero renders no chip at all.
+and an inset ring instead of a border because a border is 2px of height. Its text is the
+title's own size (14px on a 20px line, no vertical padding), so the line-height IS the box.
+Neither chip truncates when the two share a line; they step down with the title line's own
+width instead (the line is a `@container`), on a ladder measured against the real widths
+(icon + title 213px; chip about 59 / 99 / 144px for "120", "120 free", "120 free pulls";
+gold pill 28px as a star, 104px with its word; 8px gaps):
+
+| Line width | Free pulls alone | With Recommended |
+|---|---|---|
+| under 18rem | nothing | nothing (the chip; the gold pill is hidden too) |
+| from 18rem | `50` | `50`, gold pill hidden |
+| from 20rem | `50 free` | star + `50` |
+| from 23rem | `50 free pulls` | star + `50 free` |
+| from 26rem | | star + `50 free pulls` |
+| from 30rem | | `Recommended` + `50 free pulls` |
+
+Under 18rem is only the ~200px uma column beside a race-prep batch, where the title already
+fills the line. When something has to give, the gold pill goes before the number: the foil
+panel already says "recommended", nothing else says how many pulls are free. Both words stay
+in the accessibility tree at every width, and zero renders no chip at all. A Recommended
+chip with NO free pulls beside it keeps its word and truncates as before. Neither chip class
+sets `display` in App.css: they show and hide through container-query utilities, which an
+unlayered `display` would outrank. If a chip's font, padding or the titles change, re-measure
+before trusting the ladder (the title icon is `shrink-0` so an overflow shows as one instead
+of as a squashed icon).
+
+The Timeline's event filter offers **"Free pulls"** beside "Recommended only", on the same
+terms (`bannerWindowHasFreePulls`): only when some banner has any, and a window stays if
+either side of any banner in it does.
 
 **A card's `purpose` is an overlay on its own tile art** (`FeaturedTileArt`), revealed on
 hover, keyboard focus (`:focus-visible`) or a touch tap. It lives *inside* the art box
