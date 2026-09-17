@@ -22,6 +22,8 @@ import type {
 	UserPlannedPurchase,
 	UserStepUpSelection,
 	IncomeLedgerRow,
+	Plan,
+	PlanWithRows,
 	CalculationConstants
 } from "../types"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
@@ -38,6 +40,13 @@ import {
 	clearGuestPlanStash,
 	mergeStepUpSelections
 } from "./guestMigration"
+import {
+	planActivate,
+	planCreate,
+	planDelete,
+	planFetch,
+	planRename
+} from "./planFetchCalls"
 import { useAutoSave } from "../hooks/useAutoSave"
 
 interface CalculatorProviderProps {
@@ -68,6 +77,14 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	const [supportBannerData, setSupportBannerData] = useState<BannerSupport[]>([])
 	const [stepUpBannerData, setStepUpBannerData] = useState<BannerStepUp[]>([])
 	const [userPlannedBannerData, setUserPlannedBannerData] = useState<UserPlannedBanner[]>([])
+	// The account's plans, and which one userPlannedBannerData belongs to. A
+	// guest keeps [] and null: one unnamed plan in memory, no switcher.
+	// activePlanId and userPlannedBannerData are ALWAYS set in the same tick
+	// (applyPlan below), so a save can never pair one plan's id with another
+	// plan's rows.
+	const [plans, setPlans] = useState<Plan[]>([])
+	const [activePlanId, setActivePlanId] = useState<number | null>(null)
+	const [isPlanBusy, setIsPlanBusy] = useState(false)
 	// Deliberately NOT persisted — not to localStorage, not to sessionStorage,
 	// and never PATCHed. Staging is scratch space, and a reload clearing it is
 	// correct rather than a bug to fix.
@@ -113,29 +130,40 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		[userStepUpSelectionData]
 	)
 
+	// Whether the most recent performSave landed. useAutoSave's saveFn returns
+	// nothing, so the plan actions read the outcome here after `await saveNow()`
+	// to decide whether it is safe to replace the rows on screen.
+	const lastSaveOkRef = useRef(true)
+
 	const performSave = useCallback(async (): Promise<void> => {
 		// Guests never PATCH — their plan is in-memory only. The auto-save
 		// timer is already gated, but saveNow could still land here.
 		if (!getAuthToken()) return
 		try {
 			const response = await userCalculatorDataPatch(
+					// The plan these rows were loaded from. It comes from the same
+					// render as the rows beside it, so the pair is always consistent
+					// even if the timer fires mid-switch. See userCalculatorDataPatch.
+					activePlanId,
 					userStatsData,
 					prepareBannerData(),
 					preparePurchaseData(),
 					prepareStepUpSelectionData()
 				)
+			lastSaveOkRef.current = response.ok
 			if (!response.ok) {
 				toast.error("Save failed. Your changes may not have been saved.")
 			} else {
 				toast.success("Saved")
 			}
 		} catch {
+			lastSaveOkRef.current = false
 			toast.error("Save failed. Check your connection.")
 		}
-	}, [userStatsData, prepareBannerData, preparePurchaseData,
+	}, [activePlanId, userStatsData, prepareBannerData, preparePurchaseData,
 		prepareStepUpSelectionData])
 
-	const { timerIsGoing, startTimer, saveNow } = useAutoSave({
+	const { timerIsGoing, startTimer, saveNow, cancelTimer } = useAutoSave({
 		saveFn: performSave,
 		delayMs: 5000
 	})
@@ -204,6 +232,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 				// calculation_constants gets. A missing catalogue must not blank the page.
 				setStepUpBannerData(data.banner_step_up_data ?? [])
 				setUserPlannedBannerData(data.user_planned_banner_data)
+				// Defaulted: an API from before plans existed sends neither key.
+				// [] and null is also the guest value, and it hides the switcher,
+				// which is the right way to degrade. Saves then omit plan_id and
+				// the server falls back to the account's only plan.
+				setPlans(data.user_plans ?? [])
+				setActivePlanId(data.active_plan_id ?? null)
 				// Defaulted, unlike the keys above, because these two arrived later
 				// than the rest of the payload. A backend running a build from
 				// before the selector planner omits them entirely, and an
@@ -271,6 +305,10 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					// and append the guest's rows (no ids → created). Stats are in
 					// the stash only if the guest actually edited them.
 					const patchResponse = await userCalculatorDataPatch(
+						// The guest's rows join the ACTIVE plan: the account rows being
+						// resent beside them are that plan's, so it is the only id this
+						// body can be reconciled against.
+						data.active_plan_id ?? null,
 						stash.stats,
 						[
 							...toBannerPayload(data.user_planned_banner_data),
@@ -335,16 +373,194 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	// When it's null, this is either the initial mount or the initial data load — both should
 	// be skipped. Only start the timer once real user edits happen (prevStatsRef is non-null).
 	const prevStatsRef = useRef<UserStats | null>(null)
+	// Set by applyPlan just before it swaps in another plan's rows. Those rows
+	// came FROM the server, so the change they cause below is not an edit and
+	// must not arm a save that would PATCH a plan straight back to itself.
+	const suppressAutoSaveRef = useRef(false)
 	useEffect(() => {
 		const wasEmpty = prevStatsRef.current === null
 		prevStatsRef.current = userStatsData
 		if (wasEmpty) return
+		if (suppressAutoSaveRef.current) {
+			suppressAutoSaveRef.current = false
+			return
+		}
 		// Guests have nothing to save to the server. Never arming the timer
 		// also suppresses the pending-save icon and the beforeunload warning.
 		if (!getAuthToken()) return
 		startTimer()
+		// activePlanId is here so this effect is GUARANTEED to run after
+		// applyPlan and clear suppressAutoSaveRef. Every applyPlan changes the id;
+		// without it, a flag left set would swallow the user's next real edit.
 	}, [startTimer, userStatsData, userPlannedBannerData, userPlannedPurchaseData,
-		userStepUpSelectionData])
+		userStepUpSelectionData, activePlanId])
+
+	// ── Plans ────────────────────────────────────────────────────────────────
+	//
+	// Every action below follows one rule: SAVE WHAT IS ON SCREEN BEFORE
+	// REPLACING IT. The rows in state are the only copy of an unsaved edit, so a
+	// switch that swapped them out first would lose up to five seconds of work.
+	// If that save fails the action stops and the user stays where they are.
+
+	/** Flush a pending auto-save. False means it failed and nothing should move. */
+	const flushPendingSave = useCallback(async (): Promise<boolean> => {
+		if (!timerIsGoing) return true
+		await saveNow()
+		return lastSaveOkRef.current
+	}, [timerIsGoing, saveNow])
+
+	/** Put another plan's rows on screen. The id and the rows move together. */
+	const applyPlan = useCallback((planId: number, rows: UserPlannedBanner[]): void => {
+		suppressAutoSaveRef.current = true
+		setActivePlanId(planId)
+		setUserPlannedBannerData(rows)
+		// Staged rows were being composed for the plan just left; carrying them
+		// across would let "Add" drop them into a different plan.
+		setStagedBanners([])
+		setPlans((prev) => prev.map((plan) => ({ ...plan, is_active: plan.id === planId })))
+	}, [])
+
+	/**
+	 * Shared wrapper: one action at a time, the switcher disabled meanwhile, and
+	 * a thrown fetch (offline) reported once instead of in every action.
+	 */
+	const runPlanAction = useCallback(
+		async (action: () => Promise<boolean>): Promise<boolean> => {
+			if (isPlanBusy) return false
+			setIsPlanBusy(true)
+			try {
+				return await action()
+			} catch {
+				toast.error("Couldn't reach the server. Check your connection.")
+				return false
+			} finally {
+				setIsPlanBusy(false)
+			}
+		},
+		[isPlanBusy]
+	)
+
+	const switchPlan = useCallback(
+		(planId: number): Promise<boolean> =>
+			runPlanAction(async () => {
+				if (planId === activePlanId) return true
+				if (!(await flushPendingSave())) {
+					toast.error("Your changes didn't save, so we stayed on this plan.")
+					return false
+				}
+				// In parallel: one marks it active for the next visit, the other
+				// fetches its rows. Neither depends on the other's answer.
+				const [activated, fetched] = await Promise.all([
+					planActivate(planId),
+					planFetch(planId)
+				])
+				if (!activated.ok || !fetched.ok) {
+					toast.error("Couldn't open that plan. Try again.")
+					return false
+				}
+				const data = (await fetched.json()) as PlanWithRows
+				applyPlan(planId, data.user_planned_banner_data)
+				return true
+			}),
+		[runPlanAction, activePlanId, flushPendingSave, applyPlan]
+	)
+
+	const createPlan = useCallback(
+		(name: string, copyFromId?: number): Promise<boolean> =>
+			runPlanAction(async () => {
+				// Before the POST, not just before the switch: a copy of the open
+				// plan has to include the edit made two seconds ago.
+				if (!(await flushPendingSave())) {
+					toast.error("Your changes didn't save, so the plan wasn't created.")
+					return false
+				}
+				const created = await planCreate(name, copyFromId)
+				if (!created.ok) {
+					// The server words the two refusals a person can cause (the cap,
+					// a blank name). Anything else gets the generic line.
+					const body = (await created.json().catch(() => null)) as
+						| { error?: string; name?: string[] }
+						| null
+					toast.error(body?.error ?? body?.name?.[0] ?? "Couldn't create the plan. Try again.")
+					return false
+				}
+				const data = (await created.json()) as PlanWithRows
+				setPlans((prev) => [...prev, data.plan])
+				// Created inactive on the server. If this fails the plan still
+				// exists and is in the list; the user just is not on it yet.
+				const activated = await planActivate(data.plan.id)
+				if (!activated.ok) {
+					toast.error("The plan was created, but we couldn't open it. Pick it from the list.")
+					return false
+				}
+				applyPlan(data.plan.id, data.user_planned_banner_data)
+				toast.success(copyFromId === undefined ? "Plan created" : "Plan copied")
+				return true
+			}),
+		[runPlanAction, flushPendingSave, applyPlan]
+	)
+
+	const renamePlan = useCallback(
+		(planId: number, name: string): Promise<boolean> =>
+			runPlanAction(async () => {
+				const response = await planRename(planId, name)
+				if (!response.ok) {
+					const body = (await response.json().catch(() => null)) as
+						| { name?: string[] }
+						| null
+					toast.error(body?.name?.[0] ?? "Couldn't rename the plan. Try again.")
+					return false
+				}
+				// Take the server's copy: it collapses runs of spaces in the name.
+				const renamed = (await response.json()) as Plan
+				setPlans((prev) => prev.map((plan) => (plan.id === planId ? renamed : plan)))
+				return true
+			}),
+		[runPlanAction]
+	)
+
+	const deletePlan = useCallback(
+		(planId: number): Promise<boolean> =>
+			runPlanAction(async () => {
+				const deletingOpenPlan = planId === activePlanId
+				// A pending save for a DIFFERENT plan's rows is still wanted, so it
+				// is flushed. One for the plan being deleted is dropped instead:
+				// left alone it would fire at a plan id that no longer exists.
+				if (deletingOpenPlan) {
+					cancelTimer()
+				} else if (!(await flushPendingSave())) {
+					toast.error("Your changes didn't save, so the plan wasn't deleted.")
+					return false
+				}
+				const response = await planDelete(planId)
+				if (!response.ok) {
+					const body = (await response.json().catch(() => null)) as
+						| { error?: string }
+						| null
+					toast.error(body?.error ?? "Couldn't delete the plan. Try again.")
+					return false
+				}
+				const { active_plan_id: landedOn } = (await response.json()) as {
+					active_plan_id: number
+				}
+				setPlans((prev) => prev.filter((plan) => plan.id !== planId))
+				if (deletingOpenPlan) {
+					// The server promoted another plan. Its rows are not on screen yet.
+					const fetched = await planFetch(landedOn)
+					if (!fetched.ok) {
+						// The delete is done and cannot be undone from here, and the
+						// rows on screen belong to nothing. A reload is the honest fix.
+						window.location.reload()
+						return true
+					}
+					const data = (await fetched.json()) as PlanWithRows
+					applyPlan(landedOn, data.user_planned_banner_data)
+				}
+				toast.success("Plan deleted")
+				return true
+			}),
+		[runPlanAction, activePlanId, cancelTimer, flushPendingSave, applyPlan]
+	)
 
 	const value = {
 		userStatsData,
@@ -370,6 +586,13 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		isLoading,
 		fetchError,
 		organizedTimelineData,
+		plans,
+		activePlanId,
+		isPlanBusy,
+		switchPlan,
+		createPlan,
+		renamePlan,
+		deletePlan,
 		saveNow,
 		setUserPlannedBannerData,
 		setStagedBanners,

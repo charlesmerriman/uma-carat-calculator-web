@@ -7,7 +7,8 @@ interface UseAutoSaveParams {
 
 /**
  * Manages a debounced auto-save with a visual indicator.
- * Returns `timerIsGoing` (whether a save is pending) and `saveNow` (to flush immediately).
+ * Returns `timerIsGoing` (whether a save is pending), `saveNow` (to flush
+ * immediately) and `cancelTimer` (to drop a pending save unrun).
  * The hook also registers a beforeunload warning when a save is pending.
  */
 export function useAutoSave({ saveFn, delayMs = 5000 }: UseAutoSaveParams) {
@@ -58,6 +59,18 @@ export function useAutoSave({ saveFn, delayMs = 5000 }: UseAutoSaveParams) {
 		setTimerIsGoing(false)
 	}, [])
 
+	// Drop a pending save WITHOUT running it. For the one case where the thing
+	// the timer would save no longer exists: the user deleted the plan they were
+	// editing. Letting it fire would PATCH a plan id the server just removed and
+	// show "Save failed" for an edit nobody wants saved.
+	const cancelTimer = useCallback(() => {
+		if (timer.current) {
+			clearTimeout(timer.current)
+			timer.current = null
+		}
+		setTimerIsGoing(false)
+	}, [])
+
 	// Cleanup on unmount
 	useEffect(() => {
 		return () => {
@@ -67,5 +80,5 @@ export function useAutoSave({ saveFn, delayMs = 5000 }: UseAutoSaveParams) {
 		}
 	}, [])
 
-	return { timerIsGoing, startTimer, saveNow }
+	return { timerIsGoing, startTimer, saveNow, cancelTimer }
 }

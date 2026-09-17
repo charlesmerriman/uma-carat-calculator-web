@@ -154,7 +154,22 @@ export function toStepUpSelectionPayload(
 		}))
 }
 
+/**
+ * `planId` says which plan the banner rows belong to, and it must be the plan
+ * those rows were LOADED from, never "whichever is active now".
+ *
+ * The server deletes every banner row the body does not name. Auto-save fires
+ * five seconds after the last edit, so without an explicit id this sequence
+ * loses data: edit plan A, switch to plan B three seconds later, timer fires
+ * with A's rows. Written to "the active plan", A's rows land in B and B's own
+ * rows are deleted. With A's id in the body they land in A.
+ *
+ * `null` omits the key, which the server reads as "the active plan". That is
+ * right in exactly one case: an API from before plans existed (it sent no
+ * `active_plan_id`, so there is no id to send and only one plan to mean).
+ */
 export function userCalculatorDataPatch(
+	planId: number | null,
 	userStatsData: UserStats | null,
 	userPlannedBannerData: PlannedBannerPayload[],
 	userPlannedPurchaseData: PlannedPurchasePayload[],
@@ -167,6 +182,7 @@ export function userCalculatorDataPatch(
 			...authHeaders()
 		},
 		body: JSON.stringify({
+			...(planId !== null ? { plan_id: planId } : {}),
 			user_stats_data: userStatsData,
 			user_planned_banner_data: userPlannedBannerData,
 			user_planned_purchase_data: userPlannedPurchaseData,

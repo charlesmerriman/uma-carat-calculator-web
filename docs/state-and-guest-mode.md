@@ -54,9 +54,74 @@ consumes it twice (StrictMode in dev, and the stale-token retry after a 401).
 For logged-in users, changes to user stats or planned banners trigger a **debounced PATCH
 (5 s delay)** via the `useAutoSave` hook.
 
+The PATCH carries `plan_id`, the plan the banner rows were loaded from. See "Plans" below
+for why it is never "whichever plan is active".
+
 - Save state is surfaced through Sonner toasts.
 - An `onbeforeunload` warning fires if a save is still pending.
 - **Guests never arm the timer** — their plan is in-memory only.
+
+---
+
+## Plans
+
+A signed-in account holds up to five named pull plans and the calculator shows one at a
+time. **A plan is its banner rows and nothing else.** Stats, toggles, planned purchases and
+step-up selections belong to the account and stay put when the plan changes. The reasoning,
+and why it makes a plan safe to copy between accounts later, is in
+[../../backend/docs/data-model.md](../../backend/docs/data-model.md) ("`Plan`").
+
+That split is why the projection engine did not change. `useBannerResources` reads
+`userPlannedBannerData` as it always did; the array now means "the open plan's rows".
+
+The provider adds `plans`, `activePlanId`, `isPlanBusy` and four actions (`switchPlan`,
+`createPlan`, `renamePlan`, `deletePlan`). `components/carat-calculator/PlanSwitcher.tsx` is
+the only UI for them and owns no logic of its own.
+
+### Save what is on screen before replacing it
+
+The server deletes every banner row a save does not name, and the rows in React state are
+the only copy of an unsaved edit. Every rule below follows from those two facts.
+
+- **A save names its plan.** `userCalculatorDataPatch` takes `planId` first, and
+  `performSave` passes the `activePlanId` from the same render as the rows. They are only
+  ever set together (`applyPlan`), so a save cannot pair one plan's id with another's rows.
+
+  | Time | What happens |
+  |---|---|
+  | 12:00:00 | edit a row in plan A, the 5 s timer starts |
+  | 12:00:03 | switch to plan B |
+  | 12:00:05 | without the rule: A's rows are written over B |
+
+- **Every action flushes first.** `flushPendingSave()` runs `saveNow()` when a save is
+  pending and reports whether it landed (`lastSaveOkRef`). On a failure the action stops
+  and the user stays where they were, unsaved edit still on screen.
+- **Rows from the server are not an edit.** `applyPlan` sets `suppressAutoSaveRef` so the
+  auto-save effect skips the change it is about to cause. `activePlanId` is in that
+  effect's deps so the effect is guaranteed to run and clear the flag; otherwise a flag
+  left set would swallow the user's next real edit.
+- **Staged rows are cleared on a switch.** They were being composed for the plan just left.
+- **Deleting the open plan drops its pending save** (`cancelTimer` on `useAutoSave`)
+  instead of firing it at an id that no longer exists. Deleting a *different* plan flushes
+  as usual, because that edit is still wanted.
+- **Create makes the plan, then opens it.** The server creates plans inactive; `createPlan`
+  activates it only after the flush, and a copy is taken after the flush so it includes the
+  edit made two seconds ago.
+
+`__tests__/calculatorProviderPlans.test.tsx` pins the ordering. None of these failures
+throw. They lose banners.
+
+### Guests, and an API without plans
+
+For a guest `plans` is `[]` and `activePlanId` is `null`, and `PlanSwitcher` renders
+nothing. An API from before plans existed sends neither key and gets the same treatment:
+the switcher is hidden and saves omit `plan_id`, which the server reads as the account's
+only plan. Guest migration is unchanged and sends `data.active_plan_id`, so a guest's rows
+join the active plan.
+
+The switcher's menu is portalled to `<body>` like `CountStepper`'s pad. The planner box is
+`overflow-hidden` and an `@container`, which clips even a fixed-position child, and a new
+plan has no rows to make the box taller than the menu.
 
 ---
 

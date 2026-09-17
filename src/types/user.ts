@@ -102,6 +102,12 @@ export interface SavedPlannedBanner extends BasePlannedBanner {
 	id: number
 	tempId?: undefined
 	user: number
+	/**
+	 * The plan this row belongs to. Read-only on the server: where a row is
+	 * saved is decided by the PATCH's top-level `plan_id`, never by this.
+	 * Optional because an API from before plans existed does not send it.
+	 */
+	plan?: number | null
 }
 
 export interface LocalPlannedBanner extends BasePlannedBanner {
