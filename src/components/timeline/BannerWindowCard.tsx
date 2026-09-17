@@ -528,41 +528,75 @@ function FeaturePanel({
 					recommended ? "text-recommended" : "text-brand"
 				}`}
 			>
-				<Icon className="h-4 w-4" />
+				<Icon className="h-4 w-4 shrink-0" />
 				{/* With a chip to make room for, the title holds its width and the chip
 				    gives way instead (its label truncates). A title wrapping onto a
 				    second line would make the row taller, and nothing here may. */}
 				<span className={hasChip ? "shrink-0 whitespace-nowrap" : undefined}>{title}</span>
+				{/* Neither chip ever truncates ("Rec…" and "10 fr…" say nothing). They
+				    step down instead, keyed to the title line's own width, and the
+				    ladder is measured, not guessed: icon + title is 213px for the wider
+				    title, the free-pulls chip is about 59 / 99 / 144px for "120",
+				    "120 free" and "120 free pulls" at the title's 14px, the gold pill is
+				    28px as a star and 104px with its word, and every gap is 8px.
+
+				      free pulls alone          with Recommended
+				      from 18rem  "[gift] 50"   from 18rem  "[gift] 50", no gold pill
+				      from 20rem  "50 free"     from 20rem  star + "50"
+				      from 23rem  "50 free      from 23rem  star + "50 free"
+				                   pulls"       from 26rem  star + "50 free pulls"
+				                                from 30rem  "Recommended" + "50 free pulls"
+				      below 18rem nothing: the ~200px uma column beside a race-prep
+				                  batch, where the title alone fills the line
+
+				    When something has to give, the gold pill goes before the number
+				    does: the foil panel and the gold title already say "recommended",
+				    and nothing else says how many pulls are free. Both words stay in
+				    the accessibility tree at every width. Recommended with no free
+				    pulls keeps its word and truncates as it always has. */}
 				{recommended && (
-					<span className="recommended-chip">
+					<span
+						className={`recommended-chip ${freePulls > 0 ? "hidden @min-[20rem]:inline-flex" : "inline-flex"}`}
+						title="Recommended"
+					>
 						<Star aria-hidden="true" fill="currentColor" className="h-3 w-3 shrink-0" />
-						<span className="truncate">Recommended</span>
+						<span className={freePulls > 0 ? "sr-only @min-[30rem]:not-sr-only" : "truncate"}>
+							Recommended
+						</span>
 					</span>
 				)}
-				{/* The free-pulls chip never truncates ("10 fr…" says nothing); it
-				    steps down instead, keyed to the title line's own width:
-				      from 23rem   "[gift] 10 free pulls" — every band, every phone, an
-				                   ordinary column from about 1440px up
-				      from 16rem   "[gift] 10 free"       — an ordinary column at 1280px
-				      below that   nothing                — the ~200px uma column beside
-				                   a race-prep batch, where the title alone fills the line
-				    The floor is deliberate: in that narrowest column even the
-				    Recommended star has nowhere to go, and a chip poking out past the
-				    panel's border is worse than one that steps aside. The word "pulls"
-				    stays in the accessibility tree at every width. Trailing the
-				    Recommended chip, which already carries the `margin-left: auto`
-				    that pushes both to the right edge. */}
 				{freePulls > 0 && (
 					<span
-						className={`free-pulls-chip hidden @min-[16rem]:inline-flex ${
-							recommended ? "" : "ml-auto"
+						// The gold pill carries the `margin-left: auto` that pushes both
+						// chips right; wherever it is absent or hidden, this one must.
+						className={`free-pulls-chip hidden @min-[18rem]:inline-flex ${
+							recommended ? "@max-[20rem]:ml-auto" : "ml-auto"
 						}`}
 						title={`${freePulls} free pulls on this banner`}
 					>
 						<Gift aria-hidden="true" className="h-3 w-3 shrink-0 text-brand" />
 						<span>
-							{freePulls} free
-							<span className="sr-only @min-[23rem]:not-sr-only"> pulls</span>
+							{freePulls}
+							<span
+								className={
+									recommended
+										? "sr-only @min-[23rem]:not-sr-only"
+										: "sr-only @min-[20rem]:not-sr-only"
+								}
+							>
+								{" "}
+								free
+							</span>
+							<span
+								className={
+									recommended
+										? "sr-only @min-[26rem]:not-sr-only"
+										: "sr-only @min-[23rem]:not-sr-only"
+								}
+							>
+								{" "}
+								pulls
+							</span>
 						</span>
 					</span>
 				)}

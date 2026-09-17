@@ -1065,6 +1065,24 @@ describe('Timeline free pulls', () => {
     expect(panel.querySelector('.recommended-chip')).toHaveTextContent('Recommended')
     expect(panel.querySelector('.free-pulls-chip')).toHaveTextContent('10 free pulls')
   })
+
+  it('lets the Recommended word give way only when free pulls share the line', () => {
+    // Alone, the gold pill keeps its word (and may truncate). Beside the
+    // free-pulls chip it steps down to the star by container width instead of
+    // clipping to "Rec…", so the word is screen-reader-only until there is room.
+    const alone = categorised(1, 'standard', ['Yukino Bijin'])
+    alone.banner_umas[0].is_recommended = true
+    const shared = categorised(2, 'standard', ['Rice Shower'])
+    shared.banner_umas[0].is_recommended = true
+    shared.banner_umas[0].free_pulls = 120
+    events = [alone, shared]
+    renderTimeline()
+
+    const word = (name: string) => panelFor(name).querySelector('.recommended-chip > span')
+    expect(word('Yukino Bijin')).toHaveClass('truncate')
+    expect(word('Rice Shower')).toHaveClass('sr-only')
+    expect(word('Rice Shower')).not.toHaveClass('truncate')
+  })
 })
 
 describe('Timeline category filter', () => {
@@ -1090,6 +1108,36 @@ describe('Timeline category filter', () => {
     ).map((o) => o.textContent)
 
     expect(options).toEqual(['All events', 'Standard', 'Golden Week'])
+  })
+
+  it('offers "Free pulls" only when some banner has them, and narrows to those', () => {
+    const plain = categorised(1, 'standard', ['Yukino Bijin'])
+    // On the support side only: either side of a window counts.
+    const generous = categorised(2, 'standard', ['Rice Shower'], ['Kitasan Black'])
+    generous.banner_supports[0].free_pulls = 30
+    events = [plain, generous]
+    renderTimeline()
+
+    const options = Array.from(
+      screen.getByLabelText(FILTER).querySelectorAll('option'),
+    ).map((o) => o.textContent)
+    expect(options).toEqual(['All events', 'Free pulls', 'Standard'])
+
+    selectCategory('free_pulls')
+
+    expect(screen.getByText(/Showing/)).toHaveTextContent('Showing 1 of 1')
+    expect(screen.getByAltText('Rice Shower')).toBeInTheDocument()
+    expect(screen.queryByAltText('Yukino Bijin')).not.toBeInTheDocument()
+  })
+
+  it('does not offer "Free pulls" when no banner has any', () => {
+    events = [
+      categorised(1, 'standard', ['Yukino Bijin']),
+      categorised(2, 'rerun', ['Gentildonna']),
+    ]
+    renderTimeline()
+
+    expect(screen.getByLabelText(FILTER)).not.toHaveTextContent('Free pulls')
   })
 
   it('hides itself when there is nothing to choose between', () => {

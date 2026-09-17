@@ -677,7 +677,8 @@
    It is also the signal that doesn't depend on colour: the SSR surface says
    "special" to a sighted reader, the word says it to everyone. */
 .recommended-chip {
-	display: inline-flex;
+	/* No `display` here, for the reason given on .free-pulls-chip below: beside
+	   that chip this one hides and shows through container-query utilities. */
 	align-items: center;
 	gap: 0.25rem;
 	min-width: 0;
@@ -698,9 +699,8 @@
 	box-shadow: 0 0 6px var(--color-ssr-glow);
 }
 
-/* The free-pulls chip that can share the title line with it: the same 20px
-   box (0.125rem padding around a 1rem line), so it is zero-layout in the same
-   way. The 1px ring is an inset shadow rather than a border because a border
+/* The free-pulls chip that can share the title line with it: a 20px box too
+   (see its padding note below), so it is zero-layout in the same way. The 1px ring is an inset shadow rather than a border because a border
    would add 2px to the box, and to the title line with it.
 
    No `display` here on purpose. The chip hides and shows through
@@ -711,9 +711,12 @@
 	gap: 0.25rem;
 	flex-shrink: 0;
 	border-radius: 9999px;
-	padding: 0.125rem 0.5rem;
-	font-size: 0.6875rem;
-	line-height: 1rem;
+	/* The title's own size (text-sm, 14px on a 20px line), so it reads at a
+	   glance like the words beside it. The box is still 20px: the line-height
+	   IS the box now, with no vertical padding left to add to it. */
+	padding: 0 0.5rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
 	font-weight: 700;
 	letter-spacing: 0.02em;
 	white-space: nowrap;
