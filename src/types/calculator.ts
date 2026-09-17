@@ -27,6 +27,7 @@ import type { UserStats, UserPlannedBanner, UserStepUpSelection } from "./user"
 import type { GameEvent, ChampionsMeeting, LeagueOfHeroes, RaceEvent } from "./events"
 import type { AnniversaryEvent, UserPlannedPurchase } from "./anniversary"
 import type { Scenario } from "./scenario"
+import type { Plan } from "./plan"
 import type { IncomeLedgerRow } from "./ledger"
 import type { CalculationConstants } from "./constants"
 
@@ -43,7 +44,16 @@ export interface CalculatorData {
 	banner_support_data: BannerSupport[]
 	/** Select Step-Up banners, the third kind of planner row. */
 	banner_step_up_data: BannerStepUp[]
+	/** The ACTIVE plan's rows (see `active_plan_id`). `[]` for guests. */
 	user_planned_banner_data: UserPlannedBanner[]
+	/**
+	 * Every plan the account holds, oldest first. `[]` for guests. Optional
+	 * because an API from before plans existed omits it, and the two sides can
+	 * be briefly out of step during a deploy.
+	 */
+	user_plans?: Plan[]
+	/** Which plan `user_planned_banner_data` belongs to. `null` for guests. */
+	active_plan_id?: number | null
 	events_data: GameEvent[]
 	champions_meeting_data: ChampionsMeeting[]
 	league_of_heroes_event_data: LeagueOfHeroes[]
@@ -144,6 +154,24 @@ export interface CalculatorContextType {
 	isLoading: boolean
 	fetchError: boolean
 	organizedTimelineData: OrganizedTimelineData
+	/**
+	 * The account's plans, and which one `userPlannedBannerData` belongs to.
+	 * `[]` and `null` for a guest, who has one unnamed plan in memory.
+	 */
+	plans: Plan[]
+	activePlanId: number | null
+	/** True while a switch, create or delete is in flight. Disables the switcher. */
+	isPlanBusy: boolean
+	/**
+	 * The plan actions. Each flushes any pending auto-save for the plan being
+	 * left BEFORE it changes anything, resolves to whether it worked, and
+	 * toasts its own failure, so a caller only has to close its menu on true.
+	 */
+	switchPlan: (planId: number) => Promise<boolean>
+	/** Creates a plan (blank, or a copy of `copyFromId`) and switches to it. */
+	createPlan: (name: string, copyFromId?: number) => Promise<boolean>
+	renamePlan: (planId: number, name: string) => Promise<boolean>
+	deletePlan: (planId: number) => Promise<boolean>
 	saveNow: () => Promise<void>
 	setUserPlannedBannerData: Dispatch<SetStateAction<UserPlannedBanner[]>>
 	setStagedBanners: Dispatch<SetStateAction<UserPlannedBanner[]>>

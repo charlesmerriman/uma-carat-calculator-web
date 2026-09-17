@@ -9,6 +9,7 @@ import { StagedBannerRow } from "./StagedBannerRow"
 import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcons"
 import { PlannerSectionBand } from "./PlannerSectionBand"
 import { buildPlannerRows, SCENARIO_BANDS_ONLY } from "../../utils/plannerSections"
+import { PlanSwitcher } from "./PlanSwitcher"
 import { EMPTY_BANNER_RESOURCES } from "../../hooks/bannerResources"
 import { useBannerResources } from "../../hooks/useBannerResources"
 import {
@@ -227,6 +228,9 @@ export const CaratCalculator: React.FC = () => {
 						<IncomeForm />
 
 						<div className="border-t border-gray-700 pb-4">
+							{/* Which plan the sheet below is showing, and the menu to switch.
+							    Renders nothing at all for a guest, row padding included. */}
+							<PlanSwitcher />
 							{/* Add banner buttons — one row at EVERY width. Stacked, the three
 							    of them cost ~156px of a phone screen before a single planner
 							    row appeared; side by side they cost ~44px. */}

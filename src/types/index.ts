@@ -104,6 +104,9 @@ export type {
 
 export type { Scenario } from "./scenario"
 
+export type { Plan, PlanWithRows } from "./plan"
+export { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "./plan"
+
 export {
 	isSavedPurchase,
 	isLocalPurchase,
