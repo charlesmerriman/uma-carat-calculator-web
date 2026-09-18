@@ -228,8 +228,8 @@ export const CaratCalculator: React.FC = () => {
 						<IncomeForm />
 
 						<div className="border-t border-gray-700 pb-4">
-							{/* Which plan the sheet below is showing, and the menu to switch.
-							    Renders nothing at all for a guest, row padding included. */}
+							{/* The PLANS bar: a tab per plan over the sheet it switches. Renders
+							    nothing at all for a guest, bar included. */}
 							<PlanSwitcher />
 							{/* Add banner buttons — one row at EVERY width. Stacked, the three
 							    of them cost ~156px of a phone screen before a single planner
