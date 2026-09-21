@@ -24,6 +24,26 @@
       })();
     </script>
     <!--
+      Google Analytics 4 (gtag.js), added for the Raptive application, which reads
+      traffic from GA. Google asks for it immediately after <head>, but it sits after
+      the theme script, which must stay the first script (themeScript.test.ts);
+      it is async, so it never blocks the bundle. It lands on every page because
+      scripts/prerender.mjs uses this file as the template for each route and for
+      dist/spa.html. Client-side route changes are counted by GA4's enhanced
+      measurement ("page changes based on browser history events", on by default in
+      the GA stream settings), not by code here. The G- measurement ID is public by
+      design, like the AdSense ca-pub- ID below. The privacy policy's "Traffic
+      Measurement" section describes this tag; keep the two in step.
+    -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2J27T3ZME9"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-2J27T3ZME9');
+    </script>
+    <!--
       Umagon face icon set. favicon.ico carries 16/24/32/48/64 for browsers that
       still request /favicon.ico by default; the PNG links cover everything
       modern, and the 192/512 pair is what Android reaches for when a page is

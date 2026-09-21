@@ -31,7 +31,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: September 13, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: September 21, 2026</p>
 
 					<p className={paragraph}>
 						This Privacy Policy explains what information the Uma Musume Carat Calculator
@@ -139,14 +139,14 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						The Site stores an authentication token in your browser&apos;s local storage to
 						keep you signed in, along with display preferences such as your chosen theme.
-						The Site sets no cookies of its own. Third-party advertising partners (see
-						below) may set cookies on your device.
+						The Site sets no cookies of its own. Google Analytics and third-party
+						advertising partners (see below) may set cookies on your device.
 					</p>
 
 					<h2 className={heading}>Traffic Measurement</h2>
 					<p className={paragraph}>
-						To understand how many people use the Site, we count page loads ourselves
-						rather than using a third-party analytics service. When you load the Site,
+						To understand how many people use the Site, we count page loads ourselves.
+						When you load the Site,
 						your browser sends a single request that increments a daily counter. It sets
 						no cookie, and it happens whether or not you have an account.
 					</p>
@@ -171,6 +171,21 @@ export const PrivacyPolicy: React.FC = () => {
 						cannot be linked to you on any other website, or to anything else we hold. We
 						never see who you are, only that some visitor, distinguishable from other
 						visitors for the rest of the month, was here.
+					</p>
+					<p className={paragraph}>
+						We also use Google Analytics, a service run by Google, to see which pages are
+						visited and roughly where visitors come from. Google Analytics sets cookies and
+						collects information such as the pages you view, your device and browser type,
+						and your approximate location. Google processes this under its own{" "}
+						<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className={link}>
+							privacy policy
+						</a>
+						. It does not receive your account details or anything you save in the
+						calculator. You can stop it by installing the{" "}
+						<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer" className={link}>
+							Google Analytics opt-out browser add-on
+						</a>
+						.
 					</p>
 
 					<h2 className={heading}>Third-Party Advertising</h2>
