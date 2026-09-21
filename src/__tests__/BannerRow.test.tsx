@@ -125,6 +125,7 @@ function renderReserved(
   reservedCopies: number,
   reservedFunding: { selectors: number; crystals: number; unfunded: number },
   numberOfPulls = 0,
+  unpickedSelectorTickets = 0,
 ) {
   const planned: UserPlannedBanner = {
     tempId: 1,
@@ -154,6 +155,7 @@ function renderReserved(
         ...EMPTY_BANNER_RESOURCES,
         maxPossiblePulls: 1_000,
         reservedFunding,
+        unpickedSelectorTickets,
       }}
       initialBannerType="Uma"
     />,
@@ -270,6 +272,23 @@ describe('BannerRow — reserved copies', () => {
     })
     // Over-reserved rows swap the split for funded/asked-for.
     expect(screen.getAllByText('1/3')).toHaveLength(inputs.length)
+  })
+
+  it('points at the Selectors page when a selector with no pick is sitting unused', () => {
+    const { inputs } = renderReserved(1, { selectors: 0, crystals: 0, unfunded: 1 }, 0, 1)
+
+    inputs.forEach((input) => {
+      expect(statusOf(input)).toBe('over')
+      expect(input).toHaveAttribute('title', expect.stringContaining('no card picked'))
+    })
+  })
+
+  it('keeps the unpicked selector note off a row that is fully funded', () => {
+    const { inputs } = renderReserved(1, { selectors: 1, crystals: 0, unfunded: 0 }, 0, 1)
+
+    inputs.forEach((input) => {
+      expect(input).toHaveAttribute('title', expect.stringContaining('1 from selectors'))
+    })
   })
 
   it('hides the funding hint when nothing is reserved', () => {
