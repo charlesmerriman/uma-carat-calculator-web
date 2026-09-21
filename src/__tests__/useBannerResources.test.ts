@@ -650,3 +650,124 @@ describe('step-up rows', () => {
     expect(withStepUp[1].maxPossiblePulls).toBeLessThan(alone[0].maxPossiblePulls)
   })
 })
+
+describe('picked selectors', () => {
+  /**
+   * A campaign selling two uma selectors: product 60 (cutoff 2024-02-01) and
+   * product 61 (cutoff 2024-08-01). Dates are irrelevant here — selector
+   * tickets are banked up front rather than credited at the campaign.
+   */
+  const selectorCampaign: AnniversaryEvent = {
+    id: 1,
+    name: '4th Anniversary',
+    event_type: 'anniversary',
+    jp_cutoff_date: null,
+    image: null,
+    accent_label: '',
+    start_date: daysFromNow(1, 'T22:00:00Z'),
+    main_start_date: daysFromNow(1, 'T22:00:00Z'),
+    end_date: daysFromNow(60),
+    is_predicted: false,
+    applied_offset_days: 0,
+    products: [60, 61].map((id, index) => ({
+      id,
+      product_type: 'uma_selector' as const,
+      name: `Uma Selector ${id}`,
+      usd_cost: 30,
+      paid_carat_amount: 0,
+      webstore_multiplier: 1,
+      max_quantity: 1,
+      jp_cutoff_date: index === 0 ? '2024-02-01' : '2024-08-01',
+      jp_cutoff_date_override: null,
+      order: index,
+    })),
+    banner_parts: [],
+  }
+
+  const CARD_X = { ...featuredUma(7, 'Card X'), first_jp_date: '2023-11-01T00:00:00Z' }
+  const CARD_Y = { ...featuredUma(8, 'Card Y'), first_jp_date: '2023-05-01T00:00:00Z' }
+  const CARD_Z = { ...featuredUma(9, 'Card Z'), first_jp_date: '2024-03-01T00:00:00Z' }
+
+  function reserving(id: number, startDay: number, uma: Uma): UserPlannedBanner {
+    const banner = umaBanner(id, startDay, startDay + 5)
+    banner.reserved_copies = 1
+    banner.banner_uma!.umas = [uma]
+    return banner
+  }
+
+  const banners = () => [
+    reserving(1, 1, CARD_Y),
+    reserving(2, 10, CARD_X),
+    reserving(3, 20, CARD_Z),
+  ]
+
+  const purchases = (targetForB: number | null): UserPlannedPurchase[] => [
+    { id: 1, user: 1, product: 60, quantity: 1, target_uma: 7 },
+    { id: 2, user: 1, product: 61, quantity: 1, target_uma: targetForB },
+  ]
+
+  const stats = { include_purchases_in_projection: true, uma_selector_ticket: 1 }
+
+  it('matches the worked example in selector-pick-gating-plan.md', () => {
+    // Ticket A is picked for card X, ticket B has no pick, ticket C is owned.
+    const rows = render(banners(), stats, {
+      anniversaryEventData: [selectorCampaign],
+      userPlannedPurchaseData: purchases(null),
+    })
+
+    // Banner 1 (card Y): A is for X only and B has no pick, so the owned C pays.
+    expect(rows[0].reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+    // Banner 2 (card X): A's pick.
+    expect(rows[1].reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+    // Banner 3 (card Z): nothing left that can pay, and the row knows why.
+    expect(rows[2].reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+    expect(rows[2].unpickedSelectorTickets).toBe(1)
+  })
+
+  it('funds the last banner once the second selector is picked for its card', () => {
+    const rows = render(banners(), stats, {
+      anniversaryEventData: [selectorCampaign],
+      userPlannedPurchaseData: purchases(9),
+    })
+
+    expect(rows[2].reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+    expect(rows[2].unpickedSelectorTickets).toBe(0)
+  })
+
+  it('never spends a picked ticket on a different card', () => {
+    // Only banner 1 (card Y) is planned. Ticket A must NOT pay for it, so it is
+    // still in the pool afterwards, still tied to card X.
+    const rows = render([reserving(1, 1, CARD_Y), umaBanner(2, 10, 15)], {
+      include_purchases_in_projection: true,
+    }, {
+      anniversaryEventData: [selectorCampaign],
+      userPlannedPurchaseData: [purchases(null)[0]],
+    })
+
+    expect(rows[0].reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+    expect(rows[1].umaSelectorTickets).toEqual([
+      { jpCutoff: '2024-02-01', targetCardId: 7, count: 1 },
+    ])
+  })
+
+  it('gives the ticket to the EARLIEST banner featuring the picked card', () => {
+    const rows = render([reserving(1, 1, CARD_X), reserving(2, 10, CARD_X)], {
+      include_purchases_in_projection: true,
+    }, {
+      anniversaryEventData: [selectorCampaign],
+      userPlannedPurchaseData: [purchases(null)[0]],
+    })
+
+    expect(rows[0].reservedFunding.selectors).toBe(1)
+    expect(rows[1].reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('counts no unpicked selectors while purchases are left out of the projection', () => {
+    const rows = render(banners(), { uma_selector_ticket: 0 }, {
+      anniversaryEventData: [selectorCampaign],
+      userPlannedPurchaseData: purchases(null),
+    })
+
+    expect(rows[2].unpickedSelectorTickets).toBe(0)
+  })
+})

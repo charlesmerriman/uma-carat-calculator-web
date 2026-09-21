@@ -679,8 +679,15 @@ export const BannerRow = ({
 	}
 
 	// WCAG 1.4.1 again — the red state also travels as a tooltip and aria-invalid.
+	//
+	// The first branch explains the one shortfall the user can fix from another
+	// page: a purchased selector pays only for the card picked for it, so one
+	// with no pick yet funds nothing. A title attribute cannot hold a link, so
+	// the copy names the page instead.
 	const reservedHint =
-		reservedStatus === "over"
+		reservedStatus === "over" && resources.unpickedSelectorTickets > 0
+			? "You have a selector with no card picked. Pick one on the Selectors page to use it here."
+			: reservedStatus === "over"
 			? `${reservedFunding.unfunded} more ${
 					reservedFunding.unfunded === 1 ? "copy" : "copies"
 				} than you have selectors or crystals for`

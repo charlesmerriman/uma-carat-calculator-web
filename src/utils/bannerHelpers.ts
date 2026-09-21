@@ -7,7 +7,10 @@ import {
 	stepsAffordable,
 } from "./stepUpLadder"
 import { spendSelectorTickets } from "./selectorTickets"
-import type { SelectorTicketBucket } from "./selectorTickets"
+import type {
+	SelectableFeaturedCard,
+	SelectorTicketBucket
+} from "./selectorTickets"
 import type {
 	UserPlannedBanner,
 	BannerUma,
@@ -491,6 +494,14 @@ export interface ReservedCopiesInput {
 	 * is that they neither qualify a banner nor block one.
 	 */
 	selectorsBarred: boolean
+	/**
+	 * The banner's featured cards a selector could take, already filtered by
+	 * `isCardSelectable`. A PICKED ticket (a purchased selector, tied to the card
+	 * chosen on the Selectors page) pays here only if its card is in this list;
+	 * an unpicked one ignores it and reads `oldestFeaturedJpDate` as before.
+	 * Optional so an empty list is the default: no cards, no pick can match.
+	 */
+	selectableFeatured?: SelectableFeaturedCard[]
 	umaSelectorTickets: SelectorTicketBucket[]
 	supportSelectorTickets: SelectorTicketBucket[]
 	/** SSR crystals available. Support banners only — there is no uma crystal. */
@@ -541,7 +552,12 @@ export function allocateReservedCopies(
 	// is uma-side only.
 	const { buckets, spent } = input.selectorsBarred
 		? { buckets: pool, spent: 0 }
-		: spendSelectorTickets(pool, wanted, input.oldestFeaturedJpDate)
+		: spendSelectorTickets(
+				pool,
+				wanted,
+				input.oldestFeaturedJpDate,
+				input.selectableFeatured ?? []
+		  )
 	result.funding.selectors = spent
 	if (input.isUmaBanner) {
 		result.umaSelectorTickets = buckets

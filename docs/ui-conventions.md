@@ -1179,6 +1179,9 @@ USD budgeting, and the two toggles that govern whether any of it reaches the pro
   ticket column with its strip of card tiles, and the per-campaign / cumulative footer.
 - **`SelectorTargetPicker.tsx`** — the single-card picker for a selector ticket,
   filtered by that ticket's JP cutoff. **The tile is the whole control**; see below.
+  The pick is load-bearing, not decoration: a purchased selector pays for a reserved
+  copy only on a banner featuring the picked card, and with no pick it pays for nothing
+  (`resource-projection-logic.md`, "A purchased selector pays only for the card picked").
 - **`StepUpSelectionStrip.tsx`** — the band below a campaign card's three columns, one
   disclosure row per step-up the campaign sells. It filters `stepUpBannerData` on
   `anniversary_event` and renders nothing when a campaign sells none, so almost every
