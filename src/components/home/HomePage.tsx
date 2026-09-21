@@ -31,7 +31,10 @@ import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 import { useBackToTop } from "../../hooks/useBackToTop"
 
 const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@HenryHandsomeDerby"
-const YOUTUBE_UPLOADS_PLAYLIST_ID = "UUbKJl479CjOtg57eF-GhUDw"
+// A fixed video (Henry's walkthrough of this site), NOT the channel's uploads
+// playlist: the embed used to follow whatever he posted last, which was often
+// unrelated to the calculator.
+const YOUTUBE_FEATURED_VIDEO_ID = "vQJ0FLK0CKg"
 // The direct document URL, deliberately NOT umacaratcalculator.com. That domain
 // currently 301s here, but it is also the obvious candidate to repoint at this
 // site — at which point a vanity link would quietly become a self-link.
@@ -198,14 +201,14 @@ export const HomePage = () => {
 											<PlayCircle className="h-4 w-4" aria-hidden="true" />
 										</span>
 										<span className="min-w-0">
-											<span className="block truncate text-sm font-semibold text-gray-100">Henry Handsome Derby's latest video</span>
+											<span className="block truncate text-sm font-semibold text-gray-100">Henry Handsome Derby's video about this site</span>
 											<span className="block truncate text-xs text-gray-500">Open the channel on YouTube</span>
 										</span>
 									</span>
 									<ArrowUpRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 								</a>
 								<div className="aspect-video bg-gray-900">
-									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/videoseries?list=${YOUTUBE_UPLOADS_PLAYLIST_ID}`} title="Henry Handsome Derby's latest video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/${YOUTUBE_FEATURED_VIDEO_ID}`} title="Henry Handsome Derby's video about this site" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
 								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
