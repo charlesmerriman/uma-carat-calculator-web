@@ -166,6 +166,11 @@ export function useBannerResources({
 						creditAt: new Date(startDate),
 						productType: product.product_type,
 						jpCutoff: product.jp_cutoff_date,
+						// The card picked for a selector on the Selectors page. The
+						// serializer sends at most one of the two (a check constraint
+						// guarantees it), and neither for a carat pack.
+						targetCardId:
+							purchase.target_uma ?? purchase.target_support ?? null,
 						paidCarats,
 						freeCarats,
 						usd: product.usd_cost * quantity,
@@ -180,20 +185,38 @@ export function useBannerResources({
 		// catalogue, and a card stays there after its banner ends. What still
 		// constrains it is its CUTOFF, which is calendar-independent. Carried
 		// through the pass so the pool can't be spent twice.
+		//
+		// Tickets the account already OWNS have no pick anywhere, so they go in
+		// with no target and stay usable on any eligible banner. A PURCHASED
+		// selector is only usable on the card picked for it, and one with no
+		// pick yet is usable on nothing: it is counted rather than banked, so
+		// the row can tell the user why a reserved copy went unfunded.
 		let umaSelectorTickets: SelectorTicketBucket[] = addSelectorTickets(
 			[], null, userStatsData.uma_selector_ticket || 0
 		)
 		let supportSelectorTickets: SelectorTicketBucket[] = addSelectorTickets(
 			[], null, userStatsData.support_selector_ticket || 0
 		)
+		let unpickedUmaSelectors = 0
+		let unpickedSupportSelectors = 0
 		for (const credit of purchaseCredits) {
 			if (credit.productType === "uma_selector") {
+				if (credit.targetCardId === null) {
+					unpickedUmaSelectors += credit.quantity
+					continue
+				}
 				umaSelectorTickets = addSelectorTickets(
-					umaSelectorTickets, credit.jpCutoff, credit.quantity
+					umaSelectorTickets, credit.jpCutoff, credit.quantity,
+					credit.targetCardId
 				)
 			} else if (credit.productType === "support_selector") {
+				if (credit.targetCardId === null) {
+					unpickedSupportSelectors += credit.quantity
+					continue
+				}
 				supportSelectorTickets = addSelectorTickets(
-					supportSelectorTickets, credit.jpCutoff, credit.quantity
+					supportSelectorTickets, credit.jpCutoff, credit.quantity,
+					credit.targetCardId
 				)
 			}
 		}
@@ -456,6 +479,9 @@ export function useBannerResources({
 				isUmaBanner,
 				oldestFeaturedJpDate,
 				selectorsBarred,
+				// What a PICKED ticket is matched against: it pays only if its
+				// card is one of these. Already past the intrinsic gate above.
+				selectableFeatured: selectable,
 				umaSelectorTickets,
 				supportSelectorTickets,
 				ssrCrystals,
@@ -475,6 +501,11 @@ export function useBannerResources({
 				ssrShards,
 				usdSpent: income.usdSpent,
 				reservedFunding: reserved.funding,
+				unpickedSelectorTickets: stepUp
+					? 0
+					: isUmaBanner
+					? unpickedUmaSelectors
+					: unpickedSupportSelectors,
 				...(stepUp && {
 					maxPossibleSteps: stepUp.maxPossibleSteps,
 					chargeableSteps: stepUp.chargeableSteps,
