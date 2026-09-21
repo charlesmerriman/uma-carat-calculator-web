@@ -43,6 +43,8 @@ export interface PlannedBannerPayload {
 	id?: number
 	number_of_pulls: number
 	reserved_copies: number
+	/** Absent on a row that never had one; the server defaults it to "". */
+	note?: string
 	banner_uma: number | null
 	banner_support: number | null
 	banner_step_up: number | null

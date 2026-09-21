@@ -60,6 +60,13 @@ for why it is never "whichever plan is active".
 - Save state is surfaced through Sonner toasts.
 - An `onbeforeunload` warning fires if a save is still pending.
 - **Guests never arm the timer** — their plan is in-memory only.
+- **A row's note commits on blur, not per keystroke.** `BannerNoteEditor`
+  (`components/carat-calculator/BannerNote.tsx`) keeps the text in local state while the
+  person types, because every change to `userPlannedBannerData` re-arms this timer and the
+  PATCH re-sends the whole row list. The note is an optional `note?: string` on the row and
+  needs no mapping: `toBannerPayload` spreads the row, so autosave, the Navbar save and the
+  guest migration all carry it. `NOTE_MAX_LENGTH` (500) mirrors the API's cap, and the
+  textarea's `maxLength` keeps a save from ever failing on it.
 
 ---
 

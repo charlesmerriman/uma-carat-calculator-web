@@ -78,6 +78,13 @@ interface BasePlannedBanner {
 	 * stale against them. See allocateReservedCopies in utils/bannerHelpers.
 	 */
 	reserved_copies: number
+	/**
+	 * The owner's free-text reminder about this row. Nothing in the projection
+	 * reads it. Optional because "no note" is the normal state: the server sends
+	 * "" and a locally created row simply has none, so read it as `note ?? ""`.
+	 * Capped at NOTE_MAX_LENGTH (components/carat-calculator/BannerNote).
+	 */
+	note?: string
 	banner_uma?: BannerUma | null
 	banner_support?: BannerSupport | null
 	/**
