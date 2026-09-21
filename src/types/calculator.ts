@@ -172,6 +172,12 @@ export interface CalculatorContextType {
 	createPlan: (name: string, copyFromId?: number) => Promise<boolean>
 	renamePlan: (planId: number, name: string) => Promise<boolean>
 	deletePlan: (planId: number) => Promise<boolean>
+	/**
+	 * Turn "separate resources" on or off for a plan. On: the server copies the
+	 * stats on screen into the plan's own block, and from then on that plan
+	 * reads and saves them there. Off: back to the account's stats.
+	 */
+	setSeparateIncome: (planId: number, on: boolean) => Promise<boolean>
 	saveNow: () => Promise<void>
 	setUserPlannedBannerData: Dispatch<SetStateAction<UserPlannedBanner[]>>
 	setStagedBanners: Dispatch<SetStateAction<UserPlannedBanner[]>>

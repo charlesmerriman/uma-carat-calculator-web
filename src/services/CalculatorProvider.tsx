@@ -45,6 +45,7 @@ import {
 	planCreate,
 	planDelete,
 	planFetch,
+	planSetSeparateIncome,
 	planRename
 } from "./planFetchCalls"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -409,11 +410,21 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		return lastSaveOkRef.current
 	}, [timerIsGoing, saveNow])
 
-	/** Put another plan's rows on screen. The id and the rows move together. */
-	const applyPlan = useCallback((planId: number, rows: UserPlannedBanner[]): void => {
+	/**
+	 * Put another plan on screen: its id, its rows and its stats move together.
+	 * The stats are the plan's own block or the account's, whichever the
+	 * server sent; an API from before separate resources sends none, and then
+	 * what is on screen (the account's) is kept.
+	 */
+	const applyPlan = useCallback((
+		planId: number,
+		rows: UserPlannedBanner[],
+		stats?: UserStats
+	): void => {
 		suppressAutoSaveRef.current = true
 		setActivePlanId(planId)
 		setUserPlannedBannerData(rows)
+		if (stats) setUserStatsData(stats)
 		// Staged rows were being composed for the plan just left; carrying them
 		// across would let "Add" drop them into a different plan.
 		setStagedBanners([])
@@ -459,7 +470,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					return false
 				}
 				const data = (await fetched.json()) as PlanWithRows
-				applyPlan(planId, data.user_planned_banner_data)
+				applyPlan(planId, data.user_planned_banner_data, data.user_stats_data)
 				return true
 			}),
 		[runPlanAction, activePlanId, flushPendingSave, applyPlan]
@@ -493,7 +504,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					toast.error("The plan was created, but we couldn't open it. Pick it from the list.")
 					return false
 				}
-				applyPlan(data.plan.id, data.user_planned_banner_data)
+				applyPlan(data.plan.id, data.user_planned_banner_data, data.user_stats_data)
 				toast.success(copyFromId === undefined ? "Plan created" : "Plan copied")
 				return true
 			}),
@@ -554,12 +565,52 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 						return true
 					}
 					const data = (await fetched.json()) as PlanWithRows
-					applyPlan(landedOn, data.user_planned_banner_data)
+					applyPlan(landedOn, data.user_planned_banner_data, data.user_stats_data)
 				}
 				toast.success("Plan deleted")
 				return true
 			}),
 		[runPlanAction, activePlanId, cancelTimer, flushPendingSave, applyPlan]
+	)
+
+	const setSeparateIncome = useCallback(
+		(planId: number, on: boolean): Promise<boolean> =>
+			runPlanAction(async () => {
+				// Flush FIRST, and not only for the rows: the stats on screen may be
+				// an unsaved edit that belongs to the block this plan reads today,
+				// and the server seeds the new copy from the database. Without the
+				// flush the copy would start from numbers the person no longer sees.
+				if (!(await flushPendingSave())) {
+					toast.error("Your changes didn't save, so nothing was changed.")
+					return false
+				}
+				const response = await planSetSeparateIncome(planId, on)
+				if (!response.ok) {
+					toast.error("Couldn't change that. Try again.")
+					return false
+				}
+				const updated = (await response.json()) as Plan
+				setPlans((prev) => prev.map((plan) => (plan.id === planId ? updated : plan)))
+				// The stats the plan now reads are not in that answer. Fetch them
+				// the way a switch does, so they land through the same code path
+				// (and are not mistaken for an edit).
+				if (planId === activePlanId) {
+					const fetched = await planFetch(planId)
+					if (!fetched.ok) {
+						toast.error("Changed, but couldn't load the new numbers. Reload the page.")
+						return false
+					}
+					const data = (await fetched.json()) as PlanWithRows
+					applyPlan(planId, data.user_planned_banner_data, data.user_stats_data)
+				}
+				toast.success(
+					on
+						? "This plan now has its own resources."
+						: "This plan uses your account's resources again."
+				)
+				return true
+			}),
+		[runPlanAction, activePlanId, flushPendingSave, applyPlan]
 	)
 
 	const value = {
@@ -593,6 +644,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		createPlan,
 		renamePlan,
 		deletePlan,
+		setSeparateIncome,
 		saveNow,
 		setUserPlannedBannerData,
 		setStagedBanners,

@@ -33,6 +33,7 @@ const actions = () => ({
 	createPlan: vi.fn().mockResolvedValue(true),
 	renamePlan: vi.fn().mockResolvedValue(true),
 	deletePlan: vi.fn().mockResolvedValue(true),
+	setSeparateIncome: vi.fn().mockResolvedValue(true),
 })
 
 const renderSwitcher = (overrides: Partial<CalculatorContextType> = {}) => {
@@ -168,6 +169,43 @@ describe('PlanSwitcher', () => {
 			await openOptions()
 			await openOptions()
 			expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+		})
+	})
+
+	describe('separate resources', () => {
+		it('offers it unchecked for a plan on the account\'s stats, and turns it on in one click', async () => {
+			const value = renderSwitcher()
+			await openOptions()
+			const item = screen.getByRole('menuitemcheckbox', { name: /separate resources/i })
+			expect(item).toHaveAttribute('aria-checked', 'false')
+			await userEvent.click(item)
+			expect(value.setSeparateIncome).toHaveBeenCalledWith(1, true)
+		})
+
+		it('shows it checked for a plan with its own stats, and asks before turning it off', async () => {
+			const value = renderSwitcher({
+				plans: [{ ...plan(1, 'Alt account', true), income_profile_id: 7 }, plan(2, 'What if')],
+			})
+			await openOptions()
+			const item = screen.getByRole('menuitemcheckbox', { name: /separate resources/i })
+			expect(item).toHaveAttribute('aria-checked', 'true')
+			await userEvent.click(item)
+			// Nothing yet: the confirmation is showing.
+			expect(value.setSeparateIncome).not.toHaveBeenCalled()
+			await userEvent.click(screen.getByRole('button', { name: 'Use account resources' }))
+			expect(value.setSeparateIncome).toHaveBeenCalledWith(1, false)
+		})
+
+		it('marks the tab of a plan that has its own resources, and says so on hover', () => {
+			renderSwitcher({
+				plans: [plan(1, 'Main plan', true), { ...plan(2, 'Alt account'), income_profile_id: 7 }],
+			})
+			const alt = tabs().getByRole('button', { name: 'Alt account' })
+			expect(within(alt).getByTestId('own-resources-marker')).toBeInTheDocument()
+			expect(alt).toHaveAttribute('title', expect.stringMatching(/its own resources/))
+			expect(
+				within(tabs().getByRole('button', { name: 'Main plan' })).queryByTestId('own-resources-marker')
+			).not.toBeInTheDocument()
 		})
 	})
 
