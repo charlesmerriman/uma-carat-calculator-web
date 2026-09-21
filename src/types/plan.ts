@@ -3,10 +3,15 @@
  *
  * A PLAN HOLDS CHOICES. THE ACCOUNT HOLDS FACTS. Carats, tickets, ranks, the
  * income toggles, planned purchases and step-up picks all belong to the
- * account and are the same whichever plan is open. Only the banner rows change
- * on a switch. That is why the projection engine (useBannerResources) needed no
- * change for plans: it reads the same `userPlannedBannerData` it always did,
- * which now means "the active plan's rows".
+ * account. Planned purchases and step-up picks are the same whichever plan is
+ * open. The stats (`userStatsData`) are the OPEN PLAN'S: normally the
+ * account's own, but a plan with "separate resources" on reads its own copy,
+ * for people who plan for more than one game account. Which one is the
+ * server's decision (`income_profile_id` says which); the client stores
+ * whatever GET /plans/<id> hands it, in the same shape either way. That is why
+ * the projection engine (useBannerResources) needed no change for plans: it
+ * reads the same `userPlannedBannerData` and `userStatsData` it always did,
+ * which now mean "the active plan's".
  *
  * Full reasoning, including why this makes a plan safe to copy between
  * accounts later: backend/docs/data-model.md ("`Plan`").
@@ -14,12 +19,18 @@
  * A guest has one unnamed plan in memory, so for a guest `plans` is `[]` and
  * `activePlanId` is `null`. That pair is how the UI knows to hide the switcher.
  */
-import type { UserPlannedBanner } from "./user"
+import type { UserPlannedBanner, UserStats } from "./user"
 
 export interface Plan {
 	id: number
 	name: string
 	is_active: boolean
+	/**
+	 * Non-null when the plan reads its own stats ("separate resources") rather
+	 * than the account's. Read-only; the switch is `separate_income` on the
+	 * PATCH route (planSetSeparateIncome). Absent from an API older than this.
+	 */
+	income_profile_id?: number | null
 	/** ISO instant. Moves on rename, on activate, and when the rows are saved. */
 	updated_at: string
 }
@@ -27,6 +38,12 @@ export interface Plan {
 /** POST /plans and GET /plans/<id>: a plan together with its banner rows. */
 export interface PlanWithRows {
 	plan: Plan
+	/**
+	 * THIS plan's stats, shaped exactly like the same key on GET
+	 * /calculator-data. Optional only because an API from before separate
+	 * resources existed omits it; the provider then keeps what is on screen.
+	 */
+	user_stats_data?: UserStats
 	/** Shaped and ordered exactly like the same key on GET /calculator-data. */
 	user_planned_banner_data: UserPlannedBanner[]
 }

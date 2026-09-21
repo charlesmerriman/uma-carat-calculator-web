@@ -64,6 +64,20 @@ export function planActivate(planId: number): Promise<Response> {
 	})
 }
 
+/**
+ * Give this plan its own resources and income settings (`on`), or send it back
+ * to the account's (`off`). The server seeds the new copy from the stats the
+ * plan reads today and answers with the Plan only; the provider follows up
+ * with planFetch for the stats, the same path a switch uses.
+ */
+export function planSetSeparateIncome(planId: number, on: boolean): Promise<Response> {
+	return fetch(`${API_URL}/plans/${planId}`, {
+		method: "PATCH",
+		headers: jsonHeaders(),
+		body: JSON.stringify({ separate_income: on })
+	})
+}
+
 /** Resolves to `{ active_plan_id }`: where the account landed afterwards. */
 export function planDelete(planId: number): Promise<Response> {
 	return fetch(`${API_URL}/plans/${planId}`, {
