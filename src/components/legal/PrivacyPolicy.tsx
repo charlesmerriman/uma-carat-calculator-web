@@ -82,7 +82,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						When you use the calculator, we store the planning data you enter, including
 						your current in-game resources (such as carats and tickets), your selected
-						income ranks, and the banners you plan to pull on. This data is tied to your
+						income ranks, the banners you plan to pull on, and any notes you write on them.
+						Notes are shown only to you. This data is tied to your
 						anonymous account so your plan is available the next time you sign in. If you
 						use the Site as a guest, your plan stays in your browser and is discarded
 						when you leave.

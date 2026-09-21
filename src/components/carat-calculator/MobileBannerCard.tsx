@@ -57,6 +57,13 @@ interface MobileBannerCardProps {
 	 * (.banner-grid--staged).
 	 */
 	chanceDisplay?: ReactNode
+	/**
+	 * The row's note toggle, placed beside the remove button. A staged row passes
+	 * none: a note belongs to a row that is on the sheet.
+	 */
+	noteButton?: ReactNode
+	/** The open note editor, under everything else. Owns its own padding. */
+	noteEditor?: ReactNode
 	onRemove: () => void
 	removeLabel: string
 	removeIcon?: "delete" | "discard"
@@ -160,6 +167,8 @@ export const MobileBannerCard = ({
 	pullsInput,
 	reservedInput,
 	chanceDisplay,
+	noteButton,
+	noteEditor,
 	onRemove,
 	removeLabel,
 	removeIcon = "delete",
@@ -196,6 +205,8 @@ export const MobileBannerCard = ({
 				<div className="flex min-w-0 flex-1 items-center py-2 pr-1">
 					{bannerSelect}
 				</div>
+
+				{noteButton}
 
 				<button
 					onClick={onRemove}
@@ -256,6 +267,7 @@ export const MobileBannerCard = ({
 
 				{summary}
 				{chanceDisplay}
+				{noteEditor}
 			</div>
 		</div>
 	)

@@ -9,8 +9,9 @@ import type {
 	BannerStepUp,
 	UserStepUpSelection
 } from "../../types"
-import React from "react"
+import React, { useState } from "react"
 import { Link } from "react-router-dom"
+import { BannerNoteButton, BannerNoteEditor } from "./BannerNote"
 import { startOfDay } from "date-fns"
 import Select from "react-select"
 import type { SingleValue } from "react-select"
@@ -670,6 +671,42 @@ export const BannerRow = ({
 
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"
 
+	// --- Note ---
+	// Open/closed is view state and stays local: it is not part of the plan and
+	// must not trigger a save. One flag drives both form factors, since only one
+	// of the card and the table row is ever visible.
+	const [noteOpen, setNoteOpen] = useState(false)
+	const note = plannedBanner.note ?? ""
+
+	const handleNoteCommit = (nextNote: string): void => {
+		setUserPlannedBannerData(
+			updateBannerInList((banner) => ({ ...banner, note: nextNote }))
+		)
+	}
+
+	// Same factory shape as renderReservedInput below: the two form factors
+	// differ only in the button's box, never in its state.
+	const renderNoteButton = (className: string) => (
+		<BannerNoteButton
+			note={note}
+			open={noteOpen}
+			onToggle={() => setNoteOpen((open) => !open)}
+			// A row with no banner chosen is never saved (toBannerPayload drops
+			// it), so a note typed on it would vanish on reload.
+			disabled={!hasBanner}
+			className={className}
+		/>
+	)
+	const renderNoteEditor = (className: string) =>
+		noteOpen && hasBanner ? (
+			<BannerNoteEditor
+				note={note}
+				bannerName={bannerTimeline?.name ?? "this banner"}
+				onCommit={handleNoteCommit}
+				className={className}
+			/>
+		) : null
+
 	const handleReservedChange = (copies: number): void => {
 		// Whole and non-negative via NumberField, and deliberately NOT capped at
 		// what's affordable — an over-reserve is shown, not prevented.
@@ -787,6 +824,10 @@ export const BannerRow = ({
 			pullsInput={pullsInput}
 			reservedInput={renderReservedInput("w-14")}
 			chanceDisplay={null}
+			noteButton={renderNoteButton(
+				"my-auto mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-white/15 bg-black/10 transition hover:bg-black/25"
+			)}
+			noteEditor={renderNoteEditor("border-t border-gray-700 p-2")}
 			onRemove={handleDeleteBannerClick}
 			removeLabel="Delete banner"
 		/>
@@ -884,8 +925,22 @@ export const BannerRow = ({
 				)}
 			</div>
 
-			{/* === Delete button === */}
-			<button onClick={handleDeleteBannerClick} className="banner-delete-btn">
+			{/* === Note + delete === */}
+			{/* Stacked in the ONE 2.5rem track. The note button gets no track of its
+			    own because the fixed tracks already sum to the table's minimum width
+			    (see the ceiling on --container-banner-table in
+			    frontend/docs/ui-conventions.md); halving this h-16 cell still leaves
+			    two 40x32px targets. */}
+			<div className="flex flex-col">
+			{renderNoteButton(
+				"flex flex-1 items-center justify-center border-l border-b border-gray-700 bg-gray-800 transition hover:bg-gray-700 cursor-pointer"
+			)}
+			<button
+				onClick={handleDeleteBannerClick}
+				aria-label="Delete banner"
+				title="Delete banner"
+				className="banner-delete-btn flex-1"
+			>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
 					<polyline points="3 6 5 6 21 6" />
 					<path d="M19 6l-1 14H6L5 6" />
@@ -894,7 +949,15 @@ export const BannerRow = ({
 					<path d="M9 6V4h6v2" />
 				</svg>
 			</button>
+			</div>
 		</div>
+
+		{/* The open note, as a strip under the table row. Outside the grid so the
+		    row keeps its fixed h-16 and the columns stay aligned; the motion.div
+		    around each row (CaratCalculator) animates the height change. */}
+		{renderNoteEditor(
+			"hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2"
+		)}
 		</>
 	)
 }
