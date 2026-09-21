@@ -228,11 +228,26 @@ figure dripped as `monthly / 30`.
   pull. A selector isn't spent at a banner — it takes a card from the back
   catalogue, which stays available after its banner ends. What constrains it is
   its **cutoff**, which is calendar-independent. They are a bucketed pool
-  (`{ jpCutoff, count }[]`), not a scalar: two tickets with different cutoffs are
-  different resources, and spending takes the *weakest qualifying* one.
-- **A selector only has to reach ONE card on a banner.** The engine derives
-  `oldestFeaturedJpDate`; gating on the newest let a single recent unit make a
-  whole multi-uma banner read as unfundable.
+  (`{ jpCutoff, targetCardId, count }[]`), not a scalar: two tickets with
+  different cutoffs, or different picks, are different resources. Spending takes
+  picked tickets first, then the *weakest qualifying* cutoff within each group.
+- **A purchased selector pays only for the card picked for it.** The pick is
+  `UserPlannedPurchase.target_uma` / `target_support`, set on the Selectors page,
+  and rides on the bucket as `targetCardId`. Such a ticket funds a reserved copy
+  only on a banner whose selectable featured cards include that id, and the
+  cutoff is re-checked against that card's own `first_jp_date` at spend time (an
+  admin can edit a cutoff or a release date after the pick was saved). When the
+  card is on several planned banners, the earliest one that reserves a copy takes
+  the ticket, which is just the date-order pass. A purchased selector with **no
+  pick funds nothing** and never enters the pool; the engine reports it per row
+  as `unpickedSelectorTickets` so `BannerRow` can explain the red field. Tickets
+  the account already **owns** (`uma_selector_ticket` / `support_selector_ticket`)
+  have no pick anywhere and keep `targetCardId: null`, the rule below. A pick
+  does NOT reserve a copy by itself: `reserved_copies` stays a plan choice typed
+  on the row, the pick stays an account fact.
+- **An unpicked (owned) selector only has to reach ONE card on a banner.** The
+  engine derives `oldestFeaturedJpDate`; gating on the newest let a single
+  recent unit make a whole multi-uma banner read as unfundable.
 - **Barred umas are filtered out BEFORE that date is taken.** An uma flagged
   `is_time_limited`, or not `is_three_star`, can never be taken by a selector at
   any cutoff, so it must not set the bar for one — otherwise a banner whose only

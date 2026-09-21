@@ -25,12 +25,43 @@
  * rather than derived, and it bites even under an unrestricted (null) cutoff
  * which the temporal gate waves through. Mirrors the backend's
  * calculatorapi/eligibility.py; keep the two in step.
+ *
+ * PICKED TICKETS
+ * --------------
+ * A PURCHASED selector is only usable on the card picked for it on the
+ * Selectors page (`UserPlannedPurchase.target_uma` / `target_support`), so its
+ * bucket carries that card's id as `targetCardId`. Two tickets with the same
+ * cutoff and different picks are different resources, for the same reason two
+ * cutoffs are, so the pick is part of the bucket's identity.
+ *
+ * A ticket the account already OWNS (the stats counters) has no pick anywhere
+ * and keeps `targetCardId: null`, which means "any eligible card" and is the
+ * behaviour every ticket had before picks existed. A purchased selector with
+ * NO pick yet never becomes a bucket at all: the caller counts it instead, so
+ * the planner can say why a reserved copy went unfunded.
  */
 
 export interface SelectorTicketBucket {
 	/** ISO date string, or null for an unrestricted ticket. */
 	jpCutoff: string | null
+	/**
+	 * The card this ticket was picked for, or null for a ticket usable on any
+	 * eligible card. Uma and support pools are separate arrays, so an uma id and
+	 * a support card id can never meet in one pool.
+	 */
+	targetCardId: number | null
 	count: number
+}
+
+/**
+ * A featured card a selector could take, as the spend needs to see it: the id
+ * a pick is matched against, and the release date the cutoff is re-checked on.
+ * The caller filters with `isCardSelectable` first, so a barred card is never
+ * in this list and therefore can never satisfy a pick.
+ */
+export interface SelectableFeaturedCard {
+	id: number
+	first_jp_date?: string | null
 }
 
 /**
@@ -42,28 +73,48 @@ function bucketRank(bucket: SelectorTicketBucket): number {
 	return new Date(bucket.jpCutoff).getTime()
 }
 
+/**
+ * PICKED tickets sort ahead of unpicked ones, then weakest cutoff first within
+ * each group. Same principle as the cutoff order, one level up: a picked ticket
+ * can only ever go to one card, so it is the most constrained resource in the
+ * pool. Spending a go-anywhere ticket on a card a picked one covers would
+ * strand the picked ticket and throw away reach for nothing.
+ */
 function sortBuckets(buckets: SelectorTicketBucket[]): SelectorTicketBucket[] {
-	return [...buckets].sort((a, b) => bucketRank(a) - bucketRank(b))
+	return [...buckets].sort((a, b) => {
+		const aPicked = a.targetCardId !== null
+		const bPicked = b.targetCardId !== null
+		if (aPicked !== bPicked) return aPicked ? -1 : 1
+		return bucketRank(a) - bucketRank(b)
+	})
 }
 
 /**
- * Add tickets to the pool, merging into an existing bucket with the same cutoff.
- * Returns a new array — the projection treats balances as immutable snapshots.
+ * Add tickets to the pool, merging into an existing bucket with the same cutoff
+ * AND the same pick. Returns a new array — the projection treats balances as
+ * immutable snapshots.
+ *
+ * `targetCardId` defaults to null (usable on any eligible card), which is what
+ * an owned ticket is. See the module note on picked tickets.
  */
 export function addSelectorTickets(
 	buckets: SelectorTicketBucket[],
 	jpCutoff: string | null,
-	count: number
+	count: number,
+	targetCardId: number | null = null
 ): SelectorTicketBucket[] {
 	if (count <= 0) return buckets
 
-	const existing = buckets.find((bucket) => bucket.jpCutoff === jpCutoff)
+	const existing = buckets.find(
+		(bucket) =>
+			bucket.jpCutoff === jpCutoff && bucket.targetCardId === targetCardId
+	)
 	if (existing) {
 		return buckets.map((bucket) =>
 			bucket === existing ? { ...bucket, count: bucket.count + count } : bucket
 		)
 	}
-	return sortBuckets([...buckets, { jpCutoff, count }])
+	return sortBuckets([...buckets, { jpCutoff, targetCardId, count }])
 }
 
 /** Total tickets across every bucket — what the UI shows as a single number. */
@@ -131,16 +182,45 @@ export interface SelectorSpendResult {
 }
 
 /**
- * Spend up to `wanted` tickets on a card first seen at `firstJpDate`.
+ * Can this bucket's tickets pay for a copy on a banner?
  *
- * Walks buckets weakest-first (see the module note) and takes only from those
- * that qualify. Returns however many it could actually cover — the caller
- * decides what an unfunded remainder means.
+ * An UNPICKED bucket keeps the original rule: it only has to reach one card on
+ * the banner, so it is dated against the oldest selectable featured card.
+ *
+ * A PICKED bucket qualifies only when the banner features its card. The cutoff
+ * is then re-checked against THAT card's own release date even though the
+ * picker already checked it when the pick was saved: a cutoff or a release date
+ * can be edited in the admin afterwards, and claiming a selector covers a card
+ * it cannot is the worse failure (see `isCardEligible`).
+ */
+function bucketQualifies(
+	bucket: SelectorTicketBucket,
+	oldestFeaturedJpDate: string | null | undefined,
+	selectableFeatured: SelectableFeaturedCard[]
+): boolean {
+	if (bucket.targetCardId === null) {
+		return isCardEligible(oldestFeaturedJpDate, bucket.jpCutoff)
+	}
+	const picked = selectableFeatured.find(
+		(card) => card.id === bucket.targetCardId
+	)
+	return !!picked && isCardEligible(picked.first_jp_date, bucket.jpCutoff)
+}
+
+/**
+ * Spend up to `wanted` tickets on a banner whose oldest selectable featured
+ * card was first seen at `oldestFeaturedJpDate`, and whose selectable featured
+ * cards are `selectableFeatured` (what a picked ticket is matched against).
+ *
+ * Walks buckets picked-first then weakest-first (see `sortBuckets`) and takes
+ * only from those that qualify. Returns however many it could actually cover —
+ * the caller decides what an unfunded remainder means.
  */
 export function spendSelectorTickets(
 	buckets: SelectorTicketBucket[],
 	wanted: number,
-	firstJpDate: string | null | undefined
+	oldestFeaturedJpDate: string | null | undefined,
+	selectableFeatured: SelectableFeaturedCard[] = []
 ): SelectorSpendResult {
 	if (wanted <= 0) return { buckets, spent: 0 }
 
@@ -148,7 +228,10 @@ export function spendSelectorTickets(
 	const next: SelectorTicketBucket[] = []
 
 	for (const bucket of sortBuckets(buckets)) {
-		if (remaining > 0 && isCardEligible(firstJpDate, bucket.jpCutoff)) {
+		if (
+			remaining > 0 &&
+			bucketQualifies(bucket, oldestFeaturedJpDate, selectableFeatured)
+		) {
 			const taken = Math.min(bucket.count, remaining)
 			remaining -= taken
 			if (bucket.count - taken > 0) {

@@ -47,6 +47,13 @@ export interface BannerResources {
 	usdSpent: number
 	/** Which resources paid for this banner's reserved copies. */
 	reservedFunding: ReservedFunding
+	/**
+	 * Purchased selectors of THIS ROW'S kind (uma or support) that have no card
+	 * picked on the Selectors page yet. Such a ticket pays for nothing, so it is
+	 * never in the pools above — this count exists only so the row can explain
+	 * an unfunded reserved copy. Always 0 on a step-up row, which reserves none.
+	 */
+	unpickedSelectorTickets: number
 
 	// ── Step-up rows only ──
 	// Present only when the row targets a BannerStepUp. Optional rather than
@@ -88,4 +95,5 @@ export const EMPTY_BANNER_RESOURCES: BannerResources = Object.freeze({
 	ssrShards: 0,
 	usdSpent: 0,
 	reservedFunding: Object.freeze({ selectors: 0, crystals: 0, unfunded: 0 }),
+	unpickedSelectorTickets: 0,
 })

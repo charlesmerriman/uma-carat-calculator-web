@@ -135,6 +135,17 @@ describe('toBannerPayload', () => {
 		])
 	})
 
+	it("carries a row's note through, so every save path sends it", () => {
+		const local: UserPlannedBanner = {
+			tempId: 5,
+			number_of_pulls: 20, reserved_copies: 0,
+			note: 'skip if the selector covers her',
+			banner_uma: umaBanner,
+		}
+
+		expect(toBannerPayload([local])[0].note).toBe('skip if the selector covers her')
+	})
+
 	it('keeps id (and user) on saved banners so the PATCH preserves them', () => {
 		const saved: UserPlannedBanner = {
 			id: 42,

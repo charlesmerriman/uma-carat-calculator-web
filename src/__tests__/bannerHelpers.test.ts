@@ -596,11 +596,11 @@ describe('allocateReservedCopies', () => {
       reservedCopies: 2,
       selectorsBarred: true,
       oldestFeaturedJpDate: null,
-      umaSelectorTickets: [{ jpCutoff: null, count: 3 }],
+      umaSelectorTickets: [{ jpCutoff: null, targetCardId: null, count: 3 }],
     })
     expect(result.funding).toEqual({ selectors: 0, crystals: 0, unfunded: 2 })
     // The tickets are untouched — unspendable here, still spendable elsewhere.
-    expect(result.umaSelectorTickets).toEqual([{ jpCutoff: null, count: 3 }])
+    expect(result.umaSelectorTickets).toEqual([{ jpCutoff: null, targetCardId: null, count: 3 }])
   })
 
   it('still lets crystals cover a barred banner', () => {
@@ -609,7 +609,7 @@ describe('allocateReservedCopies', () => {
       ...base,
       reservedCopies: 2,
       selectorsBarred: true,
-      supportSelectorTickets: [{ jpCutoff: null, count: 3 }],
+      supportSelectorTickets: [{ jpCutoff: null, targetCardId: null, count: 3 }],
       ssrCrystals: 5,
     })
     expect(result.funding).toEqual({ selectors: 0, crystals: 2, unfunded: 0 })
@@ -626,7 +626,7 @@ describe('allocateReservedCopies', () => {
     const result = allocateReservedCopies({
       ...base,
       reservedCopies: 2,
-      supportSelectorTickets: [{ jpCutoff: null, count: 3 }],
+      supportSelectorTickets: [{ jpCutoff: null, targetCardId: null, count: 3 }],
       ssrCrystals: 5,
     })
     expect(result.funding).toEqual({ selectors: 2, crystals: 0, unfunded: 0 })
@@ -638,14 +638,14 @@ describe('allocateReservedCopies', () => {
       ...base,
       reservedCopies: 2,
       oldestFeaturedJpDate: NEW,
-      supportSelectorTickets: [{ jpCutoff: '2024-01-31', count: 3 }],
+      supportSelectorTickets: [{ jpCutoff: '2024-01-31', targetCardId: null, count: 3 }],
       ssrCrystals: 5,
     })
     expect(result.funding).toEqual({ selectors: 0, crystals: 2, unfunded: 0 })
     expect(result.ssrCrystals).toBe(3)
     // The unusable selectors are untouched.
     expect(result.supportSelectorTickets).toEqual([
-      { jpCutoff: '2024-01-31', count: 3 },
+      { jpCutoff: '2024-01-31', targetCardId: null, count: 3 },
     ])
   })
 
@@ -653,7 +653,7 @@ describe('allocateReservedCopies', () => {
     const result = allocateReservedCopies({
       ...base,
       reservedCopies: 3,
-      supportSelectorTickets: [{ jpCutoff: null, count: 1 }],
+      supportSelectorTickets: [{ jpCutoff: null, targetCardId: null, count: 1 }],
       ssrCrystals: 5,
     })
     expect(result.funding).toEqual({ selectors: 1, crystals: 2, unfunded: 0 })
@@ -675,12 +675,12 @@ describe('allocateReservedCopies', () => {
       ...base,
       isUmaBanner: true,
       reservedCopies: 1,
-      umaSelectorTickets: [{ jpCutoff: null, count: 2 }],
-      supportSelectorTickets: [{ jpCutoff: null, count: 2 }],
+      umaSelectorTickets: [{ jpCutoff: null, targetCardId: null, count: 2 }],
+      supportSelectorTickets: [{ jpCutoff: null, targetCardId: null, count: 2 }],
     })
     expect(result.funding.selectors).toBe(1)
-    expect(result.umaSelectorTickets).toEqual([{ jpCutoff: null, count: 1 }])
-    expect(result.supportSelectorTickets).toEqual([{ jpCutoff: null, count: 2 }])
+    expect(result.umaSelectorTickets).toEqual([{ jpCutoff: null, targetCardId: null, count: 1 }])
+    expect(result.supportSelectorTickets).toEqual([{ jpCutoff: null, targetCardId: null, count: 2 }])
   })
 
   it('reports the shortfall rather than clamping', () => {
@@ -697,9 +697,44 @@ describe('allocateReservedCopies', () => {
       ...base,
       reservedCopies: 1,
       oldestFeaturedJpDate: null,
-      supportSelectorTickets: [{ jpCutoff: '2024-01-31', count: 2 }],
+      supportSelectorTickets: [{ jpCutoff: '2024-01-31', targetCardId: null, count: 2 }],
     })
     expect(result.funding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('lets a picked selector pay only where its card is featured', () => {
+    const picked = [{ jpCutoff: '2024-01-31', targetCardId: 7, count: 1 }]
+
+    const miss = allocateReservedCopies({
+      ...base,
+      isUmaBanner: true,
+      reservedCopies: 1,
+      selectableFeatured: [{ id: 9, first_jp_date: OLD }],
+      umaSelectorTickets: picked,
+    })
+    expect(miss.funding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+    expect(miss.umaSelectorTickets).toEqual(picked)
+
+    const hit = allocateReservedCopies({
+      ...base,
+      isUmaBanner: true,
+      reservedCopies: 1,
+      selectableFeatured: [{ id: 7, first_jp_date: OLD }],
+      umaSelectorTickets: picked,
+    })
+    expect(hit.funding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+    expect(hit.umaSelectorTickets).toEqual([])
+  })
+
+  it('falls back to crystals when a picked support selector misses', () => {
+    const result = allocateReservedCopies({
+      ...base,
+      reservedCopies: 1,
+      selectableFeatured: [{ id: 9, first_jp_date: OLD }],
+      supportSelectorTickets: [{ jpCutoff: null, targetCardId: 7, count: 1 }],
+      ssrCrystals: 1,
+    })
+    expect(result.funding).toEqual({ selectors: 0, crystals: 1, unfunded: 0 })
   })
 
   it('floors a fractional reserve and ignores a negative one', () => {
