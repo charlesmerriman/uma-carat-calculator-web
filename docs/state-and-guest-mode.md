@@ -66,17 +66,25 @@ for why it is never "whichever plan is active".
 ## Plans
 
 A signed-in account holds up to five named pull plans and the calculator shows one at a
-time. **A plan is its banner rows and nothing else.** Stats, toggles, planned purchases and
-step-up selections belong to the account and stay put when the plan changes. The reasoning,
-and why it makes a plan safe to copy between accounts later, is in
-[../../backend/docs/data-model.md](../../backend/docs/data-model.md) ("`Plan`").
+time. **A plan is its banner rows and nothing else, plus at most a pointer to which of the
+owner's stats blocks it reads.** Planned purchases and step-up selections belong to the
+account and stay put when the plan changes. Stats and toggles belong to the account too,
+but a plan with "separate resources" on (`income_profile_id` non-null) reads and saves its
+own copy of them, for people who plan for more than one game account. The reasoning, and
+why it keeps a plan safe to copy between accounts later, is in
+[../../backend/docs/data-model.md](../../backend/docs/data-model.md) ("`Plan`" and
+"`IncomeProfile`").
 
 That split is why the projection engine did not change. `useBannerResources` reads
-`userPlannedBannerData` as it always did; the array now means "the open plan's rows".
+`userPlannedBannerData` and `userStatsData` as it always did; they now mean "the open
+plan's". The client never decides which stats block a plan reads: `GET /plans/<id>` sends
+`user_stats_data` beside the rows, in the same shape either way, and the save path is
+unchanged because `PATCH /calculator-data` already carries the plan id beside the stats.
 
-The provider adds `plans`, `activePlanId`, `isPlanBusy` and four actions (`switchPlan`,
-`createPlan`, `renamePlan`, `deletePlan`). `components/carat-calculator/PlanSwitcher.tsx` is
-the only UI for them and owns no logic of its own.
+The provider adds `plans`, `activePlanId`, `isPlanBusy` and five actions (`switchPlan`,
+`createPlan`, `renamePlan`, `deletePlan`, `setSeparateIncome`).
+`components/carat-calculator/PlanSwitcher.tsx` is the only UI for them and owns no logic of
+its own.
 
 ### Save what is on screen before replacing it
 
@@ -96,14 +104,22 @@ the only copy of an unsaved edit. Every rule below follows from those two facts.
 - **Every action flushes first.** `flushPendingSave()` runs `saveNow()` when a save is
   pending and reports whether it landed (`lastSaveOkRef`). On a failure the action stops
   and the user stays where they were, unsaved edit still on screen.
-- **Rows from the server are not an edit.** `applyPlan` sets `suppressAutoSaveRef` so the
-  auto-save effect skips the change it is about to cause. `activePlanId` is in that
+- **Rows and stats from the server are not an edit.** `applyPlan` sets the plan id, the
+  rows and (when the response carries them) the stats in one tick, with
+  `suppressAutoSaveRef` set so the auto-save effect skips the change it is about to cause.
+  An API from before separate resources sends no stats and the ones on screen are kept. `activePlanId` is in that
   effect's deps so the effect is guaranteed to run and clear the flag; otherwise a flag
   left set would swallow the user's next real edit.
 - **Staged rows are cleared on a switch.** They were being composed for the plan just left.
 - **Deleting the open plan drops its pending save** (`cancelTimer` on `useAutoSave`)
   instead of firing it at an id that no longer exists. Deleting a *different* plan flushes
   as usual, because that edit is still wanted.
+- **Separate resources flushes first, for the STATS.** Turning it on makes the server copy
+  the stats the plan reads today, from the database. A stats edit still sitting in the
+  five-second window would be missing from that copy, so `setSeparateIncome` runs
+  `flushPendingSave()` before the PATCH, then refetches the plan through `planFetch` and
+  `applyPlan`, the same path a switch uses. Turning it off discards the plan's own copy, so
+  the switcher confirms that direction the way it confirms Delete.
 - **Create makes the plan, then opens it.** The server creates plans inactive; `createPlan`
   activates it only after the flush, and a copy is taken after the flush so it includes the
   edit made two seconds ago.

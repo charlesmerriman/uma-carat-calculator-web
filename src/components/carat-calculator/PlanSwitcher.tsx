@@ -1,14 +1,23 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { FormEvent, MouseEvent } from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronDown, Copy, Ellipsis, Pencil, Plus, Trash2 } from "lucide-react"
+import { Check, ChevronDown, Copy, Ellipsis, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
 import { NAV_POPOVER } from "../navbar/navStyles"
 
 /**
  * The PLANS bar above the banner sheet: one tab per plan, a "New" button, and
- * a "..." menu for the open plan (Duplicate / Rename / Delete).
+ * a "..." menu for the open plan (Duplicate / Rename / Separate resources /
+ * Delete).
+ *
+ * SEPARATE RESOURCES. A plan normally reads the account's carats, ranks and
+ * income settings. Someone who plays two game accounts can give a plan its
+ * own copy instead: a checkable menu item turns it on (the server seeds the
+ * copy from the numbers on screen) and off (which discards that copy, so
+ * turning it off asks first, like Delete does). A tab whose plan has its own
+ * resources carries a small wallet glyph, because otherwise nothing on screen
+ * says which numbers the resources form above is editing.
  *
  * WHY TABS. The site grew out of a spreadsheet, and sheet tabs are how a
  * spreadsheet says "several versions of this". With the cap at five they
@@ -65,7 +74,7 @@ const EDGE = 8
  *             list would only repeat the tabs.
  *   the rest are the forms either menu leads to.
  */
-type Face = "list" | "actions" | "new" | "duplicate" | "rename" | "delete"
+type Face = "list" | "actions" | "new" | "duplicate" | "rename" | "delete" | "resourcesOff"
 type NameFormFace = "new" | "duplicate" | "rename"
 
 const isNameForm = (face: Face): face is NameFormFace =>
@@ -112,7 +121,8 @@ export const PlanSwitcher = () => {
 		switchPlan,
 		createPlan,
 		renamePlan,
-		deletePlan
+		deletePlan,
+		setSeparateIncome
 	} = useCalculatorData()
 
 	const [open, setOpen] = useState(false)
@@ -211,6 +221,10 @@ export const PlanSwitcher = () => {
 
 	const atCap = plans.length >= PLAN_CAP
 	const isOnlyPlan = plans.length <= 1
+	// `!= null` on purpose: an API older than this feature omits the key, and
+	// undefined and null both mean "reads the account's stats".
+	const hasOwnResources = activePlan.income_profile_id != null
+	const ownResourcesTitle = "This plan has its own resources and income settings"
 
 	const draftFor = (kind: NameFormFace): string =>
 		kind === "rename"
@@ -267,6 +281,10 @@ export const PlanSwitcher = () => {
 		if (await deletePlan(activePlan.id)) close()
 	}
 
+	const handleSeparateIncome = async (on: boolean): Promise<void> => {
+		if (await setSeparateIncome(activePlan.id, on)) close()
+	}
+
 	// The three actions on the open plan, shared by both menus.
 	const planActions = (
 		<>
@@ -290,6 +308,25 @@ export const PlanSwitcher = () => {
 				<Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
 				Rename
 			</button>
+			{/* A checkbox item, not a toggle in the sheet: it is a property of the
+			    plan, set rarely, and belongs with the plan's other actions. Turning
+			    it OFF discards the plan's own numbers, so that direction confirms. */}
+			<button
+				type="button"
+				role="menuitemcheckbox"
+				aria-checked={hasOwnResources}
+				disabled={isPlanBusy}
+				onClick={() =>
+					hasOwnResources ? setFace("resourcesOff") : void handleSeparateIncome(true)
+				}
+				className={MENU_ITEM}
+			>
+				<Wallet className="h-4 w-4 shrink-0" aria-hidden="true" />
+				<span className="flex-1">Use separate resources for this plan</span>
+				{hasOwnResources && (
+					<Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+				)}
+			</button>
 			<button
 				type="button"
 				role="menuitem"
@@ -304,8 +341,9 @@ export const PlanSwitcher = () => {
 			    carry, which is the first thing people ask. */}
 			<p className="px-2.5 pb-1 pt-2 text-xs leading-snug text-gray-400">
 				{atCap ? `${CAP_MESSAGE} ` : ""}
-				Each plan has its own banners. Your carats, ranks and purchases are
-				shared by all of them.
+				{hasOwnResources
+					? "This plan keeps its own carats, ranks and income settings. Purchases are shared by every plan."
+					: "Each plan has its own banners. Your carats, ranks and purchases are shared by all of them, unless a plan uses separate resources."}
 			</p>
 		</>
 	)
@@ -338,10 +376,22 @@ export const PlanSwitcher = () => {
 							// clicked) so it never greys out under the person's cursor.
 							disabled={isPlanBusy && !isOpenPlan}
 							onClick={() => void handleSwitch(plan.id)}
-							// The full name, for a tab whose label has been truncated.
-							title={plan.name}
+							// The full name, for a tab whose label has been truncated, and
+							// what the wallet glyph means when there is one.
+							title={
+								plan.income_profile_id != null
+									? `${plan.name}. ${ownResourcesTitle}`
+									: plan.name
+							}
 							className={`${TAB_BASE} ${isOpenPlan ? TAB_OPEN : TAB_CLOSED}`}
 						>
+							{plan.income_profile_id != null && (
+								<Wallet
+									data-testid="own-resources-marker"
+									className="mr-1.5 h-3.5 w-3.5 shrink-0 text-brand"
+									aria-hidden="true"
+								/>
+							)}
 							<span className="truncate">{plan.name}</span>
 						</button>
 					)
@@ -362,7 +412,7 @@ export const PlanSwitcher = () => {
 				type="button"
 				aria-haspopup="menu"
 				aria-label={`Options for ${activePlan.name}`}
-				title="Duplicate, rename or delete this plan"
+				title="Duplicate, rename, delete this plan, or give it separate resources"
 				onClick={(e) => openFrom(e, "actions")}
 				className={`${BAR_BUTTON} hidden w-8 self-center @min-[40rem]:flex`}
 			>
@@ -412,6 +462,12 @@ export const PlanSwitcher = () => {
 										)}
 									</span>
 									<span className="truncate">{plan.name}</span>
+									{plan.income_profile_id != null && (
+										<Wallet
+											className="ml-auto h-3.5 w-3.5 shrink-0 text-brand"
+											aria-hidden="true"
+										/>
+									)}
 								</button>
 							))}
 
@@ -465,6 +521,32 @@ export const PlanSwitcher = () => {
 								</button>
 							</div>
 						</form>
+					)}
+
+					{face === "resourcesOff" && (
+						<div className="p-2">
+							<p className="text-sm text-gray-200">
+								Use your account's resources for{" "}
+								<span className="font-semibold">{activePlan.name}</span> again?
+							</p>
+							<p className="mt-1 text-xs leading-snug text-gray-400">
+								The carats, ranks and income settings this plan kept for itself
+								are discarded. Your account's own numbers aren't touched.
+							</p>
+							<div className="mt-3 flex justify-end gap-2">
+								<button type="button" onClick={goBack} className={BUTTON_GHOST}>
+									Back
+								</button>
+								<button
+									type="button"
+									disabled={isPlanBusy}
+									onClick={() => void handleSeparateIncome(false)}
+									className={BUTTON_DANGER}
+								>
+									Use account resources
+								</button>
+							</div>
+						</div>
 					)}
 
 					{face === "delete" && (

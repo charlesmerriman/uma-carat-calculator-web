@@ -30,6 +30,7 @@ import {
 	planCreate,
 	planDelete,
 	planFetch,
+	planSetSeparateIncome,
 } from '../services/planFetchCalls'
 import { setAuthToken } from '../services/authToken'
 import type {
@@ -38,6 +39,7 @@ import type {
 	CalculatorData,
 	Plan,
 	UserPlannedBanner,
+	UserStats,
 } from '../types'
 
 // Partial mock: the payload converters (toBannerPayload and friends) stay real,
@@ -53,6 +55,7 @@ vi.mock('../services/planFetchCalls', () => ({
 	planDelete: vi.fn(),
 	planFetch: vi.fn(),
 	planRename: vi.fn(),
+	planSetSeparateIncome: vi.fn(),
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -62,6 +65,7 @@ const mockedActivate = vi.mocked(planActivate)
 const mockedCreate = vi.mocked(planCreate)
 const mockedDelete = vi.mocked(planDelete)
 const mockedPlanFetch = vi.mocked(planFetch)
+const mockedSetSeparateIncome = vi.mocked(planSetSeparateIncome)
 
 const json = (body: unknown, status = 200): Response =>
 	({ ok: status >= 200 && status < 300, status, json: async () => body }) as unknown as Response
@@ -84,6 +88,9 @@ const row = (id: number, bannerId: number, pulls: number, plan: number): UserPla
 
 const ROWS_A = [row(10, 100, 50, 1)]
 const ROWS_B = [row(20, 200, 75, 2)]
+
+/** Only the field the tests look at; the provider stores the object whole. */
+const STATS_B = { current_carat: 4321 } as UserStats
 
 const calculatorData = (): CalculatorData =>
 	({
@@ -154,7 +161,9 @@ beforeEach(() => {
 	mockedInitialFetch.mockResolvedValue(json(calculatorData()))
 	mockedPatch.mockResolvedValue(json({ message: 'ok' }))
 	mockedActivate.mockResolvedValue(json({ ...PLAN_B, is_active: true }))
-	mockedPlanFetch.mockResolvedValue(json({ plan: PLAN_B, user_planned_banner_data: ROWS_B }))
+	mockedPlanFetch.mockResolvedValue(
+		json({ plan: PLAN_B, user_stats_data: STATS_B, user_planned_banner_data: ROWS_B })
+	)
 })
 
 describe('CalculatorProvider plans', () => {
@@ -318,5 +327,76 @@ describe('CalculatorProvider plans', () => {
 		expect(mockedPlanFetch).not.toHaveBeenCalled()
 		expect(ctx().activePlanId).toBe(PLAN_A.id)
 		expect(ctx().plans.map((plan) => plan.id)).toEqual([PLAN_A.id])
+	})
+
+	describe('separate resources', () => {
+		it('a switch brings the plan\'s stats with its rows', async () => {
+			await renderLoaded()
+			expect(ctx().userStatsData?.current_carat).toBe(0)
+
+			await act(async () => {
+				await ctx().switchPlan(PLAN_B.id)
+			})
+
+			expect(ctx().userStatsData?.current_carat).toBe(4321)
+			// Stats from the server are not an edit either.
+			expect(ctx().timerIsGoing).toBe(false)
+		})
+
+		it('keeps the stats on screen when an older API sends none', async () => {
+			mockedPlanFetch.mockResolvedValue(json({ plan: PLAN_B, user_planned_banner_data: ROWS_B }))
+			await renderLoaded()
+
+			await act(async () => {
+				await ctx().switchPlan(PLAN_B.id)
+			})
+
+			expect(ctx().userStatsData?.current_carat).toBe(0)
+			expect(ctx().userPlannedBannerData).toEqual(ROWS_B)
+		})
+
+		it('flushes the pending edit BEFORE turning it on, then shows the new numbers', async () => {
+			await renderLoaded()
+			await editOpenPlan(999)
+			mockedSetSeparateIncome.mockResolvedValue(json({ ...PLAN_A, income_profile_id: 7 }))
+			mockedPlanFetch.mockResolvedValue(
+				json({
+					plan: { ...PLAN_A, income_profile_id: 7 },
+					user_stats_data: { current_carat: 555 },
+					user_planned_banner_data: ROWS_A,
+				})
+			)
+
+			let worked = false
+			await act(async () => {
+				worked = await ctx().setSeparateIncome(PLAN_A.id, true)
+			})
+
+			expect(worked).toBe(true)
+			// The save went out first: the server seeds the copy from the database.
+			expect(mockedPatch).toHaveBeenCalledTimes(1)
+			expect(mockedPatch.mock.invocationCallOrder[0]).toBeLessThan(
+				mockedSetSeparateIncome.mock.invocationCallOrder[0]
+			)
+			expect(mockedSetSeparateIncome).toHaveBeenCalledWith(PLAN_A.id, true)
+			expect(ctx().plans.find((plan) => plan.id === PLAN_A.id)?.income_profile_id).toBe(7)
+			expect(ctx().userStatsData?.current_carat).toBe(555)
+			expect(ctx().timerIsGoing).toBe(false)
+		})
+
+		it('changes nothing when the save before it fails', async () => {
+			await renderLoaded()
+			await editOpenPlan(999)
+			mockedPatch.mockResolvedValue(json({ error: 'nope' }, 500))
+
+			let worked = true
+			await act(async () => {
+				worked = await ctx().setSeparateIncome(PLAN_A.id, true)
+			})
+
+			expect(worked).toBe(false)
+			expect(mockedSetSeparateIncome).not.toHaveBeenCalled()
+			expect(ctx().userStatsData?.current_carat).toBe(0)
+		})
 	})
 })
