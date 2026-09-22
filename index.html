@@ -34,11 +34,45 @@
       the GA stream settings), not by code here. The G- measurement ID is public by
       design, like the AdSense ca-pub- ID below. The privacy policy's "Traffic
       Measurement" section describes this tag; keep the two in step.
+
+      CONSENT MODE v2. The 'consent' 'default' calls MUST come before 'config':
+      gtag reads the defaults when it initialises, and a default set afterwards
+      is ignored for that page load (consentMode.test.ts pins the order). In the
+      EEA, the UK and Switzerland every storage type starts DENIED, so for those
+      visitors GA writes no cookie and sends only cookieless pings until
+      something grants consent. Everywhere else the defaults are granted and
+      behaviour is unchanged. Nothing on the site grants consent yet: that is
+      the job of a consent management platform, which arrives with the ad
+      network (Google's and Raptive's CMPs both speak Consent Mode and flip
+      these flags themselves), so this block is the network-agnostic half of
+      EU compliance. wait_for_update gives a CMP that loads later 500ms to set
+      the real value before the first hit goes out.
+
+      Google resolves the visitor's region server-side from the request;
+      nothing here reads the visitor's location.
     -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-2J27T3ZME9"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        'ad_storage': 'granted',
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted',
+        'analytics_storage': 'granted'
+      });
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage': 'denied',
+        'wait_for_update': 500,
+        'region': [
+          'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR',
+          'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK',
+          'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'
+        ]
+      });
       gtag('js', new Date());
 
       gtag('config', 'G-2J27T3ZME9');

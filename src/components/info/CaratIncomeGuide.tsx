@@ -91,9 +91,9 @@ export const CaratIncomeGuide: React.FC = () => {
 						<Link to="/faq" className={link}>
 							FAQ
 						</Link>
-						. If it is not, send it through the{" "}
+						. If it is not, ask on{" "}
 						<Link to="/feedback" className={link}>
-							feedback form
+							Discord
 						</Link>
 						.
 					</p>

@@ -80,7 +80,7 @@ const steps = [
 const infoLinks = [
 	{ to: "/changelog", icon: ScrollText, label: "Changelog", caption: "View updates" },
 	{ to: "/faq", icon: HelpCircle, label: "FAQ", caption: "Common questions" },
-	{ to: "/feedback", icon: MessageSquare, label: "Feedback", caption: "Report a bug" },
+	{ to: "/feedback", icon: MessageSquare, label: "Feedback", caption: "Report a bug on Discord" },
 ]
 
 // The four quick-link tiles under the video share one shape: icon chip, bold
