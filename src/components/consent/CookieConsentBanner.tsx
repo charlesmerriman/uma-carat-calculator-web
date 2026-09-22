@@ -59,8 +59,8 @@ export const CookieConsentBanner: React.FC = () => {
 			</div>
 			<p className="mt-2 leading-relaxed">
 				This site uses Google Analytics to see how it is used, and may show ads in future.
-				Both set cookies only if you allow it. Signing in and your settings use no cookies
-				either way. See the{" "}
+				Both set cookies only if you allow it. Signing in and your settings use no cookies.
+				See the{" "}
 				<Link to="/privacy-policy" className="text-brand transition hover:text-brand/75">
 					privacy policy
 				</Link>
