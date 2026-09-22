@@ -7,6 +7,7 @@
 // and for the denied-by-default regions.
 import { describe, expect, it } from "vitest"
 import html from "../../index.html?raw"
+import { COOKIE_CONSENT_STORAGE_KEY } from "../services/consentStore"
 
 // The inline gtag script is the one that declares dataLayer; the first inline
 // <script> is the theme script (themeScript.test.ts owns that one).
@@ -50,6 +51,17 @@ describe("Consent Mode defaults in index.html", () => {
 		for (const region of DENIED_REGIONS) {
 			expect(regional).toContain(`'${region}'`)
 		}
+	})
+
+	it("replays a stored choice as an update, after the defaults and before config", () => {
+		// The key is duplicated from consentStore because the inline script runs
+		// before any module; a rename in one place must fail here.
+		expect(gtagScript).toContain(`"${COOKIE_CONSENT_STORAGE_KEY}"`)
+		const lastDefault = gtagScript.lastIndexOf("gtag('consent', 'default'")
+		const update = gtagScript.indexOf("gtag('consent', 'update'")
+		const config = gtagScript.indexOf("gtag('config'")
+		expect(update).toBeGreaterThan(lastDefault)
+		expect(update).toBeLessThan(config)
 	})
 
 	it("grants every storage type by default elsewhere", () => {

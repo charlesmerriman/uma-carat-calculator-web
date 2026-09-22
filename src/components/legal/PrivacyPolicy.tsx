@@ -213,8 +213,9 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						If you are in the EU, the EEA, the UK or Switzerland, Google Analytics starts
 						in a no-cookie mode: nothing is stored on your device and nothing that
-						identifies you is sent until you agree. Anywhere else, you can stop it by
-						installing the{" "}
+						identifies you is sent until you accept the cookie prompt. Anywhere else it
+						starts on, and Reject on the same prompt turns it off. You can also block it
+						everywhere by installing the{" "}
 						<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer" className={link}>
 							Google Analytics opt-out browser add-on
 						</a>
@@ -264,19 +265,18 @@ export const PrivacyPolicy: React.FC = () => {
 					</p>
 					<p className={paragraph}>
 						Google Analytics and our advertising partner are the only other services that
-						set cookies, and in the EU, the EEA, the UK and Switzerland they do so only
-						after you agree. The prompt that asks arrives together with the ads; until
-						then, neither service sets a cookie in those regions at all. Once it is there,
-						your choice is remembered on your device so you are not asked again, and you
-						can change it at any time. You can also clear or block cookies in your browser
-						settings; the calculator works without them.
+						set cookies. On your first visit a prompt asks whether to allow them, with
+						Accept and Reject side by side. In the EU, the EEA, the UK and Switzerland
+						neither service sets a cookie until you accept; elsewhere Analytics starts on,
+						and Reject turns it off. Your choice is saved on your device so you are not
+						asked again, and &quot;Cookie settings&quot; in the footer reopens the prompt
+						whenever you want to change it. You can also clear or block cookies in your
+						browser settings; the calculator works without them.
 					</p>
 					<p className={paragraph}>
-						The video on the home page is a YouTube video, but it does not load until you
-						press play. Until then nothing on that page contacts YouTube. Once you do, the
-						player runs in YouTube&apos;s privacy-enhanced mode, which does not set
-						advertising cookies before playback, and anything it stores from then on is
-						governed by Google&apos;s privacy policy.
+						The video on the home page is embedded in YouTube&apos;s privacy-enhanced mode,
+						which does not set advertising cookies unless you play it. Anything the player
+						stores from then on is governed by Google&apos;s privacy policy.
 					</p>
 
 					<h2 className={heading}>Feedback and Bug Reports</h2>
@@ -363,8 +363,8 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							<strong>Withdraw consent</strong>: for Analytics and advertising cookies, at
-							any time, through the same prompt that asked for it. Withdrawing does not
-							undo processing that already happened.
+							any time, through &quot;Cookie settings&quot; in the footer. Withdrawing does
+							not undo processing that already happened.
 						</li>
 						<li>
 							<strong>Complain</strong>: to your national data protection authority if you

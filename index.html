@@ -73,6 +73,21 @@
           'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'
         ]
       });
+      // A choice the visitor already made (the site's cookie prompt writes it;
+      // see src/services/consentStore.ts, which owns the key). Pushed as an
+      // 'update' so it overrides the regional defaults above in either
+      // direction, and before 'config' so the first page_view respects it.
+      try {
+        var consent = localStorage.getItem("uma-planner-cookie-consent");
+        if (consent === "granted" || consent === "denied") {
+          gtag('consent', 'update', {
+            'ad_storage': consent,
+            'ad_user_data': consent,
+            'ad_personalization': consent,
+            'analytics_storage': consent
+          });
+        }
+      } catch (e) {}
       gtag('js', new Date());
 
       gtag('config', 'G-2J27T3ZME9');
