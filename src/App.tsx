@@ -9,6 +9,7 @@ import { AccountPage } from "./components/account/AccountPage.js"
 import { CalculatorProvider } from "./services/CalculatorProvider.js"
 import { ErrorBoundary } from "./components/ErrorBoundary.js"
 import { ApiSourceBadge } from "./components/ApiSourceBadge.js"
+import { CookieConsentBanner } from "./components/consent/CookieConsentBanner.js"
 import { ThemeProvider } from "./services/ThemeProvider.js"
 import { AuthProvider } from "./services/AuthProvider.js"
 import { useTheme } from "./services/ThemeContext.js"
@@ -51,6 +52,9 @@ function App() {
 		<ThemeProvider>
 			<ErrorBoundary>
 				<ThemedToaster />
+				{/* On every route, the calculator included: a visitor who lands on
+				    /app straight from a link has to be asked too. */}
+				<CookieConsentBanner />
 				{/* Dev-only, and only when VITE_API_URL points somewhere remote.
 				    Compiles away entirely in production builds. */}
 				<ApiSourceBadge />

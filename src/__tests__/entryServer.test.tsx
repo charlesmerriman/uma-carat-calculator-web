@@ -21,7 +21,7 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	"/terms": { title: `Terms of Service | ${SITE_NAME}`, phrase: "Terms of Service" },
 	"/privacy-policy": { title: `Privacy Policy | ${SITE_NAME}`, phrase: "Privacy Policy" },
 	"/changelog": { title: `Changelog | ${SITE_NAME}`, phrase: "Changelog" },
-	"/feedback": { title: `Feedback | ${SITE_NAME}`, phrase: "<form" },
+	"/feedback": { title: `Feedback | ${SITE_NAME}`, phrase: "Open our Discord" },
 	"/guides/carat-income": { title: `Carat Income Guide | ${SITE_NAME}`, phrase: "running balance" },
 	// The tool itself renders behind the data gate, so a build-time render of these
 	// three is the app shell: navbar, the loading state, footer. The route identity

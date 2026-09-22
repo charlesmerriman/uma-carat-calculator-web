@@ -80,7 +80,7 @@ const steps = [
 const infoLinks = [
 	{ to: "/changelog", icon: ScrollText, label: "Changelog", caption: "View updates" },
 	{ to: "/faq", icon: HelpCircle, label: "FAQ", caption: "Common questions" },
-	{ to: "/feedback", icon: MessageSquare, label: "Feedback", caption: "Report a bug" },
+	{ to: "/feedback", icon: MessageSquare, label: "Feedback", caption: "Report a bug on Discord" },
 ]
 
 // The four quick-link tiles under the video share one shape: icon chip, bold
@@ -208,7 +208,11 @@ export const HomePage = () => {
 									<ArrowUpRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 								</a>
 								<div className="aspect-video bg-gray-900">
-									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/${YOUTUBE_FEATURED_VIDEO_ID}`} title="Henry Handsome Derby's video about this site" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+									{/* youtube-nocookie.com is YouTube's privacy-enhanced mode: the
+									    player loads, but sets no advertising cookies before the
+									    visitor presses play. Plain youtube.com/embed set them on
+									    page load for everyone. */}
+									<iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_FEATURED_VIDEO_ID}`} title="Henry Handsome Derby's video about this site" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
 								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

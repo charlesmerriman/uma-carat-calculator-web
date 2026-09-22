@@ -690,9 +690,8 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				</h2>
 				<p className="mt-1 text-sm leading-relaxed text-gray-400">
 					This permanently removes your saved plan, your connected sign-in methods, your
-					display name and your oshis. It can't be undone. Feedback you've sent stays, with no
-					link to you. A Patreon pledge is unaffected, since it belongs to your Patreon
-					account, not to this one.
+					display name and your oshis. It can't be undone. A Patreon pledge is unaffected,
+					since it belongs to your Patreon account, not to this one.
 				</p>
 				<form
 					className="mt-4 flex flex-wrap items-end gap-3"
