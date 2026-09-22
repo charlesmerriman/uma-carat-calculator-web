@@ -28,8 +28,8 @@ export const Feedback: React.FC = () => {
 					<h1 className="text-3xl font-bold text-gray-100">Feedback</h1>
 					<p className="mt-2 leading-relaxed text-gray-400">
 						Found a bug, spotted wrong data, or thought of something the calculator should
-						do? Tell us on Discord. That is where reports get read, and unlike the old form,
-						you can get a reply.
+						do? Tell us on Discord. That is where reports get read, and where you can get
+						a reply.
 					</p>
 
 					<div className="mt-8 rounded-xl border border-gray-700 bg-gray-800 p-6 shadow-md">

@@ -290,9 +290,7 @@ export const PrivacyPolicy: React.FC = () => {
 						<a href="https://discord.com/privacy" target="_blank" rel="noopener noreferrer" className={link}>
 							its own privacy policy
 						</a>
-						, and the Site never receives or stores it. Messages sent through the form the
-						Site had before September 22, 2026 were stored without any contact details or
-						IP address; they are kept only until they have been acted on, then deleted.
+						, and the Site never receives or stores it.
 					</p>
 
 					<h2 className={heading}>How Long We Keep It</h2>
