@@ -87,10 +87,6 @@ export const Terms: React.FC = () => {
 							need the data in bulk, ask.
 						</li>
 						<li>
-							Submit unlawful, abusive, or deliberately misleading content through the
-							feedback form, or use it to send anything other than feedback.
-						</li>
-						<li>
 							Reproduce the Site&apos;s content and present it as official, or in a way
 							that implies an affiliation or endorsement that does not exist.
 						</li>
