@@ -26,6 +26,7 @@ import { useSiteContent } from "../../services/SiteContentContext"
 import { homepageFaqItems } from "../../services/siteContent"
 import { firstParagraph } from "../../utils/guideMarkdown"
 import { MarkdownContent } from "../info/MarkdownContent"
+import { YouTubeFacade } from "./YouTubeFacade"
 import type { ChangelogEntry } from "../../types"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 import { useBackToTop } from "../../hooks/useBackToTop"
@@ -35,6 +36,9 @@ const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@HenryHandsomeDerby"
 // playlist: the embed used to follow whatever he posted last, which was often
 // unrelated to the calculator.
 const YOUTUBE_FEATURED_VIDEO_ID = "vQJ0FLK0CKg"
+// Served from public/, so the homepage makes no request to YouTube until the
+// visitor presses play. Replace the file together with the video id above.
+const YOUTUBE_FEATURED_THUMBNAIL = "/featured-video.jpg"
 // The direct document URL, deliberately NOT umacaratcalculator.com. That domain
 // currently 301s here, but it is also the obvious candidate to repoint at this
 // site — at which point a vanity link would quietly become a self-link.
@@ -208,7 +212,14 @@ export const HomePage = () => {
 									<ArrowUpRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 								</a>
 								<div className="aspect-video bg-gray-900">
-									<iframe className="h-full w-full" src={`https://www.youtube.com/embed/${YOUTUBE_FEATURED_VIDEO_ID}`} title="Henry Handsome Derby's video about this site" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+									{/* Click-to-play, not a live iframe: a live embed sets YouTube's
+									    cookies for every visitor before they touch anything. See
+									    YouTubeFacade for the why. */}
+									<YouTubeFacade
+										videoId={YOUTUBE_FEATURED_VIDEO_ID}
+										title="Henry Handsome Derby's video about this site"
+										thumbnailSrc={YOUTUBE_FEATURED_THUMBNAIL}
+									/>
 								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

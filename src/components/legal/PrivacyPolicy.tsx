@@ -244,19 +244,39 @@ export const PrivacyPolicy: React.FC = () => {
 
 					<h2 className={heading}>Cookies and Local Storage</h2>
 					<p className={paragraph}>
-						The Site itself sets <strong>no cookies</strong>. It uses your browser&apos;s
-						local storage for two things: a sign-in token, so you stay signed in, and your
-						display preferences, such as the theme you picked. Both are needed to run the
-						Site as you asked for it, and neither is sent anywhere else.
+						The Site&apos;s own code sets <strong>no cookies</strong>. It uses your
+						browser&apos;s local storage for two things: a sign-in token, so you stay
+						signed in, and your display preferences, such as the theme you picked. Both are
+						needed to run the Site as you asked for it, and neither is sent anywhere else.
 					</p>
 					<p className={paragraph}>
-						Google Analytics and our advertising partner are the only services that set
-						cookies, and in the EU, the EEA, the UK and Switzerland they do so only after
-						you agree. The prompt that asks arrives together with the ads; until then,
-						neither service sets a cookie in those regions at all. Once it is there, your
-						choice is remembered on your device so you are not asked again, and you can
-						change it at any time. You can also clear or block cookies in your browser
+						One cookie is set on every visit without asking, because the Site cannot work
+						without it: <code>__cf_bm</code>, from Cloudflare, the network that delivers
+						the Site and protects it from automated abuse. It tells Cloudflare that
+						requests from your browser belong to one person and not a bot. It holds no
+						information about you, cannot be read by our code, and expires 30 minutes
+						after your last request. Cloudflare describes it in its{" "}
+						<a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" className={link}>
+							privacy policy
+						</a>
+						. Site staff who sign in to the admin area also receive a session cookie for
+						that area; it is never set for visitors.
+					</p>
+					<p className={paragraph}>
+						Google Analytics and our advertising partner are the only other services that
+						set cookies, and in the EU, the EEA, the UK and Switzerland they do so only
+						after you agree. The prompt that asks arrives together with the ads; until
+						then, neither service sets a cookie in those regions at all. Once it is there,
+						your choice is remembered on your device so you are not asked again, and you
+						can change it at any time. You can also clear or block cookies in your browser
 						settings; the calculator works without them.
+					</p>
+					<p className={paragraph}>
+						The video on the home page is a YouTube video, but it does not load until you
+						press play. Until then nothing on that page contacts YouTube. Once you do, the
+						player runs in YouTube&apos;s privacy-enhanced mode, which does not set
+						advertising cookies before playback, and anything it stores from then on is
+						governed by Google&apos;s privacy policy.
 					</p>
 
 					<h2 className={heading}>Feedback and Bug Reports</h2>
@@ -289,6 +309,9 @@ export const PrivacyPolicy: React.FC = () => {
 							<strong>Google Analytics data</strong>: at most 14 months, held by Google.
 						</li>
 						<li>
+							<strong>Cloudflare&apos;s <code>__cf_bm</code> cookie</strong>: 30 minutes.
+						</li>
+						<li>
 							<strong>Your cookie choice</strong>: on your device, until you change or
 							clear it.
 						</li>
@@ -297,8 +320,9 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>Where Your Data Is Stored</h2>
 					<p className={paragraph}>
 						The Site&apos;s database is hosted by DigitalOcean in the United States (New
-						York). Google Analytics and Google&apos;s advertising services process data in
-						the United States as well. For visitors in the EU, the EEA, the UK and
+						York), and it is delivered through Cloudflare&apos;s network, which handles each
+						request at the data centre nearest you. Google Analytics and Google&apos;s
+						advertising services process data in the United States as well. For visitors in the EU, the EEA, the UK and
 						Switzerland this is a transfer outside your region. Google is certified under
 						the EU-US Data Privacy Framework, and its UK and Swiss extensions, which the
 						European Commission recognizes as adequate protection. For the database, the

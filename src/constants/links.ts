@@ -8,4 +8,4 @@ export const PATREON_URL = "https://www.patreon.com/cw/UmaCaratCalculator"
  *  received. Discord holds those messages instead, under its own privacy policy.
  *  Must be a permanent invite (no expiry, unlimited uses), or the Feedback page
  *  breaks quietly once it lapses. */
-export const DISCORD_INVITE_URL = "https://discord.gg/REPLACE_ME"
+export const DISCORD_INVITE_URL = "https://discord.com/invite/MsqDJphtQH"
