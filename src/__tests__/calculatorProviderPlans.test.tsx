@@ -39,6 +39,7 @@ import type {
 	CalculatorData,
 	Plan,
 	UserPlannedBanner,
+	UserPlannedPurchase,
 	UserStats,
 } from '../types'
 
@@ -91,6 +92,8 @@ const ROWS_B = [row(20, 200, 75, 2)]
 
 /** Only the field the tests look at; the provider stores the object whole. */
 const STATS_B = { current_carat: 4321 } as UserStats
+/** Plan B's block has one purchase; the account (plan A's block) has none. */
+const PURCHASES_B: UserPlannedPurchase[] = [{ id: 30, user: 1, product: 5, quantity: 2 }]
 
 const calculatorData = (): CalculatorData =>
 	({
@@ -162,7 +165,12 @@ beforeEach(() => {
 	mockedPatch.mockResolvedValue(json({ message: 'ok' }))
 	mockedActivate.mockResolvedValue(json({ ...PLAN_B, is_active: true }))
 	mockedPlanFetch.mockResolvedValue(
-		json({ plan: PLAN_B, user_stats_data: STATS_B, user_planned_banner_data: ROWS_B })
+		json({
+			plan: PLAN_B,
+			user_stats_data: STATS_B,
+			user_planned_banner_data: ROWS_B,
+			user_planned_purchase_data: PURCHASES_B,
+		})
 	)
 })
 
@@ -353,6 +361,36 @@ describe('CalculatorProvider plans', () => {
 
 			expect(ctx().userStatsData?.current_carat).toBe(0)
 			expect(ctx().userPlannedBannerData).toEqual(ROWS_B)
+		})
+
+		it('a switch brings the plan\'s purchases with its stats', async () => {
+			await renderLoaded()
+			expect(ctx().userPlannedPurchaseData).toEqual([])
+
+			await act(async () => {
+				await ctx().switchPlan(PLAN_B.id)
+			})
+
+			expect(ctx().userPlannedPurchaseData).toEqual(PURCHASES_B)
+			// Purchases from the server are not an edit either.
+			expect(ctx().timerIsGoing).toBe(false)
+		})
+
+		it('keeps the purchases on screen when an older API sends none', async () => {
+			mockedInitialFetch.mockResolvedValue(
+				json({ ...calculatorData(), user_planned_purchase_data: PURCHASES_B })
+			)
+			mockedPlanFetch.mockResolvedValue(
+				json({ plan: PLAN_B, user_stats_data: STATS_B, user_planned_banner_data: ROWS_B })
+			)
+			await renderLoaded()
+
+			await act(async () => {
+				await ctx().switchPlan(PLAN_B.id)
+			})
+
+			expect(ctx().userPlannedPurchaseData).toEqual(PURCHASES_B)
+			expect(ctx().userStatsData?.current_carat).toBe(4321)
 		})
 
 		it('flushes the pending edit BEFORE turning it on, then shows the new numbers', async () => {

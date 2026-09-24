@@ -45,7 +45,17 @@ export const Selectors = () => {
 		stepUpBannerData,
 		userStepUpSelectionData,
 		setUserStepUpSelectionData,
+		plans,
+		activePlanId,
 	} = useCalculatorData()
+
+	// No plan switcher renders on this page, so when the open plan reads its
+	// own purchases (separate resources on) the page has to say so, or a person
+	// with two plans cannot tell whose purchases they are looking at. A guest
+	// has no plans and a plan on the account's purchases needs no note.
+	const openPlan = plans.find((candidate) => candidate.id === activePlanId)
+	const purchasesBelongToPlan =
+		openPlan !== undefined && openPlan.income_profile_id != null
 
 	const plan = useSelectorPlanner(
 		anniversaryEventData,
@@ -159,6 +169,12 @@ export const Selectors = () => {
 						Plan what you'd spend at each anniversary. Prices are for reference
 						only. Nothing here buys anything.
 					</p>
+					{purchasesBelongToPlan && (
+						<p className="mt-1 text-sm text-gray-400">
+							These purchases belong to {openPlan.name}, which uses separate
+							resources. Your other plans don't see them.
+						</p>
+					)}
 				</div>
 
 				<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
