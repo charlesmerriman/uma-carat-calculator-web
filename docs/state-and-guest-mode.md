@@ -74,19 +74,25 @@ for why it is never "whichever plan is active".
 
 A signed-in account holds up to five named pull plans and the calculator shows one at a
 time. **A plan is its banner rows and nothing else, plus at most a pointer to which of the
-owner's stats blocks it reads.** Planned purchases and step-up selections belong to the
-account and stay put when the plan changes. Stats and toggles belong to the account too,
-but a plan with "separate resources" on (`income_profile_id` non-null) reads and saves its
-own copy of them, for people who plan for more than one game account. The reasoning, and
-why it keeps a plan safe to copy between accounts later, is in
+owner's stats blocks it reads.** Step-up selections belong to the account and stay put when
+the plan changes. Stats, toggles and planned purchases belong to the account too, but a
+plan with "separate resources" on (`income_profile_id` non-null) reads and saves its own
+copy of all three, for people who plan for more than one game account. The purchases
+follow the stats because they feed the same income (since 2026-09-24; before that they
+were the account's under every plan). The reasoning, and why it keeps a plan safe to copy
+between accounts later, is in
 [../../backend/docs/data-model.md](../../backend/docs/data-model.md) ("`Plan`" and
 "`IncomeProfile`").
 
 That split is why the projection engine did not change. `useBannerResources` reads
-`userPlannedBannerData` and `userStatsData` as it always did; they now mean "the open
-plan's". The client never decides which stats block a plan reads: `GET /plans/<id>` sends
-`user_stats_data` beside the rows, in the same shape either way, and the save path is
-unchanged because `PATCH /calculator-data` already carries the plan id beside the stats.
+`userPlannedBannerData`, `userStatsData` and `userPlannedPurchaseData` as it always did;
+they now mean "the open plan's". The client never decides which block a plan reads:
+`GET /plans/<id>` sends `user_stats_data` and `user_planned_purchase_data` beside the rows,
+in the same shape either way, and `applyPlan` swaps all three in together. Either key may
+be absent from an older API, and then what is on screen is kept. The save path is
+unchanged because `PATCH /calculator-data` already carries the plan id beside the stats
+and purchases. The Selectors page, which has no plan switcher, says whose purchases it
+shows when the open plan has separate resources on.
 
 The provider adds `plans`, `activePlanId`, `isPlanBusy` and five actions (`switchPlan`,
 `createPlan`, `renamePlan`, `deletePlan`, `setSeparateIncome`).

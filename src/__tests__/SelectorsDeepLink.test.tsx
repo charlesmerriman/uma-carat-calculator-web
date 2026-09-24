@@ -52,6 +52,8 @@ vi.mock('../services/CalculatorContext', () => ({
     stepUpBannerData: [],
     userStepUpSelectionData: [],
     setUserStepUpSelectionData: vi.fn(),
+    plans: [],
+    activePlanId: null,
   }),
 }))
 

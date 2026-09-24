@@ -411,20 +411,24 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	}, [timerIsGoing, saveNow])
 
 	/**
-	 * Put another plan on screen: its id, its rows and its stats move together.
-	 * The stats are the plan's own block or the account's, whichever the
-	 * server sent; an API from before separate resources sends none, and then
-	 * what is on screen (the account's) is kept.
+	 * Put another plan on screen: its id, its rows, its stats and its purchases
+	 * move together. The stats and purchases are the plan's own block's or the
+	 * account's, whichever the server sent; an API from before separate
+	 * resources sends no stats, and one from before purchases followed the
+	 * profile sends no purchases. In either case what is on screen (the
+	 * account's) is kept.
 	 */
 	const applyPlan = useCallback((
 		planId: number,
 		rows: UserPlannedBanner[],
-		stats?: UserStats
+		stats?: UserStats,
+		purchases?: UserPlannedPurchase[]
 	): void => {
 		suppressAutoSaveRef.current = true
 		setActivePlanId(planId)
 		setUserPlannedBannerData(rows)
 		if (stats) setUserStatsData(stats)
+		if (purchases) setUserPlannedPurchaseData(purchases)
 		// Staged rows were being composed for the plan just left; carrying them
 		// across would let "Add" drop them into a different plan.
 		setStagedBanners([])
@@ -470,7 +474,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					return false
 				}
 				const data = (await fetched.json()) as PlanWithRows
-				applyPlan(planId, data.user_planned_banner_data, data.user_stats_data)
+				applyPlan(
+					planId,
+					data.user_planned_banner_data,
+					data.user_stats_data,
+					data.user_planned_purchase_data
+				)
 				return true
 			}),
 		[runPlanAction, activePlanId, flushPendingSave, applyPlan]
@@ -504,7 +513,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					toast.error("The plan was created, but we couldn't open it. Pick it from the list.")
 					return false
 				}
-				applyPlan(data.plan.id, data.user_planned_banner_data, data.user_stats_data)
+				applyPlan(
+					data.plan.id,
+					data.user_planned_banner_data,
+					data.user_stats_data,
+					data.user_planned_purchase_data
+				)
 				toast.success(copyFromId === undefined ? "Plan created" : "Plan copied")
 				return true
 			}),
@@ -565,7 +579,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 						return true
 					}
 					const data = (await fetched.json()) as PlanWithRows
-					applyPlan(landedOn, data.user_planned_banner_data, data.user_stats_data)
+					applyPlan(
+						landedOn,
+						data.user_planned_banner_data,
+						data.user_stats_data,
+						data.user_planned_purchase_data
+					)
 				}
 				toast.success("Plan deleted")
 				return true
@@ -591,9 +610,9 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 				}
 				const updated = (await response.json()) as Plan
 				setPlans((prev) => prev.map((plan) => (plan.id === planId ? updated : plan)))
-				// The stats the plan now reads are not in that answer. Fetch them
-				// the way a switch does, so they land through the same code path
-				// (and are not mistaken for an edit).
+				// The stats and purchases the plan now reads are not in that
+				// answer. Fetch them the way a switch does, so they land through
+				// the same code path (and are not mistaken for an edit).
 				if (planId === activePlanId) {
 					const fetched = await planFetch(planId)
 					if (!fetched.ok) {
@@ -601,7 +620,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 						return false
 					}
 					const data = (await fetched.json()) as PlanWithRows
-					applyPlan(planId, data.user_planned_banner_data, data.user_stats_data)
+					applyPlan(
+						planId,
+						data.user_planned_banner_data,
+						data.user_stats_data,
+						data.user_planned_purchase_data
+					)
 				}
 				toast.success(
 					on
