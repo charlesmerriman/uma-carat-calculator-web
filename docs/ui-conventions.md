@@ -1443,6 +1443,12 @@ is what earned the "Indexed, though blocked by robots.txt" warning on 2026-09-08
 static host answers every unmatched path with the catch-all and a **200**, so for
 `NotFound` the tag is load-bearing rather than tidiness.
 
+**One public route cannot be prerendered: a shared plan's link, `/app/<public_id>`.** The
+id is per plan, so no build can list it. It rides the `spa.html` shell, reports
+`noindex` through `AppRouteMeta` ("Shared plan"), stays out of `PRERENDER_ROUTES` and the
+sitemap, and is counted in analytics as one bucket (`visits.SHARED_PLAN_ROUTE`) instead
+of a `KNOWN_ROUTES` entry. `entryServer.test.tsx` pins the frame and the tag.
+
 The canonical URL is built from `SITE_ORIGIN`, a **constant** in the hook, not from
 `window.location.origin`. App Platform keeps serving the same bundle on its generated
 `*.ondigitalocean.app` hostname and that cannot be switched off, so a runtime origin
@@ -1502,6 +1508,51 @@ react-markdown's default of not rendering raw HTML; do not add `rehype-raw`.
 The "Last updated" line formats `updated_at.slice(0, 10)`, the date half only. The build
 renders in UTC and the browser in local time, and an instant near midnight would
 otherwise format to different days on the two sides of hydration.
+
+## Shared plans: the share face and the landing card
+
+A plan's owner shares it from the plan menu; anyone with the link takes a copy. Nobody
+opens somebody else's plan, so there is no read-only calculator: the two pieces of UI are
+the owner's settings and a card with one button. Provider side: `state-and-guest-mode.md`
+("Copying a shared plan").
+
+**The share face** (`PlanSwitcher`, face `share`): the switch ("Share with a link"), the
+link in a read-only box with Copy, the two options ("Include my resources", "Include my
+notes"), the copy count, and Reset link, which asks first like Delete does because it breaks
+a link that may already be out. The options are off by default and greyed while sharing is
+off, so the owner can read what each would hand out before anything is on. The link is
+built from `window.location.origin` at click time (a dev server's link points at the dev
+server), never `SITE_ORIGIN`. The item is hidden on an API older than sharing (no
+`public_id` on the plan).
+
+**The landing card** (`components/shared-plan/SharedPlanLanding.tsx`, at `/app/<id>`):
+
+- Routing. `ApplicationViews` has a `:publicId` route beside the tabs' layout route. The
+  tabs' static paths outrank it, so `/app/timeline` (eight letters, the shape of an id)
+  never reaches it. `isPublicId()` (`utils/appRoutes.ts`) is the only place that decides
+  what an id looks like: an id gets the card inside `AppShell` (navbar, loading gate,
+  footer); anything else gets `NotFound`, like any other `/app/*` typo. The card is keyed
+  on the id, so a different link is a fresh card.
+- Inside the loading gate on purpose. The summary is catalogue ids; the card resolves them
+  against the catalogue the app already holds and narrows with `plannedBannerTarget()`,
+  then draws each banner the way a planner row does (two thumbnails, the name, the kind).
+  The thumbnails sit in a fixed slot sized for two 48px tiles (the phone card's height):
+  `.thumb-banner` is 56px at natural width, and two square uma icons overflowed a narrower
+  slot into the names (2026-10-12).
+  A banner that has left the catalogue is left off the list; the count still says how many
+  rows the plan holds.
+- KEEP IT SHORT (owner, 2026-10-12: the first draft explained too much). A heading, ONE
+  info line ("5 banners · Updated <formatDate> · Copied N times · Includes their notes"),
+  the banners, the controls. No pull counts, ever (the summary carries none).
+- Signed in: a name field prefilled "Copied plan", "Copy to my plans", greyed at the plan
+  cap with one line why. The owner opening their own link sees "This is your plan. Open
+  it". "Includes their resources" is stated, since an account copy takes them.
+- Guest: "Copy to this device", and a confirm step first when the device plan holds
+  something the copy would replace. When the owner shared their stats, a box "Use their
+  carats, tickets and ranks instead of mine" is offered, OFF until the guest ticks it:
+  their device holds one set, so the owner's replace theirs only by their choice.
+- On success it navigates to `/app`; the provider toasts. A wrong link or a plan whose
+  sharing is off reads "This plan isn't shared, or the link is wrong." with a way back.
 
 ## The update notice: stale tabs are told a newer build is live
 

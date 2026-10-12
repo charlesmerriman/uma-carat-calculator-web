@@ -1,6 +1,8 @@
 /**
- * The /plans routes: create, rename, switch, copy and delete a signed-in user's
- * pull plans. Shapes and status codes: backend/docs/api-reference.md ("Plans").
+ * The /plans routes: create, rename, switch, copy, share and delete a
+ * signed-in user's pull plans, plus a shared plan's two public routes (its
+ * summary, and taking a copy). Shapes and status codes:
+ * backend/docs/api-reference.md ("Plans", "Share links").
  *
  * Banner ROWS are not saved here. They still go through
  * userCalculatorDataPatch (calculatorFetchCalls.ts) with a `planId`, because
@@ -11,6 +13,7 @@
  * the provider decides what a failure means.
  */
 import { authHeaders } from "./authToken"
+import type { PlanSharingChanges } from "../types"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -75,6 +78,58 @@ export function planSetSeparateIncome(planId: number, on: boolean): Promise<Resp
 		method: "PATCH",
 		headers: jsonHeaders(),
 		body: JSON.stringify({ separate_income: on })
+	})
+}
+
+/**
+ * The owner's share settings for a plan: the link on or off, and what a copy
+ * carries. Answers with the Plan (the provider replaces its copy in `plans`).
+ */
+export function planSetSharing(planId: number, changes: PlanSharingChanges): Promise<Response> {
+	return fetch(`${API_URL}/plans/${planId}`, {
+		method: "PATCH",
+		headers: jsonHeaders(),
+		body: JSON.stringify(changes)
+	})
+}
+
+/** "Reset link": a new public_id, so the old link stops working. Answers with the Plan. */
+export function planResetLink(planId: number): Promise<Response> {
+	return fetch(`${API_URL}/plans/${planId}`, {
+		method: "PATCH",
+		headers: jsonHeaders(),
+		body: JSON.stringify({ regenerate_public_id: true })
+	})
+}
+
+/**
+ * A shared plan's summary for the landing card. Public, so it works without a
+ * token; one is still sent when there is one, which only changes whose rate
+ * limit it counts against. 404 when the link is wrong or sharing is off.
+ */
+export function sharedPlanSummaryFetch(publicId: string): Promise<Response> {
+	return fetch(`${API_URL}/plans/public/${encodeURIComponent(publicId)}`, {
+		method: "GET",
+		headers: jsonHeaders()
+	})
+}
+
+/**
+ * Take a copy of a shared plan. With a token: `{ name }`, and the answer is a
+ * new plan in the account, created inactive, as a PlanWithRows. Without one:
+ * `{ include_stats }`, and the answer is a SharedPlanCopy for the device store,
+ * carrying the owner's stats only when they shared them AND this is true.
+ * Which one the server does follows the token, so the caller must only call
+ * this in the mode its tab loaded in (CalculatorProvider's loadedAsRef).
+ */
+export function sharedPlanCopy(
+	publicId: string,
+	body: { name: string } | { include_stats: boolean }
+): Promise<Response> {
+	return fetch(`${API_URL}/plans/public/${encodeURIComponent(publicId)}/copy`, {
+		method: "POST",
+		headers: jsonHeaders(),
+		body: JSON.stringify(body)
 	})
 }
 

@@ -100,7 +100,14 @@ export type {
 export type { Scenario } from "./scenario"
 export type { DailyLegendRaceRelease, DailyLegendRaceUma } from "./dailyLegendRace"
 
-export type { Plan, PlanWithRows } from "./plan"
+export type {
+	Plan,
+	PlanSharingChanges,
+	PlanWithRows,
+	SharedPlanCopy,
+	SharedPlanCopyOptions,
+	SharedPlanSummary
+} from "./plan"
 export { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "./plan"
 
 export {

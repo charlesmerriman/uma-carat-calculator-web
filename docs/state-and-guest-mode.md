@@ -167,6 +167,43 @@ The popover is portalled to `<body>` like `CountStepper`'s pad. The planner box 
 `overflow-hidden` and an `@container`, which clips even a fixed-position child, and a new
 plan has no rows to make the box taller than the menu.
 
+### Copying a shared plan
+
+A plan's owner can switch on a link, `/app/<public_id>`, from the plan menu ("Share this
+plan", `setPlanSharing` / `resetPlanLink`). **A shared plan is copied, never viewed**:
+nobody but its owner ever has it on screen, so there is no read-only mode anywhere in the
+provider and no save path to gate. The link opens `SharedPlanLanding` (a card, see
+`ui-conventions.md`), and its one action is `copySharedPlan(publicId, name?)`. Opening the
+link creates nothing; the button does. Server rules: `backend/docs/data-model.md`
+("Share links").
+
+`copySharedPlan` takes the path this tab LOADED in (`loadedAsRef`), and refuses outright
+when the token has changed since, because the server picks its own path from the token on
+the request and the two must agree (a guest tab whose person signed in elsewhere would
+otherwise receive an account copy it cannot show; that tab is about to reload anyway).
+
+| | Account | Guest |
+|---|---|---|
+| First | flushes a pending save, like `createPlan` | nothing to flush |
+| Server | `POST …/copy` with the name: a new plan, created inactive | `POST …/copy` with `include_stats`: the rows (ids), and the stats if shared AND asked for |
+| Then | `planActivate` + `applyPlan`, exactly as a new plan | rebuilt with `guestPlanToState`; the auto-save effect writes the device store |
+| Rows | the copy's | replace the device's |
+| Stats | the copy's own block seeded from the owner's when shared, else the account's | replaced only when the guest ticked "Use their carats…" (and the owner shared them), and the purchases are cleared with them |
+| Notes | kept only when the owner shares them | same |
+| Purchases, step-up picks | the owner's never travel | the guest's step-up picks stay |
+
+Two details carry the invariants. The guest path writes nothing to storage itself: it sets
+state and lets the guest auto-save effect write it, the same single path `resetGuestPlan`
+relies on, so a blocked store is reported once, the usual way. And asking before a guest's
+device plan is replaced is the CARD's job, not the provider's: it knows what the copy would
+replace (rows always; stats and purchases only when the guest chose to take the owner's
+stats) and asks only when one of those holds something.
+
+Taking the owner's stats is the GUEST's choice, never automatic (owner's call, 2026-10-12):
+a device holds one set, so the owner sharing theirs must not cost the guest their own. It is
+enforced twice: the card sends `include_stats` only when the box is ticked and the server
+sends stats only then, and the provider ignores stats it did not ask for.
+
 ---
 
 ## Guest mode

@@ -77,6 +77,22 @@ describe("entry-server render()", () => {
 		expect(html).toContain("Page not found")
 	})
 
+	it("renders a shared plan's link in the app frame, noindex, never prerendered", () => {
+		// The card itself sits behind the data gate like the tabs, so a render
+		// here is the frame. The id is per plan, so no build can list it.
+		const { html, meta } = render("/app/AbCd1234", CONTENT)
+		expect(meta.title).toBe(`Shared plan | ${SITE_NAME}`)
+		expect(meta.noindex).toBe(true)
+		expect(html).toContain("Loading your plan")
+		expect(PRERENDER_ROUTES).not.toContain("/app/AbCd1234")
+	})
+
+	it("renders the 404 page for an /app path that is not a share id", () => {
+		const { html, meta } = render("/app/not-an-id", CONTENT)
+		expect(meta.title).toBe(`Page not found | ${SITE_NAME}`)
+		expect(html).toContain("Page not found")
+	})
+
 	describe("the content each document embeds", () => {
 		it("is the About row alone for /about", () => {
 			const { content } = render("/about", CONTENT)
