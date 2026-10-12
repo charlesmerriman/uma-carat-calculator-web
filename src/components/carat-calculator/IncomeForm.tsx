@@ -636,42 +636,42 @@ export const IncomeForm = () => {
 										{/* Only while the toggle is on: with it off no shop tickets
 										    are credited at all, so a count would be a control that
 										    does nothing. */}
-										{shopTicketsOn &&
-											SHOP_TICKET_FIELDS.map((field) => {
-												const defaultCount = field.defaultCount(calculationConstants)
-												const max = field.max(calculationConstants)
-												return (
-													<label key={field.key} className="flex items-center gap-1.5 text-xs text-gray-300">
-														{field.label}
-														<NumberField
-															// Shown through the same resolver the projection
-															// reads with, so the box can never show a count
-															// the engine isn't using.
-															value={shopTicketsPerMonth(userStatsData[field.key], defaultCount, max)}
-															onChange={(next) => {
-																const capped = Math.min(next, max)
-																setUserStatsData({
-																	...userStatsData,
-																	// The default count is stored as null,
-																	// "whatever the default is", so it keeps
-																	// following the default if an editor
-																	// changes it.
-																	[field.key]: capped === defaultCount ? null : capped,
-																})
-															}}
-															mediumStep={1}
-															ariaLabel={`${field.label} tickets bought each month`}
-															className="w-10 rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-center text-sm text-gray-100"
-														/>
-														<span className="text-gray-400">of {max}</span>
-													</label>
-												)
-											})}
-										{/* Next to two real-money purchases, say plainly that
-										    these don't cost anything the calculator counts. */}
-										<p className="basis-full text-center text-[11px] leading-tight text-gray-400">
-											Bought with shop currency each month. They cost no carats.
-										</p>
+										{/* One wrapper so Uma and Support always share a line: the
+										    row may wrap them under the toggle, never apart. */}
+										{shopTicketsOn && (
+											<div className="flex items-center gap-4">
+												{SHOP_TICKET_FIELDS.map((field) => {
+													const defaultCount = field.defaultCount(calculationConstants)
+													const max = field.max(calculationConstants)
+													return (
+														<label key={field.key} className="flex items-center gap-1.5 text-xs text-gray-300">
+															{field.label}
+															<NumberField
+																// Shown through the same resolver the projection
+																// reads with, so the box can never show a count
+																// the engine isn't using.
+																value={shopTicketsPerMonth(userStatsData[field.key], defaultCount, max)}
+																onChange={(next) => {
+																	const capped = Math.min(next, max)
+																	setUserStatsData({
+																		...userStatsData,
+																		// The default count is stored as null,
+																		// "whatever the default is", so it keeps
+																		// following the default if an editor
+																		// changes it.
+																		[field.key]: capped === defaultCount ? null : capped,
+																	})
+																}}
+																mediumStep={1}
+																ariaLabel={`${field.label} tickets bought each month`}
+																className="w-10 rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-center text-sm text-gray-100"
+															/>
+															<span className="text-gray-400">of {max}</span>
+														</label>
+													)
+												})}
+											</div>
+										)}
 									</div>
 									{/* Same setting as the toggle on the Selectors page, surfaced here
 									    too so it's visible right alongside the other things that change
