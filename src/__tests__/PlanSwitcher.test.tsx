@@ -34,6 +34,8 @@ const actions = () => ({
 	renamePlan: vi.fn().mockResolvedValue(true),
 	deletePlan: vi.fn().mockResolvedValue(true),
 	setSeparateIncome: vi.fn().mockResolvedValue(true),
+	setPlanSharing: vi.fn().mockResolvedValue(true),
+	resetPlanLink: vi.fn().mockResolvedValue(true),
 })
 
 const renderSwitcher = (overrides: Partial<CalculatorContextType> = {}) => {
@@ -206,6 +208,68 @@ describe('PlanSwitcher', () => {
 			expect(
 				within(tabs().getByRole('button', { name: 'Main plan' })).queryByTestId('own-resources-marker')
 			).not.toBeInTheDocument()
+		})
+	})
+
+	describe('sharing', () => {
+		const shareable = (sharing: Partial<Plan> = {}): Plan => ({
+			...plan(1, 'Main plan', true),
+			public_id: 'AbCd1234',
+			is_shared: false,
+			share_stats: false,
+			share_notes: false,
+			copy_count: 0,
+			...sharing,
+		})
+		const openShare = async (): Promise<void> => {
+			await openOptions()
+			await userEvent.click(screen.getByRole('menuitem', { name: /Share this plan/ }))
+		}
+
+		it('is not offered by an API older than sharing', async () => {
+			renderSwitcher()
+			await openOptions()
+			expect(screen.queryByRole('menuitem', { name: /Share this plan/ })).not.toBeInTheDocument()
+		})
+
+		it('starts off, with the options greyed and no link shown', async () => {
+			renderSwitcher({ plans: [shareable(), plan(2, 'What if')] })
+			await openShare()
+			expect(screen.getByRole('switch', { name: /Share with a link/ })).not.toBeChecked()
+			expect(screen.getByRole('checkbox', { name: /Include my resources/ })).toBeDisabled()
+			expect(screen.getByRole('checkbox', { name: /Include my notes/ })).toBeDisabled()
+			expect(screen.queryByRole('textbox', { name: 'Share link' })).not.toBeInTheDocument()
+		})
+
+		it('turns sharing on for the open plan', async () => {
+			const value = renderSwitcher({ plans: [shareable(), plan(2, 'What if')] })
+			await openShare()
+			await userEvent.click(screen.getByRole('switch', { name: /Share with a link/ }))
+			expect(value.setPlanSharing).toHaveBeenCalledWith(1, { is_shared: true })
+		})
+
+		it('shows the link, the count, and sets an option', async () => {
+			const value = renderSwitcher({
+				plans: [shareable({ is_shared: true, copy_count: 3 }), plan(2, 'What if')],
+			})
+			await openShare()
+			expect(screen.getByRole('textbox', { name: 'Share link' })).toHaveValue(
+				`${window.location.origin}/app/AbCd1234`
+			)
+			expect(screen.getByText('Copied 3 times.')).toBeInTheDocument()
+			await userEvent.click(screen.getByRole('checkbox', { name: /Include my notes/ }))
+			expect(value.setPlanSharing).toHaveBeenCalledWith(1, { share_notes: true })
+		})
+
+		it('asks before resetting the link', async () => {
+			const value = renderSwitcher({ plans: [shareable({ is_shared: true }), plan(2, 'What if')] })
+			await openShare()
+			await userEvent.click(screen.getByRole('button', { name: 'Reset link' }))
+			// Nothing yet: the confirmation is showing.
+			expect(value.resetPlanLink).not.toHaveBeenCalled()
+			expect(screen.getByText(/The old link stops working/)).toBeInTheDocument()
+			await userEvent.click(screen.getByRole('button', { name: 'Reset link' }))
+			expect(value.resetPlanLink).toHaveBeenCalledWith(1)
 		})
 	})
 
