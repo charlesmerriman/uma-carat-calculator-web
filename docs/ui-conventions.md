@@ -1548,9 +1548,10 @@ server), never `SITE_ORIGIN`. The item is hidden on an API older than sharing (n
   cap with one line why. The owner opening their own link sees "This is your plan. Open
   it". "Includes their resources" is stated, since an account copy takes them.
 - Guest: "Copy to this device", and a confirm step first when the device plan holds
-  something the copy would replace. When the owner shared their stats, a box "Use their
-  carats, tickets and ranks instead of mine" is offered, OFF until the guest ticks it:
-  their device holds one set, so the owner's replace theirs only by their choice.
+  something the copy would replace. When the owner shared their resources, a box "Use
+  their resources instead of mine" (carats, tickets, ranks and planned purchases) is
+  offered, OFF until the guest ticks it: their device holds one set, so the owner's replace
+  theirs only by their choice.
 - On success it navigates to `/app`; the provider toasts. A wrong link or a plan whose
   sharing is off reads "This plan isn't shared, or the link is wrong." with a way back.
 

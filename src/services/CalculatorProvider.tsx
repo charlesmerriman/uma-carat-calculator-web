@@ -772,12 +772,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	 * through applyPlan.
 	 *
 	 * Guest: the device holds one plan, and the copy replaces its ROWS. The
-	 * stats are replaced only when the GUEST chose to take them
+	 * resources (stats AND planned purchases, one block: purchases fund the
+	 * stats beside them) are replaced only when the GUEST chose to take them
 	 * (`includeStats`, off by default) and the owner shared them: the device
 	 * holds one set, so taking the owner's costs the guest their own, and the
-	 * owner sharing is not the guest asking. Then the purchases go too, because
-	 * purchases belong to the stats they fund (an account copy's seeded block
-	 * starts with none either). Step-up picks stay:
+	 * owner sharing is not the guest asking. An account copy's seeded block
+	 * gets the owner's purchases the same way. Step-up picks stay:
 	 * they are the person's, keyed to the banner. Nothing writes storage here;
 	 * the auto-save effect sees the new rows and writes them, the same single
 	 * path resetGuestPlan relies on. Asking before replacing a plan is the
@@ -844,18 +844,19 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 						savedAt: Date.now(),
 						stats: copy.user_stats_data,
 						banners: copy.user_planned_banner_data,
-						purchases: [],
+						purchases: copy.user_planned_purchase_data ?? [],
 						stepUpSelections: []
 					},
 					catalogue
 				)
 				setUserPlannedBannerData(rebuilt.banners)
-				// Both checks: the server only sends stats that were asked for,
-				// and a server that sent them anyway still does not get to
-				// overwrite the guest's own.
+				// Both checks: the server only sends resources that were asked
+				// for, and a server that sent them anyway still does not get to
+				// overwrite the guest's own. Stats and purchases move together;
+				// a purchase whose product has left the catalogue was dropped above.
 				if (includeStats && copy.user_stats_data) {
 					setUserStatsData(rebuilt.stats)
-					setUserPlannedPurchaseData([])
+					setUserPlannedPurchaseData(rebuilt.purchases)
 				}
 				setStagedBanners([])
 				toast.success("Plan copied to this device")

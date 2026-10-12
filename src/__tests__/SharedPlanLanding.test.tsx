@@ -215,7 +215,7 @@ describe('SharedPlanLanding', () => {
 				// No rows, and the guest's carats are not touched: nothing to ask.
 				const value = renderCard({ ...GUEST, userStatsData: ownStats })
 
-				const box = await screen.findByRole('checkbox', { name: /Use their carats/ })
+				const box = await screen.findByRole('checkbox', { name: /Use their resources/ })
 				expect(box).not.toBeChecked()
 				await userEvent.click(screen.getByRole('button', { name: 'Copy to this device' }))
 
@@ -226,7 +226,7 @@ describe('SharedPlanLanding', () => {
 			it('takes them when ticked, after asking about the guest\'s own', async () => {
 				const value = renderCard({ ...GUEST, userStatsData: ownStats })
 
-				await userEvent.click(await screen.findByRole('checkbox', { name: /Use their carats/ }))
+				await userEvent.click(await screen.findByRole('checkbox', { name: /Use their resources/ }))
 				await userEvent.click(screen.getByRole('button', { name: 'Copy to this device' }))
 
 				expect(screen.getByText('Your banners, carats and purchases here will be replaced.')).toBeInTheDocument()
@@ -239,7 +239,7 @@ describe('SharedPlanLanding', () => {
 				renderCard()
 				// Stated instead, since the account copy takes them.
 				expect(await screen.findByText(/Includes their resources and notes/)).toBeInTheDocument()
-				expect(screen.queryByRole('checkbox', { name: /Use their carats/ })).not.toBeInTheDocument()
+				expect(screen.queryByRole('checkbox', { name: /Use their resources/ })).not.toBeInTheDocument()
 			})
 		})
 	})

@@ -26,7 +26,7 @@
  * "copy". Full rules: backend/docs/data-model.md ("Share links").
  */
 import type { UserPlannedPurchase } from "./anniversary"
-import type { PlannedBannerPayload } from "../services/calculatorFetchCalls"
+import type { PlannedBannerPayload, PlannedPurchasePayload } from "../services/calculatorFetchCalls"
 import type { UserPlannedBanner, UserStats } from "./user"
 
 export interface Plan {
@@ -85,9 +85,10 @@ export interface SharedPlanCopyOptions {
 	/** Signed in only: what to call the new plan. */
 	name?: string
 	/**
-	 * Guest only: take the owner's carats, tickets and ranks too, replacing the
-	 * guest's own. Off unless the guest ticks it, even when the owner shared
-	 * them: a device holds one set of stats, and losing yours is your call.
+	 * Guest only: take the owner's resources too (carats, tickets, ranks and
+	 * planned purchases), replacing the guest's own. Off unless the guest ticks
+	 * it, even when the owner shared them: a device holds one set, and losing
+	 * yours is your call.
 	 */
 	includeStats?: boolean
 }
@@ -102,6 +103,12 @@ export interface SharedPlanCopy {
 	user_planned_banner_data: PlannedBannerPayload[]
 	/** The owner's stats when they share them AND the guest asked, else null. */
 	user_stats_data: UserStats | null
+	/**
+	 * That same block's planned purchases (ids only), under the same rule as
+	 * the stats: they fund those stats, so they travel together. Optional
+	 * because an API from before purchases were shared omits it.
+	 */
+	user_planned_purchase_data?: PlannedPurchasePayload[] | null
 }
 
 /** POST /plans and GET /plans/<id>: a plan together with its banner rows. */

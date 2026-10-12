@@ -671,7 +671,7 @@ export const PlanSwitcher = () => {
 								<span>
 									<span className="block text-sm text-gray-200">Include my resources</span>
 									<span className="block text-xs leading-snug text-gray-400">
-										Copies start with your carats, tickets and ranks. Your planned purchases stay private.
+										Copies start with your carats, tickets, ranks and planned purchases.
 									</span>
 								</span>
 							</label>
