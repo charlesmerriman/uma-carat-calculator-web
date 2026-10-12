@@ -55,6 +55,19 @@ describe("AppRouteMeta", () => {
 		expect(document.title).toBe("Daily Legend Races | Uma Musume Carat Calculator")
 	})
 
+	it("gives a shared plan's link its own title, kept out of search", () => {
+		renderAt("/app/AbCd1234")
+		expect(document.title).toBe("Shared plan | Uma Musume Carat Calculator")
+		expect(document.querySelector('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow")
+	})
+
+	it("never mistakes a tab for a share id", () => {
+		// "timeline" is eight letters, the shape of an id.
+		renderAt("/app/timeline")
+		expect(document.title).toBe("Banner Timeline | Uma Musume Carat Calculator")
+		expect(document.querySelector('meta[name="robots"]')).toBeNull()
+	})
+
 	it("renders nothing on the page", () => {
 		const { container } = renderAt("/app")
 		expect(container).toBeEmptyDOMElement()

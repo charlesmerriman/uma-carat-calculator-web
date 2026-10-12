@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { FormEvent, MouseEvent } from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronDown, Copy, Ellipsis, Pencil, Plus, Trash2, Wallet } from "lucide-react"
+import { Check, ChevronDown, Copy, Ellipsis, Pencil, Plus, Share2, Trash2, Wallet } from "lucide-react"
+import { toast } from "sonner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
+import type { PlanSharingChanges } from "../../types"
+import { sharedPlanPath } from "../../utils/appRoutes"
 import { NAV_POPOVER } from "../navbar/navStyles"
 
 /**
  * The PLANS bar above the banner sheet: one tab per plan, a "New" button, and
  * a "..." menu for the open plan (Duplicate / Rename / Separate resources /
- * Delete).
+ * Share / Delete).
  *
  * SEPARATE RESOURCES. A plan normally reads the account's carats, ranks and
  * income settings. Someone who plays two game accounts can give a plan its
@@ -18,6 +21,15 @@ import { NAV_POPOVER } from "../navbar/navStyles"
  * turning it off asks first, like Delete does). A tab whose plan has its own
  * resources carries a small wallet glyph, because otherwise nothing on screen
  * says which numbers the resources form above is editing.
+ *
+ * SHARING. "Share this plan" opens a face with the link switch, the link and
+ * its Copy button, the two things a copy may carry besides the banners (the
+ * owner's resources, their notes; both off until ticked, and only tickable
+ * while sharing is on), the copy count, and Reset link, which asks first like
+ * Delete does because it breaks a link that may already be out there. Nobody
+ * opens a shared plan: the link leads to a card whose one action is "copy"
+ * (SharedPlanLanding). The face is hidden on an API older than sharing (no
+ * `public_id`), the same degrade income_profile_id gets.
  *
  * WHY TABS. The site grew out of a spreadsheet, and sheet tabs are how a
  * spreadsheet says "several versions of this". With the cap at five they
@@ -74,7 +86,16 @@ const EDGE = 8
  *             list would only repeat the tabs.
  *   the rest are the forms either menu leads to.
  */
-type Face = "list" | "actions" | "new" | "duplicate" | "rename" | "delete" | "resourcesOff"
+type Face =
+	| "list"
+	| "actions"
+	| "new"
+	| "duplicate"
+	| "rename"
+	| "delete"
+	| "resourcesOff"
+	| "share"
+	| "resetLink"
 type NameFormFace = "new" | "duplicate" | "rename"
 
 const isNameForm = (face: Face): face is NameFormFace =>
@@ -113,6 +134,9 @@ const FORM_COPY: Record<NameFormFace, { title: string; submit: string }> = {
 
 const CAP_MESSAGE = `You can keep up to ${PLAN_CAP} plans.`
 
+const copiedLine = (count: number): string =>
+	count === 0 ? "Not copied yet." : count === 1 ? "Copied once." : `Copied ${count} times.`
+
 export const PlanSwitcher = () => {
 	const {
 		plans,
@@ -122,7 +146,9 @@ export const PlanSwitcher = () => {
 		createPlan,
 		renamePlan,
 		deletePlan,
-		setSeparateIncome
+		setSeparateIncome,
+		setPlanSharing,
+		resetPlanLink
 	} = useCalculatorData()
 
 	const [open, setOpen] = useState(false)
@@ -225,6 +251,9 @@ export const PlanSwitcher = () => {
 	// undefined and null both mean "reads the account's stats".
 	const hasOwnResources = activePlan.income_profile_id != null
 	const ownResourcesTitle = "This plan has its own resources and income settings"
+	// Undefined on an API older than sharing, which hides the Share item.
+	const publicId = activePlan.public_id
+	const isShared = activePlan.is_shared === true
 
 	const draftFor = (kind: NameFormFace): string =>
 		kind === "rename"
@@ -285,7 +314,32 @@ export const PlanSwitcher = () => {
 		if (await setSeparateIncome(activePlan.id, on)) close()
 	}
 
-	// The three actions on the open plan, shared by both menus.
+	// The share face stays open on success: it shows the change it made.
+	const handleSharing = (changes: PlanSharingChanges): void => {
+		void setPlanSharing(activePlan.id, changes)
+	}
+
+	const handleResetLink = async (): Promise<void> => {
+		if (await resetPlanLink(activePlan.id)) setFace("share")
+	}
+
+	// Read at click time, from the page the person is on, so a link copied on a
+	// local dev server points at that server. Only ever called from the open
+	// panel, which never renders during a build.
+	const shareLink = (id: string): string => `${window.location.origin}${sharedPlanPath(id)}`
+
+	const copyLink = async (id: string): Promise<void> => {
+		try {
+			await navigator.clipboard.writeText(shareLink(id))
+			toast.success("Link copied")
+		} catch {
+			// No clipboard access (an insecure origin, or a refused permission).
+			// The link is in a text box beside the button, ready to select.
+			toast.error("Couldn't copy the link. Select it and copy it yourself.")
+		}
+	}
+
+	// The actions on the open plan, shared by both menus.
 	const planActions = (
 		<>
 			<button
@@ -327,6 +381,19 @@ export const PlanSwitcher = () => {
 					<Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
 				)}
 			</button>
+			{publicId !== undefined && (
+				<button
+					type="button"
+					role="menuitem"
+					disabled={isPlanBusy}
+					onClick={() => setFace("share")}
+					className={MENU_ITEM}
+				>
+					<Share2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+					<span className="flex-1">Share this plan</span>
+					{isShared && <span className="text-xs font-semibold text-brand">On</span>}
+				</button>
+			)}
 			<button
 				type="button"
 				role="menuitem"
@@ -412,7 +479,7 @@ export const PlanSwitcher = () => {
 				type="button"
 				aria-haspopup="menu"
 				aria-label={`Options for ${activePlan.name}`}
-				title="Duplicate, rename, delete this plan, or give it separate resources"
+				title="Duplicate, rename, share or delete this plan, or give it separate resources"
 				onClick={(e) => openFrom(e, "actions")}
 				className={`${BAR_BUTTON} hidden w-8 self-center @min-[40rem]:flex`}
 			>
@@ -544,6 +611,130 @@ export const PlanSwitcher = () => {
 									className={BUTTON_DANGER}
 								>
 									Use account resources
+								</button>
+							</div>
+						</div>
+					)}
+
+					{face === "share" && publicId !== undefined && (
+						<div className="p-2">
+							<p className="text-sm font-semibold text-gray-100">
+								Share <span className="font-semibold">{activePlan.name}</span>
+							</p>
+							<label className="mt-3 flex cursor-pointer items-start gap-2.5">
+								<input
+									type="checkbox"
+									role="switch"
+									checked={isShared}
+									disabled={isPlanBusy}
+									onChange={(e) => handleSharing({ is_shared: e.target.checked })}
+									className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+								/>
+								<span>
+									<span className="block text-sm text-gray-200">Share with a link</span>
+									<span className="block text-xs leading-snug text-gray-400">
+										Anyone with the link can copy this plan into their own. They can't change yours.
+									</span>
+								</span>
+							</label>
+
+							{isShared && (
+								<div className="mt-3 flex gap-2">
+									<input
+										type="text"
+										readOnly
+										aria-label="Share link"
+										value={shareLink(publicId)}
+										onFocus={(e) => e.target.select()}
+										className="min-w-0 flex-1 rounded-lg border border-gray-600 bg-gray-900 px-2.5 py-1.5 text-xs text-gray-200 outline-none focus:border-brand"
+									/>
+									<button
+										type="button"
+										onClick={() => void copyLink(publicId)}
+										className={BUTTON_GHOST}
+									>
+										Copy
+									</button>
+								</div>
+							)}
+
+							{/* Off and greyed until sharing is on, so the owner can read what
+							    each one would hand out before turning anything on. */}
+							<label className={`mt-3 flex items-start gap-2.5 ${isShared ? "cursor-pointer" : "opacity-50"}`}>
+								<input
+									type="checkbox"
+									checked={activePlan.share_stats === true}
+									disabled={isPlanBusy || !isShared}
+									onChange={(e) => handleSharing({ share_stats: e.target.checked })}
+									className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+								/>
+								<span>
+									<span className="block text-sm text-gray-200">Include my resources</span>
+									<span className="block text-xs leading-snug text-gray-400">
+										Copies start with your carats, tickets, ranks and planned purchases.
+									</span>
+								</span>
+							</label>
+							<label className={`mt-2 flex items-start gap-2.5 ${isShared ? "cursor-pointer" : "opacity-50"}`}>
+								<input
+									type="checkbox"
+									checked={activePlan.share_notes === true}
+									disabled={isPlanBusy || !isShared}
+									onChange={(e) => handleSharing({ share_notes: e.target.checked })}
+									className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+								/>
+								<span>
+									<span className="block text-sm text-gray-200">Include my notes</span>
+									<span className="block text-xs leading-snug text-gray-400">
+										Copies keep the notes you wrote on each banner.
+									</span>
+								</span>
+							</label>
+
+							<p className="mt-3 text-xs text-gray-400">
+								{copiedLine(activePlan.copy_count ?? 0)}
+							</p>
+
+							<div className="mt-3 flex justify-between gap-2">
+								{isShared ? (
+									<button
+										type="button"
+										disabled={isPlanBusy}
+										onClick={() => setFace("resetLink")}
+										className={BUTTON_GHOST}
+									>
+										Reset link
+									</button>
+								) : (
+									<span />
+								)}
+								<button type="button" onClick={goBack} className={BUTTON_GHOST}>
+									{homeFace ? "Back" : "Close"}
+								</button>
+							</div>
+						</div>
+					)}
+
+					{face === "resetLink" && (
+						<div className="p-2">
+							<p className="text-sm text-gray-200">
+								Reset the link for <span className="font-semibold">{activePlan.name}</span>?
+							</p>
+							<p className="mt-1 text-xs leading-snug text-gray-400">
+								The old link stops working, so anyone you sent it to will need the new one.
+								Copies people already made are theirs to keep.
+							</p>
+							<div className="mt-3 flex justify-end gap-2">
+								<button type="button" onClick={() => setFace("share")} className={BUTTON_GHOST}>
+									Back
+								</button>
+								<button
+									type="button"
+									disabled={isPlanBusy}
+									onClick={() => void handleResetLink()}
+									className={BUTTON_DANGER}
+								>
+									Reset link
 								</button>
 							</div>
 						</div>

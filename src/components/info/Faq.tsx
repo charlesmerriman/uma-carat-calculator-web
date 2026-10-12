@@ -4,6 +4,8 @@ import { useLocation } from "react-router-dom"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
+import { useBackToTop } from "../../hooks/useBackToTop"
+import { FloatingBackToTop } from "../BackToTop"
 import { useSiteContent } from "../../services/SiteContentContext"
 import { MarkdownContent } from "./MarkdownContent"
 import { ContentLoading } from "./ContentLoading"
@@ -30,6 +32,8 @@ const question = "text-lg font-semibold text-gray-100"
 export const Faq: React.FC = () => {
 	useDocumentMeta("FAQ", "How the Uma Musume carat calculator works, where its numbers come from, whether you need an account, and what it does with your data.")
 
+	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
+
 	const categories = useSiteContent().faq()
 	const { hash } = useLocation()
 
@@ -51,6 +55,9 @@ export const Faq: React.FC = () => {
 		// footer keeps its fixed band at the bottom of a short page, and there is no
 		// overflow-y-auto, so long content scrolls the page rather than a nested region.
 		<div className="flex min-h-dvh flex-col bg-gray-900">
+			{/* Scroll anchor for "back to top", as on HomePage: first child, above
+			    the navbar, so the arrow returns to the very top of the page. */}
+			<div ref={topRef} aria-hidden="true" />
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
@@ -118,6 +125,7 @@ export const Faq: React.FC = () => {
 				</div>
 			</main>
 			<Footer />
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="48rem" />
 		</div>
 	)
 }

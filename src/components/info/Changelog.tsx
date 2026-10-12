@@ -8,6 +8,8 @@ import { changelogFetch } from "../../services/changelogFetchCalls"
 import { formatDate } from "../../utils/dateFormat"
 import type { ChangeCategory, ChangelogEntry } from "../../types"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
+import { useBackToTop } from "../../hooks/useBackToTop"
+import { FloatingBackToTop } from "../BackToTop"
 
 /** Subtle fade/slide-up on mount — matches the motion used elsewhere in the app. */
 const fadeUp = {
@@ -39,6 +41,8 @@ const categoryLabel: Record<ChangeCategory, string> = {
  */
 export const Changelog: React.FC = () => {
 	useDocumentMeta("Changelog", "Recent updates to the Uma Musume Carat Calculator: new banners, corrected event data and calculator changes.")
+
+	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 
 	const [entries, setEntries] = useState<ChangelogEntry[]>([])
 	const [isLoading, setIsLoading] = useState(true)
@@ -72,6 +76,9 @@ export const Changelog: React.FC = () => {
 		// footer stays a fixed band at the bottom of a short page, and no overflow-y-auto
 		// so long content scrolls the page (footer included) instead of a nested region.
 		<div className="flex min-h-dvh flex-col bg-gray-900">
+			{/* Scroll anchor for "back to top", as on HomePage: first child, above
+			    the navbar, so the arrow returns to the very top of the page. */}
+			<div ref={topRef} aria-hidden="true" />
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
@@ -147,6 +154,7 @@ export const Changelog: React.FC = () => {
 				</div>
 			</main>
 			<Footer />
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="48rem" />
 		</div>
 	)
 }

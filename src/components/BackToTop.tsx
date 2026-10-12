@@ -65,6 +65,8 @@ export const BackToTopButton = ({ onClick, disabled, className = "" }: BackToTop
  * only emits a class it can read whole from the source.
  */
 const FLOATING_POSITION = {
+	/** The Changelog and FAQ pages (`max-w-3xl`). */
+	"48rem": "right-[max(1.5rem,calc((100vw-48rem)/2-4.5rem))]",
 	/** The Legend Races page (`max-w-5xl`). */
 	"64rem": "right-[max(1.5rem,calc((100vw-64rem)/2-4.5rem))]",
 	/** `page-container` pages: the Timeline and Selectors. */

@@ -24,7 +24,10 @@ import type {
 	UserStepUpSelection,
 	IncomeLedgerRow,
 	Plan,
+	PlanSharingChanges,
 	PlanWithRows,
+	SharedPlanCopy,
+	SharedPlanCopyOptions,
 	CalculationConstants
 } from "../types"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
@@ -49,8 +52,11 @@ import {
 	planCreate,
 	planDelete,
 	planFetch,
+	planResetLink,
 	planSetSeparateIncome,
-	planRename
+	planSetSharing,
+	planRename,
+	sharedPlanCopy
 } from "./planFetchCalls"
 import { useAutoSave } from "../hooks/useAutoSave"
 
@@ -713,6 +719,152 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		[runPlanAction, activePlanId, flushPendingSave, applyPlan]
 	)
 
+	// ── Sharing ──────────────────────────────────────────────────────────────
+	//
+	// A shared plan is COPIED, never opened: nobody but its owner ever has it on
+	// screen. The owner's two actions below change settings and touch no rows,
+	// so they flush nothing. The copier's action creates a new plan (account)
+	// or replaces the device's plan (guest), and saves first like createPlan.
+
+	const setPlanSharing = useCallback(
+		(planId: number, changes: PlanSharingChanges): Promise<boolean> =>
+			runPlanAction(async () => {
+				const response = await planSetSharing(planId, changes)
+				if (!response.ok) {
+					toast.error("Couldn't change sharing. Try again.")
+					return false
+				}
+				const updated = (await response.json()) as Plan
+				setPlans((prev) => prev.map((plan) => (plan.id === planId ? updated : plan)))
+				return true
+			}),
+		[runPlanAction]
+	)
+
+	const resetPlanLink = useCallback(
+		(planId: number): Promise<boolean> =>
+			runPlanAction(async () => {
+				const response = await planResetLink(planId)
+				if (!response.ok) {
+					toast.error("Couldn't reset the link. Try again.")
+					return false
+				}
+				// The new id rides on the plan, so the share face shows the new
+				// link as soon as this lands.
+				const updated = (await response.json()) as Plan
+				setPlans((prev) => prev.map((plan) => (plan.id === planId ? updated : plan)))
+				toast.success("Link reset. The old one no longer works.")
+				return true
+			}),
+		[runPlanAction]
+	)
+
+	/**
+	 * Take a copy of somebody's shared plan. The path is the one this tab
+	 * LOADED in, like every save (loadedAsRef). The server picks its own path
+	 * from the token on the request, so a tab whose token changed since loading
+	 * is refused here: a guest tab whose person signed in elsewhere would get
+	 * an account copy it cannot show. That tab is about to reload anyway.
+	 *
+	 * Account: the new plan is created inactive, then switched to, exactly as
+	 * createPlan does it, so it lands with its rows, its stats (its own seeded
+	 * block when the owner shared theirs, else the account's) and its purchases
+	 * through applyPlan.
+	 *
+	 * Guest: the device holds one plan, and the copy replaces its ROWS. The
+	 * resources (stats AND planned purchases, one block: purchases fund the
+	 * stats beside them) are replaced only when the GUEST chose to take them
+	 * (`includeStats`, off by default) and the owner shared them: the device
+	 * holds one set, so taking the owner's costs the guest their own, and the
+	 * owner sharing is not the guest asking. An account copy's seeded block
+	 * gets the owner's purchases the same way. Step-up picks stay:
+	 * they are the person's, keyed to the banner. Nothing writes storage here;
+	 * the auto-save effect sees the new rows and writes them, the same single
+	 * path resetGuestPlan relies on. Asking before replacing a plan is the
+	 * landing card's job.
+	 */
+	const copySharedPlan = useCallback(
+		(publicId: string, { name = "", includeStats = false }: SharedPlanCopyOptions): Promise<boolean> =>
+			runPlanAction(async () => {
+				const loadedAs = loadedAsRef.current
+				if (loadedAs === null || (loadedAs === "account") !== !!getAuthToken()) return false
+				const asAccount = loadedAs === "account"
+				if (asAccount && !(await flushPendingSave())) {
+					toast.error("Your changes didn't save, so the plan wasn't copied.")
+					return false
+				}
+				const response = await sharedPlanCopy(
+					publicId,
+					asAccount ? { name } : { include_stats: includeStats }
+				)
+				if (!response.ok) {
+					const body = (await response.json().catch(() => null)) as
+						| { error?: string; name?: string[] }
+						| null
+					toast.error(
+						response.status === 404
+							? "This plan isn't shared any more."
+							: response.status === 429
+								? "That's a lot of copies in a short time. Try again later."
+								// The cap and a blank name, worded by the server.
+								: (body?.error ?? body?.name?.[0] ?? "Couldn't copy the plan. Try again.")
+					)
+					return false
+				}
+
+				if (asAccount) {
+					const data = (await response.json()) as PlanWithRows
+					setPlans((prev) => [...prev, data.plan])
+					const activated = await planActivate(data.plan.id)
+					if (!activated.ok) {
+						// The copy exists and is in the list, so the landing card has
+						// done its job and should move on; the person picks it from there.
+						toast.error("The plan was copied, but we couldn't open it. Pick it from the list.")
+						return true
+					}
+					applyPlan(
+						data.plan.id,
+						data.user_planned_banner_data,
+						data.user_stats_data,
+						data.user_planned_purchase_data
+					)
+					toast.success("Plan copied")
+					return true
+				}
+
+				const catalogue = catalogueRef.current
+				if (!catalogue) return false
+				const copy = (await response.json()) as SharedPlanCopy
+				// Rebuilt against the catalogue exactly as a stored guest plan is:
+				// ids become banners, and a row whose banner has left the
+				// catalogue is dropped instead of kept as a dangling id.
+				const rebuilt = guestPlanToState(
+					{
+						version: 1,
+						savedAt: Date.now(),
+						stats: copy.user_stats_data,
+						banners: copy.user_planned_banner_data,
+						purchases: copy.user_planned_purchase_data ?? [],
+						stepUpSelections: []
+					},
+					catalogue
+				)
+				setUserPlannedBannerData(rebuilt.banners)
+				// Both checks: the server only sends resources that were asked
+				// for, and a server that sent them anyway still does not get to
+				// overwrite the guest's own. Stats and purchases move together;
+				// a purchase whose product has left the catalogue was dropped above.
+				if (includeStats && copy.user_stats_data) {
+					setUserStatsData(rebuilt.stats)
+					setUserPlannedPurchaseData(rebuilt.purchases)
+				}
+				setStagedBanners([])
+				toast.success("Plan copied to this device")
+				return true
+			}),
+		[runPlanAction, flushPendingSave, applyPlan]
+	)
+
 	const value = {
 		userStatsData,
 		clubRankData,
@@ -746,6 +898,9 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		renamePlan,
 		deletePlan,
 		setSeparateIncome,
+		setPlanSharing,
+		resetPlanLink,
+		copySharedPlan,
 		isGuestPlanStored,
 		resetGuestPlan,
 		saveNow,

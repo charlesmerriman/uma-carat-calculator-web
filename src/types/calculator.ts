@@ -28,7 +28,7 @@ import type { GameEvent, ChampionsMeeting, LeagueOfHeroes, RaceEvent } from "./e
 import type { AnniversaryEvent, UserPlannedPurchase } from "./anniversary"
 import type { Scenario } from "./scenario"
 import type { DailyLegendRaceRelease } from "./dailyLegendRace"
-import type { Plan } from "./plan"
+import type { Plan, PlanSharingChanges, SharedPlanCopyOptions } from "./plan"
 import type { IncomeLedgerRow } from "./ledger"
 import type { CalculationConstants } from "./constants"
 
@@ -186,6 +186,22 @@ export interface CalculatorContextType {
 	 * reads and saves them there. Off: back to the account's stats.
 	 */
 	setSeparateIncome: (planId: number, on: boolean) => Promise<boolean>
+	/**
+	 * Change a plan's share settings: the link on or off, and whether copies
+	 * carry the owner's resources and notes. Touches no rows, so nothing is
+	 * flushed first.
+	 */
+	setPlanSharing: (planId: number, changes: PlanSharingChanges) => Promise<boolean>
+	/** Give a plan a new share link. The old one stops working. */
+	resetPlanLink: (planId: number) => Promise<boolean>
+	/**
+	 * Take a copy of somebody's shared plan. Signed in: a new plan in the
+	 * account, switched to (`name` names it). Guest: it replaces the rows on
+	 * this device, and the stats only when the guest chose `includeStats`
+	 * (and the owner shared theirs). Asking first is the caller's job
+	 * (SharedPlanLanding).
+	 */
+	copySharedPlan: (publicId: string, options: SharedPlanCopyOptions) => Promise<boolean>
 	/**
 	 * Guest only. False once a write to this device has failed (blocked or
 	 * full storage), so the navbar stops saying the plan is saved here.

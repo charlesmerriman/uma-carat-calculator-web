@@ -8,7 +8,8 @@ import { useAverageMonthlyIncome } from "../../hooks/useAverageMonthlyIncome"
 import { UncapCrystalsPanel } from "./UncapCrystalsPanel"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { NumberField } from "../NumberField"
-import type { ClubRank, TeamTrialsRank, ChampionsMeetingRank, LeagueOfHeroesRank } from "../../types"
+import { shopTicketsPerMonth } from "../../utils/cumulativeIncome"
+import type { CalculationConstants, ClubRank, TeamTrialsRank, ChampionsMeetingRank, LeagueOfHeroesRank } from "../../types"
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -98,6 +99,39 @@ const ResourceRow = ({ icon, label, value, onChange }: { icon: ReactNode; label:
 		/>
 	</div>
 )
+
+// ── Shop tickets ──────────────────────────────────────────────────────
+
+/**
+ * The two "how many do I buy" boxes beside the Monthly Shop Tickets toggle.
+ * Each maps to a nullable count on UserStats, capped at what the shop sells.
+ *
+ * These lived in the navbar's Projection Settings popover until 2026-10, where
+ * about 3% of players ever changed them: two clicks deep, behind a gear, with
+ * nothing on the calculator pointing at them. Purchases is where players
+ * already go to say what they buy, so the toggle and its counts sit here now.
+ */
+const SHOP_TICKET_FIELDS: {
+	key: "shop_uma_tickets_bought" | "shop_support_tickets_bought"
+	label: string
+	/** What a null count resolves to: the assumed purchase. */
+	defaultCount: (constants: CalculationConstants) => number
+	/** The most the shop sells in a month. */
+	max: (constants: CalculationConstants) => number
+}[] = [
+	{
+		key: "shop_uma_tickets_bought",
+		label: "Uma",
+		defaultCount: (k) => k.monthly_shop_uma_tickets,
+		max: (k) => k.monthly_shop_uma_tickets_max,
+	},
+	{
+		key: "shop_support_tickets_bought",
+		label: "Support",
+		defaultCount: (k) => k.monthly_shop_support_tickets,
+		max: (k) => k.monthly_shop_support_tickets_max,
+	},
+]
 
 // ── PassToggle ────────────────────────────────────────────────────────
 
@@ -247,6 +281,9 @@ export const IncomeForm = () => {
 	const [isOpen, setIsOpen] = useState(() => (typeof window !== "undefined" ? !window.matchMedia("(max-width: 767px)").matches : true))
 
 	if (!userStatsData) return null
+
+	// Every income toggle defaults ON; only an explicit false turns it off.
+	const shopTicketsOn = userStatsData.monthly_shop_tickets !== false
 
 	const teamTrialsRank = teamTrialsRankData.find((r) => r.id === userStatsData.team_trials_rank)
 	const clubRank = clubRankData.find((r) => r.id === userStatsData.club_rank)
@@ -575,6 +612,66 @@ export const IncomeForm = () => {
 												}
 											/>
 										</div>
+									</div>
+									{/* Monthly Shop Tickets. Its own full-width row under the passes:
+									    a toggle plus two count boxes is too much for a PassToggle
+									    half. flex-wrap lets the counts drop under the toggle on a
+									    phone and sit beside it on a desktop. */}
+									<div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-gray-700 pt-3">
+										<label className="flex items-center gap-3">
+											<ToggleSwitch
+												ariaLabel="Monthly Shop Tickets"
+												// ON by default, so a field the API didn't send reads
+												// as on, the same way the projection treats it.
+												checked={shopTicketsOn}
+												onChange={(checked) =>
+													setUserStatsData({
+														...userStatsData,
+														monthly_shop_tickets: checked,
+													})
+												}
+											/>
+											<span className="text-sm text-gray-300">Monthly Shop Tickets</span>
+										</label>
+										{/* Only while the toggle is on: with it off no shop tickets
+										    are credited at all, so a count would be a control that
+										    does nothing. */}
+										{/* One wrapper so Uma and Support always share a line: the
+										    row may wrap them under the toggle, never apart. */}
+										{shopTicketsOn && (
+											<div className="flex items-center gap-4">
+												{SHOP_TICKET_FIELDS.map((field) => {
+													const defaultCount = field.defaultCount(calculationConstants)
+													const max = field.max(calculationConstants)
+													return (
+														<label key={field.key} className="flex items-center gap-1.5 text-xs text-gray-300">
+															{field.label}
+															<NumberField
+																// Shown through the same resolver the projection
+																// reads with, so the box can never show a count
+																// the engine isn't using.
+																value={shopTicketsPerMonth(userStatsData[field.key], defaultCount, max)}
+																onChange={(next) => {
+																	const capped = Math.min(next, max)
+																	setUserStatsData({
+																		...userStatsData,
+																		// The default count is stored as null,
+																		// "whatever the default is", so it keeps
+																		// following the default if an editor
+																		// changes it.
+																		[field.key]: capped === defaultCount ? null : capped,
+																	})
+																}}
+																mediumStep={1}
+																ariaLabel={`${field.label} tickets bought each month`}
+																className="w-10 rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-center text-sm text-gray-100"
+															/>
+															<span className="text-gray-400">of {max}</span>
+														</label>
+													)
+												})}
+											</div>
+										)}
 									</div>
 									{/* Same setting as the toggle on the Selectors page, surfaced here
 									    too so it's visible right alongside the other things that change

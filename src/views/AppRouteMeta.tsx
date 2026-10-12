@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom"
 import { useDocumentMeta } from "../hooks/useDocumentMeta"
 import { useSiteContent } from "../services/SiteContentContext"
+import { isPublicId } from "../utils/appRoutes"
 
 /**
  * The owner of the /app routes' document titles and descriptions. Renders nothing.
@@ -54,10 +55,26 @@ const META: Record<AppPath, RouteMeta> = {
 	},
 }
 
+/**
+ * A shared plan's landing card (/app/<public_id>). One meta for every link,
+ * and noindex: the page is somebody's plan, copied and never browsed, and it
+ * is the one /app page that cannot be prerendered (the id is per plan), so it
+ * rides the spa.html shell and stays out of the sitemap.
+ */
+const SHARED_PLAN_META: RouteMeta = {
+	title: "Shared plan",
+	description:
+		"An Uma Musume pull plan someone shared. Copy it to make it your own and see how it works out with your carats.",
+}
+
 /** The route a pathname names, tolerating a trailing slash. Falls back to the calculator. */
-function appPathFor(pathname: string): AppPath {
+function appPathFor(pathname: string): AppPath | "shared" {
 	const path = pathname.replace(/\/+$/, "")
-	return path in META ? (path as AppPath) : "/app"
+	if (path in META) return path as AppPath
+	// Checked AFTER the tabs: "/app/timeline" has the shape of an id too.
+	const [, app, segment, extra] = path.split("/")
+	if (app === "app" && extra === undefined && isPublicId(segment)) return "shared"
+	return "/app"
 }
 
 export const AppRouteMeta = () => {
@@ -78,8 +95,12 @@ export const AppRouteMeta = () => {
 		path === "/app/legend-races"
 			? content.page("daily-legend-races", { optional: true })
 			: null
-	const meta = page ? { title: page.title, description: page.meta_description } : META[path]
+	const meta = page
+		? { title: page.title, description: page.meta_description }
+		: path === "shared"
+			? SHARED_PLAN_META
+			: META[path]
 
-	useDocumentMeta(meta.title, meta.description)
+	useDocumentMeta(meta.title, meta.description, path === "shared")
 	return null
 }
