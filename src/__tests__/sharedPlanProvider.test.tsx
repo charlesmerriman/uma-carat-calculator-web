@@ -115,6 +115,10 @@ const SHARED_ROW = {
 	banner_step_up: null,
 }
 
+/** One campaign product, so a planned purchase of it survives the catalogue rebuild. */
+const PACK_ID = 50
+const SHARED_PURCHASE = { product: PACK_ID, quantity: 3, target_uma: null, target_support: null }
+
 const basePayload = {
 	club_rank_data: [],
 	team_trials_rank_data: [],
@@ -127,7 +131,7 @@ const basePayload = {
 	champions_meeting_data: [],
 	league_of_heroes_event_data: [],
 	banner_timeline_data: [],
-	anniversary_event_data: [],
+	anniversary_event_data: [{ id: 1, products: [{ id: PACK_ID }] }],
 	scenario_data: [],
 	user_planned_purchase_data: [],
 	user_step_up_selection_data: [],
@@ -329,11 +333,19 @@ describe('a guest copy', () => {
 		expect(toast.success).toHaveBeenCalledWith('Plan copied to this device')
 	})
 
-	it("takes the owner's stats only when the guest asks for them", async () => {
+	it("takes the owner's resources, purchases included, only when the guest asks", async () => {
+		// The guest's own pack, which the owner's resources replace.
+		writeGuestPlan(
+			{ ...DEFAULT_GUEST_STATS, current_carat: 1500 },
+			[],
+			[{ product: PACK_ID, quantity: 1, target_uma: null, target_support: null }],
+			[]
+		)
 		mockedCopy.mockResolvedValue(
 			json({
 				user_planned_banner_data: [SHARED_ROW],
 				user_stats_data: { ...DEFAULT_GUEST_STATS, current_carat: 9999 },
+				user_planned_purchase_data: [SHARED_PURCHASE],
 			})
 		)
 		await renderLoaded()
@@ -342,17 +354,26 @@ describe('a guest copy', () => {
 
 		expect(mockedCopy).toHaveBeenCalledWith(LINK, { include_stats: true })
 		expect(ctx().userStatsData?.current_carat).toBe(9999)
-		expect(readGuestPlan()?.stats?.current_carat).toBe(9999)
+		expect(ctx().userPlannedPurchaseData.map((row) => row.quantity)).toEqual([3])
+		const stored = readGuestPlan()
+		expect(stored?.stats?.current_carat).toBe(9999)
+		expect(stored?.purchases.map((row) => row.quantity)).toEqual([3])
 	})
 
-	it("keeps the guest's own stats when they did not ask, whatever the server sends", async () => {
-		writeGuestPlan({ ...DEFAULT_GUEST_STATS, current_carat: 1500 }, [], [], [])
-		// A server that sent stats nobody asked for still does not get to
+	it("keeps the guest's own resources when they did not ask, whatever the server sends", async () => {
+		writeGuestPlan(
+			{ ...DEFAULT_GUEST_STATS, current_carat: 1500 },
+			[],
+			[{ product: PACK_ID, quantity: 1, target_uma: null, target_support: null }],
+			[]
+		)
+		// A server that sent resources nobody asked for still does not get to
 		// overwrite the guest's own.
 		mockedCopy.mockResolvedValue(
 			json({
 				user_planned_banner_data: [SHARED_ROW],
 				user_stats_data: { ...DEFAULT_GUEST_STATS, current_carat: 9999 },
+				user_planned_purchase_data: [SHARED_PURCHASE],
 			})
 		)
 		await renderLoaded()
@@ -360,7 +381,9 @@ describe('a guest copy', () => {
 		await copy()
 
 		expect(ctx().userStatsData?.current_carat).toBe(1500)
+		expect(ctx().userPlannedPurchaseData.map((row) => row.quantity)).toEqual([1])
 		expect(readGuestPlan()?.stats?.current_carat).toBe(1500)
+		expect(readGuestPlan()?.purchases.map((row) => row.quantity)).toEqual([1])
 	})
 
 	it('drops a row whose banner has left the catalogue', async () => {

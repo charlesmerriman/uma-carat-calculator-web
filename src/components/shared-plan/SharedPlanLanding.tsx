@@ -30,9 +30,10 @@ import { OguriSpinner } from "../OguriSpinner"
  * Signed in, the copy is a new plan in the account (named here, prefilled like
  * Duplicate's suggestion) and the calculator opens on it. As a guest, the copy
  * replaces the plan on this device, so if there is one worth keeping the card
- * asks first. A guest's own carats stay unless they tick the box to take the
- * owner's (offered only when the owner shared them): the device holds one set,
- * so losing theirs is the guest's call, never a side effect of the owner's. Both paths are CalculatorProvider.copySharedPlan; this component
+ * asks first. A guest's own resources (carats, ranks, planned purchases) stay
+ * unless they tick the box to take the owner's (offered only when the owner
+ * shared them): the device holds one set, so losing theirs is the guest's
+ * call, never a side effect of the owner's. Both paths are CalculatorProvider.copySharedPlan; this component
  * only decides when to call it and where to go afterwards.
  */
 
@@ -335,7 +336,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 							}}
 							className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
 						/>
-						<span className="text-sm text-gray-200">Use their carats, tickets and ranks instead of mine</span>
+						<span className="text-sm text-gray-200">Use their resources instead of mine</span>
 					</label>
 				)}
 
