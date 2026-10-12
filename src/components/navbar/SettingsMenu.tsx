@@ -3,8 +3,6 @@ import { Settings } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { useAccount } from "../../services/AuthContext"
 import { ToggleSwitch } from "../ToggleSwitch"
-import { NumberField } from "../NumberField"
-import { shopTicketsPerMonth } from "../../utils/cumulativeIncome"
 import { DEFAULT_CONSTANTS } from "../../constants/gameConstants"
 import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 import type { CalculationConstants, UserStats } from "../../types"
@@ -33,14 +31,6 @@ const SETTINGS: {
 	description: string | ((constants: CalculationConstants) => string)
 }[] = [
 	{
-		key: "monthly_shop_tickets",
-		label: "Monthly Shop Tickets",
-		// Both numbers are admin-editable constants, so they are read here
-		// instead of being written into the sentence.
-		description: (k) =>
-			`Buy uma and support tickets from the shop each month, up to ${k.monthly_shop_uma_tickets_max} uma and ${k.monthly_shop_support_tickets_max} support.`,
-	},
-	{
 		key: "spend_tickets_on_banners",
 		label: "Spend Tickets on Banners",
 		description: "Use tickets on planned pulls. Turn off to keep them as spares.",
@@ -63,32 +53,6 @@ const SETTINGS: {
 		key: "full_price_paid_pulls",
 		label: "Full-Price Paid Pulls",
 		description: "Spend paid carats on normal 150-carat pulls.",
-	},
-]
-
-/**
- * The two "how many do I buy" boxes under the Monthly Shop Tickets toggle.
- * Each maps to a nullable count on UserStats, capped at what the shop sells.
- */
-const SHOP_TICKET_FIELDS: {
-	key: "shop_uma_tickets_bought" | "shop_support_tickets_bought"
-	label: string
-	/** What a null count resolves to: the assumed purchase. */
-	defaultCount: (constants: CalculationConstants) => number
-	/** The most the shop sells in a month. */
-	max: (constants: CalculationConstants) => number
-}[] = [
-	{
-		key: "shop_uma_tickets_bought",
-		label: "Uma",
-		defaultCount: (k) => k.monthly_shop_uma_tickets,
-		max: (k) => k.monthly_shop_uma_tickets_max,
-	},
-	{
-		key: "shop_support_tickets_bought",
-		label: "Support",
-		defaultCount: (k) => k.monthly_shop_support_tickets,
-		max: (k) => k.monthly_shop_support_tickets_max,
 	},
 ]
 
@@ -179,44 +143,6 @@ export const SettingsMenu = () => {
 										ariaLabel={label}
 									/>
 								</div>
-								{/* Only while the toggle is on: with it off no shop tickets
-								    are credited at all, so a count would be a control that
-								    does nothing. basis-full drops the pair onto its own line
-								    under the label and switch. */}
-								{key === "monthly_shop_tickets" && userStatsData.monthly_shop_tickets && (
-									<div className="flex basis-full items-center gap-3 text-xs text-gray-300">
-										{SHOP_TICKET_FIELDS.map((field) => {
-											const defaultCount = field.defaultCount(constants)
-											const max = field.max(constants)
-											return (
-												<label key={field.key} className="flex items-center gap-1.5">
-													{field.label}
-													<NumberField
-														// Shown through the same resolver the projection
-														// reads with, so the box can never show a
-														// count the engine isn't using.
-														value={shopTicketsPerMonth(userStatsData[field.key], defaultCount, max)}
-														onChange={(next) => {
-															const capped = Math.min(next, max)
-															setUserStatsData({
-																...userStatsData,
-																// The default count is stored as null,
-																// "whatever the default is", so it keeps
-																// following the default if an editor
-																// changes it.
-																[field.key]: capped === defaultCount ? null : capped,
-															})
-														}}
-														mediumStep={1}
-														ariaLabel={`${field.label} tickets bought each month`}
-														className="w-10 rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-center text-sm text-gray-100"
-													/>
-													<span className="text-gray-400">of {max}</span>
-												</label>
-											)
-										})}
-									</div>
-								)}
 							</div>
 						))}
 					</div>
