@@ -349,6 +349,11 @@ team drawer (R2b) edit the same teams and must save through one queue.
   returns: its `key` (never the server id) names it, edits made meanwhile are saved once
   the id lands, and a delete in that window deletes the server copy when it arrives. A
   refusal is toasted with the server's sentence. Never written to the device store.
+- **What a team carries besides its umas and cards:** a private `name`, up to ten `notes`
+  (`{text, color}`, 1000 characters each, written in `components/pvp/TeamNotes.tsx`), the pin
+  (`isFocus` here, `is_focus` on the server, `focus` in the device store; at most one, set from
+  the team window's selector) and `updatedAt`, the last change in ms, which picks between two
+  teams for one event (`utils/pvpTeams.ts` `preferredTeam()`). All of it is the owner's alone.
 - **Signing in with teams on the device:** the first account load `POST`s each device team,
   clears the ones that landed and toasts "Your teams from this device were added to your
   account." A refused one stays on the device and is offered again next load.

@@ -1347,6 +1347,22 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
+### My team view: the builder (`components/pvp/TeamBuilder.tsx`)
+
+- **One editor, two layouts.** `TeamEditor` owns the pickers and the rules and draws either
+  `TeamGrid` (My team: a panel per uma, portrait beside five cards and the borrow slot) or
+  `CompactTeamGrid` (the team window: umas on top, cards below). Both take the same props.
+  Support art is 3:4 (450x600), portraits square.
+- **Side panels** (`SidePanel.tsx`): Guide picks docks on the left from `xl`, Recommended skills
+  on the right from `2xl`; narrower, each is a drawer from its own edge behind a toolbar button.
+  Both collapse, remembered per browser.
+- **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
+  starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
+  ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
+  `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks.
+- **Notes** (`TeamNotes.tsx`): ten per team, read-only until the pen, `==red==` and line breaks
+  kept, the eraser's Undo in a toast. Colours are the `--color-note-*` tokens.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It
@@ -1663,6 +1679,8 @@ the team.
   `services/TeamDrawerProvider.tsx` (`localStorage` `uma-planner-team-drawer`, read in an
   effect); the button renders nothing without its context.
 - **Not a dialog**: no backdrop or focus trap, so the page behind stays usable. Escape inside it
-  closes it and refocuses the Team button.
+  closes it and refocuses the Team button (an Escape inside an open note closes the note only).
+- **Notes** show under the team and are written here too (`TeamNotes`); the save state sits in
+  the header (`SaveStatus`).
 - **Stacking**: page < window (`z-40` from `desktop-nav`, `z-50` below, where it covers the
   screen) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
