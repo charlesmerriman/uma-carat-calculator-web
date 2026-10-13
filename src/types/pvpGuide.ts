@@ -133,4 +133,10 @@ export interface PvpGuide {
 	style_notes: PvpStyleNote[]
 	decks: PvpDeck[]
 	honorable_mentions: PvpHonorableMention[]
+	/**
+	 * Every `[[Skill name]]` in the guide's text, resolved: lower-case name ->
+	 * skill. A mention missing here (a skill that went stale) renders as its
+	 * plain name. Optional: an older API omits it.
+	 */
+	skill_mentions?: Record<string, PvpSkillRef>
 }

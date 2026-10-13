@@ -17,7 +17,8 @@
 import { useState } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
-import { InlineNote, NoteOnlyTile, SkillChip, SupportTile, UmaTile } from "./PvpTiles"
+import { InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
+import { SkillMentionsContext } from "./skillMentionsContext"
 import { STYLE_LABELS, groupSkillsByTier, stylesWithContent } from "../../utils/pvpGuide"
 import type {
 	PvpDeck,
@@ -33,6 +34,9 @@ const SECTION = "rounded-xl border border-gray-700 bg-gray-800/60 p-3"
 const HEADING = "text-sm font-semibold uppercase tracking-wide text-gray-400"
 const SUBHEADING = "text-sm font-semibold text-brand"
 const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
+
+// Module scope, so MarkdownContent's memoised components keep one identity.
+const renderSkill = (name: string) => <SkillMention name={name} />
 
 const CATEGORY_LABELS: Record<PvpSkillCategory, string> = {
 	acceleration: "Acceleration",
@@ -199,7 +203,7 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 			)}
 			{note && (
 				<div className="text-sm">
-					<MarkdownContent markdown={note.body} paragraphClassName={PARAGRAPH} />
+					<MarkdownContent markdown={note.body} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
 				</div>
 			)}
 			{skills.length > 0 && <SkillGroups rows={skills} />}
@@ -275,6 +279,7 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 		hasOverview || guide.team_comps.length > 0 || guide.stat_configs.length > 0 || sharedSkills.length > 0
 
 	return (
+		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
 		<div className="flex flex-col gap-4">
 			{!guide.is_published && (
 				<div className="flex items-center gap-2 rounded-lg border border-staging/60 bg-staging/10 px-3 py-2 text-sm font-semibold text-gray-100">
@@ -303,13 +308,13 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 								)}
 								{guide.short_description && (
 									<div className="text-sm">
-										<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} />
+										<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
 									</div>
 								)}
 								{guide.meta_analysis && (
 									<div className="mt-3 text-sm">
 										<h4 className={SUBHEADING}>Meta analysis</h4>
-										<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} />
+										<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
 									</div>
 								)}
 							</section>
@@ -351,5 +356,8 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 				{styles.length > 0 && <StyleColumn guide={guide} styles={styles} />}
 			</div>
 		</div>
+		</SkillMentionsContext.Provider>
 	)
 }
+
+const EMPTY_MENTIONS = {}

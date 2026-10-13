@@ -8,7 +8,7 @@ import {
 	raceEventsInOrder,
 	stylesWithContent,
 } from "../utils/pvpGuide"
-import { splitHighlights } from "../utils/remarkHighlight"
+import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import type { BannerSupport, BannerUma, RaceEvent } from "../types"
 import type { PvpGuide, PvpSkillRecommendation } from "../types/pvpGuide"
@@ -119,5 +119,16 @@ describe("splitHighlights", () => {
 			{ text: "!", highlighted: false },
 		])
 		expect(splitHighlights("a = b == c")).toEqual([{ text: "a = b == c", highlighted: false }])
+	})
+})
+
+describe("splitNoteText", () => {
+	it("finds mentions on their own and inside a highlight", () => {
+		expect(splitNoteText("Take [[Groundwork]], ==then [[Final Push]]==")).toEqual([
+			{ kind: "text", text: "Take " },
+			{ kind: "skill", name: "Groundwork" },
+			{ kind: "text", text: ", " },
+			{ kind: "highlight", pieces: [{ kind: "text", text: "then " }, { kind: "skill", name: "Final Push" }] },
+		])
 	})
 })

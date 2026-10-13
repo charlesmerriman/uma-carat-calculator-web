@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
@@ -39,7 +39,7 @@ function isInternalHref(href: string): boolean {
  * inheriting the paragraph top margin, and `[&>code]` on <pre> strips the inline-code
  * chip styling from a fenced block, since react-markdown routes both through `code`.
  */
-function buildComponents(paragraph: string): Components {
+function buildComponents(paragraph: string, renderSkill?: (name: string) => ReactNode): Components {
 	return {
 		h2: ({ node: _node, children, ...props }) => (
 			<h2
@@ -108,6 +108,14 @@ function buildComponents(paragraph: string): Components {
 		// `==words==` (utils/remarkHighlight.ts): the sheet's red must-haves.
 		// No background: the <mark> default yellow would fight every theme.
 		mark: ({ node: _node, ...props }) => <mark className="bg-transparent font-semibold text-highlight" {...props} />,
+		// `[[Skill name]]` (utils/remarkHighlight.ts) arrives as a span with
+		// data-skill. A caller that knows skills renders a chip; any other
+		// caller shows the bare name.
+		span: ({ node: _node, children, ...props }) => {
+			const name = (props as Record<string, unknown>)["data-skill"]
+			if (typeof name === "string") return <>{renderSkill ? renderSkill(name) : name}</>
+			return <span {...props}>{children}</span>
+		},
 	}
 }
 
@@ -121,11 +129,30 @@ function buildComponents(paragraph: string): Components {
  * `paragraphClassName` exists for the homepage teaser, whose cards set paragraphs
  * smaller than a content page does. Everything else is the same map.
  */
-export function MarkdownContent({ markdown, paragraphClassName = PARAGRAPH }: { markdown: string; paragraphClassName?: string }) {
-	const components = useMemo(() => buildComponents(paragraphClassName), [paragraphClassName])
+export function MarkdownContent({
+	markdown,
+	paragraphClassName = PARAGRAPH,
+	renderSkill,
+}: {
+	markdown: string
+	paragraphClassName?: string
+	/** Renders a `[[Skill name]]` mention. Without it the bare name shows. */
+	renderSkill?: (name: string) => ReactNode
+}) {
+	const components = useMemo(() => buildComponents(paragraphClassName, renderSkill), [paragraphClassName, renderSkill])
 	return (
 		<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
-			{markdown}
+			{escapeMentions(markdown)}
 		</ReactMarkdown>
 	)
+}
+
+/**
+ * `[[Updrafters]](FF)` is a markdown LINK (text "[Updrafters]", href "FF")
+ * before remarkHighlight ever sees it. Escaping the brackets keeps a mention
+ * literal text for the plugin to find. The one cost: a mention written inside
+ * a code span shows its backslashes, and nobody writes one there.
+ */
+function escapeMentions(markdown: string): string {
+	return markdown.replace(/\[\[([^[\]\n]+)\]\]/g, "\\[\\[$1\\]\\]")
 }

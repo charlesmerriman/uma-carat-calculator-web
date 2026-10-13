@@ -1321,9 +1321,14 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   style) and ONE style pane. Style tabs list only styles with content (`stylesWithContent`).
   Never add a second "compare" pane: it was tried and read as every card listed twice.
   "New since <previous event>" is collapsed by default for the same reason.
-- **`==words==` is red** in any guide text: `utils/remarkHighlight.ts` is a remark plugin
-  in `MarkdownContent` (emits `<mark>`, styled `text-highlight`; raw HTML stays off) and
-  `splitHighlights` feeds `InlineNote` for one-line notes. Token `--color-highlight`.
+- **`==words==` is red and `[[Skill name]]` is a skill** in any guide text:
+  `utils/remarkHighlight.ts` is a remark plugin in `MarkdownContent` (emits `<mark>`, styled
+  `text-highlight`, and `<span data-skill>`, which the caller's `renderSkill` turns into a
+  `SkillMention` chip; raw HTML stays off) and `splitNoteText` feeds `InlineNote` for
+  one-line notes. Mentions resolve through the guide's `skill_mentions`, provided by
+  `SkillMentionsContext` in `PvpGuideView`; an unresolved one is its plain name.
+  `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
+  otherwise a markdown link. Token `--color-highlight`.
 - **Stats are text** (`"1100+"`, `"578*"`), shown as written; a blank cell is an en dash.
 - **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
   first global banner start, between the nearest earlier event of either kind and this one.

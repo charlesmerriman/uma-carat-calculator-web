@@ -62,4 +62,23 @@ describe("MarkdownContent", () => {
 		expect(container.querySelector("script")).toBeNull()
 		expect(container.textContent).toContain("<script>")
 	})
+
+	it("hands a [[Skill]] mention to the caller's renderer", () => {
+		const { container } = render(
+			<MemoryRouter>
+				<MarkdownContent
+					markdown="Take [[Groundwork]] first."
+					renderSkill={(name) => <b data-testid="skill">{name}!</b>}
+				/>
+			</MemoryRouter>,
+		)
+		expect(screen.getByTestId("skill").textContent).toBe("Groundwork!")
+		expect(container.textContent).toBe("Take Groundwork! first.")
+	})
+
+	it("shows a mention's bare name with no renderer, and never turns [[x]](y) into a link", () => {
+		const { container } = renderMarkdown("Use [[Updrafters]](FF) late.")
+		expect(container.querySelector("a")).toBeNull()
+		expect(container.textContent).toBe("Use Updrafters(FF) late.")
+	})
 })

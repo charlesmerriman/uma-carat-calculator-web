@@ -10,23 +10,79 @@
 
 import { useId, useState, type ReactNode } from "react"
 import { Star } from "lucide-react"
-import { splitHighlights } from "../../utils/remarkHighlight"
+import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
+import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 
-/** A one-line note, with `==words==` in red and line breaks kept. */
+function NotePieces({ pieces }: { pieces: NotePiece[] }) {
+	return (
+		<>
+			{pieces.map((piece, index) =>
+				piece.kind === "text" ? (
+					<span key={index}>{piece.text}</span>
+				) : piece.kind === "skill" ? (
+					<SkillMention key={index} name={piece.name} />
+				) : (
+					<mark key={index} className="bg-transparent font-semibold text-highlight">
+						<NotePieces pieces={piece.pieces} />
+					</mark>
+				)
+			)}
+		</>
+	)
+}
+
+/** A one-line note: `==words==` in red, `[[Skill name]]` as a skill, line breaks kept. */
 export function InlineNote({ text, className = "" }: { text: string; className?: string }) {
 	if (!text) return null
 	return (
 		<span className={`whitespace-pre-wrap ${className}`}>
-			{splitHighlights(text).map((piece, index) =>
-				piece.highlighted ? (
-					<mark key={index} className="bg-transparent font-semibold text-highlight">
-						{piece.text}
-					</mark>
-				) : (
-					<span key={index}>{piece.text}</span>
-				)
+			<NotePieces pieces={splitNoteText(text)} />
+		</span>
+	)
+}
+
+/**
+ * A `[[Skill name]]` mention inside text: the skill's icon and name, with its
+ * description on hover, focus or tap. Inline (a span), so it sits in a
+ * sentence. A name the guide's map does not hold renders as plain text.
+ */
+export function SkillMention({ name }: { name: string }) {
+	const skill = useSkillMentions()[name.toLowerCase()]
+	const detailId = useId()
+	const [tapped, setTapped] = useState(false)
+	if (!skill) return <>{name}</>
+	return (
+		<span
+			role="group"
+			aria-label={skill.name}
+			aria-describedby={detailId}
+			tabIndex={0}
+			onPointerUp={(event) => {
+				if (event.pointerType === "touch") setTapped((open) => !open)
+			}}
+			onBlur={() => setTapped(false)}
+			className="group relative inline-flex items-center gap-1 whitespace-nowrap rounded border border-gray-600 bg-gray-800 py-px pl-0.5 pr-1.5 align-baseline text-[0.95em] font-medium text-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+		>
+			{skill.image ? (
+				<img src={skill.image} alt="" className="h-4 w-4 shrink-0" loading="lazy" decoding="async" />
+			) : (
+				<span className="h-4 w-4 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 			)}
+			{skill.name}
+			<span
+				id={detailId}
+				role="tooltip"
+				className={`pointer-events-none absolute left-0 top-full z-40 mt-1 w-64 max-w-[80vw] whitespace-normal rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs font-normal leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+					tapped ? "opacity-100" : "opacity-0"
+				}`}
+			>
+				<span className="block font-semibold text-gray-100">
+					{skill.name}
+					{skill.unique_of && <span className="font-normal text-gray-400"> ({skill.unique_of})</span>}
+				</span>
+				{skill.description}
+			</span>
 		</span>
 	)
 }

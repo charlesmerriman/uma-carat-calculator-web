@@ -296,3 +296,28 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.getByText("Champions Meeting 20")).toBeInTheDocument()
 	})
 })
+
+describe("PvpGuidePage skill mentions", () => {
+	it("renders [[Skill]] in a style note and in a deck note as the skill, with its description", async () => {
+		const groundwork = { id: 9, name: "Groundwork", description: "Front runners speed up early.", image: null, rarity: 2, unique_of: null }
+		respond(200, {
+			...GUIDE,
+			style_notes: [{ style: "front", body: "Take [[groundwork]] first." }],
+			decks: [{ ...GUIDE.decks[0], note: "Builds [[Groundwork]]" }],
+			skill_mentions: { groundwork },
+		})
+		renderPage()
+		await screen.findByText("Skills for every style")
+		const chips = screen.getAllByRole("group", { name: "Groundwork" })
+		expect(chips).toHaveLength(2)
+		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Front runners speed up early.")
+	})
+
+	it("shows an unresolved mention as its plain name", async () => {
+		respond(200, { ...GUIDE, style_notes: [{ style: "front", body: "Take [[Gone Skill]]." }], skill_mentions: {} })
+		renderPage()
+		await screen.findByText("Skills for every style")
+		expect(screen.getByText(/Take Gone Skill\./)).toBeInTheDocument()
+		expect(screen.queryByRole("group", { name: "Gone Skill" })).not.toBeInTheDocument()
+	})
+})
