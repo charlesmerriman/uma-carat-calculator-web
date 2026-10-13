@@ -8,25 +8,36 @@
  * catalogue. Each category heading counts how many of its skills that is.
  *
  * A row opens in place to show the game's description, the positions, the
- * guide's notes and where the team gets it. In place rather than a hover
- * tooltip, so it works on a touch screen.
+ * guide's notes and where the team gets it, plus a Search button per team
+ * spot that opens the picker with the skill's name already searched. In
+ * place rather than a hover tooltip, so it works on a touch screen.
  *
  * Docked in the right column from 2xl, a drawer from the right below that
  * (components/pvp/SidePanel.tsx has both placements).
  */
 
 import { useMemo, useState } from "react"
-import { Check, ChevronDown, Loader2 } from "lucide-react"
+import { Check, ChevronDown, Loader2, Search } from "lucide-react"
 import { SKILL_CATEGORY_LABELS, STYLE_LABELS, guideSkillsByCategory, type GuideSkillPick } from "../../utils/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
+
+/** One team spot a skill can be searched for: "Spot 1 · Daiwa Scarlet". */
+export interface SkillSearchSpot {
+	position: number
+	label: string
+}
 
 interface GuideSkillsProps {
 	guideState: PvpGuideState
 	/** Skill id -> where the selected team gets it ("Kitasan Black (hint)"). */
 	teamSkillSources: Map<number, string[]>
+	/** The team's three spots, each with a Search button in an open row. */
+	spots: SkillSearchSpot[]
+	/** Opens the picker for a spot with `skillName` in the search box. */
+	onSearch: (position: number, skillName: string) => void
 }
 
-export function GuideSkillsBody({ guideState, teamSkillSources }: GuideSkillsProps) {
+export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch }: GuideSkillsProps) {
 	const groups = useMemo(
 		() => (guideState.status === "ready" ? guideSkillsByCategory(guideState.guide) : []),
 		[guideState]
@@ -68,6 +79,8 @@ export function GuideSkillsBody({ guideState, teamSkillSources }: GuideSkillsPro
 									sources={teamSkillSources.get(pick.skill.id) ?? null}
 									open={openId === pick.skill.id}
 									onToggle={() => setOpenId(openId === pick.skill.id ? null : pick.skill.id)}
+									spots={spots}
+									onSearch={(position) => onSearch(position, pick.skill.name)}
 								/>
 							))}
 						</ul>
@@ -90,11 +103,13 @@ function plain(text: string): string {
 	return text.replace(/==/g, "").replace(/\[\[([^\]]+)\]\]/g, "$1")
 }
 
-function SkillRow({ pick, sources, open, onToggle }: {
+function SkillRow({ pick, sources, open, onToggle, spots, onSearch }: {
 	pick: GuideSkillPick
 	sources: string[] | null
 	open: boolean
 	onToggle: () => void
+	spots: SkillSearchSpot[]
+	onSearch: (position: number) => void
 }) {
 	const { skill } = pick
 	return (
@@ -140,6 +155,27 @@ function SkillRow({ pick, sources, open, onToggle }: {
 					<p className={sources ? "text-brand" : "text-gray-500"}>
 						{sources ? `Your team: ${sources.join(", ")}` : "Not on your team yet."}
 					</p>
+					<div className="mt-1 border-t border-gray-700/70 pt-1.5">
+						<p className="mb-1 text-[11px] font-medium text-gray-400">Find an uma or card with it for:</p>
+						<ul className="flex flex-col gap-1">
+							{spots.map((spot) => (
+								<li key={spot.position} className="flex items-center gap-1.5">
+									<span className="min-w-0 flex-1 truncate text-gray-300" title={spot.label}>
+										{spot.label}
+									</span>
+									<button
+										type="button"
+										aria-label={`Search for ${skill.name}: ${spot.label}`}
+										onClick={() => onSearch(spot.position)}
+										className="flex shrink-0 items-center gap-1 rounded-md border border-gray-600 px-2 py-0.5 font-medium text-gray-100 transition hover:border-brand hover:text-brand"
+									>
+										<Search className="h-3 w-3" aria-hidden="true" />
+										Search
+									</button>
+								</li>
+							))}
+						</ul>
+					</div>
 				</div>
 			)}
 		</li>

@@ -19,7 +19,7 @@
  * Support cards also get a row of type filters.
  */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { Search, Star, Trash2, X } from "lucide-react"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
@@ -71,6 +71,14 @@ type PvpCardPickerProps = {
 	onPick: (id: number) => void
 	/** Shown when the place is filled: empties it. */
 	onRemove?: () => void
+	/** What the search box starts with: a skill's name, from the skills panel. */
+	initialSearch?: string
+	/**
+	 * Drawn under the header: the Umas / Support cards switch of a skill
+	 * search. Switching changes `pool` and `items` on this same mounted
+	 * picker, so the search and the pinned skills carry across.
+	 */
+	tabs?: ReactNode
 	onClose: () => void
 } & ({ pool: "uma"; items: CatalogueUma[] } | { pool: "support"; items: CatalogueSupportCard[] })
 
@@ -98,8 +106,8 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, selectedId, onPick, onRemove, onClose, pool } = props
-	const [search, setSearch] = useState("")
+	const { title, skillsById, event, style, recommended, blockReason, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs } = props
+	const [search, setSearch] = useState(initialSearch ?? "")
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(null)
 
@@ -206,6 +214,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 						<X className="h-5 w-5" />
 					</button>
 				</header>
+
+				{tabs && <div className="border-b border-gray-700 px-4 py-2">{tabs}</div>}
 
 				{(chips.length > 0 || pool === "support") && (
 					<div className="flex flex-col gap-2 border-b border-gray-700 bg-gray-900/35 px-4 py-2">

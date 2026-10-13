@@ -40,13 +40,20 @@ import { DockedPanel, SideDrawer } from "./SidePanel"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamGrid } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
-import type { MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
+import type { CatalogueUma, MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
 
 /** One shared empty team, so "no team yet" is the same array on every render. */
 const NO_MEMBERS: PvpTeamMember[] = []
 
-type PickerTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
+/**
+ * What the picker is open for: one uma spot, one card slot, or a skill search
+ * from the skills panel (one spot, either pool, the skill's name searched).
+ */
+type PickerTarget =
+	| { pool: "uma"; position: number }
+	| { pool: "support"; position: number; slot: number }
+	| { pool: "skill"; position: number; query: string; tab: "uma" | "support" }
 
 const PICKS_BUTTON =
 	"flex items-center gap-1.5 rounded-md border border-gray-600 px-2.5 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand"
@@ -252,7 +259,25 @@ function ReadyBuilder({ event, teamsState, index }: {
 	const skillSources = teamSkillSources(members, index.umasById, index.cardsById)
 
 	const picksBody = <GuidePicksBody guideState={guideState} members={members} actions={pickActions} />
-	const skillsBody = <GuideSkillsBody guideState={guideState} teamSkillSources={skillSources} />
+	const skillSpots = [0, 1, 2].map((position) => {
+		const member = memberAt(members, position)
+		const name = member ? (index.umasById.get(member.uma)?.name ?? "an uma") : "empty"
+		return { position, label: `Spot ${position + 1} · ${name}` }
+	})
+	const skillsBody = (
+		<GuideSkillsBody
+			guideState={guideState}
+			teamSkillSources={skillSources}
+			spots={skillSpots}
+			onSearch={(position, skillName) => {
+				// The drawer would sit over nothing useful once the picker opens.
+				closeSkills()
+				// An empty spot wants an uma first; a filled one most often a card.
+				const tab = memberAt(members, position) ? "support" : "uma"
+				setPicker({ pool: "skill", position, query: skillName, tab })
+			}}
+		/>
+	)
 	const picksIcon = <Star className="h-4 w-4 fill-highlight text-highlight" aria-hidden="true" />
 	const skillsIcon = <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
 
@@ -413,7 +438,116 @@ function ReadyBuilder({ event, teamsState, index }: {
 					onClose={() => setPicker(null)}
 				/>
 			)}
+			{picker?.pool === "skill" && (
+				<SkillSearchPicker
+					target={picker}
+					onTab={(tab) => setPicker({ ...picker, tab })}
+					index={index}
+					event={event}
+					member={pickerMember}
+					members={members}
+					style={pickerStyle}
+					recommended={recommended}
+					onPickUma={(uma) => {
+						applyMembers(setMemberUma(members, picker.position, uma))
+						setPicker(null)
+					}}
+					onPickCard={(slot, id) => {
+						applyMembers(setCard(members, picker.position, slot, id))
+						setPicker(null)
+					}}
+					onClose={() => setPicker(null)}
+				/>
+			)}
 		</div>
+	)
+}
+
+/**
+ * The picker opened from a skill in the skills panel: one team spot, the
+ * skill's name already searched, and a switch between umas (for the spot)
+ * and support cards (for that uma's deck). Both branches render the same
+ * PvpCardPicker in the same place, so React keeps the one instance and the
+ * search and pinned skills survive the switch.
+ *
+ * A card goes in the uma's first free slot from 1 to 5, else the borrow slot.
+ */
+function SkillSearchPicker({ target, onTab, index, event, member, members, style, recommended, onPickUma, onPickCard, onClose }: {
+	target: Extract<PickerTarget, { pool: "skill" }>
+	onTab: (tab: "uma" | "support") => void
+	index: PvpCatalogueIndex
+	event: RaceEvent
+	member: PvpTeamMember | undefined
+	members: PvpTeamMember[]
+	style: MemberStyle | null
+	recommended: { umas: Set<number>; cards: Set<number> }
+	onPickUma: (uma: CatalogueUma) => void
+	onPickCard: (slot: number, cardId: number) => void
+	onClose: () => void
+}) {
+	const umaName = member ? (index.umasById.get(member.uma)?.name ?? "this uma") : null
+	const cardSlot = member
+		? (firstOpenCardSlot(member) ?? (member.cards.some((card) => card.slot === PVP_BORROW_SLOT) ? null : PVP_BORROW_SLOT))
+		: null
+	const tabs = (
+		<div className="flex gap-1 rounded-lg bg-gray-900/70 p-1" role="group" aria-label="Search for">
+			{(["uma", "support"] as const).map((tab) => (
+				<button
+					key={tab}
+					type="button"
+					aria-pressed={target.tab === tab}
+					onClick={() => onTab(tab)}
+					className={`flex-1 rounded-md px-3 py-1 text-sm font-medium transition ${
+						target.tab === tab ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:text-gray-100"
+					}`}
+				>
+					{tab === "uma" ? "Umas" : `Support cards${umaName ? ` for ${umaName}` : ""}`}
+				</button>
+			))}
+		</div>
+	)
+	const shared = {
+		title: `Find "${target.query}" for spot ${target.position + 1}`,
+		skillsById: index.skillsById,
+		event,
+		style,
+		selectedId: null,
+		initialSearch: target.query,
+		tabs,
+		onClose,
+	}
+	return target.tab === "uma" ? (
+		<PvpCardPicker
+			{...shared}
+			pool="uma"
+			items={index.catalogue.umas}
+			recommended={recommended.umas}
+			blockReason={(id) => {
+				const candidate = index.umasById.get(id)
+				if (!candidate) return null
+				if (member?.uma === id) return "Already in this spot"
+				return umaBlockReason(members, target.position, candidate, index.umasById)
+			}}
+			onPick={(id) => {
+				const uma = index.umasById.get(id)
+				if (uma) onPickUma(uma)
+			}}
+		/>
+	) : (
+		<PvpCardPicker
+			{...shared}
+			pool="support"
+			items={index.catalogue.support_cards}
+			recommended={recommended.cards}
+			blockReason={(id) => {
+				if (!member) return "Add an uma to this spot first"
+				if (member.cards.some((card) => card.support_card === id)) return "Already in this deck"
+				return cardSlot === null ? "This deck is full" : null
+			}}
+			onPick={(id) => {
+				if (cardSlot !== null) onPickCard(cardSlot, id)
+			}}
+		/>
 	)
 }
 

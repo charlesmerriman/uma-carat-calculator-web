@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { GuideSkillsBody } from "../components/pvp/GuideSkillsPanel"
 import type { PvpGuide } from "../types/pvpGuide"
 
@@ -20,12 +20,20 @@ const GUIDE = {
 	],
 } as unknown as PvpGuide
 
+const SPOTS = [
+	{ position: 0, label: "Spot 1 · Daiwa Scarlet" },
+	{ position: 1, label: "Spot 2 · empty" },
+	{ position: 2, label: "Spot 3 · empty" },
+]
+
 describe("GuideSkillsBody", () => {
 	it("groups by category, lists each skill once and counts the team's", () => {
 		render(
 			<GuideSkillsBody
 				guideState={{ status: "ready", guide: GUIDE }}
 				teamSkillSources={new Map([[1, ["Kitasan Black (hint)"]]])}
+				spots={SPOTS}
+				onSearch={() => {}}
 			/>
 		)
 		const acceleration = within(screen.getByRole("region", { name: "Acceleration" }))
@@ -40,6 +48,8 @@ describe("GuideSkillsBody", () => {
 			<GuideSkillsBody
 				guideState={{ status: "ready", guide: GUIDE }}
 				teamSkillSources={new Map([[1, ["Kitasan Black (hint)"]]])}
+				spots={SPOTS}
+				onSearch={() => {}}
 			/>
 		)
 		fireEvent.click(screen.getByRole("button", { name: /Groundwork/ }))
@@ -49,5 +59,16 @@ describe("GuideSkillsBody", () => {
 		fireEvent.click(screen.getByRole("button", { name: /Swinging Maestro/ }))
 		expect(screen.getByText("For: every position")).toBeInTheDocument()
 		expect(screen.getByText("Not on your team yet.")).toBeInTheDocument()
+	})
+
+	it("offers a search per team spot, with the skill's name", () => {
+		const onSearch = vi.fn()
+		render(
+			<GuideSkillsBody guideState={{ status: "ready", guide: GUIDE }} teamSkillSources={new Map()} spots={SPOTS} onSearch={onSearch} />
+		)
+		fireEvent.click(screen.getByRole("button", { name: /Groundwork/ }))
+		expect(screen.getAllByRole("button", { name: /^Search for Groundwork/ })).toHaveLength(3)
+		fireEvent.click(screen.getByRole("button", { name: "Search for Groundwork: Spot 2 · empty" }))
+		expect(onSearch).toHaveBeenCalledWith(1, "Groundwork")
 	})
 })

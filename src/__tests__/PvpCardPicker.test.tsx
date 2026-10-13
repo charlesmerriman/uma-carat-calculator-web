@@ -128,4 +128,10 @@ describe("PvpCardPicker", () => {
 		fireEvent.keyDown(window, { key: "Escape" })
 		expect(onClose).toHaveBeenCalled()
 	})
+
+	it("starts with a skill search already typed, from the skills panel", () => {
+		renderSupportPicker({ initialSearch: "Groundwork" })
+		expect(screen.getByRole("searchbox", { name: "Search" })).toHaveValue("Groundwork")
+		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black"])
+	})
 })
