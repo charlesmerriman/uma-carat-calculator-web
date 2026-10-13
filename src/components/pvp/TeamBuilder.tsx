@@ -38,6 +38,7 @@ import { GuideSkillsBody } from "./GuideSkillsPanel"
 import { DockedPanel, SideDrawer } from "./SidePanel"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamEditor } from "./TeamEditor"
+import { TeamNotes } from "./TeamNotes"
 import type { RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
@@ -337,6 +338,13 @@ function ReadyBuilder({ event, teamsState, index }: {
 				/>
 
 				<TeamEditor event={event} members={members} index={index} guide={guide} onChange={applyMembers} />
+				<TeamNotes
+					// Per team, so an open note never follows a switch to another team.
+					key={team?.key ?? "none"}
+					notes={team?.notes ?? []}
+					onChange={(notes) => team && editTeam(team.key, { notes })}
+					disabledReason={team ? null : "Pick an uma first to start a team"}
+				/>
 
 				{guide && (
 					<p className="flex items-center gap-1.5 text-xs text-gray-500">

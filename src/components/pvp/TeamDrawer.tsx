@@ -45,6 +45,7 @@ import { getCountdownLabel } from "../timeline/timelineShared"
 import PredictedBadge from "../PredictedBadge"
 import { SaveStatus } from "./SaveStatus"
 import { TeamEditor } from "./TeamEditor"
+import { TeamNotes } from "./TeamNotes"
 import type { RaceEvent } from "../../types"
 import type { PvpTeam } from "../../types/pvpTeam"
 
@@ -145,6 +146,13 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 								else createTeam(refForRaceEvent(choice.event), { members })
 							}}
 						/>
+						{choice.kind === "team" && (
+							<TeamNotes
+								key={choice.team.key}
+								notes={choice.team.notes}
+								onChange={(notes) => editTeam(choice.team.key, { notes })}
+							/>
+						)}
 						<div className="flex items-center justify-between gap-2">
 							{/* The save state lives in the header; this line only speaks up
 							    when there is no team yet. */}

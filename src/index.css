@@ -271,6 +271,20 @@ html {
 	--color-ssr-deep: #2b2008;
 	--color-ssr-mid: #5a4312;
 	--color-ssr-glow: rgb(255 214 102 / 55%);
+
+	/* PvP team notes (components/pvp/TeamNotes.tsx): a deep tint per colour
+	   with a mid-tone edge, read with gray-100 text (11:1 or better on each,
+	   both modes; ==highlights== in --color-highlight 4.6:1 or better, and
+	   secondary text uses gray-300, since gray-400 drops to 3.9:1 on yellow);
+	   pastel fills with darker edges under [data-theme-mode="light"]. */
+	--color-note-yellow: #3a3214;
+	--color-note-yellow-edge: #8f7a2a;
+	--color-note-pink: #3b1a2a;
+	--color-note-pink-edge: #9b4a72;
+	--color-note-blue: #172a40;
+	--color-note-blue-edge: #4a78a8;
+	--color-note-green: #16321f;
+	--color-note-green-edge: #4a9160;
 }
 
 /* ===== THEME OVERRIDES =====
@@ -454,6 +468,16 @@ html {
 	--color-ssr-deep: #fff5d9;
 	--color-ssr-mid: #f5dc93;
 	--color-ssr-glow: rgb(201 138 18 / 45%);
+
+	/* PvP team notes: pastel paper, read with the light gray-100 ink. */
+	--color-note-yellow: #fdf3c4;
+	--color-note-yellow-edge: #d9b84a;
+	--color-note-pink: #fbdbe8;
+	--color-note-pink-edge: #d98aac;
+	--color-note-blue: #d8e8f8;
+	--color-note-blue-edge: #7fa8d4;
+	--color-note-green: #d6f0dc;
+	--color-note-green-edge: #7cbf8c;
 }
 
 /* The original warm Light palette remains the primary light choice. */
