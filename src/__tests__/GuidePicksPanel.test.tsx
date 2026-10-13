@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { GuidePicksPanel, type GuidePickActions } from "../components/pvp/GuidePicksPanel"
+import { GuidePicksBody, type GuidePickActions } from "../components/pvp/GuidePicksPanel"
 import type { PvpGuide } from "../types/pvpGuide"
 
 /**
@@ -35,17 +35,12 @@ function renderPanel(actions: Partial<GuidePickActions> = {}) {
 		...actions,
 	}
 	render(
-		<GuidePicksPanel
-			guideState={{ status: "ready", guide: GUIDE }}
-			members={[]}
-			actions={all}
-			onCollapse={() => {}}
-		/>
+		<GuidePicksBody guideState={{ status: "ready", guide: GUIDE }} members={[]} actions={all} />
 	)
 	return { run, all }
 }
 
-describe("GuidePicksPanel", () => {
+describe("GuidePicksBody", () => {
 	it("lists each uma and card once", () => {
 		renderPanel()
 		expect(screen.getAllByRole("button", { name: /Maruzensky/ })).toHaveLength(1)

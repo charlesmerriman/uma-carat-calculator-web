@@ -7,12 +7,8 @@
  * guide's per-style split lives on the Recommendations view, and here it only
  * repeated the same faces. The styles show in each tile's tooltip.
  *
- * Two placements, chosen by CSS alone (nothing measures the screen):
- *
- *   xl and up   docked in a left column of the My team view, sticky under the
- *               control band. Collapsible; the toolbar's button brings it back.
- *   below xl    retracted behind the toolbar's "Guide picks" button, sliding
- *               in from the left over the page (GuidePicksDrawer).
+ * Docked in the left column from xl, a drawer from the left below that
+ * (components/pvp/SidePanel.tsx has both placements).
  *
  * A tile shows the pick, its stars or the guide's notes on hover, and a tick
  * when it is already on the team. Clicking it opens an action row under its
@@ -21,9 +17,8 @@
  * since it holds the team and its rules.
  */
 
-import { Fragment, useEffect, useMemo, useState } from "react"
-import { createPortal } from "react-dom"
-import { Check, Loader2, PanelLeftClose, Star, X } from "lucide-react"
+import { Fragment, useMemo, useState } from "react"
+import { Check, Loader2, Star } from "lucide-react"
 import { STYLE_LABELS, guidePicks } from "../../utils/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
 import type { PvpStyle } from "../../types/pvpGuide"
@@ -62,8 +57,8 @@ interface GuidePicksProps {
 /** A grid row is four tiles; the action row follows the clicked tile's row. */
 const COLUMNS = 4
 
-/** The panel's contents, shared by the docked column and the drawer. */
-function GuidePicksBody({ guideState, members, actions }: GuidePicksProps) {
+/** The panel's contents. TeamBuilder wraps it in a DockedPanel or a SideDrawer (SidePanel.tsx). */
+export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps) {
 	const picks = useMemo(() => (guideState.status === "ready" ? guidePicks(guideState.guide) : null), [guideState])
 	// The one pick whose action row is open, as "uma-41" / "card-302".
 	const [openKey, setOpenKey] = useState<string | null>(null)
@@ -266,79 +261,5 @@ function ActionRow({ item, onDone }: { item: PickItem; onDone: () => void }) {
 				</ul>
 			)}
 		</li>
-	)
-}
-
-const PANEL_HEADING = "flex items-center gap-1.5 text-sm font-semibold text-gray-100"
-const ICON_BUTTON =
-	"flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
-
-/**
- * The docked column, xl and up (hidden below, where the drawer takes over).
- * The caller renders it only while it is open; its button collapses it.
- */
-export function GuidePicksPanel({ onCollapse, ...props }: GuidePicksProps & { onCollapse: () => void }) {
-	return (
-		<aside
-			aria-label="Guide picks"
-			className="card-panel hidden self-start xl:sticky xl:top-18 xl:flex xl:max-h-[calc(100dvh-10rem)] xl:flex-col"
-		>
-			<header className="flex items-center justify-between border-b border-gray-700 py-1.5 pl-3 pr-1.5">
-				<h2 className={PANEL_HEADING}>
-					<Star className="h-4 w-4 fill-highlight text-highlight" aria-hidden="true" />
-					Guide picks
-				</h2>
-				<button type="button" aria-label="Hide guide picks" title="Hide guide picks" onClick={onCollapse} className={ICON_BUTTON}>
-					<PanelLeftClose className="h-4 w-4" />
-				</button>
-			</header>
-			<div className="min-h-0 overflow-y-auto p-3">
-				<GuidePicksBody {...props} />
-			</div>
-		</aside>
-	)
-}
-
-/**
- * The retracted panel, below xl: slides in from the left over the page, with
- * a backdrop. Escape, the backdrop or the close button put it away. It hides
- * itself at xl in case the window widens while it is open, since the docked
- * column takes over there.
- */
-export function GuidePicksDrawer({ open, onClose, ...props }: GuidePicksProps & { open: boolean; onClose: () => void }) {
-	useEffect(() => {
-		if (!open) return
-		const closeOnEscape = (keydown: KeyboardEvent) => {
-			if (keydown.key === "Escape") onClose()
-		}
-		window.addEventListener("keydown", closeOnEscape)
-		return () => window.removeEventListener("keydown", closeOnEscape)
-	}, [open, onClose])
-
-	if (!open) return null
-	return createPortal(
-		<div className="fixed inset-0 z-60 xl:hidden">
-			<div className="absolute inset-0 bg-gray-950/60" onMouseDown={onClose} aria-hidden="true" />
-			<section
-				role="dialog"
-				aria-modal="true"
-				aria-label="Guide picks"
-				className="absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col border-r border-gray-600 bg-gray-800 shadow-2xl motion-safe:animate-[guide-picks-in_160ms_ease-out]"
-			>
-				<header className="flex items-center justify-between border-b border-gray-700 py-1.5 pl-3 pr-1.5">
-					<h2 className={PANEL_HEADING}>
-						<Star className="h-4 w-4 fill-highlight text-highlight" aria-hidden="true" />
-						Guide picks
-					</h2>
-					<button type="button" aria-label="Close guide picks" onClick={onClose} className={ICON_BUTTON}>
-						<X className="h-4 w-4" />
-					</button>
-				</header>
-				<div className="min-h-0 flex-1 overflow-y-auto p-3">
-					<GuidePicksBody {...props} />
-				</div>
-			</section>
-		</div>,
-		document.body
 	)
 }

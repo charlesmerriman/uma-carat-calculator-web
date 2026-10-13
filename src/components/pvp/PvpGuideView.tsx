@@ -19,7 +19,14 @@ import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
-import { STYLE_LABELS, groupSkillsByTier, skillsForPosition, stylesWithContent } from "../../utils/pvpGuide"
+import {
+	SKILL_CATEGORY_LABELS,
+	SKILL_CATEGORY_ORDER,
+	STYLE_LABELS,
+	groupSkillsByTier,
+	skillsForPosition,
+	stylesWithContent,
+} from "../../utils/pvpGuide"
 import type {
 	PvpDeck,
 	PvpDeckSlot,
@@ -38,20 +45,10 @@ const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
 // Module scope, so MarkdownContent's memoised components keep one identity.
 const renderSkill = (name: string) => <SkillMention name={name} />
 
-// The subcategories inside a position's "Recommended skills". "other" is
-// what a guide files without a category (the sheet's per-style lists), so it
-// reads as the core list.
-const CATEGORY_LABELS: Record<PvpSkillCategory, string> = {
-	acceleration: "Acceleration",
-	other: "Core skills",
-	speed: "Speed",
-	recovery: "Recovery",
-	green: "Green skills",
-	debuff: "Debuffs",
-}
-// Acceleration first: it is what a style lives or dies by. The rest in the
-// order a player builds a skill list.
-const CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
+// The category labels and order are shared with the team builder's skills
+// panel: utils/pvpGuide.ts SKILL_CATEGORY_LABELS / SKILL_CATEGORY_ORDER.
+const CATEGORY_LABELS = SKILL_CATEGORY_LABELS
+const CATEGORY_ORDER = SKILL_CATEGORY_ORDER
 
 /** Rows split by category, in CATEGORY_ORDER, each keeping its tier order. */
 function byCategory(rows: PvpSkillRecommendation[]): Array<[PvpSkillCategory, PvpSkillRecommendation[]]> {

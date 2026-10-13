@@ -7,6 +7,7 @@ import {
 	recommendedIds,
 	setCard,
 	setMemberUma,
+	teamSkillSources,
 	umaBlockReason,
 } from "../utils/pvpTeams"
 import type { PvpGuide } from "../types/pvpGuide"
@@ -76,5 +77,17 @@ describe("pvpTeams", () => {
 	it("picks a style a member can run from a guide pick's styles", () => {
 		expect(memberStyleFrom(["everyone", "pace", "front"])).toBe("front")
 		expect(memberStyleFrom(["everyone"])).toBeUndefined()
+	})
+
+	it("lists every skill the team can get, and where from", () => {
+		const umas = new Map([[3, { name: "Maruzensky", skills: [{ skill: 1, source: "unique" }] }]])
+		const cards = new Map([
+			[302, { name: "Kitasan Black", skills: [{ skill: 2, source: "hint" }, { skill: 1, source: "event" }] }],
+		])
+		const members = setCard(setCard(setMemberUma([], 0, MARU), 0, 1, 302), 0, 6, 302)
+		const sources = teamSkillSources(members, umas, cards)
+		expect(sources.get(1)).toEqual(["Maruzensky (unique)", "Kitasan Black (event)"])
+		expect(sources.get(2)).toEqual(["Kitasan Black (hint)"])
+		expect(sources.has(3)).toBe(false)
 	})
 })

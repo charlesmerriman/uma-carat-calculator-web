@@ -16,7 +16,9 @@ import type {
 } from "../types"
 import type {
 	PvpGuide,
+	PvpSkillCategory,
 	PvpSkillRecommendation,
+	PvpSkillRef,
 	PvpStyle,
 	PvpSupportCardRef,
 	PvpUmaRecommendation,
@@ -135,6 +137,64 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	// "Everyone" rows show above the tabs, never as a tab of their own.
 	used.delete("everyone")
 	return STYLE_ORDER.filter((style) => used.has(style))
+}
+
+// How a guide's skills are grouped, everywhere they show. "other" is what a
+// guide files without a category (the sheet's per-style lists), so it reads
+// as the core list. Acceleration first: it is what a style lives or dies by;
+// the rest in the order a player builds a skill list.
+export const SKILL_CATEGORY_LABELS: Record<PvpSkillCategory, string> = {
+	acceleration: "Acceleration",
+	other: "Core skills",
+	speed: "Speed",
+	recovery: "Recovery",
+	green: "Green skills",
+	debuff: "Debuffs",
+}
+export const SKILL_CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
+
+/** One recommended skill in the team builder's skills panel. */
+export interface GuideSkillPick {
+	skill: PvpSkillRef
+	/** The best (lowest) tier any row gives it, or null when none has one. */
+	tier: number | null
+	/** Every style it is recommended for ("everyone" included), in display order. */
+	styles: PvpStyle[]
+	notes: string[]
+}
+
+/**
+ * The guide's recommended skills by category, each skill ONCE however many
+ * positions recommend it, in the first category (in SKILL_CATEGORY_ORDER) a
+ * row files it under. Within a category: best tier first (untiered last),
+ * then the guide's order.
+ */
+export function guideSkillsByCategory(guide: PvpGuide): Array<{ category: PvpSkillCategory; skills: GuideSkillPick[] }> {
+	const rank = (category: PvpSkillCategory) => SKILL_CATEGORY_ORDER.indexOf(category)
+	const picks = new Map<number, GuideSkillPick & { category: PvpSkillCategory; first: number }>()
+	guide.skill_recommendations.forEach((row, index) => {
+		const pick = picks.get(row.skill.id) ?? {
+			skill: row.skill, tier: null, styles: [], notes: [], category: row.category, first: index,
+		}
+		if (rank(row.category) < rank(pick.category)) pick.category = row.category
+		if (row.tier !== null && (pick.tier === null || row.tier < pick.tier)) pick.tier = row.tier
+		if (!pick.styles.includes(row.style)) pick.styles.push(row.style)
+		if (row.note && !pick.notes.includes(row.note)) pick.notes.push(row.note)
+		picks.set(row.skill.id, pick)
+	})
+	const tierRank = (tier: number | null) => (tier === null ? Number.MAX_SAFE_INTEGER : tier)
+	return SKILL_CATEGORY_ORDER.map((category) => ({
+		category,
+		skills: [...picks.values()]
+			.filter((pick) => pick.category === category)
+			.sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || a.first - b.first)
+			.map(({ skill, tier, styles, notes }) => ({
+				skill,
+				tier,
+				styles: [...styles].sort((a, b) => STYLE_ORDER.indexOf(a) - STYLE_ORDER.indexOf(b)),
+				notes,
+			})),
+	})).filter((group) => group.skills.length > 0)
 }
 
 /** One recommended uma or card in the team builder's Guide picks panel. */

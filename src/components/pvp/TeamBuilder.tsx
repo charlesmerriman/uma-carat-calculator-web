@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Check, CloudAlert, CloudCheck, HardDrive, Loader2, PanelLeftOpen, Pencil, Plus, Star, Trash2 } from "lucide-react"
+import { Check, CloudAlert, CloudCheck, HardDrive, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Sparkles, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
@@ -27,18 +27,24 @@ import {
 	firstOpenCardSlot,
 	memberAt,
 	memberStyleFrom,
+	teamSkillSources,
 	recommendedIds,
 	setCard,
 	setMemberStyle,
 	setMemberUma,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
-import { GuidePicksDrawer, GuidePicksPanel, type GuidePickActions } from "./GuidePicksPanel"
+import { GuidePicksBody, type GuidePickActions } from "./GuidePicksPanel"
+import { GuideSkillsBody } from "./GuideSkillsPanel"
+import { DockedPanel, SideDrawer } from "./SidePanel"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamGrid } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
 import type { MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
+
+/** One shared empty team, so "no team yet" is the same array on every render. */
+const NO_MEMBERS: PvpTeamMember[] = []
 
 type PickerTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
@@ -46,28 +52,43 @@ const PICKS_BUTTON =
 	"flex items-center gap-1.5 rounded-md border border-gray-600 px-2.5 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand"
 
 /**
- * Whether the docked Guide picks column is open, remembered per browser. A
- * convenience only: blocked storage reads as open and a failed write is
- * ignored. Safe to read during render because this view sits inside the /app
- * loading gate, which is never prerendered.
+ * Whether a docked side panel is open, remembered per browser. A convenience
+ * only: blocked storage reads as open and a failed write is ignored. Safe to
+ * read during render because this view sits inside the /app loading gate,
+ * which is never prerendered.
  */
-const DOCK_STORAGE_KEY = "uma-planner-pvp-guide-picks"
+const PICKS_STORAGE_KEY = "uma-planner-pvp-guide-picks"
+const SKILLS_STORAGE_KEY = "uma-planner-pvp-skills"
 
-function readDockOpen(): boolean {
+function readPanelOpen(key: string): boolean {
 	try {
-		return localStorage.getItem(DOCK_STORAGE_KEY) !== "closed"
+		return localStorage.getItem(key) !== "closed"
 	} catch {
 		return true
 	}
 }
 
-function writeDockOpen(open: boolean): void {
+function writePanelOpen(key: string, open: boolean): void {
 	try {
-		if (open) localStorage.removeItem(DOCK_STORAGE_KEY)
-		else localStorage.setItem(DOCK_STORAGE_KEY, "closed")
+		if (open) localStorage.removeItem(key)
+		else localStorage.setItem(key, "closed")
 	} catch {
 		// Storage blocked: the panel opens again next visit.
 	}
+}
+
+/**
+ * The My team view's grid for whichever side columns are docked. Literal
+ * strings so Tailwind sees each one. The builder keeps about 56rem in every
+ * case; the left column docks from xl, the right from 2xl (SidePanel.tsx).
+ */
+function gridLayout(left: boolean, right: boolean): string {
+	if (left && right) {
+		return "xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)] 2xl:max-w-[96rem] 2xl:grid-cols-[19rem_minmax(0,1fr)_19rem]"
+	}
+	if (left) return "xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)]"
+	if (right) return "2xl:max-w-[76rem] 2xl:grid-cols-[minmax(0,1fr)_19rem]"
+	return ""
 }
 
 /** "Team 2" when the player hasn't named it. */
@@ -113,23 +134,30 @@ function ReadyBuilder({ event, teamsState, index }: {
 
 	const [selectedKey, setSelectedKey] = useState<string | null>(null)
 	const [picker, setPicker] = useState<PickerTarget | null>(null)
-	// Guide picks has two switches, one per placement. The docked column (xl
-	// and up) starts open and remembers being collapsed; the drawer (below
-	// xl) starts closed every time. A stable close function, so the drawer's
-	// Escape listener is not re-added on every render.
-	const [dockOpen, setDockOpen] = useState(readDockOpen)
-	const [picksOpen, setPicksOpen] = useState(false)
-	const closePicks = useCallback(() => setPicksOpen(false), [])
-	const setDock = (open: boolean) => {
-		setDockOpen(open)
-		writeDockOpen(open)
+	// Each side panel has two switches, one per placement. The docked column
+	// starts open and remembers being collapsed; the drawer starts closed
+	// every time. Stable close functions, so a drawer's Escape listener is not
+	// re-added on every render.
+	const [picksDocked, setPicksDocked] = useState(() => readPanelOpen(PICKS_STORAGE_KEY))
+	const [skillsDocked, setSkillsDocked] = useState(() => readPanelOpen(SKILLS_STORAGE_KEY))
+	const [picksDrawer, setPicksDrawer] = useState(false)
+	const [skillsDrawer, setSkillsDrawer] = useState(false)
+	const closePicks = useCallback(() => setPicksDrawer(false), [])
+	const closeSkills = useCallback(() => setSkillsDrawer(false), [])
+	const dockPicks = (open: boolean) => {
+		setPicksDocked(open)
+		writePanelOpen(PICKS_STORAGE_KEY, open)
+	}
+	const dockSkills = (open: boolean) => {
+		setSkillsDocked(open)
+		writePanelOpen(SKILLS_STORAGE_KEY, open)
 	}
 	const team =
 		eventTeams.find((candidate) => candidate.key === selectedKey) ??
 		eventTeams.find((candidate) => candidate.isFocus) ??
 		eventTeams[0] ??
 		null
-	const members = team?.members ?? []
+	const members = team?.members ?? NO_MEMBERS
 
 	// Stars come from the event's guide; usePvpGuide caches it, so this is
 	// free when the player has just read the Recommendations view.
@@ -219,36 +247,59 @@ function ReadyBuilder({ event, teamsState, index }: {
 		emptyCardHint: "Add an uma to the team first, then her cards.",
 	}
 
+	// Skill id -> where the selected team gets it, for the skills panel's ticks.
+	// A few dozen links, so worked out on every render.
+	const skillSources = teamSkillSources(members, index.umasById, index.cardsById)
+
+	const picksBody = <GuidePicksBody guideState={guideState} members={members} actions={pickActions} />
+	const skillsBody = <GuideSkillsBody guideState={guideState} teamSkillSources={skillSources} />
+	const picksIcon = <Star className="h-4 w-4 fill-highlight text-highlight" aria-hidden="true" />
+	const skillsIcon = <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
+
 	return (
-		// From xl the guide's picks dock in a left column and the builder keeps
-		// its 56rem; below xl they retract behind the toolbar's button.
-		<div
-			className={`mx-auto grid w-full max-w-4xl items-start gap-4 ${
-				dockOpen ? "xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)]" : ""
-			}`}
-		>
-			{dockOpen && <GuidePicksPanel guideState={guideState} members={members} actions={pickActions} onCollapse={() => setDock(false)} />}
-			<GuidePicksDrawer guideState={guideState} members={members} actions={pickActions} open={picksOpen} onClose={closePicks} />
+		// Guide picks docks on the left from xl, Recommended skills on the
+		// right from 2xl; below those, each retracts behind a toolbar button.
+		<div className={`mx-auto grid w-full max-w-4xl items-start gap-4 ${gridLayout(picksDocked, skillsDocked)}`}>
+			{picksDocked && (
+				<DockedPanel side="left" title="Guide picks" icon={picksIcon} onCollapse={() => dockPicks(false)}>
+					{picksBody}
+				</DockedPanel>
+			)}
+			<SideDrawer side="left" title="Guide picks" icon={picksIcon} open={picksDrawer} onClose={closePicks}>
+				{picksBody}
+			</SideDrawer>
+			<SideDrawer side="right" title="Recommended skills" icon={skillsIcon} open={skillsDrawer} onClose={closeSkills}>
+				{skillsBody}
+			</SideDrawer>
 
 			<div className="flex min-w-0 flex-col gap-3">
 				<TeamToolbar
 					leading={
 						<>
-							{/* Below xl: opens the drawer. */}
-							<button
-								type="button"
-								aria-expanded={picksOpen}
-								onClick={() => setPicksOpen(true)}
-								className={`${PICKS_BUTTON} xl:hidden`}
-							>
+							{/* Below xl: opens the drawer. From xl: only while the column is collapsed. */}
+							<button type="button" aria-expanded={picksDrawer} onClick={() => setPicksDrawer(true)} className={`${PICKS_BUTTON} xl:hidden`}>
 								<PanelLeftOpen className="h-4 w-4" />
 								Guide picks
 							</button>
-							{/* xl and up, only while the docked column is collapsed. */}
-							{!dockOpen && (
-								<button type="button" onClick={() => setDock(true)} className={`${PICKS_BUTTON} hidden xl:flex`}>
+							{!picksDocked && (
+								<button type="button" onClick={() => dockPicks(true)} className={`${PICKS_BUTTON} hidden xl:flex`}>
 									<PanelLeftOpen className="h-4 w-4" />
 									Guide picks
+								</button>
+							)}
+						</>
+					}
+					trailing={
+						<>
+							{/* The same pair for the skills panel, at 2xl. */}
+							<button type="button" aria-expanded={skillsDrawer} onClick={() => setSkillsDrawer(true)} className={`${PICKS_BUTTON} 2xl:hidden`}>
+								Skills
+								<PanelRightOpen className="h-4 w-4" />
+							</button>
+							{!skillsDocked && (
+								<button type="button" onClick={() => dockSkills(true)} className={`${PICKS_BUTTON} hidden 2xl:flex`}>
+									Skills
+									<PanelRightOpen className="h-4 w-4" />
 								</button>
 							)}
 						</>
@@ -299,6 +350,12 @@ function ReadyBuilder({ event, teamsState, index }: {
 					</p>
 				)}
 			</div>
+
+			{skillsDocked && (
+				<DockedPanel side="right" title="Recommended skills" icon={skillsIcon} onCollapse={() => dockSkills(false)}>
+					{skillsBody}
+				</DockedPanel>
+			)}
 
 			{picker?.pool === "uma" && (
 				<PvpCardPicker
@@ -360,9 +417,11 @@ function ReadyBuilder({ event, teamsState, index }: {
 	)
 }
 
-function TeamToolbar({ leading, teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
+function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
 	/** Drawn first: the Guide picks button, below xl. */
 	leading?: ReactNode
+	/** Drawn last: the Skills button, below 2xl. */
+	trailing?: ReactNode
 	teams: PvpTeam[]
 	selected: PvpTeam | null
 	mode: PvpTeamsContextType["mode"]
@@ -461,6 +520,7 @@ function TeamToolbar({ leading, teams, selected, mode, saveState, onSelect, onCr
 							</IconButton>
 						</>
 					))}
+				{trailing}
 			</div>
 		</div>
 	)

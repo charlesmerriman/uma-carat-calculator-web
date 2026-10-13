@@ -12,6 +12,7 @@
 
 import type { PvpGuide } from "../types/pvpGuide"
 import type {
+	CatalogueSupportCard,
 	CatalogueUma,
 	MemberStyle,
 	PvpTeamCardSlot,
@@ -174,4 +175,31 @@ export function recommendedIds(guide: PvpGuide | null, style: MemberStyle): { um
 		if (styles.has(mention.style)) cards.add(mention.support_card.id)
 	}
 	return { umas, cards }
+}
+
+/**
+ * Every skill the team can get, by skill id, with where from: "Oguri Cap
+ * (unique)", "Kitasan Black (hint)". Read from the builder's catalogue, which
+ * already leaves out skills that are not on global.
+ */
+export function teamSkillSources(
+	members: PvpTeamMember[],
+	umasById: Map<number, Pick<CatalogueUma, "name" | "skills">>,
+	cardsById: Map<number, Pick<CatalogueSupportCard, "name" | "skills">>
+): Map<number, string[]> {
+	const sources = new Map<number, string[]>()
+	const add = (skillId: number, from: string) => {
+		const list = sources.get(skillId) ?? []
+		if (!list.includes(from)) list.push(from)
+		sources.set(skillId, list)
+	}
+	for (const member of members) {
+		const uma = umasById.get(member.uma)
+		for (const link of uma?.skills ?? []) add(link.skill, `${uma?.name} (${link.source})`)
+		for (const entry of member.cards) {
+			const card = cardsById.get(entry.support_card)
+			for (const link of card?.skills ?? []) add(link.skill, `${card?.name} (${link.source})`)
+		}
+	}
+	return sources
 }

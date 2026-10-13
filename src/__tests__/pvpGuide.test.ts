@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
 	guidePicks,
+	guideSkillsByCategory,
 	defaultPvpEvent,
 	groupSkillsByTier,
 	milestones,
@@ -187,6 +188,31 @@ describe("guidePicks", () => {
 			[302, true, ["front", "late"], ["Gold + Link"]],
 			[303, true, ["front", "late"], ["Stats"]],
 			[304, false, ["late"], []],
+		])
+	})
+})
+
+describe("guideSkillsByCategory", () => {
+	const skill = (id: number) => ({ id, name: `Skill ${id}`, description: "", image: null, rarity: 1, unique_of: null })
+	const row = (id: number, style: string, category: string, tier: number | null, note = "") =>
+		({ style, category, tier, order: 0, note, skill: skill(id) })
+	const guide = {
+		skill_recommendations: [
+			row(1, "front", "speed", 2),
+			row(2, "end", "acceleration", null),
+			row(1, "everyone", "acceleration", 1, "Take early"),
+			row(3, "pace", "acceleration", 0),
+			row(4, "late", "debuff", null),
+		],
+	} as unknown as PvpGuide
+
+	it("lists each skill once, in its first category, best tier first", () => {
+		const groups = guideSkillsByCategory(guide)
+		expect(groups.map((group) => group.category)).toEqual(["acceleration", "debuff"])
+		expect(groups[0].skills.map((pick) => [pick.skill.id, pick.tier, pick.styles, pick.notes])).toEqual([
+			[3, 0, ["pace"], []],
+			[1, 1, ["everyone", "front"], ["Take early"]],
+			[2, null, ["end"], []],
 		])
 	})
 })

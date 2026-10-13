@@ -862,11 +862,20 @@ input[type="number"] {
    reported the arrows sitting on top of the value in a 56px field. The rule
    above still applies to any remaining stock number input. */
 
-/* The PvP builder's Guide picks drawer sliding in from the left
-   (components/pvp/GuidePicksPanel.tsx; motion-safe only). */
-@keyframes guide-picks-in {
+/* The PvP builder's side panels sliding in from their edge
+   (components/pvp/SidePanel.tsx; motion-safe only). */
+@keyframes side-panel-in-left {
 	from {
 		transform: translateX(-100%);
+	}
+	to {
+		transform: none;
+	}
+}
+
+@keyframes side-panel-in-right {
+	from {
+		transform: translateX(100%);
 	}
 	to {
 		transform: none;
