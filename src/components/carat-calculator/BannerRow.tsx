@@ -398,6 +398,12 @@ export const BannerRow = ({
 		? timelineFocusHref({ kind: "banner", id: bannerTimeline.id })
 		: null
 
+	// The row's own banner, named as its select names it. Never
+	// bannerTimeline.name: a support banner shares its timeline card with the
+	// uma banner running alongside it, and that card is named after the uma, so
+	// the link's tooltip (and a screen reader) would announce the wrong banner.
+	const bannerName = currentBanner?.name ?? "this banner"
+
 	/** The images cell, shared by the desktop grid and (via props) the card. */
 	const imagesCell =
 		target.type === "StepUp" ? (
@@ -829,7 +835,7 @@ export const BannerRow = ({
 		noteOpen && hasBanner ? (
 			<BannerNoteEditor
 				note={note}
-				bannerName={bannerTimeline?.name ?? "this banner"}
+				bannerName={bannerName}
 				onCommit={handleNoteCommit}
 				className={className}
 			/>
@@ -983,7 +989,7 @@ export const BannerRow = ({
 				{timelineHref ? (
 					<Link
 						to={timelineHref}
-						title={`View ${bannerTimeline?.name ?? "this banner"} on the timeline`}
+						title={`View ${bannerName} on the timeline`}
 						className="flex items-center justify-center gap-1.5"
 					>
 						{imagesCell}
