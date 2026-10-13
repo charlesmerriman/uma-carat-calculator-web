@@ -273,29 +273,8 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 		<div className="mx-auto max-w-2xl px-4 py-10">
 			<h1 className="text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
 
-			<div className="mt-6 rounded-xl border border-gray-700 bg-gray-800/50 p-4 sm:p-5">
-				<p className="text-sm text-gray-400">
-					{[
-						plural(summary.row_count, "banner", "banners"),
-						`Updated ${formatDate(summary.updated_at.slice(0, 10))}`,
-						copiedLine(summary.copy_count),
-						includes
-					]
-						.filter(Boolean)
-						.join(" · ")}
-				</p>
-
-				{targets.length > 0 ? (
-					<ul className="mt-4 flex flex-col gap-2">
-						{targets.map((target) => (
-							<BannerLine key={`${target.type}-${target.banner.id}`} target={target} />
-						))}
-					</ul>
-				) : (
-					<p className="mt-4 text-sm text-gray-400">This plan has no banners in it yet.</p>
-				)}
-			</div>
-
+			{/* The copy controls sit ABOVE the banner list: a long plan pushed them
+			    off the bottom of the screen, behind dozens of rows. */}
 			{ownPlan && (
 				<p className="mt-4 text-sm text-gray-400">
 					This is your plan.{" "}
@@ -364,7 +343,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 						</div>
 					</div>
 				) : (
-					<div className="mt-4 flex flex-wrap items-center gap-3">
+					<div className="mt-4">
 						<button
 							type="submit"
 							disabled={isPlanBusy || atCap || (isAccount && name.trim() === "")}
@@ -372,12 +351,32 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 						>
 							{isAccount ? "Copy to my plans" : "Copy to this device"}
 						</button>
-						<Link to="/app" className="text-sm text-gray-400 hover:text-gray-200">
-							No thanks
-						</Link>
 					</div>
 				)}
 			</form>
+
+			<div className="mt-6 rounded-xl border border-gray-700 bg-gray-800/50 p-4 sm:p-5">
+				<p className="text-sm text-gray-400">
+					{[
+						plural(summary.row_count, "banner", "banners"),
+						`Updated ${formatDate(summary.updated_at.slice(0, 10))}`,
+						copiedLine(summary.copy_count),
+						includes
+					]
+						.filter(Boolean)
+						.join(" · ")}
+				</p>
+
+				{targets.length > 0 ? (
+					<ul className="mt-4 flex flex-col gap-2">
+						{targets.map((target) => (
+							<BannerLine key={`${target.type}-${target.banner.id}`} target={target} />
+						))}
+					</ul>
+				) : (
+					<p className="mt-4 text-sm text-gray-400">This plan has no banners in it yet.</p>
+				)}
+			</div>
 		</div>
 	)
 }
