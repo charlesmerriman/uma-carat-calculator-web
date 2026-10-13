@@ -94,4 +94,14 @@ describe("GuideSkillsBody", () => {
 		fireEvent.click(positions.getByRole("button", { name: "End" }))
 		expect(screen.getByRole("button", { name: /Swinging Maestro/ })).toBeInTheDocument()
 	})
+
+	it("keeps the filters in view, greyed out, when the guide has no skills", () => {
+		render(
+			<GuideSkillsBody guideState={{ status: "ready", guide: { skill_recommendations: [] } as unknown as PvpGuide }} teamSkillSources={new Map()} spots={SPOTS} onSearch={() => {}} />
+		)
+		const positions = within(screen.getByRole("group", { name: "Position" }))
+		expect(positions.getAllByRole("button").every((chip) => (chip as HTMLButtonElement).disabled)).toBe(true)
+		expect(within(screen.getByRole("group", { name: "Category" })).getByRole("button", { name: "Acceleration" })).toBeDisabled()
+		expect(screen.getByText("This event's guide has no skill picks yet.")).toBeInTheDocument()
+	})
 })

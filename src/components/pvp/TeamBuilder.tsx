@@ -402,7 +402,10 @@ function ReadyBuilder({ event, teamsState, index }: {
  * PvpCardPicker in the same place, so React keeps the one instance and the
  * search and pinned skills survive the switch.
  *
- * A card goes in the uma's first free slot from 1 to 5, else the borrow slot.
+ * A card goes in the slot chosen under the tabs: the uma's first free slot
+ * from 1 to 5 by default, else the borrow slot, else (a full deck) card 1,
+ * replacing what is there. Every slot is offered, so a full deck can still
+ * take a card found by skill.
  */
 function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, members, style, recommended, onPickUma, onPickCard, onClose }: {
 	target: SkillSearchTarget
@@ -419,24 +422,51 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 	onClose: () => void
 }) {
 	const umaName = member ? (index.umasById.get(member.uma)?.name ?? "this uma") : null
-	const cardSlot = member
+	const freeSlot = member
 		? (firstOpenCardSlot(member) ?? (member.cards.some((card) => card.slot === PVP_BORROW_SLOT) ? null : PVP_BORROW_SLOT))
 		: null
+	const [chosenSlot, setChosenSlot] = useState<number | null>(null)
+	const cardSlot = chosenSlot ?? freeSlot ?? 1
+	const inSlot = (slot: number) => member?.cards.find((card) => card.slot === slot)
+	const slotLabel = (slot: number) => {
+		const entry = inSlot(slot)
+		const place = slot === PVP_BORROW_SLOT ? "Borrowed card" : `Card ${slot}`
+		return `${place}: ${entry ? (index.cardsById.get(entry.support_card)?.name ?? "a card") : "empty"}`
+	}
 	const tabs = (
-		<div className="flex gap-1 rounded-lg bg-gray-900/70 p-1" role="group" aria-label="Search for">
-			{(["uma", "support"] as const).map((tab) => (
-				<button
-					key={tab}
-					type="button"
-					aria-pressed={target.tab === tab}
-					onClick={() => onTab(tab)}
-					className={`flex-1 rounded-md px-3 py-1 text-sm font-medium transition ${
-						target.tab === tab ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:text-gray-100"
-					}`}
-				>
-					{tab === "uma" ? "Umas" : `Support cards${umaName ? ` for ${umaName}` : ""}`}
-				</button>
-			))}
+		<div className="flex flex-col gap-2">
+			<div className="flex gap-1 rounded-lg bg-gray-900/70 p-1" role="group" aria-label="Search for">
+				{(["uma", "support"] as const).map((tab) => (
+					<button
+						key={tab}
+						type="button"
+						aria-pressed={target.tab === tab}
+						onClick={() => onTab(tab)}
+						className={`flex-1 rounded-md px-3 py-1 text-sm font-medium transition ${
+							target.tab === tab ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:text-gray-100"
+						}`}
+					>
+						{tab === "uma" ? "Umas" : `Support cards${umaName ? ` for ${umaName}` : ""}`}
+					</button>
+				))}
+			</div>
+			{target.tab === "support" && member && (
+				<label className="flex items-center gap-2 text-xs text-gray-400">
+					Put it in
+					<select
+						value={cardSlot}
+						onChange={(change) => setChosenSlot(Number(change.target.value))}
+						className="min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-100 outline-none focus:border-brand"
+					>
+						{[1, 2, 3, 4, 5, PVP_BORROW_SLOT].map((slot) => (
+							<option key={slot} value={slot}>
+								{slotLabel(slot)}
+								{inSlot(slot) ? " (replace)" : ""}
+							</option>
+						))}
+					</select>
+				</label>
+			)}
 		</div>
 	)
 	const shared = {
@@ -480,12 +510,11 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 				const late = releaseBlockReason(releaseFor("support", id))
 				if (late) return late
 				if (!member) return "Add an uma to this spot first"
-				if (member.cards.some((card) => card.support_card === id)) return "Already in this deck"
-				return cardSlot === null ? "This deck is full" : null
+				const held = member.cards.find((card) => card.support_card === id)
+				if (!held) return null
+				return held.slot === cardSlot ? "Already in this slot" : "Already in this deck"
 			}}
-			onPick={(id) => {
-				if (cardSlot !== null) onPickCard(cardSlot, id)
-			}}
+			onPick={(id) => onPickCard(cardSlot, id)}
 		/>
 	)
 }

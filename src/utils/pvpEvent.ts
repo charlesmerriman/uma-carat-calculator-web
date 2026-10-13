@@ -46,3 +46,8 @@ export function sameEvent(a: PvpEventRef | null, b: PvpEventRef | null): boolean
 export function pvpEventHref(ref: PvpEventRef): string {
 	return `/app/pvp?${PVP_EVENT_PARAM}=${formatPvpEvent(ref)}`
 }
+
+/** "CM 46" / "LoH 3": an event's short name, where the full one would be cut off. */
+export function shortEventName(event: RaceEvent): string {
+	return event.event_type === "champions_meeting" ? `CM ${event.cm_number}` : `LoH ${event.loh_number}`
+}

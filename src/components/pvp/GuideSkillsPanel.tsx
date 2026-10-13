@@ -23,6 +23,7 @@ import { useMemo, useState } from "react"
 import { Check, ChevronDown, Loader2, Search } from "lucide-react"
 import {
 	SKILL_CATEGORY_LABELS,
+	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
 	guideSkillsByCategory,
 	skillPositions,
@@ -74,7 +75,32 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 	if (guideState.status === "error") return <p className="text-sm text-gray-400">The guide didn't load.</p>
 	if (guideState.status === "none") return <p className="text-sm text-gray-400">No guide for this event yet.</p>
 	if (groups.length === 0 && position === "all") {
-		return <p className="text-sm text-gray-400">This event's guide has no skill picks yet.</p>
+		// The filters stay in view, greyed out, so the panel looks the same on
+		// every event and nobody wonders where they went.
+		return (
+			<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-2">
+					<FilterChips
+						label="Position"
+						options={[{ value: "all", label: "All" }, ...FILTER_POSITIONS.map((style) => ({ value: style, label: STYLE_LABELS[style] }))]}
+						value="all"
+						onChange={() => {}}
+						disabled
+					/>
+					<FilterChips
+						label="Category"
+						options={[
+							{ value: "all", label: "All" },
+							...SKILL_CATEGORY_ORDER.map((value) => ({ value, label: SKILL_CATEGORY_LABELS[value] })),
+						]}
+						value="all"
+						onChange={() => {}}
+						disabled
+					/>
+				</div>
+				<p className="text-sm text-gray-400">This event's guide has no skill picks yet.</p>
+			</div>
+		)
 	}
 
 	return (
@@ -139,12 +165,16 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 	)
 }
 
+/** The positions the filter offers when the guide has none to list. */
+const FILTER_POSITIONS: PvpStyle[] = ["front", "pace", "late", "end"]
+
 /** A labelled row of single-choice chips: the panel's two filters. */
-function FilterChips({ label, options, value, onChange }: {
+function FilterChips({ label, options, value, onChange, disabled = false }: {
 	label: string
 	options: Array<{ value: string; label: string }>
 	value: string
 	onChange: (value: string) => void
+	disabled?: boolean
 }) {
 	return (
 		<div role="group" aria-label={label}>
@@ -155,8 +185,9 @@ function FilterChips({ label, options, value, onChange }: {
 						key={option.value}
 						type="button"
 						aria-pressed={value === option.value}
+						disabled={disabled}
 						onClick={() => onChange(option.value)}
-						className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
+						className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
 							value === option.value
 								? "border-brand bg-brand/15 text-brand"
 								: "border-gray-600 text-gray-300 hover:border-gray-500"

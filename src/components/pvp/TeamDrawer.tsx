@@ -39,7 +39,7 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { formatDate } from "../../utils/dateFormat"
 import { hasEnded, raceEventsInOrder } from "../../utils/pvpGuide"
-import { formatPvpEvent, pvpEventHref, refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
+import { formatPvpEvent, pvpEventHref, refForRaceEvent, sameEvent, shortEventName } from "../../utils/pvpEvent"
 import { drawerTeam } from "../../utils/pvpTeams"
 import { getCountdownLabel } from "../timeline/timelineShared"
 import PredictedBadge from "../PredictedBadge"
@@ -195,7 +195,9 @@ function labelFor(team: PvpTeam, teams: PvpTeam[]): string {
 }
 
 /**
- * The CM / LoH selector, which is also the pin. "Next event (auto)" lets
+ * The CM / LoH selector, which is also the pin. Options use the short name
+ * ("CM 46 · Team 1"), which fits the 24rem window; each group's heading keeps
+ * the full one. "Next event (auto)" lets
  * drawerTeam choose and names the event it chose; a team pins it until its
  * event ends. Running and upcoming events with a team are offered.
  */
@@ -223,12 +225,12 @@ function EventSelect({ teams, events, now, autoEvent, onPin }: {
 				onChange={(change) => onPin(change.target.value === AUTO ? null : change.target.value)}
 				className="w-full rounded-md border border-gray-600 bg-gray-800 px-2 py-1.5 text-sm font-semibold text-gray-100 outline-none focus:border-brand"
 			>
-				<option value={AUTO}>{autoEvent ? `Next event (auto): ${autoEvent.name}` : "Next event (auto)"}</option>
+				<option value={AUTO}>{autoEvent ? `Next event (auto): ${shortEventName(autoEvent)}` : "Next event (auto)"}</option>
 				{groups.map((group) => (
 					<optgroup key={formatPvpEvent(refForRaceEvent(group.event))} label={group.event.name}>
 						{group.teams.map((team) => (
 							<option key={team.key} value={team.key}>
-								{group.event.name}: {labelFor(team, teams)}
+								{shortEventName(group.event)} · {labelFor(team, teams)}
 							</option>
 						))}
 					</optgroup>

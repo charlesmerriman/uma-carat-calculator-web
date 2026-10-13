@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatPvpEvent, parsePvpEvent, pvpEventHref, refForRaceEvent, sameEvent } from "../utils/pvpEvent"
+import { formatPvpEvent, parsePvpEvent, pvpEventHref, refForRaceEvent, sameEvent, shortEventName } from "../utils/pvpEvent"
 import type { RaceEvent } from "../types"
 
 describe("pvpEvent", () => {
@@ -23,5 +23,12 @@ describe("pvpEvent", () => {
 		expect(sameEvent({ kind: "cm", id: 1 }, { kind: "cm", id: 1 })).toBe(true)
 		expect(sameEvent({ kind: "cm", id: 1 }, { kind: "loh", id: 1 })).toBe(false)
 		expect(sameEvent(null, { kind: "cm", id: 1 })).toBe(false)
+	})
+})
+
+describe("shortEventName", () => {
+	it("shortens CMs and LoHs to their kind and number", () => {
+		expect(shortEventName({ event_type: "champions_meeting", cm_number: 46 } as never)).toBe("CM 46")
+		expect(shortEventName({ event_type: "league_of_heroes", loh_number: 3 } as never)).toBe("LoH 3")
 	})
 })

@@ -15,7 +15,7 @@ import type { PvpTeam } from "../types/pvpTeam"
 
 // Running from last year to next year, so "now" never matters.
 const LIBRA = {
-	id: 19, event_type: "champions_meeting", name: "Libra Cup", start_date: "2020-01-01T00:00:00Z",
+	id: 19, event_type: "champions_meeting", cm_number: 19, name: "Libra Cup", start_date: "2020-01-01T00:00:00Z",
 	end_date: "2099-01-01T00:00:00Z", is_predicted: false, surface_type: "Turf", distance: "Mile", length: "",
 } as unknown as RaceEvent
 
@@ -107,7 +107,7 @@ describe("TeamDrawer", () => {
 		const editTeam = vi.fn()
 		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [{ slot: 6, support_card: 302 }] }]
 		renderDrawer(teamsValue([team("a", { name: "Main", members })], { editTeam }))
-		expect(screen.getByRole("combobox", { name: "Which event and team to show" })).toHaveDisplayValue("Next event (auto): Libra Cup")
+		expect(screen.getByRole("combobox", { name: "Which event and team to show" })).toHaveDisplayValue("Next event (auto): CM 19")
 		// Three spots on top (one filled), then that uma's six card places.
 		expect(screen.getAllByRole("button", { name: /^Add uma/ })).toHaveLength(2)
 		expect(screen.getByRole("button", { name: "Add card 1 for uma 1" })).toBeInTheDocument()
