@@ -2,8 +2,9 @@
  * A PvP team: three panels, one per uma, each holding her portrait, her five
  * support cards and the borrowed card (slot six), set apart by a divider.
  *
- * SCALES AS ONE PICTURE. Every tile is square and the row is a fixed set of
- * fractional columns, so the same component fills the PvP page's My team view
+ * SCALES AS ONE PICTURE. Every tile keeps its art's shape (the portrait is
+ * square, a support card 3:4, the game's 450x600 art) and the row is a fixed
+ * set of fractional columns, so the same component fills the PvP page's My team view
  * and (R2b) the 26rem team drawer. Nothing in here measures the screen; card
  * names under the tiles drop out below `sm`, where they would not fit.
  *
@@ -39,7 +40,9 @@ const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 
 /**
  * The portrait is a little wider than a card so it reads as the row's
- * subject; the 1px column is the divider before the borrowed card.
+ * subject, and at 1.35fr its square is as tall as a 1fr card at 3:4 (1.33),
+ * so the row's tops and bottoms line up. The 2px column is the divider
+ * before the borrowed card.
  */
 const ROW_COLUMNS = "minmax(0,1.35fr) repeat(5,minmax(0,1fr)) 2px minmax(0,1fr)"
 
@@ -84,6 +87,7 @@ function MemberPanel({
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
 				disabled={!member}
 				disabledHint="Pick an uma first"
+				shape="card"
 				starred={entry ? starred("support", entry.support_card) : false}
 				badge={borrow && entry ? <Handshake className="h-3 w-3" aria-label="Borrowed" /> : null}
 				label={
@@ -187,6 +191,7 @@ function Tile({
 	onClick,
 	empty,
 	caption,
+	shape = "square",
 	large = false,
 	disabled = false,
 	disabledHint,
@@ -200,6 +205,8 @@ function Tile({
 	onClick: () => void
 	empty: ReactNode
 	caption?: string
+	/** "card" is the support art's 3:4; the default is the portrait's square. */
+	shape?: "square" | "card"
 	large?: boolean
 	disabled?: boolean
 	disabledHint?: string
@@ -218,7 +225,7 @@ function Tile({
 					title={disabled ? disabledHint : caption}
 					disabled={disabled}
 					onClick={onClick}
-					className={`aspect-square w-full overflow-hidden rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-brand ${
+					className={`${shape === "card" ? "aspect-[3/4]" : "aspect-square"} w-full overflow-hidden rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-brand ${
 						filled
 							? "block bg-gray-700 ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"
 							: `flex items-center justify-center border border-dashed text-gray-500 ${

@@ -145,6 +145,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		.sort((a, b) => Number(recommended.has(b.id)) - Number(recommended.has(a.id)))
 
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
+	// The art's own shape: an uma tile is square, a support card is 3:4 (450x600).
+	const artAspect = pool === "uma" ? "aspect-square" : "aspect-[3/4]"
 	const chips = [
 		...pinnedSkills.map((id) => skillsById.get(id)).filter((skill): skill is CatalogueSkill => Boolean(skill)),
 		...matchingSkills.filter((skill) => !pinnedSkills.includes(skill.id)),
@@ -284,9 +286,9 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 										>
 											<span className="relative block w-full">
 												{item.image ? (
-													<img src={item.image} alt="" loading="lazy" decoding="async" className="aspect-square w-full object-contain" />
+													<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
 												) : (
-													<span className="block aspect-square w-full rounded bg-gray-700" aria-hidden="true" />
+													<span className={`block ${artAspect} w-full rounded bg-gray-700`} aria-hidden="true" />
 												)}
 												{isRecommended && (
 													<span
