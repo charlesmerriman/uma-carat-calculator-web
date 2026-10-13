@@ -104,6 +104,19 @@ export function clearCard(members: PvpTeamMember[], position: number, slot: numb
 	)
 }
 
+/** The first empty owned slot (1..5) of a deck, or null when all five are filled. */
+export function firstOpenCardSlot(member: PvpTeamMember): number | null {
+	for (let slot = 1; slot < PVP_BORROW_SLOT; slot++) {
+		if (!member.cards.some((card) => card.slot === slot)) return slot
+	}
+	return null
+}
+
+/** The first of a guide pick's styles a member can run ("everyone" is not one). */
+export function memberStyleFrom(styles: readonly string[]): MemberStyle | undefined {
+	return MEMBER_STYLES.find((style) => styles.includes(style))
+}
+
 /**
  * Why an uma cannot go at `position`, or null when it can. The game's CM
  * rules: the same uma twice is refused, and so is a second outfit of the same

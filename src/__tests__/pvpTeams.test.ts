@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import {
 	cardBlockReason,
 	clearMember,
+	firstOpenCardSlot,
+	memberStyleFrom,
 	recommendedIds,
 	setCard,
 	setMemberUma,
@@ -61,5 +63,18 @@ describe("pvpTeams", () => {
 		expect([...recommendedIds(guide, "front").cards]).toEqual([302])
 		expect([...recommendedIds(guide, "end").cards]).toEqual([400])
 		expect(recommendedIds(null, "end").umas.size).toBe(0)
+	})
+
+	it("finds the first open owned slot, never the borrow slot", () => {
+		let members: PvpTeamMember[] = setCard(setCard(setMemberUma([], 0, MARU), 0, 1, 10), 0, 3, 11)
+		expect(firstOpenCardSlot(members[0])).toBe(2)
+		for (const slot of [2, 4, 5]) members = setCard(members, 0, slot, 20 + slot)
+		members = setCard(members, 0, 6, 30)
+		expect(firstOpenCardSlot(members[0])).toBeNull()
+	})
+
+	it("picks a style a member can run from a guide pick's styles", () => {
+		expect(memberStyleFrom(["everyone", "pace", "front"])).toBe("front")
+		expect(memberStyleFrom(["everyone"])).toBeUndefined()
 	})
 })

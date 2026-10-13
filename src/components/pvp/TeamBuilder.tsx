@@ -24,14 +24,16 @@ import {
 	cardBlockReason,
 	clearCard,
 	clearMember,
+	firstOpenCardSlot,
 	memberAt,
+	memberStyleFrom,
 	recommendedIds,
 	setCard,
 	setMemberStyle,
 	setMemberUma,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
-import { GuidePicksDrawer, GuidePicksPanel } from "./GuidePicksPanel"
+import { GuidePicksDrawer, GuidePicksPanel, type GuidePickActions } from "./GuidePicksPanel"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamGrid } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
@@ -162,6 +164,61 @@ function ReadyBuilder({ event, teamsState, index }: {
 		return picks !== undefined && (pool === "uma" ? picks.umas : picks.cards).has(id)
 	}
 
+	// What Guide picks offers for a clicked uma or card. Same rules as the
+	// picker (utils/pvpTeams.ts), shown as disabled buttons with a reason.
+	const pickActions: GuidePickActions = {
+		uma: (umaId, styles) => {
+			const candidate = index.umasById.get(umaId)
+			const style = memberStyleFrom(styles)
+			return [0, 1, 2].map((position) => {
+				const current = memberAt(members, position)
+				const currentName = current ? (index.umasById.get(current.uma)?.name ?? "an uma") : null
+				const reason = !candidate
+					? "Not in the uma list"
+					: current?.uma === umaId
+						? "Already in this spot"
+						: umaBlockReason(members, position, candidate, index.umasById)
+				return {
+					key: `spot-${position}`,
+					label: `Spot ${position + 1} · ${currentName ?? "empty"}`,
+					buttons: [
+						{
+							label: current ? "Replace" : "Add",
+							disabledReason: reason,
+							run: () => candidate && applyMembers(setMemberUma(members, position, candidate, style)),
+						},
+					],
+				}
+			})
+		},
+		card: (cardId) =>
+			members.map((member) => {
+				const name = index.umasById.get(member.uma)?.name ?? `Uma ${member.position + 1}`
+				const inDeck = member.cards.find((card) => card.support_card === cardId)
+				const open = firstOpenCardSlot(member)
+				const known = index.cardsById.has(cardId) ? null : "Not in the card list"
+				return {
+					key: `member-${member.position}`,
+					label: name,
+					buttons: [
+						{
+							label: "Add",
+							disabledReason: known ?? (inDeck ? "Already in this deck" : open === null ? "Cards 1 to 5 are full" : null),
+							run: () => open !== null && applyMembers(setCard(members, member.position, open, cardId)),
+						},
+						{
+							label: "Borrow",
+							disabledReason:
+								known ??
+								(inDeck?.slot === PVP_BORROW_SLOT ? "Already the borrowed card" : inDeck ? "Already in this deck" : null),
+							run: () => applyMembers(setCard(members, member.position, PVP_BORROW_SLOT, cardId)),
+						},
+					],
+				}
+			}),
+		emptyCardHint: "Add an uma to the team first, then her cards.",
+	}
+
 	return (
 		// From xl the guide's picks dock in a left column and the builder keeps
 		// its 56rem; below xl they retract behind the toolbar's button.
@@ -170,8 +227,8 @@ function ReadyBuilder({ event, teamsState, index }: {
 				dockOpen ? "xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)]" : ""
 			}`}
 		>
-			{dockOpen && <GuidePicksPanel guideState={guideState} members={members} onCollapse={() => setDock(false)} />}
-			<GuidePicksDrawer guideState={guideState} members={members} open={picksOpen} onClose={closePicks} />
+			{dockOpen && <GuidePicksPanel guideState={guideState} members={members} actions={pickActions} onCollapse={() => setDock(false)} />}
+			<GuidePicksDrawer guideState={guideState} members={members} actions={pickActions} open={picksOpen} onClose={closePicks} />
 
 			<div className="flex min-w-0 flex-col gap-3">
 				<TeamToolbar
