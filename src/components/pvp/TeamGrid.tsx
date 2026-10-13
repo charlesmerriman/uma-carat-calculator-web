@@ -18,6 +18,8 @@ import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
 import type { RaceEvent } from "../../types"
+import { releaseNote, type ReleaseStatus } from "../../utils/cardRelease"
+import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
 export interface TeamGridProps {
@@ -26,6 +28,8 @@ export interface TeamGridProps {
 	cardsById: Map<number, CatalogueSupportCard>
 	/** The event's course, for each uma's aptitude letters. Omitted: no letters. */
 	course?: Pick<RaceEvent, "surface_type" | "distance" | "length">
+	/** The event's release check, for the During / Too late flags. */
+	releaseFor?: ReleaseCheck
 	/** Does the event's guide recommend this pick for this style? Draws a star. */
 	isRecommended?: (pool: "uma" | "support", id: number, style: MemberStyle) => boolean
 	onPickUma: (position: number) => void
@@ -62,6 +66,7 @@ function MemberPanel({
 	umasById,
 	cardsById,
 	course,
+	releaseFor,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -88,6 +93,7 @@ function MemberPanel({
 				disabled={!member}
 				disabledHint="Pick an uma first"
 				shape="card"
+				flag={entry ? releaseFor?.("support", entry.support_card) : undefined}
 				starred={entry ? starred("support", entry.support_card) : false}
 				badge={borrow && entry ? <Handshake className="h-3 w-3" aria-label="Borrowed" /> : null}
 				label={
@@ -169,6 +175,7 @@ function MemberPanel({
 					art={uma?.portrait ?? uma?.image ?? null}
 					large
 					starred={starred("uma", member.uma)}
+					flag={releaseFor?.("uma", member.uma)}
 					label={`Change uma ${position + 1}: ${umaLabel}`}
 					onClick={() => onPickUma(position)}
 					empty={null}
@@ -196,6 +203,7 @@ function Tile({
 	disabled = false,
 	disabledHint,
 	starred = false,
+	flag,
 	badge = null,
 	onClear,
 	clearLabel,
@@ -211,6 +219,7 @@ function Tile({
 	disabled?: boolean
 	disabledHint?: string
 	starred?: boolean
+	flag?: ReleaseStatus
 	badge?: ReactNode
 	onClear?: () => void
 	clearLabel?: string
@@ -253,6 +262,7 @@ function Tile({
 						<Star className={`fill-highlight text-highlight ${large ? "h-3.5 w-3.5" : "h-3 w-3"}`} aria-label="Recommended by the guide" />
 					</span>
 				)}
+				<ReleaseFlag status={flag} />
 				{badge && (
 					<span className="pointer-events-none absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
 						{badge}
@@ -307,5 +317,27 @@ function AptitudeLetters({ uma, course, style }: {
 				)
 			})}
 		</p>
+	)
+}
+
+/**
+ * A card on the team that arrives mid-event ("During", gold) or after it
+ * ("Too late", red; picked before its date moved, or before this rule).
+ * The tooltip has the date. utils/cardRelease.ts has the rule.
+ */
+export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
+	if (!status || status.kind === "available") return null
+	const during = status.kind === "during"
+	const text = during ? releaseNote(status) : `Out ${status.date}, after this event`
+	return (
+		<span
+			className={`pointer-events-none absolute bottom-0.5 left-0.5 rounded px-1 text-[9px] font-bold uppercase leading-tight ${
+				during ? "bg-brand text-black" : "bg-highlight text-black"
+			}`}
+			title={text ?? undefined}
+		>
+			<span aria-hidden="true">{during ? "During" : "Too late"}</span>
+			<span className="sr-only">{text}</span>
+		</span>
 	)
 }

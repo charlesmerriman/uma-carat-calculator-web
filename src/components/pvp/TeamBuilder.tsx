@@ -32,6 +32,8 @@ import {
 } from "../../utils/pvpTeams"
 import { GuidePicksBody, type GuidePickActions } from "./GuidePicksPanel"
 import { SaveStatus } from "./SaveStatus"
+import { useCardReleases, type ReleaseCheck } from "../../hooks/useCardReleases"
+import { releaseBlockReason, releaseNote } from "../../utils/cardRelease"
 import { GuideSkillsBody } from "./GuideSkillsPanel"
 import { DockedPanel, SideDrawer } from "./SidePanel"
 import { PvpCardPicker } from "./PvpCardPicker"
@@ -174,6 +176,9 @@ function ReadyBuilder({ event, teamsState, index }: {
 		if (key) setSelectedKey(key)
 	}
 
+	// Only what is out by the event's last day can be added, from any of the
+	// view's paths in (utils/cardRelease.ts).
+	const releaseFor = useCardReleases(event)
 	const searchMember = skillSearch ? memberAt(members, skillSearch.position) : undefined
 	const searchStyle = searchMember?.style ?? null
 
@@ -188,9 +193,10 @@ function ReadyBuilder({ event, teamsState, index }: {
 				const currentName = current ? (index.umasById.get(current.uma)?.name ?? "an uma") : null
 				const reason = !candidate
 					? "Not in the uma list"
-					: current?.uma === umaId
-						? "Already in this spot"
-						: umaBlockReason(members, position, candidate, index.umasById)
+					: (releaseBlockReason(releaseFor("uma", umaId)) ??
+						(current?.uma === umaId
+							? "Already in this spot"
+							: umaBlockReason(members, position, candidate, index.umasById)))
 				return {
 					key: `spot-${position}`,
 					label: `Spot ${position + 1} · ${currentName ?? "empty"}`,
@@ -209,7 +215,9 @@ function ReadyBuilder({ event, teamsState, index }: {
 				const name = index.umasById.get(member.uma)?.name ?? `Uma ${member.position + 1}`
 				const inDeck = member.cards.find((card) => card.support_card === cardId)
 				const open = firstOpenCardSlot(member)
-				const known = index.cardsById.has(cardId) ? null : "Not in the card list"
+				const known = index.cardsById.has(cardId)
+					? releaseBlockReason(releaseFor("support", cardId))
+					: "Not in the card list"
 				return {
 					key: `member-${member.position}`,
 					label: name,
@@ -230,6 +238,10 @@ function ReadyBuilder({ event, teamsState, index }: {
 				}
 			}),
 		emptyCardHint: "Add an uma to the team first, then her cards.",
+		note: (pool, id) => {
+			const status = releaseFor(pool, id)
+			return releaseNote(status) ?? releaseBlockReason(status)
+		},
 	}
 
 	// Skill id -> where the selected team gets it, for the skills panel's ticks.
@@ -356,6 +368,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					index={index}
 					event={event}
 					member={searchMember}
+					releaseFor={releaseFor}
 					members={members}
 					style={searchStyle}
 					recommended={recommendedIds(guide, searchStyle ?? "front")}
@@ -383,12 +396,13 @@ function ReadyBuilder({ event, teamsState, index }: {
  *
  * A card goes in the uma's first free slot from 1 to 5, else the borrow slot.
  */
-function SkillSearchPicker({ target, onTab, index, event, member, members, style, recommended, onPickUma, onPickCard, onClose }: {
+function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, members, style, recommended, onPickUma, onPickCard, onClose }: {
 	target: SkillSearchTarget
 	onTab: (tab: "uma" | "support") => void
 	index: PvpCatalogueIndex
 	event: RaceEvent
 	member: PvpTeamMember | undefined
+	releaseFor: ReleaseCheck
 	members: PvpTeamMember[]
 	style: MemberStyle | null
 	recommended: { umas: Set<number>; cards: Set<number> }
@@ -433,9 +447,12 @@ function SkillSearchPicker({ target, onTab, index, event, member, members, style
 			pool="uma"
 			items={index.catalogue.umas}
 			recommended={recommended.umas}
+			noteFor={(id) => releaseNote(releaseFor("uma", id))}
 			blockReason={(id) => {
 				const candidate = index.umasById.get(id)
 				if (!candidate) return null
+				const late = releaseBlockReason(releaseFor("uma", id))
+				if (late) return late
 				if (member?.uma === id) return "Already in this spot"
 				return umaBlockReason(members, target.position, candidate, index.umasById)
 			}}
@@ -450,7 +467,10 @@ function SkillSearchPicker({ target, onTab, index, event, member, members, style
 			pool="support"
 			items={index.catalogue.support_cards}
 			recommended={recommended.cards}
+			noteFor={(id) => releaseNote(releaseFor("support", id))}
 			blockReason={(id) => {
+				const late = releaseBlockReason(releaseFor("support", id))
+				if (late) return late
 				if (!member) return "Add an uma to this spot first"
 				if (member.cards.some((card) => card.support_card === id)) return "Already in this deck"
 				return cardSlot === null ? "This deck is full" : null

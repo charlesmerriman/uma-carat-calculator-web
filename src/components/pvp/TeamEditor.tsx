@@ -14,6 +14,8 @@
 
 import { useMemo, useState } from "react"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
+import { useCardReleases } from "../../hooks/useCardReleases"
+import { releaseBlockReason, releaseNote } from "../../utils/cardRelease"
 import {
 	MEMBER_STYLES,
 	PVP_BORROW_SLOT,
@@ -46,6 +48,9 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
+	// Only what is out by the event's last day can be picked; what lands
+	// mid-event is marked (utils/cardRelease.ts).
+	const releaseFor = useCardReleases(event)
 
 	// The guide's picks per style, worked out once per guide for the stars.
 	const picksByStyle = useMemo(
@@ -77,6 +82,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 				umasById={index.umasById}
 				cardsById={index.cardsById}
 				course={event}
+				releaseFor={releaseFor}
 				isRecommended={isRecommended}
 				onPickUma={(position) => setPicker({ pool: "uma", position })}
 				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
@@ -96,8 +102,12 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 					recommended={recommended.umas}
 					blockReason={(id) => {
 						const candidate = index.umasById.get(id)
-						return candidate ? umaBlockReason(members, picker.position, candidate, index.umasById) : null
+						return (
+							releaseBlockReason(releaseFor("uma", id)) ??
+							(candidate ? umaBlockReason(members, picker.position, candidate, index.umasById) : null)
+						)
 					}}
+					noteFor={(id) => releaseNote(releaseFor("uma", id))}
 					selectedId={pickerMember?.uma ?? null}
 					onPick={(id) => {
 						const uma = index.umasById.get(id)
@@ -117,7 +127,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 					event={event}
 					style={pickerStyle}
 					recommended={recommended.cards}
-					blockReason={(id) => cardBlockReason(pickerMember, picker.slot, id)}
+					blockReason={(id) =>
+						releaseBlockReason(releaseFor("support", id)) ?? cardBlockReason(pickerMember, picker.slot, id)
+					}
+					noteFor={(id) => releaseNote(releaseFor("support", id))}
 					selectedId={pickerMember?.cards.find((card) => card.slot === picker.slot)?.support_card ?? null}
 					onPick={(id) => apply(setCard(members, picker.position, picker.slot, id))}
 					onRemove={

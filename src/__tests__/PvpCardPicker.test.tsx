@@ -134,4 +134,14 @@ describe("PvpCardPicker", () => {
 		expect(screen.getByRole("searchbox", { name: "Search" })).toHaveValue("Groundwork")
 		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black"])
 	})
+
+	it("sorts what can't be picked last and notes what lands mid-event", () => {
+		renderSupportPicker({
+			blockReason: (id: number) => (id === 10 ? "Out 2026/12/1, after this event" : null),
+			noteFor: (id: number) => (id === 12 ? "Out 2026/11/5, during this event" : null),
+		})
+		expect(tileNames()).toEqual(["Kitasan Black", "Super Creek", "Fine Motion"])
+		expect(screen.getByText("Out 2026/11/5, during this event")).toBeInTheDocument()
+		expect(screen.getByTitle("Out 2026/12/1, after this event")).toBeDisabled()
+	})
 })

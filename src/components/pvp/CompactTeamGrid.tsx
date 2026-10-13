@@ -12,7 +12,7 @@ import type { ReactNode } from "react"
 import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
-import type { TeamGridProps } from "./TeamGrid"
+import { ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
@@ -24,6 +24,7 @@ export function CompactTeamGrid({
 	members,
 	umasById,
 	cardsById,
+	releaseFor,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -59,6 +60,9 @@ export function CompactTeamGrid({
 											{position + 1}
 										</span>
 										{starred("uma", member.uma, member) && <StarBadge />}
+										<span className="absolute bottom-6 left-0">
+											<ReleaseFlag status={releaseFor?.("uma", member.uma)} />
+										</span>
 										<ClearButton label={`Remove ${name}`} onClick={() => onClearUma(position)} />
 										{/* The style, in the tile's bottom edge. A sibling of the
 										    button: a select inside a button is invalid HTML. */}
@@ -137,6 +141,7 @@ export function CompactTeamGrid({
 									<Art src={card?.image ?? null} />
 								</button>
 								{starred("support", entry.support_card, member) && <StarBadge small />}
+								<ReleaseFlag status={releaseFor?.("support", entry.support_card)} />
 								<ClearButton label={`Remove ${card?.name ?? "this card"}`} onClick={() => onClearCard(position, slot)} small />
 							</div>
 						)
@@ -174,7 +179,7 @@ function Art({ src }: { src: string | null }): ReactNode {
 function StarBadge({ small = false }: { small?: boolean }) {
 	return (
 		<span
-			className={`pointer-events-none absolute flex items-center justify-center rounded-full bg-gray-950/85 ${small ? "bottom-0.5 left-0.5 h-4 w-4" : "right-1 top-7 h-5 w-5"}`}
+			className={`pointer-events-none absolute flex items-center justify-center rounded-full bg-gray-950/85 ${small ? "left-0.5 top-0.5 h-4 w-4" : "right-1 top-7 h-5 w-5"}`}
 			title="Recommended by the guide"
 		>
 			<Star className={`fill-highlight text-highlight ${small ? "h-2.5 w-2.5" : "h-3 w-3"}`} aria-label="Recommended by the guide" />

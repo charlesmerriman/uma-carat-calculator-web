@@ -19,8 +19,16 @@ const LIBRA = {
 	end_date: "2099-01-01T00:00:00Z", is_predicted: false, surface_type: "Turf", distance: "Mile", length: "",
 } as unknown as RaceEvent
 
+// Card 302's first banner lands in the middle of Libra Cup.
+const SUPPORT_BANNERS = [{ banner_timeline: { start_date: "2050-01-01T12:00:00Z" }, support_cards: [{ id: 302 }] }]
+
 vi.mock("../services/CalculatorContext", () => ({
-	useCalculatorData: () => ({ championsMeetingData: [LIBRA], leagueOfHeroesData: [] }),
+	useCalculatorData: () => ({
+		championsMeetingData: [LIBRA],
+		leagueOfHeroesData: [],
+		umaBannerData: [],
+		supportBannerData: SUPPORT_BANNERS,
+	}),
 }))
 vi.mock("../hooks/usePvpCatalogue", () => ({
 	usePvpCatalogue: () => ({
@@ -134,5 +142,12 @@ describe("TeamDrawer", () => {
 		expect(screen.getByRole("heading", { name: "Your PvP team" })).toHaveFocus()
 		fireEvent.keyDown(screen.getByRole("heading", { name: "Your PvP team" }), { key: "Escape" })
 		expect(onClose).toHaveBeenCalled()
+	})
+
+	it("flags a card on the team that comes out during the event", () => {
+		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [{ slot: 6, support_card: 302 }] }]
+		renderDrawer(teamsValue([team("a", { members })]))
+		expect(screen.getByText("During")).toBeInTheDocument()
+		expect(screen.getByText("Out 2050/1/1, during this event")).toBeInTheDocument()
 	})
 })

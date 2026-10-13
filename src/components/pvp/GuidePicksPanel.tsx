@@ -45,6 +45,8 @@ export interface GuidePickActions {
 	card: (cardId: number) => PickAction[]
 	/** Shown instead of rows when there is nothing to add a card to. */
 	emptyCardHint: string | null
+	/** A line under "Add X": when it is out, if that matters for this event. */
+	note?: (pool: "uma" | "support", id: number) => string | null
 }
 
 interface GuidePicksProps {
@@ -97,6 +99,7 @@ export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps
 							onTeam: onTeamUmas.has(pick.ref.id),
 							actions: () => actions.uma(pick.ref.id, pick.styles),
 							emptyHint: null,
+							note: actions.note?.("uma", pick.ref.id) ?? null,
 						}))}
 						shape="square"
 						openKey={openKey}
@@ -120,6 +123,7 @@ export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps
 							onTeam: onTeamCards.has(pick.ref.id),
 							actions: () => actions.card(pick.ref.id),
 							emptyHint: actions.emptyCardHint,
+							note: actions.note?.("support", pick.ref.id) ?? null,
 						}))}
 						shape="card"
 						openKey={openKey}
@@ -150,6 +154,8 @@ interface PickItem {
 	/** Called only for the open pick, so the rows are worked out on demand. */
 	actions: () => PickAction[]
 	emptyHint: string | null
+	/** "Out 2026/11/5, during this event", or null. */
+	note: string | null
 }
 
 /** Four tiles a row, with the open pick's action row after its row. */
@@ -231,6 +237,7 @@ function ActionRow({ item, onDone }: { item: PickItem; onDone: () => void }) {
 	return (
 		<li className="col-span-4 rounded-lg border border-brand/40 bg-gray-900/80 p-2" aria-label={`Add ${item.name}`}>
 			<p className="mb-1.5 truncate text-xs font-semibold text-gray-100">Add {item.name}</p>
+			{item.note && <p className="-mt-1 mb-1.5 text-[11px] font-medium text-brand">{item.note}</p>}
 			{rows.length === 0 ? (
 				<p className="text-xs text-gray-400">{item.emptyHint}</p>
 			) : (

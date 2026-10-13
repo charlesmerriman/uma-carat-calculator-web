@@ -11,6 +11,8 @@
  *     distance and the style the place runs, from utils/courseAptitude.ts.
  *   - THE GUIDE'S STAR. Cards the event's guide recommends for this style
  *     carry a star and sort first.
+ *   - RELEASE DATES. A card out after the event is blocked; one out during
+ *     it carries a note (utils/cardRelease.ts, through the caller).
  *   - BLOCKED, NOT HIDDEN. A tile the team's rules refuse (already on the
  *     team, a second outfit of a character, already in this deck) stays in
  *     the grid, greyed, with the reason (the OshiPicker rule): a card that
@@ -65,8 +67,10 @@ type PvpCardPickerProps = {
 	/** The style this place runs, for the aptitude badge and the star. */
 	style: MemberStyle | null
 	recommended: Set<number>
-	/** Why an id can't go here, or null when it can. */
+	/** Why an id can't go here, or null when it can. Blocked tiles sort last. */
 	blockReason: (id: number) => string | null
+	/** A note on a pickable tile, such as "Out 2026/11/5, during this event". */
+	noteFor?: (id: number) => string | null
 	selectedId: number | null
 	onPick: (id: number) => void
 	/** Shown when the place is filled: empties it. */
@@ -106,7 +110,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs } = props
+	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(null)
@@ -149,8 +153,13 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 			if (item.alias.toLocaleLowerCase().includes(query)) return true
 			return item.skills.some((link) => matchingSkillIds.has(link.skill))
 		})
-		// Stable: the guide's picks first, the catalogue's name order within.
-		.sort((a, b) => Number(recommended.has(b.id)) - Number(recommended.has(a.id)))
+		// Stable: what can be picked before what can't, the guide's picks
+		// first within each, the catalogue's name order within those.
+		.sort(
+			(a, b) =>
+				Number(blockReason(a.id) !== null) - Number(blockReason(b.id) !== null) ||
+				Number(recommended.has(b.id)) - Number(recommended.has(a.id))
+		)
 
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
 	// The art's own shape: an uma tile is square, a support card is 3:4 (450x600).
@@ -278,6 +287,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 						<ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
 							{shown.map((item) => {
 								const reason = blockReason(item.id)
+								const note = reason === null ? (noteFor?.(item.id) ?? null) : null
 								const isRecommended = recommended.has(item.id)
 								const isSelected = item.id === selectedId
 								return (
@@ -325,6 +335,11 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 												</span>
 											)}
 											{reason && <span className="mt-0.5 text-[10px] leading-tight text-gray-400">{reason}</span>}
+											{note && (
+												<span className="mt-1 rounded bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-brand" title={note}>
+													{note}
+												</span>
+											)}
 										</button>
 									</li>
 								)
