@@ -1649,7 +1649,7 @@ It stands aside on the PvP page's My team view (`?view=team`), where the builder
 the team.
 
 - **A window over the page, never beside it** (owner, 2026-10-13; a first version docked as a
-  column and pushed the site aside). Fixed under the navbar on the right, 24rem wide, sized to its
+  column and pushed the site aside). Fixed on the right, centred on the space below the navbar, 24rem wide, sized to its
   contents; below `desktop-nav` it covers the screen with its own close button.
 - **Read-only.** `TeamSnapshot` draws the three umas on top and each uma's six cards below, in
   the builder's order (1 to 5, a divider, the borrow slot). Editing happens only on My team;

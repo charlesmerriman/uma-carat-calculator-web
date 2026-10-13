@@ -3,8 +3,12 @@
  * from the navbar's Team button. Mounted by AppShell, inside the /app
  * loading gate.
  *
- * A WINDOW OVER THE PAGE, NEVER BESIDE IT. It floats under the navbar on
- * the right, sized to its contents, and the page keeps its full width
+ * A WINDOW OVER THE PAGE, NEVER BESIDE IT. It floats on the right, centred
+ * on the space below the 4rem navbar (top 50% + 2rem, pulled up by half its
+ * height; the max height keeps its top edge clear of the navbar), sized to
+ * its contents. Framer animates `transform` and Tailwind's translate classes
+ * use the separate `translate` property, so the slide-in and the centring
+ * do not fight. The page keeps its full width
  * behind it (owner, 2026-10-13: an earlier version docked as a column and
  * pushed the site aside). Below desktop-nav it covers the screen, with its
  * own close button.
@@ -91,7 +95,7 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 				// Only Escapes from inside the window itself.
 				if (keydown.key === "Escape" && windowRef.current?.contains(keydown.target as Node)) close()
 			}}
-			className="fixed inset-2 z-50 flex flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-900 shadow-2xl desktop-nav:inset-auto desktop-nav:right-4 desktop-nav:top-19 desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-6rem)] desktop-nav:w-[24rem]"
+			className="fixed inset-2 z-50 flex flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-900 shadow-2xl desktop-nav:inset-auto desktop-nav:right-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[24rem] desktop-nav:-translate-y-1/2"
 		>
 			<header className="flex items-center gap-2 border-b border-gray-700 px-3 py-2">
 				<h2 ref={headingRef} tabIndex={-1} className="flex flex-1 items-center gap-1.5 text-sm font-semibold text-gray-100 outline-none">
