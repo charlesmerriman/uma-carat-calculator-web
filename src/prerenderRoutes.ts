@@ -27,7 +27,6 @@ export const PRERENDER_ROUTES = [
 	"/privacy-policy",
 	"/changelog",
 	"/feedback",
-	"/guides/carat-income",
 	"/app",
 	"/app/timeline",
 	"/app/selectors",

@@ -99,7 +99,6 @@ inspects an object's shape to decide what it is.
 | `/app/timeline` | Banner, event and campaign calendar |
 | `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
 | `/faq` | Every income source, explained |
-| `/guides/carat-income` | How the calculator works out your carats, in plain language |
 | `/changelog` | Patch notes |
 | `/feedback` | Bug reports and suggestions |
 | `/about` | Who makes the site and where its numbers come from |
@@ -177,7 +176,7 @@ configs, the linter and the tests on every push.
 
 ### Site content at build time
 
-The About page, the carat income guide and the FAQ are not in this repo. They are rows the
+The About page and the FAQ are not in this repo. They are rows the
 team edits in the API's admin, served by `GET /site-content`. The prerender fetches that
 endpoint from the API the bundle was built against (`VITE_API_URL`) and bakes the words into
 each document, then embeds the rows a page used in a `<script id="site-content">` block so

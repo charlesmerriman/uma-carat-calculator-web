@@ -22,7 +22,6 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	"/privacy-policy": { title: `Privacy Policy | ${SITE_NAME}`, phrase: "Privacy Policy" },
 	"/changelog": { title: `Changelog | ${SITE_NAME}`, phrase: "Changelog" },
 	"/feedback": { title: `Feedback | ${SITE_NAME}`, phrase: "Open our Discord" },
-	"/guides/carat-income": { title: `Carat Income Guide | ${SITE_NAME}`, phrase: "running balance" },
 	// The tool itself renders behind the data gate, so a build-time render of these
 	// four is the app shell: navbar, the loading state, footer. The route identity
 	// is in the head tags (asserted below), not in the body.
@@ -51,11 +50,6 @@ describe("entry-server render()", () => {
 		// Navbar and footer are the frame every public page renders inside.
 		expect(html).toContain("<nav")
 		expect(html).toContain("</footer>")
-	})
-
-	it("renders the guide with its tables, not as escaped text", () => {
-		const { html } = render("/guides/carat-income", CONTENT)
-		expect((html.match(/<table/g) ?? []).length).toBe(4)
 	})
 
 	it("reports noindex for the sign-in page, which is why it is not prerendered", () => {
@@ -97,12 +91,6 @@ describe("entry-server render()", () => {
 		it("is the About row alone for /about", () => {
 			const { content } = render("/about", CONTENT)
 			expect(content.pages?.map((page) => page.slug)).toEqual(["about"])
-			expect(content.faq).toBeUndefined()
-		})
-
-		it("is the guide row alone for the guide", () => {
-			const { content } = render("/guides/carat-income", CONTENT)
-			expect(content.pages?.map((page) => page.slug)).toEqual(["carat-income-guide"])
 			expect(content.faq).toBeUndefined()
 		})
 
