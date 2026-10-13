@@ -6,6 +6,7 @@ import {
 	newCardsBetween,
 	previousPvpEvent,
 	raceEventsInOrder,
+	skillsForPosition,
 	stylesWithContent,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
@@ -130,5 +131,23 @@ describe("splitNoteText", () => {
 			{ kind: "text", text: ", " },
 			{ kind: "highlight", pieces: [{ kind: "text", text: "then " }, { kind: "skill", name: "Final Push" }] },
 		])
+	})
+})
+
+describe("skillsForPosition", () => {
+	const row = (style: string, tier: number | null, order: number, id: number) =>
+		({ style, tier, order, category: "other", note: "", skill: { id } }) as unknown as PvpSkillRecommendation
+
+	it("merges the position's picks with the general ones: by tier, own picks first", () => {
+		const rows = [
+			row("everyone", 0, 0, 1),
+			row("front", 1, 0, 2),
+			row("front", 0, 1, 3),
+			row("pace", 0, 0, 4),
+			row("everyone", null, 0, 5),
+			row("front", null, 0, 6),
+		]
+		expect(skillsForPosition(rows, "front").map((r) => r.skill.id)).toEqual([3, 1, 2, 6, 5])
+		expect(skillsForPosition(rows, "pace").map((r) => r.skill.id)).toEqual([4, 1, 5])
 	})
 })

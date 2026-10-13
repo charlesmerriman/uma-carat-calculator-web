@@ -19,7 +19,7 @@ import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
-import { STYLE_LABELS, groupSkillsByTier, stylesWithContent } from "../../utils/pvpGuide"
+import { STYLE_LABELS, groupSkillsByTier, skillsForPosition, stylesWithContent } from "../../utils/pvpGuide"
 import type {
 	PvpDeck,
 	PvpDeckSlot,
@@ -38,17 +38,20 @@ const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
 // Module scope, so MarkdownContent's memoised components keep one identity.
 const renderSkill = (name: string) => <SkillMention name={name} />
 
+// The subcategories inside a position's "Recommended skills". "other" is
+// what a guide files without a category (the sheet's per-style lists), so it
+// reads as the core list.
 const CATEGORY_LABELS: Record<PvpSkillCategory, string> = {
 	acceleration: "Acceleration",
+	other: "Core skills",
 	speed: "Speed",
-	green: "Green skills",
 	recovery: "Recovery",
+	green: "Green skills",
 	debuff: "Debuffs",
-	other: "Recommended skills",
 }
 // Acceleration first: it is what a style lives or dies by. The rest in the
 // order a player builds a skill list.
-const CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "speed", "recovery", "other", "green", "debuff"]
+const CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
 
 /** Rows split by category, in CATEGORY_ORDER, each keeping its tier order. */
 function byCategory(rows: PvpSkillRecommendation[]): Array<[PvpSkillCategory, PvpSkillRecommendation[]]> {
@@ -58,12 +61,19 @@ function byCategory(rows: PvpSkillRecommendation[]): Array<[PvpSkillCategory, Pv
 	]).filter(([, list]) => list.length > 0)
 }
 
-function SkillGroups({ rows }: { rows: PvpSkillRecommendation[] }) {
+/**
+ * A position's "Recommended skills": its own picks and the general ones
+ * (every position) merged, split into subcategories, each by tier. A general
+ * pick looks like any other; its hover detail says it applies everywhere.
+ */
+function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
 	return (
-		<div className="flex flex-col gap-3">
+		<section aria-label="Recommended skills">
+			<h4 className={SUBHEADING}>Recommended skills</h4>
+			<div className="mt-2 flex flex-col gap-3 border-l-2 border-gray-700 pl-3">
 			{byCategory(rows).map(([category, list]) => (
 				<div key={category}>
-					<h4 className={SUBHEADING}>{CATEGORY_LABELS[category]}</h4>
+					<h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400">{CATEGORY_LABELS[category]}</h5>
 					<div className="mt-1.5 flex flex-col gap-1.5">
 						{groupSkillsByTier(list).map((group, index) => (
 							<div key={index} className="flex flex-wrap items-center gap-1.5">
@@ -73,14 +83,20 @@ function SkillGroups({ rows }: { rows: PvpSkillRecommendation[] }) {
 									</span>
 								)}
 								{group.skills.map((row) => (
-									<SkillChip key={`${row.skill.id}-${row.order}`} skill={row.skill} note={row.note} />
+									<SkillChip
+										key={`${row.style}-${row.skill.id}-${row.order}`}
+										skill={row.skill}
+										note={row.note}
+										general={row.style === "everyone"}
+									/>
 								))}
 							</div>
 						))}
 					</div>
 				</div>
 			))}
-		</div>
+			</div>
+		</section>
 	)
 }
 
@@ -186,7 +202,8 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 	const umas = guide.uma_recommendations.filter((row) => row.style === style)
 	const note = guide.style_notes.find((row) => row.style === style)
-	const skills = guide.skill_recommendations.filter((row) => row.style === style)
+	// The position's own picks and the general ones, merged.
+	const skills = skillsForPosition(guide.skill_recommendations, style)
 	const decks = guide.decks.filter((row) => row.style === style)
 	const mentions = guide.honorable_mentions.filter((row) => row.style === style)
 	return (
@@ -206,7 +223,7 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 					<MarkdownContent markdown={note.body} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
 				</div>
 			)}
-			{skills.length > 0 && <SkillGroups rows={skills} />}
+			{skills.length > 0 && <RecommendedSkills rows={skills} />}
 			{decks.length > 0 && (
 				<div className="flex flex-col gap-4">
 					<h4 className={SUBHEADING}>Example decks</h4>
@@ -273,10 +290,12 @@ function StyleColumn({ guide, styles }: { guide: PvpGuide; styles: PvpStyle[] })
 
 export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 	const styles = stylesWithContent(guide)
-	const sharedSkills = guide.skill_recommendations.filter((row) => row.style === "everyone")
+	// General skills (every position) show inside each position's tab. With
+	// no position tabs at all they get a section of their own instead.
+	const generalSkills = guide.skill_recommendations.filter((row) => row.style === "everyone")
 	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
 	const hasSide =
-		hasOverview || guide.team_comps.length > 0 || guide.stat_configs.length > 0 || sharedSkills.length > 0
+		hasOverview || guide.team_comps.length > 0 || guide.stat_configs.length > 0
 
 	return (
 		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
@@ -290,7 +309,7 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 
 			<div
 				className={
-					hasSide && styles.length > 0
+					hasSide && (styles.length > 0 || generalSkills.length > 0)
 						? "grid items-start gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"
 						: "flex flex-col gap-4"
 				}
@@ -344,16 +363,18 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 
 						{guide.stat_configs.length > 0 && <StatConfigTable rows={guide.stat_configs} />}
 
-						{sharedSkills.length > 0 && (
-							<section className={SECTION} aria-labelledby="pvp-shared-skills">
-								<h3 id="pvp-shared-skills" className={`${HEADING} mb-2`}>Skills for every style</h3>
-								<SkillGroups rows={sharedSkills} />
-							</section>
-						)}
 					</aside>
 				)}
 
-				{styles.length > 0 && <StyleColumn guide={guide} styles={styles} />}
+				{styles.length > 0 ? (
+					<StyleColumn guide={guide} styles={styles} />
+				) : (
+					generalSkills.length > 0 && (
+						<div className={SECTION}>
+							<RecommendedSkills rows={skillsForPosition(guide.skill_recommendations, "everyone")} />
+						</div>
+					)
+				)}
 			</div>
 		</div>
 		</SkillMentionsContext.Provider>

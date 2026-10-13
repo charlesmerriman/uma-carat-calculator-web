@@ -131,6 +131,30 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	return STYLE_ORDER.filter((style) => used.has(style))
 }
 
+/**
+ * One position's recommended skills: its own picks merged with the GENERAL
+ * ones (style "everyone", which apply to every position), as one list.
+ *
+ * Ordered by tier (0 first, untiered last), then the position's own picks
+ * before the general ones within a tier, then the editor's order. Category is
+ * left to the caller, which splits the list into its subcategories.
+ */
+export function skillsForPosition(rows: PvpSkillRecommendation[], style: PvpStyle): PvpSkillRecommendation[] {
+	const tierRank = (row: PvpSkillRecommendation) => (row.tier === null ? Number.MAX_SAFE_INTEGER : row.tier)
+	const generalRank = (row: PvpSkillRecommendation) => (row.style === "everyone" ? 1 : 0)
+	return rows
+		.map((row, index) => ({ row, index }))
+		.filter(({ row }) => row.style === style || row.style === "everyone")
+		.sort(
+			(a, b) =>
+				tierRank(a.row) - tierRank(b.row) ||
+				generalRank(a.row) - generalRank(b.row) ||
+				a.row.order - b.row.order ||
+				a.index - b.index
+		)
+		.map(({ row }) => row)
+}
+
 export interface SkillTierGroup {
 	/** Null for skills the guide gives no tier. */
 	tier: number | null

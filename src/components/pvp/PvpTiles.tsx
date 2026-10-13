@@ -220,12 +220,17 @@ function skillRarityClass(rarity: number): string {
 	return "border-gray-600"
 }
 
-/** A recommended skill: icon, name, whose unique it is, the description on hover. */
-export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string }) {
+/**
+ * A recommended skill: icon, name, whose unique it is, the description on
+ * hover. `general` marks a pick that applies to every position; it looks the
+ * same, and says so in its hover detail.
+ */
+export function SkillChip({ skill, note, general = false }: { skill: PvpSkillRef; note: string; general?: boolean }) {
 	const detail = (
 		<>
 			<span className="block font-semibold text-gray-100">{skill.name}</span>
 			{skill.description}
+			{general && <span className="mt-1 block text-gray-400">Recommended for every position.</span>}
 			{note && (
 				<span className="mt-1 block text-gray-300">
 					<InlineNote text={note} />

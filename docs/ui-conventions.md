@@ -1317,8 +1317,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar.
 - **Every guide section is optional** and steps aside when empty. From `xl` the guide is two
-  columns: a side column for the whole team (overview, team comps, stats, skills for every
-  style) and ONE style pane. Style tabs list only styles with content (`stylesWithContent`).
+  columns: a side column for the whole team (overview, team comps, stats) and ONE style pane.
+- **General skills (`style: "everyone"`) live inside every position's "Recommended skills"**,
+  merged with that position's own picks by `skillsForPosition` (tier first, the position's
+  own before general within a tier, then order), then split into subcategories
+  (Acceleration, Core skills, Speed, Recovery, Green, Debuffs). A general chip looks the
+  same and says "Recommended for every position" on hover. Never a separate block: a guide
+  with general skills but no position content shows them as one section instead. Style tabs list only styles with content (`stylesWithContent`).
   Never add a second "compare" pane: it was tried and read as every card listed twice.
   "New since <previous event>" is collapsed by default for the same reason.
 - **`==words==` is red and `[[Skill name]]` is a skill** in any guide text:

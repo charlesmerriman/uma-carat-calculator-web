@@ -231,7 +231,7 @@ describe("PvpGuidePage views and layout", () => {
 	it("lists each recommended uma and card once (no second compare pane)", async () => {
 		respond(200, GUIDE)
 		renderPage()
-		await screen.findByText("Skills for every style")
+		await screen.findByText("Recommended stats")
 		expect(screen.getAllByText("Maruzensky")).toHaveLength(1)
 		expect(screen.getAllByText("Kitasan Black")).toHaveLength(1)
 		expect(screen.getAllByRole("tablist", { name: "Running style" })).toHaveLength(1)
@@ -307,7 +307,7 @@ describe("PvpGuidePage skill mentions", () => {
 			skill_mentions: { groundwork },
 		})
 		renderPage()
-		await screen.findByText("Skills for every style")
+		await screen.findByText("Recommended stats")
 		const chips = screen.getAllByRole("group", { name: "Groundwork" })
 		expect(chips).toHaveLength(2)
 		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Front runners speed up early.")
@@ -316,8 +316,36 @@ describe("PvpGuidePage skill mentions", () => {
 	it("shows an unresolved mention as its plain name", async () => {
 		respond(200, { ...GUIDE, style_notes: [{ style: "front", body: "Take [[Gone Skill]]." }], skill_mentions: {} })
 		renderPage()
-		await screen.findByText("Skills for every style")
+		await screen.findByText("Recommended stats")
 		expect(screen.getByText(/Take Gone Skill\./)).toBeInTheDocument()
 		expect(screen.queryByRole("group", { name: "Gone Skill" })).not.toBeInTheDocument()
+	})
+})
+
+describe("PvpGuidePage recommended skills", () => {
+	it("merges the general skills into each position's Recommended skills", async () => {
+		respond(200, GUIDE)
+		renderPage()
+		await screen.findByText("Recommended stats")
+		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
+		// Front's own acceleration pick and the general green skill, side by side.
+		expect(section.getByText("Acceleration")).toBeInTheDocument()
+		expect(section.getByText("Green skills")).toBeInTheDocument()
+		const general = section.getByRole("group", { name: "Left-Handed ○" })
+		expect(within(general).getByRole("tooltip").textContent).toContain("Recommended for every position.")
+		const own = section.getByRole("group", { name: "Angling and Scheming" })
+		expect(within(own).getByRole("tooltip").textContent).not.toContain("every position")
+		// No separate block for the general skills any more.
+		expect(screen.queryByText("Skills for every style")).not.toBeInTheDocument()
+	})
+
+	it("shows the general skills in every position's tab", async () => {
+		respond(200, GUIDE)
+		renderPage()
+		await screen.findByText("Recommended stats")
+		fireEvent.click(within(screen.getByRole("tablist", { name: "Running style" })).getByRole("tab", { name: "End" }))
+		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
+		expect(section.getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
+		expect(section.queryByRole("group", { name: "Angling and Scheming" })).not.toBeInTheDocument()
 	})
 })
