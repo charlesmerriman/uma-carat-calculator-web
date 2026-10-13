@@ -26,7 +26,7 @@
  *
  * SITE CONTENT
  *
- * The About page, the carat income guide and the FAQ are rows the team edits in the
+ * The About page and the FAQ are rows the team edits in the
  * API's admin. Before rendering anything, this fetches GET /site-content from the API
  * the bundle was built against and hands it to every render; each document then
  * embeds the rows it used, so hydration sees the same words. Unreachable means the

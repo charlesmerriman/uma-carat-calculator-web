@@ -26,6 +26,31 @@
 @custom-variant desktop-nav (@media (min-width: 64rem));
 @custom-variant app-shell (@media (min-width: 64rem) and (min-height: 32rem));
 
+/* ===== STICKY NAVBAR OFFSET =====
+   The navbar is `sticky top-0` (components/navbar/Navbar.tsx), so on any page
+   the document scrolls it covers the top of the viewport. scroll-padding-top
+   tells the browser so: scrollIntoView and #hash jumps then park their target
+   below the bar, and each target's own scroll-mt is only the air above it.
+
+   It has to sit on the scroller, which for the document is html. The desktop
+   /app shell scrolls an inner div instead, and this does not reach it (nor
+   should it: the bar is outside that div).
+
+   Heights, switching on desktop-nav like the navbar itself:
+     mobile  — 56px top row + 1px rule + 65.5px tab row (2 x 8px padding, and
+               48.5px tabs: 16px icon, 2px gap, 16.5px label line, 2 x 6px
+               padding, 2 x 1px border) + 1px bottom border = 122.5px
+     desktop — 64px bar + 1px bottom border = 65px
+   Rounded up a hair. CHANGE THESE IF THE NAVBAR'S HEIGHT CHANGES, or deep
+   links start landing partly under it. */
+html {
+	scroll-padding-top: 7.75rem;
+
+	@variant desktop-nav {
+		scroll-padding-top: 4.125rem;
+	}
+}
+
 @theme {
 	/* The loading spinner's turn rate (components/OguriSpinner.tsx). Tailwind's
 	   stock animate-spin is one turn per second, which made the Oguri head a

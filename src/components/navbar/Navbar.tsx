@@ -116,8 +116,15 @@ export const Navbar = () => {
 		</Link>
 	)
 
+	// `sticky top-0` pins the bar wherever the DOCUMENT scrolls: every page on a
+	// phone, and the home and info pages at any width. On the desktop /app shell
+	// it is inert: the bar sits outside that shell's internal scroller, so it is
+	// already pinned there. It was dropped in May when /app moved to that
+	// scroller, which left the document-scrolled pages with a bar that scrolled
+	// away. html's `scroll-padding-top` (index.css) carries this bar's height so
+	// jump links and deep links land below it rather than under it.
 	return (
-		<div className="z-50 shrink-0">
+		<div className="sticky top-0 z-50 shrink-0">
 			{/* Mobile nav */}
 			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
 				<div className="flex h-14 items-center justify-between gap-3 px-3">

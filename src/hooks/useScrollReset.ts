@@ -137,7 +137,7 @@ export function useScrollReset(): void {
 			return () => cancelAnimationFrame(frame)
 		}
 
-		// A deep link owns its own landing — #hash anchors on /faq and the guide,
+		// A deep link owns its own landing — #hash anchors on /faq,
 		// ?focus= / ?campaign= on the timeline and selectors. Yanking those to the
 		// top is exactly the regression this hook must not introduce.
 		if (hash !== "" || hasFocusTarget(search)) return

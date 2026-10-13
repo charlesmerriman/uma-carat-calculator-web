@@ -38,9 +38,6 @@ export const Footer = () => {
 				<Link to="/faq" className="text-gray-400 transition hover:text-brand">
 					FAQ
 				</Link>
-				<Link to="/guides/carat-income" className="text-gray-400 transition hover:text-brand">
-					Carat Guide
-				</Link>
 				<Link to="/changelog" className="text-gray-400 transition hover:text-brand">
 					Changelog
 				</Link>

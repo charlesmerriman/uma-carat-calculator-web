@@ -12,7 +12,7 @@ import { DISCORD_INVITE_URL } from "../../constants/links"
  * Discord instead, so the site stores no feedback at all: a message sent there
  * is Discord's to hold, under Discord's privacy policy, and the person can get a
  * reply, which the one-way form never allowed. The route stays because the
- * footer, the home tiles, the guide and the FAQ all link here, and so does
+ * footer, the home tiles and the FAQ all link here, and so does
  * anything indexed under the old URL.
  */
 export const Feedback: React.FC = () => {

@@ -1468,7 +1468,7 @@ update them together.
 
 ### Site content: the pages the admin edits, and how they reach the prerender
 
-The About page, the carat income guide and the FAQ are rows in the API's admin
+The About page and the FAQ are rows in the API's admin
 (**Site content → Pages / FAQ**), served by `GET /site-content` as markdown. Nothing
 about them lives in this repo except the plumbing, and the words are still in the
 prerendered HTML: the prerender fetches the endpoint first and renders every route with

@@ -401,7 +401,9 @@ export const StagedBannerRow = ({
 				{timelineHref ? (
 					<Link
 						to={timelineHref}
-						title={`View ${target.timeline?.name ?? "this banner"} on the timeline`}
+						// The banner's own name, as the select shows it: the timeline
+						// card is shared with a concurrent uma banner and named after it.
+						title={`View ${currentBanner?.name ?? "this banner"} on the timeline`}
 						className="flex items-center justify-center gap-1.5"
 					>
 						{imagesCell}
