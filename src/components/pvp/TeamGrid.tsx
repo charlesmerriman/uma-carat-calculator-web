@@ -270,7 +270,7 @@ function Tile({
 					</span>
 				)}
 				<ReleaseFlag status={flag} />
-				{favourite && <FavouriteHeart />}
+				{favourite && <FavouriteHeart className="absolute bottom-1 right-1" />}
 				{badge && (
 					<span className="pointer-events-none absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
 						{badge}
@@ -351,11 +351,14 @@ export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 	)
 }
 
-/** The heart on a favourite uma's tile; the frame around it is .oshi-frame. */
-export function FavouriteHeart({ className = "bottom-1 right-1" }: { className?: string }) {
+/**
+ * The heart on a favourite uma's tile; the frame around it is .oshi-frame.
+ * `className` places it (absolute in a tile corner, or nothing inside a stack).
+ */
+export function FavouriteHeart({ className = "" }: { className?: string }) {
 	return (
 		<span
-			className={`pointer-events-none absolute flex h-5 w-5 items-center justify-center rounded-full bg-gray-950/85 ${className}`}
+			className={`pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-gray-950/85 ${className}`}
 			title="Your favourite uma"
 		>
 			<Heart className="h-3 w-3 fill-oshi text-oshi" aria-label="Your favourite uma" />

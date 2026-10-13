@@ -63,8 +63,13 @@ export function CompactTeamGrid({
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}
 											</span>
-											{starred("uma", member.uma, member) && <StarBadge />}
-											{favourite && <FavouriteHeart className="left-1 top-7" />}
+											{/* Under the number: the guide's star first, then the heart. */}
+											{(starred("uma", member.uma, member) || favourite) && (
+												<span className="pointer-events-none absolute left-1 top-7 flex flex-col gap-1">
+													{starred("uma", member.uma, member) && <StarBadge />}
+													{favourite && <FavouriteHeart />}
+												</span>
+											)}
 											<span className="absolute bottom-6 left-0">
 												<ReleaseFlag status={releaseFor?.("uma", member.uma)} />
 											</span>
@@ -181,11 +186,14 @@ function Art({ src }: { src: string | null }): ReactNode {
 	)
 }
 
-/** The guide's star on a pick it recommends for this uma's style. */
+/**
+ * The guide's star on a pick it recommends for this uma's style: in a card's
+ * corner (`small`), or in the uma tile's badge stack under the number.
+ */
 function StarBadge({ small = false }: { small?: boolean }) {
 	return (
 		<span
-			className={`pointer-events-none absolute flex items-center justify-center rounded-full bg-gray-950/85 ${small ? "left-0.5 top-0.5 h-4 w-4" : "right-1 top-7 h-5 w-5"}`}
+			className={`pointer-events-none flex items-center justify-center rounded-full bg-gray-950/85 ${small ? "absolute left-0.5 top-0.5 h-4 w-4" : "h-5 w-5"}`}
 			title="Recommended by the guide"
 		>
 			<Star className={`fill-highlight text-highlight ${small ? "h-2.5 w-2.5" : "h-3 w-3"}`} aria-label="Recommended by the guide" />
