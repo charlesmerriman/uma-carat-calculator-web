@@ -10,9 +10,9 @@
  * the team, so there is no "Start a team" step to get through.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Check, CloudAlert, CloudCheck, HardDrive, Loader2, Pencil, Plus, Star, Trash2 } from "lucide-react"
+import { Check, CloudAlert, CloudCheck, HardDrive, Loader2, PanelLeftOpen, Pencil, Plus, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
@@ -31,6 +31,7 @@ import {
 	setMemberUma,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
+import { GuidePicksDrawer, GuidePicksPanel } from "./GuidePicksPanel"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamGrid } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
@@ -82,6 +83,10 @@ function ReadyBuilder({ event, teamsState, index }: {
 
 	const [selectedKey, setSelectedKey] = useState<string | null>(null)
 	const [picker, setPicker] = useState<PickerTarget | null>(null)
+	// The retracted Guide picks drawer, below xl. A stable close function, so
+	// the drawer's Escape listener is not re-added on every render.
+	const [picksOpen, setPicksOpen] = useState(false)
+	const closePicks = useCallback(() => setPicksOpen(false), [])
 	const team =
 		eventTeams.find((candidate) => candidate.key === selectedKey) ??
 		eventTeams.find((candidate) => candidate.isFocus) ??
@@ -123,53 +128,71 @@ function ReadyBuilder({ event, teamsState, index }: {
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
-			<TeamToolbar
-				teams={eventTeams}
-				selected={team}
-				mode={mode}
-				saveState={saveState}
-				onSelect={setSelectedKey}
-				onCreate={() => {
-					const key = createTeam(ref)
-					if (key) setSelectedKey(key)
-				}}
-				onRename={(name) => team && renameTeam(team.key, name)}
-				onDelete={() => {
-					if (!team) return
-					deleteTeam(team.key)
-					setSelectedKey(null)
-				}}
-			/>
+		// From xl the guide's picks dock in a left column and the builder keeps
+		// its 56rem; below xl they retract behind the toolbar's button.
+		<div className="mx-auto grid w-full max-w-4xl items-start gap-4 xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)]">
+			<GuidePicksPanel guideState={guideState} members={members} />
+			<GuidePicksDrawer guideState={guideState} members={members} open={picksOpen} onClose={closePicks} />
 
-			<TeamGrid
-				members={members}
-				umasById={index.umasById}
-				cardsById={index.cardsById}
-				course={event}
-				isRecommended={isRecommended}
-				onPickUma={(position) => setPicker({ pool: "uma", position })}
-				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
-				onStyleChange={(position, style) => applyMembers(setMemberStyle(members, position, style))}
-				onClearUma={(position) => applyMembers(clearMember(members, position))}
-				onClearCard={(position, slot) => applyMembers(clearCard(members, position, slot))}
-			/>
+			<div className="flex min-w-0 flex-col gap-3">
+				<TeamToolbar
+					leading={
+						<button
+							type="button"
+							aria-expanded={picksOpen}
+							onClick={() => setPicksOpen(true)}
+							className="flex items-center gap-1.5 rounded-md border border-gray-600 px-2.5 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand xl:hidden"
+						>
+							<PanelLeftOpen className="h-4 w-4" />
+							Guide picks
+						</button>
+					}
+					teams={eventTeams}
+					selected={team}
+					mode={mode}
+					saveState={saveState}
+					onSelect={setSelectedKey}
+					onCreate={() => {
+						const key = createTeam(ref)
+						if (key) setSelectedKey(key)
+					}}
+					onRename={(name) => team && renameTeam(team.key, name)}
+					onDelete={() => {
+						if (!team) return
+						deleteTeam(team.key)
+						setSelectedKey(null)
+					}}
+				/>
 
-			{guide && (
-				<p className="flex items-center gap-1.5 text-xs text-gray-500">
-					<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
-					Recommended by this event's guide for that running style.
-				</p>
-			)}
-			{mode === "guest" && (
-				<p className="text-xs text-gray-400">
-					Your teams are saved on this device.{" "}
-					<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
-						Sign in
-					</Link>{" "}
-					to keep them on every device.
-				</p>
-			)}
+				<TeamGrid
+					members={members}
+					umasById={index.umasById}
+					cardsById={index.cardsById}
+					course={event}
+					isRecommended={isRecommended}
+					onPickUma={(position) => setPicker({ pool: "uma", position })}
+					onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
+					onStyleChange={(position, style) => applyMembers(setMemberStyle(members, position, style))}
+					onClearUma={(position) => applyMembers(clearMember(members, position))}
+					onClearCard={(position, slot) => applyMembers(clearCard(members, position, slot))}
+				/>
+
+				{guide && (
+					<p className="flex items-center gap-1.5 text-xs text-gray-500">
+						<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
+						Recommended by this event's guide for that running style.
+					</p>
+				)}
+				{mode === "guest" && (
+					<p className="text-xs text-gray-400">
+						Your teams are saved on this device.{" "}
+						<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
+							Sign in
+						</Link>{" "}
+						to keep them on every device.
+					</p>
+				)}
+			</div>
 
 			{picker?.pool === "uma" && (
 				<PvpCardPicker
@@ -231,7 +254,9 @@ function ReadyBuilder({ event, teamsState, index }: {
 	)
 }
 
-function TeamToolbar({ teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
+function TeamToolbar({ leading, teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
+	/** Drawn first: the Guide picks button, below xl. */
+	leading?: ReactNode
 	teams: PvpTeam[]
 	selected: PvpTeam | null
 	mode: PvpTeamsContextType["mode"]
@@ -248,6 +273,7 @@ function TeamToolbar({ teams, selected, mode, saveState, onSelect, onCreate, onR
 
 	return (
 		<div className="card-panel flex flex-wrap items-center gap-2 p-2">
+			{leading}
 			{teams.length === 0 ? (
 				<p className="px-2 text-sm text-gray-400">Pick an uma below to start your first team for this event.</p>
 			) : (

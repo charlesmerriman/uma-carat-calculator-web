@@ -14,7 +14,13 @@ import type {
 	SupportCard,
 	Uma,
 } from "../types"
-import type { PvpGuide, PvpSkillRecommendation, PvpStyle } from "../types/pvpGuide"
+import type {
+	PvpGuide,
+	PvpSkillRecommendation,
+	PvpStyle,
+	PvpSupportCardRef,
+	PvpUmaRecommendation,
+} from "../types/pvpGuide"
 import { parseApiDate } from "./dateFormat"
 import { refForRaceEvent, sameEvent, type PvpEventRef } from "./pvpEvent"
 
@@ -129,6 +135,43 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	// "Everyone" rows show above the tabs, never as a tab of their own.
 	used.delete("everyone")
 	return STYLE_ORDER.filter((style) => used.has(style))
+}
+
+/** One style's picks for the team builder's Guide picks panel. */
+export interface GuidePicks {
+	style: PvpStyle
+	/** Most stars first, as the API sorts them. */
+	umas: PvpUmaRecommendation[]
+	/** Each card once: deck cards first (decks in the guide's order), then mentions. */
+	cards: Array<{ card: PvpSupportCardRef; note: string; source: "deck" | "mention" }>
+}
+
+/**
+ * The guide's recommended umas and support cards, grouped by style, for
+ * styles that have any. A card in several decks of one style (Beginner and
+ * Standard both run Kitasan) is listed once, with the first note that says
+ * something; a card in a deck is not listed again as a mention.
+ */
+export function guidePicksByStyle(guide: PvpGuide): GuidePicks[] {
+	const groups: GuidePicks[] = []
+	for (const style of STYLE_ORDER) {
+		const umas = guide.uma_recommendations.filter((row) => row.style === style)
+		const cards: GuidePicks["cards"] = []
+		const add = (card: PvpSupportCardRef, note: string, source: "deck" | "mention") => {
+			const kept = cards.find((entry) => entry.card.id === card.id)
+			if (!kept) cards.push({ card, note, source })
+			else if (!kept.note && note) kept.note = note
+		}
+		for (const deck of guide.decks) {
+			if (deck.style !== style) continue
+			for (const slot of deck.slots) if (slot.support_card) add(slot.support_card, slot.note, "deck")
+		}
+		for (const mention of guide.honorable_mentions) {
+			if (mention.style === style) add(mention.support_card, mention.note, "mention")
+		}
+		if (umas.length > 0 || cards.length > 0) groups.push({ style, umas, cards })
+	}
+	return groups
 }
 
 /**

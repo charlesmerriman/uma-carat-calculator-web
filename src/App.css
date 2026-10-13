@@ -861,3 +861,14 @@ input[type="number"] {
    absolutely-position the native arrows here was removed with them: users
    reported the arrows sitting on top of the value in a 56px field. The rule
    above still applies to any remaining stock number input. */
+
+/* The PvP builder's Guide picks drawer sliding in from the left
+   (components/pvp/GuidePicksPanel.tsx; motion-safe only). */
+@keyframes guide-picks-in {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: none;
+	}
+}

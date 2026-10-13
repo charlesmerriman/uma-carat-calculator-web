@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+	guidePicksByStyle,
 	defaultPvpEvent,
 	groupSkillsByTier,
 	milestones,
@@ -149,5 +150,35 @@ describe("skillsForPosition", () => {
 		]
 		expect(skillsForPosition(rows, "front").map((r) => r.skill.id)).toEqual([3, 1, 2, 6, 5])
 		expect(skillsForPosition(rows, "pace").map((r) => r.skill.id)).toEqual([4, 1, 5])
+	})
+})
+
+describe("guidePicksByStyle", () => {
+	const card = (id: number) => ({ id, name: `Card ${id}`, image: null, card_type: "speed", rarity: 3 })
+	const slot = (id: number | null, note = "") => ({ slot: 1, order: 0, is_borrow: false, note, support_card: id ? card(id) : null })
+	const guide = {
+		uma_recommendations: [
+			{ style: "front", stars: 5, role: "", note: "", uma: { id: 41, name: "Maruzensky", image: null } },
+			{ style: "end", stars: 3, role: "", note: "", uma: { id: 42, name: "Gold Ship", image: null } },
+		],
+		decks: [
+			{ id: 1, style: "front", label: "Beginner", note: "", slots: [slot(302), slot(null, "Any Wit")] },
+			{ id: 2, style: "front", label: "Standard", note: "", slots: [slot(302, "Gold + Link"), slot(303)] },
+		],
+		honorable_mentions: [
+			{ style: "front", note: "dup", support_card: card(303) },
+			{ style: "late", note: "Stats", support_card: card(304) },
+		],
+	} as unknown as PvpGuide
+
+	it("groups by style, lists each card once, decks before mentions", () => {
+		const groups = guidePicksByStyle(guide)
+		expect(groups.map((group) => group.style)).toEqual(["front", "late", "end"])
+		expect(groups[0].umas.map((row) => row.uma.id)).toEqual([41])
+		expect(groups[0].cards).toEqual([
+			{ card: card(302), note: "Gold + Link", source: "deck" },
+			{ card: card(303), note: "dup", source: "deck" },
+		])
+		expect(groups[1]).toEqual({ style: "late", umas: [], cards: [{ card: card(304), note: "Stats", source: "mention" }] })
 	})
 })
