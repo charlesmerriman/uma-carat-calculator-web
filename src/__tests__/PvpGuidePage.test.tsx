@@ -368,3 +368,11 @@ describe("PvpGuidePage stat values", () => {
 		expect(screen.getByTitle("Speed: 1500++").querySelector("sup")?.textContent).toBe("++")
 	})
 })
+
+describe("PvpGuidePage timeline link", () => {
+	it("links back to the event's card on the Timeline", () => {
+		respond(404)
+		renderPage("/app/pvp?event=cm-10")
+		expect(screen.getByRole("link", { name: "View on Timeline" })).toHaveAttribute("href", "/app/timeline?focus=cm-10")
+	})
+})

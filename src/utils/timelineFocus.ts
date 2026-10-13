@@ -36,9 +36,16 @@
  * identifies a card from any of them.
  */
 export interface TimelineFocus {
-	kind: "banner" | "scenario" | "anniversary"
+	kind: "banner" | "scenario" | "anniversary" | "cm" | "loh"
 	id: number
 }
+
+/*
+ * "cm" / "loh" name a Champions Meeting or League of Heroes event by its id:
+ * the PvP page's "View on Timeline" link. The same `cm-12` form as the PvP
+ * page's own ?event= (utils/pvpEvent.ts), so a PvpEventRef IS a TimelineFocus
+ * and neither side needs a translation.
+ */
 
 /** The query parameter carrying the target. */
 export const TIMELINE_FOCUS_PARAM = "focus"
@@ -70,7 +77,9 @@ export function parseTimelineFocus(raw: string | null | undefined): TimelineFocu
 	if (separator <= 0) return null
 
 	const kind = raw.slice(0, separator)
-	if (kind !== "banner" && kind !== "scenario" && kind !== "anniversary") return null
+	if (kind !== "banner" && kind !== "scenario" && kind !== "anniversary" && kind !== "cm" && kind !== "loh") {
+		return null
+	}
 
 	// Number() rather than parseInt: parseInt("12abc") is 12, which would send a
 	// reader to a card the URL never named. The positivity check is doing real

@@ -19,7 +19,7 @@ import { Link } from "react-router-dom"
 import PredictedBadge from "../PredictedBadge"
 import { formatDate } from "../../utils/dateFormat"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
-import { getCountdownLabel } from "./timelineShared"
+import { TIMELINE_FOCUS_HIGHLIGHT, getCountdownLabel } from "./timelineShared"
 import { CourseDetails } from "./CourseDetails"
 import { availableCourseDetails, courseDetails } from "../../utils/courseDetails"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
@@ -28,24 +28,21 @@ import type { RefObject } from "react"
 import type { RaceEvent } from "../../types"
 
 /**
- * `focusRef` without an `isFocused` counterpart, unlike the other two cards.
- *
- * A race event can never be a DEEP LINK target — nothing links to one, and
- * `rowMatchesFocus` excludes the kind outright — so there is no arrival ring to
- * draw here and accepting the flag would only make that look possible. It can
- * still be the row the Timeline is ANCHORED on, though: a search matches race
- * events by name and track, so clearing the box may well leave one at the top of
- * the screen. Those are two different jobs sharing one ref, and only the second
- * applies to this card.
+ * `focusRef` and `isFocused`, like the other cards. The ref goes to whichever
+ * row the Timeline is anchored on (a search can leave a race event on top);
+ * the ring marks the card a deep link named, which for a race event is the
+ * PvP page's "View on Timeline" (?focus=cm-12 / loh-7).
  */
 export function RaceEventCard({
 	event,
 	today,
 	focusRef,
+	isFocused = false,
 }: {
 	event: RaceEvent
 	today: Date
 	focusRef?: RefObject<HTMLDivElement | null>
+	isFocused?: boolean
 }) {
 	const availableTrackDetails = availableCourseDetails(event)
 	const hasPendingDetails = availableTrackDetails.length !== courseDetails(event).length
@@ -54,7 +51,11 @@ export function RaceEventCard({
 
 	return (
 		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
-			<div className="card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3">
+			<div
+				className={`card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
+					isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""
+				}`}
+			>
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex min-w-0 items-center gap-3">
 						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">

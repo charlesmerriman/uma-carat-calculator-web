@@ -25,6 +25,7 @@ import { useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import {
 	BookOpen,
+	CalendarDays,
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
@@ -49,6 +50,7 @@ import {
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { availableCourseDetails } from "../../utils/courseDetails"
 import { formatDate } from "../../utils/dateFormat"
+import { timelineFocusHref } from "../../utils/timelineFocus"
 import {
 	PVP_EVENT_PARAM,
 	formatPvpEvent,
@@ -400,6 +402,15 @@ function EventHeader({ event, now, keyDates }: {
 					<p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
 						{formatDate(event.start_date)} through {formatDate(event.end_date)}
 						{event.is_predicted && <PredictedBadge />}
+						{/* The way back to the event's Timeline card. A PvpEventRef is
+						    a TimelineFocus, so the ref passes straight through. */}
+						<Link
+							to={timelineFocusHref(refForRaceEvent(event))}
+							className="inline-flex items-center gap-1 text-brand transition hover:text-brand/75"
+						>
+							<CalendarDays className="h-3.5 w-3.5" />
+							View on Timeline
+						</Link>
 					</p>
 				</div>
 				<span className="flex shrink-0 items-center gap-1.5 self-start rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-xs font-semibold text-gray-100">

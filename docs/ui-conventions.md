@@ -1041,7 +1041,9 @@ card per campaign with no filtering.
 
 `/app/timeline?focus=<kind>-<id>`, built by `timelineFocusHref` and parsed by
 `parseTimelineFocus` in `utils/timelineFocus.ts`. The calculator's scenario bands and its
-rows' card art both link through it; the Timeline resolves the target.
+rows' card art both link through it, and so does the PvP page's "View on Timeline"
+(`cm-<id>` / `loh-<id>`, the same form as its own `?event=`, so a `PvpEventRef` is a
+`TimelineFocus`); the Timeline resolves the target.
 
 - **Why not a `#hash`.** The Timeline windows its list (ten cards a page, or a growing
   prefix under infinite scroll) and hides past events by default, so the element a browser
@@ -1115,9 +1117,9 @@ rows' card art both link through it; the Timeline resolves the target.
   follow).
 - **The ref and the ring are no longer the same question.** The ref follows whichever row
   the list is anchored on, from either source; `isFocused` follows the deep link alone.
-  `RaceEventCard` therefore takes `focusRef` and *no* `isFocused` — a race can be the
-  anchor (a search matches race events by name and track) but can never be a link target,
-  and `rowMatchesFocus` excludes the kind outright.
+  `RaceEventCard` takes both since the PvP page links to race events: a `cm` / `loh` focus
+  matches through `refForRaceEvent`, and a race event is past once it has ENDED (like a
+  banner), which flips the Timeline to the past for an old meeting.
 
 ### The anchor: two sources, one row index
 
@@ -1129,8 +1131,8 @@ read one index rather than each learning about both sources. The URL wins where 
 exist, though in practice they cannot: typing in the search box drops the deep link.
 
 - **The anchor is a `timelineRowKey`, not a `TimelineFocus`.** A key exists for every
-  row kind where a focus cannot name a race event at all, and a search matches race
-  events — so one is routinely on screen when the box is cleared. It also stays out of the
+  row kind, and a search matches race events, so one is routinely on screen when the box
+  is cleared. It also stays out of the
   URL, leaving `utils/timelineFocus.ts` to the one job it was written for.
 - **The row is found by measuring, once, at the moment of the lift** — `measureAnchorRow`
   reads the list container's leading children, which are the rendered cards one-for-one.

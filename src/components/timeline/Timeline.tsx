@@ -42,6 +42,7 @@ import type { TimelineFocusProps, TimelineMarker, TimelineRow } from "./timeline
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
 import { useBackToTop } from "../../hooks/useBackToTop"
 import { TIMELINE_FOCUS_PARAM, parseTimelineFocus } from "../../utils/timelineFocus"
+import { refForRaceEvent } from "../../utils/pvpEvent"
 import { legendRacesByBanner } from "../../utils/dailyLegendRaces"
 import { isRaceEvent } from "../../types"
 import type {
@@ -346,6 +347,16 @@ export const Timeline = () => {
 	 */
 	const focusIsPast = useMemo(() => {
 		if (!focus) return null
+		if (focus.kind === "cm" || focus.kind === "loh") {
+			// Past once it has ENDED, like a banner.
+			const event = organizedTimelineData.find(
+				(candidate) =>
+					isRaceEvent(candidate) &&
+					refForRaceEvent(candidate).kind === focus.kind &&
+					candidate.id === focus.id
+			)
+			return event ? new Date(event.end_date) < today : null
+		}
 		if (focus.kind === "banner") {
 			// Guarded on isRaceEvent so a Champions Meeting sharing the id can't
 			// answer for a banner: ids are unique per model, not across them.
@@ -1040,16 +1051,10 @@ export const Timeline = () => {
 					// carry the same data and are meant to look the same. Everything else
 					// is a banner window, which may hold more than one concurrent banner.
 					//
-					// A race takes the ref but never the ring — it can be the anchor (a
-					// search matches race events) but never a deep link target, which is
-					// why RaceEventCard accepts only the one prop.
+					// A race event is a deep link target too since the PvP page's
+					// "View on Timeline" link (?focus=cm-12), so it takes both props.
 					return row.kind === "race" ? (
-						<RaceEventCard
-							key={rowKey}
-							event={row.event}
-							today={today}
-							focusRef={focusProps.focusRef}
-						/>
+						<RaceEventCard key={rowKey} event={row.event} today={today} {...focusProps} />
 					) : row.kind === "marker" ? (
 						<EventMarkerCard key={rowKey} marker={row.marker} {...focusProps} />
 					) : row.kind === "marker_pair" ? (

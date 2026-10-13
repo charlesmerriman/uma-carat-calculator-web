@@ -1465,6 +1465,34 @@ describe('Timeline deep links', () => {
     )
   }
 
+  it('lands on a past Champions Meeting from the PvP page, with the ring', () => {
+    // Ended long ago, so it only renders once the Timeline flips to the past.
+    const pastCm = {
+      id: 42,
+      name: 'Champions Meeting 5 Virgo Cup',
+      event_type: 'champions_meeting',
+      cm_number: 5,
+      start_date: '2020-01-01T00:00:00Z',
+      end_date: '2020-01-08T00:00:00Z',
+      is_predicted: false,
+      jp_start_date: null,
+      jp_end_date: null,
+      global_start_date: '2020-01-01T00:00:00Z',
+      global_end_date: '2020-01-08T00:00:00Z',
+      schedule_offset_days: 0,
+      applied_offset_days: 0,
+      image: null,
+      track: 'Hanshin', surface_type: 'Turf', distance: 'Mile', length: '1600m',
+      track_condition: 'TBD', season: 'TBD', weather: 'TBD', direction: 'TBD',
+    } satisfies ChampionsMeeting
+    events = [pastCm, ...BASE_EVENTS]
+    renderTimeline('/app/timeline?focus=cm-42')
+
+    expect(highlighted()).toHaveLength(1)
+    expect(highlighted()[0].textContent).toContain('Champions Meeting 5 Virgo Cup')
+    expect(screen.getByRole('button', { name: /show current\/future events/i })).toBeInTheDocument()
+  })
+
   it('reveals a whole chunk BELOW a target that lands on a chunk boundary', () => {
     // Window 10 is the last row of the first chunk. Revealing only its own
     // chunk leaves nothing under it, and a scroller with nothing left to
