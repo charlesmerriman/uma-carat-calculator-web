@@ -18,7 +18,7 @@ import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
 import type { RaceEvent } from "../../types"
-import { releaseNote, type ReleaseStatus } from "../../utils/cardRelease"
+import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils/cardRelease"
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
@@ -321,14 +321,15 @@ function AptitudeLetters({ uma, course, style }: {
 }
 
 /**
- * A card on the team that arrives mid-event ("During", gold) or after it
- * ("Too late", red; picked before its date moved, or before this rule).
+ * A card on the team that arrives mid-event ("During", gold), after it
+ * ("Too late", red) or is not on global at all ("Not out", red); the last
+ * two can only be on a team from before the rule or a date that moved.
  * The tooltip has the date. utils/cardRelease.ts has the rule.
  */
 export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 	if (!status || status.kind === "available") return null
 	const during = status.kind === "during"
-	const text = during ? releaseNote(status) : `Out ${status.date}, after this event`
+	const text = during ? releaseNote(status) : releaseBlockReason(status)
 	return (
 		<span
 			className={`pointer-events-none absolute bottom-0.5 left-0.5 rounded px-1 text-[9px] font-bold uppercase leading-tight ${
@@ -336,7 +337,7 @@ export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 			}`}
 			title={text ?? undefined}
 		>
-			<span aria-hidden="true">{during ? "During" : "Too late"}</span>
+			<span aria-hidden="true">{during ? "During" : status.kind === "unreleased" ? "Not out" : "Too late"}</span>
 			<span className="sr-only">{text}</span>
 		</span>
 	)

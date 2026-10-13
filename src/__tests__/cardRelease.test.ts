@@ -30,8 +30,13 @@ describe("cardRelease", () => {
 		expect(releaseStatus(at("2026-11-09T12:00:00Z"), EVENT)).toEqual({ kind: "after", date: "2026/11/9" })
 	})
 
-	it("counts a card on no banner as available", () => {
+	it("decides a card on no banner by whether it is on global", () => {
 		expect(releaseStatus(undefined, EVENT)).toEqual({ kind: "available" })
+		expect(releaseStatus(undefined, EVENT, true)).toEqual({ kind: "available" })
+		expect(releaseStatus(undefined, EVENT, false)).toEqual({ kind: "unreleased" })
+		expect(releaseBlockReason({ kind: "unreleased" })).toBe("Not on global yet")
+		// A banner date wins over the flag.
+		expect(releaseStatus(Date.parse("2026-10-01T12:00:00Z"), EVENT, false)).toEqual({ kind: "available" })
 	})
 
 	it("words the block and the note", () => {

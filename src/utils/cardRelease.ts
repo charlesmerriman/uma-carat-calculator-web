@@ -12,9 +12,13 @@
  *
  * A card's release is the start of its FIRST global banner (the earliest
  * effective start among the banners featuring it, so a rerun never makes an
- * old card look new), the same reading as "New since" (newCardsBetween). A
- * card on no banner at all is the launch roster or a starter or event-reward
- * card, and counts as available: the site has no date for it.
+ * old card look new), the same reading as "New since" (newCardsBetween).
+ *
+ * A card on no banner at all (the launch roster, starter and event-reward
+ * cards) has no date. The catalogue's `on_global` decides it: in the global
+ * game today means out ("available"); otherwise it is "unreleased", not
+ * pickable, "Not on global yet". An event-reward card therefore turns
+ * pickable when the global snapshot that lists it is imported.
  *
  * Dates are the banners' effective dates, which may be predicted; the tag
  * shows the date so a player can judge.
@@ -25,6 +29,8 @@ import { formatDate, parseApiDate } from "./dateFormat"
 
 export type ReleaseStatus =
 	| { kind: "available" }
+	/** On no banner and not in the global game: no date, not out. */
+	| { kind: "unreleased" }
 	| { kind: "during"; date: string }
 	| { kind: "after"; date: string }
 
@@ -56,9 +62,16 @@ export function cardReleases(umaBanners: BannerUma[], supportBanners: BannerSupp
 	}
 }
 
-/** Where a release (ms, or undefined for "no banner") falls against the event. */
-export function releaseStatus(released: number | undefined, event: Pick<RaceEvent, "start_date" | "end_date">): ReleaseStatus {
-	if (released === undefined) return { kind: "available" }
+/**
+ * Where a release (ms, or undefined for "no banner") falls against the event.
+ * `onGlobal` only matters with no banner; unknown counts as on global.
+ */
+export function releaseStatus(
+	released: number | undefined,
+	event: Pick<RaceEvent, "start_date" | "end_date">,
+	onGlobal?: boolean
+): ReleaseStatus {
+	if (released === undefined) return onGlobal === false ? { kind: "unreleased" } : { kind: "available" }
 	const start = parseApiDate(event.start_date)?.getTime()
 	const end = parseApiDate(event.end_date)?.getTime()
 	if (start === undefined || end === undefined) return { kind: "available" }
@@ -69,7 +82,9 @@ export function releaseStatus(released: number | undefined, event: Pick<RaceEven
 
 /** Why a card can't be picked for the event, or null. */
 export function releaseBlockReason(status: ReleaseStatus): string | null {
-	return status.kind === "after" ? `Out ${status.date}, after this event` : null
+	if (status.kind === "after") return `Out ${status.date}, after this event`
+	if (status.kind === "unreleased") return "Not on global yet"
+	return null
 }
 
 /** The note on a card that arrives mid-event, or null. */

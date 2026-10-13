@@ -50,7 +50,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
 	// Only what is out by the event's last day can be picked; what lands
 	// mid-event is marked (utils/cardRelease.ts).
-	const releaseFor = useCardReleases(event)
+	const releaseFor = useCardReleases(event, index)
 
 	// The guide's picks per style, worked out once per guide for the stars.
 	const picksByStyle = useMemo(

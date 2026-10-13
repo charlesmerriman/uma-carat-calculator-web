@@ -178,7 +178,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 
 	// Only what is out by the event's last day can be added, from any of the
 	// view's paths in (utils/cardRelease.ts).
-	const releaseFor = useCardReleases(event)
+	const releaseFor = useCardReleases(event, index)
 	const searchMember = skillSearch ? memberAt(members, skillSearch.position) : undefined
 	const searchStyle = searchMember?.style ?? null
 

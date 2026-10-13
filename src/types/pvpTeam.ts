@@ -35,6 +35,8 @@ export interface CatalogueUma {
 	/** The game's character: two outfits of one character share it. */
 	character_id: number | null
 	is_variant: boolean
+	/** In the global game today (has skill links from the global snapshot). */
+	on_global?: boolean
 	apt: Record<AptitudeKey, number | null>
 	skills: CatalogueSkillLink[]
 }
@@ -46,6 +48,8 @@ export interface CatalogueSupportCard {
 	card_type: string | null
 	rarity: number | null
 	title: string
+	/** In the global game today (has skill links from the global snapshot). */
+	on_global?: boolean
 	skills: CatalogueSkillLink[]
 }
 
