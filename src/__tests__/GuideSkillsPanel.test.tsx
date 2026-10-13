@@ -71,4 +71,27 @@ describe("GuideSkillsBody", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Search for Groundwork: Spot 2 · empty" }))
 		expect(onSearch).toHaveBeenCalledWith(1, "Groundwork")
 	})
+
+	it("filters by position, then by category", () => {
+		const guide = {
+			skill_recommendations: [
+				row(1, "Groundwork", "front", "acceleration", 1),
+				row(3, "Early Lead", "end", "speed", null),
+				row(2, "Swinging Maestro", "everyone", "recovery", null),
+			],
+		} as unknown as PvpGuide
+		render(<GuideSkillsBody guideState={{ status: "ready", guide }} teamSkillSources={new Map()} spots={SPOTS} onSearch={() => {}} />)
+		const positions = within(screen.getByRole("group", { name: "Position" }))
+		expect(positions.getAllByRole("button").map((chip) => chip.textContent)).toEqual(["All", "Front", "End"])
+		fireEvent.click(positions.getByRole("button", { name: "Front" }))
+		// Front's own skill and the general one; End's is gone.
+		expect(screen.getByRole("button", { name: /Groundwork/ })).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: /Swinging Maestro/ })).toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: /Early Lead/ })).not.toBeInTheDocument()
+		fireEvent.click(within(screen.getByRole("group", { name: "Category" })).getByRole("button", { name: "Recovery" }))
+		expect(screen.queryByRole("button", { name: /Groundwork/ })).not.toBeInTheDocument()
+		// End has no recovery of its own, but the general one is still recovery.
+		fireEvent.click(positions.getByRole("button", { name: "End" }))
+		expect(screen.getByRole("button", { name: /Swinging Maestro/ })).toBeInTheDocument()
+	})
 })

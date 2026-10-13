@@ -153,6 +153,12 @@ export const SKILL_CATEGORY_LABELS: Record<PvpSkillCategory, string> = {
 }
 export const SKILL_CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
 
+/** The positions a guide recommends skills for, "everyone" left out, in display order. */
+export function skillPositions(guide: PvpGuide): PvpStyle[] {
+	const used = new Set(guide.skill_recommendations.map((row) => row.style))
+	return STYLE_ORDER.filter((style) => style !== "everyone" && used.has(style))
+}
+
 /** One recommended skill in the team builder's skills panel. */
 export interface GuideSkillPick {
 	skill: PvpSkillRef
@@ -168,11 +174,19 @@ export interface GuideSkillPick {
  * positions recommend it, in the first category (in SKILL_CATEGORY_ORDER) a
  * row files it under. Within a category: best tier first (untiered last),
  * then the guide's order.
+ *
+ * With a `position`, only that position's rows and the general ("everyone")
+ * ones count, the same merge the Recommendations view makes, so a skill's
+ * tier and category are the ones the guide gives for that position.
  */
-export function guideSkillsByCategory(guide: PvpGuide): Array<{ category: PvpSkillCategory; skills: GuideSkillPick[] }> {
+export function guideSkillsByCategory(
+	guide: PvpGuide,
+	position: PvpStyle | null = null
+): Array<{ category: PvpSkillCategory; skills: GuideSkillPick[] }> {
 	const rank = (category: PvpSkillCategory) => SKILL_CATEGORY_ORDER.indexOf(category)
 	const picks = new Map<number, GuideSkillPick & { category: PvpSkillCategory; first: number }>()
 	guide.skill_recommendations.forEach((row, index) => {
+		if (position !== null && row.style !== position && row.style !== "everyone") return
 		const pick = picks.get(row.skill.id) ?? {
 			skill: row.skill, tier: null, styles: [], notes: [], category: row.category, first: index,
 		}

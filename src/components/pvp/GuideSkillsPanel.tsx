@@ -3,6 +3,9 @@
  * team builder, grouped by category and each listed once (utils/pvpGuide.ts
  * guideSkillsByCategory), however many positions the guide names it for.
  *
+ * Two filters on top: position (that position's skills plus the general
+ * ones, with that position's tiers), then category.
+ *
  * A tick marks a skill the selected team can already get: an uma's own skill
  * (unique, innate, awakening) or a card's hint or event, from the builder's
  * catalogue. Each category heading counts how many of its skills that is.
@@ -18,7 +21,14 @@
 
 import { useMemo, useState } from "react"
 import { Check, ChevronDown, Loader2, Search } from "lucide-react"
-import { SKILL_CATEGORY_LABELS, STYLE_LABELS, guideSkillsByCategory, type GuideSkillPick } from "../../utils/pvpGuide"
+import {
+	SKILL_CATEGORY_LABELS,
+	STYLE_LABELS,
+	guideSkillsByCategory,
+	skillPositions,
+	type GuideSkillPick,
+} from "../../utils/pvpGuide"
+import type { PvpSkillCategory, PvpStyle } from "../../types/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
 
 /** One team spot a skill can be searched for: "Spot 1 · Daiwa Scarlet". */
@@ -38,11 +48,20 @@ interface GuideSkillsProps {
 }
 
 export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch }: GuideSkillsProps) {
+	const guide = guideState.status === "ready" ? guideState.guide : null
+	// Position on top, category under it. "all" for either shows everything.
+	const [position, setPosition] = useState<PvpStyle | "all">("all")
+	const [category, setCategory] = useState<PvpSkillCategory | "all">("all")
+	const positions = useMemo(() => (guide ? skillPositions(guide) : []), [guide])
 	const groups = useMemo(
-		() => (guideState.status === "ready" ? guideSkillsByCategory(guideState.guide) : []),
-		[guideState]
+		() => (guide ? guideSkillsByCategory(guide, position === "all" ? null : position) : []),
+		[guide, position]
 	)
 	const [openId, setOpenId] = useState<number | null>(null)
+	// A category the chosen position has nothing in reads as "all", so
+	// switching position never leaves the list empty behind a stale filter.
+	const activeCategory = groups.some((group) => group.category === category) ? category : "all"
+	const shown = activeCategory === "all" ? groups : groups.filter((group) => group.category === activeCategory)
 
 	if (guideState.status === "loading" || guideState.status === "idle") {
 		return (
@@ -54,11 +73,40 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 	}
 	if (guideState.status === "error") return <p className="text-sm text-gray-400">The guide didn't load.</p>
 	if (guideState.status === "none") return <p className="text-sm text-gray-400">No guide for this event yet.</p>
-	if (groups.length === 0) return <p className="text-sm text-gray-400">This event's guide has no skill picks yet.</p>
+	if (groups.length === 0 && position === "all") {
+		return <p className="text-sm text-gray-400">This event's guide has no skill picks yet.</p>
+	}
 
 	return (
 		<div className="flex flex-col gap-4">
-			{groups.map((group) => {
+			<div className="flex flex-col gap-2">
+				{positions.length > 1 && (
+					<FilterChips
+						label="Position"
+						options={[
+							{ value: "all", label: "All" },
+							...positions.map((style) => ({ value: style, label: STYLE_LABELS[style] })),
+						]}
+						value={position}
+						onChange={(value) => setPosition(value as PvpStyle | "all")}
+					/>
+				)}
+				{groups.length > 1 && (
+					<FilterChips
+						label="Category"
+						options={[
+							{ value: "all", label: "All" },
+							...groups.map((group) => ({ value: group.category, label: SKILL_CATEGORY_LABELS[group.category] })),
+						]}
+						value={activeCategory}
+						onChange={(value) => setCategory(value as PvpSkillCategory | "all")}
+					/>
+				)}
+				{position !== "all" && (
+					<p className="text-[11px] text-gray-500">Includes the skills the guide recommends for every position.</p>
+				)}
+			</div>
+			{shown.map((group) => {
 				const covered = group.skills.filter((pick) => teamSkillSources.has(pick.skill.id)).length
 				return (
 					<section key={group.category} aria-label={SKILL_CATEGORY_LABELS[group.category]}>
@@ -87,6 +135,37 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 					</section>
 				)
 			})}
+		</div>
+	)
+}
+
+/** A labelled row of single-choice chips: the panel's two filters. */
+function FilterChips({ label, options, value, onChange }: {
+	label: string
+	options: Array<{ value: string; label: string }>
+	value: string
+	onChange: (value: string) => void
+}) {
+	return (
+		<div role="group" aria-label={label}>
+			<p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-gray-500">{label}</p>
+			<div className="flex flex-wrap gap-1">
+				{options.map((option) => (
+					<button
+						key={option.value}
+						type="button"
+						aria-pressed={value === option.value}
+						onClick={() => onChange(option.value)}
+						className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
+							value === option.value
+								? "border-brand bg-brand/15 text-brand"
+								: "border-gray-600 text-gray-300 hover:border-gray-500"
+						}`}
+					>
+						{option.label}
+					</button>
+				))}
+			</div>
 		</div>
 	)
 }

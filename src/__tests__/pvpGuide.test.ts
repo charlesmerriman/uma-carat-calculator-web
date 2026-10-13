@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
 	guidePicks,
 	guideSkillsByCategory,
+	skillPositions,
 	defaultPvpEvent,
 	groupSkillsByTier,
 	milestones,
@@ -214,5 +215,20 @@ describe("guideSkillsByCategory", () => {
 			[1, 1, ["everyone", "front"], ["Take early"]],
 			[2, null, ["end"], []],
 		])
+	})
+
+	it("narrows to one position plus the general skills, with that position's tier", () => {
+		const groups = guideSkillsByCategory(guide, "front")
+		expect(groups.map((group) => group.category)).toEqual(["acceleration"])
+		expect(groups[0].skills.map((pick) => [pick.skill.id, pick.tier, pick.styles])).toEqual([[1, 1, ["everyone", "front"]]])
+		const late = guideSkillsByCategory(guide, "late")
+		expect(late.map((group) => [group.category, group.skills.map((pick) => pick.skill.id)])).toEqual([
+			["acceleration", [1]],
+			["debuff", [4]],
+		])
+	})
+
+	it("lists the positions with skills, without everyone", () => {
+		expect(skillPositions(guide)).toEqual(["front", "pace", "late", "end"])
 	})
 })
