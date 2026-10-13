@@ -101,7 +101,7 @@ function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
 }
 
 // The five stats in game order, headed by the game's own stat icons
-// (public/0N_CM*.png, 84px squares shown at 24px).
+// (public/0N_CM*.png, 84px squares shown at 32px).
 const STAT_COLUMNS: Array<{ key: keyof PvpStatConfig; label: string; icon: string }> = [
 	{ key: "speed", label: "Speed", icon: "/00_CMSPEED1.png" },
 	{ key: "stamina", label: "Stamina", icon: "/01_CMStamina1.png" },
@@ -117,7 +117,8 @@ const STAT_COLUMNS: Array<{ key: keyof PvpStatConfig; label: string; icon: strin
  * line across a row, whatever the cells carry besides it.
  */
 function splitStat(value: string): { number: string; marks: string; extra: string } {
-	const match = /^(\d[\d,]*)([+*]*)(.*)$/.exec(value.trim())
+	// A "+" right before a digit starts the extra ("901*+1 Gold"), not a mark.
+	const match = /^(\d[\d,]*)((?:[+*](?!\d))*)(.*)$/.exec(value.trim())
 	return match
 		? { number: match[1], marks: match[2], extra: match[3].trim() }
 		: { number: "", marks: "", extra: value.trim() }
@@ -153,10 +154,10 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 			<table className="mt-2 w-full table-fixed border-collapse text-left">
 				<thead>
 					<tr className="border-b border-gray-600">
-						<th className="w-[5.5rem] pb-1.5 align-bottom text-xs font-semibold text-gray-300">Style</th>
+						<th className="w-[5.5rem] pb-2 align-middle text-xs font-bold uppercase tracking-wider text-gray-300">Style</th>
 						{STAT_COLUMNS.map((column) => (
-							<th key={column.key} className="pb-1.5 text-center" title={column.label}>
-								<img src={column.icon} alt={column.label} width={24} height={24} className="mx-auto h-6 w-6" />
+							<th key={column.key} className="pb-2 text-center" title={column.label}>
+								<img src={column.icon} alt={column.label} width={32} height={32} className="mx-auto h-8 w-8" />
 							</th>
 						))}
 					</tr>

@@ -146,6 +146,8 @@ describe("PvpGuidePage", () => {
 		// The number reads large and the sheet's marker stays beside it.
 		expect(screen.getByTitle("Stamina: 578*").textContent).toBe("578*")
 		expect(screen.getByTitle("Guts: 400+").textContent).toBe("400+")
+		// "+1 Gold" keeps its plus: a "+" before a digit is text, not a mark.
+		expect(screen.getByTitle("Speed: 1200*").querySelector("sup")?.textContent).toBe("*")
 		// The empty power cell is a dash, not a blank.
 		expect(screen.getAllByText("–").length).toBeGreaterThan(0)
 		expect(screen.getByText("*Bonus Speed every 300 Power.")).toBeInTheDocument()
@@ -349,5 +351,20 @@ describe("PvpGuidePage recommended skills", () => {
 		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
 		expect(section.getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
 		expect(section.queryByRole("group", { name: "Angling and Scheming" })).not.toBeInTheDocument()
+	})
+})
+
+describe("PvpGuidePage stat values", () => {
+	it("keeps the + of '+1 Gold' with its words, and the * as a mark", async () => {
+		respond(200, {
+			...GUIDE,
+			stat_configs: [{ ...GUIDE.stat_configs[0], stamina: "901*+1 Gold", speed: "1500++" }],
+		})
+		renderPage()
+		await screen.findByText("Recommended stats")
+		const stamina = screen.getByTitle("Stamina: 901*+1 Gold")
+		expect(stamina.querySelector("sup")?.textContent).toBe("*")
+		expect(within(stamina).getByText("+1 Gold")).toBeInTheDocument()
+		expect(screen.getByTitle("Speed: 1500++").querySelector("sup")?.textContent).toBe("++")
 	})
 })
