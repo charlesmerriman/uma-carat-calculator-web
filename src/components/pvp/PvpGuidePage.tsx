@@ -216,7 +216,11 @@ export const PvpGuidePage = () => {
 
 function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView) => void }) {
 	return (
-		<div role="tablist" aria-label="View" className="flex gap-1 overflow-x-auto border-b border-gray-700">
+		// No overflow-x-auto here: overflow on one axis makes the other "auto"
+		// too, and each tab's -mb-px underline (which sits on the row's border)
+		// overflowed by 1px and drew a vertical scrollbar. Three short tabs
+		// wrap on a narrow screen instead of scrolling.
+		<div role="tablist" aria-label="View" className="flex flex-wrap gap-1 border-b border-gray-700">
 			{VIEWS.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
@@ -331,61 +335,143 @@ function ControlBand({ events, event, index, now, showPast, onTogglePast, onSele
 }
 
 /**
- * The event in three short rows: name and countdown, the course as pills, the
- * key dates as one line. Compact on purpose (the owner, 2026-10-13: the
- * course and key-date grids took up most of the screen above the guide).
+ * "Champions Meeting 20 Sagittarius Cup" -> kicker "Champions Meeting 20",
+ * title "Sagittarius Cup". A name with nothing after its number ("League of
+ * Heroes 6") keeps the whole name as the title and no kicker.
+ */
+function splitEventName(event: RaceEvent): { kicker: string; title: string } {
+	const match = /^((?:Champions Meeting|League of Heroes)\s+\d+)\s+(.+)$/i.exec(event.name.trim())
+	return match ? { kicker: match[1], title: match[2] } : { kicker: "", title: event.name }
+}
+
+/** The course as label/value pairs, distance and length folded into one. */
+function courseRows(event: RaceEvent): Array<{ label: string; value: string }> {
+	const byLabel = new Map(availableCourseDetails(event).map((detail) => [detail.label, detail.value.trim()]))
+	const length = byLabel.get("Length")
+	const metres = length && /^\d+$/.test(length) ? `${length}m` : length
+	const distance = [metres, byLabel.get("Distance")].filter(Boolean).join(" · ")
+	const rows: Array<[string, string | undefined]> = [
+		["Racecourse", byLabel.get("Racecourse")],
+		["Surface", byLabel.get("Surface")],
+		["Distance", distance || undefined],
+		["Direction", byLabel.get("Direction")],
+		["Condition", byLabel.get("Track condition")],
+		["Season", byLabel.get("Season")],
+		["Weather", byLabel.get("Weather")],
+	]
+	return rows.filter((row): row is [string, string] => Boolean(row[1])).map(([label, value]) => ({ label, value }))
+}
+
+const PANEL_LABEL = "mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+
+/**
+ * The event: art, name and countdown, then the course and the schedule side
+ * by side. Kept light on purpose (the owner, 2026-10-13: boxed grids, then
+ * pills, both read as congested): labels above values, no boxes, and the key
+ * dates as a step line that shows how far the event has got.
  */
 function EventHeader({ event, now, keyDates }: {
 	event: RaceEvent
 	now: Date
 	keyDates: ReturnType<typeof milestones>
 }) {
-	const course = availableCourseDetails(event)
+	const { kicker, title } = splitEventName(event)
+	const course = courseRows(event)
+	// The first milestone still ahead is "next"; everything before it is done.
+	const nextIndex = keyDates.findIndex((milestone) => new Date(milestone.date).getTime() > now.getTime())
+
 	return (
-		<section className="card-panel flex flex-col gap-2 rounded-xl px-3 py-2.5 sm:px-4" aria-labelledby="pvp-event-name">
-			<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-				<h2 id="pvp-event-name" className="text-lg font-semibold text-gray-100 sm:text-xl">
-					{event.name}
-				</h2>
-				{event.is_predicted && <PredictedBadge />}
-				<span className="text-sm text-gray-400">
-					{formatDate(event.start_date)} through {formatDate(event.end_date)}
-				</span>
-				<span className="ml-auto flex items-center gap-1.5 rounded-full border border-gray-600 bg-gray-700 px-2.5 py-0.5 text-xs font-semibold text-gray-100">
+		<section className="card-panel overflow-hidden rounded-xl" aria-labelledby="pvp-event-name">
+			<div className="flex items-center gap-4 p-3 sm:p-4">
+				{event.image && (
+					<img
+						src={event.image}
+						alt=""
+						loading="lazy"
+						decoding="async"
+						className="hidden aspect-[16/9] w-36 shrink-0 rounded-lg object-cover sm:block"
+					/>
+				)}
+				<div className="min-w-0 flex-1">
+					{kicker && <p className="text-xs font-semibold uppercase tracking-wider text-brand">{kicker}</p>}
+					<h2 id="pvp-event-name" className="truncate text-xl font-bold text-gray-100 sm:text-2xl">
+						{title}
+					</h2>
+					<p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+						{formatDate(event.start_date)} through {formatDate(event.end_date)}
+						{event.is_predicted && <PredictedBadge />}
+					</p>
+				</div>
+				<span className="flex shrink-0 items-center gap-1.5 self-start rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-xs font-semibold text-gray-100">
 					{getCountdownLabel(event.start_date, event.end_date, now)}
 					<Clock3 className="h-3.5 w-3.5 text-brand" />
 				</span>
 			</div>
 
-			{course.length > 0 ? (
-				<ul className="flex flex-wrap gap-1.5" aria-label="Course">
-					{course.map((detail) => (
-						<li
-							key={detail.label}
-							title={detail.label}
-							className="rounded-full border border-gray-600/80 bg-gray-700/60 px-2.5 py-0.5 text-xs text-gray-100"
-						>
-							<span className="sr-only">{detail.label}: </span>
-							{detail.value.trim()}
-						</li>
-					))}
-				</ul>
-			) : (
-				<p className="text-xs text-gray-400">Course details aren't announced yet.</p>
-			)}
+			<div className="grid gap-4 border-t border-gray-700/70 bg-gray-900/30 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-8">
+				<div className="min-w-0">
+					<h3 className={PANEL_LABEL}>Course</h3>
+					{course.length > 0 ? (
+						<dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4" aria-label="Course">
+							{course.map((row) => (
+								<div key={row.label} className="min-w-0">
+									<dt className="text-[11px] text-gray-500">{row.label}</dt>
+									<dd className="truncate text-sm font-medium text-gray-100" title={row.value}>
+										{row.value}
+									</dd>
+								</div>
+							))}
+						</dl>
+					) : (
+						<p className="text-sm text-gray-400">Not announced yet.</p>
+					)}
+				</div>
 
-			{keyDates.length > 0 && (
-				<ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs" aria-label="Key dates">
-					{keyDates.map((milestone, position) => (
-						<li key={milestone.label} className="flex items-center gap-1">
-							{position > 0 && <ChevronRight className="h-3 w-3 text-gray-600" aria-hidden="true" />}
-							<span className="text-gray-400">{milestone.label}</span>
-							<span className="font-semibold text-gray-100">{formatDate(milestone.date)}</span>
-						</li>
-					))}
-					{event.is_predicted && <li className="text-gray-500">(estimated)</li>}
-				</ol>
-			)}
+				{keyDates.length > 0 && (
+					<div className="min-w-0">
+						<h3 className={PANEL_LABEL}>
+							Schedule{event.is_predicted && <span className="normal-case tracking-normal"> (estimated)</span>}
+						</h3>
+						<ol
+							className="grid gap-y-2"
+							style={{ gridTemplateColumns: `repeat(${keyDates.length}, minmax(0, 1fr))` }}
+							aria-label="Key dates"
+						>
+							{keyDates.map((milestone, position) => {
+								const done = nextIndex === -1 || position < nextIndex
+								const isNext = position === nextIndex
+								return (
+									<li key={milestone.label} className="relative min-w-0 pr-2" aria-current={isNext ? "step" : undefined}>
+										{/* The line runs from this dot to the next one. */}
+										{position < keyDates.length - 1 && (
+											<span
+												aria-hidden="true"
+												className={`absolute left-1.5 right-0 top-[5px] h-0.5 ${done ? "bg-brand/60" : "bg-gray-700"}`}
+											/>
+										)}
+										<span
+											aria-hidden="true"
+											className={`relative block h-3 w-3 rounded-full border-2 ${
+												isNext
+													? "border-brand bg-gray-900 ring-4 ring-brand/20"
+													: done
+														? "border-brand bg-brand"
+														: "border-gray-600 bg-gray-800"
+											}`}
+										/>
+										<div className={`mt-1.5 text-[11px] leading-tight ${isNext ? "text-brand" : "text-gray-400"}`}>
+											{milestone.label}
+										</div>
+										<div className={`text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
+											{formatDate(milestone.date)}
+										</div>
+									</li>
+								)
+							})}
+						</ol>
+					</div>
+				)}
+			</div>
 		</section>
 	)
 }

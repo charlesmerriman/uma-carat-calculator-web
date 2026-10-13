@@ -268,16 +268,31 @@ describe("PvpGuidePage views and layout", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("shows the course as pills and the key dates on one line", () => {
+	it("shows the course as labelled values, with length and distance folded together", () => {
 		respond(404)
 		renderPage("/app/pvp?event=cm-10")
-		const course = within(screen.getByRole("list", { name: "Course" }))
-		expect(course.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-			"Racecourse: Tokyo",
-			"Surface: Turf",
-			"Distance: Mile",
-			"Length: 1600m",
-		])
-		expect(within(screen.getByRole("list", { name: "Key dates" })).getAllByRole("listitem")).toHaveLength(5)
+		const header = within(screen.getByRole("region", { name: "Aquarius Cup" }))
+		expect(header.getByText("Racecourse").nextSibling?.textContent).toBe("Tokyo")
+		expect(header.getByText("Distance").nextSibling?.textContent).toBe("1600m · Mile")
+		// The sentinel "TBD" slots stay out.
+		expect(header.queryByText("Weather")).not.toBeInTheDocument()
+	})
+
+	it("draws the key dates as steps and marks the next one", () => {
+		respond(404)
+		renderPage("/app/pvp?event=cm-10")
+		const steps = within(screen.getByRole("list", { name: "Key dates" })).getAllByRole("listitem")
+		expect(steps).toHaveLength(5)
+		// The whole event is in 2099, so registration is the next step.
+		expect(steps[0]).toHaveAttribute("aria-current", "step")
+		expect(steps[1]).not.toHaveAttribute("aria-current")
+	})
+
+	it("splits a meeting's number from its cup name", () => {
+		events = [event(20, "Champions Meeting 20 Sagittarius Cup", "2099-10-10T00:00:00Z")]
+		respond(404)
+		renderPage()
+		expect(screen.getByRole("heading", { name: "Sagittarius Cup" })).toBeInTheDocument()
+		expect(screen.getByText("Champions Meeting 20")).toBeInTheDocument()
 	})
 })

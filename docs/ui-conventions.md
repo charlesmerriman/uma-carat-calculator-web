@@ -1302,10 +1302,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   kind, so the Timeline card links to a guide without branching on the tag. No parameter
   opens on the running event, else the next, else the newest (`defaultPvpEvent`).
 - **The header renders from the calculator payload**, guide or not, and stays COMPACT
-  (owner, 2026-10-13): name, dates and countdown on one row, the course as pills
-  (`availableCourseDetails`, the same data `CourseDetails` shows on the Timeline card), and
-  the key dates on one line: the start date plus the eight `*_hours` calculation constants
-  (`milestones`). A null LoH offset hides that milestone. No grids of boxes here.
+  and LIGHT (owner, 2026-10-13: boxed grids, then pills, both read as congested): art
+  thumbnail, "Champions Meeting 20" kicker over the cup name, countdown; then the course
+  as small labels over values (`availableCourseDetails`, length folded into distance) beside
+  a step-line schedule: the start date plus the eight `*_hours` calculation constants
+  (`milestones`), passed steps filled, the next one ringed. A null LoH offset hides that step.
+- **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
+  `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
 - **Three views under the header, `?view=`**: Recommendations (the guide, default, no
   parameter), My team (`team`, the R2 builder) and Gallery (`gallery`, R3). The last two
   are "Coming soon" placeholders until those releases; the guide is fetched only on
