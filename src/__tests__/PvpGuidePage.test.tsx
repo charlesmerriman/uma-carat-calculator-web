@@ -226,3 +226,58 @@ describe("PvpGuidePage", () => {
 		await waitFor(() => expect(screen.getByText("Recommended stats")).toBeInTheDocument())
 	})
 })
+
+describe("PvpGuidePage views and layout", () => {
+	it("lists each recommended uma and card once (no second compare pane)", async () => {
+		respond(200, GUIDE)
+		renderPage()
+		await screen.findByText("Skills for every style")
+		expect(screen.getAllByText("Maruzensky")).toHaveLength(1)
+		expect(screen.getAllByText("Kitasan Black")).toHaveLength(1)
+		expect(screen.getAllByRole("tablist", { name: "Running style" })).toHaveLength(1)
+	})
+
+	it("keeps the cards new since the last event collapsed until asked", async () => {
+		respond(404)
+		renderPage("/app/pvp?event=cm-10")
+		expect(screen.queryByText("New since")).not.toBeInTheDocument()
+	})
+
+	it("offers My team and Gallery as coming-soon views, kept in the URL", async () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10")
+		const views = within(screen.getByRole("tablist", { name: "View" }))
+		expect(views.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+			"Recommendations",
+			"My teamSoon",
+			"GallerySoon",
+		])
+		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")
+		expect(screen.getByText("Build your team")).toBeInTheDocument()
+		expect(screen.getByText("Coming soon")).toBeInTheDocument()
+		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
+		expect(screen.getByText("Teams from other players")).toBeInTheDocument()
+		fireEvent.click(views.getByRole("tab", { name: "Recommendations" }))
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10")
+	})
+
+	it("does not fetch the guide on a placeholder view", () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10&view=gallery")
+		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("shows the course as pills and the key dates on one line", () => {
+		respond(404)
+		renderPage("/app/pvp?event=cm-10")
+		const course = within(screen.getByRole("list", { name: "Course" }))
+		expect(course.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+			"Racecourse: Tokyo",
+			"Surface: Turf",
+			"Distance: Mile",
+			"Length: 1600m",
+		])
+		expect(within(screen.getByRole("list", { name: "Key dates" })).getAllByRole("listitem")).toHaveLength(5)
+	})
+})

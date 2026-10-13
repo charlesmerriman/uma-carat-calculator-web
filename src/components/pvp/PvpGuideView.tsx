@@ -1,12 +1,17 @@
 /**
- * One event's guide: overview, stats, team-wide skills, then a pane per
- * running style. Every section is optional and steps aside when empty; the
- * guide model is the superset of the sheet's two formats, and most guides fill
- * only one of them.
+ * One event's guide, the "Recommendations" view of the PvP page.
  *
- * One style pane at a time; from the 2xl breakpoint a second pane sits beside
- * it with its own tab bar, defaulting to the next style, so two styles can be
- * compared on a wide monitor.
+ * Two columns from xl up: a narrow side column with what applies to the whole
+ * team (overview, team comps, stats, skills for every style) and a main
+ * column with one running style at a time (umas, notes, skills, decks,
+ * mentions). Below xl the side column stacks on top.
+ *
+ * ONE style pane, never two. A second "compare" pane beside the first was
+ * tried (2026-10-13) and read as every uma and card listed twice; removed at
+ * the owner's request.
+ *
+ * Every section is optional and steps aside when empty; the guide model is
+ * the superset of the sheet's two formats, and most guides fill only one.
  */
 
 import { useState } from "react"
@@ -24,8 +29,8 @@ import type {
 	PvpStyle,
 } from "../../types/pvpGuide"
 
-const SECTION = "rounded-xl border border-gray-700 bg-gray-800/60 p-3 sm:p-4"
-const HEADING = "text-base font-semibold text-gray-100"
+const SECTION = "rounded-xl border border-gray-700 bg-gray-800/60 p-3"
+const HEADING = "text-sm font-semibold uppercase tracking-wide text-gray-400"
 const SUBHEADING = "text-sm font-semibold text-brand"
 const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
 
@@ -90,12 +95,12 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 		<section className={SECTION} aria-labelledby="pvp-stats">
 			<h3 id="pvp-stats" className={HEADING}>Recommended stats</h3>
 			<div className="mt-2 overflow-x-auto">
-				<table className="w-full min-w-[30rem] border-collapse text-left text-sm">
+				<table className="w-full border-collapse text-left text-xs sm:text-sm">
 					<thead>
 						<tr>
-							<th className="border-b border-gray-600 px-2 py-1.5 font-semibold text-gray-300">Style</th>
+							<th className="border-b border-gray-600 px-1.5 py-1 font-semibold text-gray-300">Style</th>
 							{STAT_COLUMNS.map(([, label]) => (
-								<th key={label} className="border-b border-gray-600 px-2 py-1.5 text-center font-semibold text-gray-300">
+								<th key={label} className="border-b border-gray-600 px-1.5 py-1 text-center font-semibold text-gray-300">
 									{label}
 								</th>
 							))}
@@ -104,12 +109,12 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 					<tbody>
 						{rows.map((row, index) => (
 							<tr key={index}>
-								<td className="border-b border-gray-800 px-2 py-1.5 align-top">
+								<td className="border-b border-gray-800 px-1.5 py-1 align-top">
 									<span className="font-semibold text-gray-100">{STYLE_LABELS[row.style]}</span>
 									{row.label && <span className="block text-xs text-gray-400">{row.label}</span>}
 								</td>
 								{STAT_COLUMNS.map(([key]) => (
-									<td key={key} className="border-b border-gray-800 px-2 py-1.5 text-center tabular-nums text-gray-100">
+									<td key={key} className="border-b border-gray-800 px-1.5 py-1 text-center tabular-nums text-gray-100">
 										{/* An en dash for a stat the guide says nothing about. */}
 										{(row[key] as string) || "–"}
 									</td>
@@ -144,7 +149,7 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 				</span>
 				{deck.note && <InlineNote text={deck.note} className="text-xs text-gray-400" />}
 			</div>
-			<div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+			<div className="mt-2 grid max-w-3xl grid-cols-3 gap-2 sm:grid-cols-6">
 				{[1, 2, 3, 4, 5, 6].map((number) => {
 					const [main, ...alternates] = slots.get(number) ?? []
 					return (
@@ -209,7 +214,7 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 			{mentions.length > 0 && (
 				<div>
 					<h4 className={SUBHEADING}>Honorable mentions</h4>
-					<div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+					<div className="mt-2 grid max-w-3xl grid-cols-3 gap-2 sm:grid-cols-6">
 						{mentions.map((row) => (
 							<SupportTile key={row.support_card.id} card={row.support_card} note={row.note} />
 						))}
@@ -248,19 +253,13 @@ function StyleTabs({ styles, active, onChange, label }: {
 	)
 }
 
-function StyleColumn({ guide, styles, initial, label, className = "" }: {
-	guide: PvpGuide
-	styles: PvpStyle[]
-	initial: PvpStyle
-	label: string
-	className?: string
-}) {
-	const [active, setActive] = useState<PvpStyle>(initial)
+function StyleColumn({ guide, styles }: { guide: PvpGuide; styles: PvpStyle[] }) {
+	const [active, setActive] = useState<PvpStyle>(styles[0])
 	// A guide reload with fewer styles can leave the old pick behind.
 	const shown = styles.includes(active) ? active : styles[0]
 	return (
-		<div className={`flex min-w-0 flex-col gap-3 ${className}`}>
-			<StyleTabs styles={styles} active={shown} onChange={setActive} label={label} />
+		<div className="flex min-w-0 flex-col gap-3">
+			<StyleTabs styles={styles} active={shown} onChange={setActive} label="Running style" />
 			<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 				<StylePane guide={guide} style={shown} />
 			</div>
@@ -271,8 +270,9 @@ function StyleColumn({ guide, styles, initial, label, className = "" }: {
 export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 	const styles = stylesWithContent(guide)
 	const sharedSkills = guide.skill_recommendations.filter((row) => row.style === "everyone")
-	const hasOverview =
-		guide.style_ranking || guide.short_description || guide.meta_analysis || guide.team_comps.length > 0
+	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
+	const hasSide =
+		hasOverview || guide.team_comps.length > 0 || guide.stat_configs.length > 0 || sharedSkills.length > 0
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -283,73 +283,73 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 				</div>
 			)}
 
-			{hasOverview && (
-				<section className={SECTION} aria-labelledby="pvp-overview">
-					<h3 id="pvp-overview" className={HEADING}>Overview</h3>
-					{guide.style_ranking && (
-						<p className="mt-2 text-sm text-gray-300">
-							<span className="font-semibold text-gray-100">Style ranking: </span>
-							{guide.style_ranking}
-						</p>
-					)}
-					{guide.short_description && (
-						<div className="text-sm">
-							<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} />
-						</div>
-					)}
-					{guide.meta_analysis && (
-						<div className="mt-2 text-sm">
-							<h4 className={SUBHEADING}>Meta analysis</h4>
-							<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} />
-						</div>
-					)}
-					{guide.team_comps.length > 0 && (
-						<div className="mt-3">
-							<h4 className={`flex items-center gap-1.5 ${SUBHEADING}`}>
-								<Users className="h-4 w-4" />
-								Team comps
-							</h4>
-							<ul className="mt-1.5 space-y-1 text-sm text-gray-300">
-								{guide.team_comps.map((comp, index) => (
-									<li key={index}>
-										<span className="font-medium text-gray-100">{comp.text}</span>
-										{comp.note && (
-											<>
-												<span className="text-gray-500"> · </span>
-												<InlineNote text={comp.note} />
-											</>
-										)}
-									</li>
-								))}
-							</ul>
-						</div>
-					)}
-				</section>
-			)}
+			<div
+				className={
+					hasSide && styles.length > 0
+						? "grid items-start gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"
+						: "flex flex-col gap-4"
+				}
+			>
+				{hasSide && (
+					<aside className="flex min-w-0 flex-col gap-4" aria-label="For the whole team">
+						{hasOverview && (
+							<section className={SECTION} aria-labelledby="pvp-overview">
+								<h3 id="pvp-overview" className={HEADING}>Overview</h3>
+								{guide.style_ranking && (
+									<p className="mt-2 text-sm text-gray-300">
+										<span className="font-semibold text-gray-100">Style ranking: </span>
+										{guide.style_ranking}
+									</p>
+								)}
+								{guide.short_description && (
+									<div className="text-sm">
+										<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} />
+									</div>
+								)}
+								{guide.meta_analysis && (
+									<div className="mt-3 text-sm">
+										<h4 className={SUBHEADING}>Meta analysis</h4>
+										<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} />
+									</div>
+								)}
+							</section>
+						)}
 
-			{guide.stat_configs.length > 0 && <StatConfigTable rows={guide.stat_configs} />}
+						{guide.team_comps.length > 0 && (
+							<section className={SECTION} aria-labelledby="pvp-team-comps">
+								<h3 id="pvp-team-comps" className={`flex items-center gap-1.5 ${HEADING}`}>
+									<Users className="h-4 w-4" />
+									Team comps
+								</h3>
+								<ul className="mt-2 space-y-1 text-sm text-gray-300">
+									{guide.team_comps.map((comp, index) => (
+										<li key={index}>
+											<span className="font-medium text-gray-100">{comp.text}</span>
+											{comp.note && (
+												<>
+													<span className="text-gray-500"> · </span>
+													<InlineNote text={comp.note} />
+												</>
+											)}
+										</li>
+									))}
+								</ul>
+							</section>
+						)}
 
-			{sharedSkills.length > 0 && (
-				<section className={SECTION} aria-labelledby="pvp-shared-skills">
-					<h3 id="pvp-shared-skills" className={`${HEADING} mb-2`}>For every style</h3>
-					<SkillGroups rows={sharedSkills} />
-				</section>
-			)}
+						{guide.stat_configs.length > 0 && <StatConfigTable rows={guide.stat_configs} />}
 
-			{styles.length > 0 && (
-				<section aria-label="By running style" className="grid gap-4 2xl:grid-cols-2">
-					<StyleColumn guide={guide} styles={styles} initial={styles[0]} label="Running style" />
-					{styles.length > 1 && (
-						<StyleColumn
-							guide={guide}
-							styles={styles}
-							initial={styles[1]}
-							label="Compare with"
-							className="hidden 2xl:flex"
-						/>
-					)}
-				</section>
-			)}
+						{sharedSkills.length > 0 && (
+							<section className={SECTION} aria-labelledby="pvp-shared-skills">
+								<h3 id="pvp-shared-skills" className={`${HEADING} mb-2`}>Skills for every style</h3>
+								<SkillGroups rows={sharedSkills} />
+							</section>
+						)}
+					</aside>
+				)}
+
+				{styles.length > 0 && <StyleColumn guide={guide} styles={styles} />}
+			</div>
 		</div>
 	)
 }

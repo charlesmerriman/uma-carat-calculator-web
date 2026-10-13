@@ -1301,16 +1301,23 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
   kind, so the Timeline card links to a guide without branching on the tag. No parameter
   opens on the running event, else the next, else the newest (`defaultPvpEvent`).
-- **The header renders from the calculator payload**, guide or not: dates, the countdown,
-  `CourseDetails` (shared with `RaceEventCard`, so course data shows the same on both
-  surfaces) and the key dates, which are the start date plus the eight
-  `*_hours` calculation constants (`milestones`). A null LoH offset hides that milestone.
+- **The header renders from the calculator payload**, guide or not, and stays COMPACT
+  (owner, 2026-10-13): name, dates and countdown on one row, the course as pills
+  (`availableCourseDetails`, the same data `CourseDetails` shows on the Timeline card), and
+  the key dates on one line: the start date plus the eight `*_hours` calculation constants
+  (`milestones`). A null LoH offset hides that milestone. No grids of boxes here.
+- **Three views under the header, `?view=`**: Recommendations (the guide, default, no
+  parameter), My team (`team`, the R2 builder) and Gallery (`gallery`, R3). The last two
+  are "Coming soon" placeholders until those releases; the guide is fetched only on
+  Recommendations.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar.
-- **Every guide section is optional** and steps aside when empty. Style tabs list only
-  styles with content (`stylesWithContent`; "everyone" rows sit above the tabs). From
-  `2xl` a second pane sits beside the first for comparing two styles.
+- **Every guide section is optional** and steps aside when empty. From `xl` the guide is two
+  columns: a side column for the whole team (overview, team comps, stats, skills for every
+  style) and ONE style pane. Style tabs list only styles with content (`stylesWithContent`).
+  Never add a second "compare" pane: it was tried and read as every card listed twice.
+  "New since <previous event>" is collapsed by default for the same reason.
 - **`==words==` is red** in any guide text: `utils/remarkHighlight.ts` is a remark plugin
   in `MarkdownContent` (emits `<mark>`, styled `text-highlight`; raw HTML stays off) and
   `splitHighlights` feeds `InlineNote` for one-line notes. Token `--color-highlight`.
