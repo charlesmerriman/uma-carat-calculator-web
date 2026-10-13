@@ -137,41 +137,63 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	return STYLE_ORDER.filter((style) => used.has(style))
 }
 
-/** One style's picks for the team builder's Guide picks panel. */
+/** One recommended uma or card in the team builder's Guide picks panel. */
+export interface GuidePick<Ref> {
+	ref: Ref
+	/** Every style the guide lists it under, in display order. */
+	styles: PvpStyle[]
+	/** The guide's notes on it, each once ("Use as runaway", "Gold + Link"). */
+	notes: string[]
+}
+
 export interface GuidePicks {
-	style: PvpStyle
-	/** Most stars first, as the API sorts them. */
-	umas: PvpUmaRecommendation[]
-	/** Each card once: deck cards first (decks in the guide's order), then mentions. */
-	cards: Array<{ card: PvpSupportCardRef; note: string; source: "deck" | "mention" }>
+	/** Highest stars first; ties keep the guide's order. */
+	umas: Array<GuidePick<PvpUmaRecommendation["uma"]> & { stars: number }>
+	/** Deck cards first (in the guide's order), then honourable mentions. */
+	cards: Array<GuidePick<PvpSupportCardRef> & { inDeck: boolean }>
 }
 
 /**
- * The guide's recommended umas and support cards, grouped by style, for
- * styles that have any. A card in several decks of one style (Beginner and
- * Standard both run Kitasan) is listed once, with the first note that says
- * something; a card in a deck is not listed again as a mention.
+ * The guide's recommended umas and support cards as two flat lists, each uma
+ * and card ONCE however many styles, decks or mentions name it. An uma keeps
+ * her best star rating; a card counts as a deck card if any deck runs it.
  */
-export function guidePicksByStyle(guide: PvpGuide): GuidePicks[] {
-	const groups: GuidePicks[] = []
-	for (const style of STYLE_ORDER) {
-		const umas = guide.uma_recommendations.filter((row) => row.style === style)
-		const cards: GuidePicks["cards"] = []
-		const add = (card: PvpSupportCardRef, note: string, source: "deck" | "mention") => {
-			const kept = cards.find((entry) => entry.card.id === card.id)
-			if (!kept) cards.push({ card, note, source })
-			else if (!kept.note && note) kept.note = note
-		}
-		for (const deck of guide.decks) {
-			if (deck.style !== style) continue
-			for (const slot of deck.slots) if (slot.support_card) add(slot.support_card, slot.note, "deck")
-		}
-		for (const mention of guide.honorable_mentions) {
-			if (mention.style === style) add(mention.support_card, mention.note, "mention")
-		}
-		if (umas.length > 0 || cards.length > 0) groups.push({ style, umas, cards })
+export function guidePicks(guide: PvpGuide): GuidePicks {
+	const note = <T extends { notes: string[] }>(pick: T, text: string) => {
+		if (text && !pick.notes.includes(text)) pick.notes.push(text)
 	}
-	return groups
+	const style = <T extends { styles: PvpStyle[] }>(pick: T, value: PvpStyle) => {
+		if (!pick.styles.includes(value)) pick.styles.push(value)
+		pick.styles.sort((a, b) => STYLE_ORDER.indexOf(a) - STYLE_ORDER.indexOf(b))
+	}
+
+	const umas = new Map<number, GuidePicks["umas"][number]>()
+	for (const row of guide.uma_recommendations) {
+		const pick = umas.get(row.uma.id) ?? { ref: row.uma, styles: [], notes: [], stars: 0 }
+		pick.stars = Math.max(pick.stars, row.stars)
+		style(pick, row.style)
+		note(pick, row.note)
+		umas.set(row.uma.id, pick)
+	}
+
+	const cards = new Map<number, GuidePicks["cards"][number]>()
+	const addCard = (card: PvpSupportCardRef, value: PvpStyle, text: string, inDeck: boolean) => {
+		const pick = cards.get(card.id) ?? { ref: card, styles: [], notes: [], inDeck }
+		pick.inDeck = pick.inDeck || inDeck
+		style(pick, value)
+		note(pick, text)
+		cards.set(card.id, pick)
+	}
+	for (const deck of guide.decks) {
+		for (const slot of deck.slots) if (slot.support_card) addCard(slot.support_card, deck.style, slot.note, true)
+	}
+	for (const mention of guide.honorable_mentions) addCard(mention.support_card, mention.style, mention.note, false)
+
+	return {
+		// Array.prototype.sort is stable, so equal stars keep the guide's order.
+		umas: [...umas.values()].sort((a, b) => b.stars - a.stars),
+		cards: [...cards.values()],
+	}
 }
 
 /**

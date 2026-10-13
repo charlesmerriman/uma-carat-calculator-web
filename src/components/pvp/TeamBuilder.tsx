@@ -40,6 +40,34 @@ import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
 
 type PickerTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
+const PICKS_BUTTON =
+	"flex items-center gap-1.5 rounded-md border border-gray-600 px-2.5 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand"
+
+/**
+ * Whether the docked Guide picks column is open, remembered per browser. A
+ * convenience only: blocked storage reads as open and a failed write is
+ * ignored. Safe to read during render because this view sits inside the /app
+ * loading gate, which is never prerendered.
+ */
+const DOCK_STORAGE_KEY = "uma-planner-pvp-guide-picks"
+
+function readDockOpen(): boolean {
+	try {
+		return localStorage.getItem(DOCK_STORAGE_KEY) !== "closed"
+	} catch {
+		return true
+	}
+}
+
+function writeDockOpen(open: boolean): void {
+	try {
+		if (open) localStorage.removeItem(DOCK_STORAGE_KEY)
+		else localStorage.setItem(DOCK_STORAGE_KEY, "closed")
+	} catch {
+		// Storage blocked: the panel opens again next visit.
+	}
+}
+
 /** "Team 2" when the player hasn't named it. */
 function teamLabel(team: PvpTeam, index: number): string {
 	return team.name.trim() || `Team ${index + 1}`
@@ -83,10 +111,17 @@ function ReadyBuilder({ event, teamsState, index }: {
 
 	const [selectedKey, setSelectedKey] = useState<string | null>(null)
 	const [picker, setPicker] = useState<PickerTarget | null>(null)
-	// The retracted Guide picks drawer, below xl. A stable close function, so
-	// the drawer's Escape listener is not re-added on every render.
+	// Guide picks has two switches, one per placement. The docked column (xl
+	// and up) starts open and remembers being collapsed; the drawer (below
+	// xl) starts closed every time. A stable close function, so the drawer's
+	// Escape listener is not re-added on every render.
+	const [dockOpen, setDockOpen] = useState(readDockOpen)
 	const [picksOpen, setPicksOpen] = useState(false)
 	const closePicks = useCallback(() => setPicksOpen(false), [])
+	const setDock = (open: boolean) => {
+		setDockOpen(open)
+		writeDockOpen(open)
+	}
 	const team =
 		eventTeams.find((candidate) => candidate.key === selectedKey) ??
 		eventTeams.find((candidate) => candidate.isFocus) ??
@@ -130,22 +165,36 @@ function ReadyBuilder({ event, teamsState, index }: {
 	return (
 		// From xl the guide's picks dock in a left column and the builder keeps
 		// its 56rem; below xl they retract behind the toolbar's button.
-		<div className="mx-auto grid w-full max-w-4xl items-start gap-4 xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)]">
-			<GuidePicksPanel guideState={guideState} members={members} />
+		<div
+			className={`mx-auto grid w-full max-w-4xl items-start gap-4 ${
+				dockOpen ? "xl:max-w-[76rem] xl:grid-cols-[19rem_minmax(0,1fr)]" : ""
+			}`}
+		>
+			{dockOpen && <GuidePicksPanel guideState={guideState} members={members} onCollapse={() => setDock(false)} />}
 			<GuidePicksDrawer guideState={guideState} members={members} open={picksOpen} onClose={closePicks} />
 
 			<div className="flex min-w-0 flex-col gap-3">
 				<TeamToolbar
 					leading={
-						<button
-							type="button"
-							aria-expanded={picksOpen}
-							onClick={() => setPicksOpen(true)}
-							className="flex items-center gap-1.5 rounded-md border border-gray-600 px-2.5 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand xl:hidden"
-						>
-							<PanelLeftOpen className="h-4 w-4" />
-							Guide picks
-						</button>
+						<>
+							{/* Below xl: opens the drawer. */}
+							<button
+								type="button"
+								aria-expanded={picksOpen}
+								onClick={() => setPicksOpen(true)}
+								className={`${PICKS_BUTTON} xl:hidden`}
+							>
+								<PanelLeftOpen className="h-4 w-4" />
+								Guide picks
+							</button>
+							{/* xl and up, only while the docked column is collapsed. */}
+							{!dockOpen && (
+								<button type="button" onClick={() => setDock(true)} className={`${PICKS_BUTTON} hidden xl:flex`}>
+									<PanelLeftOpen className="h-4 w-4" />
+									Guide picks
+								</button>
+							)}
+						</>
 					}
 					teams={eventTeams}
 					selected={team}

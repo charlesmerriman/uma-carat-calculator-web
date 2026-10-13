@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-	guidePicksByStyle,
+	guidePicks,
 	defaultPvpEvent,
 	groupSkillsByTier,
 	milestones,
@@ -153,32 +153,40 @@ describe("skillsForPosition", () => {
 	})
 })
 
-describe("guidePicksByStyle", () => {
+describe("guidePicks", () => {
 	const card = (id: number) => ({ id, name: `Card ${id}`, image: null, card_type: "speed", rarity: 3 })
+	const uma = (id: number) => ({ id, name: `Uma ${id}`, image: null })
 	const slot = (id: number | null, note = "") => ({ slot: 1, order: 0, is_borrow: false, note, support_card: id ? card(id) : null })
 	const guide = {
 		uma_recommendations: [
-			{ style: "front", stars: 5, role: "", note: "", uma: { id: 41, name: "Maruzensky", image: null } },
-			{ style: "end", stars: 3, role: "", note: "", uma: { id: 42, name: "Gold Ship", image: null } },
+			{ style: "pace", stars: 2, role: "", note: "", uma: uma(41) },
+			{ style: "end", stars: 3, role: "", note: "", uma: uma(42) },
+			{ style: "front", stars: 5, role: "", note: "Use as runaway", uma: uma(41) },
 		],
 		decks: [
 			{ id: 1, style: "front", label: "Beginner", note: "", slots: [slot(302), slot(null, "Any Wit")] },
-			{ id: 2, style: "front", label: "Standard", note: "", slots: [slot(302, "Gold + Link"), slot(303)] },
+			{ id: 2, style: "late", label: "Standard", note: "", slots: [slot(302, "Gold + Link"), slot(303)] },
 		],
 		honorable_mentions: [
-			{ style: "front", note: "dup", support_card: card(303) },
-			{ style: "late", note: "Stats", support_card: card(304) },
+			{ style: "front", note: "Stats", support_card: card(303) },
+			{ style: "late", note: "", support_card: card(304) },
 		],
 	} as unknown as PvpGuide
 
-	it("groups by style, lists each card once, decks before mentions", () => {
-		const groups = guidePicksByStyle(guide)
-		expect(groups.map((group) => group.style)).toEqual(["front", "late", "end"])
-		expect(groups[0].umas.map((row) => row.uma.id)).toEqual([41])
-		expect(groups[0].cards).toEqual([
-			{ card: card(302), note: "Gold + Link", source: "deck" },
-			{ card: card(303), note: "dup", source: "deck" },
+	it("lists each uma once, with her best stars and every style, best first", () => {
+		const { umas } = guidePicks(guide)
+		expect(umas.map((pick) => [pick.ref.id, pick.stars, pick.styles, pick.notes])).toEqual([
+			[41, 5, ["front", "pace"], ["Use as runaway"]],
+			[42, 3, ["end"], []],
 		])
-		expect(groups[1]).toEqual({ style: "late", umas: [], cards: [{ card: card(304), note: "Stats", source: "mention" }] })
+	})
+
+	it("lists each card once, deck cards before mentions", () => {
+		const { cards } = guidePicks(guide)
+		expect(cards.map((pick) => [pick.ref.id, pick.inDeck, pick.styles, pick.notes])).toEqual([
+			[302, true, ["front", "late"], ["Gold + Link"]],
+			[303, true, ["front", "late"], ["Stats"]],
+			[304, false, ["late"], []],
+		])
 	})
 })
