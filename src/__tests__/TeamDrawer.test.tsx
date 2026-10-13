@@ -4,7 +4,7 @@
  * drawer's team / empty state / pin, and Escape.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamDrawerButton } from "../components/navbar/TeamDrawerButton"
@@ -107,7 +107,7 @@ describe("TeamDrawer", () => {
 		fireEvent.change(screen.getByRole("combobox", { name: "Running style for uma 1" }), { target: { value: "pace" } })
 		expect(editTeam).toHaveBeenCalledWith("a", { members: [{ ...members[0], style: "pace" }] })
 		expect(screen.getByRole("link", { name: /Go to PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-19")
-		expect(screen.getByText("Saved on this device.")).toBeInTheDocument()
+		expect(within(screen.getByRole("banner")).getByRole("status")).toHaveTextContent("On this device")
 	})
 
 	it("offers to start a team when the event has none", () => {

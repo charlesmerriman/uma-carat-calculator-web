@@ -43,6 +43,7 @@ import { formatPvpEvent, pvpEventHref, refForRaceEvent, sameEvent } from "../../
 import { drawerTeam } from "../../utils/pvpTeams"
 import { getCountdownLabel } from "../timeline/timelineShared"
 import PredictedBadge from "../PredictedBadge"
+import { SaveStatus } from "./SaveStatus"
 import { TeamEditor } from "./TeamEditor"
 import type { RaceEvent } from "../../types"
 import type { PvpTeam } from "../../types/pvpTeam"
@@ -103,6 +104,7 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 					<Users className="h-4 w-4 text-brand" aria-hidden="true" />
 					Your PvP team
 				</h2>
+				{status === "ready" && <SaveStatus mode={mode} saveState={saveState} hasTeam={choice.kind === "team"} />}
 				<button
 					type="button"
 					aria-label="Close your PvP team"
@@ -144,16 +146,10 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 							}}
 						/>
 						<div className="flex items-center justify-between gap-2">
-							<span className="text-xs text-gray-400" role="status" aria-live="polite">
-								{choice.kind === "none"
-									? `No team for ${choice.event.name} yet. Pick an uma to start one.`
-									: saveState === "error"
-										? "Your last change didn't save."
-										: mode === "guest"
-											? "Saved on this device."
-											: saveState === "pending" || saveState === "saving"
-												? "Saving…"
-												: "Saved."}
+							{/* The save state lives in the header; this line only speaks up
+							    when there is no team yet. */}
+							<span className="text-xs text-gray-400">
+								{choice.kind === "none" ? `No team for ${choice.event.name} yet. Pick an uma to start one.` : null}
 							</span>
 							<Link
 								to={pvpEventHref(refForRaceEvent(choice.event))}
