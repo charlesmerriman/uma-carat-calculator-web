@@ -20,7 +20,7 @@ import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude
 import type { RaceEvent } from "../../types"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
-interface TeamGridProps {
+export interface TeamGridProps {
 	members: PvpTeamMember[]
 	umasById: Map<number, CatalogueUma>
 	cardsById: Map<number, CatalogueSupportCard>

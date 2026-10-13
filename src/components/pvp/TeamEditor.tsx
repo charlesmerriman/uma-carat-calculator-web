@@ -2,9 +2,11 @@
  * One team, editable: the grid (TeamGrid) and the two pickers its places
  * open, an uma for a spot or a card for a slot.
  *
- * Used by the PvP page's My team view, which owns which team it is and what
- * an edit does (it creates the team on the first pick). The team window
- * shows teams read-only (TeamSnapshot) and never edits.
+ * ONE EDITOR, TWO PLACES. The PvP page's My team view draws the full layout
+ * (TeamGrid) and the team window the compact one (CompactTeamGrid), with the
+ * same pickers and rules, and both write through PvpTeamsProvider, so an edit
+ * in one shows in the other at once. The caller owns which team it is and
+ * what an edit does (both create the team on the first pick).
  *
  * The guide is optional: with it, recommended picks get their star in the
  * grid and sort first in the pickers.
@@ -26,6 +28,7 @@ import {
 	umaBlockReason,
 } from "../../utils/pvpTeams"
 import { PvpCardPicker } from "./PvpCardPicker"
+import { CompactTeamGrid } from "./CompactTeamGrid"
 import { TeamGrid } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
@@ -33,11 +36,13 @@ import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
 type PlaceTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
-export function TeamEditor({ event, members, index, guide, onChange }: {
+export function TeamEditor({ event, members, index, guide, layout = "full", onChange }: {
 	event: RaceEvent
 	members: PvpTeamMember[]
 	index: PvpCatalogueIndex
 	guide: PvpGuide | null
+	/** "compact": the team window's umas-on-top layout. */
+	layout?: "full" | "compact"
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
@@ -59,6 +64,7 @@ export function TeamEditor({ event, members, index, guide, onChange }: {
 		const member = memberAt(members, position)
 		return (member && index.umasById.get(member.uma)?.name) || `uma ${position + 1}`
 	}
+	const Grid = layout === "compact" ? CompactTeamGrid : TeamGrid
 	const apply = (next: PvpTeamMember[]) => {
 		onChange(next)
 		setPicker(null)
@@ -66,7 +72,7 @@ export function TeamEditor({ event, members, index, guide, onChange }: {
 
 	return (
 		<>
-			<TeamGrid
+			<Grid
 				members={members}
 				umasById={index.umasById}
 				cardsById={index.cardsById}

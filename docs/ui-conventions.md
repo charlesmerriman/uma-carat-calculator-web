@@ -1651,9 +1651,10 @@ the team.
 - **A window over the page, never beside it** (owner, 2026-10-13; a first version docked as a
   column and pushed the site aside). Fixed on the right, centred on the space below the navbar, 24rem wide, sized to its
   contents; below `desktop-nav` it covers the screen with its own close button.
-- **Read-only.** `TeamSnapshot` draws the three umas on top and each uma's six cards below, in
-  the builder's order (1 to 5, a divider, the borrow slot). Editing happens only on My team;
-  "Edit in PvP" opens it on the same team (`preferredTeam()`).
+- **Editable, in a compact layout.** `CompactTeamGrid` draws the three umas on top and each uma's
+  six cards below, in the builder's order (1 to 5, a divider, the borrow slot). It takes
+  `TeamGrid`'s props, so `TeamEditor` draws either layout with the same pickers and rules; with no
+  team for the event, the first pick creates one. "Go to PvP" opens the PvP page on the event.
 - **The selector is the pin**: "Next event (auto)" lets `utils/pvpTeams.ts` `drawerTeam()`
   choose; a team pins it until its event ends.
 - **Mounted in `AppShell`, never in `Navbar`.** Info pages render their own navbar, and a route

@@ -95,24 +95,25 @@ describe("TeamDrawerButton", () => {
 })
 
 describe("TeamDrawer", () => {
-	it("shows the team for the running event, read-only, with a way to edit it in PvP", () => {
+	it("shows the team for the running event, editable, with a way to the PvP page", () => {
+		const editTeam = vi.fn()
 		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [{ slot: 6, support_card: 302 }] }]
-		renderDrawer(teamsValue([team("a", { name: "Main", members })]))
+		renderDrawer(teamsValue([team("a", { name: "Main", members })], { editTeam }))
 		expect(screen.getByRole("combobox", { name: "Which event and team to show" })).toHaveDisplayValue("Next event (auto): Libra Cup")
-		expect(screen.getByLabelText("Your team")).toBeInTheDocument()
 		// Three spots on top (one filled), then that uma's six card places.
-		expect(screen.getAllByText("Empty")).toHaveLength(2)
-		expect(screen.getByLabelText("Card 1: empty")).toBeInTheDocument()
-		expect(screen.getByRole("img", { name: "Borrowed card: unknown" })).toBeInTheDocument()
-		// Nothing to edit here: the only controls are the selector, close and the link.
-		expect(screen.queryByRole("button", { name: /Add|Change|Remove/ })).not.toBeInTheDocument()
-		expect(screen.getByRole("link", { name: /Edit in PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-19&view=team")
+		expect(screen.getAllByRole("button", { name: /^Add uma/ })).toHaveLength(2)
+		expect(screen.getByRole("button", { name: "Add card 1 for uma 1" })).toBeInTheDocument()
+		// An edit goes to the shown team.
+		fireEvent.change(screen.getByRole("combobox", { name: "Running style for uma 1" }), { target: { value: "pace" } })
+		expect(editTeam).toHaveBeenCalledWith("a", { members: [{ ...members[0], style: "pace" }] })
+		expect(screen.getByRole("link", { name: /Go to PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-19")
+		expect(screen.getByText("Saved on this device.")).toBeInTheDocument()
 	})
 
-	it("offers to build one when the event has no team", () => {
+	it("offers to start a team when the event has none", () => {
 		renderDrawer(teamsValue([]))
-		expect(screen.getByText("No team for Libra Cup yet.")).toBeInTheDocument()
-		expect(screen.getByRole("link", { name: "Build one" })).toHaveAttribute("href", "/app/pvp?event=cm-19&view=team")
+		expect(screen.getByText("No team for Libra Cup yet. Pick an uma to start one.")).toBeInTheDocument()
+		expect(screen.getAllByRole("button", { name: /^Add uma/ })).toHaveLength(3)
 	})
 
 	it("pins a team from the select, and auto unpins", () => {

@@ -13,8 +13,10 @@
  * pushed the site aside). Below desktop-nav it covers the screen, with its
  * own close button.
  *
- * READ-ONLY. It shows the team; editing happens on the PvP page's My team
- * view, which "Edit in PvP" opens on the same team (preferredTeam).
+ * EDITABLE, in a compact layout: the three umas on top, each uma's six cards
+ * below (CompactTeamGrid through TeamEditor, the same pickers and rules as
+ * the PvP page's My team view). With no team for the event yet, the first
+ * pick creates one. "Go to PvP" opens the PvP page on the event.
  *
  * WHICH TEAM. utils/pvpTeams.ts drawerTeam(): the pinned team while its event
  * is still on, else your team for the event running now or coming next (the
@@ -29,30 +31,26 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { motion, useReducedMotion } from "framer-motion"
-import { Clock3, Loader2, Pencil, Users, X } from "lucide-react"
+import { Clock3, Loader2, Swords, Users, X } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { focusTeamDrawerButton } from "../../services/TeamDrawerContext"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { formatDate } from "../../utils/dateFormat"
 import { hasEnded, raceEventsInOrder } from "../../utils/pvpGuide"
 import { formatPvpEvent, pvpEventHref, refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
 import { drawerTeam } from "../../utils/pvpTeams"
 import { getCountdownLabel } from "../timeline/timelineShared"
 import PredictedBadge from "../PredictedBadge"
-import { TeamSnapshot } from "./TeamSnapshot"
+import { TeamEditor } from "./TeamEditor"
 import type { RaceEvent } from "../../types"
 import type { PvpTeam } from "../../types/pvpTeam"
 
 const AUTO = "auto"
 
-/** "/app/pvp?event=cm-19&view=team": the builder, on this event. */
-function builderHref(event: RaceEvent): string {
-	return `${pvpEventHref(refForRaceEvent(event))}&view=team`
-}
-
 export function TeamDrawer({ onClose }: { onClose: () => void }) {
-	const { status, teams, ensureLoaded, pinTeam } = usePvpTeams()
+	const { status, teams, mode, saveState, ensureLoaded, pinTeam, editTeam, createTeam } = usePvpTeams()
 	const { championsMeetingData, leagueOfHeroesData } = useCalculatorData()
 	const catalogue = usePvpCatalogue()
 	const reduceMotion = useReducedMotion()
@@ -73,6 +71,9 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 		[championsMeetingData, leagueOfHeroesData]
 	)
 	const choice = drawerTeam(teams, events, now)
+	const shownEvent = choice.kind === "no-events" ? null : choice.event
+	// Stars in the grid and the pickers; usePvpGuide caches per event.
+	const guideState = usePvpGuide(shownEvent ? refForRaceEvent(shownEvent) : null)
 	// What "auto" would show with no pin, for the selector's first option.
 	const autoChoice = drawerTeam(teams.map((team) => ({ ...team, isFocus: false })), events, now)
 	const autoEvent = autoChoice.kind === "no-events" ? null : autoChoice.event
@@ -130,28 +131,38 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 							<EventSelect teams={teams} events={events} now={now} autoEvent={autoEvent} onPin={pinTeam} />
 							<EventDates event={choice.event} now={now} />
 						</div>
-						{choice.kind === "none" ? (
-							<div className="rounded-xl border border-dashed border-gray-600 bg-gray-800/40 p-4 text-center">
-								<p className="text-sm text-gray-300">No team for {choice.event.name} yet.</p>
-								<Link
-									to={builderHref(choice.event)}
-									className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-100 transition hover:border-brand hover:text-brand"
-								>
-									Build one
-								</Link>
-							</div>
-						) : (
-							<>
-								<TeamSnapshot members={choice.team.members} umasById={catalogue.umasById} cardsById={catalogue.cardsById} />
-								<Link
-									to={builderHref(choice.event)}
-									className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-100 transition hover:border-brand hover:text-brand"
-								>
-									<Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-									Edit in PvP
-								</Link>
-							</>
-						)}
+						<TeamEditor
+							layout="compact"
+							event={choice.event}
+							members={choice.kind === "team" ? choice.team.members : []}
+							index={catalogue}
+							guide={guideState.status === "ready" ? guideState.guide : null}
+							onChange={(members) => {
+								// No team for this event yet: the first pick makes one, as on My team.
+								if (choice.kind === "team") editTeam(choice.team.key, { members })
+								else createTeam(refForRaceEvent(choice.event), { members })
+							}}
+						/>
+						<div className="flex items-center justify-between gap-2">
+							<span className="text-xs text-gray-400" role="status" aria-live="polite">
+								{choice.kind === "none"
+									? `No team for ${choice.event.name} yet. Pick an uma to start one.`
+									: saveState === "error"
+										? "Your last change didn't save."
+										: mode === "guest"
+											? "Saved on this device."
+											: saveState === "pending" || saveState === "saving"
+												? "Saving…"
+												: "Saved."}
+							</span>
+							<Link
+								to={pvpEventHref(refForRaceEvent(choice.event))}
+								className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-100 transition hover:border-brand hover:text-brand"
+							>
+								<Swords className="h-3.5 w-3.5" aria-hidden="true" />
+								Go to PvP
+							</Link>
+						</div>
 					</div>
 				)}
 			</div>
