@@ -285,6 +285,13 @@ html {
 	--color-note-blue-edge: #4a78a8;
 	--color-note-green: #16321f;
 	--color-note-green-edge: #4a9160;
+
+	/* The favourite-uma frame on a PvP team (App.css .oshi-frame): a pink
+	   that sits beside the brand gold in a turning gradient, its lighter
+	   partner and a glow. Redrawn deeper under [data-theme-mode="light"]. */
+	--color-oshi: #f472b6;
+	--color-oshi-soft: #fbcfe8;
+	--color-oshi-glow: rgb(244 114 182 / 45%);
 }
 
 /* ===== THEME OVERRIDES =====
@@ -478,6 +485,11 @@ html {
 	--color-note-blue-edge: #7fa8d4;
 	--color-note-green: #d6f0dc;
 	--color-note-green-edge: #7cbf8c;
+
+	/* The favourite-uma frame, deeper so it reads on white cards. */
+	--color-oshi: #db2777;
+	--color-oshi-soft: #f9a8d4;
+	--color-oshi-glow: rgb(219 39 119 / 35%);
 }
 
 /* The original warm Light palette remains the primary light choice. */

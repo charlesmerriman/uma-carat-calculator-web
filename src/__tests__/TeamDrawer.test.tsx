@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamDrawerButton } from "../components/navbar/TeamDrawerButton"
 import { TeamDrawerProvider } from "../services/TeamDrawerProvider"
 import { PvpTeamsContext, type PvpTeamsContextType } from "../services/PvpTeamsContext"
+import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import type { RaceEvent } from "../types"
 import type { PvpTeam } from "../types/pvpTeam"
 
@@ -34,7 +35,7 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 	usePvpCatalogue: () => ({
 		status: "ready",
 		catalogue: { umas: [], support_cards: [], skills: [] },
-		umasById: new Map(),
+		umasById: new Map([[41, { id: 41, name: "Maruzensky", image: null, portrait: null, character_id: 1004 }]]),
 		cardsById: new Map(),
 		skillsById: new Map(),
 	}),
@@ -110,9 +111,9 @@ describe("TeamDrawer", () => {
 		expect(screen.getByRole("combobox", { name: "Which event and team to show" })).toHaveDisplayValue("Next event (auto): CM 19")
 		// Three spots on top (one filled), then that uma's six card places.
 		expect(screen.getAllByRole("button", { name: /^Add uma/ })).toHaveLength(2)
-		expect(screen.getByRole("button", { name: "Add card 1 for uma 1" })).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "Add card 1 for Maruzensky" })).toBeInTheDocument()
 		// An edit goes to the shown team.
-		fireEvent.change(screen.getByRole("combobox", { name: "Running style for uma 1" }), { target: { value: "pace" } })
+		fireEvent.change(screen.getByRole("combobox", { name: "Running style for Maruzensky" }), { target: { value: "pace" } })
 		expect(editTeam).toHaveBeenCalledWith("a", { members: [{ ...members[0], style: "pace" }] })
 		expect(screen.getByRole("link", { name: /Go to PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-19")
 		expect(within(screen.getByRole("banner")).getByRole("status")).toHaveTextContent("On this device")
@@ -149,5 +150,27 @@ describe("TeamDrawer", () => {
 		renderDrawer(teamsValue([team("a", { members })]))
 		expect(screen.getByText("During")).toBeInTheDocument()
 		expect(screen.getByText("Out 2050/1/1, during this event")).toBeInTheDocument()
+	})
+
+	it("frames a favourite uma on the team", () => {
+		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [] }]
+		const auth = { account: { oshis: [{ position: 0, id: 41, name: "Maruzensky", image: "" }], oshi_slots: 1 } } as unknown as AuthContextType
+		render(
+			<MemoryRouter>
+				<AuthContext.Provider value={auth}>
+					<PvpTeamsContext.Provider value={teamsValue([team("a", { members })])}>
+						<TeamDrawer onClose={vi.fn()} />
+					</PvpTeamsContext.Provider>
+				</AuthContext.Provider>
+			</MemoryRouter>
+		)
+		expect(screen.getByLabelText("Your favourite uma")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "Change uma 1: Maruzensky" }).closest(".oshi-frame")).not.toBeNull()
+	})
+
+	it("leaves the frame off for a guest", () => {
+		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [] }]
+		renderDrawer(teamsValue([team("a", { members })]))
+		expect(screen.queryByLabelText("Your favourite uma")).not.toBeInTheDocument()
 	})
 })

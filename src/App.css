@@ -881,3 +881,45 @@ input[type="number"] {
 		transform: none;
 	}
 }
+
+/* ===== FAVOURITE UMA FRAME (PvP team) =====
+   A favourite uma (an oshi) on a PvP team, in TeamGrid and CompactTeamGrid:
+   a 3px gradient ring that turns slowly, with a soft glow. The ring is this
+   element's own background showing through its 3px padding around the tile.
+
+   The turn animates a registered custom property (@property), which a
+   conic-gradient can read; a browser without @property shows the same ring,
+   still. Reduced motion holds it still too. Colours are the --color-oshi*
+   tokens (index.css), redrawn for light themes. */
+@property --oshi-angle {
+	syntax: "<angle>";
+	inherits: false;
+	initial-value: 0deg;
+}
+
+.oshi-frame {
+	padding: 3px;
+	border-radius: 0.6875rem;
+	background: conic-gradient(
+		from var(--oshi-angle),
+		var(--color-oshi),
+		var(--color-brand),
+		var(--color-oshi-soft),
+		var(--color-brand),
+		var(--color-oshi)
+	);
+	box-shadow: 0 0 18px var(--color-oshi-glow);
+	animation: oshi-turn 6s linear infinite;
+}
+
+@keyframes oshi-turn {
+	to {
+		--oshi-angle: 360deg;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.oshi-frame {
+		animation: none;
+	}
+}

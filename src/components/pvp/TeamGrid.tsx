@@ -13,7 +13,7 @@
  */
 
 import type { ReactNode } from "react"
-import { ChevronDown, Handshake, Plus, Star, UserPlus, X } from "lucide-react"
+import { ChevronDown, Handshake, Heart, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
@@ -28,6 +28,8 @@ export interface TeamGridProps {
 	cardsById: Map<number, CatalogueSupportCard>
 	/** The event's course, for each uma's aptitude letters. Omitted: no letters. */
 	course?: Pick<RaceEvent, "surface_type" | "distance" | "length">
+	/** Is this uma one of the player's favourites (oshis)? Draws the frame. */
+	isFavourite?: (umaId: number) => boolean
 	/** The event's release check, for the During / Too late flags. */
 	releaseFor?: ReleaseCheck
 	/** Does the event's guide recommend this pick for this style? Draws a star. */
@@ -67,6 +69,7 @@ function MemberPanel({
 	cardsById,
 	course,
 	releaseFor,
+	isFavourite,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -176,6 +179,7 @@ function MemberPanel({
 					large
 					starred={starred("uma", member.uma)}
 					flag={releaseFor?.("uma", member.uma)}
+					favourite={isFavourite?.(member.uma) ?? false}
 					label={`Change uma ${position + 1}: ${umaLabel}`}
 					onClick={() => onPickUma(position)}
 					empty={null}
@@ -203,6 +207,7 @@ function Tile({
 	disabled = false,
 	disabledHint,
 	starred = false,
+	favourite = false,
 	flag,
 	badge = null,
 	onClear,
@@ -219,6 +224,8 @@ function Tile({
 	disabled?: boolean
 	disabledHint?: string
 	starred?: boolean
+	/** A favourite uma: the turning oshi frame and a heart (App.css .oshi-frame). */
+	favourite?: boolean
 	flag?: ReleaseStatus
 	badge?: ReactNode
 	onClear?: () => void
@@ -227,7 +234,7 @@ function Tile({
 	const filled = art !== undefined
 	return (
 		<div className="min-w-0">
-			<div className="group relative">
+			<div className={`group relative ${favourite ? "oshi-frame" : ""}`}>
 				<button
 					type="button"
 					aria-label={label}
@@ -236,7 +243,7 @@ function Tile({
 					onClick={onClick}
 					className={`${shape === "card" ? "aspect-[3/4]" : "aspect-square"} w-full overflow-hidden rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-brand ${
 						filled
-							? "block bg-gray-700 ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"
+							? `block bg-gray-700 ${favourite ? "" : "ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"}`
 							: `flex items-center justify-center border border-dashed text-gray-500 ${
 									disabled
 										? "cursor-not-allowed border-gray-700/70 bg-gray-900/30 text-gray-700"
@@ -263,6 +270,7 @@ function Tile({
 					</span>
 				)}
 				<ReleaseFlag status={flag} />
+				{favourite && <FavouriteHeart />}
 				{badge && (
 					<span className="pointer-events-none absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
 						{badge}
@@ -339,6 +347,18 @@ export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 		>
 			<span aria-hidden="true">{during ? "During" : status.kind === "unreleased" ? "Not out" : "Too late"}</span>
 			<span className="sr-only">{text}</span>
+		</span>
+	)
+}
+
+/** The heart on a favourite uma's tile; the frame around it is .oshi-frame. */
+export function FavouriteHeart({ className = "bottom-1 right-1" }: { className?: string }) {
+	return (
+		<span
+			className={`pointer-events-none absolute flex h-5 w-5 items-center justify-center rounded-full bg-gray-950/85 ${className}`}
+			title="Your favourite uma"
+		>
+			<Heart className="h-3 w-3 fill-oshi text-oshi" aria-label="Your favourite uma" />
 		</span>
 	)
 }

@@ -12,7 +12,8 @@
  * grid and sort first in the pickers.
  */
 
-import { useMemo, useState } from "react"
+import { useContext, useMemo, useState } from "react"
+import { AuthContext } from "../../services/AuthContext"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useCardReleases } from "../../hooks/useCardReleases"
 import { releaseBlockReason, releaseNote } from "../../utils/cardRelease"
@@ -22,6 +23,7 @@ import {
 	cardBlockReason,
 	clearCard,
 	clearMember,
+	favouriteCheck,
 	memberAt,
 	recommendedIds,
 	setCard,
@@ -48,6 +50,13 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
+	// The account's favourite umas (oshis it covers) get the frame. Read
+	// without useAccount so a test without an AuthProvider just has none.
+	const account = useContext(AuthContext)?.account ?? null
+	const isFavourite = useMemo(() => {
+		const covered = (account?.oshis ?? []).filter((oshi) => oshi.position < (account?.oshi_slots ?? 0))
+		return favouriteCheck(covered.map((oshi) => oshi.id), index.umasById)
+	}, [account, index.umasById])
 	// Only what is out by the event's last day can be picked; what lands
 	// mid-event is marked (utils/cardRelease.ts).
 	const releaseFor = useCardReleases(event, index)
@@ -83,6 +92,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 				cardsById={index.cardsById}
 				course={event}
 				releaseFor={releaseFor}
+				isFavourite={isFavourite}
 				isRecommended={isRecommended}
 				onPickUma={(position) => setPicker({ pool: "uma", position })}
 				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}

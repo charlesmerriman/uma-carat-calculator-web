@@ -12,7 +12,7 @@ import type { ReactNode } from "react"
 import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
-import { ReleaseFlag, type TeamGridProps } from "./TeamGrid"
+import { FavouriteHeart, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
@@ -25,6 +25,7 @@ export function CompactTeamGrid({
 	umasById,
 	cardsById,
 	releaseFor,
+	isFavourite,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -42,45 +43,50 @@ export function CompactTeamGrid({
 					const member = memberAt(members, position)
 					const uma = member ? umasById.get(member.uma) : undefined
 					const name = uma?.name ?? `uma ${position + 1}`
+					const favourite = member ? (isFavourite?.(member.uma) ?? false) : false
 					return (
 						<li key={position} className="min-w-0">
 							{member ? (
 								<>
-									<div className="group relative aspect-square overflow-hidden rounded-lg bg-gray-700 ring-1 ring-gray-600 transition hover:ring-2 hover:ring-brand/70">
-										<button
-											type="button"
-											aria-label={`Change uma ${position + 1}: ${name}`}
-											title={uma?.name}
-											onClick={() => onPickUma(position)}
-											className="block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
-										>
-											<Art src={uma?.portrait ?? uma?.image ?? null} />
-										</button>
-										<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
-											{position + 1}
-										</span>
-										{starred("uma", member.uma, member) && <StarBadge />}
-										<span className="absolute bottom-6 left-0">
-											<ReleaseFlag status={releaseFor?.("uma", member.uma)} />
-										</span>
-										<ClearButton label={`Remove ${name}`} onClick={() => onClearUma(position)} />
-										{/* The style, in the tile's bottom edge. A sibling of the
-										    button: a select inside a button is invalid HTML. */}
-										<label className="absolute inset-x-0 bottom-0">
-											<span className="sr-only">Running style for {name}</span>
-											<select
-												value={member.style}
-												onChange={(change) => onStyleChange(position, change.target.value as MemberStyle)}
-												className="w-full cursor-pointer appearance-none bg-gray-950/85 py-0.5 pr-4 text-center text-[11px] font-semibold text-brand outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+									{/* A favourite uma (an oshi) gets the turning frame (App.css .oshi-frame). */}
+									<div className={favourite ? "oshi-frame" : undefined}>
+										<div className={`group relative aspect-square overflow-hidden rounded-lg bg-gray-700 transition ${favourite ? "" : "ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"}`}>
+											<button
+												type="button"
+												aria-label={`Change uma ${position + 1}: ${name}`}
+												title={uma?.name}
+												onClick={() => onPickUma(position)}
+												className="block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 											>
-												{MEMBER_STYLES.map((style) => (
-													<option key={style} value={style}>
-														{STYLE_LABELS[style]}
-													</option>
-												))}
-											</select>
-											<ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-										</label>
+												<Art src={uma?.portrait ?? uma?.image ?? null} />
+											</button>
+											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
+												{position + 1}
+											</span>
+											{starred("uma", member.uma, member) && <StarBadge />}
+											{favourite && <FavouriteHeart className="left-1 top-7" />}
+											<span className="absolute bottom-6 left-0">
+												<ReleaseFlag status={releaseFor?.("uma", member.uma)} />
+											</span>
+											<ClearButton label={`Remove ${name}`} onClick={() => onClearUma(position)} />
+											{/* The style, in the tile's bottom edge. A sibling of the
+											    button: a select inside a button is invalid HTML. */}
+											<label className="absolute inset-x-0 bottom-0">
+												<span className="sr-only">Running style for {name}</span>
+												<select
+													value={member.style}
+													onChange={(change) => onStyleChange(position, change.target.value as MemberStyle)}
+													className="w-full cursor-pointer appearance-none bg-gray-950/85 py-0.5 pr-4 text-center text-[11px] font-semibold text-brand outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+												>
+													{MEMBER_STYLES.map((style) => (
+														<option key={style} value={style}>
+															{STYLE_LABELS[style]}
+														</option>
+													))}
+												</select>
+												<ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+											</label>
+										</div>
 									</div>
 									<p className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={uma?.name}>
 										{uma?.name ?? "Unknown uma"}
