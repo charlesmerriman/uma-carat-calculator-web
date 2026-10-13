@@ -1,0 +1,182 @@
+/**
+ * Pure helpers behind the PvP page: which event to show, the event before it,
+ * the cards new since then, the key dates, and how a guide's rows group.
+ *
+ * Everything takes its inputs as parameters (events, banners, constants, "now"),
+ * so the tests can pin each rule with a fixed calendar.
+ */
+
+import type {
+	BannerSupport,
+	BannerUma,
+	CalculationConstants,
+	RaceEvent,
+	SupportCard,
+	Uma,
+} from "../types"
+import type { PvpGuide, PvpSkillRecommendation, PvpStyle } from "../types/pvpGuide"
+import { parseApiDate } from "./dateFormat"
+import { refForRaceEvent, sameEvent, type PvpEventRef } from "./pvpEvent"
+
+/** Display order, the same order the API sorts by. */
+export const STYLE_ORDER: PvpStyle[] = ["everyone", "runaway", "front", "pace", "late", "end"]
+
+export const STYLE_LABELS: Record<PvpStyle, string> = {
+	everyone: "Everyone",
+	runaway: "Runaway",
+	front: "Front",
+	pace: "Pace",
+	late: "Late",
+	end: "End",
+}
+
+function time(value: string): number {
+	return parseApiDate(value)?.getTime() ?? Number.NaN
+}
+
+/** Every CM and LoH, oldest first by start date. Ties keep CMs first. */
+export function raceEventsInOrder(cms: RaceEvent[], lohs: RaceEvent[]): RaceEvent[] {
+	return [...cms, ...lohs]
+		.filter((event) => !Number.isNaN(time(event.start_date)))
+		.sort((a, b) => time(a.start_date) - time(b.start_date))
+}
+
+/** True from the event's start until its end has passed. */
+export function isRunning(event: RaceEvent, now: Date): boolean {
+	return time(event.start_date) <= now.getTime() && now.getTime() <= time(event.end_date)
+}
+
+export function hasEnded(event: RaceEvent, now: Date): boolean {
+	return time(event.end_date) < now.getTime()
+}
+
+/**
+ * The event the page opens on with no ?event= in the URL: the one running now,
+ * else the next to start, else the most recent one. Null with no events at all.
+ */
+export function defaultPvpEvent(events: RaceEvent[], now: Date): RaceEvent | null {
+	const running = events.find((event) => isRunning(event, now))
+	if (running) return running
+	const upcoming = events.find((event) => time(event.start_date) > now.getTime())
+	if (upcoming) return upcoming
+	return events.length > 0 ? events[events.length - 1] : null
+}
+
+export function findEvent(events: RaceEvent[], ref: PvpEventRef | null): RaceEvent | null {
+	return events.find((event) => sameEvent(refForRaceEvent(event), ref)) ?? null
+}
+
+/**
+ * The nearest earlier event of EITHER kind: the sheet numbers its PvP list
+ * across CMs and LoHs together, so "since the last PvP" means either.
+ */
+export function previousPvpEvent(events: RaceEvent[], current: RaceEvent): RaceEvent | null {
+	const index = events.findIndex((event) => event === current)
+	return index > 0 ? events[index - 1] : null
+}
+
+export interface NewCards {
+	umas: Uma[]
+	supports: SupportCard[]
+}
+
+/**
+ * The cards whose FIRST global banner starts on or after `previousStart` and
+ * before `start`: what arrived since the last PvP event. A card's first
+ * appearance is the earliest effective start among the banners featuring it,
+ * so a rerun never makes an old card look new.
+ */
+export function newCardsBetween(
+	previousStart: string,
+	start: string,
+	umaBanners: BannerUma[],
+	supportBanners: BannerSupport[]
+): NewCards {
+	const from = time(previousStart)
+	const to = time(start)
+
+	function firsts<T extends { id: number }>(entries: Array<{ start: number; cards: T[] }>): T[] {
+		const first = new Map<number, { start: number; card: T }>()
+		for (const { start: bannerStart, cards } of entries) {
+			if (Number.isNaN(bannerStart)) continue
+			for (const card of cards) {
+				const seen = first.get(card.id)
+				if (!seen || bannerStart < seen.start) first.set(card.id, { start: bannerStart, card })
+			}
+		}
+		return [...first.values()]
+			.filter(({ start: cardStart }) => from <= cardStart && cardStart < to)
+			.sort((a, b) => a.start - b.start)
+			.map(({ card }) => card)
+	}
+
+	return {
+		umas: firsts(umaBanners.map((banner) => ({ start: time(banner.banner_timeline.start_date), cards: banner.umas }))),
+		supports: firsts(
+			supportBanners.map((banner) => ({ start: time(banner.banner_timeline.start_date), cards: banner.support_cards }))
+		),
+	}
+}
+
+/** The styles a guide says something about, in display order. */
+export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
+	const used = new Set<PvpStyle>()
+	for (const row of guide.uma_recommendations) used.add(row.style)
+	for (const row of guide.style_notes) used.add(row.style)
+	for (const row of guide.decks) used.add(row.style)
+	for (const row of guide.honorable_mentions) used.add(row.style)
+	for (const row of guide.skill_recommendations) used.add(row.style)
+	// "Everyone" rows show above the tabs, never as a tab of their own.
+	used.delete("everyone")
+	return STYLE_ORDER.filter((style) => used.has(style))
+}
+
+export interface SkillTierGroup {
+	/** Null for skills the guide gives no tier. */
+	tier: number | null
+	skills: PvpSkillRecommendation[]
+}
+
+/** Rows grouped by tier, in the order they arrived (tier 0 first, untiered last). */
+export function groupSkillsByTier(rows: PvpSkillRecommendation[]): SkillTierGroup[] {
+	const groups: SkillTierGroup[] = []
+	for (const row of rows) {
+		const last = groups[groups.length - 1]
+		if (last && last.tier === row.tier) last.skills.push(row)
+		else groups.push({ tier: row.tier, skills: [row] })
+	}
+	return groups
+}
+
+export interface Milestone {
+	label: string
+	/** ISO instant. */
+	date: string
+}
+
+/**
+ * The event's key dates, from its start date plus the per-kind hour offsets
+ * in the calculation constants. Round 1 is the start itself. A milestone whose
+ * offset is null (League of Heroes, until its schedule is known) is left out.
+ */
+export function milestones(event: RaceEvent, constants: CalculationConstants): Milestone[] {
+	const start = parseApiDate(event.start_date)
+	if (!start) return []
+	const isCm = event.event_type === "champions_meeting"
+	const offsets: Array<[string, number | null]> = [
+		["Registration opens", isCm ? constants.cm_registration_opens_hours : constants.loh_registration_opens_hours],
+		["Round 1", 0],
+		["Round 2", isCm ? constants.cm_round_two_hours : constants.loh_round_two_hours],
+		[
+			"Finals registration closes",
+			isCm ? constants.cm_finals_registration_closes_hours : constants.loh_finals_registration_closes_hours,
+		],
+		["Finals", isCm ? constants.cm_finals_hours : constants.loh_finals_hours],
+	]
+	return offsets
+		.filter((entry): entry is [string, number] => entry[1] !== null && entry[1] !== undefined)
+		.map(([label, hours]) => ({
+			label,
+			date: new Date(start.getTime() + hours * 3_600_000).toISOString(),
+		}))
+}

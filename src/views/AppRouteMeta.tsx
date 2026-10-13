@@ -28,7 +28,7 @@ interface RouteMeta {
 	description: string
 }
 
-type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races"
+type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -52,6 +52,13 @@ const META: Record<AppPath, RouteMeta> = {
 		title: "Daily Legend Races",
 		description:
 			"When each batch of umas joins the Uma Musume daily legend races on global, and how long grinding Star Pieces for one of them takes.",
+	},
+	// The fallback only, like Legend Races: the "pvp-guides" page row supplies
+	// the real title and description.
+	"/app/pvp": {
+		title: "PvP Guides",
+		description:
+			"What to build for each Uma Musume Champions Meeting and League of Heroes on global: recommended stats, umas, skills and support decks.",
 	},
 }
 
@@ -94,7 +101,9 @@ export const AppRouteMeta = () => {
 	const page =
 		path === "/app/legend-races"
 			? content.page("daily-legend-races", { optional: true })
-			: null
+			: path === "/app/pvp"
+				? content.page("pvp-guides", { optional: true })
+				: null
 	const meta = page
 		? { title: page.title, description: page.meta_description }
 		: path === "shared"

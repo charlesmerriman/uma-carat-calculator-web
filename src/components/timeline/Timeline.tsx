@@ -26,9 +26,13 @@ import {
 	bannerWindowHasRecommended,
 	buildMarkerRows,
 	buildTimelineMarkers,
+	categorySelectClass,
+	controlButtonClass,
 	groupTimelineEvents,
 	markerRowMatchesKind,
 	markerRowMatchesSearch,
+	pageIndicatorClass,
+	paginationButtonClass,
 	rowMatchesFocus,
 	spliceMarkerRows,
 	timelineRowKey,
@@ -146,17 +150,8 @@ function storePage(page: number): void {
 		// Position simply won't survive leaving the route.
 	}
 }
-const controlButtonClass =
-	"inline-flex min-h-10 items-center justify-center gap-2 rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 shadow-sm transition hover:border-gray-500 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-45 md:min-h-0 md:py-1.5"
-const paginationButtonClass = `${controlButtonClass} min-w-28`
-const pageIndicatorClass =
-	"inline-flex min-h-10 items-center justify-center rounded border border-gray-700 bg-gray-950/50 px-4 py-2 text-sm font-semibold text-gray-200 shadow-inner md:min-h-0 md:py-1.5"
 const searchInputClass =
 	"w-full rounded border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
-// Matches controlButtonClass so the filter reads as a third control in that row
-// rather than a form field that wandered in.
-const categorySelectClass =
-	"inline-flex min-h-10 items-center rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 shadow-sm transition hover:border-gray-500 hover:bg-gray-700 focus:border-gray-500 focus:outline-none md:min-h-0 md:py-1.5"
 
 /**
  * The filter's value: the absence of a filter, a banner category, a marker

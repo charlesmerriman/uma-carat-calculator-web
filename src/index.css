@@ -239,6 +239,11 @@ html {
 	   recommended gold. */
 	--color-legend-race: #fdba74;
 
+	/* PvP guide highlights: the sheet's red "must have" text, written as
+	   ==words== (utils/remarkHighlight.ts). A soft red that reads on every
+	   dark theme; the light override deepens it. */
+	--color-highlight: #f87171;
+
 	/* ── Recommended banner accent ─────────────────────────────────────────
 	   The editorial "Recommended" flag: the SSR panel on the Timeline
 	   (.ssr-panel / .recommended-chip in App.css) and the gold star and wash in
@@ -424,6 +429,7 @@ html {
 	--color-step-up: #713a85;
 	--color-step-up-border: #8b4aa0;
 	--color-legend-race: #9a3412;
+	--color-highlight: #b91c1c;
 	--color-new-year: #92400e;
 	--color-campaign: #075985;
 

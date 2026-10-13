@@ -1292,6 +1292,36 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   375px. The profile pill's name waits for `xl` for the same reason on desktop: with a
   fourth link it pushed the signed-in bar past 1024px.
 
+## PvP page (`components/pvp/`)
+
+`/app/pvp`: one Champions Meeting or League of Heroes event at a time, with its guide
+(`GET /pvp-guides/<kind>/<id>`, `backend/docs/api-reference.md`, "PvP guides").
+
+- **The event lives in the URL**: `?event=cm-12` / `loh-7`, the event's database id
+  (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
+  kind, so the Timeline card links to a guide without branching on the tag. No parameter
+  opens on the running event, else the next, else the newest (`defaultPvpEvent`).
+- **The header renders from the calculator payload**, guide or not: dates, the countdown,
+  `CourseDetails` (shared with `RaceEventCard`, so course data shows the same on both
+  surfaces) and the key dates, which are the start date plus the eight
+  `*_hours` calculation constants (`milestones`). A null LoH offset hides that milestone.
+- **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
+  the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
+  drafts with a "Draft, visible to staff only" bar.
+- **Every guide section is optional** and steps aside when empty. Style tabs list only
+  styles with content (`stylesWithContent`; "everyone" rows sit above the tabs). From
+  `2xl` a second pane sits beside the first for comparing two styles.
+- **`==words==` is red** in any guide text: `utils/remarkHighlight.ts` is a remark plugin
+  in `MarkdownContent` (emits `<mark>`, styled `text-highlight`; raw HTML stays off) and
+  `splitHighlights` feeds `InlineNote` for one-line notes. Token `--color-highlight`.
+- **Stats are text** (`"1100+"`, `"578*"`), shown as written; a blank cell is an en dash.
+- **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
+  first global banner start, between the nearest earlier event of either kind and this one.
+- **The mobile bar has five tabs**: labels are 10px and hide (sr-only) below 360px, where
+  the icons carry the bar. Checked at 375px and 320px on 2026-10-13.
+- **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
+  local SQLite with the community sheet's guides (local only).
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It

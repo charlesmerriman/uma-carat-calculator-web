@@ -20,6 +20,13 @@
 			"title": "Daily Legend Races",
 			"meta_description": "When each batch of umas joins the Uma Musume daily legend races on global, and how long grinding Star Pieces for one of them takes.",
 			"updated_at": "2026-10-05T00:00:00Z"
+		},
+		{
+			"slug": "pvp-guides",
+			"body": "Pick a Champions Meeting or League of Heroes event to see what to build for it: the stats to aim for, which umas run each style well, the skills worth chasing and example support decks.\n\nThe guides are written by the people behind the community carat sheet, and they fill each one in as the event gets closer.\n",
+			"title": "PvP Guides",
+			"meta_description": "What to build for each Uma Musume Champions Meeting and League of Heroes on global: recommended stats, umas, skills and support decks.",
+			"updated_at": "2026-10-13T00:00:00Z"
 		}
 	],
 	"faq": [

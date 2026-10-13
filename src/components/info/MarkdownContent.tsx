@@ -4,12 +4,17 @@ import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { childrenToText, slugify } from "../../utils/guideMarkdown"
+import { remarkHighlight } from "../../utils/remarkHighlight"
 
 // Same text-style vocabulary as the legal pages, so every public content page
 // reads the same whether its words come from a component or from the admin.
 const PARAGRAPH = "mt-3 leading-relaxed text-gray-300"
 const list = "mt-3 space-y-1 pl-6 leading-relaxed text-gray-300"
 const link = "text-brand transition hover:text-brand/75"
+
+// Module scope so every render passes the same array, and react-markdown does
+// not re-run its pipeline setup for an identity change.
+const REMARK_PLUGINS = [remarkGfm, remarkHighlight]
 
 /** A site-relative href: "/faq", "/faq#anchor". Not "//host" and not "#anchor". */
 function isInternalHref(href: string): boolean {
@@ -100,6 +105,9 @@ function buildComponents(paragraph: string): Components {
 		code: ({ node: _node, ...props }) => (
 			<code className="rounded bg-gray-800 px-1.5 py-0.5 text-[0.9em] text-gray-200" {...props} />
 		),
+		// `==words==` (utils/remarkHighlight.ts): the sheet's red must-haves.
+		// No background: the <mark> default yellow would fight every theme.
+		mark: ({ node: _node, ...props }) => <mark className="bg-transparent font-semibold text-highlight" {...props} />,
 	}
 }
 
@@ -116,7 +124,7 @@ function buildComponents(paragraph: string): Components {
 export function MarkdownContent({ markdown, paragraphClassName = PARAGRAPH }: { markdown: string; paragraphClassName?: string }) {
 	const components = useMemo(() => buildComponents(paragraphClassName), [paragraphClassName])
 	return (
-		<ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+		<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
 			{markdown}
 		</ReactMarkdown>
 	)

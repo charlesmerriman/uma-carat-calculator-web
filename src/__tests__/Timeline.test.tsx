@@ -143,8 +143,6 @@ function raceEvent(id: number, day: string): ChampionsMeeting {
     season: 'Spring',
     weather: 'Sunny',
     direction: 'Left',
-    speed_recommendation: '',
-    stamina_recommendation: '',
   } as ChampionsMeeting
 }
 

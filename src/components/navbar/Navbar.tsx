@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { CalendarDays, Calculator as CalculatorIcon, LogIn, Sparkles, Trophy } from "lucide-react"
+import { CalendarDays, Calculator as CalculatorIcon, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
@@ -46,6 +46,7 @@ export const Navbar = () => {
 	const isTimeline = location.pathname === "/app/timeline"
 	const isSelectors = location.pathname === "/app/selectors"
 	const isLegendRaces = location.pathname === "/app/legend-races"
+	const isPvp = location.pathname === "/app/pvp"
 
 	const timerIsGoing = calculatorData?.timerIsGoing ?? false
 	// False once this browser has refused to store the guest's plan.
@@ -59,8 +60,13 @@ export const Navbar = () => {
 	// side, measured at 375px, every label truncated: the icon and gap left
 	// 47px for words needing 57-69px. Stacked, at 11px, the longest
 	// ("Calculator", ~63px) fits down to a 320px screen.
+	//
+	// The fifth tab (PvP) took each cell from about 69px to about 57px at 375px,
+	// so the labels went to 10px ("Calculator" is ~57px there and fits). Below
+	// 360px even that truncates, so the words hide there and the icons carry
+	// the bar; the label stays in the accessibility tree (sr-only).
 	const mobileNavClass = (active: boolean) =>
-		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-1 py-1.5 text-[11px] font-semibold transition ${
+		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
 				? "border-brand/50 bg-brand/10 text-brand"
 				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
@@ -163,24 +169,28 @@ export const Navbar = () => {
 					</div>
 				</div>
 
-				<div className="grid grid-cols-4 gap-1 border-t border-gray-700 px-2 py-2">
+				<div className="grid grid-cols-5 gap-1 border-t border-gray-700 px-2 py-2">
 					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="h-4 w-4 shrink-0" />
-						<span className="truncate">Calculator</span>
+						<span className="truncate max-[359px]:sr-only">Calculator</span>
 					</Link>
 					<Link to="/app/timeline" className={mobileNavClass(isTimeline)} {...prefetchOnIntent}>
 						<CalendarDays className="h-4 w-4 shrink-0" />
-						<span className="truncate">Timeline</span>
+						<span className="truncate max-[359px]:sr-only">Timeline</span>
 					</Link>
 					<Link to="/app/selectors" className={mobileNavClass(isSelectors)} {...prefetchOnIntent}>
 						<Sparkles className="h-4 w-4 shrink-0" />
-						<span className="truncate">Selectors</span>
+						<span className="truncate max-[359px]:sr-only">Selectors</span>
 					</Link>
 					{/* "Legends" rather than the desktop "Legend Races": four tabs share
 					    the bar, and the longer label would not fit a 320px screen. */}
 					<Link to="/app/legend-races" className={mobileNavClass(isLegendRaces)} {...prefetchOnIntent}>
 						<Trophy className="h-4 w-4 shrink-0" />
-						<span className="truncate">Legends</span>
+						<span className="truncate max-[359px]:sr-only">Legends</span>
+					</Link>
+					<Link to="/app/pvp" className={mobileNavClass(isPvp)} {...prefetchOnIntent}>
+						<Swords className="h-4 w-4 shrink-0" />
+						<span className="truncate max-[359px]:sr-only">PvP</span>
 					</Link>
 				</div>
 			</nav>
@@ -224,6 +234,10 @@ export const Navbar = () => {
 						<Link to="/app/legend-races" className={desktopNavClass(isLegendRaces)} {...prefetchOnIntent}>
 							<Trophy className="h-4 w-4" />
 							Legend Races
+						</Link>
+						<Link to="/app/pvp" className={desktopNavClass(isPvp)} {...prefetchOnIntent}>
+							<Swords className="h-4 w-4" />
+							PvP
 						</Link>
 					</div>
 

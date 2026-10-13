@@ -6,6 +6,7 @@ import { CaratCalculator } from "../components/carat-calculator/CaratCalculator"
 import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
+import { PvpGuidePage } from "../components/pvp/PvpGuidePage"
 import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
 import { OguriSpinner } from "../components/OguriSpinner"
@@ -144,6 +145,9 @@ export const ApplicationViews = () => (
 			<Route path="timeline" element={<Timeline />}/>
 			<Route path="selectors" element={<Selectors />}/>
 			<Route path="legend-races" element={<DailyLegendRaces />}/>
+			{/* A static path, so it outranks the ":publicId" share route below;
+			    "pvp" is also too short to pass isPublicId. */}
+			<Route path="pvp" element={<PvpGuidePage />}/>
 		</Route>
 		<Route path=":publicId" element={<SharedPlanRoute />} />
 		{/* Unmatched path under /app. A SIBLING of the layout route, not a child:

@@ -45,4 +45,21 @@ describe("MarkdownContent", () => {
 		expect(container.querySelector("strong")).toHaveTextContent("bold")
 		expect(container.querySelectorAll("li").length).toBe(2)
 	})
+
+	it("turns ==words== into a red <mark>, and leaves a lone = alone", () => {
+		const { container } = renderMarkdown("Take ==Stamina 500== first. a = b, and `==code==` stays.")
+		const marks = container.querySelectorAll("mark")
+		expect(marks).toHaveLength(1)
+		expect(marks[0].textContent).toBe("Stamina 500")
+		expect(container.textContent).toContain("a = b")
+		expect(container.querySelector("code")?.textContent).toBe("==code==")
+	})
+
+	it("keeps raw HTML off inside a highlight too", () => {
+		// The highlight is built from the syntax tree, so markup inside ==
+		// stays text (or is dropped as raw HTML), and never becomes an element.
+		const { container } = renderMarkdown("Before ==<script>alert(1)</script>== after")
+		expect(container.querySelector("script")).toBeNull()
+		expect(container.textContent).toContain("<script>")
+	})
 })
