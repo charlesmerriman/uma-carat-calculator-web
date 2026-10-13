@@ -94,6 +94,12 @@ vi.mock("../services/CalculatorContext", () => ({
 	}),
 }))
 
+// The builder has its own tests (usePvpTeams, PvpCardPicker); here it only
+// has to be the thing the My team view shows, for the selected event.
+vi.mock("../components/pvp/TeamBuilder", () => ({
+	TeamBuilder: ({ event: shown }: { event: RaceEvent }) => <div data-testid="team-builder">{`cm-${shown.id}`}</div>,
+}))
+
 const { PvpGuidePage } = await import("../components/pvp/PvpGuidePage")
 const { clearPvpGuideCache } = await import("../hooks/usePvpGuide")
 
@@ -247,19 +253,18 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByText("New since")).not.toBeInTheDocument()
 	})
 
-	it("offers My team and Gallery as coming-soon views, kept in the URL", async () => {
+	it("offers My team and a coming-soon Gallery, kept in the URL", async () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		const views = within(screen.getByRole("tablist", { name: "View" }))
 		expect(views.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
 			"Recommendations",
-			"My teamSoon",
+			"My team",
 			"GallerySoon",
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")
-		expect(screen.getByText("Build your team")).toBeInTheDocument()
-		expect(screen.getByText("Coming soon")).toBeInTheDocument()
+		expect(screen.getByTestId("team-builder").textContent).toBe("cm-10")
 		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
 		expect(screen.getByText("Teams from other players")).toBeInTheDocument()
 		fireEvent.click(views.getByRole("tab", { name: "Recommendations" }))

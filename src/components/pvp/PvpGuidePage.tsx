@@ -7,7 +7,7 @@
  * three views of the event:
  *
  *   Recommendations  the guide (PvpGuideView), live now
- *   My team          the player's own team builder (R2), a placeholder for now
+ *   My team          the player's own team builder (TeamBuilder)
  *   Gallery          teams other players posted for this event (R3), a placeholder
  *
  * The event and the view are both URL parameters (`?event=cm-12&view=team`),
@@ -69,6 +69,7 @@ import {
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
 import { SupportTile, UmaTile } from "./PvpTiles"
+import { TeamBuilder } from "./TeamBuilder"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
@@ -79,7 +80,7 @@ type PvpView = "recommendations" | "team" | "gallery"
 const VIEW_PARAM = "view"
 const VIEWS: Array<{ id: PvpView; label: string; icon: LucideIcon; soon: boolean }> = [
 	{ id: "recommendations", label: "Recommendations", icon: BookOpen, soon: false },
-	{ id: "team", label: "My team", icon: Users, soon: true },
+	{ id: "team", label: "My team", icon: Users, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: true },
 ]
 
@@ -194,13 +195,7 @@ export const PvpGuidePage = () => {
 									/>
 								</div>
 							)}
-							{view === "team" && (
-								<ComingSoon
-									icon={Users}
-									title="Build your team"
-									text="Pick three umas for this event, give each a running style and six support cards, and keep your team on hand while you plan your pulls."
-								/>
-							)}
+							{view === "team" && <TeamBuilder event={event} />}
 							{view === "gallery" && (
 								<ComingSoon
 									icon={LayoutGrid}
