@@ -39,7 +39,7 @@ function buildComponents(paragraph: string): Components {
 		h2: ({ node: _node, children, ...props }) => (
 			<h2
 				id={slugify(childrenToText(children))}
-				className="mt-12 scroll-mt-24 text-xl font-semibold text-brand"
+				className="mt-12 scroll-mt-6 text-xl font-semibold text-brand"
 				{...props}
 			>
 				{children}
@@ -48,7 +48,7 @@ function buildComponents(paragraph: string): Components {
 		h3: ({ node: _node, children, ...props }) => (
 			<h3
 				id={slugify(childrenToText(children))}
-				className="mt-8 scroll-mt-24 text-lg font-semibold text-gray-100 [&>em]:font-normal [&>em]:text-gray-400"
+				className="mt-8 scroll-mt-6 text-lg font-semibold text-gray-100 [&>em]:font-normal [&>em]:text-gray-400"
 				{...props}
 			>
 				{children}

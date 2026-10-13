@@ -125,7 +125,7 @@ export const SupportersSection = () => {
 		rank === null ? BASE_TIER_STYLE : TIER_STYLES[rank] ?? BASE_TIER_STYLE
 
 	return (
-		<section id="supporters" className="mt-10 scroll-mt-20 border-t border-gray-800 pt-8">
+		<section id="supporters" className="mt-10 scroll-mt-6 border-t border-gray-800 pt-8">
 			<div className="flex flex-wrap items-baseline justify-between gap-3">
 				<h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-gray-100">
 					<Heart className="h-5 w-5 text-brand" aria-hidden="true" />

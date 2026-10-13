@@ -87,9 +87,10 @@ export const Faq: React.FC = () => {
 							</nav>
 
 							{categories.map((category) => (
-								// scroll-mt keeps the heading clear of the sticky navbar when a jump link
-								// or a deep link lands on it.
-								<section key={category.slug} id={category.slug} className="mt-12 scroll-mt-24">
+								// html's scroll-padding-top (index.css) keeps the heading clear of
+								// the sticky navbar when a jump link or a deep link lands on it;
+								// scroll-mt is only the air above it.
+								<section key={category.slug} id={category.slug} className="mt-12 scroll-mt-6">
 									<h2 className={categoryHeading}>{category.title}</h2>
 
 									<div className="mt-4 space-y-4">
@@ -98,9 +99,10 @@ export const Faq: React.FC = () => {
 												key={item.slug}
 												// Per-question anchor, so a single answer can be linked
 												// directly — e.g. from the homepage teaser or in a reply
-												// to someone asking. scroll-mt clears the sticky navbar.
+												// to someone asking. Clears the navbar the same way as the
+												// section above.
 												id={item.slug}
-												className="scroll-mt-24 rounded-xl border border-gray-700 bg-gray-800 p-5 shadow-md"
+												className="scroll-mt-6 rounded-xl border border-gray-700 bg-gray-800 p-5 shadow-md"
 											>
 												<h3 className={question}>{item.question}</h3>
 												<MarkdownContent markdown={item.answer} />
