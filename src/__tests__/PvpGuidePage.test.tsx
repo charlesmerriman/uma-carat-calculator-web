@@ -143,7 +143,9 @@ describe("PvpGuidePage", () => {
 		renderPage()
 		await screen.findByText("Recommended stats")
 		expect(screen.getByText("Stamina 578 is enough").tagName).toBe("MARK")
-		expect(screen.getByText("578*")).toBeInTheDocument()
+		// The number reads large and the sheet's marker stays beside it.
+		expect(screen.getByTitle("Stamina: 578*").textContent).toBe("578*")
+		expect(screen.getByTitle("Guts: 400+").textContent).toBe("400+")
 		// The empty power cell is a dash, not a blank.
 		expect(screen.getAllByText("–").length).toBeGreaterThan(0)
 		expect(screen.getByText("*Bonus Speed every 300 Power.")).toBeInTheDocument()

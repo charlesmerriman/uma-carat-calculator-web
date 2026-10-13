@@ -100,13 +100,51 @@ function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
 	)
 }
 
-const STAT_COLUMNS: Array<[keyof PvpStatConfig, string]> = [
-	["speed", "Speed"],
-	["stamina", "Stamina"],
-	["power", "Power"],
-	["guts", "Guts"],
-	["wit", "Wit"],
+// The five stats in game order, each with the colour the game gives it.
+// Theme tokens (index.css, "--color-stat-*"), so light themes get deeper
+// shades. Literal class names, not built strings, so Tailwind sees them.
+const STAT_COLUMNS: Array<{ key: keyof PvpStatConfig; label: string; short: string; text: string; tint: string; dot: string }> = [
+	{ key: "speed", label: "Speed", short: "SPD", text: "text-stat-speed", tint: "bg-stat-speed/10 border-stat-speed/30", dot: "bg-stat-speed" },
+	{ key: "stamina", label: "Stamina", short: "STA", text: "text-stat-stamina", tint: "bg-stat-stamina/10 border-stat-stamina/30", dot: "bg-stat-stamina" },
+	{ key: "power", label: "Power", short: "POW", text: "text-stat-power", tint: "bg-stat-power/10 border-stat-power/30", dot: "bg-stat-power" },
+	{ key: "guts", label: "Guts", short: "GUTS", text: "text-stat-guts", tint: "bg-stat-guts/10 border-stat-guts/30", dot: "bg-stat-guts" },
+	{ key: "wit", label: "Wit", short: "WIT", text: "text-stat-wit", tint: "bg-stat-wit/10 border-stat-wit/30", dot: "bg-stat-wit" },
 ]
+
+/**
+ * "1100+" -> 1100 and "+"; "901*+1 Gold" -> 901 and "*+1 Gold". The number is
+ * what a player compares at a glance, so it reads large; the sheet's markers
+ * stay, smaller, beside or under it. A value with no leading number shows whole.
+ */
+function splitStat(value: string): { number: string; rest: string } {
+	const match = /^(\d[\d,]*)(.*)$/.exec(value.trim())
+	return match ? { number: match[1], rest: match[2].trim() } : { number: "", rest: value.trim() }
+}
+
+function StatValue({ value, column }: { value: string; column: (typeof STAT_COLUMNS)[number] }) {
+	if (!value) {
+		// An en dash for a stat the guide says nothing about.
+		return (
+			<div className="flex h-full min-h-11 items-center justify-center rounded-lg border border-dashed border-gray-700 text-gray-600">
+				–
+			</div>
+		)
+	}
+	const { number, rest } = splitStat(value)
+	return (
+		<div
+			className={`flex h-full min-h-11 flex-col items-center justify-center rounded-lg border px-1 py-1 text-center ${column.tint}`}
+			title={`${column.label}: ${value}`}
+		>
+			{number && <span className={`text-base font-bold leading-none tabular-nums ${column.text}`}>{number}</span>}
+			{rest && (
+				<span className={`mt-0.5 text-[10px] font-semibold leading-tight ${number ? "text-gray-300" : column.text}`}>
+					{rest}
+				</span>
+			)}
+		</div>
+	)
+}
 
 function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	// One line each under the table, in order of first appearance.
@@ -114,38 +152,42 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	return (
 		<section className={SECTION} aria-labelledby="pvp-stats">
 			<h3 id="pvp-stats" className={HEADING}>Recommended stats</h3>
-			<div className="mt-2 overflow-x-auto">
-				<table className="w-full border-collapse text-left text-xs sm:text-sm">
-					<thead>
-						<tr>
-							<th className="border-b border-gray-600 px-1.5 py-1 font-semibold text-gray-300">Style</th>
-							{STAT_COLUMNS.map(([, label]) => (
-								<th key={label} className="border-b border-gray-600 px-1.5 py-1 text-center font-semibold text-gray-300">
-									{label}
-								</th>
+			{/* A real table for screen readers; styled as a grid of tinted cells. */}
+			<table className="mt-3 w-full table-fixed border-separate border-spacing-1 text-left">
+				<thead>
+					<tr>
+						<th className="w-[5.5rem] text-[11px] font-semibold text-gray-500">
+							<span className="sr-only">Style</span>
+						</th>
+						{STAT_COLUMNS.map((column) => (
+							<th key={column.key} className="pb-1 text-center" title={column.label}>
+								<span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-gray-300">
+									<span className={`h-2 w-2 rounded-full ${column.dot}`} aria-hidden="true" />
+									<span aria-hidden="true">{column.short}</span>
+									<span className="sr-only">{column.label}</span>
+								</span>
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{rows.map((row, index) => (
+						<tr key={index}>
+							<th scope="row" className="pr-1 align-middle font-normal">
+								<span className="block text-sm font-semibold leading-tight text-gray-100">{STYLE_LABELS[row.style]}</span>
+								{row.label && <span className="block text-[11px] leading-tight text-gray-400">{row.label}</span>}
+							</th>
+							{STAT_COLUMNS.map((column) => (
+								<td key={column.key} className="h-px align-middle">
+									<StatValue value={row[column.key] as string} column={column} />
+								</td>
 							))}
 						</tr>
-					</thead>
-					<tbody>
-						{rows.map((row, index) => (
-							<tr key={index}>
-								<td className="border-b border-gray-800 px-1.5 py-1 align-top">
-									<span className="font-semibold text-gray-100">{STYLE_LABELS[row.style]}</span>
-									{row.label && <span className="block text-xs text-gray-400">{row.label}</span>}
-								</td>
-								{STAT_COLUMNS.map(([key]) => (
-									<td key={key} className="border-b border-gray-800 px-1.5 py-1 text-center tabular-nums text-gray-100">
-										{/* An en dash for a stat the guide says nothing about. */}
-										{(row[key] as string) || "–"}
-									</td>
-								))}
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+					))}
+				</tbody>
+			</table>
 			{footnotes.length > 0 && (
-				<ul className="mt-2 space-y-0.5 text-xs text-gray-400">
+				<ul className="mt-2 space-y-0.5 border-t border-gray-700/70 pt-2 text-xs text-gray-400">
 					{footnotes.map((footnote) => (
 						<li key={footnote}>
 							<InlineNote text={footnote} />
