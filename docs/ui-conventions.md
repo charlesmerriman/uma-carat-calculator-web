@@ -1334,9 +1334,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `SkillMentionsContext` in `PvpGuideView`; an unresolved one is its plain name.
   `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
   otherwise a markdown link. Token `--color-highlight`.
-- **Stats are text** (`"1100+"`, `"578*"`), shown as written: the leading number large, the
-  sheet's markers small beside it (`splitStat`), each stat in its game colour (`--color-stat-*`
-  tokens with light overrides). A blank cell is a dashed box with an en dash.
+- **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the
+  game's stat icons (`public/0N_CM*.png`). `splitStat` puts `+` / `*` beside the number as a
+  superscript and anything longer ("+1 Gold") on a second line, and every cell is top-aligned,
+  so a row's numbers always share one line. A blank cell is an en dash.
 - **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
   first global banner start, between the nearest earlier event of either kind and this one.
 - **The mobile bar has five tabs**: labels are 10px and hide (sr-only) below 360px, where

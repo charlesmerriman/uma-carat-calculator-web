@@ -100,49 +100,47 @@ function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
 	)
 }
 
-// The five stats in game order, each with the colour the game gives it.
-// Theme tokens (index.css, "--color-stat-*"), so light themes get deeper
-// shades. Literal class names, not built strings, so Tailwind sees them.
-const STAT_COLUMNS: Array<{ key: keyof PvpStatConfig; label: string; short: string; text: string; tint: string; dot: string }> = [
-	{ key: "speed", label: "Speed", short: "SPD", text: "text-stat-speed", tint: "bg-stat-speed/10 border-stat-speed/30", dot: "bg-stat-speed" },
-	{ key: "stamina", label: "Stamina", short: "STA", text: "text-stat-stamina", tint: "bg-stat-stamina/10 border-stat-stamina/30", dot: "bg-stat-stamina" },
-	{ key: "power", label: "Power", short: "POW", text: "text-stat-power", tint: "bg-stat-power/10 border-stat-power/30", dot: "bg-stat-power" },
-	{ key: "guts", label: "Guts", short: "GUTS", text: "text-stat-guts", tint: "bg-stat-guts/10 border-stat-guts/30", dot: "bg-stat-guts" },
-	{ key: "wit", label: "Wit", short: "WIT", text: "text-stat-wit", tint: "bg-stat-wit/10 border-stat-wit/30", dot: "bg-stat-wit" },
+// The five stats in game order, headed by the game's own stat icons
+// (public/0N_CM*.png, 84px squares shown at 24px).
+const STAT_COLUMNS: Array<{ key: keyof PvpStatConfig; label: string; icon: string }> = [
+	{ key: "speed", label: "Speed", icon: "/00_CMSPEED1.png" },
+	{ key: "stamina", label: "Stamina", icon: "/01_CMStamina1.png" },
+	{ key: "power", label: "Power", icon: "/02_CMPOWER1.png" },
+	{ key: "guts", label: "Guts", icon: "/03_CMGUTS1.png" },
+	{ key: "wit", label: "Wit", icon: "/04_CMWits1.png" },
 ]
 
 /**
- * "1100+" -> 1100 and "+"; "901*+1 Gold" -> 901 and "*+1 Gold". The number is
- * what a player compares at a glance, so it reads large; the sheet's markers
- * stay, smaller, beside or under it. A value with no leading number shows whole.
+ * "1100+" -> 1100, marks "+"; "901*+1 Gold" -> 901, marks "*", extra
+ * "+1 Gold". Marks (+ and *) sit beside the number as a superscript; anything
+ * longer drops to a second line. Every number therefore lands on the same
+ * line across a row, whatever the cells carry besides it.
  */
-function splitStat(value: string): { number: string; rest: string } {
-	const match = /^(\d[\d,]*)(.*)$/.exec(value.trim())
-	return match ? { number: match[1], rest: match[2].trim() } : { number: "", rest: value.trim() }
+function splitStat(value: string): { number: string; marks: string; extra: string } {
+	const match = /^(\d[\d,]*)([+*]*)(.*)$/.exec(value.trim())
+	return match
+		? { number: match[1], marks: match[2], extra: match[3].trim() }
+		: { number: "", marks: "", extra: value.trim() }
 }
 
-function StatValue({ value, column }: { value: string; column: (typeof STAT_COLUMNS)[number] }) {
-	if (!value) {
-		// An en dash for a stat the guide says nothing about.
-		return (
-			<div className="flex h-full min-h-11 items-center justify-center rounded-lg border border-dashed border-gray-700 text-gray-600">
-				–
-			</div>
-		)
-	}
-	const { number, rest } = splitStat(value)
+function StatValue({ value, label }: { value: string; label: string }) {
+	// An en dash for a stat the guide says nothing about.
+	if (!value) return <span className="text-gray-600">–</span>
+	const { number, marks, extra } = splitStat(value)
 	return (
-		<div
-			className={`flex h-full min-h-11 flex-col items-center justify-center rounded-lg border px-1 py-1 text-center ${column.tint}`}
-			title={`${column.label}: ${value}`}
-		>
-			{number && <span className={`text-base font-bold leading-none tabular-nums ${column.text}`}>{number}</span>}
-			{rest && (
-				<span className={`mt-0.5 text-[10px] font-semibold leading-tight ${number ? "text-gray-300" : column.text}`}>
-					{rest}
+		<span title={`${label}: ${value}`}>
+			{number && (
+				<span className="text-sm font-semibold tabular-nums text-gray-100">
+					{number}
+					{marks && <sup className="ml-px text-[10px] font-medium text-gray-400">{marks}</sup>}
 				</span>
 			)}
-		</div>
+			{extra && (
+				<span className={number ? "block text-[10px] leading-tight text-gray-400" : "text-sm text-gray-100"}>
+					{extra}
+				</span>
+			)}
+		</span>
 	)
 }
 
@@ -152,34 +150,29 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	return (
 		<section className={SECTION} aria-labelledby="pvp-stats">
 			<h3 id="pvp-stats" className={HEADING}>Recommended stats</h3>
-			{/* A real table for screen readers; styled as a grid of tinted cells. */}
-			<table className="mt-3 w-full table-fixed border-separate border-spacing-1 text-left">
+			<table className="mt-2 w-full table-fixed border-collapse text-left">
 				<thead>
-					<tr>
-						<th className="w-[5.5rem] text-[11px] font-semibold text-gray-500">
-							<span className="sr-only">Style</span>
-						</th>
+					<tr className="border-b border-gray-600">
+						<th className="w-[5.5rem] pb-1.5 align-bottom text-xs font-semibold text-gray-300">Style</th>
 						{STAT_COLUMNS.map((column) => (
-							<th key={column.key} className="pb-1 text-center" title={column.label}>
-								<span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-gray-300">
-									<span className={`h-2 w-2 rounded-full ${column.dot}`} aria-hidden="true" />
-									<span aria-hidden="true">{column.short}</span>
-									<span className="sr-only">{column.label}</span>
-								</span>
+							<th key={column.key} className="pb-1.5 text-center" title={column.label}>
+								<img src={column.icon} alt={column.label} width={24} height={24} className="mx-auto h-6 w-6" />
 							</th>
 						))}
 					</tr>
 				</thead>
 				<tbody>
 					{rows.map((row, index) => (
-						<tr key={index}>
-							<th scope="row" className="pr-1 align-middle font-normal">
-								<span className="block text-sm font-semibold leading-tight text-gray-100">{STYLE_LABELS[row.style]}</span>
+						<tr key={index} className="border-b border-gray-700/80 last:border-b-0">
+							{/* align-top on every cell: the numbers share one line
+							    even when a cell or the label wraps below it. */}
+							<th scope="row" className="py-2 pr-1 align-top font-normal">
+								<span className="block text-sm font-semibold leading-5 text-gray-100">{STYLE_LABELS[row.style]}</span>
 								{row.label && <span className="block text-[11px] leading-tight text-gray-400">{row.label}</span>}
 							</th>
 							{STAT_COLUMNS.map((column) => (
-								<td key={column.key} className="h-px align-middle">
-									<StatValue value={row[column.key] as string} column={column} />
+								<td key={column.key} className="py-2 text-center align-top leading-5">
+									<StatValue value={row[column.key] as string} label={column.label} />
 								</td>
 							))}
 						</tr>

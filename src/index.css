@@ -244,14 +244,6 @@ html {
 	   dark theme; the light override deepens it. */
 	--color-highlight: #f87171;
 
-	/* The five race stats, in the game's own colours: the PvP guide's
-	   recommended-stats card. Light overrides below deepen each one. */
-	--color-stat-speed: #60a5fa;
-	--color-stat-stamina: #f87171;
-	--color-stat-power: #fb923c;
-	--color-stat-guts: #f472b6;
-	--color-stat-wit: #4ade80;
-
 	/* ── Recommended banner accent ─────────────────────────────────────────
 	   The editorial "Recommended" flag: the SSR panel on the Timeline
 	   (.ssr-panel / .recommended-chip in App.css) and the gold star and wash in
@@ -438,11 +430,6 @@ html {
 	--color-step-up-border: #8b4aa0;
 	--color-legend-race: #9a3412;
 	--color-highlight: #b91c1c;
-	--color-stat-speed: #1d4ed8;
-	--color-stat-stamina: #b91c1c;
-	--color-stat-power: #c2410c;
-	--color-stat-guts: #be185d;
-	--color-stat-wit: #15803d;
 	--color-new-year: #92400e;
 	--color-campaign: #075985;
 
