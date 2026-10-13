@@ -24,6 +24,11 @@ interface TeamGridProps {
 	members: PvpTeamMember[]
 	umasById: Map<number, CatalogueUma>
 	cardsById: Map<number, CatalogueSupportCard>
+	/**
+	 * The team drawer's narrow layout: no card names under the tiles, no hint
+	 * line on an empty spot, tighter spacing. The tiles keep their shapes.
+	 */
+	compact?: boolean
 	/** The event's course, for each uma's aptitude letters. Omitted: no letters. */
 	course?: Pick<RaceEvent, "surface_type" | "distance" | "length">
 	/** Does the event's guide recommend this pick for this style? Draws a star. */
@@ -48,7 +53,7 @@ const ROW_COLUMNS = "minmax(0,1.35fr) repeat(5,minmax(0,1fr)) 2px minmax(0,1fr)"
 
 export function TeamGrid(props: TeamGridProps) {
 	return (
-		<div className="flex flex-col gap-3" aria-label="Your team">
+		<div className={`flex flex-col ${props.compact ? "gap-2" : "gap-3"}`} aria-label="Your team">
 			{POSITIONS.map((position) => (
 				<MemberPanel key={position} position={position} {...props} />
 			))}
@@ -62,6 +67,7 @@ function MemberPanel({
 	umasById,
 	cardsById,
 	course,
+	compact = false,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -84,7 +90,7 @@ function MemberPanel({
 			<Tile
 				key={slot}
 				art={entry ? (card?.image ?? null) : undefined}
-				caption={entry ? (card?.name ?? "Unknown card") : slotName}
+				caption={compact ? undefined : entry ? (card?.name ?? "Unknown card") : slotName}
 				disabled={!member}
 				disabledHint="Pick an uma first"
 				shape="card"
@@ -119,15 +125,20 @@ function MemberPanel({
 				<UserPlus className="h-5 w-5 shrink-0 text-gray-500 transition group-hover:text-brand" aria-hidden="true" />
 				<span className="min-w-0">
 					<span className="block text-sm font-semibold text-gray-200 group-hover:text-brand">Add an uma</span>
-					<span className="block truncate text-xs text-gray-500">Then pick her five support cards and a borrowed one.</span>
+					{!compact && (
+						<span className="block truncate text-xs text-gray-500">Then pick her five support cards and a borrowed one.</span>
+					)}
 				</span>
 			</button>
 		)
 	}
 
 	return (
-		<section className="rounded-xl border border-gray-600 bg-gray-800 p-2.5 shadow-md sm:p-3" aria-label={umaLabel}>
-			<header className="mb-2.5 flex items-center gap-2">
+		<section
+			className={`rounded-xl border border-gray-600 bg-gray-800 shadow-md ${compact ? "p-2" : "p-2.5 sm:p-3"}`}
+			aria-label={umaLabel}
+		>
+			<header className={`flex items-center gap-2 ${compact ? "mb-2" : "mb-2.5"}`}>
 				<span
 					className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-black"
 					aria-hidden="true"
@@ -164,7 +175,7 @@ function MemberPanel({
 				</button>
 			</header>
 
-			<div className="grid items-start gap-1.5 sm:gap-2" style={{ gridTemplateColumns: ROW_COLUMNS }}>
+			<div className={`grid items-start ${compact ? "gap-1" : "gap-1.5 sm:gap-2"}`} style={{ gridTemplateColumns: ROW_COLUMNS }}>
 				<Tile
 					art={uma?.portrait ?? uma?.image ?? null}
 					large

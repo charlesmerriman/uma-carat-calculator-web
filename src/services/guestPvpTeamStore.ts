@@ -34,6 +34,8 @@ export interface GuestPvpTeam {
 	focus: boolean
 	notes: PvpNote[]
 	members: PvpTeamMember[]
+	/** Last change, in ms; 0 for a team stored before it was kept. */
+	updatedAt: number
 }
 
 interface GuestPvpTeamsEnvelope {
@@ -103,6 +105,7 @@ function readTeam(raw: unknown): GuestPvpTeam | null {
 		focus: row.focus === true,
 		notes,
 		members,
+		updatedAt: typeof row.updatedAt === "number" && Number.isFinite(row.updatedAt) ? row.updatedAt : 0,
 	}
 }
 

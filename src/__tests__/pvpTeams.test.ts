@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
 	cardBlockReason,
 	clearMember,
+	drawerTeam,
 	firstOpenCardSlot,
 	memberStyleFrom,
 	recommendedIds,
@@ -11,7 +12,8 @@ import {
 	umaBlockReason,
 } from "../utils/pvpTeams"
 import type { PvpGuide } from "../types/pvpGuide"
-import type { PvpTeamMember } from "../types/pvpTeam"
+import type { PvpTeam, PvpTeamMember } from "../types/pvpTeam"
+import type { RaceEvent } from "../types"
 
 const OGURI = { id: 1, name: "Oguri Cap", character_id: 1006, running_style: 3 }
 const OGURI_XMAS = { id: 2, name: "Oguri Cap (Christmas)", character_id: 1006, running_style: 3 }
@@ -89,5 +91,50 @@ describe("pvpTeams", () => {
 		expect(sources.get(1)).toEqual(["Maruzensky (unique)", "Kitasan Black (event)"])
 		expect(sources.get(2)).toEqual(["Kitasan Black (hint)"])
 		expect(sources.has(3)).toBe(false)
+	})
+})
+
+/**
+ * The plan's worked example (R2b "Which team it shows"): today 2026-11-02,
+ * Libra Cup (CM) running Nov 1 to Nov 8, LoH #4 from Nov 20, Virgo Cup
+ * ended Oct 20.
+ */
+describe("drawerTeam", () => {
+	const race = (id: number, event_type: string, name: string, start: string, end: string) =>
+		({ id, event_type, name, start_date: start, end_date: end }) as unknown as RaceEvent
+	const VIRGO = race(5, "champions_meeting", "Virgo Cup", "2026-10-13T00:00:00Z", "2026-10-20T00:00:00Z")
+	const LIBRA = race(19, "champions_meeting", "Libra Cup", "2026-11-01T00:00:00Z", "2026-11-08T00:00:00Z")
+	const LOH4 = race(4, "league_of_heroes", "League of Heroes 4", "2026-11-20T00:00:00Z", "2026-11-27T00:00:00Z")
+	const EVENTS = [VIRGO, LIBRA, LOH4]
+	const NOW = new Date("2026-11-02T12:00:00Z")
+	const team = (key: string, kind: "cm" | "loh", event: number, extra: Partial<PvpTeam> = {}): PvpTeam => ({
+		key, id: null, kind, event, name: key, isFocus: false, notes: [], members: [], updatedAt: 0, ...extra,
+	})
+	const libra1 = team("Libra Team 1", "cm", 19, { updatedAt: Date.parse("2026-10-30T00:00:00Z") })
+	const lohDraft = team("LoH Draft", "loh", 4)
+
+	it("prefers the running event over an upcoming one", () => {
+		const choice = drawerTeam([libra1, lohDraft], EVENTS, NOW)
+		expect(choice).toMatchObject({ kind: "team", team: { key: "Libra Team 1" }, event: LIBRA, pinned: false })
+	})
+
+	it("shows the pin first", () => {
+		const choice = drawerTeam([libra1, { ...lohDraft, isFocus: true }], EVENTS, NOW)
+		expect(choice).toMatchObject({ kind: "team", team: { key: "LoH Draft" }, event: LOH4, pinned: true })
+	})
+
+	it("ignores a pin on an event that has ended", () => {
+		const choice = drawerTeam([team("Virgo Team 1", "cm", 5, { isFocus: true })], EVENTS, NOW)
+		expect(choice).toEqual({ kind: "none", event: LIBRA })
+	})
+
+	it("takes the newer edit of two teams for one event", () => {
+		const libra2 = team("Libra Team 2", "cm", 19, { updatedAt: Date.parse("2026-11-01T00:00:00Z") })
+		expect(drawerTeam([libra1, libra2], EVENTS, NOW)).toMatchObject({ team: { key: "Libra Team 2" } })
+	})
+
+	it("says so when nothing is running or coming up", () => {
+		expect(drawerTeam([libra1], [VIRGO], NOW)).toEqual({ kind: "no-events" })
+		expect(drawerTeam([], [], NOW)).toEqual({ kind: "no-events" })
 	})
 })

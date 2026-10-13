@@ -10,7 +10,7 @@
  * the team, so there is no "Start a team" step to get through.
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Check, CloudAlert, CloudCheck, HardDrive, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Sparkles, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
@@ -18,19 +18,15 @@ import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatal
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
 import {
-	MEMBER_STYLES,
 	PVP_BORROW_SLOT,
 	PVP_TEAM_CAP_PER_EVENT,
-	cardBlockReason,
-	clearCard,
-	clearMember,
 	firstOpenCardSlot,
 	memberAt,
+	preferredTeam,
 	memberStyleFrom,
 	teamSkillSources,
 	recommendedIds,
 	setCard,
-	setMemberStyle,
 	setMemberUma,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
@@ -38,7 +34,7 @@ import { GuidePicksBody, type GuidePickActions } from "./GuidePicksPanel"
 import { GuideSkillsBody } from "./GuideSkillsPanel"
 import { DockedPanel, SideDrawer } from "./SidePanel"
 import { PvpCardPicker } from "./PvpCardPicker"
-import { TeamGrid } from "./TeamGrid"
+import { TeamEditor } from "./TeamEditor"
 import type { RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
@@ -47,13 +43,10 @@ import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
 const NO_MEMBERS: PvpTeamMember[] = []
 
 /**
- * What the picker is open for: one uma spot, one card slot, or a skill search
- * from the skills panel (one spot, either pool, the skill's name searched).
+ * A skill search opened from the skills panel: one spot, either pool, the
+ * skill's name searched. The grid's own pickers live in TeamEditor.
  */
-type PickerTarget =
-	| { pool: "uma"; position: number }
-	| { pool: "support"; position: number; slot: number }
-	| { pool: "skill"; position: number; query: string; tab: "uma" | "support" }
+type SkillSearchTarget = { position: number; query: string; tab: "uma" | "support" }
 
 const PICKS_BUTTON =
 	"flex items-center gap-1.5 rounded-md border border-gray-600 px-2.5 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand"
@@ -140,7 +133,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 	const eventTeams = teams.filter((team) => sameEvent({ kind: team.kind, id: team.event }, ref))
 
 	const [selectedKey, setSelectedKey] = useState<string | null>(null)
-	const [picker, setPicker] = useState<PickerTarget | null>(null)
+	const [skillSearch, setSkillSearch] = useState<SkillSearchTarget | null>(null)
 	// Each side panel has two switches, one per placement. The docked column
 	// starts open and remembers being collapsed; the drawer starts closed
 	// every time. Stable close functions, so a drawer's Escape listener is not
@@ -159,11 +152,10 @@ function ReadyBuilder({ event, teamsState, index }: {
 		setSkillsDocked(open)
 		writePanelOpen(SKILLS_STORAGE_KEY, open)
 	}
-	const team =
-		eventTeams.find((candidate) => candidate.key === selectedKey) ??
-		eventTeams.find((candidate) => candidate.isFocus) ??
-		eventTeams[0] ??
-		null
+	// The team the player picked here, else the one the team drawer would
+	// show for this event (pinned, else edited last), so "Open in PvP" from the
+	// drawer lands on the same team.
+	const team = eventTeams.find((candidate) => candidate.key === selectedKey) ?? preferredTeam(eventTeams)
 	const members = team?.members ?? NO_MEMBERS
 
 	// Stars come from the event's guide; usePvpGuide caches it, so this is
@@ -181,23 +173,8 @@ function ReadyBuilder({ event, teamsState, index }: {
 		if (key) setSelectedKey(key)
 	}
 
-	const pickerMember = picker ? memberAt(members, picker.position) : undefined
-	const pickerStyle = pickerMember?.style ?? null
-	const recommended = recommendedIds(guide, pickerStyle ?? "front")
-	const umaName = (position: number): string => {
-		const member = memberAt(members, position)
-		return (member && index.umasById.get(member.uma)?.name) || `uma ${position + 1}`
-	}
-
-	// The guide's picks per style, worked out once per guide for the grid's stars.
-	const picksByStyle = useMemo(
-		() => new Map(MEMBER_STYLES.map((style) => [style, recommendedIds(guide, style)])),
-		[guide]
-	)
-	const isRecommended = (pool: "uma" | "support", id: number, style: MemberStyle): boolean => {
-		const picks = picksByStyle.get(style)
-		return picks !== undefined && (pool === "uma" ? picks.umas : picks.cards).has(id)
-	}
+	const searchMember = skillSearch ? memberAt(members, skillSearch.position) : undefined
+	const searchStyle = searchMember?.style ?? null
 
 	// What Guide picks offers for a clicked uma or card. Same rules as the
 	// picker (utils/pvpTeams.ts), shown as disabled buttons with a reason.
@@ -274,7 +251,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 				closeSkills()
 				// An empty spot wants an uma first; a filled one most often a card.
 				const tab = memberAt(members, position) ? "support" : "uma"
-				setPicker({ pool: "skill", position, query: skillName, tab })
+				setSkillSearch({ position, query: skillName, tab })
 			}}
 		/>
 	)
@@ -346,18 +323,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					}}
 				/>
 
-				<TeamGrid
-					members={members}
-					umasById={index.umasById}
-					cardsById={index.cardsById}
-					course={event}
-					isRecommended={isRecommended}
-					onPickUma={(position) => setPicker({ pool: "uma", position })}
-					onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
-					onStyleChange={(position, style) => applyMembers(setMemberStyle(members, position, style))}
-					onClearUma={(position) => applyMembers(clearMember(members, position))}
-					onClearCard={(position, slot) => applyMembers(clearCard(members, position, slot))}
-				/>
+				<TeamEditor event={event} members={members} index={index} guide={guide} onChange={applyMembers} />
 
 				{guide && (
 					<p className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -382,81 +348,25 @@ function ReadyBuilder({ event, teamsState, index }: {
 				</DockedPanel>
 			)}
 
-			{picker?.pool === "uma" && (
-				<PvpCardPicker
-					pool="uma"
-					items={index.catalogue.umas}
-					title={`Uma ${picker.position + 1}`}
-					skillsById={index.skillsById}
-					event={event}
-					style={pickerStyle}
-					recommended={recommended.umas}
-					blockReason={(id) => {
-						const candidate = index.umasById.get(id)
-						return candidate ? umaBlockReason(members, picker.position, candidate, index.umasById) : null
-					}}
-					selectedId={pickerMember?.uma ?? null}
-					onPick={(id) => {
-						const uma = index.umasById.get(id)
-						if (uma) applyMembers(setMemberUma(members, picker.position, uma))
-						setPicker(null)
-					}}
-					onRemove={
-						pickerMember
-							? () => {
-									applyMembers(clearMember(members, picker.position))
-									setPicker(null)
-								}
-							: undefined
-					}
-					onClose={() => setPicker(null)}
-				/>
-			)}
-			{picker?.pool === "support" && (
-				<PvpCardPicker
-					pool="support"
-					items={index.catalogue.support_cards}
-					title={`${picker.slot === PVP_BORROW_SLOT ? "Borrowed card" : `Card ${picker.slot}`} for ${umaName(picker.position)}`}
-					skillsById={index.skillsById}
-					event={event}
-					style={pickerStyle}
-					recommended={recommended.cards}
-					blockReason={(id) => cardBlockReason(pickerMember, picker.slot, id)}
-					selectedId={pickerMember?.cards.find((card) => card.slot === picker.slot)?.support_card ?? null}
-					onPick={(id) => {
-						applyMembers(setCard(members, picker.position, picker.slot, id))
-						setPicker(null)
-					}}
-					onRemove={
-						pickerMember?.cards.some((card) => card.slot === picker.slot)
-							? () => {
-									applyMembers(clearCard(members, picker.position, picker.slot))
-									setPicker(null)
-								}
-							: undefined
-					}
-					onClose={() => setPicker(null)}
-				/>
-			)}
-			{picker?.pool === "skill" && (
+			{skillSearch && (
 				<SkillSearchPicker
-					target={picker}
-					onTab={(tab) => setPicker({ ...picker, tab })}
+					target={skillSearch}
+					onTab={(tab) => setSkillSearch({ ...skillSearch, tab })}
 					index={index}
 					event={event}
-					member={pickerMember}
+					member={searchMember}
 					members={members}
-					style={pickerStyle}
-					recommended={recommended}
+					style={searchStyle}
+					recommended={recommendedIds(guide, searchStyle ?? "front")}
 					onPickUma={(uma) => {
-						applyMembers(setMemberUma(members, picker.position, uma))
-						setPicker(null)
+						applyMembers(setMemberUma(members, skillSearch.position, uma))
+						setSkillSearch(null)
 					}}
 					onPickCard={(slot, id) => {
-						applyMembers(setCard(members, picker.position, slot, id))
-						setPicker(null)
+						applyMembers(setCard(members, skillSearch.position, slot, id))
+						setSkillSearch(null)
 					}}
-					onClose={() => setPicker(null)}
+					onClose={() => setSkillSearch(null)}
 				/>
 			)}
 		</div>
@@ -473,7 +383,7 @@ function ReadyBuilder({ event, teamsState, index }: {
  * A card goes in the uma's first free slot from 1 to 5, else the borrow slot.
  */
 function SkillSearchPicker({ target, onTab, index, event, member, members, style, recommended, onPickUma, onPickCard, onClose }: {
-	target: Extract<PickerTarget, { pool: "skill" }>
+	target: SkillSearchTarget
 	onTab: (tab: "uma" | "support") => void
 	index: PvpCatalogueIndex
 	event: RaceEvent

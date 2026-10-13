@@ -20,6 +20,7 @@ const team = (extra: Partial<GuestPvpTeam> = {}): GuestPvpTeam => ({
 	focus: false,
 	notes: [{ text: "Pull Kitasan", color: "yellow" }],
 	members: [{ position: 0, uma: 41, style: "front", cards: [{ slot: 1, support_card: 302 }] }],
+	updatedAt: 1700000000000,
 	...extra,
 })
 
@@ -67,7 +68,7 @@ describe("guestPvpTeamStore", () => {
 
 	it("keeps only extra fields it knows", () => {
 		store([{ ...team(), id: 99, secret: "x" }])
-		expect(Object.keys(readGuestPvpTeams()[0]).sort()).toEqual(["event", "focus", "kind", "members", "name", "notes"])
+		expect(Object.keys(readGuestPvpTeams()[0]).sort()).toEqual(["event", "focus", "kind", "members", "name", "notes", "updatedAt"])
 	})
 
 	it("keeps one pin and at most ten notes", () => {

@@ -7,6 +7,7 @@ import { Wordmark } from "../Wordmark"
 import { OguriSpinner } from "../OguriSpinner"
 import { ThemePicker } from "./ThemePicker"
 import { SettingsMenu } from "./SettingsMenu"
+import { TeamDrawerButton } from "./TeamDrawerButton"
 import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 
@@ -33,10 +34,12 @@ export const Navbar = () => {
 	// itself lives in ProfileMenu now.
 	const { isLoggedIn } = useAccount()
 
-	// Settings gear + theme picker, grouped so every nav cluster renders the same
-	// controls. SettingsMenu renders nothing outside app mode (no stats loaded).
+	// Team drawer + settings gear + theme picker, grouped so every nav cluster
+	// renders the same controls. TeamDrawerButton and SettingsMenu render
+	// nothing outside app mode.
 	const navControls = (
 		<>
+			<TeamDrawerButton />
 			<SettingsMenu />
 			<ThemePicker />
 		</>

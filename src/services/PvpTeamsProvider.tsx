@@ -77,6 +77,7 @@ function fromPayload(payload: PvpTeamPayload): PvpTeam {
 		isFocus: payload.is_focus,
 		notes: payload.notes,
 		members: payload.members,
+		updatedAt: Date.parse(payload.updated_at) || 0,
 	}
 }
 
@@ -90,6 +91,7 @@ function fromGuest(team: GuestPvpTeam): PvpTeam {
 		isFocus: team.focus,
 		notes: team.notes,
 		members: team.members,
+		updatedAt: team.updatedAt,
 	}
 }
 
@@ -101,6 +103,7 @@ function toGuest(team: PvpTeam): GuestPvpTeam {
 		focus: team.isFocus,
 		notes: team.notes,
 		members: team.members,
+		updatedAt: team.updatedAt,
 	}
 }
 
@@ -322,6 +325,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 				isFocus: false,
 				notes: content.notes ?? [],
 				members: content.members ?? [],
+				updatedAt: Date.now(),
 			}
 			commit([...teamsRef.current, team])
 			if (modeRef.current === "account") {
@@ -351,7 +355,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 
 	const editTeam = useCallback<PvpTeamsContextType["editTeam"]>(
 		(key, changes) => {
-			update(key, (team) => ({ ...team, ...changes }))
+			update(key, (team) => ({ ...team, ...changes, updatedAt: Date.now() }))
 			markDirty(key)
 		},
 		[markDirty, update]
@@ -359,7 +363,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 
 	const renameTeam = useCallback(
 		(key: string, name: string) => {
-			update(key, (team) => ({ ...team, name }))
+			update(key, (team) => ({ ...team, name, updatedAt: Date.now() }))
 			const team = teamsRef.current.find((candidate) => candidate.key === key)
 			// No id yet: adoptCreated sends the name once there is one.
 			if (modeRef.current === "account" && team?.id != null) void pvpTeamPatch(team.id, { name })

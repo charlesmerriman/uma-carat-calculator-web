@@ -123,4 +123,9 @@ export interface PvpTeam extends PvpTeamContent {
 	kind: PvpEventKind
 	event: number
 	isFocus: boolean
+	/**
+	 * When it was last changed, in ms (0 when unknown). Picks between two
+	 * teams for one event: the team drawer shows the one edited last.
+	 */
+	updatedAt: number
 }

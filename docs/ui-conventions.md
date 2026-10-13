@@ -1640,3 +1640,26 @@ Rules that follow from it:
   carries, so `npm run dev` and `npm run dev:live` never show the toast. To see it locally,
   change the `build` value the middleware returns, or test through `startUpdateWatch` with
   an injected fetch as the test file does.
+
+## Team drawer (PvP)
+
+`components/pvp/TeamDrawer.tsx`, opened by the navbar's Team button
+(`components/navbar/TeamDrawerButton.tsx`), shows the player's PvP team beside every planner
+page. It stands aside on the PvP page's My team view (`?view=team`), where the builder already
+shows the team.
+
+- **Mounted in `AppShell`, never in `Navbar`.** Info pages render their own navbar, and a route
+  change inside `/app` swaps only the `<Outlet/>`, so a drawer in `AppShell` stays open and
+  mid-edit from page to page. It renders behind the loading gate, so a prerendered `/app` page
+  carries none of it. Open state: `services/TeamDrawerProvider.tsx` (`localStorage`
+  `uma-planner-team-drawer`, read in an effect); the button renders nothing without its context.
+- **Placement**, by the `team-dock` variant in `index.css`: `--container-banner-table` (76.625rem)
+  + 2rem page padding + the drawer's 26rem = 104.625rem. From there it is a column and the
+  scroller shrinks beside it (the planner keeps its table). Between `app-shell` and `team-dock`
+  it covers the right edge of the page area; below `app-shell` it is fixed over the screen.
+- **Not a dialog**: no backdrop or focus trap, so the page behind stays usable. Escape inside it
+  closes it and refocuses the Team button.
+- **Stacking**: page < drawer (`z-30`; `z-50` below `app-shell`, where it covers the screen) <
+  cookie banner (`z-40`) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
+- **Which team** is `utils/pvpTeams.ts` `drawerTeam()`; the builder opens on the same team
+  through `preferredTeam()`. The grid is `TeamEditor`, shared with the builder.

@@ -92,7 +92,7 @@ describe("PvpTeamsProvider", () => {
 		act(() => seen[0].editTeam(key!, { members: MEMBERS }))
 		act(() => seen[0].renameTeam(key!, "Aquarius"))
 		expect(readGuestPvpTeams()).toEqual([
-			{ kind: "cm", event: 10, name: "Aquarius", focus: false, notes: [], members: MEMBERS },
+			{ kind: "cm", event: 10, name: "Aquarius", focus: false, notes: [], members: MEMBERS, updatedAt: expect.any(Number) },
 		])
 		expect(mockedCreate).not.toHaveBeenCalled()
 		expect(mockedReplace).not.toHaveBeenCalled()
@@ -101,8 +101,8 @@ describe("PvpTeamsProvider", () => {
 
 	it("drops a device team whose event left the site", () => {
 		writeGuestPvpTeams([
-			{ kind: "cm", event: 10, name: "", focus: false, notes: [], members: [] },
-			{ kind: "cm", event: 99, name: "Gone", focus: false, notes: [], members: [] },
+			{ kind: "cm", event: 10, name: "", focus: false, notes: [], members: [], updatedAt: 0 },
+			{ kind: "cm", event: 99, name: "Gone", focus: false, notes: [], members: [], updatedAt: 0 },
 		])
 		const { seen } = renderProvider()
 		act(() => seen[0].ensureLoaded())
@@ -162,7 +162,7 @@ describe("PvpTeamsProvider", () => {
 	})
 
 	it("moves the device's teams into the account on the first signed-in load", async () => {
-		writeGuestPvpTeams([{ kind: "cm", event: 10, name: "Mine", focus: false, notes: [], members: MEMBERS }])
+		writeGuestPvpTeams([{ kind: "cm", event: 10, name: "Mine", focus: false, notes: [], members: MEMBERS, updatedAt: 0 }])
 		loggedIn = true
 		mockedCreate.mockResolvedValue(json(payload(8, { name: "Mine", members: MEMBERS })))
 		mockedList.mockResolvedValue(json([payload(8, { name: "Mine", members: MEMBERS })]))
@@ -176,7 +176,7 @@ describe("PvpTeamsProvider", () => {
 	})
 
 	it("keeps a device team the account refused", async () => {
-		writeGuestPvpTeams([{ kind: "cm", event: 10, name: "Mine", focus: false, notes: [], members: MEMBERS }])
+		writeGuestPvpTeams([{ kind: "cm", event: 10, name: "Mine", focus: false, notes: [], members: MEMBERS, updatedAt: 0 }])
 		loggedIn = true
 		mockedCreate.mockResolvedValue(json({ error: "nope" }, 400))
 		const { seen } = renderProvider()

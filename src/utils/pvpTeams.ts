@@ -10,11 +10,15 @@
  * Every function returns a new members array; nothing mutates.
  */
 
+import type { RaceEvent } from "../types"
 import type { PvpGuide } from "../types/pvpGuide"
+import { hasEnded, isRunning } from "./pvpGuide"
+import { refForRaceEvent, sameEvent } from "./pvpEvent"
 import type {
 	CatalogueSupportCard,
 	CatalogueUma,
 	MemberStyle,
+	PvpTeam,
 	PvpTeamCardSlot,
 	PvpTeamMember,
 } from "../types/pvpTeam"
@@ -202,4 +206,59 @@ export function teamSkillSources(
 		}
 	}
 	return sources
+}
+
+/**
+ * Of one event's teams, the one to open on: the pinned one, else the one
+ * edited last (a tie goes to the newer team). The builder and the team drawer
+ * both start here, so "Open in PvP" from the drawer lands on the same team.
+ */
+export function preferredTeam(teams: PvpTeam[]): PvpTeam | null {
+	const pinned = teams.find((team) => team.isFocus)
+	if (pinned) return pinned
+	let best: PvpTeam | null = null
+	for (const team of teams) if (!best || team.updatedAt >= best.updatedAt) best = team
+	return best
+}
+
+/** What the team drawer shows. */
+export type DrawerChoice =
+	| { kind: "team"; team: PvpTeam; event: RaceEvent; pinned: boolean }
+	/** No team for the running or next event: the drawer offers to build one. */
+	| { kind: "none"; event: RaceEvent }
+	/** No event running or coming up at all. */
+	| { kind: "no-events" }
+
+/**
+ * Which team the drawer shows, decided in three steps:
+ *
+ *   1. The pinned team, if its event has not ended. An ended pin is ignored,
+ *      never cleared: the pin is the player's to change.
+ *   2. Else a team for the event running now, or if none is running the next
+ *      to start; with two, the one edited last.
+ *   3. Else none: the event it would be for, so the drawer can say "No team
+ *      for Libra Cup yet", or no event at all.
+ *
+ * `events` oldest first by start (raceEventsInOrder); `now` is passed in so a
+ * test can pin the calendar.
+ */
+export function drawerTeam(teams: PvpTeam[], events: RaceEvent[], now: Date): DrawerChoice {
+	const eventOf = (team: PvpTeam) =>
+		events.find((event) => sameEvent(refForRaceEvent(event), { kind: team.kind, id: team.event })) ?? null
+
+	const pinned = teams.find((team) => team.isFocus)
+	const pinnedEvent = pinned ? eventOf(pinned) : null
+	if (pinned && pinnedEvent && !hasEnded(pinnedEvent, now)) {
+		return { kind: "team", team: pinned, event: pinnedEvent, pinned: true }
+	}
+
+	// Ordered by start, so the first one not over is the running one if any,
+	// else the next to start.
+	const target = events.find((event) => isRunning(event, now)) ?? events.find((event) => !hasEnded(event, now))
+	if (!target) return { kind: "no-events" }
+	const forTarget = teams.filter((team) => eventOf(team) === target)
+	// The pin was handled above; among the rest, the latest edit wins.
+	const team = preferredTeam(forTarget.map((candidate) => ({ ...candidate, isFocus: false })))
+	const chosen = team ? forTarget.find((candidate) => candidate.key === team.key) ?? null : null
+	return chosen ? { kind: "team", team: chosen, event: target, pinned: false } : { kind: "none", event: target }
 }
