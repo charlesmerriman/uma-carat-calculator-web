@@ -10,14 +10,15 @@
  * the team, so there is no "Start a team" step to get through.
  */
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Check, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { Check, CloudAlert, CloudCheck, HardDrive, Loader2, Pencil, Plus, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
 import {
+	MEMBER_STYLES,
 	PVP_BORROW_SLOT,
 	PVP_TEAM_CAP_PER_EVENT,
 	cardBlockReason,
@@ -33,7 +34,7 @@ import {
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamGrid } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
-import type { PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
+import type { MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
 
 type PickerTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
@@ -111,11 +112,23 @@ function ReadyBuilder({ event, teamsState, index }: {
 		return (member && index.umasById.get(member.uma)?.name) || `uma ${position + 1}`
 	}
 
+	// The guide's picks per style, worked out once per guide for the grid's stars.
+	const picksByStyle = useMemo(
+		() => new Map(MEMBER_STYLES.map((style) => [style, recommendedIds(guide, style)])),
+		[guide]
+	)
+	const isRecommended = (pool: "uma" | "support", id: number, style: MemberStyle): boolean => {
+		const picks = picksByStyle.get(style)
+		return picks !== undefined && (pool === "uma" ? picks.umas : picks.cards).has(id)
+	}
+
 	return (
-		<div className="flex flex-col gap-3">
-			<TeamTabs
+		<div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+			<TeamToolbar
 				teams={eventTeams}
 				selected={team}
+				mode={mode}
+				saveState={saveState}
 				onSelect={setSelectedKey}
 				onCreate={() => {
 					const key = createTeam(ref)
@@ -129,19 +142,34 @@ function ReadyBuilder({ event, teamsState, index }: {
 				}}
 			/>
 
-			<div className="mx-auto w-full max-w-3xl">
-				<TeamGrid
-					members={members}
-					umasById={index.umasById}
-					cardsById={index.cardsById}
-					onPickUma={(position) => setPicker({ pool: "uma", position })}
-					onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
-					onStyleChange={(position, style) => applyMembers(setMemberStyle(members, position, style))}
-					onClearUma={(position) => applyMembers(clearMember(members, position))}
-					onClearCard={(position, slot) => applyMembers(clearCard(members, position, slot))}
-				/>
-				<SaveLine mode={mode} saveState={saveState} hasTeam={team !== null} />
-			</div>
+			<TeamGrid
+				members={members}
+				umasById={index.umasById}
+				cardsById={index.cardsById}
+				course={event}
+				isRecommended={isRecommended}
+				onPickUma={(position) => setPicker({ pool: "uma", position })}
+				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
+				onStyleChange={(position, style) => applyMembers(setMemberStyle(members, position, style))}
+				onClearUma={(position) => applyMembers(clearMember(members, position))}
+				onClearCard={(position, slot) => applyMembers(clearCard(members, position, slot))}
+			/>
+
+			{guide && (
+				<p className="flex items-center gap-1.5 text-xs text-gray-500">
+					<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
+					Recommended by this event's guide for that running style.
+				</p>
+			)}
+			{mode === "guest" && (
+				<p className="text-xs text-gray-400">
+					Your teams are saved on this device.{" "}
+					<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
+						Sign in
+					</Link>{" "}
+					to keep them on every device.
+				</p>
+			)}
 
 			{picker?.pool === "uma" && (
 				<PvpCardPicker
@@ -203,9 +231,11 @@ function ReadyBuilder({ event, teamsState, index }: {
 	)
 }
 
-function TeamTabs({ teams, selected, onSelect, onCreate, onRename, onDelete }: {
+function TeamToolbar({ teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
 	teams: PvpTeam[]
 	selected: PvpTeam | null
+	mode: PvpTeamsContextType["mode"]
+	saveState: PvpTeamsContextType["saveState"]
 	onSelect: (key: string) => void
 	onCreate: () => void
 	onRename: (name: string) => void
@@ -217,44 +247,49 @@ function TeamTabs({ teams, selected, onSelect, onCreate, onRename, onDelete }: {
 	const selectedIndex = selected ? teams.indexOf(selected) : -1
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
-			<div className="flex flex-wrap gap-1.5" role="group" aria-label="Your teams for this event">
-				{teams.map((team, index) => (
-					<button
-						key={team.key}
-						type="button"
-						aria-pressed={team === selected}
-						onClick={() => {
-							onSelect(team.key)
-							setRenaming(false)
-							setConfirmingDelete(false)
-						}}
-						className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
-							team === selected
-								? "border-brand bg-brand/15 text-brand"
-								: "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
-						}`}
-					>
-						{teamLabel(team, index)}
-					</button>
-				))}
-				{teams.length > 0 && (
+		<div className="card-panel flex flex-wrap items-center gap-2 p-2">
+			{teams.length === 0 ? (
+				<p className="px-2 text-sm text-gray-400">Pick an uma below to start your first team for this event.</p>
+			) : (
+				<>
+					<div className="flex flex-wrap gap-1 rounded-lg bg-gray-900/70 p-1" role="group" aria-label="Your teams for this event">
+						{teams.map((team, index) => (
+							<button
+								key={team.key}
+								type="button"
+								aria-pressed={team === selected}
+								onClick={() => {
+									onSelect(team.key)
+									setRenaming(false)
+									setConfirmingDelete(false)
+								}}
+								className={`max-w-[12rem] truncate rounded-md px-3 py-1.5 text-sm font-medium transition ${
+									team === selected
+										? "bg-gray-700 text-brand shadow-sm"
+										: "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+								}`}
+							>
+								{teamLabel(team, index)}
+							</button>
+						))}
+					</div>
 					<button
 						type="button"
 						disabled={atCap}
 						title={atCap ? `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.` : undefined}
 						onClick={onCreate}
-						className="flex items-center gap-1 rounded-full border border-dashed border-gray-600 px-3 py-1 text-sm text-gray-300 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
+						className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
 					>
-						<Plus className="h-3.5 w-3.5" />
+						<Plus className="h-4 w-4" />
 						New team
 					</button>
-				)}
-			</div>
+				</>
+			)}
 
-			{selected && (
-				<div className="ml-auto flex items-center gap-1.5">
-					{renaming ? (
+			<div className="ml-auto flex items-center gap-1.5">
+				<SaveStatus mode={mode} saveState={saveState} hasTeam={selected !== null} />
+				{selected &&
+					(renaming ? (
 						<RenameField
 							initial={selected.name}
 							placeholder={teamLabel(selected, selectedIndex)}
@@ -268,7 +303,7 @@ function TeamTabs({ teams, selected, onSelect, onCreate, onRename, onDelete }: {
 							Delete {teamLabel(selected, selectedIndex)}?
 							<button
 								type="button"
-								className="rounded border border-highlight/60 px-2 py-0.5 text-highlight transition hover:bg-highlight/10"
+								className="rounded-md border border-highlight/60 px-2 py-1 text-highlight transition hover:bg-highlight/10"
 								onClick={() => {
 									onDelete()
 									setConfirmingDelete(false)
@@ -278,7 +313,7 @@ function TeamTabs({ teams, selected, onSelect, onCreate, onRename, onDelete }: {
 							</button>
 							<button
 								type="button"
-								className="rounded border border-gray-600 px-2 py-0.5 transition hover:bg-gray-700"
+								className="rounded-md border border-gray-600 px-2 py-1 transition hover:bg-gray-700"
 								onClick={() => setConfirmingDelete(false)}
 							>
 								Keep
@@ -293,10 +328,46 @@ function TeamTabs({ teams, selected, onSelect, onCreate, onRename, onDelete }: {
 								<Trash2 className="h-4 w-4" />
 							</IconButton>
 						</>
-					)}
-				</div>
-			)}
+					))}
+			</div>
 		</div>
+	)
+}
+
+/** Where the team is saved, as a small icon and a word or two. */
+function SaveStatus({ mode, saveState, hasTeam }: {
+	mode: PvpTeamsContextType["mode"]
+	saveState: PvpTeamsContextType["saveState"]
+	hasTeam: boolean
+}) {
+	if (!hasTeam && saveState !== "error") return null
+	let icon: ReactNode
+	let text: string
+	let tone = "text-gray-400"
+	if (saveState === "error") {
+		icon = <CloudAlert className="h-4 w-4" />
+		text = mode === "guest" ? "Not saved on this device" : "Not saved"
+		tone = "text-highlight"
+	} else if (mode === "guest") {
+		icon = <HardDrive className="h-4 w-4" />
+		text = "On this device"
+	} else if (saveState === "pending" || saveState === "saving") {
+		icon = <Loader2 className="h-4 w-4 animate-spin" />
+		text = "Saving…"
+	} else {
+		icon = <CloudCheck className="h-4 w-4" />
+		text = "Saved"
+	}
+	return (
+		<span
+			className={`mr-1 flex items-center gap-1.5 text-xs font-medium ${tone}`}
+			role="status"
+			aria-live="polite"
+			title={saveState === "error" && mode !== "guest" ? "Your next change will try again." : undefined}
+		>
+			{icon}
+			{text}
+		</span>
 	)
 }
 
@@ -346,44 +417,10 @@ function IconButton({ label, onClick, submit = false, children }: {
 			aria-label={label}
 			title={label}
 			onClick={onClick}
-			className="flex h-8 w-8 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+			className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
 		>
 			{children}
 		</button>
-	)
-}
-
-function SaveLine({ mode, saveState, hasTeam }: {
-	mode: PvpTeamsContextType["mode"]
-	saveState: PvpTeamsContextType["saveState"]
-	hasTeam: boolean
-}) {
-	let text: ReactNode
-	if (saveState === "error") {
-		text = mode === "guest"
-			? "This browser didn't keep your last change."
-			: "Your last change didn't save. Your next change will try again."
-	} else if (!hasTeam) {
-		text = "Pick an uma to start a team."
-	} else if (mode === "guest") {
-		text = (
-			<>
-				Saved on this device.{" "}
-				<Link to="/login" className="text-brand transition hover:text-brand/75">
-					Sign in
-				</Link>{" "}
-				to keep your teams on every device.
-			</>
-		)
-	} else if (saveState === "pending" || saveState === "saving") {
-		text = "Saving…"
-	} else {
-		text = "Saved to your account."
-	}
-	return (
-		<p className="mt-2 text-xs text-gray-400" role="status" aria-live="polite">
-			{text}
-		</p>
 	)
 }
 

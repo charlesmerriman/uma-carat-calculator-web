@@ -339,7 +339,9 @@ team drawer (R2b) edit the same teams and must save through one queue.
 - **Guest:** `services/guestPvpTeamStore.ts`, localStorage key `guestPvpTeams.v1`. Ids
   only, read back field by field, one pin kept, notes capped at ten; a refused write is
   reported and toasted once per tab. A team whose event is no longer in
-  `/calculator-data` is dropped on read. `subscribeToGuestPvpTeams` takes another tab's
+  `/calculator-data` is kept but not shown (filtered at read time: the first load runs
+  from a child's effect in the commit that brings the events in, so filtering at load
+  saw an empty list). `subscribeToGuestPvpTeams` takes another tab's
   copy. The save line says "Saved on this device".
 - **Account:** the `/pvp-teams` routes (`services/pvpTeamFetchCalls.ts`). Create, rename,
   pin and delete go out at once; member and note edits mark the team dirty and are `PUT`

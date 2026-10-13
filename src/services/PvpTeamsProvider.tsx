@@ -144,18 +144,17 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 	const deletedRef = useRef(new Set<string>())
 	const warnedStorageRef = useRef(false)
 
-	// The events this site still lists, so a stored team for an event that
-	// left it is dropped instead of drawn against nothing.
+	// The events this site still lists. A team for an event that left it is
+	// kept (on the device or the server) but not shown: filtering here, at
+	// read time, rather than when the teams load, because the first load runs
+	// from a child's effect in the same commit that brings the events in.
 	const knownEvents = useMemo(() => {
 		const keys = new Set<string>()
 		for (const event of championsMeetingData ?? []) keys.add(`cm-${event.id}`)
 		for (const event of leagueOfHeroesData ?? []) keys.add(`loh-${event.id}`)
 		return keys
 	}, [championsMeetingData, leagueOfHeroesData])
-	const knownEventsRef = useRef(knownEvents)
-	useEffect(() => {
-		knownEventsRef.current = knownEvents
-	}, [knownEvents])
+	const shownTeams = useMemo(() => teams.filter((team) => isKnownEvent(knownEvents, team)), [teams, knownEvents])
 
 	/** Set the teams, and for a guest put them on the device. */
 	const commit = useCallback((next: PvpTeam[]) => {
@@ -254,8 +253,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 	}, [commit, importGuestTeams])
 
 	const loadGuest = useCallback(() => {
-		const stored = readGuestPvpTeams().filter((team) => isKnownEvent(knownEventsRef.current, team))
-		teamsRef.current = stored.map(fromGuest)
+		teamsRef.current = readGuestPvpTeams().map(fromGuest)
 		setTeams(teamsRef.current)
 		setStatus("ready")
 	}, [])
@@ -276,9 +274,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		if (mode !== "guest") return
 		return subscribeToGuestPvpTeams(() => {
-			teamsRef.current = readGuestPvpTeams()
-				.filter((team) => isKnownEvent(knownEventsRef.current, team))
-				.map(fromGuest)
+			teamsRef.current = readGuestPvpTeams().map(fromGuest)
 			setTeams(teamsRef.current)
 		})
 	}, [mode])
@@ -403,7 +399,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 		() => ({
 			status,
 			mode,
-			teams,
+			teams: shownTeams,
 			saveState,
 			ensureLoaded,
 			createTeam,
@@ -412,7 +408,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 			pinTeam,
 			deleteTeam,
 		}),
-		[status, mode, teams, saveState, ensureLoaded, createTeam, editTeam, renameTeam, pinTeam, deleteTeam]
+		[status, mode, shownTeams, saveState, ensureLoaded, createTeam, editTeam, renameTeam, pinTeam, deleteTeam]
 	)
 
 	return <PvpTeamsContext.Provider value={value}>{children}</PvpTeamsContext.Provider>
