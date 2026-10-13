@@ -110,40 +110,31 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					    the app-shell breakpoint this same div still carries
 					    overflow-y-auto but never scrolls internally, so "has an
 					    overflow style" would not identify the live scroller. */}
-					{/* The page area and the team drawer, side by side. From the
-					    team-dock breakpoint the drawer is a column here and the scroller
-					    shrinks beside it; narrower, the drawer covers the right edge of
-					    this row (`relative` is its containing block) or, below app-shell,
-					    the screen. A route change swaps only the <Outlet/> inside, so the
-					    drawer stays open, scrolled and mid-edit from page to page.
-					    -> components/pvp/TeamDrawer.tsx */}
-					<div className="relative flex min-h-0 flex-1">
-						<div data-app-scroller className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-							{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
-							    timeline keep a normal block formatting context and don't become
-							    flex items themselves. flex-1 grows it into the slack; min-height:auto
-							    stops it shrinking below its content, so tall content still scrolls. */}
-							{/* The routed pages mount only once the data is here — they
-							    all assume their collections are populated. */}
-							<div className="flex-1">
-								{isLoading ? (
-									<PageLoading />
-								) : fetchError ? (
-									<PageError />
-								) : (
-									children ?? <Outlet />
-								)}
-							</div>
-							{/* Outside the gate above on purpose: it owns the page's document
-							    title, which has to be right while the spinner shows and in a
-							    build-time render. Renders nothing; see AppRouteMeta. */}
-							<AppRouteMeta />
-							<Footer />
+					<div data-app-scroller className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+						{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
+						    timeline keep a normal block formatting context and don't become
+						    flex items themselves. flex-1 grows it into the slack; min-height:auto
+						    stops it shrinking below its content, so tall content still scrolls. */}
+						{/* The routed pages mount only once the data is here — they
+						    all assume their collections are populated. */}
+						<div className="flex-1">
+							{isLoading ? (
+								<PageLoading />
+							) : fetchError ? (
+								<PageError />
+							) : (
+								children ?? <Outlet />
+							)}
 						</div>
-						{/* Behind the loading gate like the pages: it reads the events,
-						    and a build-time render carries no trace of it. */}
-						{!isLoading && !fetchError && <TeamDrawerSlot />}
+						{/* Outside the gate above on purpose: it owns the page's document
+						    title, which has to be right while the spinner shows and in a
+						    build-time render. Renders nothing; see AppRouteMeta. */}
+						<AppRouteMeta />
+						<Footer />
 					</div>
+					{/* The team window, floating over the page. Behind the loading gate
+					    like the pages: it reads the events, and a build-time render carries none of it. */}
+					{!isLoading && !fetchError && <TeamDrawerSlot />}
 				</div>
 			</TeamDrawerProvider>
 		</PvpTeamsProvider>

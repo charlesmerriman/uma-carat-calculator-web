@@ -95,12 +95,18 @@ describe("TeamDrawerButton", () => {
 })
 
 describe("TeamDrawer", () => {
-	it("shows the team for the running event, with a way to the builder", () => {
-		renderDrawer(teamsValue([team("a", { name: "Main" })]))
-		expect(screen.getByText("Libra Cup")).toBeInTheDocument()
+	it("shows the team for the running event, read-only, with a way to edit it in PvP", () => {
+		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [{ slot: 6, support_card: 302 }] }]
+		renderDrawer(teamsValue([team("a", { name: "Main", members })]))
+		expect(screen.getByRole("combobox", { name: "Which event and team to show" })).toHaveDisplayValue("Next event (auto): Libra Cup")
 		expect(screen.getByLabelText("Your team")).toBeInTheDocument()
-		expect(screen.getByRole("link", { name: /Open in PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-19&view=team")
-		expect(screen.getByText("Saved on this device.")).toBeInTheDocument()
+		// Three spots on top (one filled), then that uma's six card places.
+		expect(screen.getAllByText("Empty")).toHaveLength(2)
+		expect(screen.getByLabelText("Card 1: empty")).toBeInTheDocument()
+		expect(screen.getByRole("img", { name: "Borrowed card: unknown" })).toBeInTheDocument()
+		// Nothing to edit here: the only controls are the selector, close and the link.
+		expect(screen.queryByRole("button", { name: /Add|Change|Remove/ })).not.toBeInTheDocument()
+		expect(screen.getByRole("link", { name: /Edit in PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-19&view=team")
 	})
 
 	it("offers to build one when the event has no team", () => {
@@ -112,7 +118,7 @@ describe("TeamDrawer", () => {
 	it("pins a team from the select, and auto unpins", () => {
 		const pinTeam = vi.fn()
 		renderDrawer(teamsValue([team("a"), team("b", { name: "Alt" })], { pinTeam }))
-		const select = screen.getByRole("combobox", { name: "Show in this panel" })
+		const select = screen.getByRole("combobox", { name: "Which event and team to show" })
 		expect(select).toHaveValue("auto")
 		fireEvent.change(select, { target: { value: "b" } })
 		expect(pinTeam).toHaveBeenCalledWith("b")

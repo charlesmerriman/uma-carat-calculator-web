@@ -26,16 +26,6 @@
 @custom-variant desktop-nav (@media (min-width: 64rem));
 @custom-variant app-shell (@media (min-width: 64rem) and (min-height: 32rem));
 
-/* team-dock — the width from which the PvP team drawer (components/pvp/
-   TeamDrawer.tsx) docks as a column beside the page instead of covering its
-   right edge. --container-banner-table (76.625rem) + 2rem of page padding +
-   the drawer's 26rem = 104.625rem (about 1674px): the narrowest window in
-   which the planner keeps its table layout with the drawer docked. Any
-   narrower and docking would flip the whole planner into phone cards. It
-   carries app-shell's height floor because it only means anything inside the
-   fixed-height shell. If --container-banner-table moves, move this with it. */
-@custom-variant team-dock (@media (min-width: 104.625rem) and (min-height: 32rem));
-
 /* ===== STICKY NAVBAR OFFSET =====
    The navbar is `sticky top-0` (components/navbar/Navbar.tsx), so on any page
    the document scrolls it covers the top of the viewport. scroll-padding-top
@@ -96,8 +86,6 @@ html {
 	   that switches cards to the spreadsheet, and raising it moves that switch
 	   point later. Prefer reclaiming measured slack from existing tracks (see the
 	   comment on .banner-grid) if the table ever needs another column. */
-	/* The team drawer's team-dock variant (top of this file) is this plus 2rem
-	   plus 26rem. Change one, revisit the other. */
 	--container-banner-table: 76.625rem;
 
 	/* The income panel's desktop layout, keyed to the SAME box as the banner

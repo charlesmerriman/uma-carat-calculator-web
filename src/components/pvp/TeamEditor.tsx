@@ -2,11 +2,9 @@
  * One team, editable: the grid (TeamGrid) and the two pickers its places
  * open, an uma for a spot or a card for a slot.
  *
- * ONE EDITOR, TWO PLACES. The PvP page's My team view and the team drawer
- * both render this, so a team looks and edits the same in each, and both
- * write through PvpTeamsProvider, so an edit in one shows in the other at
- * once. The caller owns which team it is and what an edit does (the builder
- * creates a team on the first pick; the drawer edits the one it shows).
+ * Used by the PvP page's My team view, which owns which team it is and what
+ * an edit does (it creates the team on the first pick). The team window
+ * shows teams read-only (TeamSnapshot) and never edits.
  *
  * The guide is optional: with it, recommended picks get their star in the
  * grid and sort first in the pickers.
@@ -35,13 +33,11 @@ import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
 type PlaceTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
-export function TeamEditor({ event, members, index, guide, compact = false, onChange }: {
+export function TeamEditor({ event, members, index, guide, onChange }: {
 	event: RaceEvent
 	members: PvpTeamMember[]
 	index: PvpCatalogueIndex
 	guide: PvpGuide | null
-	/** The drawer's narrow layout (TeamGrid `compact`). */
-	compact?: boolean
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
@@ -75,7 +71,6 @@ export function TeamEditor({ event, members, index, guide, compact = false, onCh
 				umasById={index.umasById}
 				cardsById={index.cardsById}
 				course={event}
-				compact={compact}
 				isRecommended={isRecommended}
 				onPickUma={(position) => setPicker({ pool: "uma", position })}
 				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}

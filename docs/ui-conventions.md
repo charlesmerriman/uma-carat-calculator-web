@@ -1641,25 +1641,27 @@ Rules that follow from it:
   change the `build` value the middleware returns, or test through `startUpdateWatch` with
   an injected fetch as the test file does.
 
-## Team drawer (PvP)
+## Team window (PvP)
 
 `components/pvp/TeamDrawer.tsx`, opened by the navbar's Team button
-(`components/navbar/TeamDrawerButton.tsx`), shows the player's PvP team beside every planner
-page. It stands aside on the PvP page's My team view (`?view=team`), where the builder already
-shows the team.
+(`components/navbar/TeamDrawerButton.tsx`), shows the player's PvP team over every planner page.
+It stands aside on the PvP page's My team view (`?view=team`), where the builder already shows
+the team.
 
+- **A window over the page, never beside it** (owner, 2026-10-13; a first version docked as a
+  column and pushed the site aside). Fixed under the navbar on the right, 24rem wide, sized to its
+  contents; below `desktop-nav` it covers the screen with its own close button.
+- **Read-only.** `TeamSnapshot` draws the three umas on top and each uma's six cards below, in
+  the builder's order (1 to 5, a divider, the borrow slot). Editing happens only on My team;
+  "Edit in PvP" opens it on the same team (`preferredTeam()`).
+- **The selector is the pin**: "Next event (auto)" lets `utils/pvpTeams.ts` `drawerTeam()`
+  choose; a team pins it until its event ends.
 - **Mounted in `AppShell`, never in `Navbar`.** Info pages render their own navbar, and a route
-  change inside `/app` swaps only the `<Outlet/>`, so a drawer in `AppShell` stays open and
-  mid-edit from page to page. It renders behind the loading gate, so a prerendered `/app` page
-  carries none of it. Open state: `services/TeamDrawerProvider.tsx` (`localStorage`
-  `uma-planner-team-drawer`, read in an effect); the button renders nothing without its context.
-- **Placement**, by the `team-dock` variant in `index.css`: `--container-banner-table` (76.625rem)
-  + 2rem page padding + the drawer's 26rem = 104.625rem. From there it is a column and the
-  scroller shrinks beside it (the planner keeps its table). Between `app-shell` and `team-dock`
-  it covers the right edge of the page area; below `app-shell` it is fixed over the screen.
+  change inside `/app` swaps only the `<Outlet/>`, so the window stays open from page to page. It
+  renders behind the loading gate, so a prerendered `/app` page carries none of it. Open state:
+  `services/TeamDrawerProvider.tsx` (`localStorage` `uma-planner-team-drawer`, read in an
+  effect); the button renders nothing without its context.
 - **Not a dialog**: no backdrop or focus trap, so the page behind stays usable. Escape inside it
   closes it and refocuses the Team button.
-- **Stacking**: page < drawer (`z-30`; `z-50` below `app-shell`, where it covers the screen) <
-  cookie banner (`z-40`) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
-- **Which team** is `utils/pvpTeams.ts` `drawerTeam()`; the builder opens on the same team
-  through `preferredTeam()`. The grid is `TeamEditor`, shared with the builder.
+- **Stacking**: page < window (`z-40` from `desktop-nav`, `z-50` below, where it covers the
+  screen) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
