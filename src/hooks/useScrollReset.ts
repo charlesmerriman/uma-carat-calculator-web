@@ -29,7 +29,29 @@ import { SELECTORS_CAMPAIGN_PARAM } from "../utils/selectorsFocus"
  */
 
 /** Matches the `data-app-scroller` attribute set in views/ApplicationViews.tsx. */
-const APP_SCROLLER_SELECTOR = "[data-app-scroller]"
+export const APP_SCROLLER_SELECTOR = "[data-app-scroller]"
+
+/**
+ * The history entry whose scroll a page has taken over, if any.
+ *
+ * A page that animates its own layout change can't have the scroller jumped
+ * under it mid-animation, which is what the Back restore below would do. The
+ * PvP gallery is the one user: opening or closing a post reshapes the whole
+ * feed, and it scrolls in step with that (GalleryView, `KeepRowInPlace`).
+ * Keyed by the entry, so a claim that somehow outlives its navigation can
+ * never swallow the next one.
+ */
+let claimedKey: string | null = null
+
+/**
+ * Leave this navigation's scroll alone: the page is moving it itself. Call it
+ * from a layout effect (or componentDidUpdate) of the same commit, which runs
+ * before this hook's, since React runs a child's layout effects before its
+ * parents'.
+ */
+export function claimScrollRestore(key: string): void {
+	claimedKey = key
+}
 
 type Offsets = {
 	/** The document scroller — every page below the `app-shell` breakpoint. */
@@ -122,6 +144,12 @@ export function useScrollReset(): void {
 		const previousPathname = livePathname.current
 		liveKey.current = key
 		livePathname.current = pathname
+
+		// The page has this one (see claimScrollRestore). The outgoing entry is
+		// still filed above, so Forward and Back elsewhere keep working.
+		const claimed = claimedKey === key
+		claimedKey = null
+		if (claimed) return
 
 		// Back/forward: return to where this entry was left. Nothing saved means
 		// the first entry of the session, which the browser has already placed.

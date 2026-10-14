@@ -51,6 +51,8 @@ describe('parseTimelineFocus', () => {
       { kind: 'banner' as const, id: 812 },
       { kind: 'scenario' as const, id: 4 },
       { kind: 'anniversary' as const, id: 17 },
+      { kind: 'cm' as const, id: 12 },
+      { kind: 'loh' as const, id: 7 },
     ]) {
       expect(parseTimelineFocus(formatTimelineFocus(focus))).toEqual(focus)
     }
@@ -95,10 +97,21 @@ describe('rowMatchesFocus', () => {
     expect(rowMatchesFocus(markerRow('scenario', 3), { kind: 'anniversary', id: 3 })).toBe(false)
   })
 
-  it('never matches a race event, whatever its id', () => {
-    const race: TimelineRow = { kind: 'race', event: { id: 3 } as ChampionsMeeting }
+  it('matches a race event only through its own kind and id', () => {
+    const race: TimelineRow = {
+      kind: 'race',
+      event: { id: 3, event_type: 'champions_meeting' } as ChampionsMeeting,
+    }
+    expect(rowMatchesFocus(race, { kind: 'cm', id: 3 })).toBe(true)
+    // A League of Heroes event sharing the id is a different card.
+    expect(rowMatchesFocus(race, { kind: 'loh', id: 3 })).toBe(false)
+    expect(rowMatchesFocus(race, { kind: 'cm', id: 4 })).toBe(false)
     expect(rowMatchesFocus(race, { kind: 'banner', id: 3 })).toBe(false)
     expect(rowMatchesFocus(race, { kind: 'scenario', id: 3 })).toBe(false)
+  })
+
+  it('never matches a banner window for a cm focus', () => {
+    expect(rowMatchesFocus(bannerRow(3), { kind: 'cm', id: 3 })).toBe(false)
   })
 
   it('matches a pair row through either of its halves', () => {

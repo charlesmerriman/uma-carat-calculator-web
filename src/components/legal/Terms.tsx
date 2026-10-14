@@ -113,6 +113,25 @@ export const Terms: React.FC = () => {
 						abuse of the Site.
 					</p>
 
+					<h2 className={heading}>Posting in the Gallery</h2>
+					<p className={paragraph}>
+						If you post a team or a comment in the PvP gallery, it is public, with your display
+						name and picture next to it. You agree not to post:
+					</p>
+					<ul className={list}>
+						<li>harassment, hate, or attacks on other players</li>
+						<li>sexual or violent content</li>
+						<li>spam, advertising, or links</li>
+						<li>anyone&apos;s personal information</li>
+						<li>anything illegal, or anything you don&apos;t have the right to share</li>
+					</ul>
+					<p className={paragraph}>
+						Other players can copy a team you post into their own teams. You can report a post
+						or comment that breaks these rules from its Report button. We may hide or remove
+						any post or comment, and stop an account posting, commenting or voting, when we
+						think it breaks these rules or the law.
+					</p>
+
 					<h2 className={heading}>Availability</h2>
 					<p className={paragraph}>
 						The Site is a hobby project maintained in spare time. It is provided

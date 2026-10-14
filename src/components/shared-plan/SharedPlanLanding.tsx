@@ -11,6 +11,8 @@ import type { BannerRowType, PlannedBannerTarget } from "../../utils/bannerHelpe
 import { formatDate } from "../../utils/dateFormat"
 import { BannerTypeIcon } from "../carat-calculator/BannerTypeBadge"
 import { OguriSpinner } from "../OguriSpinner"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 /**
  * /app/<public_id>: somebody's shared plan, and one thing to do with it.
@@ -74,6 +76,7 @@ const includesLine = (resources: boolean, notes: boolean): string | null =>
 
 /** One banner of the plan as the card shows it: art, name and kind. */
 const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "Empty" }> }) => {
+	const oshiIds = useOshiIds()
 	// The same two thumbnails a planner row shows. A step-up features no cards,
 	// so it shows its campaign art when there is some, else its kind's glyph.
 	const images =
@@ -94,15 +97,13 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 					) : (
 						<BannerTypeIcon type="StepUp" className="h-6 w-6 text-step-up" />
 					)
+				) : target.type === "Uma" ? (
+					target.banner.umas.slice(0, 2).map((uma) => (
+						<FramedUma key={uma.id} src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="h-full" />
+					))
 				) : (
 					images.slice(0, 2).map((img) => (
-						<img
-							key={img.name}
-							src={img.image}
-							alt={img.name}
-							// The uma frame is baked into the art; round to match it, as the rows do.
-							className={`h-full w-auto min-w-0 object-contain ${target.type === "Uma" ? "rounded-md" : ""}`}
-						/>
+						<img key={img.name} src={img.image} alt={img.name} className="h-full w-auto min-w-0 object-contain" />
 					))
 				)}
 			</div>

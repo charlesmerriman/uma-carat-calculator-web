@@ -8,6 +8,11 @@ export interface EligibleCard {
 	value: number
 	label: string
 	image: string
+	/**
+	 * An uma's borderless art, drawn in the site's frame (FramedUma); null for
+	 * a support card, which keeps its own art.
+	 */
+	portrait: string | null
 	/** First JP banner date — the ordering key, and what eligibility is judged on. */
 	firstJpDate: string | null
 }
@@ -89,7 +94,10 @@ export function buildEligibleCardCatalogue({
 }: EligibleCardCatalogueInput): EligibleCard[] {
 	const seen = new Map<number, Omit<EligibleCard, "value">>()
 
-	const addEligibleCards = (cards: (Uma | SupportCard)[]): void => {
+	const addEligibleCards = <Card extends Uma | SupportCard>(
+		cards: Card[],
+		portraitOf: (card: Card) => string | null
+	): void => {
 		for (const card of cards) {
 			if (seen.has(card.id)) continue
 			// BOTH gates. The intrinsic one first because it is unconditional —
@@ -100,6 +108,7 @@ export function buildEligibleCardCatalogue({
 			seen.set(card.id, {
 				label: card.name,
 				image: card.image,
+				portrait: portraitOf(card),
 				firstJpDate: card.first_jp_date,
 			})
 		}
@@ -108,12 +117,12 @@ export function buildEligibleCardCatalogue({
 	if (pool === "uma") {
 		for (const banner of umaBannerData) {
 			if (!isGachaBanner(banner.banner_timeline.name)) continue
-			addEligibleCards(banner.umas)
+			addEligibleCards(banner.umas, (uma) => uma.portrait ?? uma.image)
 		}
 	} else {
 		for (const banner of supportBannerData) {
 			if (!isGachaBanner(banner.banner_timeline.name)) continue
-			addEligibleCards(banner.support_cards)
+			addEligibleCards(banner.support_cards, () => null)
 		}
 	}
 

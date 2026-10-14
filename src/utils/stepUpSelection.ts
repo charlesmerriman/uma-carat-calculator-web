@@ -190,6 +190,12 @@ export function replaceSelectionsFor(
 export interface SelectedCardArt {
 	name: string
 	image: string
+	/**
+	 * Set when the pick is an uma: its id (for the oshi frame) and its
+	 * borderless art, so the planner row draws it in FramedUma. Null for a
+	 * support card, which keeps its own art.
+	 */
+	uma: { id: number; portrait: string | null } | null
 }
 
 /**
@@ -216,7 +222,7 @@ export function findGuaranteedCardArt(
 	if (target.uma !== null && target.uma !== undefined) {
 		for (const banner of umaBannerData) {
 			const uma = banner.umas.find((candidate) => candidate.id === target.uma)
-			if (uma) return { name: uma.name, image: uma.image }
+			if (uma) return { name: uma.name, image: uma.image, uma: { id: uma.id, portrait: uma.portrait ?? null } }
 		}
 		return null
 	}
@@ -224,7 +230,7 @@ export function findGuaranteedCardArt(
 		const card = banner.support_cards.find(
 			(candidate) => candidate.id === target.support
 		)
-		if (card) return { name: card.name, image: card.image }
+		if (card) return { name: card.name, image: card.image, uma: null }
 	}
 	return null
 }

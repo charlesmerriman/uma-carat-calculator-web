@@ -1,6 +1,7 @@
 import { useState } from "react"
 import type React from "react"
 import { UserRound } from "lucide-react"
+import { FramedUma } from "../FramedUma"
 
 /**
  * The account's picture, or the quiet default when there is none.
@@ -23,6 +24,14 @@ import { UserRound } from "lucide-react"
  * `onError` swaps a broken image for the default, in case an editor removes a
  * uma's art between the account loading and the image request.
  *
+ * FRAMED (2026-10-14). The picture is an uma, and every uma on the site is
+ * drawn in the site's frame (FramedUma): `oshi` asks for the rainbow one,
+ * which the caller sets when the picture is the viewer's own favourite (their
+ * own avatar, their own gallery posts). `framed={false}` is for the owner's
+ * named exceptions only: the navbar's profile menu and the account page's
+ * header show the borderless art with no frame. The silhouette has no frame:
+ * it is not an uma.
+ *
  * No browser globals: this renders inside the navbar on every prerendered page.
  */
 
@@ -41,19 +50,36 @@ const ICON_CLASSES: Record<AvatarSize, string> = {
 	lg: "h-8 w-8",
 }
 
+/** The framed picture's width per size; the frame keeps it square. */
+const FRAME_WIDTHS: Record<AvatarSize, string> = {
+	sm: "w-8",
+	md: "w-9",
+	lg: "w-16",
+}
+
 interface AvatarProps {
 	src: string | null | undefined
 	size?: AvatarSize
+	/** The picture is the viewer's own favourite: the rainbow frame. */
+	oshi?: boolean
+	/** False only for the owner's named exceptions (navbar profile, account header). */
+	framed?: boolean
 	className?: string
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ src, size = "sm", className = "" }) => {
+export const Avatar: React.FC<AvatarProps> = ({ src, size = "sm", oshi = false, framed = true, className = "" }) => {
 	const [failedSrc, setFailedSrc] = useState<string | null>(null)
 	const base = `shrink-0 ${SIZE_CLASSES[size]} ${className}`
 
 	if (src && src !== failedSrc) {
 		return (
-			<img src={src} alt="" onError={() => setFailedSrc(src)} className={`${base} object-cover bg-gray-700`} />
+			<FramedUma
+				src={src}
+				oshi={oshi}
+				frame={framed}
+				onError={() => setFailedSrc(src)}
+				className={`${FRAME_WIDTHS[size]} ${className}`}
+			/>
 		)
 	}
 

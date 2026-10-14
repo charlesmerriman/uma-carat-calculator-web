@@ -7,7 +7,7 @@
  */
 
 /** The pages that exist. Fixed: each has a route in App.tsx and a row the API refuses to delete. */
-export type SitePageSlug = "about" | "carat-income-guide" | "daily-legend-races"
+export type SitePageSlug = "about" | "carat-income-guide" | "daily-legend-races" | "pvp-guides"
 
 export interface SitePage {
 	slug: SitePageSlug

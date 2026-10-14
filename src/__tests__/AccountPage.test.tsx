@@ -13,6 +13,8 @@ import { AccountPage } from '../components/account/AccountPage'
 import { startAccountLink, unlinkProvider } from '../services/accountLinking'
 import { accountDelete, accountPatch } from '../services/accountFetchCalls'
 import { umasFetch } from '../services/umasFetchCalls'
+import { galleryMyPosts, galleryPostTakeDown } from '../services/galleryFetchCalls'
+import { TestQueryProvider } from '../test/TestQueryProvider'
 import { getAuthToken, setAuthToken } from '../services/authToken'
 import type { Account, AccountStatus } from '../types/account'
 
@@ -22,6 +24,11 @@ vi.mock('../services/accountLinking', () => ({
 }))
 vi.mock('../services/accountFetchCalls', () => ({ accountDelete: vi.fn(), accountPatch: vi.fn() }))
 vi.mock('../services/umasFetchCalls', () => ({ umasFetch: vi.fn() }))
+vi.mock('../services/galleryFetchCalls', () => ({
+	galleryMyPosts: vi.fn(),
+	galleryPostTakeDown: vi.fn(),
+	galleryShareUrl: (id: string) => `https://site.example/post/${id}`,
+}))
 // Navbar and Footer pull in contexts this page does not need under test.
 vi.mock('../components/navbar/Navbar', () => ({ Navbar: () => <nav /> }))
 vi.mock('../components/footer/Footer', () => ({ Footer: () => null }))
@@ -35,24 +42,33 @@ const auth = vi.hoisted(() => ({
 	refresh: vi.fn(),
 	signOut: vi.fn(),
 }))
-vi.mock('../services/AuthContext', () => ({ useAccount: () => auth }))
+// The real module, so AuthContext itself exists (useOshiIds reads it for the
+// favourite frame); only useAccount is replaced.
+vi.mock('../services/AuthContext', async () => ({
+	...(await vi.importActual<typeof import('../services/AuthContext')>('../services/AuthContext')),
+	useAccount: () => auth,
+}))
 
 const mockedStart = vi.mocked(startAccountLink)
 const mockedUnlink = vi.mocked(unlinkProvider)
 const mockedDelete = vi.mocked(accountDelete)
 const mockedPatch = vi.mocked(accountPatch)
 const mockedUmas = vi.mocked(umasFetch)
+const mockedMyPosts = vi.mocked(galleryMyPosts)
+const mockedTakeDown = vi.mocked(galleryPostTakeDown)
 const mockedToast = vi.mocked(toast)
 
 function account(overrides: Partial<Account> = {}): Account {
 	return {
 		username: 'user_a3f9c1',
 		display_name: '',
+		show_supporter_badge: true,
 		avatar_url: null,
 		oshis: [],
 		// The free slot: every account may hold one favourite.
 		oshi_slots: 1,
 		oshi_variants: false,
+		early_access: false,
 		linked_providers: [{ provider: 'google', linked_at: '2026-07-02' }],
 		supporter: { is_supporter: false },
 		...overrides,
@@ -95,12 +111,16 @@ function signedIn(acct: Account) {
 function renderPage() {
 	return render(
 		<MemoryRouter initialEntries={['/account']}>
-			<AccountPage />
+			<TestQueryProvider>
+				<AccountPage />
+			</TestQueryProvider>
 		</MemoryRouter>,
 	)
 }
 
 beforeEach(() => {
+	mockedMyPosts.mockReset().mockResolvedValue(response(200, []))
+	mockedTakeDown.mockReset()
 	auth.isLoggedIn = false
 	auth.status = 'anonymous'
 	auth.account = null
@@ -543,3 +563,42 @@ describe('AccountPage delete account', () => {
 		expect(getAuthToken()).toBe('T0K3N')
 	})
 })
+
+describe('AccountPage gallery', () => {
+	const post = {
+		public_id: 'k3Df8aQ2', caption: 'Runaway blocker', published_at: '2026-10-10T00:00:00Z',
+		content_updated_at: '2026-10-10T00:00:00Z', is_mine: true, umas: [], my_vote: null,
+		poster: { display_name: 'Rhondal', portrait: null, tier_name: null, gallery_style: null },
+		stats: { views: 212, upvotes: 14, comments: 5, copies: 3 },
+		team: [], event: { kind: 'cm', id: 19, label: 'Libra Cup' }, hidden: true,
+	}
+
+	it('lists the posts with their numbers and status, and takes one down', async () => {
+		mockedMyPosts.mockResolvedValue(response(200, [post]))
+		mockedTakeDown.mockResolvedValue(response(204))
+		signedIn(account())
+		renderPage()
+		const section = await screen.findByRole('region', { name: 'Your gallery posts' })
+		expect(await within(section).findByText('Libra Cup')).toBeInTheDocument()
+		expect(within(section).getByText('Hidden while we review it')).toBeInTheDocument()
+		expect(within(section).getByText('212 views')).toBeInTheDocument()
+		expect(within(section).getByRole('link', { name: 'Open' })).toHaveAttribute(
+			'href', '/app/pvp?event=cm-19&view=gallery&post=k3Df8aQ2',
+		)
+		fireEvent.click(within(section).getByRole('button', { name: 'Take down' }))
+		fireEvent.click(within(section).getByRole('button', { name: 'Take down' }))
+		await waitFor(() => expect(within(section).queryByText('Libra Cup')).not.toBeInTheDocument())
+		expect(mockedTakeDown).toHaveBeenCalledWith('k3Df8aQ2')
+	})
+
+	it('lets a supporter hide their tier in the gallery', async () => {
+		mockedPatch.mockResolvedValue(response(200, {}))
+		signedIn(account({ supporter: { is_supporter: true, tier: 'Junior Class', benefits: [] } }))
+		renderPage()
+		const toggle = screen.getByRole('checkbox', { name: 'Show my tier on my gallery posts and comments' })
+		expect(toggle).toBeChecked()
+		fireEvent.click(toggle)
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ show_supporter_badge: false }))
+	})
+})
+

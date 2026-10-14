@@ -65,7 +65,7 @@ beforeEach(() => {
 
 describe('OAuthCallback', () => {
   it('exchanges the code and navigates to the app', async () => {
-    mockedComplete.mockResolvedValue(undefined)
+    mockedComplete.mockResolvedValue(null)
 
     renderAt('?code=CODE&state=ST8')
 
@@ -73,6 +73,16 @@ describe('OAuthCallback', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/app', { replace: true })
     })
     expect(mockedComplete).toHaveBeenCalledWith('google', 'CODE', 'ST8')
+  })
+
+  it('lands on the /app page the sign-in started from', async () => {
+    mockedComplete.mockResolvedValue('/app/pvp?view=gallery&post=k3Df8aQ2')
+
+    renderAt('?code=CODE&state=ST8')
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/app/pvp?view=gallery&post=k3Df8aQ2', { replace: true })
+    })
   })
 
   it('shows a spinner while the exchange is in flight', () => {
@@ -89,7 +99,7 @@ describe('OAuthCallback', () => {
    * mounts every component in dev, which is exactly this scenario.
    */
   it('only exchanges once when mounted twice (StrictMode guard)', async () => {
-    mockedComplete.mockResolvedValue(undefined)
+    mockedComplete.mockResolvedValue(null)
 
     const { rerender } = renderAt('?code=CODE&state=ST8')
     rerender(
@@ -180,7 +190,7 @@ describe('OAuthCallback finishing an account link', () => {
   it('ignores a parked link when nobody is signed in', async () => {
     auth.isLoggedIn = false
     parkLink()
-    mockedComplete.mockResolvedValue(undefined)
+    mockedComplete.mockResolvedValue(null)
 
     renderAt('?code=CODE&state=LINK-ST8')
 

@@ -13,6 +13,13 @@ frontend rules that are easy to break accidentally.
 Do not hand-roll `toLocaleDateString` or date-fns `format` at a call site. Four such
 copies previously drifted into two different locales and two different timezone bases.
 
+**A feed read top to bottom may say how long ago instead**: `formatTimeAgo` in
+`utils/relativeDate.ts` ("just now", "5 minutes ago", "2 days ago", then `formatDate` past
+30 days), with the `formatDate` string in a `title`. It reads the clock, so only behind the
+`/app` loading gate or on a page that is never prerendered. The gallery and the account
+page's posts use it. (`formatRelativeDate` in the same file is the changelog's, by whole
+days.)
+
 ### `parseApiDate` — the two shapes, and why the distinction is load-bearing
 
 DRF sends two different date shapes, and they must be parsed differently:
@@ -582,6 +589,52 @@ scenarios and anniversaries occurring between the first and last planned banner.
 This is deliberately not `AnniversaryEventStrip`, whose `rounded-t-xl border-b-0` geometry
 exists to weld onto the top of a timeline card and which is left-aligned.
 
+### Uma frames (`components/FramedUma.tsx`)
+
+**Every uma the site draws is its borderless art inside the site's own frame. This is a
+site-wide rule (owner, 2026-10-14): an exception exists only when the owner names one.**
+Today that covers the calculator rows (desktop, staged, mobile, a step-up's step 5 pick),
+the Timeline's featured tiles, the Daily Legend Races tab, the Selectors page and both its
+pickers, the PvP guide's uma tiles, the guide picks panel, the team builder and the team window, the PvP card
+picker, the PvP gallery (its posters' avatars included), a shared plan's landing page, and
+the favourites card and picker on the account page.
+
+**The owner's exceptions** (2026-10-14) draw the same borderless art with NO frame
+(`FramedUma frame={false}`, `Avatar framed={false}`, `UmaPortrait frame={false}`;
+`.uma-frame--bare` in App.css):
+
+- the navbar's profile menu (the trigger and the menu's own avatar);
+- the account page, except the "Your favourite uma musume" card and the favourites picker
+  it opens: the header avatar and the "Your gallery posts" list are bare.
+
+(The Selectors page was an exception for a moment on 2026-10-14 and was taken back the same
+day: it is framed.) The art is the API's `portrait` (borderless,
+else bordered); never the bordered `image`, whose baked-in rarity border would sit inside
+ours. A route that sends an uma sends `portrait` with it (`/calculator-data`, the PvP guide,
+the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `image`).
+
+- **Two frames**, SVGs in `src/assets/`: `uma-frame.svg` (silver) for everyone and
+  `uma-frame-oshi.svg` (the rainbow) for the person's favourite umas that their tier covers
+  (`useOshiIds`, the slice the Legend Races tab already used). App.css ("Uma frames") lays the
+  frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
+  pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
+- **Support cards keep their own art**: there is no borderless set for them. A list that can
+  hold either pool decides per item from data, never from shape: a catalogue option's
+  `portrait` is set only for umas (`EligibleCard`, `PvpCardPicker`'s items), a step 5 pick
+  carries `uma` (`SelectedCardArt`), a planner row narrows on `target.type`.
+- **`useOshiIds` reads `AuthContext` directly**, so a row or picker rendered on its own (in
+  a test) draws silver frames instead of throwing for want of an AuthProvider.
+- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds` for
+  most lists; the team builder keeps its own any-outfit-of-the-character match
+  (`isFavourite`) and adds its heart; an avatar is rainbow when it is yours (your own
+  avatar, your own gallery posts and comments, your covered favourites on the account page)
+  and silver on someone else's.
+- **A state rings the frame, never replaces it.** The guide picks panel's open and
+  on-the-team rings follow the frame's corner (`rounded-[10.75%]`); the old turning
+  `.oshi-frame` and the gold rings are gone.
+- **Not framed:** support cards, and banner, campaign and event art. The `/post/<id>` link
+  preview picture is drawn by the API (`gallery_preview.py`) and does not use the frames.
+
 ### Portaled `react-select` menus need `menuPosition="fixed"`
 
 Every select using `menuPortalTarget={document.body}` also sets `menuPosition="fixed"`.
@@ -1041,7 +1094,9 @@ card per campaign with no filtering.
 
 `/app/timeline?focus=<kind>-<id>`, built by `timelineFocusHref` and parsed by
 `parseTimelineFocus` in `utils/timelineFocus.ts`. The calculator's scenario bands and its
-rows' card art both link through it; the Timeline resolves the target.
+rows' card art both link through it, and so does the PvP page's "View on Timeline"
+(`cm-<id>` / `loh-<id>`, the same form as its own `?event=`, so a `PvpEventRef` is a
+`TimelineFocus`); the Timeline resolves the target.
 
 - **Why not a `#hash`.** The Timeline windows its list (ten cards a page, or a growing
   prefix under infinite scroll) and hides past events by default, so the element a browser
@@ -1115,9 +1170,9 @@ rows' card art both link through it; the Timeline resolves the target.
   follow).
 - **The ref and the ring are no longer the same question.** The ref follows whichever row
   the list is anchored on, from either source; `isFocused` follows the deep link alone.
-  `RaceEventCard` therefore takes `focusRef` and *no* `isFocused` — a race can be the
-  anchor (a search matches race events by name and track) but can never be a link target,
-  and `rowMatchesFocus` excludes the kind outright.
+  `RaceEventCard` takes both since the PvP page links to race events: a `cm` / `loh` focus
+  matches through `refForRaceEvent`, and a race event is past once it has ENDED (like a
+  banner), which flips the Timeline to the past for an old meeting.
 
 ### The anchor: two sources, one row index
 
@@ -1129,8 +1184,8 @@ read one index rather than each learning about both sources. The URL wins where 
 exist, though in practice they cannot: typing in the search box drops the deep link.
 
 - **The anchor is a `timelineRowKey`, not a `TimelineFocus`.** A key exists for every
-  row kind where a focus cannot name a race event at all, and a search matches race
-  events — so one is routinely on screen when the box is cleared. It also stays out of the
+  row kind, and a search matches race events, so one is routinely on screen when the box
+  is cleared. It also stays out of the
   URL, leaving `utils/timelineFocus.ts` to the one job it was written for.
 - **The row is found by measuring, once, at the moment of the lift** — `measureAnchorRow`
   reads the list container's leading children, which are the rendered cards one-for-one.
@@ -1291,6 +1346,200 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Four mobile tabs stack icon above label** at 11px; side by side they truncated at
   375px. The profile pill's name waits for `xl` for the same reason on desktop: with a
   fourth link it pushed the signed-in bar past 1024px.
+
+## PvP page (`components/pvp/`)
+
+`/app/pvp`: one Champions Meeting or League of Heroes event at a time, with its guide
+(`GET /pvp-guides/<kind>/<id>`, `backend/docs/api-reference.md`, "PvP guides").
+
+- **Early access (owner, 2026-10-14, for about a week): supporters and staff only.**
+  `PvpGuidePage` is a wrapper: `usePvpAccess()` (`hooks/usePvpAccess.ts`) gives `open`,
+  `pending` (the account is still loading, so a supporter never sees the gate flash) or
+  `locked`, and anything but `open` draws `PvpEarlyAccess` (sign in, Patreon, or "link your
+  Patreon on your account page") and none of the page's own hooks. The server says WHO
+  (`account.early_access`, `benefits.early_access_for`: any paid tier, or staff); the
+  `PVP_EARLY_ACCESS` constant says the page is still early. The team window and the
+  navbar's Team button follow the same answer (`TeamDrawerProvider`'s `available`). A
+  client gate only: the PvP API stays open. Opening to everyone is that one constant set
+  to `false`.
+
+- **The event lives in the URL**: `?event=cm-12` / `loh-7`, the event's database id
+  (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
+  kind, so the Timeline card links to a guide without branching on the tag. No parameter
+  opens on the running event, else the next, else the newest (`defaultPvpEvent`).
+- **The header renders from the calculator payload**, guide or not, and stays COMPACT
+  and LIGHT (owner, 2026-10-13: boxed grids, then pills, both read as congested): art
+  thumbnail, "Champions Meeting 20" kicker over the cup name, countdown; then the course
+  as small labels over values (`availableCourseDetails`, length folded into distance) beside
+  a step-line schedule: the start date plus the eight `*_hours` calculation constants
+  (`milestones`), passed steps filled, the next one ringed. A null LoH offset hides that step.
+- **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
+  `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
+- **Three views under the header, `?view=`**: Recommendations (the guide, default, no
+  parameter), My team (`team`, the builder) and Gallery (`gallery`, the posted teams; see
+  "Gallery view" below). The guide is fetched only on Recommendations.
+- **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
+  the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
+  drafts with a "Draft, visible to staff only" bar.
+- **Every guide section is optional** and steps aside when empty. From `xl` the guide is two
+  columns: a side column for the whole team (overview, team comps, stats) and ONE style pane.
+- **General skills (`style: "everyone"`) live inside every position's "Recommended skills"**,
+  merged with that position's own picks by `skillsForPosition` (tier first, the position's
+  own before general within a tier, then order), then split into subcategories
+  (Acceleration, Core skills, Speed, Recovery, Green, Debuffs). A general chip looks the
+  same and says "Recommended for every position" on hover. Never a separate block: a guide
+  with general skills but no position content shows them as one section instead. Style tabs list only styles with content (`stylesWithContent`).
+  Never add a second "compare" pane: it was tried and read as every card listed twice.
+  "New since <previous event>" is collapsed by default for the same reason.
+- **`==words==` is red and `[[Skill name]]` is a skill** in any guide text:
+  `utils/remarkHighlight.ts` is a remark plugin in `MarkdownContent` (emits `<mark>`, styled
+  `text-highlight`, and `<span data-skill>`, which the caller's `renderSkill` turns into a
+  `SkillMention` chip; raw HTML stays off) and `splitNoteText` feeds `InlineNote` for
+  one-line notes. Mentions resolve through the guide's `skill_mentions`, provided by
+  `SkillMentionsContext` in `PvpGuideView`; an unresolved one is its plain name.
+  `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
+  otherwise a markdown link. Token `--color-highlight`.
+- **A skill's other versions ride along.** The API sends each embedded skill with its own
+  `version` label (`○ white`, `◎ gold`, `evolved`) and `versions`, its other forms,
+  derived server side from the game data (same group plus the evolution link), never
+  stored. `SkillVersions` (PvpTiles) lists them under the chip's and the mention's hover
+  detail, a white chip with a gold form shows a ◎ badge (`hasGoldVersion`), and the team
+  builder's skills panel counts a source that teaches the pick or a HIGHER version
+  (`familySources` in `utils/pvpGuide.ts`): a card that teaches the gold teaches the white
+  too (owner, 2026-10-14), so a gold on the team covers a white pick and a white never
+  covers a gold; an evolved pick is covered by a base, "(evolve it)". A guide may
+  list the white and the gold as two rows when their usefulness differs (owner,
+  2026-10-14); they show as two chips.
+- **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the
+  game's stat icons (`public/0N_CM*.png`). `splitStat` puts `+` / `*` beside the number as a
+  superscript and anything longer ("+1 Gold") on a second line, and every cell is top-aligned,
+  so a row's numbers always share one line. A blank cell is an en dash.
+- **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
+  first global banner start, between the nearest earlier event of either kind and this one.
+- **The mobile bar has five tabs**: labels are 10px and hide (sr-only) below 360px, where
+  the icons carry the bar. Checked at 375px and 320px on 2026-10-13.
+- **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
+  local SQLite with the community sheet's guides (local only).
+
+### Gallery view (`components/pvp/gallery/`)
+
+Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gallery/<kind>/<id>`
+(`backend/docs/api-reference.md`, "Gallery").
+
+- **One full-width feed until a post opens, then two panes from `lg` up.** With nothing
+  open the feed spans the page and each row is one short band. Open a post and the feed
+  moves to the left with the post (`GalleryPostPanel`) beside it, inline and sticky under the
+  PvP page's own sticky event bar (`top-[4.5rem]`; change it if that bar's height changes).
+  Below `lg` the post takes the feed's place (the feed stays mounted, hidden) with an "All
+  teams" button.
+- **Rows take their shape from the feed's width, not the screen's**: the feed is
+  `@container/feed`, and `GalleryRow` stacks below `@4xl/feed` (56rem) and lays out as a band
+  above it; the toolbar does the same at `@2xl/feed`. So the narrow left pane and a phone get
+  the stacked row with no extra rules.
+- **Opening and closing morph (two panes only).** Framer Motion layout animations: the row
+  card animates its size and the pieces inside only their position (`Glide`,
+  `layout="position"`, so text is never stretched), measured only when `split` flips
+  (`layoutDependency`); the post slides in and out (`AnimatePresence mode="popLayout"`, which
+  lifts a closing post out of the grid so the feed widens under it). Below two panes the
+  feed is `hidden` while a post is open, and a hidden element measures as an empty box, so
+  the rows don't animate there. `MotionConfig reducedMotion="user"` turns it all off for
+  reduced motion.
+- **`KeepRowInPlace` holds the opened (or closed) row still on screen** through the morph:
+  rows roughly double in height, so without it the row you clicked lands a screen lower. It
+  scrolls the app scroller on the same curve and timing as the morph (`MORPH`), which
+  cancels the row's own slide. That only works if nothing else moves the scroller before
+  Framer measures (a microtask after the commit), so the grid opts out of browser scroll
+  anchoring (`[overflow-anchor:none]`) and the navigation is claimed from `useScrollReset`
+  (`claimScrollRestore`), whose Back restore would otherwise jump it. A row that was out of
+  sight leaves the scroll where it is. **It is not a dialog**: the page stays usable, toasts
+  show above it, and Escape closes it while focus is inside. The layout uses `lg:` rather
+  than `desktop-nav:` (both 64rem) because Tailwind emits custom variants after its
+  breakpoints, so a `desktop-nav:` column would beat the `xl:` one that widens it.
+- **Sort, filter and open post are URL parameters**: `?sort=top|new` (Hot has no
+  parameter), `?uma=<id>` and `?post=<public_id>`. Every row is a real link (an empty
+  `<Link>` stretched over the row, the upvote above it; never a button or link wrapped around
+  the row's lists). Opening from the list PUSHES an entry marked `galleryFromFeed`, and
+  closing it then goes Back, so Back and Close agree and the list's scroll comes back
+  (`useScrollReset` below two panes, `KeepRowInPlace` from two panes up); moving between posts (the arrows, or another row), sorting and
+  filtering REPLACE. A post's permanent link is `/post/<public_id>`, which the API serves
+  (link-preview tags) and which moves people on to `?view=gallery&post=<id>`. Copy link
+  copies the `/post` URL, never the `/app/pvp` address. Locally `/post` is only on :8000
+  (Vite does not route it), so a copied local link 404s in the SPA.
+- **Data lives in the query cache** (`services/galleryQueries.ts`, TanStack Query; the why is
+  in `services/queryClient.ts`). One post can be drawn as feed rows in several cached sorts,
+  in the panel, and on the account page; `patchPost` writes a vote or a comment count to
+  every copy. Never thread a change back through props, and never fetch gallery data outside
+  that module. **"Load more" grows `limit`**, never a page number: Hot and Top are re-ranked on
+  every request, so an offset page repeats or skips posts that moved. Rows on screen stay
+  (dimmed) while a new sort, filter or longer list loads, within one event only. A sign-in or
+  sign-out resets the whole cache (`QueryProvider`), because `my_vote` and `is_mine` describe
+  whoever asked.
+- **Rows** (`GalleryRow`): vertical upvote, picture, name, tier chip, "You" on your own, how
+  long ago, caption (two lines), the three umas with names and styles, views and comments.
+  The poster's longer **strategy** (`GalleryPost.strategy`, 2,000 characters, plain text with
+  its line breaks) is never on a row: the open post shows it under the team, and
+  `PublishDialog` has a box for it under the caption's. Re-posting the team that is up starts
+  the dialog from its current words, so updating cards can't wipe a strategy.
+  Decks are left to the panel on purpose: they made each row half again as tall, and from `lg`
+  up the full team is one click away beside the list. Above the list sit the sort buttons, a
+  line saying what the sort means (Hot and Top add that supporters count a bit extra, since
+  the counts are people and the order is points), the uma filter (the API's `umas` tally, so
+  it only offers umas that find something), and `YourPostBar`: your post's numbers, a "Post a
+  team" button to My team, or Sign in for a guest.
+- **Looks by key only** (`poster.gallery_style`). In the list, `ssr` is
+  `.ssr-panel.ssr-panel--quiet`: the foil edge on the ordinary surface, still glints, one pass
+  of the shine on hover or focus. The open post's poster block is quiet too (since
+  2026-10-14): the owner turned off the coloured fill behind the text as hard to read. The
+  fill (`.ssr-panel--rainbow`, App.css) is kept but applied nowhere; its comment says how to
+  bring it back.
+  `sr` and `rose` are `[data-gallery-style]` edges in App.css ("Gallery looks") from the
+  `--color-gallery-*` tokens, light overrides included. The tier NAME is always text in
+  `TierChip`, so the signal never rests on colour. Never derive a look from a tier name.
+- **Votes are optimistic** (`useGalleryVote`, one per button so each has its own pending
+  state) and roll back with the server's sentence on a refusal. Your own post shows its count
+  without a button. The number is people, never weighted points.
+- **A guest is asked to sign in and brought back.** `useSignInPrompt` puts the current
+  address on `/login` links as router state (`returnTo`); `Login` passes it to
+  `startSocialLogin`, which keeps it in the pending login only if `safeReturnPath` accepts it
+  (a page under `/app`, so CalculatorProvider still takes in a guest plan on that load), and
+  `OAuthCallback` lands there instead of `/app`.
+- **Copy to My team** asks `POST /gallery/posts/<id>/copy` for the team, runs it through
+  `withinRelease` (utils/pvpTeams.ts: the release rule, because the server does not check
+  it) and adds it through `usePvpTeams().createTeam`, so guests and accounts take the same
+  path and the per-event cap applies.
+- **Comments** (`GalleryComments`): one level of replies, plain text (no links drawn),
+  states `visible` / `deleted` ("[deleted]") / `removed` ("[removed]") / `under_review`
+  (your own hidden comment). Reply shows only to someone who can write (signed in with a
+  display name); the box says which is missing otherwise. A refusal shows under the box.
+  Report opens `ReportDialog`.
+- **Dialogs** (`GalleryModal`: posting, reporting) are the native `<dialog>` with
+  `showModal()`: top layer, inert page behind, Escape to the top dialog only, focus back to
+  the opener. Toasts render BELOW the top layer, so a dialog shows its errors inline and
+  toasts only once it has closed. jsdom lacks `showModal`; `src/test/setup.ts` stubs it.
+- **Posting** lives on My team (`GalleryPostBar` in TeamBuilder.tsx, signed in only): it
+  waits for a pending save, needs a complete team, and opens `PublishDialog`, whose box must
+  be ticked (the API refuses without `confirm_public_identity: true`). `setTeamPost` keeps
+  "Posted" on the right team, and `rememberPublished` refreshes the gallery's cache. The
+  account page lists posts (`MyGalleryPosts`, uma pictures from the small `GET /umas`, not
+  the PvP catalogue) and holds the supporter's "Show my tier" switch.
+- **Counts read as words** through `countLabel` (utils/plural.ts): "1 comment", "3 copies".
+- **Local data**: `python manage.py seed_gallery_demo` in `backend/` (12 fake players).
+
+### My team view: the builder (`components/pvp/TeamBuilder.tsx`)
+
+- **One editor, two layouts.** `TeamEditor` owns the pickers and the rules and draws either
+  `TeamGrid` (My team: a panel per uma, portrait beside five cards and the borrow slot) or
+  `CompactTeamGrid` (the team window: umas on top, cards below). Both take the same props.
+  Support art is 3:4 (450x600), portraits square.
+- **Side panels** (`SidePanel.tsx`): Guide picks docks on the left from `xl`, Recommended skills
+  on the right from `2xl`; narrower, each is a drawer from its own edge behind a toolbar button.
+  Both collapse, remembered per browser.
+- **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
+  starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
+  ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
+  `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks.
+- **Notes** (`TeamNotes.tsx`): ten per team, read-only until the pen, `==red==` and line breaks
+  kept, the eraser's Undo in a toast. Colours are the `--color-note-*` tokens.
 
 ## Selectors page (`components/selectors/`)
 
@@ -1585,3 +1834,31 @@ Rules that follow from it:
   carries, so `npm run dev` and `npm run dev:live` never show the toast. To see it locally,
   change the `build` value the middleware returns, or test through `startUpdateWatch` with
   an injected fetch as the test file does.
+
+## Team window (PvP)
+
+`components/pvp/TeamDrawer.tsx`, opened by the navbar's Team button
+(`components/navbar/TeamDrawerButton.tsx`), shows the player's PvP team over every planner page.
+It stands aside on the PvP page's My team view (`?view=team`), where the builder already shows
+the team.
+
+- **A window over the page, never beside it** (owner, 2026-10-13; a first version docked as a
+  column and pushed the site aside). Fixed on the right, centred on the space below the navbar, 24rem wide, sized to its
+  contents; below `desktop-nav` it covers the screen with its own close button.
+- **Editable, in a compact layout.** `CompactTeamGrid` draws the three umas on top and each uma's
+  six cards below, in the builder's order (1 to 5, a divider, the borrow slot). It takes
+  `TeamGrid`'s props, so `TeamEditor` draws either layout with the same pickers and rules; with no
+  team for the event, the first pick creates one. "Go to PvP" opens the PvP page on the event.
+- **The selector is the pin**: "Next event (auto)" lets `utils/pvpTeams.ts` `drawerTeam()`
+  choose; a team pins it until its event ends.
+- **Mounted in `AppShell`, never in `Navbar`.** Info pages render their own navbar, and a route
+  change inside `/app` swaps only the `<Outlet/>`, so the window stays open from page to page. It
+  renders behind the loading gate, so a prerendered `/app` page carries none of it. Open state:
+  `services/TeamDrawerProvider.tsx` (`localStorage` `uma-planner-team-drawer`, read in an
+  effect); the button renders nothing without its context.
+- **Not a dialog**: no backdrop or focus trap, so the page behind stays usable. Escape inside it
+  closes it and refocuses the Team button (an Escape inside an open note closes the note only).
+- **Notes** show under the team and are written here too (`TeamNotes`); the save state sits in
+  the header (`SaveStatus`).
+- **Stacking**: page < window (`z-40` from `desktop-nav`, `z-50` below, where it covers the
+  screen) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
