@@ -34,7 +34,7 @@ export const Terms: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Terms of Service</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: September 12, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 14, 2026</p>
 
 					<p className={paragraph}>
 						These terms govern your use of the Uma Musume Carat Calculator (&quot;the
