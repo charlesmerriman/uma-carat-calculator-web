@@ -17,6 +17,8 @@ import type {
 	BannerUma,
 	UserStepUpSelection,
 } from "../../types"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 interface StepUpSelectionStripProps {
 	/** This campaign's step-ups, already filtered by the caller. */
@@ -71,6 +73,8 @@ const StepUpRow = ({
 		umaBannerData,
 		supportBannerData
 	)
+	// The person's favourite umas get the rainbow frame (FramedUma).
+	const oshiIds = useOshiIds()
 
 	return (
 		<button
@@ -87,7 +91,13 @@ const StepUpRow = ({
 					isUma ? "h-12 w-12" : "h-12 w-9"
 				} shrink-0 items-center justify-center overflow-hidden rounded border border-gray-600 bg-gray-900/50`}
 			>
-				{guaranteed ? (
+				{guaranteed?.uma ? (
+					<FramedUma
+						src={guaranteed.uma.portrait ?? guaranteed.image}
+						oshi={oshiIds.has(guaranteed.uma.id)}
+						className="h-full"
+					/>
+				) : guaranteed ? (
 					<img
 						src={guaranteed.image}
 						alt=""

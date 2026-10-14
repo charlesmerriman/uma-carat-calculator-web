@@ -9,6 +9,8 @@ import type {
 	BannerUma,
 	BannerSupport
 } from "../../types"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
@@ -49,6 +51,8 @@ export const SelectorTargetPicker = ({
 	const [isOpen, setIsOpen] = useState(false)
 	const [search, setSearch] = useState("")
 	const isUma = product.product_type === "uma_selector"
+	// The person's favourite umas get the rainbow frame (FramedUma).
+	const oshiIds = useOshiIds()
 
 	// The catalogue rules — "(All)" exclusion, inclusive cutoff, newest-first
 	// ordering — live in the hook, shared with the step-up selection picker.
@@ -129,7 +133,9 @@ export const SelectorTargetPicker = ({
 							: "border-dashed border-gray-500 text-gray-500"
 					} ${canPick ? "group-hover:border-brand group-hover:bg-gray-900/70" : ""}`}
 				>
-					{selected ? (
+					{selected?.portrait ? (
+						<FramedUma src={selected.portrait} oshi={oshiIds.has(selected.value)} className="h-28" />
+					) : selected ? (
 						<img
 							src={selected.image}
 							alt=""
@@ -243,13 +249,17 @@ export const SelectorTargetPicker = ({
 												}`}
 												onClick={() => choose(option)}
 											>
-												<img
-													src={option.image}
-													alt=""
-													loading="lazy"
-													decoding="async"
-													className={`${cardSizeClass} object-contain`}
-												/>
+												{option.portrait ? (
+													<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-28" />
+												) : (
+													<img
+														src={option.image}
+														alt=""
+														loading="lazy"
+														decoding="async"
+														className={`${cardSizeClass} object-contain`}
+													/>
+												)}
 												<span className="mt-2 line-clamp-2 min-h-9 text-xs font-medium leading-tight text-gray-100">
 													{option.label}
 												</span>

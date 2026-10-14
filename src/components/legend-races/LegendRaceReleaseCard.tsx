@@ -8,6 +8,7 @@ import { formatDate } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { arrivalCountdown, rarityGroups, splitOutfit } from "../../utils/dailyLegendRaces"
 import type { DailyLegendRaceRelease, DailyLegendRaceUma } from "../../types"
+import { FramedUma } from "../FramedUma"
 
 const STARS: Record<1 | 2 | 3, string> = { 1: "★", 2: "★★", 3: "★★★" }
 
@@ -28,21 +29,9 @@ const UmaTile = ({ uma, isOshi }: { uma: DailyLegendRaceUma; isOshi: boolean }) 
 		// A fixed width from `sm` up, where the tiles are a wrapping flex row
 		// (see the list below). On a phone the list is a grid and sizes them.
 		<li title={uma.name} className="flex min-w-0 flex-col items-center gap-1 sm:w-22">
-			<div
-				className={`aspect-square w-full overflow-hidden rounded-lg bg-gray-900/40 ${
-					isOshi ? "ring-2 ring-brand" : ""
-				}`}
-			>
-				{uma.image && (
-					<img
-						src={uma.image}
-						alt=""
-						loading="lazy"
-						decoding="async"
-						className="block h-full w-full object-contain"
-					/>
-				)}
-			</div>
+			{/* The borderless art in the site's frame; a favourite gets the
+			    rainbow one. */}
+			<FramedUma src={uma.portrait ?? uma.image} oshi={isOshi} className="w-full" />
 			<span className="text-center text-xs leading-tight text-gray-300">
 				<span className="line-clamp-2">{base}</span>
 				{outfit && <span className="line-clamp-2 text-[0.6875rem] text-gray-400">{outfit}</span>}

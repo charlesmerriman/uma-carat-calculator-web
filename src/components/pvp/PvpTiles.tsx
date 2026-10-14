@@ -14,6 +14,8 @@ import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import { hasGoldVersion } from "../../utils/pvpGuide"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 	return (
@@ -183,11 +185,12 @@ function Stars({ count }: { count: number }) {
 
 /** A recommended uma: art, name, stars, an optional role tag, the note on hover. */
 export function UmaTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: number; role: string; note: string }) {
+	const oshiIds = useOshiIds()
 	return (
 		<WithDetail label={uma.name} detail={note ? <InlineNote text={note} /> : null} className="w-24 shrink-0 sm:w-28">
 			<div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
-				<div className="relative">
-					<TileArt src={uma.image} alt={uma.name} />
+				<div className="relative p-1.5">
+					<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 					{role && (
 						<span className="absolute left-1 top-1 rounded border border-gray-600 bg-gray-800/95 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
 							{role}

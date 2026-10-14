@@ -286,12 +286,10 @@ html {
 	--color-note-green: #16321f;
 	--color-note-green-edge: #4a9160;
 
-	/* The favourite-uma frame on a PvP team (App.css .oshi-frame): a pink
-	   that sits beside the brand gold in a turning gradient, its lighter
-	   partner and a glow. Redrawn deeper under [data-theme-mode="light"]. */
+	/* The favourite-uma heart on a PvP team (TeamGrid's FavouriteHeart). The
+	   favourite's frame itself is the rainbow SVG (FramedUma), not a token.
+	   Redrawn deeper under [data-theme-mode="light"]. */
 	--color-oshi: #f472b6;
-	--color-oshi-soft: #fbcfe8;
-	--color-oshi-glow: rgb(244 114 182 / 45%);
 
 	/* Gallery looks (App.css [data-gallery-style], components/pvp/gallery).
 	   The top tier wears the SSR panel above; these are the two below it.
@@ -504,8 +502,6 @@ html {
 
 	/* The favourite-uma frame, deeper so it reads on white cards. */
 	--color-oshi: #db2777;
-	--color-oshi-soft: #f9a8d4;
-	--color-oshi-glow: rgb(219 39 119 / 35%);
 
 	/* Gallery looks, deeper on white cards. */
 	--color-gallery-sr-edge: #b7791f;

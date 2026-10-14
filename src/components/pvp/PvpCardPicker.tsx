@@ -33,6 +33,8 @@ import type {
 	CatalogueUma,
 	MemberStyle,
 } from "../../types/pvpTeam"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -54,6 +56,8 @@ interface PickerItem {
 	/** Extra text the name search also reads (a card's title). */
 	alias: string
 	image: string | null
+	/** An uma's borderless art, drawn in the site's frame (FramedUma); null for a support card. */
+	portrait: string | null
 	skills: CatalogueSkillLink[]
 	cardType: string | null
 	apt: CatalogueUma["apt"] | null
@@ -93,6 +97,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 			name: uma.name,
 			alias: "",
 			image: uma.image,
+			portrait: uma.portrait ?? uma.image,
 			skills: uma.skills,
 			cardType: null,
 			apt: uma.apt,
@@ -103,6 +108,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 		name: card.name,
 		alias: card.title,
 		image: card.image,
+		portrait: null,
 		skills: card.skills,
 		cardType: card.card_type,
 		apt: null,
@@ -112,6 +118,8 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 export function PvpCardPicker(props: PvpCardPickerProps) {
 	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
+	// The person's favourite umas get the rainbow frame (FramedUma).
+	const oshiIds = useOshiIds()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(null)
 
@@ -305,7 +313,9 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 											}`}
 										>
 											<span className="relative block w-full">
-												{item.image ? (
+												{item.portrait ? (
+													<FramedUma src={item.portrait} oshi={oshiIds.has(item.id)} className="w-full" />
+												) : item.image ? (
 													<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
 												) : (
 													<span className={`block ${artAspect} w-full rounded bg-gray-700`} aria-hidden="true" />

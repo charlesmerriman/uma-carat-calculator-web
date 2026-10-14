@@ -20,6 +20,8 @@ export interface PvpUmaRef {
 	id: number
 	name: string
 	image: string | null
+	/** The borderless art, drawn in the site's frame (FramedUma). Optional for older fixtures. */
+	portrait?: string | null
 }
 
 export interface PvpSupportCardRef {

@@ -11,7 +11,7 @@ import {
 	Ticket,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
-import { useId, useState } from "react"
+import { useId, useState, type ReactNode } from "react"
 import PredictedBadge from "../PredictedBadge"
 import { bannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
@@ -38,6 +38,8 @@ import type {
 	BannerUma,
 	UserPlannedBanner,
 } from "../../types"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 /**
  * One timeline card: a date header, then one section per banner opening in that
@@ -279,6 +281,8 @@ type FeaturedCard = {
 	id: number
 	name: string
 	image: string
+	/** An uma's borderless art (the API's `portrait`); support cards have none. */
+	portrait?: string | null
 	recommendation: string
 	/**
 	 * The card's public one-liner, shown over its art on hover, focus or tap.
@@ -314,9 +318,18 @@ type FeaturedCard = {
 function FeaturedTileArt({
 	item,
 	tileAspectClass,
+	framed,
+	oshi,
 }: {
 	item: FeaturedCard
 	tileAspectClass: string
+	/**
+	 * An uma: the borderless art in the site's frame (FramedUma), flush with
+	 * the tile's top and sides, so the frame IS the tile's edge there.
+	 */
+	framed: boolean
+	/** One of the person's favourite umas: the rainbow frame. */
+	oshi: boolean
 }) {
 	const overlayId = useId()
 	const [tapped, setTapped] = useState(false)
@@ -327,7 +340,9 @@ function FeaturedTileArt({
 			{item.recommendation}
 		</div>
 	)
-	const art = (
+	const art = framed ? (
+		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" />
+	) : (
 		<img
 			src={item.image}
 			alt={item.name}
@@ -337,16 +352,32 @@ function FeaturedTileArt({
 		/>
 	)
 
+	// The art's box is cut to the art's own corner, so the badge and the
+	// purpose scrim stop where the art does, and has no fill of its own: the
+	// tile's colour would otherwise show past the art's round top corners.
+	// An uma's corner is its frame's (App.css "Uma frames"). A support card's
+	// PNG has transparent round corners baked in, a 37.5px radius on 450x600,
+	// so 8.3% of the width by 6.25% of the height. Underneath, the skirt fills
+	// the art's lower half with the tile's colour, so its round bottom corners
+	// meet the name block without a notch.
+	const surface = framed ? "rounded-[10.75%]" : "rounded-[8.3%_/_6.25%]"
+	const withSkirt = (box: ReactNode) => (
+		<div className="relative shrink-0">
+			<div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gray-700" />
+			{box}
+		</div>
+	)
+
 	if (!purpose) {
-		return (
-			<div className="relative shrink-0 overflow-hidden bg-gray-700">
+		return withSkirt(
+			<div className={`relative shrink-0 overflow-hidden ${surface}`}>
 				{recommendationBadge}
 				{art}
 			</div>
 		)
 	}
 
-	return (
+	return withSkirt(
 		<div
 			role="group"
 			aria-label={item.name}
@@ -358,7 +389,7 @@ function FeaturedTileArt({
 			onBlur={() => setTapped(false)}
 			// ring-inset: the tile clips its overflow, so an outset ring would be
 			// shaved off at the rounded corners.
-			className="group relative shrink-0 overflow-hidden bg-gray-700 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+			className={`group relative shrink-0 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
 		>
 			{recommendationBadge}
 			{art}
@@ -412,6 +443,8 @@ type FeaturePanelProps = {
 	items: FeaturedCard[]
 	/** False when this window has no banner of this kind at all. */
 	hasBanner: boolean
+	/** Uma tiles: drawn in the site's frame (FramedUma). Support art keeps its own. */
+	framed?: boolean
 	emptyText: string
 	/** Widest a tile grows to. Uma art is portrait and wider; support art is smaller. */
 	tileWidthClass: string
@@ -452,6 +485,7 @@ function FeaturePanel({
 	title,
 	items,
 	hasBanner,
+	framed = false,
 	emptyText,
 	tileWidthClass,
 	tileAspectClass,
@@ -473,6 +507,7 @@ function FeaturePanel({
 	// that meant showing two umas and hiding nine, with nothing on screen to say
 	// so. A card that grows taller — or a line that scrolls — is the right trade.
 	const isBand = layout === "band"
+	const oshiIds = useOshiIds()
 
 	// A band tile is narrower than a column tile, so its name gets a smaller
 	// size and a third line. Both tiers were measured against real banners: at
@@ -488,10 +523,18 @@ function FeaturePanel({
 	const tiles = items.map((item) => {
 		const tile = (
 			<div
-				className={`flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg bg-gray-700 text-left shadow-sm ${tileWidthClass}`}
+				// No fill or shadow of its own: either would show past the art's
+				// round top corners (FeaturedTileArt). The name block carries the
+				// tile's colour instead.
+				className={`flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg text-left ${tileWidthClass}`}
 			>
-				<FeaturedTileArt item={item} tileAspectClass={tileAspectClass} />
-				<div className="flex min-h-16 flex-1 items-center justify-center p-2">
+				<FeaturedTileArt
+					item={item}
+					tileAspectClass={tileAspectClass}
+					framed={framed}
+					oshi={framed && oshiIds.has(item.id)}
+				/>
+				<div className="flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2">
 					<div
 						className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${nameClass}`}
 					>
@@ -765,6 +808,7 @@ function BannerSection({
 			title="Featured Umamusume"
 			items={umaBanner?.umas ?? []}
 			hasBanner={!!umaBanner}
+			framed
 			emptyText="No Umamusume banner"
 			tileWidthClass="max-w-[10rem] 2xl:max-w-[13.5rem]"
 			tileAspectClass="aspect-square"

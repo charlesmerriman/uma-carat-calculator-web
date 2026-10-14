@@ -14,6 +14,7 @@ import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { FavouriteHeart, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
+import { FramedUma } from "../FramedUma"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
@@ -48,17 +49,18 @@ export function CompactTeamGrid({
 						<li key={position} className="min-w-0">
 							{member ? (
 								<>
-									{/* A favourite uma (an oshi) gets the turning frame (App.css .oshi-frame). */}
-									<div className={favourite ? "oshi-frame" : undefined}>
-										<div className={`group relative aspect-square overflow-hidden rounded-lg bg-gray-700 transition ${favourite ? "" : "ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"}`}>
+									{/* The uma in the site's frame (FramedUma); a favourite gets the
+									    rainbow one. The overlays sit on the framed square. */}
+									<div>
+										<div className="group relative aspect-square transition hover:brightness-110">
 											<button
 												type="button"
 												aria-label={`Change uma ${position + 1}: ${name}`}
 												title={uma?.name}
 												onClick={() => onPickUma(position)}
-												className="block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+												className="block h-full w-full rounded-[10.75%] outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<Art src={uma?.portrait ?? uma?.image ?? null} />
+												<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={favourite} className="w-full" />
 											</button>
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}

@@ -13,6 +13,13 @@ frontend rules that are easy to break accidentally.
 Do not hand-roll `toLocaleDateString` or date-fns `format` at a call site. Four such
 copies previously drifted into two different locales and two different timezone bases.
 
+**A feed read top to bottom may say how long ago instead**: `formatTimeAgo` in
+`utils/relativeDate.ts` ("just now", "5 minutes ago", "2 days ago", then `formatDate` past
+30 days), with the `formatDate` string in a `title`. It reads the clock, so only behind the
+`/app` loading gate or on a page that is never prerendered. The gallery and the account
+page's posts use it. (`formatRelativeDate` in the same file is the changelog's, by whole
+days.)
+
 ### `parseApiDate` — the two shapes, and why the distinction is load-bearing
 
 DRF sends two different date shapes, and they must be parsed differently:
@@ -581,6 +588,52 @@ scenarios and anniversaries occurring between the first and last planned banner.
 
 This is deliberately not `AnniversaryEventStrip`, whose `rounded-t-xl border-b-0` geometry
 exists to weld onto the top of a timeline card and which is left-aligned.
+
+### Uma frames (`components/FramedUma.tsx`)
+
+**Every uma the site draws is its borderless art inside the site's own frame. This is a
+site-wide rule (owner, 2026-10-14): an exception exists only when the owner names one.**
+Today that covers the calculator rows (desktop, staged, mobile, a step-up's step 5 pick),
+the Timeline's featured tiles, the Daily Legend Races tab, the Selectors page and both its
+pickers, the PvP guide's uma tiles, the guide picks panel, the team builder and the team window, the PvP card
+picker, the PvP gallery (its posters' avatars included), a shared plan's landing page, and
+the favourites card and picker on the account page.
+
+**The owner's exceptions** (2026-10-14) draw the same borderless art with NO frame
+(`FramedUma frame={false}`, `Avatar framed={false}`, `UmaPortrait frame={false}`;
+`.uma-frame--bare` in App.css):
+
+- the navbar's profile menu (the trigger and the menu's own avatar);
+- the account page, except the "Your favourite uma musume" card and the favourites picker
+  it opens: the header avatar and the "Your gallery posts" list are bare.
+
+(The Selectors page was an exception for a moment on 2026-10-14 and was taken back the same
+day: it is framed.) The art is the API's `portrait` (borderless,
+else bordered); never the bordered `image`, whose baked-in rarity border would sit inside
+ours. A route that sends an uma sends `portrait` with it (`/calculator-data`, the PvP guide,
+the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `image`).
+
+- **Two frames**, SVGs in `src/assets/`: `uma-frame.svg` (silver) for everyone and
+  `uma-frame-oshi.svg` (the rainbow) for the person's favourite umas that their tier covers
+  (`useOshiIds`, the slice the Legend Races tab already used). App.css ("Uma frames") lays the
+  frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
+  pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
+- **Support cards keep their own art**: there is no borderless set for them. A list that can
+  hold either pool decides per item from data, never from shape: a catalogue option's
+  `portrait` is set only for umas (`EligibleCard`, `PvpCardPicker`'s items), a step 5 pick
+  carries `uma` (`SelectedCardArt`), a planner row narrows on `target.type`.
+- **`useOshiIds` reads `AuthContext` directly**, so a row or picker rendered on its own (in
+  a test) draws silver frames instead of throwing for want of an AuthProvider.
+- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds` for
+  most lists; the team builder keeps its own any-outfit-of-the-character match
+  (`isFavourite`) and adds its heart; an avatar is rainbow when it is yours (your own
+  avatar, your own gallery posts and comments, your covered favourites on the account page)
+  and silver on someone else's.
+- **A state rings the frame, never replaces it.** The guide picks panel's open and
+  on-the-team rings follow the frame's corner (`rounded-[10.75%]`); the old turning
+  `.oshi-frame` and the gold rings are gone.
+- **Not framed:** support cards, and banner, campaign and event art. The `/post/<id>` link
+  preview picture is drawn by the API (`gallery_preview.py`) and does not use the frames.
 
 ### Portaled `react-select` menus need `menuPosition="fixed"`
 
@@ -1362,34 +1415,75 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gallery/<kind>/<id>`
 (`backend/docs/api-reference.md`, "Gallery").
 
-- **Sort and open post are URL parameters**: `?sort=top|new` (Hot has no parameter) and
-  `?post=<public_id>`. A post's permanent link is `/post/<public_id>`, which the API serves
-  (link-preview tags) and which moves people on to `?view=gallery&post=<id>`. The Share and
-  Copy link buttons copy the `/post` URL, never the `/app/pvp` address. Locally `/post` is
-  only on :8000 (Vite does not route it), so a copied local link 404s in the SPA.
-- **Rows are compact** (`GalleryRow`: picture, name, tier chip, caption, three umas with
-  styles, views, comments, date, upvote) so the feed scans; the whole team, copies, actions
-  and comments open in `GalleryPostPanel` (a right-hand sheet from `desktop-nav`, full screen
-  below). Opening a post sends one view (`galleryView`, fire and forget).
-- **Looks by key only** (`poster.gallery_style`): `ssr` swaps the row's `card-panel` for
-  `.ssr-panel` (the Timeline's recommended panel, so reduced motion is already handled); `sr`
-  and `rose` are `[data-gallery-style]` edges in App.css ("Gallery looks") from the
+- **Two panes from `lg` up, one below.** The feed sits on the left and the open post
+  (`GalleryPostPanel`) beside it, inline and sticky under the PvP page's own sticky event bar
+  (`top-[4.5rem]`; change it if that bar's height changes). With nothing open the right pane
+  says "Pick a team". Below `lg` the post takes the feed's place (the feed stays mounted,
+  hidden) with an "All teams" button. **It is not a dialog**: the page stays usable, toasts
+  show above it, and Escape closes it while focus is inside. The layout uses `lg:` rather
+  than `desktop-nav:` (both 64rem) because Tailwind emits custom variants after its
+  breakpoints, so a `desktop-nav:` column would beat the `xl:` one that widens it.
+- **Sort, filter and open post are URL parameters**: `?sort=top|new` (Hot has no
+  parameter), `?uma=<id>` and `?post=<public_id>`. Every row is a real link (an empty
+  `<Link>` stretched over the row, the upvote above it; never a button or link wrapped around
+  the row's lists). Opening from the list PUSHES an entry marked `galleryFromFeed`, and
+  closing it then goes Back, so Back and Close agree and the list's scroll comes back
+  (`useScrollReset`); moving between posts (the arrows, or another row), sorting and
+  filtering REPLACE. A post's permanent link is `/post/<public_id>`, which the API serves
+  (link-preview tags) and which moves people on to `?view=gallery&post=<id>`. Copy link
+  copies the `/post` URL, never the `/app/pvp` address. Locally `/post` is only on :8000
+  (Vite does not route it), so a copied local link 404s in the SPA.
+- **Data lives in the query cache** (`services/galleryQueries.ts`, TanStack Query; the why is
+  in `services/queryClient.ts`). One post can be drawn as feed rows in several cached sorts,
+  in the panel, and on the account page; `patchPost` writes a vote or a comment count to
+  every copy. Never thread a change back through props, and never fetch gallery data outside
+  that module. **"Load more" grows `limit`**, never a page number: Hot and Top are re-ranked on
+  every request, so an offset page repeats or skips posts that moved. Rows on screen stay
+  (dimmed) while a new sort, filter or longer list loads, within one event only. A sign-in or
+  sign-out resets the whole cache (`QueryProvider`), because `my_vote` and `is_mine` describe
+  whoever asked.
+- **Rows** (`GalleryRow`): vertical upvote, picture, name, tier chip, "You" on your own, how
+  long ago, caption (two lines), the three umas with names and styles, views and comments.
+  Decks are left to the panel on purpose: they made each row half again as tall, and from `lg`
+  up the full team is one click away beside the list. Above the list sit the sort buttons, a
+  line saying what the sort means (Hot and Top add that supporters count a bit extra, since
+  the counts are people and the order is points), the uma filter (the API's `umas` tally, so
+  it only offers umas that find something), and `YourPostBar`: your post's numbers, a "Post a
+  team" button to My team, or Sign in for a guest.
+- **Looks by key only** (`poster.gallery_style`). In the list, `ssr` is
+  `.ssr-panel.ssr-panel--quiet`: the foil edge on the ordinary surface, still glints, one pass
+  of the shine on hover or focus. The open post's poster block wears the full `.ssr-panel`.
+  `sr` and `rose` are `[data-gallery-style]` edges in App.css ("Gallery looks") from the
   `--color-gallery-*` tokens, light overrides included. The tier NAME is always text in
   `TierChip`, so the signal never rests on colour. Never derive a look from a tier name.
-- **Votes are optimistic** and roll back with the server's sentence on a refusal; a guest's
-  click toasts "Sign in to upvote teams." The number is people, never weighted points.
-- **Copy to my teams** asks `POST /gallery/posts/<id>/copy` for the team, runs it through
+- **Votes are optimistic** (`useGalleryVote`, one per button so each has its own pending
+  state) and roll back with the server's sentence on a refusal. Your own post shows its count
+  without a button. The number is people, never weighted points.
+- **A guest is asked to sign in and brought back.** `useSignInPrompt` puts the current
+  address on `/login` links as router state (`returnTo`); `Login` passes it to
+  `startSocialLogin`, which keeps it in the pending login only if `safeReturnPath` accepts it
+  (a page under `/app`, so CalculatorProvider still takes in a guest plan on that load), and
+  `OAuthCallback` lands there instead of `/app`.
+- **Copy to My team** asks `POST /gallery/posts/<id>/copy` for the team, runs it through
   `withinRelease` (utils/pvpTeams.ts: the release rule, because the server does not check
   it) and adds it through `usePvpTeams().createTeam`, so guests and accounts take the same
   path and the per-event cap applies.
 - **Comments** (`GalleryComments`): one level of replies, plain text (no links drawn),
   states `visible` / `deleted` ("[deleted]") / `removed` ("[removed]") / `under_review`
-  (your own hidden comment). Report opens `ReportDialog`.
+  (your own hidden comment). Reply shows only to someone who can write (signed in with a
+  display name); the box says which is missing otherwise. A refusal shows under the box.
+  Report opens `ReportDialog`.
+- **Dialogs** (`GalleryModal`: posting, reporting) are the native `<dialog>` with
+  `showModal()`: top layer, inert page behind, Escape to the top dialog only, focus back to
+  the opener. Toasts render BELOW the top layer, so a dialog shows its errors inline and
+  toasts only once it has closed. jsdom lacks `showModal`; `src/test/setup.ts` stubs it.
 - **Posting** lives on My team (`GalleryPostBar` in TeamBuilder.tsx, signed in only): it
   waits for a pending save, needs a complete team, and opens `PublishDialog`, whose box must
   be ticked (the API refuses without `confirm_public_identity: true`). `setTeamPost` keeps
-  "Posted" on the right team. The account page lists posts (`MyGalleryPosts`) and holds the
-  supporter's "Show my tier" switch.
+  "Posted" on the right team, and `rememberPublished` refreshes the gallery's cache. The
+  account page lists posts (`MyGalleryPosts`, uma pictures from the small `GET /umas`, not
+  the PvP catalogue) and holds the supporter's "Show my tier" switch.
+- **Counts read as words** through `countLabel` (utils/plural.ts): "1 comment", "3 copies".
 - **Local data**: `python manage.py seed_gallery_demo` in `backend/` (12 fake players).
 
 ### My team view: the builder (`components/pvp/TeamBuilder.tsx`)

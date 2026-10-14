@@ -5,10 +5,12 @@ import { BannerTypeIcon } from "./BannerTypeBadge"
 import type { BannerRowType } from "../../utils/bannerHelpers"
 import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcons"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 interface MobileBannerCardProps {
 	bannerType: BannerRowType
-	images: { name: string; image: string }[]
+	images: { id: number; name: string; image: string; portrait?: string | null }[]
 	/**
 	 * Replaces the thumbnail strip entirely. A step-up row has no featured cards
 	 * to thumbnail — the player picks their own from the back catalogue — so it
@@ -121,28 +123,38 @@ const Thumbnails = ({
 	href,
 	slot,
 	images,
+	framed,
 	thumbTileRadius,
 }: {
 	href?: string | null
 	slot?: ReactNode
-	images: { name: string; image: string }[]
+	images: { id: number; name: string; image: string; portrait?: string | null }[]
+	/** An uma row: the borderless art in the site's frame (FramedUma). */
+	framed: boolean
 	thumbTileRadius: string
 }) => {
+	const oshiIds = useOshiIds()
 	const strip = slot ?? (
 		<>
 			{images.length > 0
-				? images.slice(0, 2).map((img) => (
-						<div
-							key={img.name}
-							className={`flex h-12 min-w-0 shrink-0 items-center justify-center overflow-hidden ${thumbTileRadius} bg-black/10 ring-1 ring-white/10`}
-						>
-							<img
-								src={img.image}
+				? images.slice(0, 2).map((img) =>
+						framed ? (
+							<FramedUma
+								key={img.id}
+								src={img.portrait ?? img.image}
 								alt={img.name}
-								className="h-full w-auto object-contain"
+								oshi={oshiIds.has(img.id)}
+								className="w-12"
 							/>
-						</div>
-					))
+						) : (
+							<div
+								key={img.name}
+								className={`flex h-12 min-w-0 shrink-0 items-center justify-center overflow-hidden ${thumbTileRadius} bg-black/10 ring-1 ring-white/10`}
+							>
+								<img src={img.image} alt={img.name} className="h-full w-auto object-contain" />
+							</div>
+						)
+					)
 				: null}
 			<ExtraCardsBadge hidden={images.length - 2} />
 		</>
@@ -204,6 +216,7 @@ export const MobileBannerCard = ({
 						href={imagesHref}
 						slot={imagesSlot}
 						images={images}
+						framed={bannerType === "Uma"}
 						thumbTileRadius={style.thumbTileRadius}
 					/>
 				</div>

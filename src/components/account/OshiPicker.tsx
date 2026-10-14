@@ -4,6 +4,8 @@ import { Lock, Search, X } from "lucide-react"
 import { OguriSpinner } from "../OguriSpinner"
 import { umasFetch } from "../../services/umasFetchCalls"
 import type { OshiOption } from "../../types/account"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 /**
  * The modal for choosing a favourite uma ("oshi" in the code and on the wire;
@@ -68,6 +70,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 	onChoose,
 }) => {
 	const [catalogue, setCatalogue] = useState<Catalogue>({ state: "idle" })
+	const oshiIds = useOshiIds()
 	const [search, setSearch] = useState("")
 	const [saving, setSaving] = useState<number | null>(null)
 	// Whether the catalogue has ever arrived, as a ref rather than read from
@@ -179,13 +182,12 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 										: "border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700 disabled:cursor-wait"
 							}`}
 						>
-							{/* Square with the avatar's corners, so the person sees what they will get. */}
-							<img
+							{/* In the frame the avatar wears, so the person sees what they will
+							    get; the ones already picked wear the favourite's rainbow. */}
+							<FramedUma
 								src={option.image}
-								alt=""
-								loading="lazy"
-								decoding="async"
-								className={`h-20 w-20 rounded-lg bg-gray-800 object-cover ${isSaving ? "opacity-50" : ""}`}
+								oshi={oshiIds.has(option.id)}
+								className={`w-20 ${isSaving ? "opacity-50" : ""}`}
 							/>
 							<span className="mt-2 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">
 								{option.name}

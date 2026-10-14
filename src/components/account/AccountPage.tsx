@@ -337,7 +337,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 		<>
 			{/* Identity: the picture, the name they go by, the tier. */}
 			<div className="mt-6 flex items-start gap-4">
-				<Avatar src={account.avatar_url} size="lg" />
+				<Avatar src={account.avatar_url} size="lg" framed={false} />
 				<div className="min-w-0">
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="truncate text-lg font-semibold text-gray-100">{shownName}</span>
@@ -450,7 +450,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 									covered ? "border-gray-600 bg-gray-700/50" : "border-gray-700 bg-gray-800 opacity-60"
 								}`}
 							>
-								<Avatar src={oshi.image || null} size="lg" />
+								<Avatar src={oshi.image || null} size="lg" oshi={covered} />
 								<span className="mt-2 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">
 									{oshi.name}
 								</span>

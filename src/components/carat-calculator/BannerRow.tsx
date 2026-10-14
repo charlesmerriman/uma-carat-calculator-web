@@ -67,6 +67,8 @@ import {
 } from "../../utils/reactSelectStyles"
 import { RecommendedMark } from "./RecommendedMark"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import { BannerTypeBadge } from "./BannerTypeBadge"
 import { TrashIcon } from "./TrashIcon"
 import { CountStepper } from "./CountStepper"
@@ -173,6 +175,8 @@ export const BannerRow = ({
 	})
 
 	const isStepUp = bannerType === "StepUp"
+	// The person's favourite umas, drawn in the rainbow frame (FramedUma).
+	const oshiIds = useOshiIds()
 
 	const targetBannerData = bannersForRowType(bannerType, {
 		umaBannerData,
@@ -407,7 +411,15 @@ export const BannerRow = ({
 	/** The images cell, shared by the desktop grid and (via props) the card. */
 	const imagesCell =
 		target.type === "StepUp" ? (
-			guaranteedCard ? (
+			guaranteedCard?.uma ? (
+				<FramedUma
+					src={guaranteedCard.uma.portrait ?? guaranteedCard.image}
+					alt={guaranteedCard.name}
+					oshi={oshiIds.has(guaranteedCard.uma.id)}
+					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
+					className="w-14"
+				/>
+			) : guaranteedCard ? (
 				<img
 					src={guaranteedCard.image}
 					alt={guaranteedCard.name}
@@ -439,14 +451,19 @@ export const BannerRow = ({
 			)
 		) : (
 			<>
-				{images.slice(0, 2).map((img) => (
-					<img
-						key={img.name}
-						src={img.image}
-						alt={img.name}
-						className={`thumb-banner ${bannerType === "Uma" ? "thumb-banner--uma" : ""}`}
-					/>
-				))}
+				{target.type === "Uma"
+					? target.banner.umas.slice(0, 2).map((uma) => (
+							<FramedUma
+								key={uma.id}
+								src={uma.portrait ?? uma.image}
+								alt={uma.name}
+								oshi={oshiIds.has(uma.id)}
+								className="w-14"
+							/>
+						))
+					: images.slice(0, 2).map((img) => (
+							<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" />
+						))}
 				<ExtraCardsBadge hidden={images.length - 2} />
 			</>
 		)

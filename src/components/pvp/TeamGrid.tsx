@@ -21,6 +21,7 @@ import type { RaceEvent } from "../../types"
 import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils/cardRelease"
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
+import { FramedUma } from "../FramedUma"
 
 export interface TeamGridProps {
 	members: PvpTeamMember[]
@@ -176,6 +177,7 @@ function MemberPanel({
 			<div className="grid items-start gap-1.5 sm:gap-2" style={{ gridTemplateColumns: ROW_COLUMNS }}>
 				<Tile
 					art={uma?.portrait ?? uma?.image ?? null}
+					framed
 					large
 					starred={starred("uma", member.uma)}
 					flag={releaseFor?.("uma", member.uma)}
@@ -203,6 +205,7 @@ function Tile({
 	empty,
 	caption,
 	shape = "square",
+	framed = false,
 	large = false,
 	disabled = false,
 	disabledHint,
@@ -220,11 +223,13 @@ function Tile({
 	caption?: string
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
+	/** An uma: drawn in the site's frame (FramedUma), the rainbow one for a favourite. */
+	framed?: boolean
 	large?: boolean
 	disabled?: boolean
 	disabledHint?: string
 	starred?: boolean
-	/** A favourite uma: the turning oshi frame and a heart (App.css .oshi-frame). */
+	/** A favourite uma: the rainbow frame (FramedUma) and a heart. */
 	favourite?: boolean
 	flag?: ReleaseStatus
 	badge?: ReactNode
@@ -234,24 +239,29 @@ function Tile({
 	const filled = art !== undefined
 	return (
 		<div className="min-w-0">
-			<div className={`group relative ${favourite ? "oshi-frame" : ""}`}>
+			<div className="group relative">
 				<button
 					type="button"
 					aria-label={label}
 					title={disabled ? disabledHint : caption}
 					disabled={disabled}
 					onClick={onClick}
-					className={`${shape === "card" ? "aspect-[3/4]" : "aspect-square"} w-full overflow-hidden rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-brand ${
-						filled
-							? `block bg-gray-700 ${favourite ? "" : "ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"}`
-							: `flex items-center justify-center border border-dashed text-gray-500 ${
-									disabled
-										? "cursor-not-allowed border-gray-700/70 bg-gray-900/30 text-gray-700"
-										: "border-gray-600 bg-gray-900/50 hover:border-brand hover:bg-brand/5 hover:text-brand"
-								}`
+					className={`${shape === "card" ? "aspect-[3/4]" : "aspect-square"} w-full outline-none transition focus-visible:ring-2 focus-visible:ring-brand ${
+						filled && framed
+							? // The frame is the tile's edge, so the focus ring follows its corner.
+								"block rounded-[10.75%] hover:brightness-110"
+							: filled
+								? "block overflow-hidden rounded-lg bg-gray-700 ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"
+								: `flex items-center justify-center overflow-hidden rounded-lg border border-dashed text-gray-500 ${
+										disabled
+											? "cursor-not-allowed border-gray-700/70 bg-gray-900/30 text-gray-700"
+											: "border-gray-600 bg-gray-900/50 hover:border-brand hover:bg-brand/5 hover:text-brand"
+									}`
 					}`}
 				>
-					{filled ? (
+					{filled && framed ? (
+						<FramedUma src={art} oshi={favourite} className="w-full" />
+					) : filled ? (
 						art ? (
 							<img src={art} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
 						) : (
@@ -352,7 +362,7 @@ export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 }
 
 /**
- * The heart on a favourite uma's tile; the frame around it is .oshi-frame.
+ * The heart on a favourite uma's tile; the rainbow frame around it is FramedUma's.
  * `className` places it (absolute in a tile corner, or nothing inside a stack).
  */
 export function FavouriteHeart({ className = "" }: { className?: string }) {

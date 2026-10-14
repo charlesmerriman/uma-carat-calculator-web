@@ -23,6 +23,8 @@ import { STYLE_LABELS, guidePicks } from "../../utils/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
 import type { PvpStyle } from "../../types/pvpGuide"
 import type { PvpTeamMember } from "../../types/pvpTeam"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 /** One button in a pick's action row. A disabled one says why. */
 export interface PickButton {
@@ -94,6 +96,7 @@ export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps
 							key: `uma-${pick.ref.id}`,
 							name: pick.ref.name,
 							image: pick.ref.image,
+							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image },
 							detail: describe(pick.styles, pick.notes),
 							stars: pick.stars,
 							onTeam: onTeamUmas.has(pick.ref.id),
@@ -118,6 +121,7 @@ export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps
 							key: `card-${pick.ref.id}`,
 							name: pick.ref.name,
 							image: pick.ref.image,
+							uma: null,
 							detail: describe(pick.styles, pick.inDeck ? pick.notes : ["Honourable mention", ...pick.notes]),
 							stars: 0,
 							onTeam: onTeamCards.has(pick.ref.id),
@@ -148,6 +152,8 @@ interface PickItem {
 	key: string
 	name: string
 	image: string | null
+	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favourite. */
+	uma: { id: number; portrait: string | null } | null
 	detail: string
 	stars: number
 	onTeam: boolean
@@ -191,6 +197,10 @@ function PickTile({ item, shape, open, onClick }: {
 	onClick: () => void
 }) {
 	const aspect = shape === "card" ? "aspect-[3/4]" : "aspect-square"
+	const oshiIds = useOshiIds()
+	// The open / on-team ring is a state, drawn round whatever the art is;
+	// on an uma it follows the frame's corner (App.css "Uma frames").
+	const ring = open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : ""
 	return (
 		<li className="min-w-0">
 			<button
@@ -201,11 +211,15 @@ function PickTile({ item, shape, open, onClick }: {
 				className="group block w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				<span
-					className={`relative block overflow-hidden rounded-md bg-gray-700 transition ${
-						open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : "ring-1 ring-gray-600 group-hover:ring-gray-400"
-					}`}
+					className={
+						item.uma
+							? `relative block rounded-[10.75%] transition ${ring}`
+							: `relative block overflow-hidden rounded-md bg-gray-700 transition ${ring || "ring-1 ring-gray-600 group-hover:ring-gray-400"}`
+					}
 				>
-					{item.image ? (
+					{item.uma ? (
+						<FramedUma src={item.uma.portrait} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
+					) : item.image ? (
 						<img src={item.image} alt={item.name} loading="lazy" decoding="async" className={`${aspect} block w-full object-cover`} />
 					) : (
 						<span className={`${aspect} block w-full`} aria-hidden="true" />

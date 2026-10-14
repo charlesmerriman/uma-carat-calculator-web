@@ -41,6 +41,8 @@ import type {
 import { STEPS_PER_ROUND } from "../../utils/stepUpLadder"
 import { PULLS_PER_PITY_COPY } from "../../utils/probabilityCalculations"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import { BannerTypeBadge } from "./BannerTypeBadge"
 import { TrashIcon } from "./TrashIcon"
 
@@ -81,6 +83,8 @@ export const StagedBannerRow = ({
 	const bannerType: BannerRowType = plannedBannerRowType(stagedBanner)
 
 	const isStepUp = bannerType === "StepUp"
+	// The person's favourite umas, drawn in the rainbow frame (FramedUma).
+	const oshiIds = useOshiIds()
 
 	const targetBannerData = bannersForRowType(bannerType, {
 		umaBannerData,
@@ -202,14 +206,19 @@ export const StagedBannerRow = ({
 			)
 		) : (
 			<>
-				{images.slice(0, 2).map((img) => (
-					<img
-						key={img.name}
-						src={img.image}
-						alt={img.name}
-						className={`thumb-banner ${bannerType === "Uma" ? "thumb-banner--uma" : ""}`}
-					/>
-				))}
+				{target.type === "Uma"
+					? target.banner.umas.slice(0, 2).map((uma) => (
+							<FramedUma
+								key={uma.id}
+								src={uma.portrait ?? uma.image}
+								alt={uma.name}
+								oshi={oshiIds.has(uma.id)}
+								className="w-14"
+							/>
+						))
+					: images.slice(0, 2).map((img) => (
+							<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" />
+						))}
 				<ExtraCardsBadge hidden={images.length - 2} />
 			</>
 		)
