@@ -42,12 +42,22 @@ export function YouChip() {
  * Picture, name and tier chip, in one line; `extra` follows them. The
  * picture is the poster's first favourite uma, framed like every uma: the
  * rainbow frame on your own (`mine`), since it is yours.
+ *
+ * `avatarClassName` and `nameClassName` add to the small defaults, for a
+ * caller that draws the line bigger somewhere (the feed's wide row does, by
+ * container query).
  */
-export function PosterLine({ poster, extra, mine = false }: { poster: GalleryPoster; extra?: ReactNode; mine?: boolean }) {
+export function PosterLine({ poster, extra, mine = false, avatarClassName = "", nameClassName = "" }: {
+	poster: GalleryPoster
+	extra?: ReactNode
+	mine?: boolean
+	avatarClassName?: string
+	nameClassName?: string
+}) {
 	return (
 		<div className="flex min-w-0 items-center gap-2">
-			<Avatar src={poster.portrait} size="sm" oshi={mine} />
-			<span className="min-w-0 truncate text-sm font-semibold text-gray-100">{posterName(poster)}</span>
+			<Avatar src={poster.portrait} size="sm" oshi={mine} className={avatarClassName} />
+			<span className={`min-w-0 truncate text-sm font-semibold text-gray-100 ${nameClassName}`}>{posterName(poster)}</span>
 			<TierChip poster={poster} />
 			{extra}
 		</div>

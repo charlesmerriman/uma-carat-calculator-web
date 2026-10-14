@@ -736,8 +736,9 @@
    In the FEED the SSR panel is quiet (.ssr-panel--quiet, below): the foil edge
    on the ordinary card surface, the glints at rest, and the shine only while
    the row is hovered or focused. A list where every Senior Class row glows
-   gold and sweeps reads as "ranked by tier", which it is not. The open post
-   wears the full panel.
+   gold and sweeps reads as "ranked by tier", which it is not. The open post's
+   poster block is quiet too since 2026-10-14 (the owner: a coloured fill
+   behind the text made it hard to read).
 
    SR: the gold edge is a second background clipped to the border box, the
    SSR panel's zero-layout trick, so the row is exactly as tall as a plain
@@ -758,7 +759,12 @@
 	animation: none;
 }
 
-/* EXPERIMENT (2026-10-14): the game's SSR card gradient across the whole
+/* OFF (2026-10-14, the owner: hard to read over the fill). Nothing applies
+   this class; it is kept so it can come back. To turn it on, add
+   ssr-panel--rainbow next to ssr-panel--quiet in GalleryRow (GalleryView.tsx)
+   and the poster block (GalleryPostPanel.tsx).
+
+   EXPERIMENT (2026-10-14): the game's SSR card gradient across the whole
    post, at 50%, over the ordinary card surface (the second layer), so
    it reads the same whatever is behind the row. At that strength the dark
    theme's colours land in the middle tones, where the row's own light text

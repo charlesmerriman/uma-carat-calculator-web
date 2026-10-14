@@ -2,12 +2,20 @@
  * The PvP page's Gallery view: teams other players posted for the selected
  * event, ranked Hot (default), Top or New, filterable by uma.
  *
- * LAYOUT. From `lg` (64rem, the width of `desktop-nav`) up it is two panes:
- * the feed on the left and the open post beside it, inline and sticky, so
- * moving from team to team is one click and the list never goes dark behind
- * an overlay. Below that the post
- * takes the feed's place (the feed stays mounted, hidden, so it keeps its
- * rows), and closing it goes back to where you were in the list.
+ * LAYOUT. With no post open the feed spans the page, and each row is one short
+ * band: upvote, poster and caption, the three umas, the counts. Open one and,
+ * from `lg` (64rem, the width of `desktop-nav`) up, it is two panes: the feed
+ * on the left and the post beside it, inline and sticky, so moving from team
+ * to team is one click and the list never goes dark behind an overlay. Below
+ * that the post takes the feed's place (the feed stays mounted, hidden, so it
+ * keeps its rows), and closing it goes back to where you were in the list.
+ *
+ * The rows pick their shape from the FEED's width (a container query, `feed`),
+ * not the screen's, so the narrow left pane and a phone get the stacked row
+ * and a wide feed gets the band. Between the two the rows morph (Framer
+ * Motion layout animations, two panes only) while the post slides in or out,
+ * and `KeepRowInPlace` scrolls in step so the row you opened or closed stays
+ * where it was on screen.
  *
  * ADDRESSES. Sort, filter and open post are URL parameters
  * (`?sort=top&uma=12&post=k3Df8aQ2`), and every row is a real link, so a post
@@ -29,9 +37,10 @@
  * Inside the /app loading gate, so it may use the browser freely.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Component, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react"
 import { Link, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom"
-import { Eye, Loader2, MessageSquare, MousePointerClick, Send, Users } from "lucide-react"
+import { AnimatePresence, MotionConfig, animate, motion, useReducedMotion, type MotionProps } from "framer-motion"
+import { Eye, Loader2, MessageSquare, Send, Users } from "lucide-react"
 import { GalleryPostPanel } from "./GalleryPostPanel"
 import { GalleryUpvote, PosterLine, StyleChip, UmaPortrait, YouChip } from "./GalleryBits"
 import { ACTION_BUTTON, SECONDARY_BUTTON } from "./galleryStyles"
@@ -39,6 +48,7 @@ import { useAccount } from "../../../services/AuthContext"
 import { usePvpTeams } from "../../../services/PvpTeamsContext"
 import { useGalleryFeed, useGalleryPost } from "../../../services/galleryQueries"
 import { useSignInPrompt } from "../../../hooks/useSignInPrompt"
+import { APP_SCROLLER_SELECTOR, claimScrollRestore } from "../../../hooks/useScrollReset"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
 import { refForRaceEvent, sameEvent, type PvpEventRef } from "../../../utils/pvpEvent"
 import { formatDate } from "../../../utils/dateFormat"
@@ -65,6 +75,23 @@ const POST_PARAM = "post"
  * beat the `xl:` one meant to widen it.
  */
 const TWO_PANES = "(min-width: 64rem)"
+
+/**
+ * The one timing for the whole change of shape: the rows' morph, the post
+ * sliding in, and KeepRowInPlace's scroll. The scroll only cancels the row's
+ * own slide if the two run on the same curve for the same time.
+ */
+const MORPH = { duration: 0.35, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] }
+
+/**
+ * Motion props for a piece of the feed that should glide when it changes
+ * shape: `layout="position"` (its size snaps, which keeps text from being
+ * stretched mid-morph), and measured only when `split` flips, since rows
+ * re-render on every vote and refetch and a reorder is not meant to slide.
+ * Empty below two panes: there the feed is hidden while a post is open, and a
+ * hidden element measures as an empty box at the corner of the screen.
+ */
+type Glide = Pick<MotionProps, "layout" | "layoutDependency">
 
 /**
  * Under the sort buttons: what the order means. Hot and Top say that
@@ -108,6 +135,10 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 	const fromFeed = (location.state as FeedHistoryState | null)?.galleryFromFeed === true
 	const ref = refForRaceEvent(event)
 	const catalogue = usePvpCatalogue()
+	const split = openPost !== null
+	const twoPanes = useMediaQuery(TWO_PANES)
+	const reduceMotion = useReducedMotion() ?? false
+	const glide: Glide = twoPanes ? { layout: "position", layoutDependency: split } : {}
 
 	// How long each list has grown, remembered per event, sort and filter, so
 	// switching back to a sort you had expanded keeps it expanded.
@@ -140,7 +171,8 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 	// into view when it opens, and the list put back where it was when it
 	// closes: Back restores the scroll on its own (useScrollReset); a close
 	// that replaced the address scrolls to the row instead. Either way focus
-	// returns to the row's link, for keyboards and screen readers.
+	// returns to the row's link, for keyboards and screen readers. (With two
+	// panes the scroll is KeepRowInPlace's.)
 	const rootRef = useRef<HTMLDivElement>(null)
 	const lastOpened = useRef<string | null>(null)
 	useEffect(() => {
@@ -167,13 +199,16 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 	const nobodyPosted = feed.data !== undefined && !feed.isPlaceholderData && feed.data.count === 0 && uma === null
 	const failed = feed.isError || catalogue.status === "error"
 
+	// `@container/feed`: the rows and the toolbar lay themselves out by this
+	// column's width (see GalleryRow).
 	const list = (
-		<div className={`flex min-w-0 flex-col gap-3 ${openPost ? "hidden lg:flex" : ""}`}>
+		<div className={`@container/feed flex min-w-0 flex-col gap-3 ${openPost ? "hidden lg:flex" : ""}`}>
 			<FeedToolbar
 				sort={sort}
 				uma={uma}
 				feed={feed.data}
 				index={catalogue.status === "ready" ? catalogue : null}
+				glide={glide}
 				onSort={(next) => replaceParams({ [SORT_PARAM]: next === "hot" ? null : next })}
 				onFilter={(next) => replaceParams({ [UMA_PARAM]: next === null ? null : String(next) })}
 			/>
@@ -182,6 +217,7 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 				eventName={event.name}
 				postHref={(publicId) => withParams({ [POST_PARAM]: publicId })}
 				onOpenMyTeam={onOpenMyTeam}
+				glide={glide}
 			/>
 
 			{failed ? (
@@ -214,6 +250,7 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 									row={row}
 									index={catalogue}
 									selected={row.public_id === openPost}
+									glide={glide}
 									link={
 										<Link
 											id={rowLinkId(row.public_id)}
@@ -268,45 +305,207 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 		)
 	}
 
+	// One column until a post opens, then the feed and the post side by side.
+	// `relative` is for AnimatePresence's popLayout, which takes a closing post
+	// out of the grid (absolute, where it was) so the feed can widen under it
+	// as it slides away. [overflow-anchor:none] keeps the browser's own scroll
+	// anchoring from jumping the page when the rows change height: the
+	// scrolling during a change of shape is KeepRowInPlace's alone.
 	return (
-		<div
-			ref={rootRef}
-			className="grid scroll-mt-4 gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]"
-		>
-			{list}
-			<div className={`min-w-0 ${openPost ? "" : "hidden lg:block"}`}>
-				{openPost && catalogue.status === "ready" ? (
-					<GalleryPostPanel
-						key={openPost}
-						publicId={openPost}
-						event={event}
-						index={catalogue}
-						neighbours={neighbours}
-						onOpenPost={switchPost}
-						onClose={closePost}
-						onOpenMyTeam={() => {
-							replaceParams({ [POST_PARAM]: null })
-							onOpenMyTeam()
-						}}
-					/>
-				) : (
-					<div className="card-panel flex flex-col items-center gap-2 p-8 text-center app-shell:sticky app-shell:top-[4.5rem]">
-						<MousePointerClick className="h-6 w-6 text-gray-500" aria-hidden="true" />
-						<p className="text-sm font-medium text-gray-200">Pick a team to see it here</p>
-						<p className="max-w-xs text-sm text-gray-400">The whole team and its comments open beside the list.</p>
-					</div>
-				)}
+		<MotionConfig transition={MORPH} reducedMotion="user">
+			<KeepRowInPlace split={split} openPost={openPost} locationKey={location.key} instant={reduceMotion} />
+			<div
+				ref={rootRef}
+				className={`relative grid scroll-mt-4 grid-cols-1 gap-6 [overflow-anchor:none] ${
+					split ? "lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]" : ""
+				}`}
+			>
+				{list}
+				{/* initial={false}: a post that is open when the gallery mounts (a
+				    shared link) is just there, with no slide. */}
+				<AnimatePresence initial={false} mode="popLayout">
+					{openPost && (
+						<motion.div
+							key="post"
+							className="min-w-0"
+							initial={{ opacity: 0, x: 32 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: 32, transition: { ...MORPH, duration: 0.2 } }}
+						>
+							{catalogue.status === "ready" ? (
+								<GalleryPostPanel
+									key={openPost}
+									publicId={openPost}
+									event={event}
+									index={catalogue}
+									neighbours={neighbours}
+									onOpenPost={switchPost}
+									onClose={closePost}
+									onOpenMyTeam={() => {
+										replaceParams({ [POST_PARAM]: null })
+										onOpenMyTeam()
+									}}
+								/>
+							) : (
+								<div
+									className="card-panel flex items-center justify-center gap-2 p-8 text-sm text-gray-400 app-shell:sticky app-shell:top-[4.5rem]"
+									role="status"
+								>
+									{catalogue.status === "error" ? (
+										"The gallery didn't load."
+									) : (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+											Loading the team…
+										</>
+									)}
+								</div>
+							)}
+						</motion.div>
+					)}
+				</AnimatePresence>
 			</div>
-		</div>
+		</MotionConfig>
 	)
 }
 
-/** The sort buttons, what the sort means, the count, and the uma filter. */
-function FeedToolbar({ sort, uma, feed, index, onSort, onFilter }: {
+/** Whether a media query matches, kept up to date as the window changes. */
+function useMediaQuery(query: string): boolean {
+	return useSyncExternalStore(
+		(onChange) => {
+			const list = window.matchMedia(query)
+			list.addEventListener("change", onChange)
+			return () => list.removeEventListener("change", onChange)
+		},
+		() => window.matchMedia(query).matches,
+		// Never rendered on the server (GalleryView is inside the /app gate);
+		// here because useSyncExternalStore wants one.
+		() => false,
+	)
+}
+
+/** `element`'s top inside `scroller`'s content, from layout, so a running animation's transform doesn't count. */
+function topWithin(element: HTMLElement, scroller: HTMLElement): number | null {
+	let top = 0
+	let node: HTMLElement | null = element
+	while (node && node !== scroller) {
+		top += node.offsetTop
+		node = node.offsetParent as HTMLElement | null
+	}
+	// The scroller is `relative`, so every offsetParent chain inside it ends
+	// on it. One that doesn't wasn't inside it.
+	return node === scroller ? top : null
+}
+
+interface KeepRowInPlaceProps {
+	split: boolean
+	openPost: string | null
+	locationKey: string
+	/** Reduced motion: the rows don't morph, so the scroll jumps with them. */
+	instant: boolean
+}
+
+interface RowPlace {
+	scroller: HTMLElement
+	publicId: string | null
+	/** Where the row's top was on screen, from the scroller's top; null when it was out of sight. */
+	top: number | null
+}
+
+/**
+ * Holds the row being opened or closed still on screen while the feed changes
+ * shape. Opening a post makes every row about twice as tall, so without this
+ * the row you clicked lands a screen or more below where you clicked it, and
+ * closing throws you as far the other way.
+ *
+ * It only acts where the app scroller scrolls (the `app-shell` desktop frame,
+ * which two panes always are, give or take a very short window). Below two
+ * panes the post replaces the feed instead, and GalleryView's effect places
+ * that.
+ *
+ * HOW IT STAYS STILL. Framer measures the new layout a microtask after this
+ * commit and slides each row from its old place on screen to its new one. The
+ * scroller has not moved yet at that point, so the opened row is set to slide
+ * by exactly the distance this then scrolls; running the scroll on the same
+ * curve for the same time (MORPH) cancels the two out, and the row stays put
+ * while everything around it moves. That needs nothing else to move the
+ * scroller first, which is why the grid opts out of the browser's scroll
+ * anchoring and why this claims the navigation from useScrollReset, whose
+ * Back restore would jump it. Closing with the close button is a Back.
+ *
+ * A row that was out of sight (Next team ran past the screen, or "Open" on
+ * your post at the top) has no place on screen to keep, so the scroll stays
+ * where it is.
+ *
+ * A class because getSnapshotBeforeUpdate is React's only hook into the
+ * moment after the new layout is decided and before it reaches the screen,
+ * which is when the row's old place can still be read.
+ */
+class KeepRowInPlace extends Component<KeepRowInPlaceProps, object, RowPlace | null> {
+	private scrolling: { stop: () => void } | null = null
+
+	getSnapshotBeforeUpdate(previous: Readonly<KeepRowInPlaceProps>): RowPlace | null {
+		if (previous.split === this.props.split) return null
+		const scroller = document.querySelector<HTMLElement>(APP_SCROLLER_SELECTOR)
+		if (!scroller) return null
+		// Opening keeps the row being opened; closing, the one that was open.
+		const publicId = this.props.openPost ?? previous.openPost
+		const link = publicId ? document.getElementById(rowLinkId(publicId)) : null
+		const top = link ? link.getBoundingClientRect().top - scroller.getBoundingClientRect().top : null
+		const inSight = top !== null && top >= 0 && top < scroller.clientHeight
+		return { scroller, publicId, top: inSight ? top : null }
+	}
+
+	componentDidUpdate(_previous: Readonly<KeepRowInPlaceProps>, _state: object, place: RowPlace | null) {
+		if (!place) return
+		const { scroller } = place
+		// The document is what scrolls (a phone, or a very short window).
+		if (scroller.scrollHeight <= scroller.clientHeight) return
+		claimScrollRestore(this.props.locationKey)
+		this.scrolling?.stop()
+		this.scrolling = null
+
+		const link = place.publicId && place.top !== null ? document.getElementById(rowLinkId(place.publicId)) : null
+		const rowTop = link ? topWithin(link, scroller) : null
+		if (rowTop === null || place.top === null) return
+		// Read after topWithin, which made the browser lay the new rows out: a
+		// feed that just got shorter has already pulled scrollTop back by now.
+		const from = scroller.scrollTop
+		const to = Math.min(Math.max(rowTop - place.top, 0), scroller.scrollHeight - scroller.clientHeight)
+		if (Math.abs(to - from) < 1) return
+		if (this.props.instant) {
+			scroller.scrollTop = to
+			return
+		}
+		this.scrolling = animate(from, to, {
+			...MORPH,
+			onUpdate: (value) => {
+				scroller.scrollTop = value
+			},
+		})
+	}
+
+	componentWillUnmount() {
+		this.scrolling?.stop()
+	}
+
+	render() {
+		return null
+	}
+}
+
+/**
+ * The sort buttons, what the sort means, the count, and the uma filter.
+ * Stacked in a narrow feed (sort and count, the note, the filter); in a wide
+ * one the filter moves up between the sort and the count (the inner row turns
+ * into `contents` and `order` places them) and the note takes the line below.
+ */
+function FeedToolbar({ sort, uma, feed, index, glide, onSort, onFilter }: {
 	sort: GallerySort
 	uma: number | null
 	feed: GalleryFeed | undefined
 	index: Pick<PvpCatalogueIndex, "umasById"> | null
+	glide: Glide
 	onSort: (sort: GallerySort) => void
 	onFilter: (uma: number | null) => void
 }) {
@@ -315,8 +514,8 @@ function FeedToolbar({ sort, uma, feed, index, onSort, onFilter }: {
 	// the menu (at 0) so the menu shows what is applied.
 	const options = uma !== null && !tally.some((entry) => entry.uma === uma) ? [...tally, { uma, count: 0 }] : tally
 	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex flex-wrap items-center gap-2">
+		<div className="flex flex-col gap-2 @2xl/feed:flex-row @2xl/feed:flex-wrap @2xl/feed:items-center @2xl/feed:gap-x-3">
+			<div className="flex flex-wrap items-center gap-2 @2xl/feed:contents">
 				<div className="flex gap-1 rounded-lg bg-gray-900/70 p-1" role="group" aria-label="Sort teams">
 					{GALLERY_SORTS.map((option) => (
 						<button
@@ -332,13 +531,17 @@ function FeedToolbar({ sort, uma, feed, index, onSort, onFilter }: {
 						</button>
 					))}
 				</div>
-				{feed && <span className="ml-auto text-sm text-gray-400">{countLabel(feed.count, "team")}</span>}
+				{feed && (
+					<motion.span {...glide} className="ml-auto text-sm text-gray-400 @2xl/feed:order-2">
+						{countLabel(feed.count, "team")}
+					</motion.span>
+				)}
 			</div>
-			<p className="text-xs leading-relaxed text-gray-400">
+			<motion.p {...glide} className="text-xs leading-relaxed text-gray-400 @2xl/feed:order-3 @2xl/feed:basis-full">
 				{SORT_NOTES[sort]} {sort !== "new" && WEIGHT_NOTE}
-			</p>
+			</motion.p>
 			{options.length > 0 && index && (
-				<label className="flex items-center gap-2 text-sm text-gray-300">
+				<motion.label {...glide} className="flex items-center gap-2 text-sm text-gray-300 @2xl/feed:order-1 @2xl/feed:w-80">
 					With
 					<select
 						value={uma ?? ""}
@@ -352,7 +555,7 @@ function FeedToolbar({ sort, uma, feed, index, onSort, onFilter }: {
 							</option>
 						))}
 					</select>
-				</label>
+				</motion.label>
 			)}
 		</div>
 	)
@@ -363,11 +566,12 @@ function FeedToolbar({ sort, uma, feed, index, onSort, onFilter }: {
  * to post one, or (for a guest) the way to sign in. Posting itself happens on
  * My team, where the team is.
  */
-function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam }: {
+function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam, glide = {} }: {
 	eventRef: PvpEventRef
 	eventName: string
 	postHref: (publicId: string) => string
 	onOpenMyTeam: () => void
+	glide?: Glide
 }) {
 	const { isLoggedIn } = useAccount()
 	const { teams, ensureLoaded } = usePvpTeams()
@@ -383,7 +587,7 @@ function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam }: {
 
 	if (!isLoggedIn) {
 		return (
-			<Bar>
+			<Bar glide={glide}>
 				<span className="min-w-0 flex-1">Sign in to upvote, comment and post your own team.</span>
 				<Link to="/login" state={signInState} className={ACTION_BUTTON}>
 					Sign in
@@ -393,7 +597,7 @@ function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam }: {
 	}
 	if (posted && post.data) {
 		return (
-			<Bar>
+			<Bar glide={glide}>
 				<span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
 					<span className="font-medium text-gray-100">Your post</span>
 					{post.data.hidden ? (
@@ -413,7 +617,7 @@ function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam }: {
 	}
 	if (posted) return null
 	return (
-		<Bar>
+		<Bar glide={glide}>
 			<span className="min-w-0 flex-1">Got a team for {eventName}? Post it from My team.</span>
 			<button type="button" onClick={onOpenMyTeam} className={ACTION_BUTTON}>
 				<Send className="h-4 w-4" aria-hidden="true" />
@@ -423,11 +627,14 @@ function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam }: {
 	)
 }
 
-function Bar({ children }: { children: ReactNode }) {
+function Bar({ children, glide }: { children: ReactNode; glide: Glide }) {
 	return (
-		<div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-700 bg-gray-900/40 px-3 py-2 text-sm text-gray-300">
+		<motion.div
+			{...glide}
+			className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-700 bg-gray-900/40 px-3 py-2 text-sm text-gray-300"
+		>
 			{children}
-		</div>
+		</motion.div>
 	)
 }
 
@@ -458,19 +665,38 @@ function FeedSkeleton() {
  * empty link stretched over it (a link wrapped around the row would put
  * lists and paragraphs inside an <a> or <button>, which is invalid and makes
  * a screen reader read the whole row as its name); the upvote sits above it.
+ *
+ * TWO SHAPES, by the feed's width (`@4xl/feed`, 56rem). Narrow (beside an
+ * open post, or a phone) it stacks: poster, caption, umas, counts. Wide (the
+ * feed with nothing open) it is one band about half as tall: poster and
+ * caption, then the umas, then the counts, side by side, everything centred
+ * on the band's middle. The time sits right after the name rather than at
+ * the far end of the poster's column (which is most of the row), and the
+ * picture and name are a size up. The poster and caption share a wrapper
+ * that is `contents` when stacked, so both shapes keep the same reading
+ * order.
+ *
+ * `glide` morphs one shape into the other: the card animates its size, and
+ * each piece inside only its position, so text is never stretched. The
+ * border radius is inline because Framer can only keep a corner round
+ * through the morph when it owns the value.
  */
-export function GalleryRow({ row, index, selected, link }: {
+export function GalleryRow({ row, index, selected, link, glide = {} }: {
 	row: Row
 	index: Pick<PvpCatalogueIndex, "umasById">
 	selected: boolean
 	link: ReactNode
+	glide?: Glide
 }) {
 	const look = row.poster.gallery_style
 	const updated = row.content_updated_at !== row.published_at
 	return (
-		<article
+		<motion.article
+			{...glide}
+			layout={glide.layout ? true : undefined}
+			style={glide.layout ? { borderRadius: 12 } : undefined}
 			data-gallery-style={look ?? undefined}
-			className={`${look === "ssr" ? "ssr-panel ssr-panel--quiet ssr-panel--rainbow rounded-xl border" : "card-panel"} ${
+			className={`${look === "ssr" ? "ssr-panel ssr-panel--quiet rounded-xl border" : "card-panel"} ${
 				selected ? "outline-2 outline-offset-2 outline-brand" : ""
 			}`}
 		>
@@ -478,25 +704,37 @@ export function GalleryRow({ row, index, selected, link }: {
 			    lands here and the link inside can still be absolute. */}
 			<div className="relative flex gap-3 p-3">
 				{link}
-				<div className="relative z-[2] self-start">
+				<motion.div {...glide} className="relative z-[2] self-start @4xl/feed:self-center">
 					<GalleryUpvote post={row} layout="column" />
-				</div>
-				<div className="flex min-w-0 flex-1 flex-col gap-2">
-					<div className="flex items-center gap-2">
-						<div className="min-w-0 flex-1">
-							<PosterLine poster={row.poster} mine={row.is_mine} extra={row.is_mine && <YouChip />} />
-						</div>
-						<time
-							dateTime={row.content_updated_at}
-							title={`${updated ? "Updated" : "Posted"} ${formatDate(row.content_updated_at)}`}
-							className="shrink-0 text-xs text-gray-500"
-						>
-							{updated ? "updated " : ""}
-							{formatTimeAgo(row.content_updated_at)}
-						</time>
+				</motion.div>
+				<div className="flex min-w-0 flex-1 flex-col gap-2 @4xl/feed:flex-row @4xl/feed:items-center @4xl/feed:gap-6">
+					<div className="contents @4xl/feed:flex @4xl/feed:min-w-0 @4xl/feed:flex-1 @4xl/feed:flex-col @4xl/feed:gap-2">
+						<motion.div {...glide} className="flex items-center gap-2 @4xl/feed:gap-3">
+							<div className="min-w-0 flex-1 @4xl/feed:flex-initial">
+								<PosterLine
+									poster={row.poster}
+									mine={row.is_mine}
+									extra={row.is_mine && <YouChip />}
+									avatarClassName="@4xl/feed:h-11 @4xl/feed:w-11"
+									nameClassName="@4xl/feed:text-base"
+								/>
+							</div>
+							<time
+								dateTime={row.content_updated_at}
+								title={`${updated ? "Updated" : "Posted"} ${formatDate(row.content_updated_at)}`}
+								className="shrink-0 text-xs text-gray-500"
+							>
+								{updated ? "updated " : ""}
+								{formatTimeAgo(row.content_updated_at)}
+							</time>
+						</motion.div>
+						{row.caption && (
+							<motion.p {...glide} className="line-clamp-2 break-words text-sm text-gray-200">
+								{row.caption}
+							</motion.p>
+						)}
 					</div>
-					{row.caption && <p className="line-clamp-2 break-words text-sm text-gray-200">{row.caption}</p>}
-					<ul className="grid grid-cols-3 gap-2" aria-label="Umas">
+					<motion.ul {...glide} className="grid grid-cols-3 gap-2 @4xl/feed:w-80 @4xl/feed:shrink-0 @6xl/feed:w-[30rem]" aria-label="Umas">
 						{row.umas.map((member) => {
 							const uma = index.umasById.get(member.uma)
 							return (
@@ -507,8 +745,11 @@ export function GalleryRow({ row, index, selected, link }: {
 								</li>
 							)
 						})}
-					</ul>
-					<p className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+					</motion.ul>
+					<motion.p
+						{...glide}
+						className="flex flex-wrap items-center gap-3 text-xs text-gray-400 @4xl/feed:w-28 @4xl/feed:shrink-0 @4xl/feed:flex-col @4xl/feed:items-start @4xl/feed:gap-1.5"
+					>
 						<span className="flex items-center gap-1">
 							<Eye className="h-3.5 w-3.5" aria-hidden="true" />
 							{countLabel(row.stats.views, "view")}
@@ -517,9 +758,9 @@ export function GalleryRow({ row, index, selected, link }: {
 							<MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
 							{countLabel(row.stats.comments, "comment")}
 						</span>
-					</p>
+					</motion.p>
 				</div>
 			</div>
-		</article>
+		</motion.article>
 	)
 }

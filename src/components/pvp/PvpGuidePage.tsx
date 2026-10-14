@@ -213,7 +213,8 @@ function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView)
 		// No overflow-x-auto here: overflow on one axis makes the other "auto"
 		// too, and each tab's -mb-px underline (which sits on the row's border)
 		// overflowed by 1px and drew a vertical scrollbar. Three short tabs
-		// wrap on a narrow screen instead of scrolling.
+		// wrap on a narrow screen instead of scrolling. Each tab is flex-1, so
+		// the three share the page's width.
 		<div role="tablist" aria-label="View" className="flex flex-wrap gap-1 border-b border-gray-700">
 			{VIEWS.map((entry) => {
 				const Icon = entry.icon
@@ -225,7 +226,7 @@ function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView)
 						role="tab"
 						aria-selected={active}
 						onClick={() => onChange(entry.id)}
-						className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition ${
+						className={`-mb-px flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition ${
 							active
 								? "border-brand text-brand"
 								: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
