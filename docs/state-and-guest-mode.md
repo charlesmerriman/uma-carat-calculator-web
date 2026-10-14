@@ -354,6 +354,10 @@ team drawer (R2b) edit the same teams and must save through one queue.
   (`isFocus` here, `is_focus` on the server, `focus` in the device store; at most one, set from
   the team window's selector) and `updatedAt`, the last change in ms, which picks between two
   teams for one event (`utils/pvpTeams.ts` `preferredTeam()`). All of it is the owner's alone.
+- **A team copied from the gallery** goes through `createTeam` like any new team, so a
+  guest's copy lands in the device store and an account's on the server. Only an account's
+  team can be posted: `post` (the gallery post's public id) is always null on the device,
+  and `setTeamPost` updates it after posting or taking down.
 - **Signing in with teams on the device:** the first account load `POST`s each device team,
   clears the ones that landed and toasts "Your teams from this device were added to your
   account." A refused one stays on the device and is offered again next load.

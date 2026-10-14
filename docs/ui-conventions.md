@@ -1312,9 +1312,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
 - **Three views under the header, `?view=`**: Recommendations (the guide, default, no
-  parameter), My team (`team`, the R2 builder) and Gallery (`gallery`, R3). The last two
-  are "Coming soon" placeholders until those releases; the guide is fetched only on
-  Recommendations.
+  parameter), My team (`team`, the builder) and Gallery (`gallery`, the posted teams; see
+  "Gallery view" below). The guide is fetched only on Recommendations.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar.
@@ -1357,6 +1356,41 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   the icons carry the bar. Checked at 375px and 320px on 2026-10-13.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
+
+### Gallery view (`components/pvp/gallery/`)
+
+Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gallery/<kind>/<id>`
+(`backend/docs/api-reference.md`, "Gallery").
+
+- **Sort and open post are URL parameters**: `?sort=top|new` (Hot has no parameter) and
+  `?post=<public_id>`. A post's permanent link is `/post/<public_id>`, which the API serves
+  (link-preview tags) and which moves people on to `?view=gallery&post=<id>`. The Share and
+  Copy link buttons copy the `/post` URL, never the `/app/pvp` address. Locally `/post` is
+  only on :8000 (Vite does not route it), so a copied local link 404s in the SPA.
+- **Rows are compact** (`GalleryRow`: picture, name, tier chip, caption, three umas with
+  styles, views, comments, date, upvote) so the feed scans; the whole team, copies, actions
+  and comments open in `GalleryPostPanel` (a right-hand sheet from `desktop-nav`, full screen
+  below). Opening a post sends one view (`galleryView`, fire and forget).
+- **Looks by key only** (`poster.gallery_style`): `ssr` swaps the row's `card-panel` for
+  `.ssr-panel` (the Timeline's recommended panel, so reduced motion is already handled); `sr`
+  and `rose` are `[data-gallery-style]` edges in App.css ("Gallery looks") from the
+  `--color-gallery-*` tokens, light overrides included. The tier NAME is always text in
+  `TierChip`, so the signal never rests on colour. Never derive a look from a tier name.
+- **Votes are optimistic** and roll back with the server's sentence on a refusal; a guest's
+  click toasts "Sign in to upvote teams." The number is people, never weighted points.
+- **Copy to my teams** asks `POST /gallery/posts/<id>/copy` for the team, runs it through
+  `withinRelease` (utils/pvpTeams.ts: the release rule, because the server does not check
+  it) and adds it through `usePvpTeams().createTeam`, so guests and accounts take the same
+  path and the per-event cap applies.
+- **Comments** (`GalleryComments`): one level of replies, plain text (no links drawn),
+  states `visible` / `deleted` ("[deleted]") / `removed` ("[removed]") / `under_review`
+  (your own hidden comment). Report opens `ReportDialog`.
+- **Posting** lives on My team (`GalleryPostBar` in TeamBuilder.tsx, signed in only): it
+  waits for a pending save, needs a complete team, and opens `PublishDialog`, whose box must
+  be ticked (the API refuses without `confirm_public_identity: true`). `setTeamPost` keeps
+  "Posted" on the right team. The account page lists posts (`MyGalleryPosts`) and holds the
+  supporter's "Show my tier" switch.
+- **Local data**: `python manage.py seed_gallery_demo` in `backend/` (12 fake players).
 
 ### My team view: the builder (`components/pvp/TeamBuilder.tsx`)
 
