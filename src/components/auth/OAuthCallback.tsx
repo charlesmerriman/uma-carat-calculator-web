@@ -22,8 +22,9 @@ import { PROVIDERS } from "../../constants/providers"
  * the two salts on the server — and a link is only considered while someone is
  * signed in, because a link can only have been started by someone who was.
  *
- *   sign-in  → trade the code for an API token, hand off to /app (where
- *              CalculatorProvider picks up any stashed guest plan).
+ *   sign-in  → trade the code for an API token, hand off to /app, or to the
+ *              /app page the sign-in started from (where CalculatorProvider
+ *              picks up any stashed guest plan either way).
  *   link     → attach the identity to the signed-in account, re-read
  *              /account, hand off to /account.
  */
@@ -109,9 +110,11 @@ export const OAuthCallback: React.FC = () => {
 		// The provider is inferred from the pending login saved before the
 		// redirect, not from the URL — the URL is attacker-controllable.
 		completeSocialLogin(peekPendingLoginProvider() ?? "", code, state)
-			.then(() => {
+			.then((returnTo) => {
 				// replace: true so Back doesn't return to a spent callback URL.
-				navigate("/app", { replace: true })
+				// returnTo is the /app page the sign-in started from (a gallery
+				// post, say), already checked by safeReturnPath.
+				navigate(returnTo ?? "/app", { replace: true })
 			})
 			.catch((e: unknown) => {
 				setExchangeError(
