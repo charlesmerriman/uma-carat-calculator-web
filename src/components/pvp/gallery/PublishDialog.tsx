@@ -9,14 +9,22 @@
  *
  * Posting again for the same event replaces the earlier post: same link,
  * same comments, upvotes back to zero. The dialog says so when it applies.
+ *
+ * A refusal (a blocked word in the caption, say) shows inside the dialog,
+ * next to what caused it: toasts sit below a modal dialog (GalleryModal).
+ * The post goes into the gallery's cache, and the feeds are refetched
+ * (rememberPublished), so the Gallery tab shows it without a reload.
  */
 
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 import { GalleryModal } from "./GalleryModal"
+import { FIELD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./galleryStyles"
 import { pvpTeamPublish, refusalText } from "../../../services/galleryFetchCalls"
+import { rememberPublished } from "../../../services/galleryQueries"
 import { GALLERY_CAPTION_MAX, type GalleryPost } from "../../../types/gallery"
 
 export function PublishDialog({ teamId, displayName, replacing, onPosted, onClose }: {
@@ -31,20 +39,26 @@ export function PublishDialog({ teamId, displayName, replacing, onPosted, onClos
 	const [caption, setCaption] = useState("")
 	const [agreed, setAgreed] = useState(false)
 	const [sending, setSending] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const queryClient = useQueryClient()
 
 	const send = async () => {
 		setSending(true)
+		setError(null)
 		try {
 			const response = await pvpTeamPublish(teamId, caption.trim())
 			if (response.ok) {
-				onPosted((await response.json()) as GalleryPost)
-				toast.success(replacing ? "Your post is updated." : "Your team is in the gallery.")
+				const post = (await response.json()) as GalleryPost
+				rememberPublished(queryClient, post)
+				onPosted(post)
 				onClose()
+				// After the close, so it is not hidden under the dialog.
+				toast.success(replacing ? "Your post is updated." : "Your team is in the gallery.")
 				return
 			}
-			toast.error(await refusalText(response, "Your team couldn't be posted. Try again in a moment."))
+			setError(await refusalText(response, "Your team couldn't be posted. Try again in a moment."))
 		} catch {
-			toast.error("Your team couldn't be posted. Try again in a moment.")
+			setError("Your team couldn't be posted. Try again in a moment.")
 		} finally {
 			setSending(false)
 		}
@@ -79,7 +93,7 @@ export function PublishDialog({ teamId, displayName, replacing, onPosted, onClos
 							maxLength={GALLERY_CAPTION_MAX}
 							onChange={(change) => setCaption(change.target.value)}
 							placeholder="Runaway blocker and two pace"
-							className="rounded border border-gray-600 bg-gray-900 px-3 py-2 text-gray-100 outline-none placeholder:text-gray-500 focus:border-brand"
+							className={FIELD}
 						/>
 						<span className="text-xs text-gray-500">
 							{caption.length}/{GALLERY_CAPTION_MAX}. No links.
@@ -105,16 +119,17 @@ export function PublishDialog({ teamId, displayName, replacing, onPosted, onClos
 						</Link>
 						.
 					</p>
+					{error && (
+						<p className="rounded-lg border border-highlight/50 bg-highlight/10 p-3 text-gray-100" role="alert">
+							{error}
+						</p>
+					)}
 					<div className="flex justify-end gap-2">
-						<button type="button" onClick={onClose} className="rounded-md border border-gray-600 px-3 py-1.5 text-gray-200 transition hover:bg-gray-700">
+						<button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
 							Cancel
 						</button>
-						<button
-							type="submit"
-							disabled={!agreed || sending}
-							className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							{sending && <Loader2 className="h-4 w-4 animate-spin" />}
+						<button type="submit" disabled={!agreed || sending} className={PRIMARY_BUTTON}>
+							{sending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
 							{replacing ? "Update post" : "Post team"}
 						</button>
 					</div>
@@ -123,10 +138,10 @@ export function PublishDialog({ teamId, displayName, replacing, onPosted, onClos
 				<div className="flex flex-col gap-4 text-sm text-gray-300">
 					<p>A post shows your display name, and you haven't set one yet.</p>
 					<div className="flex justify-end gap-2">
-						<button type="button" onClick={onClose} className="rounded-md border border-gray-600 px-3 py-1.5 text-gray-200 transition hover:bg-gray-700">
+						<button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
 							Not now
 						</button>
-						<Link to="/account" className="rounded-md bg-brand px-3 py-1.5 font-semibold text-black transition hover:bg-brand/85">
+						<Link to="/account" className={PRIMARY_BUTTON}>
 							Set a display name
 						</Link>
 					</div>

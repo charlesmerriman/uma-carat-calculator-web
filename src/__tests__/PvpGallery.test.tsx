@@ -1,14 +1,16 @@
 /**
- * The PvP gallery: the feed (sorts, rows by look, votes), the post panel
- * (deep link, view, copy, share, missing post), the comment thread's states,
- * the post dialog, and the release filter a copied team goes through.
+ * The PvP gallery: the feed (sorts, filter, longer lists, rows by look,
+ * votes, your post), the post panel (deep link, view, copy, share, missing
+ * post, closing and stepping), the comment thread's states, the dialogs
+ * (posting, reporting over a post), and the release filter a copied team goes
+ * through.
  *
  * The routes are mocked; their rules are tested in the API
  * (test_gallery.py, test_pvp_gallery.py).
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, useLocation } from "react-router-dom"
 import { toast } from "sonner"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { GalleryView } from "../components/pvp/gallery/GalleryView"
@@ -19,13 +21,15 @@ import {
 	galleryCopy,
 	galleryFeedFetch,
 	galleryPostFetch,
+	galleryReport,
 	galleryView,
 	galleryVote,
 	pvpTeamPublish,
 } from "../services/galleryFetchCalls"
 import { withinRelease } from "../utils/pvpTeams"
+import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { RaceEvent } from "../types"
-import type { GalleryComment, GalleryPost, GalleryRow } from "../types/gallery"
+import type { GalleryComment, GalleryFeed, GalleryPost, GalleryRow } from "../types/gallery"
 import type { PvpTeamMember } from "../types/pvpTeam"
 
 const LIBRA = {
@@ -57,7 +61,12 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 }))
 
 const auth = vi.hoisted(() => ({ isLoggedIn: true, account: { display_name: "Rhondal" } as { display_name: string } | null }))
-vi.mock("../services/AuthContext", () => ({ useAccount: () => auth }))
+// The real module, so AuthContext itself exists (useOshiIds reads it); only
+// useAccount is replaced. No provider is mounted, so nobody's favourites.
+vi.mock("../services/AuthContext", async () => ({
+	...(await vi.importActual<typeof import("../services/AuthContext")>("../services/AuthContext")),
+	useAccount: () => auth,
+}))
 
 vi.mock("../services/galleryFetchCalls", async () => {
 	const actual = await vi.importActual<typeof import("../services/galleryFetchCalls")>("../services/galleryFetchCalls")
@@ -70,6 +79,7 @@ vi.mock("../services/galleryFetchCalls", async () => {
 		galleryCopy: vi.fn(),
 		galleryCommentsFetch: vi.fn(),
 		galleryPostTakeDown: vi.fn(),
+		galleryReport: vi.fn(),
 		pvpTeamPublish: vi.fn(),
 	}
 })
@@ -120,102 +130,219 @@ function teamsValue(extra: Partial<PvpTeamsContextType> = {}): PvpTeamsContextTy
 	}
 }
 
+/** Where the router is, so a test can see what closing a post did to the address. */
+function Address() {
+	const location = useLocation()
+	return <output data-testid="address">{`${location.pathname}${location.search}`}</output>
+}
+
 function renderGallery(url = "/app/pvp?event=cm-19&view=gallery", teams = teamsValue(), onOpenMyTeam = vi.fn()) {
 	render(
 		<MemoryRouter initialEntries={[url]}>
-			<PvpTeamsContext.Provider value={teams}>
-				<GalleryView event={LIBRA} onOpenMyTeam={onOpenMyTeam} />
-			</PvpTeamsContext.Provider>
+			<TestQueryProvider>
+				<PvpTeamsContext.Provider value={teams}>
+					<GalleryView event={LIBRA} onOpenMyTeam={onOpenMyTeam} />
+					<Address />
+				</PvpTeamsContext.Provider>
+			</TestQueryProvider>
 		</MemoryRouter>
 	)
 	return { teams, onOpenMyTeam }
 }
 
+function feed(results: GalleryRow[], extra: Partial<GalleryFeed> = {}): Promise<Response> {
+	return json({
+		count: results.length, sort: "hot", limit: 20, has_more: false, results,
+		umas: [{ uma: 41, count: 3 }, { uma: 12, count: 2 }],
+		...extra,
+	})
+}
+
+/** The open post's panel, named by its title. */
+const panel = (name = "Poster free's team") => screen.findByRole("region", { name })
+
 beforeEach(() => {
 	auth.isLoggedIn = true
 	auth.account = { display_name: "Rhondal" }
-	vi.mocked(galleryFeedFetch).mockImplementation((_ref, sort) =>
-		json({
-			count: 3, sort, page: 1, has_more: false,
-			results: [
+	vi.mocked(galleryFeedFetch).mockImplementation((_ref, { sort }) =>
+		feed(
+			[
 				row("aaaaaaa1", { poster: poster("ssr", "Senior Class") }),
 				row("bbbbbbb2", { poster: poster("sr", "Classic Class") }),
-				row("ccccccc3", { poster: poster("rose", "Junior Class") }),
+				row("ccccccc3", { poster: poster("rose", "Junior Class"), stats: { views: 1, upvotes: 2, comments: 1 } }),
 			],
-		})
+			{ sort }
+		)
 	)
+	vi.mocked(galleryPostFetch).mockImplementation((id) => json(fullPost(id)))
 	vi.mocked(galleryCommentsFetch).mockImplementation(() => json({ count: 0, page: 1, has_more: false, results: [] }))
 })
 
 afterEach(() => vi.clearAllMocks())
 
 describe("the feed", () => {
-	it("draws each supporter look by its key, with the tier name as text", async () => {
+	it("draws each supporter look by its key, the SSR one quiet, with the tier name as text", async () => {
 		renderGallery()
 		const rows = await screen.findAllByRole("article")
-		expect(rows[0]).toHaveClass("ssr-panel")
+		expect(rows[0]).toHaveClass("ssr-panel", "ssr-panel--quiet")
 		expect(rows[1]).toHaveAttribute("data-gallery-style", "sr")
 		expect(rows[2]).toHaveAttribute("data-gallery-style", "rose")
 		expect(within(rows[0]).getByText("Senior Class")).toBeInTheDocument()
 		expect(within(rows[1]).getByText("212 views")).toBeInTheDocument()
+		expect(within(rows[0]).getByText("Oguri Cap")).toBeInTheDocument()
 		expect(screen.getByText("3 teams")).toBeInTheDocument()
 	})
 
-	it("asks the API for the sort the tabs choose", async () => {
+	it("counts one as one", async () => {
+		renderGallery()
+		const rows = await screen.findAllByRole("article")
+		expect(within(rows[2]).getByText("1 view")).toBeInTheDocument()
+		expect(within(rows[2]).getByText("1 comment")).toBeInTheDocument()
+	})
+
+	it("makes every row a link to its post", async () => {
+		renderGallery()
+		const [first] = await screen.findAllByRole("article")
+		expect(within(first).getByRole("link", { name: "Open Poster ssr's team" })).toHaveAttribute(
+			"href", "/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1"
+		)
+	})
+
+	it("asks the API for the sort the tabs choose, and says what it means", async () => {
 		renderGallery()
 		await screen.findAllByRole("article")
 		fireEvent.click(screen.getByRole("button", { name: "Top" }))
-		await waitFor(() => expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, "top", 1))
+		await waitFor(() =>
+			expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, { sort: "top", uma: null, limit: 20 })
+		)
 		expect(screen.getByRole("button", { name: "Top" })).toHaveAttribute("aria-pressed", "true")
+		expect(screen.getByText(/supporters' own posts, count a bit extra/)).toBeInTheDocument()
+	})
+
+	it("filters by an uma the event's posts use", async () => {
+		renderGallery()
+		await screen.findAllByRole("article")
+		const filter = screen.getByRole("combobox")
+		expect(within(filter).getByRole("option", { name: "Maruzensky (3)" })).toBeInTheDocument()
+		fireEvent.change(filter, { target: { value: "12" } })
+		await waitFor(() =>
+			expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, { sort: "hot", uma: 12, limit: 20 })
+		)
+		expect(screen.getByTestId("address").textContent).toContain("uma=12")
+	})
+
+	it("loads more by asking for a longer list from the top", async () => {
+		vi.mocked(galleryFeedFetch).mockImplementation((_ref, { limit }) =>
+			feed([row("aaaaaaa1")], { count: 30, limit, has_more: limit < 30 })
+		)
+		renderGallery()
+		fireEvent.click(await screen.findByRole("button", { name: "Load more" }))
+		await waitFor(() =>
+			expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, { sort: "hot", uma: null, limit: 40 })
+		)
+		await waitFor(() => expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument())
 	})
 
 	it("moves the vote at once and puts it back when the server says no", async () => {
-		vi.mocked(galleryVote).mockImplementation(() => json({ error: "Your account can't vote in the gallery." }, 403))
+		// The answer is held back so the vote can be seen before it arrives.
+		let answer: (response: Response) => void = () => undefined
+		vi.mocked(galleryVote).mockImplementation(() => new Promise((resolve) => (answer = resolve)))
 		renderGallery()
 		const [first] = await screen.findAllByRole("article")
 		fireEvent.click(within(first).getByRole("button", { name: /^Upvote/ }))
-		expect(within(first).getByRole("button", { name: /Remove your upvote \(15/ })).toBeInTheDocument()
+		expect(await within(first).findByRole("button", { name: /Remove your upvote \(15/ })).toBeInTheDocument()
+		answer(new Response(JSON.stringify({ error: "Your account can't vote in the gallery." }), { status: 403 }))
 		await waitFor(() => expect(within(first).getByRole("button", { name: /^Upvote \(14/ })).toBeInTheDocument())
 		expect(toast.error).toHaveBeenCalledWith("Your account can't vote in the gallery.")
 	})
 
-	it("asks a guest to sign in instead of voting", async () => {
+	it("asks a guest to sign in instead of voting, with a way to do it", async () => {
 		auth.isLoggedIn = false
-		vi.mocked(galleryFeedFetch).mockImplementation(() =>
-			json({ count: 1, sort: "hot", page: 1, has_more: false, results: [row("aaaaaaa1", { my_vote: null })] })
-		)
+		vi.mocked(galleryFeedFetch).mockImplementation(() => feed([row("aaaaaaa1", { my_vote: null })]))
 		renderGallery()
 		const [first] = await screen.findAllByRole("article")
 		fireEvent.click(within(first).getByRole("button", { name: /^Upvote/ }))
-		expect(toast).toHaveBeenCalledWith("Sign in to upvote teams.")
+		expect(toast).toHaveBeenCalledWith(
+			"Sign in to upvote teams.",
+			expect.objectContaining({ action: expect.objectContaining({ label: "Sign in" }) })
+		)
 		expect(galleryVote).not.toHaveBeenCalled()
+		expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
+	})
+
+	it("marks your own post and shows it above the list", async () => {
+		vi.mocked(galleryFeedFetch).mockImplementation(() =>
+			feed([row("mine0001", { is_mine: true, my_vote: true }), row("bbbbbbb2")])
+		)
+		vi.mocked(galleryPostFetch).mockImplementation((id) => json(fullPost(id, { is_mine: true })))
+		renderGallery(undefined, teamsValue({
+			teams: [{ key: "t1", id: 7, kind: "cm", event: 19, name: "", members: [], notes: [], is_focus: false, post: "mine0001" }] as unknown as PvpTeamsContextType["teams"],
+		}))
+		const [mine] = await screen.findAllByRole("article")
+		expect(within(mine).getByText("You")).toBeInTheDocument()
+		expect(within(mine).queryByRole("button", { name: /upvote/i })).not.toBeInTheDocument()
+		expect(await screen.findByText("Your post")).toBeInTheDocument()
+		expect(screen.getByText("14 upvotes")).toBeInTheDocument()
+	})
+
+	it("offers to post when you have not", async () => {
+		const { onOpenMyTeam } = renderGallery()
+		fireEvent.click(await screen.findByRole("button", { name: "Post a team" }))
+		expect(onOpenMyTeam).toHaveBeenCalled()
 	})
 
 	it("says so when nobody has posted", async () => {
-		vi.mocked(galleryFeedFetch).mockImplementation(() => json({ count: 0, sort: "hot", page: 1, has_more: false, results: [] }))
+		vi.mocked(galleryFeedFetch).mockImplementation(() => feed([], { umas: [] }))
 		const { onOpenMyTeam } = renderGallery()
 		expect(await screen.findByText("Nobody has posted a team for Libra Cup yet.")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Build yours on My team" }))
 		expect(onOpenMyTeam).toHaveBeenCalled()
 	})
+
+	it("offers to try again when the feed fails", async () => {
+		vi.mocked(galleryFeedFetch).mockImplementationOnce(() => json({}, 500))
+		renderGallery()
+		fireEvent.click(await screen.findByRole("button", { name: "Try again" }))
+		expect(await screen.findAllByRole("article")).toHaveLength(3)
+	})
 })
 
 describe("the post panel", () => {
-	it("opens from its link, counts one view and draws the team", async () => {
-		vi.mocked(galleryPostFetch).mockImplementation(() => json(fullPost("aaaaaaa1")))
+	it("opens from its link, counts one view and draws the team with its caption in full", async () => {
 		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
-		const panel = await screen.findByRole("dialog", { name: "Caption aaaaaaa1" })
-		expect(await within(panel).findByText("Maruzensky")).toBeInTheDocument()
-		expect(within(panel).getByText("3 copies")).toBeInTheDocument()
+		const open = await panel()
+		expect(await within(open).findByText("Maruzensky")).toBeInTheDocument()
+		expect(within(open).getByText("Kitasan Black")).toBeInTheDocument()
+		expect(within(open).getByText("Caption aaaaaaa1")).toBeInTheDocument()
+		expect(within(open).getByText("3 copies")).toBeInTheDocument()
 		expect(galleryView).toHaveBeenCalledTimes(1)
 		expect(galleryView).toHaveBeenCalledWith("aaaaaaa1")
 	})
 
+	it("opens from the list and closes back to it", async () => {
+		renderGallery()
+		const [first] = await screen.findAllByRole("article")
+		fireEvent.click(within(first).getByRole("link", { name: /^Open/ }))
+		await panel()
+		expect(screen.getByTestId("address").textContent).toContain("post=aaaaaaa1")
+		fireEvent.click(screen.getByRole("button", { name: "Close" }))
+		await waitFor(() => expect(screen.getByTestId("address").textContent).not.toContain("post="))
+		expect(screen.queryByRole("region", { name: "Poster free's team" })).not.toBeInTheDocument()
+	})
+
+	it("steps to the next team in the list", async () => {
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		await panel()
+		await screen.findAllByRole("article")
+		expect(screen.getByRole("button", { name: "Previous team" })).toBeDisabled()
+		fireEvent.click(screen.getByRole("button", { name: "Next team" }))
+		await waitFor(() => expect(screen.getByTestId("address").textContent).toContain("post=bbbbbbb2"))
+	})
+
 	it("copies the team into My team, minus what is not out by the event", async () => {
-		vi.mocked(galleryPostFetch).mockImplementation(() => json(fullPost("aaaaaaa1")))
 		vi.mocked(galleryCopy).mockImplementation(() => json({ kind: "cm", event: 19, members: TEAM }))
 		const { teams } = renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
-		fireEvent.click(await screen.findByRole("button", { name: "Copy to my teams" }))
+		fireEvent.click(await screen.findByRole("button", { name: "Copy to My team" }))
 		await waitFor(() => expect(teams.createTeam).toHaveBeenCalled())
 		expect(teams.createTeam).toHaveBeenCalledWith({ kind: "cm", id: 19 }, {
 			members: [{ position: 0, uma: 41, style: "front", cards: [{ slot: 1, support_card: 302 }] }],
@@ -226,7 +353,6 @@ describe("the post panel", () => {
 	it("copies the permanent /post link", async () => {
 		const writeText = vi.fn(() => Promise.resolve())
 		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true })
-		vi.mocked(galleryPostFetch).mockImplementation(() => json(fullPost("aaaaaaa1")))
 		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
 		fireEvent.click(await screen.findByRole("button", { name: "Copy link" }))
 		await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/post/aaaaaaa1`))
@@ -239,12 +365,33 @@ describe("the post panel", () => {
 		expect(galleryView).not.toHaveBeenCalled()
 	})
 
+	it("keeps the post open when Escape closes a report over it", async () => {
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		fireEvent.click(await screen.findByRole("button", { name: "Report" }))
+		const report = await screen.findByRole("dialog", { name: "Report this team" })
+		fireEvent.keyDown(within(report).getAllByRole("radio")[0], { key: "Escape" })
+		// The browser's answer to Escape on a modal dialog, which jsdom does not send.
+		fireEvent(report, new Event("cancel", { cancelable: true }))
+		await waitFor(() => expect(screen.queryByRole("dialog", { name: "Report this team" })).not.toBeInTheDocument())
+		expect(screen.getByRole("region", { name: "Poster free's team" })).toBeInTheDocument()
+		expect(screen.getByTestId("address").textContent).toContain("post=aaaaaaa1")
+	})
+
+	it("shows a refused report inside the dialog", async () => {
+		vi.mocked(galleryReport).mockImplementation(() => json({ error: "You already reported this." }, 409))
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		fireEvent.click(await screen.findByRole("button", { name: "Report" }))
+		const report = await screen.findByRole("dialog", { name: "Report this team" })
+		fireEvent.click(within(report).getAllByRole("radio")[0])
+		fireEvent.click(within(report).getByRole("button", { name: "Send report" }))
+		expect(await within(report).findByRole("alert")).toHaveTextContent("You already reported this.")
+	})
+
 	it("draws each comment state", async () => {
 		const comment = (id: number, extra: Partial<GalleryComment>): GalleryComment => ({
 			id, state: "visible", body: `Body ${id}`, created_at: "2026-10-11T00:00:00Z", edited: false,
 			earlier_version: false, is_author: false, is_mine: false, poster: poster(null), replies: [], ...extra,
 		})
-		vi.mocked(galleryPostFetch).mockImplementation(() => json(fullPost("aaaaaaa1")))
 		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
 			json({
 				count: 2, page: 1, has_more: false,
@@ -260,6 +407,24 @@ describe("the post panel", () => {
 		expect(screen.getByText("Author")).toBeInTheDocument()
 		expect(screen.getByText("[deleted]")).toBeInTheDocument()
 		expect(screen.getByText("Body 4")).toBeInTheDocument()
+		expect(screen.getAllByRole("button", { name: "Reply" }).length).toBeGreaterThan(0)
+	})
+
+	it("offers no Reply without a display name, and says what to set", async () => {
+		auth.account = { display_name: "" }
+		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
+			json({
+				count: 1, page: 1, has_more: false,
+				results: [{
+					id: 1, state: "visible", body: "Nice", created_at: "2026-10-11T00:00:00Z", edited: false,
+					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), replies: [],
+				}],
+			})
+		)
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		expect(await screen.findByText("Nice")).toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "Set a display name" })).toHaveAttribute("href", "/account")
 	})
 })
 
@@ -267,7 +432,9 @@ describe("the post dialog", () => {
 	function renderDialog(displayName: string, onPosted = vi.fn()) {
 		render(
 			<MemoryRouter>
-				<PublishDialog teamId={5} displayName={displayName} replacing={false} onPosted={onPosted} onClose={vi.fn()} />
+				<TestQueryProvider>
+					<PublishDialog teamId={5} displayName={displayName} replacing={false} onPosted={onPosted} onClose={vi.fn()} />
+				</TestQueryProvider>
 			</MemoryRouter>
 		)
 		return onPosted
@@ -283,6 +450,15 @@ describe("the post dialog", () => {
 		fireEvent.click(post)
 		await waitFor(() => expect(onPosted).toHaveBeenCalled())
 		expect(pvpTeamPublish).toHaveBeenCalledWith(5, "Runaway blocker")
+	})
+
+	it("shows a refusal next to the caption", async () => {
+		vi.mocked(pvpTeamPublish).mockImplementation(() => json({ error: "That caption has a word we don't allow." }, 400))
+		renderDialog("Rhondal")
+		fireEvent.click(screen.getByRole("checkbox"))
+		fireEvent.click(screen.getByRole("button", { name: "Post team" }))
+		expect(await screen.findByRole("alert")).toHaveTextContent("That caption has a word we don't allow.")
+		expect(toast.error).not.toHaveBeenCalled()
 	})
 
 	it("sends someone with no display name to set one", () => {

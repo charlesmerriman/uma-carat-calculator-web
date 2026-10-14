@@ -1,52 +1,43 @@
 /**
  * The account page's "Your gallery posts": every team the person has posted,
- * with its numbers, whether it is live or waiting for a moderator, and the
- * ways to open, share or take it down.
+ * with its umas, its numbers, whether it is live or waiting for a moderator,
+ * and the ways to open, share or take it down.
  *
- * Fetched when the section mounts (the account page renders only for a
- * signed-in person). Event names come with each post, because the account
- * page is outside /app and has no event list of its own.
+ * Read from the gallery's query cache (services/galleryQueries.ts), so a vote
+ * or a take-down made on the PvP page in this tab is already reflected. The
+ * account page renders only for a signed-in person. Event names come with
+ * each post, because the account page is outside /app and has no event list;
+ * the uma pictures come from the small /umas list for the same reason.
  */
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowBigUp, Copy, Eye, Link2, MessageSquare } from "lucide-react"
+import { ArrowBigUp, Copy, Eye, Link2, Loader2, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
-import { galleryMyPosts, galleryPostTakeDown, galleryShareUrl } from "../../services/galleryFetchCalls"
+import { UmaPortrait } from "../pvp/gallery/GalleryBits"
+import { ACTION_BUTTON, DANGER_BUTTON, SECONDARY_BUTTON } from "../pvp/gallery/galleryStyles"
+import { galleryShareUrl } from "../../services/galleryFetchCalls"
+import { failureText, useMyGalleryPosts, useTakeDownPost } from "../../services/galleryQueries"
+import { useUmaPictures } from "../../hooks/useUmaPictures"
 import { formatDate } from "../../utils/dateFormat"
-import type { GalleryPost } from "../../types/gallery"
+import { formatTimeAgo } from "../../utils/relativeDate"
+import { countLabel } from "../../utils/plural"
+import { STYLE_LABELS } from "../../utils/pvpGuide"
 
 export function MyGalleryPosts({ className, titleClassName }: { className: string; titleClassName: string }) {
-	const [posts, setPosts] = useState<GalleryPost[] | null>(null)
-	const [failed, setFailed] = useState(false)
+	const posts = useMyGalleryPosts()
+	const pictures = useUmaPictures((posts.data?.length ?? 0) > 0)
+	const takeDown = useTakeDownPost()
 	const [confirming, setConfirming] = useState<string | null>(null)
 
-	useEffect(() => {
-		let live = true
-		galleryMyPosts()
-			.then(async (response) => {
-				if (!response.ok) throw new Error(String(response.status))
-				const body = (await response.json()) as GalleryPost[]
-				if (live) setPosts(body)
-			})
-			.catch(() => {
-				if (live) setFailed(true)
-			})
-		return () => {
-			live = false
-		}
-	}, [])
-
-	const takeDown = async (publicId: string) => {
-		const response = await galleryPostTakeDown(publicId).catch(() => null)
-		if (!response?.ok) {
-			toast.error("Your post couldn't be taken down. Try again in a moment.")
-			return
-		}
-		setPosts((current) => (current ?? []).filter((post) => post.public_id !== publicId))
-		setConfirming(null)
-		toast.success("Your post is down.")
-	}
+	const remove = (publicId: string) =>
+		takeDown.mutate(publicId, {
+			onSuccess: () => {
+				setConfirming(null)
+				toast.success("Your post is down.")
+			},
+			onError: (error) => toast.error(failureText(error, "Your post couldn't be taken down. Try again in a moment.")),
+		})
 
 	const share = async (publicId: string) => {
 		const url = galleryShareUrl(publicId)
@@ -63,11 +54,19 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 			<h2 id="gallery-posts" className={titleClassName}>
 				Your gallery posts
 			</h2>
-			{failed ? (
-				<p className="mt-2 text-sm text-gray-400">Your posts didn't load. Try again in a moment.</p>
-			) : posts === null ? (
-				<p className="mt-2 text-sm text-gray-400">Loading your posts…</p>
-			) : posts.length === 0 ? (
+			{posts.isError ? (
+				<div className="mt-2 flex flex-col items-start gap-2 text-sm text-gray-400" role="alert">
+					Your posts didn't load.
+					<button type="button" onClick={() => void posts.refetch()} className={SECONDARY_BUTTON}>
+						Try again
+					</button>
+				</div>
+			) : posts.isPending ? (
+				<p className="mt-2 flex items-center gap-2 text-sm text-gray-400" role="status">
+					<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+					Loading your posts…
+				</p>
+			) : posts.data.length === 0 ? (
 				<p className="mt-2 text-sm leading-relaxed text-gray-300">
 					You haven't posted a team yet. Build one on the{" "}
 					<Link to="/app/pvp?view=team" className="text-brand hover:text-brand/75">
@@ -77,8 +76,8 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 				</p>
 			) : (
 				<ul className="mt-3 flex flex-col gap-3">
-					{posts.map((post) => (
-						<li key={post.public_id} className="rounded-lg border border-gray-700 bg-gray-900/40 p-3">
+					{posts.data.map((post) => (
+						<li key={post.public_id} className="flex flex-col gap-2 rounded-lg border border-gray-700 bg-gray-900/40 p-3">
 							<div className="flex flex-wrap items-center gap-2">
 								<span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-100">{post.event.label}</span>
 								{post.hidden ? (
@@ -89,61 +88,69 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 									<span className="rounded-full bg-brand/15 px-2 py-0.5 text-xs font-medium text-brand">Live</span>
 								)}
 							</div>
-							{post.caption && <p className="mt-1 break-words text-sm text-gray-300">{post.caption}</p>}
-							<p className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
-								<span className="flex items-center gap-1">
-									<Eye className="h-3.5 w-3.5" aria-hidden="true" />
-									{post.stats.views} views
-								</span>
+							{post.caption && <p className="break-words text-sm text-gray-300">{post.caption}</p>}
+							<ul className="flex gap-3" aria-label="Umas">
+								{post.umas.map((member) => {
+									const uma = pictures.get(member.uma)
+									return (
+										<li key={member.uma} className="flex w-16 flex-col items-center gap-0.5 text-center">
+											{/* The account page is an owner-named exception to the frame rule. */}
+											<UmaPortrait uma={uma} className="w-12" frame={false} />
+											<span className="w-full truncate text-[11px] text-gray-300">{uma?.name ?? ""}</span>
+											<span className="text-[11px] text-gray-500">{STYLE_LABELS[member.style]}</span>
+										</li>
+									)
+								})}
+							</ul>
+							<p className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
 								<span className="flex items-center gap-1">
 									<ArrowBigUp className="h-3.5 w-3.5" aria-hidden="true" />
-									{post.stats.upvotes} upvotes
+									{countLabel(post.stats.upvotes, "upvote")}
 								</span>
 								<span className="flex items-center gap-1">
 									<MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-									{post.stats.comments} comments
+									{countLabel(post.stats.comments, "comment")}
+								</span>
+								<span className="flex items-center gap-1">
+									<Eye className="h-3.5 w-3.5" aria-hidden="true" />
+									{countLabel(post.stats.views, "view")}
 								</span>
 								<span className="flex items-center gap-1">
 									<Copy className="h-3.5 w-3.5" aria-hidden="true" />
-									{post.stats.copies} copies
+									{countLabel(post.stats.copies, "copy", "copies")}
 								</span>
-								<span>Posted {formatDate(post.published_at)}</span>
+								<time dateTime={post.published_at} title={formatDate(post.published_at)}>
+									Posted {formatTimeAgo(post.published_at)}
+								</time>
 							</p>
-							<div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+							<div className="flex flex-wrap items-center gap-2">
 								<Link
 									to={`/app/pvp?event=${post.event.kind}-${post.event.id}&view=gallery&post=${post.public_id}`}
-									className="rounded-md border border-gray-600 px-2.5 py-1 text-gray-100 transition hover:border-brand hover:text-brand"
+									className={ACTION_BUTTON}
 								>
 									Open
 								</Link>
-								<button
-									type="button"
-									onClick={() => void share(post.public_id)}
-									className="flex items-center gap-1 rounded-md border border-gray-600 px-2.5 py-1 text-gray-100 transition hover:border-brand hover:text-brand"
-								>
-									<Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+								<button type="button" onClick={() => void share(post.public_id)} className={ACTION_BUTTON}>
+									<Link2 className="h-4 w-4" aria-hidden="true" />
 									Copy link
 								</button>
 								{confirming === post.public_id ? (
-									<span className="flex items-center gap-1.5 text-gray-300">
+									<span className="flex items-center gap-1.5 text-sm text-gray-300">
 										Take it down?
 										<button
 											type="button"
-											onClick={() => void takeDown(post.public_id)}
-											className="rounded-md border border-highlight/60 px-2 py-1 text-highlight transition hover:bg-highlight/10"
+											disabled={takeDown.isPending}
+											onClick={() => remove(post.public_id)}
+											className={DANGER_BUTTON}
 										>
 											Take down
 										</button>
-										<button type="button" onClick={() => setConfirming(null)} className="rounded-md border border-gray-600 px-2 py-1 transition hover:bg-gray-700">
+										<button type="button" onClick={() => setConfirming(null)} className={SECONDARY_BUTTON}>
 											Keep
 										</button>
 									</span>
 								) : (
-									<button
-										type="button"
-										onClick={() => setConfirming(post.public_id)}
-										className="rounded-md border border-gray-600 px-2.5 py-1 text-gray-300 transition hover:border-highlight hover:text-highlight"
-									>
+									<button type="button" onClick={() => setConfirming(post.public_id)} className={ACTION_BUTTON}>
 										Take down
 									</button>
 								)}

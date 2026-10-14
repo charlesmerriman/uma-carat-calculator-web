@@ -39,8 +39,13 @@ export function pvpTeamPublish(teamId: number, caption: string): Promise<Respons
 	return post(`/pvp-teams/${teamId}/publish`, { confirm_public_identity: true, caption })
 }
 
-export function galleryFeedFetch(ref: PvpEventRef, sort: GallerySort, page: number): Promise<Response> {
-	const query = new URLSearchParams({ sort, page: String(page) })
+/** One event's feed: the top `limit` rows for the sort, only teams with `uma` when set. */
+export function galleryFeedFetch(
+	ref: PvpEventRef,
+	{ sort, uma, limit }: { sort: GallerySort; uma: number | null; limit: number }
+): Promise<Response> {
+	const query = new URLSearchParams({ sort, limit: String(limit) })
+	if (uma !== null) query.set("uma", String(uma))
 	return fetch(`${API_URL}/pvp-gallery/${ref.kind}/${ref.id}?${query}`, { headers: jsonHeaders() })
 }
 

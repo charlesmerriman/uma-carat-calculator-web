@@ -65,13 +65,24 @@ export interface GalleryPost extends GalleryRow {
 	stats: GalleryStats & { copies: number }
 }
 
+/**
+ * One event's feed: the top `limit` rows. "Load more" asks for a longer
+ * limit rather than a next page, because Hot and Top are re-ranked on every
+ * request and an offset page would repeat or skip posts that moved.
+ */
 export interface GalleryFeed {
+	/** Posts matching the filter, all of them, not just the rows sent. */
 	count: number
 	sort: GallerySort
-	page: number
+	limit: number
 	has_more: boolean
 	results: GalleryRow[]
+	/** Every uma in the event's posts, filter or not, most-used first. */
+	umas: Array<{ uma: number; count: number }>
 }
+
+/** Rows a feed asks for at first, and how many more each "Load more" adds. */
+export const GALLERY_FEED_STEP = 20
 
 /**
  * visible       shown with its text and person

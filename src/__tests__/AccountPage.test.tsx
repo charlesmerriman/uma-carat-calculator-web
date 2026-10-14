@@ -14,6 +14,7 @@ import { startAccountLink, unlinkProvider } from '../services/accountLinking'
 import { accountDelete, accountPatch } from '../services/accountFetchCalls'
 import { umasFetch } from '../services/umasFetchCalls'
 import { galleryMyPosts, galleryPostTakeDown } from '../services/galleryFetchCalls'
+import { TestQueryProvider } from '../test/TestQueryProvider'
 import { getAuthToken, setAuthToken } from '../services/authToken'
 import type { Account, AccountStatus } from '../types/account'
 
@@ -41,7 +42,12 @@ const auth = vi.hoisted(() => ({
 	refresh: vi.fn(),
 	signOut: vi.fn(),
 }))
-vi.mock('../services/AuthContext', () => ({ useAccount: () => auth }))
+// The real module, so AuthContext itself exists (useOshiIds reads it for the
+// favourite frame); only useAccount is replaced.
+vi.mock('../services/AuthContext', async () => ({
+	...(await vi.importActual<typeof import('../services/AuthContext')>('../services/AuthContext')),
+	useAccount: () => auth,
+}))
 
 const mockedStart = vi.mocked(startAccountLink)
 const mockedUnlink = vi.mocked(unlinkProvider)
@@ -104,7 +110,9 @@ function signedIn(acct: Account) {
 function renderPage() {
 	return render(
 		<MemoryRouter initialEntries={['/account']}>
-			<AccountPage />
+			<TestQueryProvider>
+				<AccountPage />
+			</TestQueryProvider>
 		</MemoryRouter>,
 	)
 }

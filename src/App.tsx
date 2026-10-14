@@ -12,6 +12,7 @@ import { ApiSourceBadge } from "./components/ApiSourceBadge.js"
 import { CookieConsentBanner } from "./components/consent/CookieConsentBanner.js"
 import { ThemeProvider } from "./services/ThemeProvider.js"
 import { AuthProvider } from "./services/AuthProvider.js"
+import { QueryProvider } from "./services/QueryProvider.js"
 import { useTheme } from "./services/ThemeContext.js"
 import { getThemeMode } from "./services/themeStore.js"
 import { HomePage } from "./components/home/HomePage.js"
@@ -68,40 +69,44 @@ function App() {
 				    home page and the FAQ, and the Phase 3 ad loader needs it
 				    everywhere. A guest costs no request — see AuthProvider. */}
 				<AuthProvider>
-					<Routes>
-						<Route path="/" element={<HomePage />} />
-						<Route path="/login" element={<Login />} />
-						{/* Where Google/Discord send the browser back to. Must match
-						    OAUTH_REDIRECT_URI on the backend and the redirect URI
-						    registered in each provider's console, exactly. */}
-						<Route path="/auth/callback" element={<OAuthCallback />} />
-						{/* Connected providers, supporter status, sign-out. Not prerendered
-						    and noindex, like /login: it describes one signed-in person, and
-						    a guest gets a sign-in card rather than a redirect. */}
-						<Route path="/account" element={<AccountPage />} />
-						<Route path="/privacy-policy" element={<PrivacyPolicy />} />
-						<Route path="/terms" element={<Terms />} />
-						<Route path="/about" element={<About />} />
-						<Route path="/changelog" element={<Changelog />} />
-						<Route path="/faq" element={<Faq />} />
-						<Route path="/feedback" element={<Feedback />} />
-						{/* Public since guest mode: the calculator works without an
-						    account; logging in is only needed to save a plan. The
-						    closed-beta passcode wall that used to wrap this route
-						    was removed at open-beta launch. */}
-						<Route
-							path="/app/*"
-							element={
-								<CalculatorProvider>
-									<ApplicationViews />
-								</CalculatorProvider>
-							}
-						/>
-						{/* A real 404 rather than a redirect home — see NotFound for why the
-						    old redirect was a soft 404. Only reached for paths OUTSIDE /app:
-						    /app/* matches above and ApplicationViews carries its own. */}
-						<Route path="*" element={<NotFound />} />
-					</Routes>
+					{/* The query cache (services/queryClient.ts). Inside AuthProvider
+					    because a sign-in or sign-out resets it. */}
+					<QueryProvider>
+						<Routes>
+							<Route path="/" element={<HomePage />} />
+							<Route path="/login" element={<Login />} />
+							{/* Where Google/Discord send the browser back to. Must match
+							    OAUTH_REDIRECT_URI on the backend and the redirect URI
+							    registered in each provider's console, exactly. */}
+							<Route path="/auth/callback" element={<OAuthCallback />} />
+							{/* Connected providers, supporter status, sign-out. Not prerendered
+							    and noindex, like /login: it describes one signed-in person, and
+							    a guest gets a sign-in card rather than a redirect. */}
+							<Route path="/account" element={<AccountPage />} />
+							<Route path="/privacy-policy" element={<PrivacyPolicy />} />
+							<Route path="/terms" element={<Terms />} />
+							<Route path="/about" element={<About />} />
+							<Route path="/changelog" element={<Changelog />} />
+							<Route path="/faq" element={<Faq />} />
+							<Route path="/feedback" element={<Feedback />} />
+							{/* Public since guest mode: the calculator works without an
+							    account; logging in is only needed to save a plan. The
+							    closed-beta passcode wall that used to wrap this route
+							    was removed at open-beta launch. */}
+							<Route
+								path="/app/*"
+								element={
+									<CalculatorProvider>
+										<ApplicationViews />
+									</CalculatorProvider>
+								}
+							/>
+							{/* A real 404 rather than a redirect home — see NotFound for why the
+							    old redirect was a soft 404. Only reached for paths OUTSIDE /app:
+							    /app/* matches above and ApplicationViews carries its own. */}
+							<Route path="*" element={<NotFound />} />
+						</Routes>
+					</QueryProvider>
 				</AuthProvider>
 			</ErrorBoundary>
 		</ThemeProvider>

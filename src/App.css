@@ -595,6 +595,15 @@
 
    Same @apply restriction as the category chip below: the --color-ssr-* and
    --color-recommended-* tokens live in index.css's @theme. */
+/* The game's own SSR rainbow, as colour stops for a linear-gradient: the
+   foil edge of every .ssr-panel (the Timeline's recommended banners and the
+   gallery's top tier). The Senior Class chip uses the same four colours with
+   its stops moved (.gallery-chip below). Not theme tokens, for the reason the
+   panel gives below: a foil looks the same whatever it is printed on. */
+:root {
+	--ssr-rainbow: #ffa4eb 0%, #ed66f8 33%, #4ee3ff 67%, #deff59 100%;
+}
+
 .ssr-panel {
 	/* One four-point glint, reused by every ::before layer. Pale gold for the
 	   dark surface; the light theme swaps in a deeper one below. */
@@ -618,14 +627,7 @@
 			var(--color-ssr-mid) 55%,
 			var(--color-ssr-deep) 100%
 		) padding-box,
-		linear-gradient(
-			115deg,
-			#f8d66d 0%,
-			#ff9ecf 25%,
-			#9ee7ff 50%,
-			#b9a3ff 75%,
-			#f8d66d 100%
-		) border-box;
+		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
 	/* Kept tight on purpose: .card-panel is overflow-hidden with only 8px of
 	   padding on a phone, so any wider outer glow is sheared off at its edge. */
 	box-shadow:
@@ -726,13 +728,83 @@
 
 /* ── Gallery looks ─────────────────────────────────────────────────────────
    A supporter's post in the PvP gallery, by the KEY the API sends
-   (components/pvp/gallery/GalleryRow.tsx). The top tier is the SSR panel
-   itself (the row swaps card-panel for .ssr-panel, as FeaturePanel does);
-   the two below get an edge. Both are still: only the top tier moves.
+   (GalleryRow in components/pvp/gallery/GalleryView.tsx, and the poster block
+   in GalleryPostPanel.tsx). The top tier is the SSR panel itself (the row
+   swaps card-panel for .ssr-panel, as FeaturePanel does); the two below get
+   an edge. Both are still: only the top tier moves.
+
+   In the FEED the SSR panel is quiet (.ssr-panel--quiet, below): the foil edge
+   on the ordinary card surface, the glints at rest, and the shine only while
+   the row is hovered or focused. A list where every Senior Class row glows
+   gold and sweeps reads as "ranked by tier", which it is not. The open post
+   wears the full panel.
 
    SR: the gold edge is a second background clipped to the border box, the
    SSR panel's zero-layout trick, so the row is exactly as tall as a plain
    one. The surface stays the ordinary card. */
+.ssr-panel--quiet {
+	background:
+		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
+	box-shadow: 0 0 6px var(--color-ssr-glow);
+}
+
+.ssr-panel--quiet::before {
+	animation: none;
+	opacity: 0.6;
+}
+
+.ssr-panel--quiet::after {
+	animation: none;
+}
+
+/* EXPERIMENT (2026-10-14): the game's SSR card gradient across the whole
+   post, at 50%, over the ordinary card surface (the second layer), so
+   it reads the same whatever is behind the row. At that strength the dark
+   theme's colours land in the middle tones, where the row's own light text
+   still reads (about 3.3 to 5.5:1) better than dark ink would (2.8 to 4.7),
+   so the text keeps its colours and only the dim lines are lifted. The
+   stops are re-spaced like the chip's: the purples squeezed toward the pink
+   end, the cyan held as a band from 48% to 74%. Used on the feed row and on
+   the open post's poster block. To undo: delete this block and the
+   ssr-panel--rainbow class in GalleryRow (GalleryView.tsx) and PostBody
+   (GalleryPostPanel.tsx). */
+.ssr-panel--rainbow {
+	background:
+		linear-gradient(115deg, #f3a9e880 0%, #da76f380 18%, #ba8cf480 32%, #73e0fd80 48%, #73e0fd80 74%, #c5f58f80 100%) padding-box,
+		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
+	/* The plain panel's inner gold haze, dropped: it tinted the pastel edge
+	   on the open post but not on the row. */
+	box-shadow: 0 0 6px var(--color-ssr-glow);
+}
+
+.ssr-panel--rainbow :is(.text-gray-400, .text-gray-500) {
+	color: var(--color-gray-200);
+}
+
+/* One pass of the shine on hover or keyboard focus, then rest. */
+.ssr-panel--quiet:hover::after,
+.ssr-panel--quiet:focus-within::after {
+	animation: ssr-sweep-once 1.4s ease-in-out;
+}
+
+@keyframes ssr-sweep-once {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ssr-panel--quiet:hover::after,
+	.ssr-panel--quiet:focus-within::after {
+		animation: none;
+	}
+}
+
 .card-panel[data-gallery-style="sr"] {
 	border-color: transparent;
 	background:
@@ -766,9 +838,13 @@
 	white-space: nowrap;
 }
 
+/* The SSR rainbow's colours, re-spaced for a chip only a few words wide:
+   the darker purple is narrowed (it is the stop the dark ink reads worst
+   on) and the cyan held as a solid band, so the chip reads as the game's
+   rainbow rather than a purple pill. */
 .gallery-chip[data-gallery-style="ssr"] {
 	color: var(--color-recommended-ink);
-	background: linear-gradient(115deg, #f8d66d 0%, #ff9ecf 30%, #9ee7ff 60%, #b9a3ff 85%, #f8d66d 100%);
+	background: linear-gradient(115deg, #ffa4eb 0%, #ed66f8 22%, #4ee3ff 42%, #4ee3ff 68%, #deff59 100%);
 	box-shadow: 0 0 6px var(--color-ssr-glow);
 }
 
@@ -875,20 +951,57 @@
 	@apply font-semibold text-gray-100;
 }
 
+/* ===== UMA FRAMES =====
+   components/FramedUma.tsx: an uma's borderless art in the site's own frame,
+   silver for everyone and the rainbow one for the person's favourites
+   ([data-oshi]). The frame is a 762-unit SVG whose outer edge is a 4-unit
+   line on an 80-unit corner, so the art underneath is clipped to the same
+   curve (82/762 of the side, as a percentage so it holds at every size) and
+   nothing pokes out past the frame's corners. The frame's 24-unit band
+   covers the art's outer edge, the way the game's own frames do. */
+.uma-frame {
+	position: relative;
+	display: block;
+	aspect-ratio: 1;
+	flex-shrink: 0;
+	border-radius: 10.75%;
+	background-color: var(--color-gray-700);
+}
+
+.uma-frame > img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: inherit;
+}
+
+.uma-frame::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: url("./assets/uma-frame.svg") center / 100% 100% no-repeat;
+}
+
+.uma-frame[data-oshi]::after {
+	background-image: url("./assets/uma-frame-oshi.svg");
+}
+
+/* The owner's named exceptions (the navbar profile, the account page outside
+   the favourites card): the same borderless art and corner, no frame. */
+.uma-frame--bare::after {
+	content: none;
+}
+
 /* ===== THUMBNAILS ===== */
 
 /* Base thumbnail geometry — deliberately square-cornered. Support card art is a
    full-bleed rectangle with its border frame drawn into the image, so any CSS
-   radius visibly slices that frame's corners off. */
+   radius visibly slices that frame's corners off. Umas are not drawn with this
+   class: they are FramedUma ("Uma frames" above). */
 .thumb-banner {
 	@apply h-14 w-auto object-contain;
-}
-
-/* Uma icons ship with a rounded frame baked into the art (corners transparent),
-   so they get a matching radius — it lands on the existing curve rather than
-   cutting into artwork. */
-.thumb-banner--uma {
-	@apply rounded-md;
 }
 
 /* ===== SELECT OVERRIDES ===== */
@@ -941,44 +1054,3 @@ input[type="number"] {
 	}
 }
 
-/* ===== FAVOURITE UMA FRAME (PvP team) =====
-   A favourite uma (an oshi) on a PvP team, in TeamGrid and CompactTeamGrid:
-   a 3px gradient ring that turns slowly, with a soft glow. The ring is this
-   element's own background showing through its 3px padding around the tile.
-
-   The turn animates a registered custom property (@property), which a
-   conic-gradient can read; a browser without @property shows the same ring,
-   still. Reduced motion holds it still too. Colours are the --color-oshi*
-   tokens (index.css), redrawn for light themes. */
-@property --oshi-angle {
-	syntax: "<angle>";
-	inherits: false;
-	initial-value: 0deg;
-}
-
-.oshi-frame {
-	padding: 3px;
-	border-radius: 0.6875rem;
-	background: conic-gradient(
-		from var(--oshi-angle),
-		var(--color-oshi),
-		var(--color-brand),
-		var(--color-oshi-soft),
-		var(--color-brand),
-		var(--color-oshi)
-	);
-	box-shadow: 0 0 18px var(--color-oshi-glow);
-	animation: oshi-turn 6s linear infinite;
-}
-
-@keyframes oshi-turn {
-	to {
-		--oshi-angle: 360deg;
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.oshi-frame {
-		animation: none;
-	}
-}
