@@ -199,19 +199,32 @@ describe("guidePicks", () => {
 describe("skill versions", () => {
 	const gold = { id: 12, name: "Corner Adept ◎", description: "", image: null, rarity: 2, tier: 2, version: "◎ gold", is_evolved: false }
 	const evolved = { id: 13, name: "Corner Virtuoso", description: "", image: null, rarity: 6, tier: 1, version: "evolved", is_evolved: true }
-	const white = { id: 11, name: "Corner Adept ○", description: "", image: null, rarity: 1, unique_of: null, version: "○ white", versions: [gold, evolved] }
-	const lone = { id: 20, name: "Groundwork", description: "", image: null, rarity: 2, unique_of: null, version: "◎ gold", versions: [] }
+	const white = { id: 11, name: "Corner Adept ○", description: "", image: null, rarity: 1, unique_of: null, version: "○ white", tier: 1, is_evolved: false, versions: [gold, evolved] }
+	const whiteVersion = { id: 11, name: "Corner Adept ○", description: "", image: null, rarity: 1, tier: 1, version: "○ white", is_evolved: false }
+	const goldPick = { id: 12, name: "Corner Adept ◎", description: "", image: null, rarity: 2, unique_of: null, version: "◎ gold", tier: 2, is_evolved: false, versions: [whiteVersion, evolved] }
+	const evolvedPick = { id: 13, name: "Corner Virtuoso", description: "", image: null, rarity: 6, unique_of: null, version: "evolved", tier: 1, is_evolved: true, versions: [whiteVersion, gold] }
+	const lone = { id: 20, name: "Groundwork", description: "", image: null, rarity: 2, unique_of: null, version: "◎ gold", tier: 2, is_evolved: false, versions: [] }
 
 	it("answers to its own id and its versions'", () => {
 		expect(skillFamilyIds(white)).toEqual([11, 12, 13])
 		expect(skillFamilyIds(lone)).toEqual([20])
 	})
 
-	it("finds the team's sources for any version and says which", () => {
-		const sources = new Map([[12, ["Kitasan Black (hint)"]], [13, ["Oguri Cap (evolution)"]]])
-		expect(familySources(sources, white)).toEqual(["Kitasan Black (hint), as ◎ gold", "Oguri Cap (evolution), as evolved"])
+	it("a gold on the team covers a white pick, and says so", () => {
+		const sources = new Map([[12, ["Kitasan Black (hint)"]]])
+		expect(familySources(sources, white)).toEqual(["Kitasan Black (hint), as ◎ gold"])
 		expect(familySources(new Map([[11, ["Special Week (own)"]]]), white)).toEqual(["Special Week (own)"])
 		expect(familySources(new Map(), white)).toBeNull()
+	})
+
+	it("a white on the team does not cover a gold pick", () => {
+		expect(familySources(new Map([[11, ["Special Week (own)"]]]), goldPick)).toBeNull()
+		expect(familySources(new Map([[12, ["Kitasan Black (hint)"]]]), goldPick)).toEqual(["Kitasan Black (hint)"])
+	})
+
+	it("an evolved pick is covered by a base version, to evolve; no card teaches the evolved form", () => {
+		expect(familySources(new Map([[11, ["Special Week (own)"]]]), evolvedPick)).toEqual(["Special Week (own), as ○ white (evolve it)"])
+		expect(familySources(new Map([[13, ["Oguri Cap (evolution)"]]]), white)).toBeNull()
 	})
 
 	it("badges a white skill that has a gold version", () => {
@@ -222,7 +235,7 @@ describe("skill versions", () => {
 })
 
 describe("guideSkillsByCategory", () => {
-	const skill = (id: number) => ({ id, name: `Skill ${id}`, description: "", image: null, rarity: 1, unique_of: null, version: "○ white", versions: [] })
+	const skill = (id: number) => ({ id, name: `Skill ${id}`, description: "", image: null, rarity: 1, unique_of: null, version: "○ white", tier: 1, is_evolved: false, versions: [] })
 	const row = (id: number, style: string, category: string, tier: number | null, note = "") =>
 		({ style, category, tier, order: 0, note, skill: skill(id) })
 	const guide = {

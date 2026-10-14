@@ -60,8 +60,8 @@ const GUIDE: PvpGuide = {
 		{ style: "end", stars: 3, role: "", note: "", uma: { id: 42, name: "Gold Ship", image: null } },
 	],
 	skill_recommendations: [
-		{ style: "everyone", category: "green", tier: 1, order: 0, note: "", skill: { id: 1, name: "Left-Handed ○", description: "Better on left turns.", image: null, rarity: 1, unique_of: null, version: "○ white", versions: [] } },
-		{ style: "front", category: "acceleration", tier: null, order: 0, note: "order 1", skill: { id: 2, name: "Angling and Scheming", description: "Accelerates.", image: null, rarity: 5, unique_of: "Seiun Sky", version: "○ white", versions: [] } },
+		{ style: "everyone", category: "green", tier: 1, order: 0, note: "", skill: { id: 1, name: "Left-Handed ○", description: "Better on left turns.", image: null, rarity: 1, unique_of: null, version: "○ white", tier: 1, is_evolved: false, versions: [] } },
+		{ style: "front", category: "acceleration", tier: null, order: 0, note: "order 1", skill: { id: 2, name: "Angling and Scheming", description: "Accelerates.", image: null, rarity: 5, unique_of: "Seiun Sky", version: "○ white", tier: 1, is_evolved: false, versions: [] } },
 	],
 	style_notes: [{ style: "front", body: "**Acceleration:** Seiun first." }],
 	decks: [
@@ -310,7 +310,7 @@ describe("PvpGuidePage skill mentions", () => {
 	it("renders [[Skill]] in a style note and in a deck note as the skill, with its description", async () => {
 		const groundwork = {
 			id: 9, name: "Groundwork", description: "Front runners speed up early.", image: null, rarity: 1, unique_of: null,
-			version: "○ white",
+			version: "○ white", tier: 1, is_evolved: false,
 			versions: [{ id: 10, name: "Groundwork ◎", description: "Even earlier.", image: null, rarity: 2, tier: 2, version: "◎ gold", is_evolved: false }],
 		}
 		respond(200, {

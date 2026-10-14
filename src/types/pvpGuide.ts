@@ -60,6 +60,9 @@ export interface PvpSkillRef {
 	unique_of: string | null
 	/** This skill's own version label: "○ white", "◎ gold", "evolved". */
 	version: string
+	/** 1 white, 2 gold (the game's own number). */
+	tier: number
+	is_evolved: boolean
 	/** Its other versions, white then gold then evolved; empty when it has none. */
 	versions: PvpSkillVersion[]
 }

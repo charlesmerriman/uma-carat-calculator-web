@@ -1341,8 +1341,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   derived server side from the game data (same group plus the evolution link), never
   stored. `SkillVersions` (PvpTiles) lists them under the chip's and the mention's hover
   detail, a white chip with a gold form shows a ◎ badge (`hasGoldVersion`), and the team
-  builder's skills panel counts a team as having a pick when it can get ANY version
-  (`familySources`, `skillFamilyIds` in `utils/pvpGuide.ts`), saying which. A guide may
+  builder's skills panel counts a source that teaches the pick or a HIGHER version
+  (`familySources` in `utils/pvpGuide.ts`): a card that teaches the gold teaches the white
+  too (owner, 2026-10-14), so a gold on the team covers a white pick and a white never
+  covers a gold; an evolved pick is covered by a base, "(evolve it)". A guide may
   list the white and the gold as two rows when their usefulness differs (owner,
   2026-10-14); they show as two chips.
 - **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the

@@ -22,6 +22,7 @@ import type {
 	PvpStyle,
 	PvpSupportCardRef,
 	PvpUmaRecommendation,
+	PvpSkillVersion,
 } from "../types/pvpGuide"
 import { parseApiDate } from "./dateFormat"
 import { refForRaceEvent, sameEvent, type PvpEventRef } from "./pvpEvent"
@@ -213,24 +214,40 @@ export function guideSkillsByCategory(
 
 /**
  * Every id a recommended skill answers to: its own and its other versions'.
- * A guide names one version; a team that can get ANY of them has the skill
- * (sometimes a worse one, which `familySources` says).
+ * A guide names one version; the rest are the same effect in another form.
  */
 export function skillFamilyIds(skill: PvpSkillRef): number[] {
 	return [skill.id, ...skill.versions.map((version) => version.id)]
 }
 
 /**
- * Where a team gets a recommended skill or any version of it, from the
- * team's skill sources (`teamSkillSources` in utils/pvpTeams). A source that
- * gives another version says which: "Kitasan Black (hint), as ◎ gold". Null
- * when the team gets none of them.
+ * Does a source teaching `version` give a team the pick `skill`?
+ *
+ * The direction matters: a card that teaches the gold teaches the white too
+ * (owner, 2026-10-14), so a gold on the team covers a white pick, and a
+ * white never covers a gold. No card teaches an evolved skill; an evolved
+ * pick is covered by a base version, which is what gets evolved.
+ */
+function versionCovers(skill: PvpSkillRef, version: PvpSkillVersion): boolean {
+	if (skill.is_evolved) return !version.is_evolved
+	if (version.is_evolved) return false
+	return version.tier >= skill.tier
+}
+
+/**
+ * Where a team gets a recommended skill, from the team's skill sources
+ * (`teamSkillSources` in utils/pvpTeams): the pick itself, or a version that
+ * covers it (`versionCovers`). A source that gives another version says
+ * which: "Kitasan Black (hint), as ◎ gold"; the base of an evolved pick says
+ * "(evolve it)". Null when the team gets none of them.
  */
 export function familySources(sources: Map<number, string[]>, skill: PvpSkillRef): string[] | null {
 	const found: string[] = []
 	for (const from of sources.get(skill.id) ?? []) found.push(from)
 	for (const version of skill.versions) {
-		for (const from of sources.get(version.id) ?? []) found.push(`${from}, as ${version.version}`)
+		if (!versionCovers(skill, version)) continue
+		const suffix = skill.is_evolved ? " (evolve it)" : ""
+		for (const from of sources.get(version.id) ?? []) found.push(`${from}, as ${version.version}${suffix}`)
 	}
 	return found.length > 0 ? found : null
 }

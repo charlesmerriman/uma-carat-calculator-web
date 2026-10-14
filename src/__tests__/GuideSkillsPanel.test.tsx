@@ -8,7 +8,7 @@ import type { PvpGuide } from "../types/pvpGuide"
  * and counted, and a row that opens to say why and where from.
  */
 
-const skill = (id: number, name: string) => ({ id, name, description: `${name} does a thing.`, image: null, rarity: 1, unique_of: null, version: "○ white", versions: [] })
+const skill = (id: number, name: string) => ({ id, name, description: `${name} does a thing.`, image: null, rarity: 1, unique_of: null, version: "○ white", tier: 1, is_evolved: false, versions: [] })
 const row = (id: number, name: string, style: string, category: string, tier: number | null) =>
 	({ style, category, tier, order: 0, note: "", skill: skill(id, name) })
 
