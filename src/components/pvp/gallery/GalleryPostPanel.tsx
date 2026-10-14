@@ -176,7 +176,7 @@ function StepButton({ label, target, onOpenPost, children }: {
 	)
 }
 
-/** Everything but the comments: the poster in their look, caption, team, numbers, actions. */
+/** Everything but the comments: the poster in their look, caption, team, strategy, numbers, actions. */
 function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 	post: GalleryPost
 	event: RaceEvent
@@ -194,6 +194,7 @@ function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 	const [confirmTakeDown, setConfirmTakeDown] = useState(false)
 	const look = post.poster.gallery_style
 	const updated = post.content_updated_at !== post.published_at
+	const strategyId = useId()
 
 	const copy = async () => {
 		ensureLoaded()
@@ -247,11 +248,12 @@ function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 				</p>
 			)}
 
-			{/* The poster in their look: the open post is where a supporter's
-			    full SSR shine belongs (the list keeps it quiet). */}
+			{/* The poster in their look. Senior Class is the quiet panel here
+			    too, the foil edge on the ordinary surface: its coloured fill
+			    is off for now (App.css, .ssr-panel--rainbow). */}
 			<div
 				data-gallery-style={look ?? undefined}
-				className={`flex flex-col gap-2 ${look === "ssr" ? "ssr-panel ssr-panel--rainbow rounded-xl border p-3" : look ? "card-panel p-3" : ""}`}
+				className={`flex flex-col gap-2 ${look === "ssr" ? "ssr-panel ssr-panel--quiet rounded-xl border p-3" : look ? "card-panel p-3" : ""}`}
 			>
 				<div className="flex flex-col gap-2">
 					<PosterLine poster={post.poster} mine={post.is_mine} extra={post.is_mine && <YouChip />} />
@@ -270,6 +272,17 @@ function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 			</div>
 
 			<GalleryTeam members={post.team} index={index} />
+
+			{/* The poster's longer text, after the team it talks about. Plain
+			    text with its line breaks; nothing in it becomes a link. */}
+			{post.strategy && (
+				<section aria-labelledby={strategyId} className="flex flex-col gap-1.5 rounded-xl border border-gray-700 bg-gray-900/40 p-3">
+					<h3 id={strategyId} className="text-sm font-semibold text-gray-100">
+						Strategy
+					</h3>
+					<p className="whitespace-pre-line break-words text-sm leading-relaxed text-gray-200">{post.strategy}</p>
+				</section>
+			)}
 
 			<div className="flex flex-wrap items-center gap-3">
 				<GalleryUpvote post={post} layout="row" />

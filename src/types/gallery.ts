@@ -57,6 +57,12 @@ export interface GalleryRow {
 
 /** One post in full, for the post panel. */
 export interface GalleryPost extends GalleryRow {
+	/**
+	 * The longer text ("Strategy"), "" when there is none. Only here, never
+	 * on a feed row. Not "notes": that is a team's private notes, which no
+	 * gallery payload may carry.
+	 */
+	strategy: string
 	team: PvpTeamMember[]
 	/** `label` is the event's name. */
 	event: { kind: PvpEventKind; id: number; label: string }
@@ -132,5 +138,6 @@ export interface GalleryCopy {
 }
 
 export const GALLERY_CAPTION_MAX = 140
+export const GALLERY_STRATEGY_MAX = 2000
 export const GALLERY_COMMENT_MAX = 500
 export const GALLERY_REPORT_NOTE_MAX = 200

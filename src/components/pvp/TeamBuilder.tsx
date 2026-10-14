@@ -365,6 +365,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 						teamId={team.id}
 						displayName={account?.display_name ?? ""}
 						replacing={eventTeams.some((candidate) => candidate.post)}
+						ownPost={team.post ?? null}
 						onPosted={(post) => setTeamPost(team.key, post.public_id)}
 						onClose={() => setPublishing(false)}
 					/>

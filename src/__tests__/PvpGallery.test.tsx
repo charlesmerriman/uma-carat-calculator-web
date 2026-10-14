@@ -113,6 +113,7 @@ const TEAM: PvpTeamMember[] = [
 function fullPost(publicId: string, extra: Partial<GalleryPost> = {}): GalleryPost {
 	return {
 		...row(publicId),
+		strategy: "",
 		team: TEAM,
 		event: { kind: "cm", id: 19, label: "Libra Cup" },
 		hidden: false,
@@ -319,6 +320,20 @@ describe("the post panel", () => {
 		expect(galleryView).toHaveBeenCalledWith("aaaaaaa1")
 	})
 
+	it("shows the strategy under the team, and no section without one", async () => {
+		vi.mocked(galleryPostFetch).mockImplementation((id) =>
+			json(fullPost(id, { strategy: id === "aaaaaaa1" ? "Pace in front.\nEnd closes." : "" }))
+		)
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		const open = await panel()
+		const strategy = await within(open).findByRole("region", { name: "Strategy" })
+		expect(strategy).toHaveTextContent("Pace in front. End closes.")
+		fireEvent.click(screen.getByRole("button", { name: "Next team" }))
+		await waitFor(() => expect(screen.getByTestId("address").textContent).toContain("post=bbbbbbb2"))
+		await within(await panel()).findByText("Caption bbbbbbb2")
+		expect(screen.queryByRole("region", { name: "Strategy" })).not.toBeInTheDocument()
+	})
+
 	it("opens from the list and closes back to it", async () => {
 		renderGallery()
 		const [first] = await screen.findAllByRole("article")
@@ -327,7 +342,8 @@ describe("the post panel", () => {
 		expect(screen.getByTestId("address").textContent).toContain("post=aaaaaaa1")
 		fireEvent.click(screen.getByRole("button", { name: "Close" }))
 		await waitFor(() => expect(screen.getByTestId("address").textContent).not.toContain("post="))
-		expect(screen.queryByRole("region", { name: "Poster free's team" })).not.toBeInTheDocument()
+		// The post slides out before it leaves the page.
+		await waitFor(() => expect(screen.queryByRole("region", { name: "Poster free's team" })).not.toBeInTheDocument())
 	})
 
 	it("steps to the next team in the list", async () => {
@@ -429,11 +445,18 @@ describe("the post panel", () => {
 })
 
 describe("the post dialog", () => {
-	function renderDialog(displayName: string, onPosted = vi.fn()) {
+	function renderDialog(displayName: string, onPosted = vi.fn(), ownPost: string | null = null) {
 		render(
 			<MemoryRouter>
 				<TestQueryProvider>
-					<PublishDialog teamId={5} displayName={displayName} replacing={false} onPosted={onPosted} onClose={vi.fn()} />
+					<PublishDialog
+						teamId={5}
+						displayName={displayName}
+						replacing={ownPost !== null}
+						ownPost={ownPost}
+						onPosted={onPosted}
+						onClose={vi.fn()}
+					/>
 				</TestQueryProvider>
 			</MemoryRouter>
 		)
@@ -445,11 +468,34 @@ describe("the post dialog", () => {
 		const onPosted = renderDialog("Rhondal")
 		const post = screen.getByRole("button", { name: "Post team" })
 		expect(post).toBeDisabled()
-		fireEvent.change(screen.getByRole("textbox"), { target: { value: "  Runaway blocker " } })
+		fireEvent.change(screen.getByRole("textbox", { name: /Caption/ }), { target: { value: "  Runaway blocker " } })
+		fireEvent.change(screen.getByRole("textbox", { name: /Strategy/ }), { target: { value: "Pace in front.\n\nEnd closes. " } })
 		fireEvent.click(screen.getByRole("checkbox"))
 		fireEvent.click(post)
 		await waitFor(() => expect(onPosted).toHaveBeenCalled())
-		expect(pvpTeamPublish).toHaveBeenCalledWith(5, "Runaway blocker")
+		expect(pvpTeamPublish).toHaveBeenCalledWith(5, "Runaway blocker", "Pace in front.\n\nEnd closes.")
+	})
+
+	it("starts an update from the post's own words", async () => {
+		vi.mocked(galleryPostFetch).mockImplementation((id) =>
+			json(fullPost(id, { caption: "Old caption", strategy: "Old strategy" }))
+		)
+		renderDialog("Rhondal", vi.fn(), "aaaaaaa1")
+		expect(await screen.findByRole("textbox", { name: /Strategy/ })).toHaveValue("Old strategy")
+		expect(screen.getByRole("textbox", { name: /Caption/ })).toHaveValue("Old caption")
+		expect(screen.getByRole("button", { name: "Update post" })).toBeInTheDocument()
+	})
+
+	it("marks the box a refusal names", async () => {
+		vi.mocked(pvpTeamPublish).mockImplementation(() =>
+			json({ error: "Links can't be posted in the gallery.", field: "strategy" }, 400)
+		)
+		renderDialog("Rhondal")
+		fireEvent.click(screen.getByRole("checkbox"))
+		fireEvent.click(screen.getByRole("button", { name: "Post team" }))
+		expect(await screen.findByRole("alert")).toHaveTextContent("Links can't be posted in the gallery.")
+		expect(screen.getByRole("textbox", { name: /Strategy/ })).toHaveAttribute("aria-invalid", "true")
+		expect(screen.getByRole("textbox", { name: /Caption/ })).not.toHaveAttribute("aria-invalid")
 	})
 
 	it("shows a refusal next to the caption", async () => {

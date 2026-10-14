@@ -27,16 +27,28 @@ const post = (path: string, body?: unknown, method = "POST"): Promise<Response> 
 
 /** The sentence a refusal carries, or `fallback` when it has none. */
 export async function refusalText(response: Response, fallback: string): Promise<string> {
+	return (await refusal(response, fallback)).text
+}
+
+/**
+ * A refusal's sentence, and the request field it was about when the API
+ * names one (`caption` or `strategy` on a post), so a form with two text
+ * boxes can mark the right one.
+ */
+export async function refusal(response: Response, fallback: string): Promise<{ text: string; field: string | null }> {
 	try {
-		const body = (await response.json()) as { error?: unknown }
-		return typeof body.error === "string" && body.error ? body.error : fallback
+		const body = (await response.json()) as { error?: unknown; field?: unknown }
+		return {
+			text: typeof body.error === "string" && body.error ? body.error : fallback,
+			field: typeof body.field === "string" ? body.field : null,
+		}
 	} catch {
-		return fallback
+		return { text: fallback, field: null }
 	}
 }
 
-export function pvpTeamPublish(teamId: number, caption: string): Promise<Response> {
-	return post(`/pvp-teams/${teamId}/publish`, { confirm_public_identity: true, caption })
+export function pvpTeamPublish(teamId: number, caption: string, strategy: string): Promise<Response> {
+	return post(`/pvp-teams/${teamId}/publish`, { confirm_public_identity: true, caption, strategy })
 }
 
 /** One event's feed: the top `limit` rows for the sort, only teams with `uma` when set. */

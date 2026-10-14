@@ -1415,11 +1415,32 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gallery/<kind>/<id>`
 (`backend/docs/api-reference.md`, "Gallery").
 
-- **Two panes from `lg` up, one below.** The feed sits on the left and the open post
-  (`GalleryPostPanel`) beside it, inline and sticky under the PvP page's own sticky event bar
-  (`top-[4.5rem]`; change it if that bar's height changes). With nothing open the right pane
-  says "Pick a team". Below `lg` the post takes the feed's place (the feed stays mounted,
-  hidden) with an "All teams" button. **It is not a dialog**: the page stays usable, toasts
+- **One full-width feed until a post opens, then two panes from `lg` up.** With nothing
+  open the feed spans the page and each row is one short band. Open a post and the feed
+  moves to the left with the post (`GalleryPostPanel`) beside it, inline and sticky under the
+  PvP page's own sticky event bar (`top-[4.5rem]`; change it if that bar's height changes).
+  Below `lg` the post takes the feed's place (the feed stays mounted, hidden) with an "All
+  teams" button.
+- **Rows take their shape from the feed's width, not the screen's**: the feed is
+  `@container/feed`, and `GalleryRow` stacks below `@4xl/feed` (56rem) and lays out as a band
+  above it; the toolbar does the same at `@2xl/feed`. So the narrow left pane and a phone get
+  the stacked row with no extra rules.
+- **Opening and closing morph (two panes only).** Framer Motion layout animations: the row
+  card animates its size and the pieces inside only their position (`Glide`,
+  `layout="position"`, so text is never stretched), measured only when `split` flips
+  (`layoutDependency`); the post slides in and out (`AnimatePresence mode="popLayout"`, which
+  lifts a closing post out of the grid so the feed widens under it). Below two panes the
+  feed is `hidden` while a post is open, and a hidden element measures as an empty box, so
+  the rows don't animate there. `MotionConfig reducedMotion="user"` turns it all off for
+  reduced motion.
+- **`KeepRowInPlace` holds the opened (or closed) row still on screen** through the morph:
+  rows roughly double in height, so without it the row you clicked lands a screen lower. It
+  scrolls the app scroller on the same curve and timing as the morph (`MORPH`), which
+  cancels the row's own slide. That only works if nothing else moves the scroller before
+  Framer measures (a microtask after the commit), so the grid opts out of browser scroll
+  anchoring (`[overflow-anchor:none]`) and the navigation is claimed from `useScrollReset`
+  (`claimScrollRestore`), whose Back restore would otherwise jump it. A row that was out of
+  sight leaves the scroll where it is. **It is not a dialog**: the page stays usable, toasts
   show above it, and Escape closes it while focus is inside. The layout uses `lg:` rather
   than `desktop-nav:` (both 64rem) because Tailwind emits custom variants after its
   breakpoints, so a `desktop-nav:` column would beat the `xl:` one that widens it.
@@ -1428,7 +1449,7 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   `<Link>` stretched over the row, the upvote above it; never a button or link wrapped around
   the row's lists). Opening from the list PUSHES an entry marked `galleryFromFeed`, and
   closing it then goes Back, so Back and Close agree and the list's scroll comes back
-  (`useScrollReset`); moving between posts (the arrows, or another row), sorting and
+  (`useScrollReset` below two panes, `KeepRowInPlace` from two panes up); moving between posts (the arrows, or another row), sorting and
   filtering REPLACE. A post's permanent link is `/post/<public_id>`, which the API serves
   (link-preview tags) and which moves people on to `?view=gallery&post=<id>`. Copy link
   copies the `/post` URL, never the `/app/pvp` address. Locally `/post` is only on :8000
@@ -1444,6 +1465,10 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   whoever asked.
 - **Rows** (`GalleryRow`): vertical upvote, picture, name, tier chip, "You" on your own, how
   long ago, caption (two lines), the three umas with names and styles, views and comments.
+  The poster's longer **strategy** (`GalleryPost.strategy`, 2,000 characters, plain text with
+  its line breaks) is never on a row: the open post shows it under the team, and
+  `PublishDialog` has a box for it under the caption's. Re-posting the team that is up starts
+  the dialog from its current words, so updating cards can't wipe a strategy.
   Decks are left to the panel on purpose: they made each row half again as tall, and from `lg`
   up the full team is one click away beside the list. Above the list sit the sort buttons, a
   line saying what the sort means (Hot and Top add that supporters count a bit extra, since
@@ -1452,7 +1477,10 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   team" button to My team, or Sign in for a guest.
 - **Looks by key only** (`poster.gallery_style`). In the list, `ssr` is
   `.ssr-panel.ssr-panel--quiet`: the foil edge on the ordinary surface, still glints, one pass
-  of the shine on hover or focus. The open post's poster block wears the full `.ssr-panel`.
+  of the shine on hover or focus. The open post's poster block is quiet too (since
+  2026-10-14): the owner turned off the coloured fill behind the text as hard to read. The
+  fill (`.ssr-panel--rainbow`, App.css) is kept but applied nowhere; its comment says how to
+  bring it back.
   `sr` and `rose` are `[data-gallery-style]` edges in App.css ("Gallery looks") from the
   `--color-gallery-*` tokens, light overrides included. The tier NAME is always text in
   `TierChip`, so the signal never rests on colour. Never derive a look from a tier name.

@@ -135,8 +135,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<h2 className={heading}>The PvP Gallery</h2>
 					<p className={paragraph}>
 						Posting a team to the gallery is your choice, and the post dialog asks you to
-						agree first. Once you post, everyone can see the team, your caption, your display
-						name, your favourite character picture and, if you support us on Patreon and
+						agree first. Once you post, everyone can see the team, your caption and strategy, your
+						display name, your favourite character picture and, if you support us on Patreon and
 						leave it switched on, your tier. The same shows next to any comment you write.
 					</p>
 					<ul className={list}>
@@ -181,7 +181,7 @@ export const PrivacyPolicy: React.FC = () => {
 							service you asked for when you signed in.
 						</li>
 						<li>
-							<strong>Showing what you post in the gallery</strong> (your team, caption,
+							<strong>Showing what you post in the gallery</strong> (your team, caption, strategy,
 							comments, display name, picture and tier). Basis: <strong>your consent</strong>,
 							Article 6(1)(a), given when you post. You withdraw it by taking the post down or
 							deleting the comment.
