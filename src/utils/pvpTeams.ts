@@ -14,6 +14,7 @@ import type { RaceEvent } from "../types"
 import type { PvpGuide } from "../types/pvpGuide"
 import { hasEnded, isRunning } from "./pvpGuide"
 import { refForRaceEvent, sameEvent } from "./pvpEvent"
+import { releaseBlockReason, type ReleaseStatus } from "./cardRelease"
 import type {
 	CatalogueSupportCard,
 	CatalogueUma,
@@ -282,4 +283,23 @@ export function favouriteCheck(
 		const character = umasById.get(umaId)?.character_id
 		return character != null && characters.has(character)
 	}
+}
+
+/**
+ * A team as it may be added to an event: anything not out by the event's last
+ * day removed (utils/cardRelease.ts). Every path into a team applies the
+ * release rule, and a team copied from the gallery is a path in: its poster's
+ * client checked it, but the server does not, so it is checked again here.
+ * An uma that may not be added takes its deck with it.
+ */
+export function withinRelease(
+	members: PvpTeamMember[],
+	releaseFor: (pool: "uma" | "support", id: number) => ReleaseStatus
+): PvpTeamMember[] {
+	return members
+		.filter((member) => releaseBlockReason(releaseFor("uma", member.uma)) === null)
+		.map((member) => ({
+			...member,
+			cards: member.cards.filter((card) => releaseBlockReason(releaseFor("support", card.support_card)) === null),
+		}))
 }

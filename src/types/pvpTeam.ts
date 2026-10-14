@@ -111,6 +111,8 @@ export interface PvpTeamPayload extends PvpTeamContent {
 	event: number
 	is_focus: boolean
 	updated_at: string
+	/** The public id of the gallery post copied from this team, or null. Out only. */
+	post?: string | null
 }
 
 /**
@@ -132,4 +134,9 @@ export interface PvpTeam extends PvpTeamContent {
 	 * teams for one event: the team drawer shows the one edited last.
 	 */
 	updatedAt: number
+	/**
+	 * The public id of this team's gallery post, or null/absent when it is not
+	 * posted. Only an account's team can be posted; a guest's never is.
+	 */
+	post?: string | null
 }

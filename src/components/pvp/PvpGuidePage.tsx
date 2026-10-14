@@ -8,7 +8,7 @@
  *
  *   Recommendations  the guide (PvpGuideView), live now
  *   My team          the player's own team builder (TeamBuilder)
- *   Gallery          teams other players posted for this event (R3), a placeholder
+ *   Gallery          teams other players posted for this event (GalleryView)
  *
  * The event and the view are both URL parameters (`?event=cm-12&view=team`),
  * so every screen is a link someone can paste. With no event the page opens on
@@ -70,6 +70,7 @@ import {
 import { PvpGuideView } from "./PvpGuideView"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
+import { GalleryView } from "./gallery/GalleryView"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
@@ -81,7 +82,7 @@ const VIEW_PARAM = "view"
 const VIEWS: Array<{ id: PvpView; label: string; icon: LucideIcon; soon: boolean }> = [
 	{ id: "recommendations", label: "Recommendations", icon: BookOpen, soon: false },
 	{ id: "team", label: "My team", icon: Users, soon: false },
-	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: true },
+	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
 ]
 
 function parseView(value: string | null): PvpView {
@@ -197,11 +198,7 @@ export const PvpGuidePage = () => {
 							)}
 							{view === "team" && <TeamBuilder event={event} />}
 							{view === "gallery" && (
-								<ComingSoon
-									icon={LayoutGrid}
-									title="Teams from other players"
-									text="See the teams other players built for this event, and copy one to use as your starting point."
-								/>
+								<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
 							)}
 						</div>
 					</>
@@ -244,19 +241,6 @@ function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView)
 					</button>
 				)
 			})}
-		</div>
-	)
-}
-
-function ComingSoon({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
-	return (
-		<div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-700 bg-gray-800/40 px-4 py-12 text-center">
-			<Icon className="h-8 w-8 text-gray-500" />
-			<h2 className="text-base font-semibold text-gray-100">{title}</h2>
-			<p className="max-w-md text-sm text-gray-400">{text}</p>
-			<span className="mt-1 rounded-full border border-brand/50 bg-brand/10 px-3 py-0.5 text-xs font-semibold text-brand">
-				Coming soon
-			</span>
 		</div>
 	)
 }

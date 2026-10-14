@@ -292,6 +292,22 @@ html {
 	--color-oshi: #f472b6;
 	--color-oshi-soft: #fbcfe8;
 	--color-oshi-glow: rgb(244 114 182 / 45%);
+
+	/* Gallery looks (App.css [data-gallery-style], components/pvp/gallery).
+	   The top tier wears the SSR panel above; these are the two below it.
+	   SR: a metallic gold EDGE on the ordinary dark card, with a soft glow. On
+	   the gold, gilded and midnight themes the glow is what keeps it apart
+	   from the brand gold, the recommended chip's trick. Rose: a still edge
+	   for the first paid tier, redder than the favourite-uma pink so the two
+	   never read as one signal. Chips carry dark ink on the gold fills (7:1
+	   or better) and the rose text clears 4.5:1 on gray-800. */
+	--color-gallery-sr-edge: #d4a017;
+	--color-gallery-sr-light: #fff1b8;
+	--color-gallery-sr-glow: rgb(245 197 66 / 35%);
+	--color-gallery-rose-edge: #fb7185;
+	--color-gallery-rose-glow: rgb(251 113 133 / 30%);
+	--color-gallery-rose-text: #fda4af;
+	--color-gallery-rose-tint: rgb(251 113 133 / 14%);
 }
 
 /* ===== THEME OVERRIDES =====
@@ -490,6 +506,15 @@ html {
 	--color-oshi: #db2777;
 	--color-oshi-soft: #f9a8d4;
 	--color-oshi-glow: rgb(219 39 119 / 35%);
+
+	/* Gallery looks, deeper on white cards. */
+	--color-gallery-sr-edge: #b7791f;
+	--color-gallery-sr-light: #f5d77a;
+	--color-gallery-sr-glow: rgb(183 121 31 / 30%);
+	--color-gallery-rose-edge: #e11d48;
+	--color-gallery-rose-glow: rgb(225 29 72 / 22%);
+	--color-gallery-rose-text: #be123c;
+	--color-gallery-rose-tint: rgb(225 29 72 / 10%);
 }
 
 /* The original warm Light palette remains the primary light choice. */

@@ -99,6 +99,10 @@ vi.mock("../services/CalculatorContext", () => ({
 vi.mock("../components/pvp/TeamBuilder", () => ({
 	TeamBuilder: ({ event: shown }: { event: RaceEvent }) => <div data-testid="team-builder">{`cm-${shown.id}`}</div>,
 }))
+// The gallery has its own tests (PvpGallery.test.tsx); here only which view shows.
+vi.mock("../components/pvp/gallery/GalleryView", () => ({
+	GalleryView: ({ event }: { event: { id: number } }) => <div data-testid="gallery-view">{`cm-${event.id}`}</div>,
+}))
 
 const { PvpGuidePage } = await import("../components/pvp/PvpGuidePage")
 const { clearPvpGuideCache } = await import("../hooks/usePvpGuide")
@@ -253,25 +257,26 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByText("New since")).not.toBeInTheDocument()
 	})
 
-	it("offers My team and a coming-soon Gallery, kept in the URL", async () => {
+	it("offers My team and the Gallery, kept in the URL", async () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		const views = within(screen.getByRole("tablist", { name: "View" }))
 		expect(views.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
 			"Recommendations",
 			"My team",
-			"GallerySoon",
+			"Gallery",
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")
 		expect(screen.getByTestId("team-builder").textContent).toBe("cm-10")
 		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
-		expect(screen.getByText("Teams from other players")).toBeInTheDocument()
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=gallery")
+		expect(screen.getByTestId("gallery-view").textContent).toBe("cm-10")
 		fireEvent.click(views.getByRole("tab", { name: "Recommendations" }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10")
 	})
 
-	it("does not fetch the guide on a placeholder view", () => {
+	it("does not fetch the guide on the gallery view", () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10&view=gallery")
 		expect(fetchMock).not.toHaveBeenCalled()

@@ -78,6 +78,7 @@ function fromPayload(payload: PvpTeamPayload): PvpTeam {
 		notes: payload.notes,
 		members: payload.members,
 		updatedAt: Date.parse(payload.updated_at) || 0,
+		post: payload.post ?? null,
 	}
 }
 
@@ -397,6 +398,23 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 		[commit]
 	)
 
+	const setTeamPost = useCallback(
+		(key: string, publicId: string | null) => {
+			const team = teamsRef.current.find((candidate) => candidate.key === key)
+			if (!team) return
+			// One post per event: posting this team moves the post off any other
+			// team for the same event, as the server does.
+			commit(
+				teamsRef.current.map((candidate) => {
+					if (candidate.key === key) return { ...candidate, post: publicId }
+					const sameEventTeam = candidate.kind === team.kind && candidate.event === team.event
+					return sameEventTeam && publicId !== null ? { ...candidate, post: null } : candidate
+				})
+			)
+		},
+		[commit]
+	)
+
 	const saveState: PvpTeamsSaveState = timerIsGoing ? "pending" : requestState
 
 	const value = useMemo<PvpTeamsContextType>(
@@ -411,8 +429,9 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 			renameTeam,
 			pinTeam,
 			deleteTeam,
+			setTeamPost,
 		}),
-		[status, mode, shownTeams, saveState, ensureLoaded, createTeam, editTeam, renameTeam, pinTeam, deleteTeam]
+		[status, mode, shownTeams, saveState, ensureLoaded, createTeam, editTeam, renameTeam, pinTeam, deleteTeam, setTeamPost]
 	)
 
 	return <PvpTeamsContext.Provider value={value}>{children}</PvpTeamsContext.Provider>

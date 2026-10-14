@@ -44,6 +44,12 @@ export interface PvpTeamsContextType {
 	/** Pin a team as the focus, or `null` to unpin whichever is pinned. */
 	pinTeam: (key: string | null) => void
 	deleteTeam: (key: string) => void
+	/**
+	 * Record that a team was posted to the gallery (its post's public id) or
+	 * taken down (null). The post itself is made by the gallery's own route;
+	 * this only keeps My team's "Posted" in step without a reload.
+	 */
+	setTeamPost: (key: string, publicId: string | null) => void
 }
 
 export const PvpTeamsContext = createContext<PvpTeamsContextType | undefined>(undefined)

@@ -51,7 +51,7 @@ const team = (key: string, extra: Partial<PvpTeam> = {}): PvpTeam => ({
 function teamsValue(teams: PvpTeam[], extra: Partial<PvpTeamsContextType> = {}): PvpTeamsContextType {
 	return {
 		status: "ready", mode: "guest", teams, saveState: "idle",
-		ensureLoaded: vi.fn(), createTeam: vi.fn(), editTeam: vi.fn(), renameTeam: vi.fn(), pinTeam: vi.fn(), deleteTeam: vi.fn(),
+		ensureLoaded: vi.fn(), createTeam: vi.fn(), editTeam: vi.fn(), renameTeam: vi.fn(), pinTeam: vi.fn(), deleteTeam: vi.fn(), setTeamPost: vi.fn(),
 		...extra,
 	}
 }

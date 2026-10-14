@@ -12,14 +12,18 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Check, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Sparkles, Star, Trash2 } from "lucide-react"
+import { Check, LayoutGrid, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Send, Sparkles, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
-import { refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
+import { pvpEventHref, refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
+import { useAccount } from "../../services/AuthContext"
+import { PublishDialog } from "./gallery/PublishDialog"
 import {
 	PVP_BORROW_SLOT,
+	PVP_DECK_SIZE,
 	PVP_TEAM_CAP_PER_EVENT,
+	PVP_TEAM_SIZE,
 	firstOpenCardSlot,
 	memberAt,
 	preferredTeam,
@@ -132,7 +136,9 @@ function ReadyBuilder({ event, teamsState, index }: {
 	teamsState: PvpTeamsContextType
 	index: PvpCatalogueIndex
 }) {
-	const { teams, mode, saveState, createTeam, editTeam, renameTeam, deleteTeam } = teamsState
+	const { teams, mode, saveState, createTeam, editTeam, renameTeam, deleteTeam, setTeamPost } = teamsState
+	const { account } = useAccount()
+	const [publishing, setPublishing] = useState(false)
 	const ref = refForRaceEvent(event)
 	const eventTeams = teams.filter((team) => sameEvent({ kind: team.kind, id: team.event }, ref))
 
@@ -345,6 +351,24 @@ function ReadyBuilder({ event, teamsState, index }: {
 					onChange={(notes) => team && editTeam(team.key, { notes })}
 					disabledReason={team ? null : "Pick an uma first to start a team"}
 				/>
+
+				{team && mode === "account" && (
+					<GalleryPostBar
+						team={team}
+						eventHref={pvpEventHref(ref)}
+						saving={saveState === "pending" || saveState === "saving"}
+						onPublish={() => setPublishing(true)}
+					/>
+				)}
+				{publishing && team?.id != null && (
+					<PublishDialog
+						teamId={team.id}
+						displayName={account?.display_name ?? ""}
+						replacing={eventTeams.some((candidate) => candidate.post)}
+						onPosted={(post) => setTeamPost(team.key, post.public_id)}
+						onClose={() => setPublishing(false)}
+					/>
+				)}
 
 				{guide && (
 					<p className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -624,6 +648,59 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 					))}
 				{trailing}
 			</div>
+		</div>
+	)
+}
+
+/**
+ * The selected team's place in the gallery, for a signed-in player: post it,
+ * or, once posted, a link to the post and "Update post". A post is a frozen
+ * copy (the API's gallery.publish_team), so edits made here reach it only
+ * when the player updates it; the line says so. Waits for a pending save, so
+ * what gets posted is what is on screen.
+ */
+function GalleryPostBar({ team, eventHref, saving, onPublish }: {
+	team: PvpTeam
+	eventHref: string
+	saving: boolean
+	onPublish: () => void
+}) {
+	const complete =
+		team.members.length === PVP_TEAM_SIZE && team.members.every((member) => member.cards.length === PVP_DECK_SIZE)
+	const blocked = team.id === null || saving ? "Saving your team first…" : complete ? null : "Fill all three umas and their six cards to post this team."
+	const button = (
+		<button
+			type="button"
+			disabled={blocked !== null}
+			title={blocked ?? undefined}
+			onClick={onPublish}
+			className="flex items-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-100 transition enabled:hover:border-brand enabled:hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			<Send className="h-4 w-4" aria-hidden="true" />
+			{team.post ? "Update post" : "Post to gallery"}
+		</button>
+	)
+	return (
+		<div className="card-panel flex flex-wrap items-center gap-2 p-2 text-sm text-gray-300">
+			{team.post ? (
+				<>
+					<Link
+						to={`${eventHref}&view=gallery&post=${team.post}`}
+						className="flex items-center gap-1.5 rounded-md bg-brand/15 px-2.5 py-1 font-medium text-brand transition hover:bg-brand/25"
+					>
+						<LayoutGrid className="h-4 w-4" aria-hidden="true" />
+						Posted
+					</Link>
+					<span className="min-w-0 flex-1 text-xs text-gray-400">
+						Your post shows this team as it was when you posted it.
+					</span>
+				</>
+			) : (
+				<span className="min-w-0 flex-1 text-xs text-gray-400">
+					{blocked && !saving && team.id !== null ? blocked : "Share this team in the gallery for this event."}
+				</span>
+			)}
+			{button}
 		</div>
 	)
 }
