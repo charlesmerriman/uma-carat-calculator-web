@@ -97,7 +97,7 @@ export const ProfileMenu = () => {
 					open ? "border-brand/70" : "border-gray-600 hover:border-gray-400 hover:bg-gray-800"
 				}`}
 			>
-				<Avatar src={account?.avatar_url} size="md" />
+				<Avatar src={account?.avatar_url} size="md" framed={false} />
 				<span className="hidden items-center gap-1 desktop-nav:flex">
 					{name && <span className="hidden max-w-36 truncate text-sm font-medium text-gray-200 xl:block">{name}</span>}
 					<ChevronDown
@@ -110,7 +110,7 @@ export const ProfileMenu = () => {
 			{open && (
 				<div role="menu" aria-label="Account" className={`${NAV_POPOVER} absolute right-0 top-full z-50 mt-1.5 w-60 p-1.5`}>
 					<div className="flex items-center gap-3 px-2 py-2">
-						<Avatar src={account?.avatar_url} size="sm" />
+						<Avatar src={account?.avatar_url} size="sm" framed={false} />
 						<div className="min-w-0">
 							<div className="truncate text-sm font-semibold text-gray-100">{name || "Signed in"}</div>
 							{/* The handle stays visible when a chosen name is shown above it:

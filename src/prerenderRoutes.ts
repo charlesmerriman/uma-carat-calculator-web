@@ -31,6 +31,7 @@ export const PRERENDER_ROUTES = [
 	"/app/timeline",
 	"/app/selectors",
 	"/app/legend-races",
+	"/app/pvp",
 ] as const
 
 export type PrerenderRoute = (typeof PRERENDER_ROUTES)[number]

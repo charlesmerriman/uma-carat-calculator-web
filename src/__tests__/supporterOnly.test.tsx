@@ -17,10 +17,12 @@ function account(benefits?: string[]): Account {
 	return {
 		username: 'user_a3f9c1',
 		display_name: '',
+		show_supporter_badge: true,
 		avatar_url: null,
 		oshis: [],
 		oshi_slots: 0,
 		oshi_variants: false,
+		early_access: false,
 		linked_providers: [],
 		supporter: benefits ? { is_supporter: true, tier: 'Junior Class', benefits } : { is_supporter: false },
 	}

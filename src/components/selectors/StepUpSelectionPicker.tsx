@@ -22,6 +22,8 @@ import type {
 	BannerUma,
 	UserStepUpSelection,
 } from "../../types"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 
 interface StepUpSelectionPickerProps {
 	stepUp: BannerStepUp
@@ -57,6 +59,8 @@ export const StepUpSelectionPicker = ({
 }: StepUpSelectionPickerProps) => {
 	const [search, setSearch] = useState("")
 	const isUma = poolFor(stepUp) === "uma"
+	// The person's favourite umas get the rainbow frame (FramedUma).
+	const oshiIds = useOshiIds()
 
 	const options = useEligibleCardCatalogue({
 		pool: poolFor(stepUp),
@@ -119,7 +123,9 @@ export const StepUpSelectionPicker = ({
 							: "border-gray-600 bg-gray-900/50"
 					}`}
 				>
-					{card ? (
+					{card?.portrait ? (
+						<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
+					) : card ? (
 						<img
 							src={card.image}
 							alt={card.label}
@@ -190,13 +196,17 @@ export const StepUpSelectionPicker = ({
 				}`}
 				onClick={() => onChange(toggleCard(selections, stepUp, option.value))}
 			>
-				<img
-					src={option.image}
-					alt=""
-					loading="lazy"
-					decoding="async"
-					className={`${cardSizeClass} object-contain`}
-				/>
+				{option.portrait ? (
+					<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-24" />
+				) : (
+					<img
+						src={option.image}
+						alt=""
+						loading="lazy"
+						decoding="async"
+						className={`${cardSizeClass} object-contain`}
+					/>
+				)}
 				<span className="mt-2 line-clamp-2 min-h-9 text-xs font-medium leading-tight text-gray-100">
 					{option.label}
 				</span>

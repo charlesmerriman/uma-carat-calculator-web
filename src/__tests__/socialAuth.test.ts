@@ -3,6 +3,7 @@ import {
   startSocialLogin,
   completeSocialLogin,
   isSocialProvider,
+  safeReturnPath,
 } from '../services/socialAuth'
 
 const STATE_KEY = 'oauthState.v1'
@@ -31,7 +32,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function readPending(): { provider?: string; state?: string; createdAt?: number } | null {
+function readPending(): { provider?: string; state?: string; createdAt?: number; returnTo?: string } | null {
   const raw = sessionStorage.getItem(STATE_KEY)
   return raw ? JSON.parse(raw) : null
 }
@@ -103,6 +104,39 @@ describe('startSocialLogin', () => {
 
     await expect(startSocialLogin('google')).rejects.toThrow()
     expect(assignMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('the page to return to', () => {
+  it('rides the pending login and comes back from the exchange', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ authorize_url: 'https://x.test', state: 'ST8' }))
+    await startSocialLogin('google', '/app/pvp?view=gallery&post=k3Df8aQ2')
+    expect(readPending()?.returnTo).toBe('/app/pvp?view=gallery&post=k3Df8aQ2')
+
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'abc123' }))
+    await expect(completeSocialLogin('google', 'CODE', 'ST8')).resolves.toBe('/app/pvp?view=gallery&post=k3Df8aQ2')
+  })
+
+  it('is nothing when the sign-in started from nowhere in particular', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ authorize_url: 'https://x.test', state: 'ST8' }))
+    await startSocialLogin('google')
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'abc123' }))
+    await expect(completeSocialLogin('google', 'CODE', 'ST8')).resolves.toBeNull()
+  })
+
+  it('is never anywhere but a page under /app', () => {
+    expect(safeReturnPath('/app')).toBe('/app')
+    expect(safeReturnPath('/app/pvp?post=x')).toBe('/app/pvp?post=x')
+    expect(safeReturnPath('/app?x=1')).toBe('/app?x=1')
+    for (const bad of ['//evil.example', '/\\evil.example', 'https://evil.example/app', '/application', '/account', '/app\\..', '', 42, null]) {
+      expect(safeReturnPath(bad)).toBeNull()
+    }
+  })
+
+  it('drops a path someone wrote into storage by hand', async () => {
+    sessionStorage.setItem(STATE_KEY, JSON.stringify({ provider: 'google', state: 'ST8', createdAt: Date.now(), returnTo: '//evil.example' }))
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'abc123' }))
+    await expect(completeSocialLogin('google', 'CODE', 'ST8')).resolves.toBeNull()
   })
 })
 

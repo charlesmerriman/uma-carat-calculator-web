@@ -38,6 +38,10 @@
 		<loc>https://umacaratcalculator.com/app/legend-races</loc>
 		<priority>0.7</priority>
 	</url>
+	<url>
+		<loc>https://umacaratcalculator.com/app/pvp</loc>
+		<priority>0.7</priority>
+	</url>
 	<!-- 16 questions across 4 groups. -->
 	<url>
 		<loc>https://umacaratcalculator.com/faq</loc>

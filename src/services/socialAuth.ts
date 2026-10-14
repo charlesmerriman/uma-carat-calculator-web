@@ -41,6 +41,23 @@ interface PendingLogin {
 	provider: SocialProvider
 	state: string
 	createdAt: number
+	/** Where to land once signed in (safeReturnPath), when the sign-in began somewhere specific. */
+	returnTo?: string
+}
+
+/**
+ * A path the callback may send someone back to after signing in, or null.
+ *
+ * Only a page inside /app: the calculator's own provider is what moves a
+ * guest plan into the new account on that first load (OAuthCallback), so the
+ * landing must stay under it; and a same-origin path that starts with "/app"
+ * cannot be an open redirect ("//evil.example" and "/\\evil" never match). It
+ * arrives through router state, which a link cannot set, but is checked here
+ * anyway because sessionStorage is just a string.
+ */
+export function safeReturnPath(value: unknown): string | null {
+	if (typeof value !== "string" || value.length > 512 || value.includes("\\")) return null
+	return /^\/app(?:[/?#]|$)/.test(value) ? value : null
 }
 
 interface StartResponse {
@@ -85,7 +102,7 @@ function parsePendingLogin(raw: string | null): PendingLogin | null {
 		) {
 			return null
 		}
-		return parsed as PendingLogin
+		return { ...(parsed as PendingLogin), returnTo: safeReturnPath(parsed.returnTo) ?? undefined }
 	} catch {
 		return null
 	}
@@ -129,8 +146,12 @@ function takePendingLogin(): PendingLogin | null {
 /**
  * Step 1: fetch the provider's consent URL and redirect the browser to it.
  * Does not return in the success case — the page navigates away.
+ *
+ * `returnTo` is where to land afterwards (a page under /app, see
+ * safeReturnPath); it rides the pending login, so it belongs to this one
+ * sign-in and expires with it.
  */
-export async function startSocialLogin(provider: SocialProvider): Promise<void> {
+export async function startSocialLogin(provider: SocialProvider, returnTo?: string | null): Promise<void> {
 	const response = await fetch(
 		`${API_URL}/auth/${provider}/start?redirect_uri=${encodeURIComponent(callbackUrl())}`
 	)
@@ -158,7 +179,8 @@ export async function startSocialLogin(provider: SocialProvider): Promise<void> 
 		const pending: PendingLogin = {
 			provider,
 			state: data.state,
-			createdAt: Date.now()
+			createdAt: Date.now(),
+			returnTo: safeReturnPath(returnTo) ?? undefined
 		}
 		sessionStorage.setItem(STATE_KEY, JSON.stringify(pending))
 	} catch {
@@ -177,12 +199,15 @@ export async function startSocialLogin(provider: SocialProvider): Promise<void> 
  * The state comparison is what stops login CSRF — an attacker can craft a
  * callback URL but cannot write to this tab's sessionStorage, so a forged
  * callback has nothing to match against.
+ *
+ * Resolves to the page the sign-in was started for (startSocialLogin's
+ * `returnTo`), or null to land on the default.
  */
 export async function completeSocialLogin(
 	provider: string,
 	code: string,
 	state: string
-): Promise<void> {
+): Promise<string | null> {
 	const pending = takePendingLogin()
 
 	if (
@@ -213,4 +238,5 @@ export async function completeSocialLogin(
 	// Goes through the token module so AuthProvider notices the sign-in and
 	// fetches the account, rather than waiting for the next page load.
 	setAuthToken(data.token)
+	return pending.returnTo ?? null
 }

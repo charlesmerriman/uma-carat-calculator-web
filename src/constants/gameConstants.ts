@@ -368,4 +368,13 @@ export const DEFAULT_CONSTANTS: CalculationConstants = {
 
 	prediction_factor: 0.664,
 	game_event_end_buffer_days: GAME_EVENT_END_DATE_BUFFER_DAYS,
+
+	cm_registration_opens_hours: -72,
+	cm_round_two_hours: 48,
+	cm_finals_registration_closes_hours: 108,
+	cm_finals_hours: 120,
+	loh_registration_opens_hours: null,
+	loh_round_two_hours: null,
+	loh_finals_registration_closes_hours: null,
+	loh_finals_hours: null,
 }

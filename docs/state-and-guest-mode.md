@@ -325,6 +325,47 @@ tests after that release. `DEFAULT_GUEST_STATS`, `statsAreDirty` and
 
 ---
 
+## Guest teams (the PvP team builder)
+
+PvP teams have their own provider, `services/PvpTeamsProvider.tsx` (context and
+`usePvpTeams()` in `PvpTeamsContext.ts`), mounted in `AppShell` inside the calculator
+provider. One provider rather than a hook per page because the PvP page's builder and the
+team drawer (R2b) edit the same teams and must save through one queue.
+
+- **Loaded on first use.** Nothing is read on `/app` load; the first consumer calls
+  `ensureLoaded()` (the PvP page's My team view, later the drawer).
+- **A tab saves the way it loaded**, the same rule as the plan: guest or account is decided
+  once, from the token, at that first load, and latched in `modeRef`.
+- **Guest:** `services/guestPvpTeamStore.ts`, localStorage key `guestPvpTeams.v1`. Ids
+  only, read back field by field, one pin kept, notes capped at ten; a refused write is
+  reported and toasted once per tab. A team whose event is no longer in
+  `/calculator-data` is kept but not shown (filtered at read time: the first load runs
+  from a child's effect in the commit that brings the events in, so filtering at load
+  saw an empty list). `subscribeToGuestPvpTeams` takes another tab's
+  copy. The save line says "Saved on this device".
+- **Account:** the `/pvp-teams` routes (`services/pvpTeamFetchCalls.ts`). Create, rename,
+  pin and delete go out at once; member and note edits mark the team dirty and are `PUT`
+  1.5 s after the last edit through `useAutoSave`. A team is on screen before its `POST`
+  returns: its `key` (never the server id) names it, edits made meanwhile are saved once
+  the id lands, and a delete in that window deletes the server copy when it arrives. A
+  refusal is toasted with the server's sentence. Never written to the device store.
+- **What a team carries besides its umas and cards:** a private `name`, up to ten `notes`
+  (`{text, color}`, 1000 characters each, written in `components/pvp/TeamNotes.tsx`), the pin
+  (`isFocus` here, `is_focus` on the server, `focus` in the device store; at most one, set from
+  the team window's selector) and `updatedAt`, the last change in ms, which picks between two
+  teams for one event (`utils/pvpTeams.ts` `preferredTeam()`). All of it is the owner's alone.
+- **A team copied from the gallery** goes through `createTeam` like any new team, so a
+  guest's copy lands in the device store and an account's on the server. Only an account's
+  team can be posted: `post` (the gallery post's public id) is always null on the device,
+  and `setTeamPost` updates it after posting or taking down.
+- **Signing in with teams on the device:** the first account load `POST`s each device team,
+  clears the ones that landed and toasts "Your teams from this device were added to your
+  account." A refused one stays on the device and is offered again next load.
+
+The catalogue the builder draws from (`GET /pvp-catalogue`) is a module-level promise in
+`pvpTeamFetchCalls.ts`, read through `hooks/usePvpCatalogue.ts`: one request per tab, made
+when the builder first mounts.
+
 ## Social sign-in, client side
 
 `services/socialAuth.ts`:

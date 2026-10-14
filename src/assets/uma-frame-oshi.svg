@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 762 762">
+  <defs>
+    <radialGradient gradientUnits="userSpaceOnUse" cx="67.87" cy="15.487" r="369" id="gradient-3" gradientTransform="matrix(1.667014, 1.880327, -6.992333, 3.544391, 72.010796, -123.745753)">
+      <stop offset="0" style="stop-color: rgb(209, 21, 193);"/>
+      <stop offset="0.695" style="stop-color: rgb(52, 142, 231);"/>
+      <stop offset="1" style="stop-color: rgb(96, 161, 3);"/>
+    </radialGradient>
+    <radialGradient gradientUnits="userSpaceOnUse" cx="46.695" cy="24.299" r="369" id="gradient-2" gradientTransform="matrix(1.87644, 2.010262, -3.842979, 2.050985, 56.618439, -126.356556)">
+      <stop offset="0" style="stop-color: rgb(255, 164, 235);"/>
+      <stop offset="0.239" style="stop-color: rgb(237, 102, 248);"/>
+      <stop offset="0.678" style="stop-color: rgb(78, 227, 255);"/>
+      <stop offset="0.738" style="stop-color: rgb(78, 227, 255);"/>
+      <stop offset="1" style="stop-color: rgb(222, 255, 89);"/>
+    </radialGradient>
+  </defs>
+  <rect x="12" y="12" width="738" height="738" style="fill: none; stroke-width: 24px; paint-order: stroke; stroke: url(&quot;#gradient-2&quot;);" rx="72" ry="72"/>
+  <rect width="758" height="758" style="fill: none; paint-order: stroke; stroke: url(&quot;#gradient-3&quot;); stroke-width: 4px;" rx="80" ry="80" x="2" y="2"/>
+</svg>

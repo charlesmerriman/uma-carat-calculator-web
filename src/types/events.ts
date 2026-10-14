@@ -76,11 +76,12 @@ export interface ChampionsMeeting {
 	season: string
 	weather: string
 	direction: string
-	speed_recommendation: string
-	stamina_recommendation: string
-	power_recommendation: string
-	guts_recommendation: string
-	wit_recommendation: string
+	/**
+	 * Whether the event has a PUBLISHED PvP guide (GET /pvp-guides/<kind>/<id>).
+	 * Drives the Timeline card's "PvP guide" link and the PvP page's star.
+	 * Optional: an older API omits it, which reads as "no guide".
+	 */
+	has_guide?: boolean
 }
 
 /**
@@ -119,11 +120,12 @@ export interface LeagueOfHeroes {
 	season: string
 	weather: string
 	direction: string
-	speed_recommendation: string
-	stamina_recommendation: string
-	power_recommendation: string
-	guts_recommendation: string
-	wit_recommendation: string
+	/**
+	 * Whether the event has a PUBLISHED PvP guide (GET /pvp-guides/<kind>/<id>).
+	 * Drives the Timeline card's "PvP guide" link and the PvP page's star.
+	 * Optional: an older API omits it, which reads as "no guide".
+	 */
+	has_guide?: boolean
 }
 
 /**

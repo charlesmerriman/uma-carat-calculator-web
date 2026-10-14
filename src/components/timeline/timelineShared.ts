@@ -13,6 +13,7 @@ import { parseApiDate } from "../../utils/dateFormat"
 import { startOfUtcDay } from "../../utils/utcDates"
 import { isRaceEvent } from "../../types"
 import type { TimelineFocus } from "../../utils/timelineFocus"
+import { refForRaceEvent } from "../../utils/pvpEvent"
 import type {
 	AnniversaryEvent,
 	AttachedAnniversaryEvent,
@@ -230,12 +231,17 @@ export function timelineRowKey(row: TimelineRow): string {
  * BannerWindowGroup), so the card a reader lands on is routinely shared with a
  * banner they did not click. A marker focus likewise matches the PAIR row
  * holding that marker when it launched alongside its other half (see
- * pairSameDayMarkers) — the shared panel is the card the reader lands on. Race
- * events can never match — nothing links to one — and they are excluded by
- * falling through rather than by a guard, so a new row kind is a compile error
- * at the switch above rather than a silent "never focusable" here.
+ * pairSameDayMarkers) — the shared panel is the card the reader lands on. A
+ * "cm" / "loh" focus (the PvP page's "View on Timeline") matches the race
+ * event of that kind and id, through refForRaceEvent, the one place that maps
+ * the backend's event_type onto the kind.
  */
 export function rowMatchesFocus(row: TimelineRow, focus: TimelineFocus): boolean {
+	if (focus.kind === "cm" || focus.kind === "loh") {
+		if (row.kind !== "race") return false
+		const ref = refForRaceEvent(row.event)
+		return ref.kind === focus.kind && ref.id === focus.id
+	}
 	if (focus.kind === "banner") {
 		return (
 			row.kind === "banner_window" &&
@@ -734,3 +740,17 @@ export function mergeTimelineMarkers(
 ): TimelineRow[] {
 	return spliceMarkerRows(rows, buildMarkerRows(markers))
 }
+
+// ── Control band styles ──────────────────────────────────────────────────────
+// Shared by the Timeline's sticky band and the PvP page's, so the two bars of
+// buttons read as the same control set. Moved here from Timeline.tsx.
+
+export const controlButtonClass =
+	"inline-flex min-h-10 items-center justify-center gap-2 rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 shadow-sm transition hover:border-gray-500 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-45 md:min-h-0 md:py-1.5"
+export const paginationButtonClass = `${controlButtonClass} min-w-28`
+export const pageIndicatorClass =
+	"inline-flex min-h-10 items-center justify-center rounded border border-gray-700 bg-gray-950/50 px-4 py-2 text-sm font-semibold text-gray-200 shadow-inner md:min-h-0 md:py-1.5"
+// Matches controlButtonClass so the filter reads as a third control in that row
+// rather than a form field that wandered in.
+export const categorySelectClass =
+	"inline-flex min-h-10 items-center rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 shadow-sm transition hover:border-gray-500 hover:bg-gray-700 focus:border-gray-500 focus:outline-none md:min-h-0 md:py-1.5"

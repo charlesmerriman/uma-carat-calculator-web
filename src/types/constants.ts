@@ -108,4 +108,17 @@ export interface CalculationConstants {
 	// Global date prediction (used server-side; served for reference)
 	prediction_factor: number
 	game_event_end_buffer_days: number
+
+	// PvP milestones: hours after a Champions Meeting / League of Heroes start
+	// date (negative = before it). Round 1 IS the start date. League of Heroes'
+	// four are null until its schedule is known; the PvP page shows a date
+	// only for the ones that are set (utils/pvpGuide.ts, `milestones`).
+	cm_registration_opens_hours: number
+	cm_round_two_hours: number
+	cm_finals_registration_closes_hours: number
+	cm_finals_hours: number
+	loh_registration_opens_hours: number | null
+	loh_round_two_hours: number | null
+	loh_finals_registration_closes_hours: number | null
+	loh_finals_hours: number | null
 }

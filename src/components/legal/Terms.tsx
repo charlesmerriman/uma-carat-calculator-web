@@ -34,7 +34,7 @@ export const Terms: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Terms of Service</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: September 12, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 14, 2026</p>
 
 					<p className={paragraph}>
 						These terms govern your use of the Uma Musume Carat Calculator (&quot;the
@@ -111,6 +111,25 @@ export const Terms: React.FC = () => {
 						You keep ownership of the planning data you enter. We may remove content or
 						suspend access where it is necessary to comply with the law or to stop
 						abuse of the Site.
+					</p>
+
+					<h2 className={heading}>Posting in the Gallery</h2>
+					<p className={paragraph}>
+						If you post a team or a comment in the PvP gallery, it is public, with your display
+						name and picture next to it. You agree not to post:
+					</p>
+					<ul className={list}>
+						<li>harassment, hate, or attacks on other players</li>
+						<li>sexual or violent content</li>
+						<li>spam, advertising, or links</li>
+						<li>anyone&apos;s personal information</li>
+						<li>anything illegal, or anything you don&apos;t have the right to share</li>
+					</ul>
+					<p className={paragraph}>
+						Other players can copy a team you post into their own teams. You can report a post
+						or comment that breaks these rules from its Report button. We may hide or remove
+						any post or comment, and stop an account posting, commenting or voting, when we
+						think it breaks these rules or the law.
 					</p>
 
 					<h2 className={heading}>Availability</h2>

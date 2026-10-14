@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { RaceEventCard } from '../components/timeline/RaceEventCard'
 import { isRaceEvent, isBannerTimeline } from '../types'
 import type {
@@ -39,11 +40,6 @@ const courseAndStats = {
   season: 'Autumn',
   weather: 'Cloudy',
   direction: 'Right',
-  speed_recommendation: '1100',
-  stamina_recommendation: '900',
-  power_recommendation: '1000',
-  guts_recommendation: '400',
-  wit_recommendation: '700',
 } as const
 
 const championsMeeting: ChampionsMeeting = {
@@ -73,11 +69,6 @@ const unannouncedLoh: LeagueOfHeroes = {
   season: 'TBD',
   weather: 'TBD',
   direction: 'TBD',
-  speed_recommendation: '0',
-  stamina_recommendation: '0',
-  power_recommendation: '0',
-  guts_recommendation: '0',
-  wit_recommendation: '0',
 }
 
 describe('RaceEventCard', () => {
@@ -113,6 +104,43 @@ describe('RaceEventCard', () => {
     expect(
       screen.getByText('Some course details are coming soon.'),
     ).toBeTruthy()
+  })
+})
+
+describe('the PvP guide link', () => {
+  const withRouter = (event: ChampionsMeeting | LeagueOfHeroes) =>
+    render(
+      <MemoryRouter>
+        <RaceEventCard event={event} today={TODAY} />
+      </MemoryRouter>,
+    )
+
+  it('links to the guide only when one is published', () => {
+    withRouter({ ...championsMeeting, has_guide: true })
+    expect(screen.getByRole('link', { name: 'PvP guide' })).toHaveAttribute(
+      'href',
+      `/app/pvp?event=cm-${championsMeeting.id}`,
+    )
+  })
+
+  it('names the League of Heroes kind in its link', () => {
+    withRouter({ ...leagueOfHeroes, has_guide: true })
+    expect(screen.getByRole('link', { name: 'PvP guide' })).toHaveAttribute(
+      'href',
+      `/app/pvp?event=loh-${leagueOfHeroes.id}`,
+    )
+  })
+
+  it('has no link without a guide', () => {
+    withRouter({ ...championsMeeting, has_guide: false })
+    expect(screen.queryByRole('link', { name: 'PvP guide' })).toBeNull()
+  })
+
+  it('keeps the two kinds the same card apart from the href', () => {
+    const cm = withRouter({ ...championsMeeting, has_guide: true }).container.innerHTML
+    const loh = withRouter({ ...leagueOfHeroes, has_guide: true }).container.innerHTML
+    const normalise = (html: string) => html.replace(/event=(cm|loh)-\d+/g, 'event=X')
+    expect(normalise(loh)).toBe(normalise(cm))
   })
 })
 

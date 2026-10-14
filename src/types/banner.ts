@@ -74,6 +74,13 @@ export interface Uma extends JpDated {
 	id: number
 	name: string
 	image: string
+	/**
+	 * The borderless cut when there is one, else the bordered art (the API's
+	 * Uma.portrait). What FramedUma draws inside the site's own frame; `image`
+	 * keeps the game's bordered card art. Optional only for fixtures written
+	 * before it existed: the API always sends it.
+	 */
+	portrait?: string | null
 	admin_comments: string
 	recommendation: string
 	/**

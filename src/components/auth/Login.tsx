@@ -1,16 +1,22 @@
 import { useState } from "react"
 import type React from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { Footer } from "../footer/Footer"
 import { Wordmark } from "../Wordmark"
 import { readGuestPlan } from "../../services/guestPlanStore"
-import { SOCIAL_PROVIDERS, startSocialLogin, type SocialProvider } from "../../services/socialAuth"
+import { SOCIAL_PROVIDERS, safeReturnPath, startSocialLogin, type SocialProvider } from "../../services/socialAuth"
 import { PROVIDERS } from "../../constants/providers"
 import { ApiError } from "../../services/userServices"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 
 export const Login: React.FC = () => {
 	useDocumentMeta("Sign In", "Sign in to the Uma Musume Carat Calculator with Google, Discord or Patreon to keep your plan on every device.", true)
+
+	// Where to land after signing in, when a page sent people here to do
+	// something (the gallery's "Sign in to comment"). Router state, so a link
+	// from outside cannot set it; checked again before it is stored.
+	const location = useLocation()
+	const returnTo = safeReturnPath((location.state as { returnTo?: unknown } | null)?.returnTo)
 
 	// Which provider is mid-redirect, so only that button shows a pending state.
 	const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null)
@@ -25,7 +31,7 @@ export const Login: React.FC = () => {
 		setPendingProvider(provider)
 		try {
 			// On success the browser navigates away and nothing below runs.
-			await startSocialLogin(provider)
+			await startSocialLogin(provider, returnTo)
 		} catch (e: unknown) {
 			setError(
 				e instanceof ApiError

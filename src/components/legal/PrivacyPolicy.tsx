@@ -42,7 +42,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 9, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 14, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -65,8 +65,9 @@ export const PrivacyPolicy: React.FC = () => {
 					</ul>
 					<p className={paragraph}>
 						What we do hold is described below: an anonymous account reference if you sign
-						in, the plan you build, an anonymous visitor count, and the data that Google
-						Analytics and (if ads run) our advertising partner collect with your consent.
+						in, the plan you build, anything you choose to post in the PvP gallery, an
+						anonymous visitor count, and the data that Google Analytics and (if ads run) our
+						advertising partner collect with your consent.
 					</p>
 
 					<h2 className={heading}>Who Is Responsible</h2>
@@ -98,14 +99,15 @@ export const PrivacyPolicy: React.FC = () => {
 							by us. You are not asked to choose one.
 						</li>
 						<li>
-							A display name, if you choose one on your account page. It is shown to you
-							alone, never appears anywhere else on the Site, and you can change or clear
-							it whenever you like.
+							A display name, if you choose one on your account page. It is shown to you,
+							and to everyone else only next to a team or comment you post in the PvP
+							gallery (see below). You can change it whenever you like, and clear it once
+							you have no team posted.
 						</li>
 						<li>
 							The favourite characters you pick on your account page. These are picks from
 							the Site&apos;s own catalogue, not anything about you, and the first one is used
-							as your picture.
+							as your picture, including next to anything you post in the gallery.
 						</li>
 					</ul>
 					<p className={paragraph}>
@@ -130,6 +132,43 @@ export const PrivacyPolicy: React.FC = () => {
 						account.
 					</p>
 
+					<h2 className={heading}>The PvP Gallery</h2>
+					<p className={paragraph}>
+						Posting a team to the gallery is your choice, and the post dialog asks you to
+						agree first. Once you post, everyone can see the team, your caption and strategy, your
+						display name, your favourite character picture and, if you support us on Patreon and
+						leave it switched on, your tier. The same shows next to any comment you write.
+					</p>
+					<ul className={list}>
+						<li>
+							<strong>Upvotes</strong>: we store which posts you upvoted, so each person
+							counts once. Nobody else can see who upvoted what.
+						</li>
+						<li>
+							<strong>Views</strong>: we count how often each post is opened. To count each
+							person once a day, the server keeps a scrambled value in its memory for a day.
+							It is never written to our database.
+						</li>
+						<li>
+							<strong>Reports</strong>: if you report a post or comment, we keep the report
+							and your account reference for our moderators. The person you reported is never
+							told who you are.
+						</li>
+						<li>
+							<strong>Link previews</strong>: when a post&apos;s link is shared on Discord, X
+							or a similar service, that service fetches a picture of the team&apos;s three
+							characters with their running styles, plus the event name and the characters&apos;
+							names. Nothing about you is in it. Those services keep their own copy under their
+							own policies, even after a post is taken down.
+						</li>
+					</ul>
+					<p className={paragraph}>
+						Taking a post down deletes it with its upvotes and comments. Deleting your account
+						deletes your posts, your upvotes and your comments, except that a comment someone
+						has replied to stays in its thread as &quot;[deleted]&quot;, with no text and no
+						name.
+					</p>
+
 					<h2 className={heading}>Why We Use It, and the Legal Basis</h2>
 					<p className={paragraph}>
 						GDPR requires a legal basis for each thing we do with your data. These are ours:
@@ -140,6 +179,17 @@ export const PrivacyPolicy: React.FC = () => {
 							reference, username, display name, favourite characters and planning data). Basis:{" "}
 							<strong>performance of a contract</strong>, Article 6(1)(b). This is the
 							service you asked for when you signed in.
+						</li>
+						<li>
+							<strong>Showing what you post in the gallery</strong> (your team, caption, strategy,
+							comments, display name, picture and tier). Basis: <strong>your consent</strong>,
+							Article 6(1)(a), given when you post. You withdraw it by taking the post down or
+							deleting the comment.
+						</li>
+						<li>
+							<strong>Moderating the gallery</strong> (reports, and limits on how often you
+							can post or comment). Basis: <strong>legitimate interest</strong>, Article
+							6(1)(f), in keeping the gallery free of spam and abuse.
 						</li>
 						<li>
 							<strong>Counting visitors</strong> with the anonymous counter described
@@ -307,6 +357,11 @@ export const PrivacyPolicy: React.FC = () => {
 						<li>
 							<strong>Account data and your plan</strong>: until you delete your account.
 							Deleting it removes everything at once.
+						</li>
+						<li>
+							<strong>Gallery posts and comments</strong>: until you take them down or delete
+							your account. Reports are kept as a record of what our moderators decided, with
+							your account reference removed if you delete your account.
 						</li>
 						<li>
 							<strong>Visitor scrambled values</strong>: 90 days. The daily and monthly

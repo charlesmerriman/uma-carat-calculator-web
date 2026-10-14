@@ -1,15 +1,20 @@
-import { useMemo } from "react"
+import { useMemo, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { childrenToText, slugify } from "../../utils/guideMarkdown"
+import { remarkHighlight } from "../../utils/remarkHighlight"
 
 // Same text-style vocabulary as the legal pages, so every public content page
 // reads the same whether its words come from a component or from the admin.
 const PARAGRAPH = "mt-3 leading-relaxed text-gray-300"
 const list = "mt-3 space-y-1 pl-6 leading-relaxed text-gray-300"
 const link = "text-brand transition hover:text-brand/75"
+
+// Module scope so every render passes the same array, and react-markdown does
+// not re-run its pipeline setup for an identity change.
+const REMARK_PLUGINS = [remarkGfm, remarkHighlight]
 
 /** A site-relative href: "/faq", "/faq#anchor". Not "//host" and not "#anchor". */
 function isInternalHref(href: string): boolean {
@@ -34,7 +39,7 @@ function isInternalHref(href: string): boolean {
  * inheriting the paragraph top margin, and `[&>code]` on <pre> strips the inline-code
  * chip styling from a fenced block, since react-markdown routes both through `code`.
  */
-function buildComponents(paragraph: string): Components {
+function buildComponents(paragraph: string, renderSkill?: (name: string) => ReactNode): Components {
 	return {
 		h2: ({ node: _node, children, ...props }) => (
 			<h2
@@ -100,6 +105,17 @@ function buildComponents(paragraph: string): Components {
 		code: ({ node: _node, ...props }) => (
 			<code className="rounded bg-gray-800 px-1.5 py-0.5 text-[0.9em] text-gray-200" {...props} />
 		),
+		// `==words==` (utils/remarkHighlight.ts): the sheet's red must-haves.
+		// No background: the <mark> default yellow would fight every theme.
+		mark: ({ node: _node, ...props }) => <mark className="bg-transparent font-semibold text-highlight" {...props} />,
+		// `[[Skill name]]` (utils/remarkHighlight.ts) arrives as a span with
+		// data-skill. A caller that knows skills renders a chip; any other
+		// caller shows the bare name.
+		span: ({ node: _node, children, ...props }) => {
+			const name = (props as Record<string, unknown>)["data-skill"]
+			if (typeof name === "string") return <>{renderSkill ? renderSkill(name) : name}</>
+			return <span {...props}>{children}</span>
+		},
 	}
 }
 
@@ -113,11 +129,30 @@ function buildComponents(paragraph: string): Components {
  * `paragraphClassName` exists for the homepage teaser, whose cards set paragraphs
  * smaller than a content page does. Everything else is the same map.
  */
-export function MarkdownContent({ markdown, paragraphClassName = PARAGRAPH }: { markdown: string; paragraphClassName?: string }) {
-	const components = useMemo(() => buildComponents(paragraphClassName), [paragraphClassName])
+export function MarkdownContent({
+	markdown,
+	paragraphClassName = PARAGRAPH,
+	renderSkill,
+}: {
+	markdown: string
+	paragraphClassName?: string
+	/** Renders a `[[Skill name]]` mention. Without it the bare name shows. */
+	renderSkill?: (name: string) => ReactNode
+}) {
+	const components = useMemo(() => buildComponents(paragraphClassName, renderSkill), [paragraphClassName, renderSkill])
 	return (
-		<ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-			{markdown}
+		<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
+			{escapeMentions(markdown)}
 		</ReactMarkdown>
 	)
+}
+
+/**
+ * `[[Updrafters]](FF)` is a markdown LINK (text "[Updrafters]", href "FF")
+ * before remarkHighlight ever sees it. Escaping the brackets keeps a mention
+ * literal text for the plugin to find. The one cost: a mention written inside
+ * a code span shows its backslashes, and nobody writes one there.
+ */
+function escapeMentions(markdown: string): string {
+	return markdown.replace(/\[\[([^[\]\n]+)\]\]/g, "\\[\\[$1\\]\\]")
 }
