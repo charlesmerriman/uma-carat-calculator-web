@@ -68,6 +68,8 @@ import {
 	raceEventsInOrder,
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
+import { PvpEarlyAccess } from "./PvpEarlyAccess"
+import { usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { GalleryView } from "./gallery/GalleryView"
@@ -89,7 +91,17 @@ function parseView(value: string | null): PvpView {
 	return VIEWS.some((view) => view.id === value) ? (value as PvpView) : "recommendations"
 }
 
+/**
+ * The route's component: the page itself, or the early-access card while the
+ * page is for supporters and staff only (hooks/usePvpAccess.ts). A wrapper so
+ * the page's own hooks never run for someone who can't see it.
+ */
 export const PvpGuidePage = () => {
+	const access = usePvpAccess()
+	return access === "open" ? <PvpGuide /> : <PvpEarlyAccess pending={access === "pending"} />
+}
+
+const PvpGuide = () => {
 	const {
 		championsMeetingData,
 		leagueOfHeroesData,

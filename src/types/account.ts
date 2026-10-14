@@ -99,6 +99,12 @@ export interface Account {
 	 * serializer. A variant already held is never taken away.
 	 */
 	oshi_variants: boolean
+	/**
+	 * Whether features still in early access are open to this account:
+	 * supporters and staff (backend benefits.early_access_for). It says who;
+	 * which features are early is the client's (hooks/usePvpAccess.ts).
+	 */
+	early_access: boolean
 	linked_providers: LinkedProvider[]
 	supporter: SupporterStatus
 }

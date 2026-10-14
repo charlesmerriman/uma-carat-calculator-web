@@ -1352,6 +1352,17 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 `/app/pvp`: one Champions Meeting or League of Heroes event at a time, with its guide
 (`GET /pvp-guides/<kind>/<id>`, `backend/docs/api-reference.md`, "PvP guides").
 
+- **Early access (owner, 2026-10-14, for about a week): supporters and staff only.**
+  `PvpGuidePage` is a wrapper: `usePvpAccess()` (`hooks/usePvpAccess.ts`) gives `open`,
+  `pending` (the account is still loading, so a supporter never sees the gate flash) or
+  `locked`, and anything but `open` draws `PvpEarlyAccess` (sign in, Patreon, or "link your
+  Patreon on your account page") and none of the page's own hooks. The server says WHO
+  (`account.early_access`, `benefits.early_access_for`: any paid tier, or staff); the
+  `PVP_EARLY_ACCESS` constant says the page is still early. The team window and the
+  navbar's Team button follow the same answer (`TeamDrawerProvider`'s `available`). A
+  client gate only: the PvP API stays open. Opening to everyone is that one constant set
+  to `false`.
+
 - **The event lives in the URL**: `?event=cm-12` / `loh-7`, the event's database id
   (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
   kind, so the Timeline card links to a guide without branching on the tag. No parameter

@@ -41,6 +41,9 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 	}),
 }))
 vi.mock("../hooks/usePvpGuide", () => ({ usePvpGuide: () => ({ status: "none" }) }))
+// The drawer as everyone will have it; the early-access gate has its own
+// tests (usePvpAccess.test.tsx, PvpGuidePage.test.tsx).
+vi.mock("../hooks/usePvpAccess", () => ({ usePvpAccess: () => "open" }))
 
 const { TeamDrawer } = await import("../components/pvp/TeamDrawer")
 

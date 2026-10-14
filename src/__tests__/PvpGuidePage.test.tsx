@@ -99,6 +99,14 @@ vi.mock("../services/CalculatorContext", () => ({
 vi.mock("../components/pvp/TeamBuilder", () => ({
 	TeamBuilder: ({ event: shown }: { event: RaceEvent }) => <div data-testid="team-builder">{`cm-${shown.id}`}</div>,
 }))
+// The page as everyone will have it, unless a test closes it: the early-access
+// rule itself is tested in usePvpAccess.test.tsx.
+const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
+vi.mock("../hooks/usePvpAccess", () => ({ usePvpAccess: () => access.value }))
+vi.mock("../services/AuthContext", async () => ({
+	...(await vi.importActual<typeof import("../services/AuthContext")>("../services/AuthContext")),
+	useAccount: () => ({ isLoggedIn: false, status: "anonymous", account: null }),
+}))
 // The gallery has its own tests (PvpGallery.test.tsx); here only which view shows.
 vi.mock("../components/pvp/gallery/GalleryView", () => ({
 	GalleryView: ({ event }: { event: { id: number } }) => <div data-testid="gallery-view">{`cm-${event.id}`}</div>,
@@ -140,6 +148,27 @@ afterEach(() => {
 })
 
 describe("PvpGuidePage", () => {
+	afterEach(() => {
+		access.value = "open"
+	})
+
+	it("shows the early-access card to anyone it is closed to, and none of the page", () => {
+		access.value = "locked"
+		renderPage()
+		expect(screen.getByRole("heading", { name: "PvP is in early access" })).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
+		expect(screen.getByRole("link", { name: /Support us on Patreon/ })).toHaveAttribute("href", expect.stringContaining("patreon.com"))
+		expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
+		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("waits for the account rather than flashing the card at a supporter", () => {
+		access.value = "pending"
+		renderPage()
+		expect(screen.getByText("Checking your account…")).toBeInTheDocument()
+		expect(screen.queryByRole("heading", { name: "PvP is in early access" })).not.toBeInTheDocument()
+	})
+
 	it("opens on the next event and fetches its guide", async () => {
 		respond(200, GUIDE)
 		renderPage()

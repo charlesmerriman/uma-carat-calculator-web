@@ -9,17 +9,20 @@
  *
  * `available` is false on the PvP page's My team view (?view=team), where the
  * builder already shows the team; the open state is kept, so the drawer comes
- * back on the next page.
+ * back on the next page. It is also false for anyone the PvP page is still
+ * closed to (early access, hooks/usePvpAccess.ts): no Team button, no drawer.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useLocation } from "react-router-dom"
 import { TeamDrawerContext, isMyTeamView, type TeamDrawerContextType } from "./TeamDrawerContext"
+import { usePvpAccess } from "../hooks/usePvpAccess"
 
 const STORAGE_KEY = "uma-planner-team-drawer"
 
 export function TeamDrawerProvider({ children }: { children: ReactNode }) {
 	const location = useLocation()
+	const access = usePvpAccess()
 	const [open, setOpenState] = useState(false)
 
 	useEffect(() => {
@@ -43,9 +46,9 @@ export function TeamDrawerProvider({ children }: { children: ReactNode }) {
 					// A convenience only.
 				}
 			},
-			available: !isMyTeamView(location.pathname, location.search),
+			available: access === "open" && !isMyTeamView(location.pathname, location.search),
 		}),
-		[open, location.pathname, location.search]
+		[open, access, location.pathname, location.search]
 	)
 
 	return <TeamDrawerContext.Provider value={value}>{children}</TeamDrawerContext.Provider>

@@ -22,6 +22,7 @@ function account(benefits?: string[]): Account {
 		oshis: [],
 		oshi_slots: 0,
 		oshi_variants: false,
+		early_access: false,
 		linked_providers: [],
 		supporter: benefits ? { is_supporter: true, tier: 'Junior Class', benefits } : { is_supporter: false },
 	}

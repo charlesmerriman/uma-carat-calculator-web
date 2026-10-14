@@ -68,6 +68,7 @@ function account(overrides: Partial<Account> = {}): Account {
 		// The free slot: every account may hold one favourite.
 		oshi_slots: 1,
 		oshi_variants: false,
+		early_access: false,
 		linked_providers: [{ provider: 'google', linked_at: '2026-07-02' }],
 		supporter: { is_supporter: false },
 		...overrides,
