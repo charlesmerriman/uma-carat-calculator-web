@@ -30,6 +30,24 @@ export interface PvpSupportCardRef {
 	rarity: number | null
 }
 
+/**
+ * Another version of a recommended skill: its white, gold or evolved form.
+ * Derived by the API from the game data (same group, plus the evolution
+ * link); a guide names ONE version per row and these ride along.
+ */
+export interface PvpSkillVersion {
+	id: number
+	name: string
+	description: string
+	image: string | null
+	rarity: number
+	/** 1 white, 2 gold (the game's own number). */
+	tier: number
+	/** "○ white", "◎ gold" or "evolved": the label a chip shows. */
+	version: string
+	is_evolved: boolean
+}
+
 export interface PvpSkillRef {
 	id: number
 	name: string
@@ -40,6 +58,10 @@ export interface PvpSkillRef {
 	rarity: number
 	/** The outfit whose unique this skill is, or null. */
 	unique_of: string | null
+	/** This skill's own version label: "○ white", "◎ gold", "evolved". */
+	version: string
+	/** Its other versions, white then gold then evolved; empty when it has none. */
+	versions: PvpSkillVersion[]
 }
 
 export interface PvpStatConfig {

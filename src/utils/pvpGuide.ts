@@ -211,6 +211,35 @@ export function guideSkillsByCategory(
 	})).filter((group) => group.skills.length > 0)
 }
 
+/**
+ * Every id a recommended skill answers to: its own and its other versions'.
+ * A guide names one version; a team that can get ANY of them has the skill
+ * (sometimes a worse one, which `familySources` says).
+ */
+export function skillFamilyIds(skill: PvpSkillRef): number[] {
+	return [skill.id, ...skill.versions.map((version) => version.id)]
+}
+
+/**
+ * Where a team gets a recommended skill or any version of it, from the
+ * team's skill sources (`teamSkillSources` in utils/pvpTeams). A source that
+ * gives another version says which: "Kitasan Black (hint), as ◎ gold". Null
+ * when the team gets none of them.
+ */
+export function familySources(sources: Map<number, string[]>, skill: PvpSkillRef): string[] | null {
+	const found: string[] = []
+	for (const from of sources.get(skill.id) ?? []) found.push(from)
+	for (const version of skill.versions) {
+		for (const from of sources.get(version.id) ?? []) found.push(`${from}, as ${version.version}`)
+	}
+	return found.length > 0 ? found : null
+}
+
+/** True when a white skill has a gold version to show a ◎ badge for. */
+export function hasGoldVersion(skill: PvpSkillRef): boolean {
+	return skill.rarity === 1 && skill.versions.some((version) => version.tier === 2 && !version.is_evolved)
+}
+
 /** One recommended uma or card in the team builder's Guide picks panel. */
 export interface GuidePick<Ref> {
 	ref: Ref

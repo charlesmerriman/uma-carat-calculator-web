@@ -60,8 +60,8 @@ const GUIDE: PvpGuide = {
 		{ style: "end", stars: 3, role: "", note: "", uma: { id: 42, name: "Gold Ship", image: null } },
 	],
 	skill_recommendations: [
-		{ style: "everyone", category: "green", tier: 1, order: 0, note: "", skill: { id: 1, name: "Left-Handed ○", description: "Better on left turns.", image: null, rarity: 1, unique_of: null } },
-		{ style: "front", category: "acceleration", tier: null, order: 0, note: "order 1", skill: { id: 2, name: "Angling and Scheming", description: "Accelerates.", image: null, rarity: 5, unique_of: "Seiun Sky" } },
+		{ style: "everyone", category: "green", tier: 1, order: 0, note: "", skill: { id: 1, name: "Left-Handed ○", description: "Better on left turns.", image: null, rarity: 1, unique_of: null, version: "○ white", versions: [] } },
+		{ style: "front", category: "acceleration", tier: null, order: 0, note: "order 1", skill: { id: 2, name: "Angling and Scheming", description: "Accelerates.", image: null, rarity: 5, unique_of: "Seiun Sky", version: "○ white", versions: [] } },
 	],
 	style_notes: [{ style: "front", body: "**Acceleration:** Seiun first." }],
 	decks: [
@@ -308,7 +308,11 @@ describe("PvpGuidePage views and layout", () => {
 
 describe("PvpGuidePage skill mentions", () => {
 	it("renders [[Skill]] in a style note and in a deck note as the skill, with its description", async () => {
-		const groundwork = { id: 9, name: "Groundwork", description: "Front runners speed up early.", image: null, rarity: 2, unique_of: null }
+		const groundwork = {
+			id: 9, name: "Groundwork", description: "Front runners speed up early.", image: null, rarity: 1, unique_of: null,
+			version: "○ white",
+			versions: [{ id: 10, name: "Groundwork ◎", description: "Even earlier.", image: null, rarity: 2, tier: 2, version: "◎ gold", is_evolved: false }],
+		}
 		respond(200, {
 			...GUIDE,
 			style_notes: [{ style: "front", body: "Take [[groundwork]] first." }],
@@ -320,6 +324,8 @@ describe("PvpGuidePage skill mentions", () => {
 		const chips = screen.getAllByRole("group", { name: "Groundwork" })
 		expect(chips).toHaveLength(2)
 		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Front runners speed up early.")
+		// The other version rides along in the hover detail.
+		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Groundwork ◎ ◎ gold")
 	})
 
 	it("shows an unresolved mention as its plain name", async () => {

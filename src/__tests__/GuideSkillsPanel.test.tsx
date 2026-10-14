@@ -8,7 +8,7 @@ import type { PvpGuide } from "../types/pvpGuide"
  * and counted, and a row that opens to say why and where from.
  */
 
-const skill = (id: number, name: string) => ({ id, name, description: `${name} does a thing.`, image: null, rarity: 1, unique_of: null })
+const skill = (id: number, name: string) => ({ id, name, description: `${name} does a thing.`, image: null, rarity: 1, unique_of: null, version: "○ white", versions: [] })
 const row = (id: number, name: string, style: string, category: string, tier: number | null) =>
 	({ style, category, tier, order: 0, note: "", skill: skill(id, name) })
 
@@ -59,6 +59,25 @@ describe("GuideSkillsBody", () => {
 		fireEvent.click(screen.getByRole("button", { name: /Swinging Maestro/ }))
 		expect(screen.getByText("For: every position")).toBeInTheDocument()
 		expect(screen.getByText("Not on your team yet.")).toBeInTheDocument()
+	})
+
+	it("counts a skill the team gets as another version, and says which", () => {
+		const gold = { id: 7, name: "Groundwork ◎", description: "", image: null, rarity: 2, tier: 2, version: "◎ gold", is_evolved: false }
+		const guide = {
+			skill_recommendations: [{ ...GUIDE.skill_recommendations[0], skill: { ...skill(1, "Groundwork"), versions: [gold] } }],
+		} as unknown as PvpGuide
+		render(
+			<GuideSkillsBody
+				guideState={{ status: "ready", guide }}
+				teamSkillSources={new Map([[7, ["Kitasan Black (hint)"]]])}
+				spots={SPOTS}
+				onSearch={() => {}}
+			/>
+		)
+		expect(screen.getByText("1 of 1 on your team")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: /Groundwork/ }))
+		expect(screen.getByText("Your team: Kitasan Black (hint), as ◎ gold")).toBeInTheDocument()
+		expect(screen.getByText("Also as: Groundwork ◎ (◎ gold)")).toBeInTheDocument()
 	})
 
 	it("offers a search per team spot, with the skill's name", () => {

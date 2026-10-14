@@ -12,6 +12,7 @@ import { useId, useState, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
+import { hasGoldVersion } from "../../utils/pvpGuide"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 
 function NotePieces({ pieces }: { pieces: NotePiece[] }) {
@@ -82,7 +83,38 @@ export function SkillMention({ name }: { name: string }) {
 					{skill.unique_of && <span className="font-normal text-gray-400"> ({skill.unique_of})</span>}
 				</span>
 				{skill.description}
+				<SkillVersions skill={skill} />
 			</span>
+		</span>
+	)
+}
+
+/**
+ * The other versions of a skill (white, gold, evolved) under its hover
+ * detail: a guide names one version, and the rest are worth knowing about
+ * because a card may teach the other one. Nothing when it has none.
+ */
+export function SkillVersions({ skill }: { skill: PvpSkillRef }) {
+	if (skill.versions.length === 0) return null
+	return (
+		<span className="mt-1 block border-t border-gray-700/70 pt-1 text-gray-300">
+			<span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+				Also as {skill.version ? `(this is the ${skill.version})` : ""}
+			</span>
+			{skill.versions.map((version) => (
+				<span key={version.id} className="mt-0.5 flex items-start gap-1">
+					{version.image ? (
+						<img src={version.image} alt="" className="mt-px h-3.5 w-3.5 shrink-0" loading="lazy" decoding="async" />
+					) : (
+						<span className="mt-px h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+					)}
+					<span>
+						<span className="font-medium text-gray-100">{version.name}</span>
+						<span className="text-gray-400"> {version.version}</span>
+						{version.description && <span className="block text-gray-400">{version.description}</span>}
+					</span>
+				</span>
+			))}
 		</span>
 	)
 }
@@ -236,6 +268,7 @@ export function SkillChip({ skill, note, general = false }: { skill: PvpSkillRef
 					<InlineNote text={note} />
 				</span>
 			)}
+			<SkillVersions skill={skill} />
 		</>
 	)
 	return (
@@ -250,6 +283,12 @@ export function SkillChip({ skill, note, general = false }: { skill: PvpSkillRef
 					{skill.name}
 					{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
 				</span>
+				{/* A white skill with a gold version: the ◎ says "there is a better one". */}
+				{hasGoldVersion(skill) && (
+					<span className="shrink-0 text-xs text-recommended" title="Has a gold version" aria-label="Has a gold version">
+						◎
+					</span>
+				)}
 				{note && <InlineNote text={note} className="hidden truncate text-xs text-gray-400 sm:inline" />}
 			</div>
 		</WithDetail>

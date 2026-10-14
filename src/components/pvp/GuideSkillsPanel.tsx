@@ -26,6 +26,7 @@ import {
 	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
 	guideSkillsByCategory,
+	familySources,
 	skillPositions,
 	type GuideSkillPick,
 } from "../../utils/pvpGuide"
@@ -133,7 +134,8 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 				)}
 			</div>
 			{shown.map((group) => {
-				const covered = group.skills.filter((pick) => teamSkillSources.has(pick.skill.id)).length
+				// Any version counts: a card teaching the white form covers a gold pick.
+				const covered = group.skills.filter((pick) => familySources(teamSkillSources, pick.skill) !== null).length
 				return (
 					<section key={group.category} aria-label={SKILL_CATEGORY_LABELS[group.category]}>
 						<h3 className="mb-1.5 flex items-baseline justify-between text-xs font-semibold uppercase tracking-wider text-brand">
@@ -150,7 +152,7 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 								<SkillRow
 									key={pick.skill.id}
 									pick={pick}
-									sources={teamSkillSources.get(pick.skill.id) ?? null}
+									sources={familySources(teamSkillSources, pick.skill)}
 									open={openId === pick.skill.id}
 									onToggle={() => setOpenId(openId === pick.skill.id ? null : pick.skill.id)}
 									spots={spots}
@@ -254,6 +256,11 @@ function SkillRow({ pick, sources, open, onToggle, spots, onSearch }: {
 			{open && (
 				<div className="flex flex-col gap-1 border-t border-gray-700/70 px-2 py-1.5 text-xs leading-snug text-gray-300">
 					{skill.description && <p>{skill.description}</p>}
+					{skill.versions.length > 0 && (
+						<p className="text-gray-400">
+							Also as: {skill.versions.map((version) => `${version.name} (${version.version})`).join(", ")}
+						</p>
+					)}
 					<p className="text-gray-400">
 						For: {pick.styles.map((style) => (style === "everyone" ? "every position" : STYLE_LABELS[style])).join(", ")}
 					</p>

@@ -1336,6 +1336,15 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `SkillMentionsContext` in `PvpGuideView`; an unresolved one is its plain name.
   `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
   otherwise a markdown link. Token `--color-highlight`.
+- **A skill's other versions ride along.** The API sends each embedded skill with its own
+  `version` label (`○ white`, `◎ gold`, `evolved`) and `versions`, its other forms,
+  derived server side from the game data (same group plus the evolution link), never
+  stored. `SkillVersions` (PvpTiles) lists them under the chip's and the mention's hover
+  detail, a white chip with a gold form shows a ◎ badge (`hasGoldVersion`), and the team
+  builder's skills panel counts a team as having a pick when it can get ANY version
+  (`familySources`, `skillFamilyIds` in `utils/pvpGuide.ts`), saying which. A guide may
+  list the white and the gold as two rows when their usefulness differs (owner,
+  2026-10-14); they show as two chips.
 - **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the
   game's stat icons (`public/0N_CM*.png`). `splitStat` puts `+` / `*` beside the number as a
   superscript and anything longer ("+1 Gold") on a second line, and every cell is top-aligned,

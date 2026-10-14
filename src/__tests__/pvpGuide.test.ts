@@ -11,6 +11,9 @@ import {
 	raceEventsInOrder,
 	skillsForPosition,
 	stylesWithContent,
+	familySources,
+	hasGoldVersion,
+	skillFamilyIds,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
@@ -193,8 +196,33 @@ describe("guidePicks", () => {
 	})
 })
 
+describe("skill versions", () => {
+	const gold = { id: 12, name: "Corner Adept ◎", description: "", image: null, rarity: 2, tier: 2, version: "◎ gold", is_evolved: false }
+	const evolved = { id: 13, name: "Corner Virtuoso", description: "", image: null, rarity: 6, tier: 1, version: "evolved", is_evolved: true }
+	const white = { id: 11, name: "Corner Adept ○", description: "", image: null, rarity: 1, unique_of: null, version: "○ white", versions: [gold, evolved] }
+	const lone = { id: 20, name: "Groundwork", description: "", image: null, rarity: 2, unique_of: null, version: "◎ gold", versions: [] }
+
+	it("answers to its own id and its versions'", () => {
+		expect(skillFamilyIds(white)).toEqual([11, 12, 13])
+		expect(skillFamilyIds(lone)).toEqual([20])
+	})
+
+	it("finds the team's sources for any version and says which", () => {
+		const sources = new Map([[12, ["Kitasan Black (hint)"]], [13, ["Oguri Cap (evolution)"]]])
+		expect(familySources(sources, white)).toEqual(["Kitasan Black (hint), as ◎ gold", "Oguri Cap (evolution), as evolved"])
+		expect(familySources(new Map([[11, ["Special Week (own)"]]]), white)).toEqual(["Special Week (own)"])
+		expect(familySources(new Map(), white)).toBeNull()
+	})
+
+	it("badges a white skill that has a gold version", () => {
+		expect(hasGoldVersion(white)).toBe(true)
+		expect(hasGoldVersion(lone)).toBe(false)
+		expect(hasGoldVersion({ ...white, rarity: 2 })).toBe(false)
+	})
+})
+
 describe("guideSkillsByCategory", () => {
-	const skill = (id: number) => ({ id, name: `Skill ${id}`, description: "", image: null, rarity: 1, unique_of: null })
+	const skill = (id: number) => ({ id, name: `Skill ${id}`, description: "", image: null, rarity: 1, unique_of: null, version: "○ white", versions: [] })
 	const row = (id: number, style: string, category: string, tier: number | null, note = "") =>
 		({ style, category, tier, order: 0, note, skill: skill(id) })
 	const guide = {
