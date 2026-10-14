@@ -108,6 +108,7 @@ function supporterWith(oshis: Oshi[], slots: number): Account {
   return {
     username: 'user_a',
     display_name: '',
+    show_supporter_badge: true,
     avatar_url: null,
     oshis,
     oshi_slots: slots,

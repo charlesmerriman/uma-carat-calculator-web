@@ -71,6 +71,11 @@ export interface Account {
 	 */
 	display_name: string
 	/**
+	 * Whether their Patreon tier and its look show beside their gallery posts
+	 * and comments. Their own switch; the pledge is unaffected.
+	 */
+	show_supporter_badge: boolean
+	/**
 	 * The picture for the navbar, chosen by the server: the first oshi's art,
 	 * or `null` until they have picked one. Null rather than "" so a component
 	 * branches to its default instead of trying to load an empty `src`. No
@@ -110,6 +115,7 @@ export interface Account {
 export interface AccountPreferencesPatch {
 	display_name?: string
 	oshis?: number[]
+	show_supporter_badge?: boolean
 }
 
 /**

@@ -8,6 +8,8 @@ import { Footer } from "../footer/Footer"
 import { OguriSpinner } from "../OguriSpinner"
 import { Avatar } from "./Avatar"
 import { OshiPicker } from "./OshiPicker"
+import { MyGalleryPosts } from "./MyGalleryPosts"
+import { ToggleSwitch } from "../ToggleSwitch"
 import { PROVIDERS } from "../../constants/providers"
 import { useAccount } from "../../services/AuthContext"
 import { SOCIAL_PROVIDERS, type SocialProvider } from "../../services/socialAuth"
@@ -505,6 +507,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				)}
 			</section>
 
+			{/* The teams they posted to the PvP gallery. */}
+			<MyGalleryPosts className={`${CARD} mt-4`} titleClassName={CARD_TITLE} />
+
 			{/* Sign-in methods */}
 			<section className={`${CARD} mt-4`} aria-labelledby="sign-in-methods">
 				<h2 id="sign-in-methods" className={CARD_TITLE}>
@@ -596,6 +601,22 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 								</ul>
 							</>
 						)}
+						{/* Their switch for the tier beside their gallery posts and comments. */}
+						<div className="mt-4 flex items-center justify-between gap-3">
+							<span className="text-sm text-gray-300">
+								Show my tier on my gallery posts and comments
+							</span>
+							<ToggleSwitch
+								checked={account.show_supporter_badge ?? true}
+								ariaLabel="Show my tier on my gallery posts and comments"
+								onChange={(checked) =>
+									void savePreferences(
+										{ show_supporter_badge: checked },
+										checked ? "Your tier shows in the gallery." : "Your tier is hidden in the gallery."
+									)
+								}
+							/>
+						</div>
 						{/* Honest about timing: the key is real, the ads are not yet. */}
 						<p className="mt-3 text-xs leading-relaxed text-gray-500">
 							Ads aren't running on the site yet. When they start, supporters won't see them.
