@@ -1,6 +1,13 @@
 name: CI
 
-on: [push, pull_request]
+# Runs on a push to develop or master ONLY (owner's call, 2026-10-15), not on
+# pull requests: checks run locally while the work is done. A merge that
+# breaks something therefore shows up here, on the develop push after it; a
+# red run on develop is the next thing to fix. Branch protection must not
+# require this check.
+on:
+  push:
+    branches: [develop, master]
 
 jobs:
   frontend:
