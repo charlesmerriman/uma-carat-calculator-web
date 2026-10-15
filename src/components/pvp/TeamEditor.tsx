@@ -114,7 +114,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 						const candidate = index.umasById.get(id)
 						return (
 							releaseBlockReason(releaseFor("uma", id)) ??
-							(candidate ? umaBlockReason(members, picker.position, candidate, index.umasById) : null)
+							(candidate ? umaBlockReason(members, picker.position, candidate, index) : null)
 						)
 					}}
 					noteFor={(id) => releaseNote(releaseFor("uma", id))}
@@ -138,7 +138,8 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 					style={pickerStyle}
 					recommended={recommended.cards}
 					blockReason={(id) =>
-						releaseBlockReason(releaseFor("support", id)) ?? cardBlockReason(pickerMember, picker.slot, id)
+						releaseBlockReason(releaseFor("support", id)) ??
+						cardBlockReason(pickerMember, picker.slot, id, index)
 					}
 					noteFor={(id) => releaseNote(releaseFor("support", id))}
 					selectedId={pickerMember?.cards.find((card) => card.slot === picker.slot)?.support_card ?? null}
