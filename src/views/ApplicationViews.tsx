@@ -29,15 +29,19 @@ const PageLoading = () => (
 	</div>
 )
 
-const PageError = () => (
-	<div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-gray-100">
-		<h1 className="text-2xl font-bold">Failed to load data</h1>
-		<p className="text-white/60">The server may be down. Please try again.</p>
+/* The page area when the initial fetch failed or ran past its deadline
+   (CALCULATOR_DATA_TIMEOUT_MS). On a banner-launch day the usual cause is a
+   queued server, so the copy says "busy" and the button retries the fetch in
+   place instead of reloading the whole page. */
+const PageError = ({ onRetry }: { onRetry: () => void }) => (
+	<div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center text-gray-100">
+		<h1 className="text-2xl font-bold">The calculator didn't load</h1>
+		<p className="text-white/60">The server might be busy. Wait a moment and try again.</p>
 		<button
 			className="rounded bg-brand px-4 py-2 font-semibold text-black transition-opacity hover:opacity-80"
-			onClick={() => window.location.reload()}
+			onClick={onRetry}
 		>
-			Reload page
+			Try again
 		</button>
 	</div>
 )
@@ -63,7 +67,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 	// Gates the page area only. The navbar and footer around it render
 	// immediately, so /app is visibly the app while the payload is still in
 	// flight rather than a spinner on a blank background.
-	const { isLoading, fetchError } = useCalculatorData()
+	const { isLoading, fetchError, retryLoad } = useCalculatorData()
 
 	return (
 		// The player's PvP teams, shared by the PvP page and (R2b) the team
@@ -121,7 +125,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 							{isLoading ? (
 								<PageLoading />
 							) : fetchError ? (
-								<PageError />
+								<PageError onRetry={retryLoad} />
 							) : (
 								children ?? <Outlet />
 							)}

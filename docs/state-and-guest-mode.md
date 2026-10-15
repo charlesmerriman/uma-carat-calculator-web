@@ -28,6 +28,14 @@ the spinner in the page area alone. The routed pages (`CaratCalculator`, `Timeli
 `Selectors`) stay behind it — they all assume their collections are populated, and nothing has
 changed about that guarantee.
 
+**The gate has a deadline.** The catalogue fetch (the home page's prefetch included) is raced
+against `CALCULATOR_DATA_TIMEOUT_MS` (20 s, `withDeadline` in `calculatorFetchCalls.ts`). Past
+it, the request is aborted and `fetchError` is set, so a queued API on a banner-launch day shows
+"The calculator didn't load" with a **Try again** button instead of a spinner until Cloudflare's
+~100 s cutoff. The button calls the context's `retryLoad()`, which drops any prefetch and runs
+the load effect again in place, with no page reload. The deadline covers the catalogue download
+only, never the guest-plan import that follows it.
+
 **Anything that renders OUTSIDE the gate must tolerate empty collections**, because while
 `isLoading` is true every array on the context is still at its initial `[]` and
 `userStatsData` is `null`. `Navbar` is the one such component today.
