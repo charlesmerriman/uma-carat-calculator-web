@@ -20,7 +20,6 @@ const GUIDE = {
 	decks: [
 		{ id: 1, style: "front", label: "", note: "", slots: [{ slot: 1, order: 0, is_borrow: false, note: "", support_card: card(302, "Kitasan Black") }] },
 	],
-	honorable_mentions: [{ style: "front", note: "", support_card: card(302, "Kitasan Black") }],
 } as unknown as PvpGuide
 
 function renderPanel(actions: Partial<GuidePickActions> = {}) {

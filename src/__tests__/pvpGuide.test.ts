@@ -110,8 +110,7 @@ describe("guide grouping", () => {
 		const guide = {
 			uma_recommendations: [{ style: "end" }],
 			style_notes: [{ style: "front" }],
-			decks: [],
-			honorable_mentions: [{ style: "runaway" }],
+			decks: [{ style: "runaway" }],
 			skill_recommendations: [skill("everyone", 1)],
 		} as unknown as PvpGuide
 		expect(stylesWithContent(guide)).toEqual(["runaway", "front", "end"])
@@ -172,10 +171,6 @@ describe("guidePicks", () => {
 			{ id: 1, style: "front", label: "Beginner", note: "", slots: [slot(302), slot(null, "Any Wit")] },
 			{ id: 2, style: "late", label: "Standard", note: "", slots: [slot(302, "Gold + Link"), slot(303)] },
 		],
-		honorable_mentions: [
-			{ style: "front", note: "Stats", support_card: card(303) },
-			{ style: "late", note: "", support_card: card(304) },
-		],
 	} as unknown as PvpGuide
 
 	it("lists each uma once, with her best stars and every style, best first", () => {
@@ -186,12 +181,11 @@ describe("guidePicks", () => {
 		])
 	})
 
-	it("lists each card once, deck cards before mentions", () => {
+	it("lists each deck card once, with every style it is filed under", () => {
 		const { cards } = guidePicks(guide)
-		expect(cards.map((pick) => [pick.ref.id, pick.inDeck, pick.styles, pick.notes])).toEqual([
-			[302, true, ["front", "late"], ["Gold + Link"]],
-			[303, true, ["front", "late"], ["Stats"]],
-			[304, false, ["late"], []],
+		expect(cards.map((pick) => [pick.ref.id, pick.styles, pick.notes])).toEqual([
+			[302, ["front", "late"], ["Gold + Link"]],
+			[303, ["late"], []],
 		])
 	})
 })

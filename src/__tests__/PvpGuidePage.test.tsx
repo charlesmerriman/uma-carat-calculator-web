@@ -78,7 +78,6 @@ const GUIDE: PvpGuide = {
 			],
 		},
 	],
-	honorable_mentions: [{ style: "front", note: "Stats + 2SP", support_card: card(304, "Fine Motion") }],
 }
 
 let events: RaceEvent[] = []
@@ -193,13 +192,12 @@ describe("PvpGuidePage", () => {
 		expect(screen.getByText("2 Front + 1 Late")).toBeInTheDocument()
 		// Twice: the chip, and its hover detail.
 		expect(screen.getAllByText("Left-Handed ○").length).toBe(2)
-		// The front pane is first: uma, deck, alternate, note-only slot, borrow, mention.
+		// The front pane is first: uma, deck, alternate, note-only slot, borrow.
 		expect(screen.getByText("Maruzensky")).toBeInTheDocument()
 		expect(screen.getByText("Kitasan Black")).toBeInTheDocument()
 		expect(screen.getByText("or any speed")).toBeInTheDocument()
 		expect(screen.getByText("Any Wit")).toBeInTheDocument()
 		expect(screen.getAllByText("Borrow").length).toBe(1)
-		expect(screen.getByText("Fine Motion")).toBeInTheDocument()
 		// Sections the guide leaves empty step aside.
 		expect(screen.queryByText("Meta analysis")).not.toBeInTheDocument()
 	})

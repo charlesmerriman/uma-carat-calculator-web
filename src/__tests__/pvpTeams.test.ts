@@ -118,8 +118,10 @@ describe("pvpTeams", () => {
 				{ style: "front", stars: 5, role: "", note: "", uma: { id: 3, name: "", image: null } },
 				{ style: "end", stars: 3, role: "", note: "", uma: { id: 1, name: "", image: null } },
 			],
-			decks: [{ id: 1, style: "front", label: "", note: "", slots: [{ slot: 1, order: 0, is_borrow: false, note: "", support_card: card(302) }] }],
-			honorable_mentions: [{ style: "end", note: "", support_card: card(400) }],
+			decks: [
+				{ id: 1, style: "front", label: "", note: "", slots: [{ slot: 1, order: 0, is_borrow: false, note: "", support_card: card(302) }] },
+				{ id: 2, style: "end", label: "", note: "", slots: [{ slot: 1, order: 0, is_borrow: false, note: "", support_card: card(400) }] },
+			],
 		} as unknown as PvpGuide
 		expect([...recommendedIds(guide, "runaway").umas]).toEqual([3])
 		expect([...recommendedIds(guide, "front").cards]).toEqual([302])

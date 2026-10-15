@@ -129,12 +129,6 @@ export interface PvpDeck {
 	slots: PvpDeckSlot[]
 }
 
-export interface PvpHonorableMention {
-	style: PvpStyle
-	note: string
-	support_card: PvpSupportCardRef
-}
-
 export interface PvpTeamComp {
 	text: string
 	note: string
@@ -159,7 +153,6 @@ export interface PvpGuide {
 	skill_recommendations: PvpSkillRecommendation[]
 	style_notes: PvpStyleNote[]
 	decks: PvpDeck[]
-	honorable_mentions: PvpHonorableMention[]
 	/**
 	 * Every `[[Skill name]]` in the guide's text, resolved: lower-case name ->
 	 * skill. A mention missing here (a skill that went stale) renders as its

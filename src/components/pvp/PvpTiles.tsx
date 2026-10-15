@@ -208,7 +208,7 @@ export function UmaTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: num
 	)
 }
 
-/** A support card in a deck slot or a mention: art, name, the reason under it. */
+/** A support card in a deck slot: art, name, the reason under it. */
 export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCardRef; note: string; borrow?: boolean }) {
 	return (
 		<div className="min-w-0">
