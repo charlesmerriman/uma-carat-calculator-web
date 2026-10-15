@@ -160,7 +160,10 @@ export interface CalculatorContextType {
 	// consumer that renders during loading must tolerate that; the routed pages
 	// stay behind the gate precisely so they never have to.
 	isLoading: boolean
+	/** The fetch failed, or passed CALCULATOR_DATA_TIMEOUT_MS without an answer. */
 	fetchError: boolean
+	/** Clear the error and run the initial fetch again, without a page reload. */
+	retryLoad: () => void
 	organizedTimelineData: OrganizedTimelineData
 	/**
 	 * The account's plans, and which one `userPlannedBannerData` belongs to.

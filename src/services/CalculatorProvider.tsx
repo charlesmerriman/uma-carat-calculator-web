@@ -32,11 +32,14 @@ import type {
 } from "../types"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import {
+	CALCULATOR_DATA_TIMEOUT_MS,
 	initialCalculatorDataFetch,
+	resetCalculatorDataPrefetch,
 	userCalculatorDataPatch,
 	toBannerPayload,
 	toPurchasePayload,
-	toStepUpSelectionPayload
+	toStepUpSelectionPayload,
+	withDeadline
 } from "./calculatorFetchCalls"
 import { DEFAULT_GUEST_STATS } from "./guestMigration"
 import {
@@ -123,6 +126,8 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		useState<CalculationConstants>(DEFAULT_CONSTANTS)
 	const [isLoading, setIsLoading] = useState(true)
 	const [fetchError, setFetchError] = useState(false)
+	// Bumped by retryLoad; the load effect lists it, so a bump runs it again.
+	const [loadAttempt, setLoadAttempt] = useState(0)
 	// Whether the guest's last write to this device landed. True until one
 	// fails, so the navbar never claims "saved" in a browser that refused.
 	const [isGuestPlanStored, setIsGuestPlanStored] = useState(true)
@@ -319,7 +324,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 				setIsLoading(false)
 		}
 
-		const load = async (): Promise<void> => {
+		const fetchCatalogue = async (): Promise<CalculatorData> => {
 			// A present-but-invalid token makes the backend 401 even on the
 			// now-public GET (DRF authenticates before checking permissions).
 			// Drop the stale token and retry as a guest instead of stranding
@@ -332,7 +337,18 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 			if (!response.ok) {
 				throw new Error(`calculator-data fetch failed: ${response.status}`)
 			}
-			let data = (await response.json()) as CalculatorData
+			return (await response.json()) as CalculatorData
+		}
+
+		const load = async (): Promise<void> => {
+			// The deadline covers the catalogue download and nothing after it.
+			// The guest-plan import below writes to the account, and cutting
+			// that off halfway would be worse than letting it finish.
+			let data = await withDeadline(
+				fetchCatalogue(),
+				CALCULATOR_DATA_TIMEOUT_MS,
+				controller
+			)
 
 			// Latched here and never re-asked. See loadedAsRef.
 			const loadedAs = getAuthToken() ? "account" : "guest"
@@ -364,7 +380,9 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		}
 
 		load().catch((error: unknown) => {
-			// AbortError is expected when Strict Mode cleanup cancels the first fetch
+			// AbortError is expected when Strict Mode cleanup cancels the first
+			// fetch. A timeout aborts too, but withDeadline rejects with
+			// CalculatorDataTimeout first, so it lands below as an error.
 			if (error instanceof Error && error.name === "AbortError") return
 			console.error("Error fetching calculator data:", error)
 			setIsLoading(false)
@@ -372,6 +390,20 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		})
 
 		return () => controller.abort()
+	}, [loadAttempt])
+
+	/**
+	 * The error page's "Try again": run the load above once more, in place.
+	 * A page reload would also work, but it throws away the shell and repeats
+	 * every other request on the page, which is the last thing a server
+	 * that just timed out needs.
+	 */
+	const retryLoad = useCallback(() => {
+		// A prefetch that failed or hung must not be handed straight back.
+		resetCalculatorDataPrefetch()
+		setFetchError(false)
+		setIsLoading(true)
+		setLoadAttempt((attempt) => attempt + 1)
 	}, [])
 
 	// prevStatsRef tracks what userStatsData was on the last effect run.
@@ -889,6 +921,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		timerIsGoing,
 		isLoading,
 		fetchError,
+		retryLoad,
 		organizedTimelineData,
 		plans,
 		activePlanId,
