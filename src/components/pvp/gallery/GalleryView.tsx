@@ -43,6 +43,7 @@ import { AnimatePresence, MotionConfig, animate, motion, useReducedMotion, type 
 import { Eye, Loader2, MessageSquare, Send, Users } from "lucide-react"
 import { GalleryPostPanel } from "./GalleryPostPanel"
 import { GalleryUpvote, PosterLine, StyleChip, UmaPortrait, YouChip } from "./GalleryBits"
+import { GalleryUmaFilter } from "./GalleryUmaFilter"
 import { ACTION_BUTTON, SECONDARY_BUTTON } from "./galleryStyles"
 import { useAccount } from "../../../services/AuthContext"
 import { usePvpTeams } from "../../../services/PvpTeamsContext"
@@ -511,7 +512,7 @@ function FeedToolbar({ sort, uma, feed, index, glide, onSort, onFilter }: {
 }) {
 	const tally = feed?.umas ?? []
 	// A filter from a link can name an uma nobody uses any more; it stays in
-	// the menu (at 0) so the menu shows what is applied.
+	// the picker (at 0) so the picker shows what is applied.
 	const options = uma !== null && !tally.some((entry) => entry.uma === uma) ? [...tally, { uma, count: 0 }] : tally
 	return (
 		<div className="flex flex-col gap-2 @2xl/feed:flex-row @2xl/feed:flex-wrap @2xl/feed:items-center @2xl/feed:gap-x-3">
@@ -541,21 +542,10 @@ function FeedToolbar({ sort, uma, feed, index, glide, onSort, onFilter }: {
 				{SORT_NOTES[sort]} {sort !== "new" && WEIGHT_NOTE}
 			</motion.p>
 			{options.length > 0 && index && (
-				<motion.label {...glide} className="flex items-center gap-2 text-sm text-gray-300 @2xl/feed:order-1 @2xl/feed:w-80">
+				<motion.div {...glide} className="flex items-center gap-2 text-sm text-gray-300 @2xl/feed:order-1 @2xl/feed:w-80">
 					With
-					<select
-						value={uma ?? ""}
-						onChange={(change) => onFilter(change.target.value === "" ? null : Number(change.target.value))}
-						className="min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-2 py-1.5 text-sm text-gray-100 outline-none focus:border-brand"
-					>
-						<option value="">Any uma</option>
-						{options.map((entry) => (
-							<option key={entry.uma} value={entry.uma}>
-								{index.umasById.get(entry.uma)?.name ?? "Unknown uma"} ({entry.count})
-							</option>
-						))}
-					</select>
-				</motion.label>
+					<GalleryUmaFilter uma={uma} options={options} index={index} onFilter={onFilter} />
+				</motion.div>
 			)}
 		</div>
 	)
