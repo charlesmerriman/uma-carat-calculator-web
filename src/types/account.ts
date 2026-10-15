@@ -101,7 +101,8 @@ export interface Account {
 	oshi_variants: boolean
 	/**
 	 * Whether features still in early access are open to this account:
-	 * supporters and staff (backend benefits.early_access_for). It says who;
+	 * supporters, staff, and accounts the owner granted it in the admin
+	 * (backend benefits.early_access_for). It says who;
 	 * which features are early is the client's (hooks/usePvpAccess.ts).
 	 */
 	early_access: boolean
