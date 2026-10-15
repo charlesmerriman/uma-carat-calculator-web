@@ -122,7 +122,7 @@ export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps
 							name: pick.ref.name,
 							image: pick.ref.image,
 							uma: null,
-							detail: describe(pick.styles, pick.inDeck ? pick.notes : ["Honourable mention", ...pick.notes]),
+							detail: describe(pick.styles, pick.notes),
 							stars: 0,
 							onTeam: onTeamCards.has(pick.ref.id),
 							actions: () => actions.card(pick.ref.id),

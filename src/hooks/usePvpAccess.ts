@@ -5,8 +5,9 @@ import { useAccount } from "../services/AuthContext"
  * staff first: the owner's call on 2026-10-14, for about a week. Set this to
  * false to open it to everyone; nothing else needs to change.
  *
- * The server says WHO is early (`account.early_access`, supporter or staff,
- * backend benefits.early_access_for); this says WHAT is still early. A client
+ * The server says WHO is early (`account.early_access`: a supporter, staff,
+ * or an account granted it in the admin; backend benefits.early_access_for);
+ * this says WHAT is still early. A client
  * gate: it decides what is drawn, and the PvP API itself stays open.
  */
 export const PVP_EARLY_ACCESS = true

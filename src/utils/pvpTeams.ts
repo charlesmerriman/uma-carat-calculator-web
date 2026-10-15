@@ -238,8 +238,7 @@ function umaKey(name: string): string {
 
 /**
  * The guide's picks for one style, as id sets, for the picker's star: umas
- * the guide rates for the style, cards in its decks or honourable mentions
- * for the style. A runaway reads the front picks too, since the guide often
+ * the guide rates for the style, cards in its decks for the style. A runaway reads the front picks too, since the guide often
  * files a runaway under Front.
  */
 export function recommendedIds(guide: PvpGuide | null, style: MemberStyle): { umas: Set<number>; cards: Set<number> } {
@@ -255,9 +254,6 @@ export function recommendedIds(guide: PvpGuide | null, style: MemberStyle): { um
 		for (const slot of deck.slots) {
 			if (slot.support_card) cards.add(slot.support_card.id)
 		}
-	}
-	for (const mention of guide.honorable_mentions) {
-		if (styles.has(mention.style)) cards.add(mention.support_card.id)
 	}
 	return { umas, cards }
 }

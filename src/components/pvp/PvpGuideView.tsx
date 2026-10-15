@@ -3,8 +3,8 @@
  *
  * Two columns from xl up: a narrow side column with what applies to the whole
  * team (overview, team comps, stats, skills for every style) and a main
- * column with one running style at a time (umas, notes, skills, decks,
- * mentions). Below xl the side column stacks on top.
+ * column with one running style at a time (umas, notes, skills, decks).
+ * Below xl the side column stacks on top.
  *
  * ONE style pane, never two. A second "compare" pane beside the first was
  * tried (2026-10-13) and read as every uma and card listed twice; removed at
@@ -238,7 +238,6 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 	// The position's own picks and the general ones, merged.
 	const skills = skillsForPosition(guide.skill_recommendations, style)
 	const decks = guide.decks.filter((row) => row.style === style)
-	const mentions = guide.honorable_mentions.filter((row) => row.style === style)
 	return (
 		<div className="flex flex-col gap-4">
 			{umas.length > 0 && (
@@ -263,16 +262,6 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 					{decks.map((deck) => (
 						<DeckGrid key={deck.id} deck={deck} />
 					))}
-				</div>
-			)}
-			{mentions.length > 0 && (
-				<div>
-					<h4 className={SUBHEADING}>Honorable mentions</h4>
-					<div className="mt-2 grid max-w-3xl grid-cols-3 gap-2 sm:grid-cols-6">
-						{mentions.map((row) => (
-							<SupportTile key={row.support_card.id} card={row.support_card} note={row.note} />
-						))}
-					</div>
 				</div>
 			)}
 		</div>

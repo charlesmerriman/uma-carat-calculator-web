@@ -133,7 +133,6 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	for (const row of guide.uma_recommendations) used.add(row.style)
 	for (const row of guide.style_notes) used.add(row.style)
 	for (const row of guide.decks) used.add(row.style)
-	for (const row of guide.honorable_mentions) used.add(row.style)
 	for (const row of guide.skill_recommendations) used.add(row.style)
 	// "Everyone" rows show above the tabs, never as a tab of their own.
 	used.delete("everyone")
@@ -269,14 +268,14 @@ export interface GuidePick<Ref> {
 export interface GuidePicks {
 	/** Highest stars first; ties keep the guide's order. */
 	umas: Array<GuidePick<PvpUmaRecommendation["uma"]> & { stars: number }>
-	/** Deck cards first (in the guide's order), then honourable mentions. */
-	cards: Array<GuidePick<PvpSupportCardRef> & { inDeck: boolean }>
+	/** The decks' cards, in the guide's order. */
+	cards: Array<GuidePick<PvpSupportCardRef>>
 }
 
 /**
  * The guide's recommended umas and support cards as two flat lists, each uma
- * and card ONCE however many styles, decks or mentions name it. An uma keeps
- * her best star rating; a card counts as a deck card if any deck runs it.
+ * and card ONCE however many styles or decks name it. An uma keeps her best
+ * star rating.
  */
 export function guidePicks(guide: PvpGuide): GuidePicks {
 	const note = <T extends { notes: string[] }>(pick: T, text: string) => {
@@ -297,17 +296,15 @@ export function guidePicks(guide: PvpGuide): GuidePicks {
 	}
 
 	const cards = new Map<number, GuidePicks["cards"][number]>()
-	const addCard = (card: PvpSupportCardRef, value: PvpStyle, text: string, inDeck: boolean) => {
-		const pick = cards.get(card.id) ?? { ref: card, styles: [], notes: [], inDeck }
-		pick.inDeck = pick.inDeck || inDeck
-		style(pick, value)
-		note(pick, text)
-		cards.set(card.id, pick)
-	}
 	for (const deck of guide.decks) {
-		for (const slot of deck.slots) if (slot.support_card) addCard(slot.support_card, deck.style, slot.note, true)
+		for (const slot of deck.slots) {
+			if (!slot.support_card) continue
+			const pick = cards.get(slot.support_card.id) ?? { ref: slot.support_card, styles: [], notes: [] }
+			style(pick, deck.style)
+			note(pick, slot.note)
+			cards.set(slot.support_card.id, pick)
+		}
 	}
-	for (const mention of guide.honorable_mentions) addCard(mention.support_card, mention.style, mention.note, false)
 
 	return {
 		// Array.prototype.sort is stable, so equal stars keep the guide's order.
