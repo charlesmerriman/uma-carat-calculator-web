@@ -18,7 +18,10 @@
  *     the grid, greyed, with the reason (the OshiPicker rule): a card that
  *     vanishes from search looks like a missing card.
  *
- * Support cards also get a row of type filters.
+ * Support cards also get a rarity switch (All, SSR, SR, R; All to start) and
+ * a row of type filters. Both are support-only: on the skill search's Umas
+ * tab they stay set but apply to nothing, so switching back finds them as
+ * left, and they never empty the uma grid.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
@@ -40,6 +43,15 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 const MAX_SKILL_CHIPS = 6
 
 const CARD_TYPES = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
+/** The rarity switch, in the game's order. null is All; 3 / 2 / 1 are SSR / SR / R. */
+const RARITIES = [
+	{ id: null, label: "All" },
+	{ id: 3, label: "SSR" },
+	{ id: 2, label: "SR" },
+	{ id: 1, label: "R" },
+] as const
+type RarityFilter = (typeof RARITIES)[number]["id"]
+
 const CARD_TYPE_LABELS: Record<string, string> = {
 	speed: "Speed",
 	stamina: "Stamina",
@@ -60,6 +72,8 @@ interface PickerItem {
 	portrait: string | null
 	skills: CatalogueSkillLink[]
 	cardType: string | null
+	/** A support card's 1 / 2 / 3 (R / SR / SSR); null for an uma. */
+	rarity: number | null
 	apt: CatalogueUma["apt"] | null
 }
 
@@ -100,6 +114,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 			portrait: uma.portrait ?? uma.image,
 			skills: uma.skills,
 			cardType: null,
+			rarity: null,
 			apt: uma.apt,
 		}))
 	}
@@ -111,6 +126,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 		portrait: null,
 		skills: card.skills,
 		cardType: card.card_type,
+		rarity: card.rarity,
 		apt: null,
 	}))
 }
@@ -122,6 +138,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 	const oshiIds = useOshiIds()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(null)
+	const [rarity, setRarity] = useState<RarityFilter>(null)
 
 	useEffect(() => {
 		const closeOnEscape = (keydown: KeyboardEvent) => {
@@ -155,7 +172,12 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		.filter((item) => {
 			const skillIds = new Set(item.skills.map((link) => link.skill))
 			if (!pinnedSkills.every((id) => skillIds.has(id))) return false
-			if (cardType && item.cardType !== cardType) return false
+			// Support-only filters (see the header). A card with no rarity
+			// reads as SSR, the convention on SupportCard.rarity.
+			if (pool === "support") {
+				if (cardType && item.cardType !== cardType) return false
+				if (rarity !== null && (item.rarity ?? 3) !== rarity) return false
+			}
 			if (!query) return true
 			if (item.name.toLocaleLowerCase().includes(query)) return true
 			if (item.alias.toLocaleLowerCase().includes(query)) return true
@@ -237,22 +259,45 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				{(chips.length > 0 || pool === "support") && (
 					<div className="flex flex-col gap-2 border-b border-gray-700 bg-gray-900/35 px-4 py-2">
 						{pool === "support" && (
-							<div className="flex flex-wrap gap-1.5" role="group" aria-label="Card type">
-								{CARD_TYPES.map((type) => (
-									<button
-										key={type}
-										type="button"
-										aria-pressed={cardType === type}
-										onClick={() => setCardType(cardType === type ? null : type)}
-										className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
-											cardType === type
-												? "border-brand bg-brand/15 text-brand"
-												: "border-gray-600 text-gray-300 hover:border-gray-500"
-										}`}
-									>
-										{CARD_TYPE_LABELS[type]}
-									</button>
-								))}
+							<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+								{/* Rarity on the left, the type chips pushed to the right
+								    (owner's layout). Rarity is one of four, so a segmented
+								    switch like the gallery's sort; the type chips toggle on and
+								    off. */}
+								<div className="flex gap-0.5 rounded-lg bg-gray-900/70 p-0.5" role="group" aria-label="Rarity">
+									{RARITIES.map((option) => (
+										<button
+											key={option.label}
+											type="button"
+											aria-pressed={rarity === option.id}
+											onClick={() => setRarity(option.id)}
+											className={`rounded-md px-2.5 py-0.5 text-xs font-medium transition ${
+												rarity === option.id ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+											}`}
+										>
+											{option.label}
+										</button>
+									))}
+								</div>
+								{/* ml-auto keeps the chips on the right even when they wrap
+								    to a line of their own. */}
+								<div className="ml-auto flex flex-wrap justify-end gap-1.5" role="group" aria-label="Card type">
+									{CARD_TYPES.map((type) => (
+										<button
+											key={type}
+											type="button"
+											aria-pressed={cardType === type}
+											onClick={() => setCardType(cardType === type ? null : type)}
+											className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
+												cardType === type
+													? "border-brand bg-brand/15 text-brand"
+													: "border-gray-600 text-gray-300 hover:border-gray-500"
+											}`}
+										>
+											{CARD_TYPE_LABELS[type]}
+										</button>
+									))}
+								</div>
 							</div>
 						)}
 						{chips.length > 0 && (
@@ -290,7 +335,10 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 
 				<div className="min-h-0 overflow-y-auto p-4">
 					{shown.length === 0 ? (
-						<p className="py-12 text-center text-sm text-gray-400">Nothing matches that search.</p>
+						<p className="py-12 text-center text-sm text-gray-400">
+							{/* A rarity and a type can empty the grid with nothing typed. */}
+							{query ? "Nothing matches that search." : "Nothing matches these filters."}
+						</p>
 					) : (
 						<ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
 							{shown.map((item) => {

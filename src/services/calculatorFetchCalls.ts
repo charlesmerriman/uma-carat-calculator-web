@@ -235,6 +235,57 @@ export function initialCalculatorDataFetch(signal?: AbortSignal): Promise<Respon
 }
 
 /* ---------------------------------------------------------------------------
+ * The loading gate's deadline
+ *
+ * Nothing under /app renders until /calculator-data lands, and a fetch has no
+ * deadline of its own: when the API is queued behind a banner-launch crowd the
+ * request just waits, and the page shows a spinner until Cloudflare gives up
+ * about 100 s later. To a visitor that looks the same as the site being down
+ * (2026-09-23 and 2026-10-14). A request that fails after 20 s with a "try
+ * again" button is a much better experience than one that never answers.
+ * ------------------------------------------------------------------------- */
+
+/** How long /app waits for the catalogue before offering a retry. */
+export const CALCULATOR_DATA_TIMEOUT_MS = 20_000
+
+/** The deadline passed. Named so the provider can tell it from an abort. */
+export class CalculatorDataTimeout extends Error {
+	constructor(ms: number) {
+		super(`calculator-data took longer than ${ms} ms`)
+		this.name = "CalculatorDataTimeout"
+	}
+}
+
+/**
+ * `work`, or a CalculatorDataTimeout if it has not settled within `ms`. On a
+ * timeout `controller` is aborted too, so the request stops instead of
+ * finishing unseen.
+ *
+ * WHY A RACE AND NOT `AbortSignal.timeout()` ON THE FETCH: the request the
+ * provider waits on is often the home page's PREFETCH (below), which was
+ * started without the provider's signal, so a signal on the provider's own
+ * fetch would never reach it. The race covers whichever request it turns out
+ * to be, and the body download as well as the headers. It also avoids
+ * `AbortSignal.any()`, which iPhones older than iOS 17.4 lack.
+ */
+export function withDeadline<T>(
+	work: Promise<T>,
+	ms: number,
+	controller: AbortController
+): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined
+	const deadline = new Promise<never>((_resolve, reject) => {
+		timer = setTimeout(() => {
+			// Reject BEFORE aborting: the abort makes `work` reject too, and the
+			// race must settle on the timeout, not on the AbortError it causes.
+			reject(new CalculatorDataTimeout(ms))
+			controller.abort()
+		}, ms)
+	})
+	return Promise.race([work, deadline]).finally(() => clearTimeout(timer))
+}
+
+/* ---------------------------------------------------------------------------
  * Prefetching /calculator-data
  *
  * Nothing under /app renders until this request lands, so the wait is the whole
@@ -327,7 +378,11 @@ function takePrefetchedCalculatorData(): Promise<Response> | null {
 	return prefetched.promise.then((response) => response.clone())
 }
 
-/** Test seam: forget any in-flight or completed prefetch. */
+/**
+ * Forget any in-flight or completed prefetch. A test seam, and what the
+ * loading gate's "Try again" calls first, so a prefetch that failed or hung
+ * is never handed out a second time.
+ */
 export function resetCalculatorDataPrefetch(): void {
 	prefetched = null
 }

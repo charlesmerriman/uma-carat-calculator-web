@@ -13,13 +13,13 @@ const skill = (id: number, name: string): CatalogueSkill => ({
 })
 const SKILLS = new Map([skill(1, "Lead the Pack"), skill(2, "Groundwork"), skill(3, "Leader's Pride")].map((s) => [s.id, s]))
 
-const card = (id: number, name: string, skills: number[], card_type = "speed"): CatalogueSupportCard => ({
-	id, name, image: null, card_type, rarity: 3, title: "", skills: skills.map((s) => ({ skill: s, source: "hint" })),
+const card = (id: number, name: string, skills: number[], card_type = "speed", rarity: number | null = 3): CatalogueSupportCard => ({
+	id, name, image: null, card_type, rarity, title: "", skills: skills.map((s) => ({ skill: s, source: "hint" })),
 })
 const CARDS = [
 	card(10, "Fine Motion", [2], "wit"),
 	card(11, "Kitasan Black", [1, 2]),
-	card(12, "Super Creek", [3], "stamina"),
+	card(12, "Super Creek", [3], "stamina", 2),
 ]
 
 const apt = (front: number, medium: number) => ({
@@ -80,6 +80,45 @@ describe("PvpCardPicker", () => {
 		renderSupportPicker()
 		fireEvent.click(within(screen.getByRole("group", { name: "Card type" })).getByRole("button", { name: "Stamina" }))
 		expect(tileNames()).toEqual(["Super Creek"])
+	})
+
+	it("filters by rarity, starting on All", () => {
+		renderSupportPicker({ items: [...CARDS, card(13, "Sakura Bakushin O", [], "speed", 1), card(14, "No Rarity Yet", [], "speed", null)] })
+		const rarity = within(screen.getByRole("group", { name: "Rarity" }))
+		expect(rarity.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
+		expect(tileNames()).toHaveLength(5)
+		fireEvent.click(rarity.getByRole("button", { name: "SR" }))
+		expect(tileNames()).toEqual(["Super Creek"])
+		fireEvent.click(rarity.getByRole("button", { name: "R" }))
+		expect(tileNames()).toEqual(["Sakura Bakushin O"])
+		// A card with no rarity reads as SSR.
+		fireEvent.click(rarity.getByRole("button", { name: "SSR" }))
+		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "No Rarity Yet"])
+		expect(rarity.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false")
+		fireEvent.click(rarity.getByRole("button", { name: "All" }))
+		expect(tileNames()).toHaveLength(5)
+	})
+
+	it("says the filters, not the search, emptied the grid", () => {
+		renderSupportPicker()
+		fireEvent.click(within(screen.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "R" }))
+		expect(screen.getByText("Nothing matches these filters.")).toBeInTheDocument()
+	})
+
+	it("keeps the card filters off the umas when a skill search switches tabs", () => {
+		const shared = {
+			title: "Find", skillsById: SKILLS, event: COURSE, style: "front" as const, recommended: new Set<number>(),
+			blockReason: () => null, selectedId: null, onPick: () => {}, onClose: () => {},
+		}
+		const { rerender } = render(<PvpCardPicker {...shared} pool="support" items={CARDS} />)
+		fireEvent.click(within(screen.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "SR" }))
+		fireEvent.click(within(screen.getByRole("group", { name: "Card type" })).getByRole("button", { name: "Stamina" }))
+		rerender(<PvpCardPicker {...shared} pool="uma" items={[uma(1, "Maruzensky", 8, 7)]} />)
+		expect(tileNames()).toEqual(["Maruzensky"])
+		// Back on the cards, both are still set.
+		rerender(<PvpCardPicker {...shared} pool="support" items={CARDS} />)
+		expect(tileNames()).toEqual(["Super Creek"])
+		expect(within(screen.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "SR" })).toHaveAttribute("aria-pressed", "true")
 	})
 
 	it("stars the guide's picks and puts them first", () => {

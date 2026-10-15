@@ -2,8 +2,10 @@
  * Pure operations on a PvP team: put an uma or a card in a place, take it
  * out, change a style, and the rules the picker greys tiles out by.
  *
- * The rules mirror the server's (backend calculatorapi/pvp_teams.py and
- * views/pvp_team.py), which refuses the same things. Checking them here first
+ * Most rules mirror the server's (backend calculatorapi/pvp_teams.py and
+ * views/pvp_team.py), which refuses the same things. The deck's uma rules (a
+ * second card of one uma, a card of the uma training) are client-only; the
+ * functions say which rule is which. Checking them here first
  * is what lets the picker disable a tile WITH A REASON instead of letting the
  * player pick it and then showing a refusal.
  *
@@ -123,21 +125,32 @@ export function memberStyleFrom(styles: readonly string[]): MemberStyle | undefi
 	return MEMBER_STYLES.find((style) => styles.includes(style))
 }
 
+/** The catalogue lookups the team rules read. PvpCatalogueIndex is one. */
+export type TeamRuleLookups = {
+	umasById: Map<number, Pick<CatalogueUma, "name" | "character_id">>
+	cardsById: Map<number, Pick<CatalogueSupportCard, "name" | "card_type">>
+}
+
 /**
  * Why an uma cannot go at `position`, or null when it can. The game's CM
  * rules: the same uma twice is refused, and so is a second outfit of the same
  * character. The member being replaced does not count against itself.
+ *
+ * Swapping the uma keeps the deck (setMemberUma), so an uma whose own card is
+ * in that spot's deck is refused too: the mirror of cardBlockReason's
+ * "can't support herself", which a swap would otherwise walk round. The
+ * server checks the first two rules (pvp_teams.py), not this one.
  */
 export function umaBlockReason(
 	members: PvpTeamMember[],
 	position: number,
-	candidate: Pick<CatalogueUma, "id" | "character_id">,
-	umasById: Map<number, Pick<CatalogueUma, "name" | "character_id">>
+	candidate: Pick<CatalogueUma, "id" | "name" | "character_id">,
+	lookups: TeamRuleLookups
 ): string | null {
 	for (const member of members) {
 		if (member.position === position) continue
 		if (member.uma === candidate.id) return "Already on this team"
-		const other = umasById.get(member.uma)
+		const other = lookups.umasById.get(member.uma)
 		if (
 			other &&
 			candidate.character_id !== null &&
@@ -146,14 +159,81 @@ export function umaBlockReason(
 			return `${other.name} is already on this team`
 		}
 	}
+	const deck = members.find((member) => member.position === position)?.cards ?? []
+	for (const card of deck) {
+		const held = lookups.cardsById.get(card.support_card)
+		if (held && held.card_type !== "group" && sameUma(held.name, candidate.name)) {
+			return `${held.name}'s card is in this deck`
+		}
+	}
 	return null
 }
 
-/** Why a card cannot go in `slot` of this member's deck, or null. */
-export function cardBlockReason(member: PvpTeamMember | undefined, slot: number, cardId: number): string | null {
+/**
+ * Why a card cannot go in `slot` of this member's deck, or null. `slot` null
+ * means a slot that is empty now (Guide picks' "Add" fills the first open one).
+ * The game's deck rules, the borrow slot included in all three:
+ *
+ *   - the same card twice is refused (the server refuses it too);
+ *   - so is a card of the uma training with the deck (no Daiwa Scarlet card
+ *     for Daiwa Scarlet, in any outfit);
+ *   - and a second card of the same uma (two Agnes Tachyon cards, whatever
+ *     their titles).
+ *
+ * Group cards are exempt from the last two. A group card is filed under one
+ * of its umas in the game data (Team Sirius under Special Week), which is why
+ * the exemption reads the card type. Those two are client-only: the server
+ * checks the same card twice, not the uma behind it.
+ *
+ * The card in `slot`, which the pick replaces, does not count against it.
+ */
+export function cardBlockReason(
+	member: PvpTeamMember | undefined,
+	slot: number | null,
+	cardId: number,
+	lookups: TeamRuleLookups
+): string | null {
 	if (!member) return null
-	const elsewhere = member.cards.find((card) => card.support_card === cardId && card.slot !== slot)
-	return elsewhere ? "Already in this deck" : null
+	const others = member.cards.filter((card) => card.slot !== slot)
+	if (others.some((card) => card.support_card === cardId)) return "Already in this deck"
+	const candidate = lookups.cardsById.get(cardId)
+	if (!candidate || candidate.card_type === "group") return null
+	const trainee = lookups.umasById.get(member.uma)
+	if (trainee && sameUma(trainee.name, candidate.name)) return `${candidate.name} can't support herself`
+	for (const card of others) {
+		const other = lookups.cardsById.get(card.support_card)
+		if (other && other.card_type !== "group" && sameUma(other.name, candidate.name)) {
+			return `${other.name} already has a card in this deck`
+		}
+	}
+	return null
+}
+
+/**
+ * Whether two names are the same uma: a support card's name is its uma's
+ * name (the title is what tells the cards apart), and an uma's name adds its
+ * outfit in brackets. The API sends no character id for cards (and the ~300
+ * not on global yet have none at all), so the name is the key.
+ *
+ * Compared as letters and digits only, outfit dropped, because a few umas
+ * and their cards are spelled differently ("T.M. Opera O" / "TM Opera O",
+ * "Ines Fujin ♡" / "Ines Fujin"). Checked on 2026-10-14 against the game's
+ * character ids: every global card lands on its own uma, no two umas share a
+ * key, and no card name has brackets to lose.
+ */
+function sameUma(a: string, b: string): boolean {
+	return umaKey(a) === umaKey(b)
+}
+
+function umaKey(name: string): string {
+	const key = name
+		.replace(/\s*\(.*\)\s*$/, "")
+		.normalize("NFKD")
+		.toLocaleLowerCase()
+		.replace(/[^a-z0-9]/g, "")
+	// A name with no Latin letters at all keeps itself, so it never matches
+	// every other such name on an empty key.
+	return key || name.trim().toLocaleLowerCase()
 }
 
 /**
