@@ -1483,8 +1483,9 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   Decks are left to the panel on purpose: they made each row half again as tall, and from `lg`
   up the full team is one click away beside the list. Above the list sit the sort buttons, a
   line saying what the sort means (Hot and Top add that supporters count a bit extra, since
-  the counts are people and the order is points), the uma filter (the API's `umas` tally, so
-  it only offers umas that find something), and `YourPostBar`: your post's numbers, a "Post a
+  the counts are people and the order is points), the uma filter (`GalleryUmaFilter`: a field
+  showing the framed uma, opening a search-and-grid picker over the API's `umas` tally, so it
+  only offers umas that find something), and `YourPostBar`: your post's numbers, a "Post a
   team" button to My team, or Sign in for a guest.
 - **Looks by key only** (`poster.gallery_style`). In the list, `ssr` is
   `.ssr-panel.ssr-panel--quiet`: the foil edge on the ordinary surface, still glints, one pass

@@ -223,13 +223,25 @@ describe("the feed", () => {
 	it("filters by an uma the event's posts use", async () => {
 		renderGallery()
 		await screen.findAllByRole("article")
-		const filter = screen.getByRole("combobox")
-		expect(within(filter).getByRole("option", { name: "Maruzensky (3)" })).toBeInTheDocument()
-		fireEvent.change(filter, { target: { value: "12" } })
+		fireEvent.click(screen.getByRole("button", { name: "Filter by uma: any uma" }))
+		const picker = screen.getByRole("dialog", { name: "Filter by uma" })
+		expect(within(picker).getByRole("button", { name: /Maruzensky\s*3 teams/ })).toBeInTheDocument()
+		// The search narrows the tiles by name.
+		fireEvent.change(within(picker).getByRole("searchbox", { name: "Search umas" }), { target: { value: "oguri" } })
+		expect(within(picker).queryByRole("button", { name: /Maruzensky/ })).not.toBeInTheDocument()
+		fireEvent.click(within(picker).getByRole("button", { name: /Oguri Cap\s*2 teams/ }))
 		await waitFor(() =>
 			expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, { sort: "hot", uma: 12, limit: 20 })
 		)
 		expect(screen.getByTestId("address").textContent).toContain("uma=12")
+		expect(screen.queryByRole("dialog", { name: "Filter by uma" })).not.toBeInTheDocument()
+
+		// The field's X clears it.
+		fireEvent.click(await screen.findByRole("button", { name: "Show every uma" }))
+		await waitFor(() =>
+			expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, { sort: "hot", uma: null, limit: 20 })
+		)
+		expect(screen.getByTestId("address").textContent).not.toContain("uma=")
 	})
 
 	it("loads more by asking for a longer list from the top", async () => {
