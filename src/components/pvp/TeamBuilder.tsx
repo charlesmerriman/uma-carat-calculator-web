@@ -32,6 +32,7 @@ import {
 	recommendedIds,
 	setCard,
 	setMemberUma,
+	cardBlockReason,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
 import { GuidePicksBody, type GuidePickActions } from "./GuidePicksPanel"
@@ -203,7 +204,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					: (releaseBlockReason(releaseFor("uma", umaId)) ??
 						(current?.uma === umaId
 							? "Already in this spot"
-							: umaBlockReason(members, position, candidate, index.umasById)))
+							: umaBlockReason(members, position, candidate, index)))
 				return {
 					key: `spot-${position}`,
 					label: `Spot ${position + 1} · ${currentName ?? "empty"}`,
@@ -231,14 +232,21 @@ function ReadyBuilder({ event, teamsState, index }: {
 					buttons: [
 						{
 							label: "Add",
-							disabledReason: known ?? (inDeck ? "Already in this deck" : open === null ? "Cards 1 to 5 are full" : null),
+							// The deck rules first (utils/pvpTeams.ts): "already in this
+							// deck" says more than "full" when both are true.
+							disabledReason:
+								known ??
+								cardBlockReason(member, null, cardId, index) ??
+								(open === null ? "Cards 1 to 5 are full" : null),
 							run: () => open !== null && applyMembers(setCard(members, member.position, open, cardId)),
 						},
 						{
 							label: "Borrow",
 							disabledReason:
 								known ??
-								(inDeck?.slot === PVP_BORROW_SLOT ? "Already the borrowed card" : inDeck ? "Already in this deck" : null),
+								(inDeck?.slot === PVP_BORROW_SLOT
+									? "Already the borrowed card"
+									: cardBlockReason(member, PVP_BORROW_SLOT, cardId, index)),
 							run: () => applyMembers(setCard(members, member.position, PVP_BORROW_SLOT, cardId)),
 						},
 					],
@@ -517,7 +525,7 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 				const late = releaseBlockReason(releaseFor("uma", id))
 				if (late) return late
 				if (member?.uma === id) return "Already in this spot"
-				return umaBlockReason(members, target.position, candidate, index.umasById)
+				return umaBlockReason(members, target.position, candidate, index)
 			}}
 			onPick={(id) => {
 				const uma = index.umasById.get(id)
@@ -536,8 +544,8 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 				if (late) return late
 				if (!member) return "Add an uma to this spot first"
 				const held = member.cards.find((card) => card.support_card === id)
-				if (!held) return null
-				return held.slot === cardSlot ? "Already in this slot" : "Already in this deck"
+				if (held) return held.slot === cardSlot ? "Already in this slot" : "Already in this deck"
+				return cardBlockReason(member, cardSlot, id, index)
 			}}
 			onPick={(id) => onPickCard(cardSlot, id)}
 		/>
