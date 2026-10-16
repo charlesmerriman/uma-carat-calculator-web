@@ -70,13 +70,20 @@ describe('BannerNoteButton', () => {
 		const { rerender } = render(
 			<BannerNoteButton note="" open={false} onToggle={vi.fn()} className="" />
 		)
-		expect(screen.getByRole('button', { name: 'Add a note' })).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'Row options and note' })).toBeInTheDocument()
 
 		rerender(
 			<BannerNoteButton note="rerun bait" open onToggle={vi.fn()} className="" />
 		)
-		const button = screen.getByRole('button', { name: 'Edit note' })
+		const button = screen.getByRole('button', { name: 'Edit row options and note' })
 		expect(button).toHaveAttribute('title', 'rerun bait')
 		expect(button).toHaveAttribute('aria-expanded', 'true')
+	})
+
+	it('reads as set when the row has an override but no note', () => {
+		render(<BannerNoteButton note="" hasOptions open={false} onToggle={vi.fn()} className="" />)
+		expect(
+			screen.getByRole('button', { name: 'Edit row options and note' })
+		).toBeInTheDocument()
 	})
 })

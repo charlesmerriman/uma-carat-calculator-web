@@ -55,6 +55,7 @@ import {
 } from "../utils/bannerHelpers"
 import type { PullStrategyResult } from "../utils/bannerHelpers"
 import { purchaseCarats } from "../utils/campaignPurchases"
+import { isExcludedFromProjection, rowSpendSettings } from "../utils/rowOptions"
 import { addSelectorTickets, isCardSelectable } from "../utils/selectorTickets"
 import type { SelectorTicketBucket } from "../utils/selectorTickets"
 import { EMPTY_BANNER_RESOURCES } from "./bannerResources"
@@ -393,6 +394,9 @@ export function useBannerResources({
 
 			const target = plannedBannerTarget(banner)
 			const isUmaBanner = target.type === "Uma"
+			// The gear menu's switches with this row's own overrides on top
+			// (utils/rowOptions). Ignored on a step-up, which is paid-only.
+			const spendSettings = rowSpendSettings(banner, userStatsData)
 			const freePulls =
 				target.type === "Uma" || target.type === "Support"
 					? target.banner.free_pulls
@@ -437,13 +441,13 @@ export function useBannerResources({
 						freeCarats,
 						paidCarats,
 						discountDays,
-						discountedPaidPulls: userStatsData.discounted_paid_pulls,
-						fullPricePaidPulls: userStatsData.full_price_paid_pulls,
-						// `!== false`, not the raw value: during a deploy the client
-						// can briefly run against an API that doesn't send this field
-						// yet, and a missing toggle has to mean "spend them", which
-						// is what every plan did before the toggle existed.
-						spendTickets: userStatsData.spend_tickets_on_banners !== false,
+						discountedPaidPulls: spendSettings.discountedPaidPulls,
+						fullPricePaidPulls: spendSettings.fullPricePaidPulls,
+						// Resolved by rowSpendSettings, which also owns the
+						// "missing switch means spend them" rule for a deploy
+						// where the API does not send it yet.
+						spendTickets: spendSettings.spendTickets,
+						ticketLimit: spendSettings.ticketLimit,
 				  })
 
 			// A selector only has to reach ONE card on the banner — it takes a
@@ -508,6 +512,9 @@ export function useBannerResources({
 				ssrCrystals,
 				ssrShards,
 				usdSpent: income.usdSpent,
+				ticketsSpent: isUmaBanner
+					? umaTickets - strategy.umaTickets
+					: supportTickets - strategy.supportTickets,
 				reservedFunding: reserved.funding,
 				unpickedSelectorTickets: stepUp
 					? 0
@@ -520,6 +527,12 @@ export function useBannerResources({
 					stepLabel: stepUp.stepLabel,
 				}),
 			}
+
+			// A row left out of the projection is shown with what it WOULD cost
+			// (the result above is filled in as usual) but commits nothing, so
+			// the banners after it see the balances as if it were not planned.
+			// Its selectors and crystals stay in the pool for the same reason.
+			if (isExcludedFromProjection(banner)) continue
 
 			// Bank what this banner committed, so the banners after it start from
 			// a balance that already accounts for it.

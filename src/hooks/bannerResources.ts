@@ -45,6 +45,13 @@ export interface BannerResources {
 	ssrShards: number
 	/** Cumulative planned real-money spend as of this banner, in USD. */
 	usdSpent: number
+	/**
+	 * Matching gacha tickets this row's pulls actually used. What the row
+	 * options panel shows as the automatic figure, so the player can see what
+	 * they are overriding. Computed even on a row left out of the projection
+	 * (what it WOULD use). 0 on a step-up.
+	 */
+	ticketsSpent: number
 	/** Which resources paid for this banner's reserved copies. */
 	reservedFunding: ReservedFunding
 	/**
@@ -94,6 +101,7 @@ export const EMPTY_BANNER_RESOURCES: BannerResources = Object.freeze({
 	ssrCrystals: 0,
 	ssrShards: 0,
 	usdSpent: 0,
+	ticketsSpent: 0,
 	reservedFunding: Object.freeze({ selectors: 0, crystals: 0, unfunded: 0 }),
 	unpickedSelectorTickets: 0,
 })
