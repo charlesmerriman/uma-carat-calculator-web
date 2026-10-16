@@ -69,7 +69,13 @@ interface MobileBannerCardProps {
 	 * second one), under the odds. Owns its own padding.
 	 */
 	oddsPanel?: ReactNode
-	/** The open note editor, under everything else. Owns its own padding. */
+	/**
+	 * A line about the row's state that must show whether or not any panel is
+	 * open (a row left out of the projection). Under the summary. Owns its own
+	 * padding.
+	 */
+	notice?: ReactNode
+	/** The open options panel (note included), under everything else. Owns its own padding. */
 	noteEditor?: ReactNode
 	onRemove: () => void
 	removeLabel: string
@@ -187,6 +193,7 @@ export const MobileBannerCard = ({
 	chanceDisplay,
 	noteButton,
 	oddsPanel,
+	notice,
 	noteEditor,
 	onRemove,
 	removeLabel,
@@ -287,6 +294,7 @@ export const MobileBannerCard = ({
 				</div>
 
 				{summary}
+				{notice}
 				{chanceDisplay}
 				{oddsPanel}
 				{noteEditor}

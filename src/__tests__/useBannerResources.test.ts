@@ -267,6 +267,56 @@ describe('spend attribution', () => {
   })
 })
 
+describe('row options', () => {
+  it('a row left out of the projection spends nothing, but still shows its own numbers', () => {
+    const counted = [umaBanner(1, 1, 10, 10), umaBanner(2, 20, 30, 0)]
+    const leftOut = [
+      { ...umaBanner(1, 1, 10, 10), excluded_from_projection: true },
+      umaBanner(2, 20, 30, 0),
+    ]
+    const baseline = render([umaBanner(1, 1, 10, 0), umaBanner(2, 20, 30, 0)])
+    const withSpend = render(counted)
+    const withoutSpend = render(leftOut)
+    // The later banner sees the balance as if the first were not planned.
+    expect(withoutSpend[1].freeCarats).toBe(baseline[1].freeCarats)
+    expect(withSpend[1].freeCarats).toBeLessThan(withoutSpend[1].freeCarats)
+    // The left-out row itself still reports what it would have.
+    expect(withoutSpend[0].maxPossiblePulls).toBe(withSpend[0].maxPossiblePulls)
+  })
+
+  it('a row ticket number wins over the global switch, in both directions', () => {
+    const plan = (limit: number | null) => [
+      { ...umaBanner(1, 1, 10, 10), tickets_to_use: limit },
+      umaBanner(2, 20, 30, 0),
+    ]
+    // Switch OFF, row says 4: the row spends 4 of the 6.
+    const off = render(plan(4), { uma_ticket: 6, spend_tickets_on_banners: false })
+    expect(off[0].ticketsSpent).toBe(4)
+    expect(off[1].umaTickets).toBe(2)
+    // Switch ON, row says 0: the row holds every ticket back.
+    const zero = render(plan(0), { uma_ticket: 6 })
+    expect(zero[0].ticketsSpent).toBe(0)
+    expect(zero[1].umaTickets).toBe(6)
+    // Automatic: as many as the pulls need.
+    const auto = render(plan(null), { uma_ticket: 6 })
+    expect(auto[0].ticketsSpent).toBe(6)
+  })
+
+  it("a row's paid-carat choice replaces both global paid toggles", () => {
+    const row = (use: 'none' | 'all' | null) => [
+      { ...umaBanner(1, 1, 10, 10), paid_carat_use: use },
+      umaBanner(2, 20, 30, 0),
+    ]
+    const stats = { current_paid_carat: 1500, discounted_paid_pulls: true, full_price_paid_pulls: true }
+    // 'none': the 10 pulls go on free carats (a debt here), paid untouched.
+    const none = render(row('none'), stats)
+    expect(none[1].paidCarats).toBe(none[0].paidCarats)
+    // Following the globals spends paid carats.
+    const globals = render(row(null), stats)
+    expect(globals[1].paidCarats).toBeLessThan(globals[0].paidCarats)
+  })
+})
+
 describe('ledger rewards', () => {
   const ledgerRow = (overrides: Partial<IncomeLedgerRow>): IncomeLedgerRow => ({
     date: daysFromNow(5, 'T22:00:00Z'),

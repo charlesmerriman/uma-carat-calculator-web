@@ -22,6 +22,7 @@ import { plannedBannerTarget } from "../utils/bannerHelpers"
 import { authHeaders, getAuthToken } from "./authToken"
 import type {
 	UserStats,
+	PaidCaratUse,
 	UserPlannedBanner,
 	UserPlannedPurchase,
 	UserStepUpSelection
@@ -50,6 +51,11 @@ export interface PlannedBannerPayload {
 	second_card?: number | null
 	/** Absent or null: the default target for the banner type. */
 	primary_target?: number | null
+	/** The row options; each absent means its default (see UserPlannedBanner). */
+	tickets_to_use?: number | null
+	paid_carat_use?: PaidCaratUse | null
+	pulls_already_made?: number
+	excluded_from_projection?: boolean
 	banner_uma: number | null
 	banner_support: number | null
 	banner_step_up: number | null
