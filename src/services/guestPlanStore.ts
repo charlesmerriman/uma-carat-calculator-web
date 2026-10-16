@@ -48,6 +48,7 @@ import type {
 } from "./calculatorFetchCalls"
 import { DEFAULT_GUEST_STATS, statsAreDirty } from "./guestMigration"
 import { isTargetCopies } from "../utils/probabilityCalculations"
+import { readSkippedRaceEvents } from "../utils/raceParticipation"
 
 const STORAGE_KEY = "guestPlan.v1"
 
@@ -155,6 +156,12 @@ function readStats(raw: unknown): UserStats | null {
 	const stats: Record<string, unknown> = { ...DEFAULT_GUEST_STATS }
 	for (const [key, fallback] of Object.entries(DEFAULT_GUEST_STATS)) {
 		const value = stored[key]
+		// The one non-scalar stat, read by its own reader. Any damage there
+		// degrades to "skipping nothing" on its own, like a bad scalar does.
+		if (key === "skipped_race_events") {
+			stats[key] = readSkippedRaceEvents(value) ?? {}
+			continue
+		}
 		const fits =
 			typeof fallback === "boolean"
 				? typeof value === "boolean"

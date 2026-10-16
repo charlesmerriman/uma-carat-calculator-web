@@ -24,6 +24,8 @@ import { CourseDetails } from "./CourseDetails"
 import { availableCourseDetails, courseDetails } from "../../utils/courseDetails"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
+import { useRaceParticipation } from "../../hooks/useRaceParticipation"
+import { ToggleSwitch } from "../ToggleSwitch"
 import type { RefObject } from "react"
 import type { RaceEvent } from "../../types"
 
@@ -48,6 +50,10 @@ export function RaceEventCard({
 	const hasPendingDetails = availableTrackDetails.length !== courseDetails(event).length
 	const hasEventDetails = availableTrackDetails.length > 0
 	const countdownLabel = getCountdownLabel(event.start_date, event.end_date, today)
+	// Null when there's nothing to switch (see the hook), and the switch is
+	// simply not drawn.
+	const participation = useRaceParticipation(event)
+	const skipped = participation?.participating === false
 
 	return (
 		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
@@ -69,6 +75,11 @@ export function RaceEventCard({
 							<p className="mt-0.5 text-sm text-gray-400">
 								{formatDate(event.start_date)} through {formatDate(event.end_date)}
 							</p>
+							{skipped && (
+								<p className="mt-0.5 text-sm text-gray-400">
+									You're skipping this one, so its rewards aren't counted in your income.
+								</p>
+							)}
 						</div>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
@@ -82,6 +93,19 @@ export function RaceEventCard({
 								<BookOpen className="h-4 w-4" />
 								PvP guide
 							</Link>
+						)}
+						{participation && (
+							<div
+								className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 py-0.5 pl-3 pr-1 text-sm font-semibold text-gray-100"
+								title="Turn this off if you won't play it. Its rewards then stay out of your projected income."
+							>
+								<span>Taking part</span>
+								<ToggleSwitch
+									checked={participation.participating}
+									onChange={participation.setParticipating}
+									ariaLabel={`Taking part in ${event.name}`}
+								/>
+							</div>
 						)}
 						<div className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
 							<span>{countdownLabel}</span>
