@@ -10,9 +10,15 @@
  *   My team          the player's own team builder (TeamBuilder)
  *   Gallery          teams other players posted for this event (GalleryView)
  *
- * The event and the view are both URL parameters (`?event=cm-12&view=team`),
- * so every screen is a link someone can paste. With no event the page opens on
- * the one running now, else the next one (`defaultPvpEvent`).
+ * The event, the view and the guide's running style are all URL parameters
+ * (`?event=cm-12&view=team`, `?event=cm-12&style=pace`), so every screen is a
+ * link someone can paste, and "Copy link" in the header copies one. With no
+ * event the page opens on the one running now, else the next one
+ * (`defaultPvpEvent`).
+ *
+ * The tab remembers where it left the page (services/pvpPageMemory.ts): a bare
+ * /app/pvp (the navbar link) goes back to that address, and an address with no
+ * style opens on the last style shown.
  *
  * The header reads the calculator payload, so it renders even for an event
  * with no guide; only the guide is fetched (hooks/usePvpGuide.ts).
@@ -21,8 +27,9 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { useMemo, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react"
+import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
 import {
 	BookOpen,
 	CalendarDays,
@@ -32,12 +39,19 @@ import {
 	Clock3,
 	History,
 	LayoutGrid,
+	Link2,
 	Loader2,
 	Swords,
 	Users,
 	type LucideIcon,
 } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
+import {
+	recalledPvpPage,
+	recalledPvpStyle,
+	rememberPvpPage,
+	rememberPvpStyle,
+} from "../../services/pvpPageMemory"
 import { useSiteContent } from "../../services/SiteContentContext"
 import { MarkdownContent } from "../info/MarkdownContent"
 import PredictedBadge from "../PredictedBadge"
@@ -59,13 +73,17 @@ import {
 	refForRaceEvent,
 } from "../../utils/pvpEvent"
 import {
+	PVP_STYLE_PARAM,
 	defaultPvpEvent,
 	findEvent,
 	hasEnded,
 	milestones,
 	newCardsBetween,
+	parsePvpStyle,
+	pickStyle,
 	previousPvpEvent,
 	raceEventsInOrder,
+	stylesWithContent,
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
 import { PvpEarlyAccess } from "./PvpEarlyAccess"
@@ -74,6 +92,7 @@ import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { GalleryView } from "./gallery/GalleryView"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
+import type { PvpStyle } from "../../types/pvpGuide"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
 const FALLBACK_TITLE = "PvP Guides"
@@ -98,7 +117,14 @@ function parseView(value: string | null): PvpView {
  */
 export const PvpGuidePage = () => {
 	const access = usePvpAccess()
-	return access === "open" ? <PvpGuide /> : <PvpEarlyAccess pending={access === "pending"} />
+	const { search } = useLocation()
+	if (access !== "open") return <PvpEarlyAccess pending={access === "pending"} />
+	// A bare /app/pvp (the navbar link) goes back to where this tab left the
+	// page. Read at render: the route renders only behind the /app loading
+	// gate, never during the build. `replace`, so Back skips the bare address.
+	const recalled = search === "" ? recalledPvpPage() : ""
+	if (recalled) return <Navigate to={{ search: recalled }} replace />
+	return <PvpGuide />
 }
 
 const PvpGuide = () => {
@@ -111,6 +137,7 @@ const PvpGuide = () => {
 	} = useCalculatorData()
 	const page = useSiteContent().page("pvp-guides", { optional: true })
 	const [searchParams, setSearchParams] = useSearchParams()
+	const { search } = useLocation()
 
 	// One clock reading per mount, so every label measures from the same "now".
 	const now = useMemo(() => new Date(), [])
@@ -130,18 +157,61 @@ const PvpGuide = () => {
 	const choices = events.filter((candidate) => showPast || !hasEnded(candidate, now) || candidate === event)
 	const index = event ? choices.indexOf(event) : -1
 
-	const setParam = (key: string, value: string | null) =>
+	// The running style asked for: the URL's, else the last one this tab was
+	// on, since a Timeline card's link names only the event. Read at render
+	// (behind the loading gate, like the clock above); the store changes only
+	// in the effect below, after the URL already has.
+	const urlStyle = parsePvpStyle(searchParams.get(PVP_STYLE_PARAM))
+	const wantedStyle = urlStyle ?? recalledPvpStyle()
+
+	// Where the tab left the page, for the next visit (services/pvpPageMemory.ts).
+	useEffect(() => rememberPvpPage(search), [search])
+	useEffect(() => {
+		if (urlStyle) rememberPvpStyle(urlStyle)
+	}, [urlStyle])
+
+	const setParam = (key: string, value: string | null, options?: { replace?: boolean }) =>
 		setSearchParams((params) => {
 			if (value === null) params.delete(key)
 			else params.set(key, value)
 			return params
-		})
+		}, options)
+	// Changing the event keeps `?style=`, so Next stays on the reader's style.
 	const select = (next: RaceEvent | undefined) => {
 		if (next) setParam(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(next)))
 	}
+	// A style is a tab inside the guide: `replace`, so Back leaves the page
+	// (or the event) instead of stepping back through every tab clicked.
+	const selectStyle = (next: PvpStyle) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
 	// Fetched only on the view that shows it.
 	const guideState = usePvpGuide(event && view === "recommendations" ? refForRaceEvent(event) : null)
+	// The tab the guide shows, the same pick PvpGuideView makes, for the link.
+	const shownStyle =
+		guideState.status === "ready" ? pickStyle(stylesWithContent(guideState.guide), wantedStyle) : null
+
+	/**
+	 * A link to what is on screen, for someone else: the event, always (a bare
+	 * /app/pvp moves with the calendar), the style on screen, and the Gallery
+	 * view. Never My team: that view is the reader's own, so the link opens the
+	 * guide. Never an open post: a post has its own link, /post/<id>.
+	 * Built at click time from the page the reader is on, so a link copied on a
+	 * dev server points at that server; never during a build.
+	 */
+	const copyLink = async (shown: RaceEvent) => {
+		const params = new URLSearchParams({ [PVP_EVENT_PARAM]: formatPvpEvent(refForRaceEvent(shown)) })
+		if (view === "gallery") params.set(VIEW_PARAM, view)
+		if (view === "recommendations" && shownStyle) params.set(PVP_STYLE_PARAM, shownStyle)
+		const url = `${window.location.origin}/app/pvp?${params}`
+		try {
+			await navigator.clipboard.writeText(url)
+			toast.success("Link copied.")
+		} catch {
+			// No clipboard (an insecure origin, or a refused permission): show
+			// the link so it can be copied by hand, as the gallery does.
+			toast(url)
+		}
+	}
 
 	return (
 		<div className="w-full bg-gray-900 pb-8">
@@ -174,7 +244,12 @@ const PvpGuide = () => {
 					</p>
 				) : (
 					<>
-						<EventHeader event={event} now={now} keyDates={milestones(event, calculationConstants)} />
+						<EventHeader
+							event={event}
+							now={now}
+							keyDates={milestones(event, calculationConstants)}
+							onCopyLink={() => copyLink(event)}
+						/>
 
 						<ViewTabs view={view} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
 
@@ -197,7 +272,9 @@ const PvpGuide = () => {
 											The guide didn't load. Try another event, or reload the page.
 										</p>
 									)}
-									{guideState.status === "ready" && <PvpGuideView guide={guideState.guide} />}
+									{guideState.status === "ready" && (
+										<PvpGuideView guide={guideState.guide} style={wantedStyle} onStyleChange={selectStyle} />
+									)}
 
 									<NewCardsSection
 										key={formatPvpEvent(refForRaceEvent(event))}
@@ -364,10 +441,11 @@ const PANEL_LABEL = "mb-2 text-[11px] font-semibold uppercase tracking-wider tex
  * pills, both read as congested): labels above values, no boxes, and the key
  * dates as a step line that shows how far the event has got.
  */
-function EventHeader({ event, now, keyDates }: {
+function EventHeader({ event, now, keyDates, onCopyLink }: {
 	event: RaceEvent
 	now: Date
 	keyDates: ReturnType<typeof milestones>
+	onCopyLink: () => void
 }) {
 	const { kicker, title } = splitEventName(event)
 	const course = courseRows(event)
@@ -403,6 +481,14 @@ function EventHeader({ event, now, keyDates }: {
 							<CalendarDays className="h-3.5 w-3.5" />
 							View on Timeline
 						</Link>
+						<button
+							type="button"
+							onClick={onCopyLink}
+							className="inline-flex items-center gap-1 text-brand transition hover:text-brand/75"
+						>
+							<Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+							Copy link
+						</button>
 					</p>
 				</div>
 				<span className="flex shrink-0 items-center gap-1.5 self-start rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-xs font-semibold text-gray-100">

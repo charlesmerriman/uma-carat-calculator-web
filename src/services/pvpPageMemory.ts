@@ -1,0 +1,68 @@
+/**
+ * Where the reader left the PvP page, so coming back to it lands them there.
+ *
+ * Two things, kept apart because they come back in different situations:
+ *
+ *   the page   the page's whole query string (`?event=cm-12&view=gallery&...`).
+ *              It comes back only on a bare `/app/pvp`, which is what the navbar
+ *              link opens. A link that names an event (a Timeline card, the
+ *              team window) goes where it says.
+ *   the style  the running style last on screen. It comes back on ANY address
+ *              that names no style, so a Timeline card's link (which names only
+ *              the event) still opens on the reader's style.
+ *
+ * One key could not do both: the page is rewritten on every visit, so landing
+ * from a Timeline link (no `style`) would wipe the style before the next visit
+ * could read it.
+ *
+ * sessionStorage, not localStorage: this is "where was I in this tab". A new
+ * tab, or a visit next week, should open on the event that is on now (the
+ * page's default), not on one that has long ended.
+ *
+ * Every access is wrapped: private browsing and strict privacy settings can
+ * make sessionStorage throw, and then the page just opens on its default.
+ */
+
+import { parsePvpStyle } from "../utils/pvpGuide"
+import type { PvpStyle } from "../types/pvpGuide"
+
+const PAGE_KEY = "pvp-page"
+const STYLE_KEY = "pvp-style"
+
+/** The page's query string, with its `?`, or "" for the bare page. */
+export function rememberPvpPage(search: string): void {
+	try {
+		sessionStorage.setItem(PAGE_KEY, search)
+	} catch {
+		// Storage refused: the next visit opens on the default event.
+	}
+}
+
+/** The query string the page was left on, or "" when there is none. */
+export function recalledPvpPage(): string {
+	try {
+		const search = sessionStorage.getItem(PAGE_KEY) ?? ""
+		// Only ever a query string; anything else would send <Navigate> off the
+		// page. A lone "?" is refused too: it lands back on the bare page, and
+		// the restore would fire again, forever.
+		return search.length > 1 && search.startsWith("?") ? search : ""
+	} catch {
+		return ""
+	}
+}
+
+export function rememberPvpStyle(style: PvpStyle): void {
+	try {
+		sessionStorage.setItem(STYLE_KEY, style)
+	} catch {
+		// Storage refused: the next guide opens on its first style.
+	}
+}
+
+export function recalledPvpStyle(): PvpStyle | null {
+	try {
+		return parsePvpStyle(sessionStorage.getItem(STYLE_KEY))
+	} catch {
+		return null
+	}
+}
