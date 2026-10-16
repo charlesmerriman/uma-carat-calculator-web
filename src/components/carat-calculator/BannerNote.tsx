@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { NotebookPen } from "lucide-react"
+import { SlidersHorizontal } from "lucide-react"
 
 /**
  * The cap on a planned banner's note. Mirrors NOTE_MAX_LENGTH in the API's
@@ -15,6 +15,12 @@ const COUNTER_THRESHOLD = NOTE_MAX_LENGTH - 100
 interface BannerNoteButtonProps {
 	/** The saved note, so the button can show whether the row has one. */
 	note: string
+	/**
+	 * Whether any row option is set (utils/rowOptions hasRowOptions). The
+	 * button opens the whole options panel now, note included, so an override
+	 * inks it in exactly as a note does.
+	 */
+	hasOptions?: boolean
 	open: boolean
 	onToggle: () => void
 	disabled?: boolean
@@ -23,9 +29,10 @@ interface BannerNoteButtonProps {
 }
 
 /**
- * Toggles a row's note editor. Bright and filled in when the row already has a
- * note, dim and hollow when it doesn't, so notes can be spotted down the sheet
- * without opening every row. Grays rather than a hue on purpose: the gray scale
+ * Toggles a row's options panel: its overrides and its note. Bright and filled
+ * in when the row has a note or an override, dim and hollow when it has
+ * neither, so a customised row can be spotted down the sheet without opening
+ * every one. Grays rather than a hue on purpose: the gray scale
  * is remapped per theme, whereas a stock amber measures ~1.7:1 on the light
  * theme's card fill (see --color-staging in index.css). The label and tooltip
  * change too (WCAG 1.4.1), and the tooltip carries the note itself so a quick
@@ -33,13 +40,15 @@ interface BannerNoteButtonProps {
  */
 export const BannerNoteButton = ({
 	note,
+	hasOptions = false,
 	open,
 	onToggle,
 	disabled = false,
 	className,
 }: BannerNoteButtonProps) => {
 	const hasNote = note.length > 0
-	const label = hasNote ? "Edit note" : "Add a note"
+	const inked = hasNote || hasOptions
+	const label = inked ? "Edit row options and note" : "Row options and note"
 
 	return (
 		<button
@@ -50,14 +59,13 @@ export const BannerNoteButton = ({
 			aria-expanded={open}
 			title={hasNote ? note : disabled ? "Pick a banner first" : label}
 			className={`${className} ${
-				hasNote ? "text-gray-100" : "text-gray-500"
+				inked ? "text-gray-100" : "text-gray-500"
 			} disabled:cursor-not-allowed disabled:opacity-40`}
 		>
-			<NotebookPen
+			<SlidersHorizontal
 				className="h-4 w-4"
-				// A note that exists reads as "inked in".
-				fill={hasNote ? "currentColor" : "none"}
-				fillOpacity={0.3}
+				// A row with something set reads as "inked in": heavier strokes.
+				strokeWidth={inked ? 2.75 : 2}
 			/>
 		</button>
 	)

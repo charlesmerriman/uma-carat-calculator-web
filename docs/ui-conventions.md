@@ -614,8 +614,10 @@ ours. A route that sends an uma sends `portrait` with it (`/calculator-data`, th
 the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `image`).
 
 - **Two frames**, SVGs in `src/assets/`: `uma-frame.svg` (silver) for everyone and
-  `uma-frame-oshi.svg` (the rainbow) for the person's favourite umas that their tier covers
-  (`useOshiIds`, the slice the Legend Races tab already used). App.css ("Uma frames") lays the
+  `uma-frame-oshi.svg` (the rainbow) for EVERY OUTFIT of each favourite their tier covers
+  (`useOshiIds`, owner 2026-10-16: a favourite Oguri Cap frames Oguri Cap (Christmas) too,
+  on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
+  `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
   frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
   pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
 - **Support cards keep their own art**: there is no borderless set for them. A list that can
@@ -624,9 +626,10 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   carries `uma` (`SelectedCardArt`), a planner row narrows on `target.type`.
 - **`useOshiIds` reads `AuthContext` directly**, so a row or picker rendered on its own (in
   a test) draws silver frames instead of throwing for want of an AuthProvider.
-- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds` for
-  most lists; the team builder keeps its own any-outfit-of-the-character match
-  (`isFavourite`) and adds its heart; an avatar is rainbow when it is yours (your own
+- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds`
+  everywhere, the team builder included (it adds its heart). The ONE exact-match place is
+  the favourites picker (`useOshiPickIds`), where the rainbow says "you picked THIS card";
+  an avatar is rainbow when it is yours (your own
   avatar, your own gallery posts and comments, your covered favourites on the account page)
   and silver on someone else's.
 - **A state rings the frame, never replaces it.** The guide picks panel's open and
@@ -1367,6 +1370,20 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
   kind, so the Timeline card links to a guide without branching on the tag. No parameter
   opens on the running event, else the next, else the newest (`defaultPvpEvent`).
+- **So does the guide's running style**: `?style=front` / `pace` / ... (`PVP_STYLE_PARAM`,
+  `parsePvpStyle`; never `everyone`, which is not a tab). The page owns it and
+  `PvpGuideView`'s tabs are controlled; a tab click `replace`s, so Back never steps through
+  tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
+  first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event
+  that has it.
+- **The tab remembers where it left the page** (`services/pvpPageMemory.ts`, sessionStorage,
+  so a new tab opens on the current event). A bare `/app/pvp`, the navbar link, `<Navigate
+  replace>`s to the last address; an address that names no style (a Timeline card's link)
+  opens on the last style shown. Two keys on purpose: the page key is rewritten on every
+  visit and would drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
+- **"Copy link" in the header** copies the event (always, even on the default landing),
+  the style on screen, and `view=gallery`. Never `view=team` (the builder is the reader's
+  own, so the link opens the guide) and never `post` (a post's link is `/post/<id>`).
 - **The header renders from the calculator payload**, guide or not, and stays COMPACT
   and LIGHT (owner, 2026-10-13: boxed grids, then pills, both read as congested): art
   thumbnail, "Champions Meeting 20" kicker over the cup name, countdown; then the course
@@ -1772,7 +1789,12 @@ notes"), the copy count, and Reset link, which asks first like Delete does becau
 a link that may already be out. The options are off by default and greyed while sharing is
 off, so the owner can read what each would hand out before anything is on. The link is
 built from `window.location.origin` at click time (a dev server's link points at the dev
-server), never `SITE_ORIGIN`. The item is hidden on an API older than sharing (no
+server), never `SITE_ORIGIN`. Its path is `/plan/<id>` (`sharedPlanLinkPath`), not
+`/app/<id>`: the API serves `/plan` with a link preview of the plan (backend
+`views/plan_share.py`) and redirects to the card. The dev server has no ingress, so
+`vite.config.ts` redirects `/plan/<id>` to `/app/<id>` itself. "Include my notes" says the
+notes show in link previews too, because Discord keeps a preview after the owner turns
+notes off. The item is hidden on an API older than sharing (no
 `public_id` on the plan).
 
 **The landing card** (`components/shared-plan/SharedPlanLanding.tsx`, at `/app/<id>`):
@@ -1792,8 +1814,9 @@ server), never `SITE_ORIGIN`. The item is hidden on an API older than sharing (n
   A banner that has left the catalogue is left off the list; the count still says how many
   rows the plan holds.
 - KEEP IT SHORT (owner, 2026-10-12: the first draft explained too much). A heading, ONE
-  info line ("5 banners · Updated <formatDate> · Copied N times · Includes their notes"),
-  the banners, the controls. No pull counts, ever (the summary carries none).
+  info line ("5 banners · 230 pulls · Updated <formatDate> · Copied N times · Includes their
+  notes"), the banners, the controls. The totals are the plan's only numbers (owner,
+  2026-10-16, with the link preview): pulls, plus steps when it has step-ups. Nothing per row.
 - Signed in: a name field prefilled "Copied plan", "Copy to my plans", greyed at the plan
   cap with one line why. The owner opening their own link sees "This is your plan. Open
   it". "Includes their resources" is stated, since an account copy takes them.

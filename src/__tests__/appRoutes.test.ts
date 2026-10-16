@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isPublicId, sharedPlanPath } from "../utils/appRoutes"
+import { isPublicId, sharedPlanLinkPath, sharedPlanPath } from "../utils/appRoutes"
 
 // The client's half of the share id's shape. The server's is
 // calculatorapi/public_ids.py: 8 letters or digits.
@@ -23,5 +23,11 @@ describe("isPublicId", () => {
 describe("sharedPlanPath", () => {
 	it("is the app route the link opens", () => {
 		expect(sharedPlanPath("AbCd1234")).toBe("/app/AbCd1234")
+	})
+})
+
+describe("sharedPlanLinkPath", () => {
+	it("is the API-served link with the preview, not the app route", () => {
+		expect(sharedPlanLinkPath("AbCd1234")).toBe("/plan/AbCd1234")
 	})
 })

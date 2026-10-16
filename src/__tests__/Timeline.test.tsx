@@ -299,6 +299,9 @@ function campaign(
 }
 
 vi.mock('../services/CalculatorContext', () => ({
+  // The race cards' "taking part" switch reads this; null keeps it hidden,
+  // which is all these filter and deep-link tests need.
+  useCalculatorDataSafe: () => null,
   useCalculatorData: () => ({
     organizedTimelineData: events,
     userPlannedBannerData: [],

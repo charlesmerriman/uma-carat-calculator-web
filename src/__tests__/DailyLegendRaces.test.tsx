@@ -73,9 +73,16 @@ vi.mock('../services/CalculatorContext', () => ({
   }),
 }))
 
-vi.mock('../services/AuthContext', () => ({
-  useAccount: () => ({ account }),
-}))
+// The page reads the account through useAccount, and its tiles' rainbow frame
+// through useOshiIds, which reads the context itself. A getter as the
+// context's default, so both see the account each test sets.
+vi.mock('../services/AuthContext', async () => {
+  const { createContext } = await import('react')
+  return {
+    useAccount: () => ({ account }),
+    AuthContext: createContext({ get account() { return account } }),
+  }
+})
 
 const { DailyLegendRaces } = await import('../components/legend-races/DailyLegendRaces')
 const { LegendRaceNote } = await import('../components/timeline/LegendRaceNote')

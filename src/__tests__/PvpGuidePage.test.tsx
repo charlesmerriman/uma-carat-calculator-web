@@ -137,6 +137,9 @@ function respond(status: number, body: unknown = {}) {
 
 beforeEach(() => {
 	events = [OLD, NEXT, LATER]
+	// The page remembers where the tab left it (services/pvpPageMemory.ts);
+	// without this, one test's last address would open the next test's page.
+	sessionStorage.clear()
 	clearPvpGuideCache()
 	fetchMock.mockReset()
 	vi.stubGlobal("fetch", fetchMock)
@@ -417,5 +420,81 @@ describe("PvpGuidePage timeline link", () => {
 		respond(404)
 		renderPage("/app/pvp?event=cm-10")
 		expect(screen.getByRole("link", { name: "View on Timeline" })).toHaveAttribute("href", "/app/timeline?focus=cm-10")
+	})
+})
+
+describe("PvpGuidePage style links and memory", () => {
+	const styleTabs = () => within(screen.getAllByRole("tablist", { name: "Running style" })[0])
+	const location = () => screen.getByTestId("location").textContent
+
+	it("keeps the style in the URL, and keeps it when the event changes", async () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10")
+		await screen.findByText("Recommended stats")
+		fireEvent.click(styleTabs().getByRole("tab", { name: "End" }))
+		expect(location()).toBe("/app/pvp?event=cm-10&style=end")
+		fireEvent.click(screen.getByRole("button", { name: /Next/ }))
+		expect(location()).toBe("/app/pvp?event=cm-11&style=end")
+		await screen.findByText("Recommended stats")
+		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+	})
+
+	it("opens on the style a link names", async () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10&style=end")
+		await screen.findByText("Recommended stats")
+		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+		expect(screen.getAllByText("Gold Ship").length).toBeGreaterThan(0)
+	})
+
+	it("shows the first style when the guide lacks the one asked for, and keeps the ask", async () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10&style=pace")
+		await screen.findByText("Recommended stats")
+		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
+		expect(location()).toBe("/app/pvp?event=cm-10&style=pace")
+	})
+
+	it("goes back to where the tab left the page when the bare page is opened", () => {
+		respond(404)
+		const first = renderPage("/app/pvp?event=cm-11&view=gallery")
+		first.unmount()
+		renderPage("/app/pvp")
+		expect(location()).toBe("/app/pvp?event=cm-11&view=gallery")
+		expect(screen.getByTestId("gallery-view").textContent).toBe("cm-11")
+	})
+
+	it("goes where a link to an event says, on the last style shown", async () => {
+		respond(200, GUIDE)
+		const first = renderPage("/app/pvp?event=cm-11&style=end")
+		await screen.findByText("Recommended stats")
+		first.unmount()
+		// A Timeline card's link: the event only.
+		renderPage("/app/pvp?event=cm-10")
+		await screen.findByText("Recommended stats")
+		expect(location()).toBe("/app/pvp?event=cm-10")
+		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+	})
+
+	it("copies a link to the event and the style on screen, and never My team", async () => {
+		const writeText = vi.fn(() => Promise.resolve())
+		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true })
+		respond(200, GUIDE)
+		// No ?event=: the link still names it, since the default moves with the calendar.
+		renderPage("/app/pvp")
+		await screen.findByText("Recommended stats")
+		fireEvent.click(styleTabs().getByRole("tab", { name: "End" }))
+		const copy = () => fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
+		copy()
+		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/app/pvp?event=cm-10&style=end`))
+
+		const views = within(screen.getByRole("tablist", { name: "View" }))
+		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
+		copy()
+		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/app/pvp?event=cm-10&view=gallery`))
+
+		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
+		copy()
+		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/app/pvp?event=cm-10`))
 	})
 })

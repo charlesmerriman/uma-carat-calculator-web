@@ -59,7 +59,9 @@ export const DEFAULT_GUEST_STATS: UserStats = {
 	ssr_crystals: 0,
 	sr_crystals: 0,
 	ssr_shards: 0,
-	sr_shards: 0
+	sr_shards: 0,
+	// Taking part in every race event, the same as the backend's {} default.
+	skipped_race_events: {}
 }
 
 const STASH_KEY = "guestPlanMigration.v1"
@@ -87,12 +89,16 @@ export interface GuestPlanStash {
 
 /**
  * True if the guest actually changed anything from the defaults.
- * All UserStats fields are flat scalars, so a keyed compare is enough.
+ * Every field is a flat scalar except `skipped_race_events`, which is an object
+ * and so can't be compared with `!==` (a fresh `{}` never equals the default's):
+ * it counts as changed when it skips anything.
  */
 export function statsAreDirty(stats: UserStats | null): boolean {
 	if (!stats) return false
-	return (Object.keys(DEFAULT_GUEST_STATS) as (keyof UserStats)[]).some(
-		(key) => stats[key] !== DEFAULT_GUEST_STATS[key]
+	return (Object.keys(DEFAULT_GUEST_STATS) as (keyof UserStats)[]).some((key) =>
+		key === "skipped_race_events"
+			? Object.values(stats.skipped_race_events ?? {}).some((ids) => ids.length > 0)
+			: stats[key] !== DEFAULT_GUEST_STATS[key]
 	)
 }
 

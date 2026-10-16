@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CalculatorContext } from "./CalculatorContext"
 import { clearAuthToken, getAuthToken, subscribeToAuthToken } from "./authToken"
@@ -62,6 +62,7 @@ import {
 	sharedPlanCopy
 } from "./planFetchCalls"
 import { useAutoSave } from "../hooks/useAutoSave"
+import { withoutSkippedRaces } from "../utils/raceParticipation"
 
 interface CalculatorProviderProps {
 	children: React.ReactNode
@@ -897,6 +898,18 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		[runPlanAction, flushPendingSave, applyPlan]
 	)
 
+	// The ledger every projection consumer reads, with the race events the
+	// player said they're skipping already taken out. Done HERE, once, rather
+	// than in each engine hook, so the planner rows, the income tiles and the
+	// uncap panel can never disagree about a skip (utils/raceParticipation).
+	// The unfiltered ledger is exposed beside it only for the Timeline's
+	// "taking part" switch, which has to see an event in order to bring it back.
+	const skippedRaceEvents = userStatsData?.skipped_race_events
+	const projectionLedger = useMemo(
+		() => withoutSkippedRaces(incomeLedger, skippedRaceEvents),
+		[incomeLedger, skippedRaceEvents]
+	)
+
 	const value = {
 		userStatsData,
 		clubRankData,
@@ -916,7 +929,8 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		gameEventsData,
 		championsMeetingData,
 		leagueOfHeroesData,
-		incomeLedger,
+		incomeLedger: projectionLedger,
+		fullIncomeLedger: incomeLedger,
 		calculationConstants,
 		timerIsGoing,
 		isLoading,

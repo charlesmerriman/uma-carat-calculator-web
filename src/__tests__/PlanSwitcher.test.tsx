@@ -254,7 +254,7 @@ describe('PlanSwitcher', () => {
 			})
 			await openShare()
 			expect(screen.getByRole('textbox', { name: 'Share link' })).toHaveValue(
-				`${window.location.origin}/app/AbCd1234`
+				`${window.location.origin}/plan/AbCd1234`
 			)
 			expect(screen.getByText('Copied 3 times.')).toBeInTheDocument()
 			await userEvent.click(screen.getByRole('checkbox', { name: /Include my notes/ }))

@@ -162,6 +162,16 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   the event too: League of Heroes #1 only ran to Platinum 1, so it pays at
   `min(user's rank, Platinum 1)`. Rows say which event they are via
   `event_number`; the rule lives in `RACE_RANK_CAPS` (`utils/incomeLedger.ts`).
+- **A skipped race event is removed from the ledger, once, upstream of every
+  consumer.** The player turns "Taking part" off on the Timeline card; that writes
+  `skipped_race_events` on the stats block (`{champions_meeting: [ids],
+  league_of_heroes: [ids]}`), and `CalculatorProvider` exposes `incomeLedger` with
+  those rows already gone (`withoutSkippedRaces`, `utils/raceParticipation.ts`).
+  The planner rows, the income tiles and the uncap panel therefore can't disagree
+  about a skip, and no engine function knows skips exist. `fullIncomeLedger` keeps
+  every row, for the Timeline switch alone (it must find a skipped event to offer
+  it back); never project from it. The switch is drawn only while the row's date is
+  `>= today`, the same bound `raceEventsInWindow` uses.
 - **`throughout_end` is the linked banner's end**, with the game-event buffer
   already removed, because the decay curve runs over the banner rather than the
   event. The client no longer keeps its own copy of that constant.
@@ -222,6 +232,19 @@ figure dripped as `monthly / 30`.
   zeroes the matching tickets once, so the spend, `maxPossiblePulls` and the
   breakdown all agree; the balances still accrue and show on every row. The hook
   reads it as `!== false`, so an API without the field behaves as "on".
+- **Row options override the gear menu for one row, through `rowSpendSettings`**
+  (`utils/rowOptions.ts`, the only reader). `tickets_to_use` is a ceiling passed as
+  `ticketLimit`: it caps the spend AND `maxPossiblePulls`, and a number on the row
+  wins over `spend_tickets_on_banners` (owner's call, 2026-10-16), so 0 holds every
+  ticket back on that row and 5 spends up to 5 with the switch off. `paid_carat_use`
+  replaces both paid toggles (`none` / `discount` / `all`). A row with
+  `excluded_from_projection` still gets its result computed (it shows what it would
+  cost), but the walk `continue`s before banking its spend, so later rows see the
+  balances as if it were not planned. `pulls_already_made` never reaches the spend:
+  it only moves the 200-pull counter, through `pityExchanges(pulls, priorPulls)`, so
+  the odds strip, the two-card pot and `getPullCountStatus` all count the banner's
+  whole counter. The "Set pulls" shortcuts (`pullsToNextExchange`, `pullsForChance`)
+  are built from the same odds the strip shows, so they cannot disagree with it.
 - **Monthly shop tickets have a default and a cap, and they are two constants.**
   `monthly_shop_*_tickets` (4) is what an untouched account is assumed to buy;
   `monthly_shop_*_tickets_max` (9) only caps a player's own count

@@ -52,6 +52,8 @@ const SUMMARY: SharedPlanSummary = {
 	share_stats: false,
 	share_notes: true,
 	row_count: 2,
+	pull_count: 1200,
+	step_count: 0,
 	rows: [
 		{ banner_uma: 100, banner_support: null, banner_step_up: null },
 		{ banner_uma: null, banner_support: 300, banner_step_up: null },
@@ -114,7 +116,7 @@ describe('SharedPlanLanding', () => {
 		expect(screen.getByText('Support banner')).toBeInTheDocument()
 		expect(screen.getByAltText('Kitasan Black')).toHaveAttribute('src', '/media/kitasan.png')
 		expect(
-			screen.getByText('2 banners · Updated 2026/10/11 · Copied 3 times · Includes their notes')
+			screen.getByText('2 banners · 1,200 pulls · Updated 2026/10/11 · Copied 3 times · Includes their notes')
 		).toBeInTheDocument()
 		expect(mockedSummary).toHaveBeenCalledWith(LINK)
 	})

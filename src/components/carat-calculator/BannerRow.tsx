@@ -12,6 +12,15 @@ import type {
 import React, { useState } from "react"
 import { Link } from "react-router-dom"
 import { BannerNoteButton, BannerNoteEditor } from "./BannerNote"
+import { RowOptionsPanel } from "./RowOptionsPanel"
+import type { PullShortcut, RowOptionsChange } from "./RowOptionsPanel"
+import {
+	hasRowOptions,
+	isExcludedFromProjection,
+	pullsAlreadyMade,
+	pullsForChance,
+	pullsToNextExchange,
+} from "../../utils/rowOptions"
 import { startOfDay } from "date-fns"
 import Select from "react-select"
 import type { SingleValue } from "react-select"
@@ -76,6 +85,11 @@ import { buildCopyChips, buildCountChips, coarsePullDelta } from "../../utils/co
 
 // Static, so built once rather than per render.
 const copyChips = buildCopyChips()
+
+// The row options' "Set pulls" shortcuts, switched off for now (owner,
+// 2026-10-16). The maths and the panel's rendering stay in place, so turning
+// them back on is this one line.
+const SHOW_PULL_SHORTCUTS = false
 
 interface BannerRowProps {
 	plannedBanner: UserPlannedBanner
@@ -332,9 +346,18 @@ export const BannerRow = ({
 	// deliberately (see the plan's decision record). Everything downstream reads
 	// it through this pair rather than reaching for the field.
 	const plannedCount = plannedBanner.number_of_pulls
+	// Pulls already made on this banner (a row option). They are rolled for
+	// nothing and cost nothing; they only move the banner's 200-pull counter,
+	// which the odds and the green "on a threshold" state both read. Never on
+	// a step-up, whose ladder has no exchange.
+	const alreadyMade = isStepUp ? 0 : pullsAlreadyMade(plannedBanner)
 	const countStatus = isStepUp
 		? getStepCountStatus(plannedCount, stepUpperBound)
-		: getPullCountStatus(plannedCount, pullUpperBound)
+		: getPullCountStatus(plannedCount, pullUpperBound, alreadyMade)
+	// Left out of the projection: the row shows what it would cost but spends
+	// nothing (useBannerResources skips its banking), so its numbers are dimmed
+	// and a notice says why.
+	const excluded = isExcludedFromProjection(plannedBanner)
 
 	const hasBanner = target.type !== "Empty"
 
@@ -512,11 +535,13 @@ export const BannerRow = ({
 							rateB: chosenCards.second.rate,
 							reservedCopies: fundedReservedCopies,
 							targetA: oddsGoal.copies,
+							priorPulls: alreadyMade,
 						})
 					: shiftDistribution(
 							calculateCopyDistribution(
 								plannedCount,
-								chosenCards.primary?.rate ?? constants.rate_up_rate_3
+								chosenCards.primary?.rate ?? constants.rate_up_rate_3,
+								alreadyMade
 							),
 							fundedReservedCopies
 						)
@@ -835,11 +860,67 @@ export const BannerRow = ({
 		)
 	}
 
+	// --- Row options ---
+	// The panel the note button opens now holds the row's overrides too. Each
+	// change is a partial row merged in, the same way the note commits.
+	const handleRowOptionsChange = (change: RowOptionsChange): void => {
+		setUserPlannedBannerData(updateBannerInList((banner) => ({ ...banner, ...change })))
+	}
+
+	// "Already pulled" only means something while the banner runs. Offered from
+	// its start until it ends (bannerHasEnded's own cutoff).
+	const isLive =
+		!!bannerTimeline?.start_date &&
+		new Date(bannerTimeline.start_date).getTime() <= currentDate.getTime() &&
+		!bannerHasEnded
+
+	// The "set my pulls" shortcuts. Built from the same odds the strip shows
+	// (the chosen card's own rate, pulls already made, funded reserved copies),
+	// so a shortcut can never land on a count whose strip disagrees with it.
+	// The chance buttons chase oddsGoal, the target the strip's caption names.
+	// The rate falls back exactly as the strip's does, for the same banner.
+	const shortcutRate = chosenCards
+		? chosenCards.primary?.rate ?? constants.rate_up_rate_3
+		: undefined
+	const pullShortcuts: PullShortcut[] = []
+	if (
+		SHOW_PULL_SHORTCUTS &&
+		!isStepUp &&
+		hasBanner &&
+		!bannerHasEnded &&
+		shortcutRate !== undefined
+	) {
+		const toExchange = pullsToNextExchange(alreadyMade, plannedCount)
+		pullShortcuts.push({
+			label: `Next exchange (${toExchange})`,
+			pulls: toExchange,
+			title: `Sets ${toExchange} pulls, enough for one more 200-pull exchange.`,
+		})
+		for (const chance of [0.5, 0.9]) {
+			const pulls = pullsForChance({
+				copies: oddsGoal.copies,
+				chance,
+				rate: shortcutRate,
+				alreadyMade,
+				guaranteed: fundedReservedCopies,
+			})
+			// 0 means the reserved copies already cover the target: nothing to set.
+			if (pulls === 0) continue
+			const percent = `${chance * 100}%`
+			pullShortcuts.push({
+				label: `${percent} at ${oddsGoal.label} (${pulls})`,
+				pulls,
+				title: `The fewest pulls for a ${percent} chance of ${oddsGoal.label}.`,
+			})
+		}
+	}
+
 	// Same factory shape as renderReservedInput below: the two form factors
 	// differ only in the button's box, never in its state.
 	const renderNoteButton = (className: string) => (
 		<BannerNoteButton
 			note={note}
+			hasOptions={hasRowOptions(plannedBanner)}
 			open={noteOpen}
 			onToggle={() => setNoteOpen((open) => !open)}
 			// A row with no banner chosen is never saved (toBannerPayload drops
@@ -850,12 +931,32 @@ export const BannerRow = ({
 	)
 	const renderNoteEditor = (className: string) =>
 		noteOpen && hasBanner ? (
-			<BannerNoteEditor
-				note={note}
-				bannerName={bannerName}
-				onCommit={handleNoteCommit}
+			<RowOptionsPanel
+				plannedBanner={plannedBanner}
+				isStepUp={isStepUp}
+				ticketKind={bannerType === "Support" ? "support" : "uma"}
+				ticketsSpent={resources.ticketsSpent}
+				isLive={isLive}
+				pullShortcuts={pullShortcuts}
+				onChange={handleRowOptionsChange}
+				onSetPulls={handlePullCountChange}
 				className={className}
-			/>
+			>
+				<BannerNoteEditor
+					note={note}
+					bannerName={bannerName}
+					onCommit={handleNoteCommit}
+				/>
+			</RowOptionsPanel>
+		) : null
+
+	// Shown whether or not the panel is open: a row that spends nothing looks
+	// like any other row otherwise, and the later rows' numbers depend on it.
+	const renderExcludedNotice = (className: string) =>
+		excluded && hasBanner ? (
+			<div className={`text-xs text-gray-400 ${className}`}>
+				Not counted: this banner spends nothing, so the banners after it don't see it.
+			</div>
 		) : null
 
 	const handleReservedChange = (copies: number): void => {
@@ -980,7 +1081,8 @@ export const BannerRow = ({
 			bannerSelect={mobileBannerSelect}
 			dates={dateDisplay}
 			maxCount={maxCountCell}
-			summary={statsDisplay}
+			summary={excluded ? <div className="opacity-50">{statsDisplay}</div> : statsDisplay}
+			notice={renderExcludedNotice("border-t border-gray-700 px-3 py-2")}
 			pullsInput={pullsInput}
 			reservedInput={renderReservedInput("w-14")}
 			chanceDisplay={null}
@@ -1037,7 +1139,7 @@ export const BannerRow = ({
 			{/* === Derived Stats section === */}
 			{/* px-1 and compact stat padding keep the four boxes within this tighter
 			    track without clipping their labels. */}
-			<div className="flex min-w-0 items-center justify-center px-1 py-2">
+			<div className={`flex min-w-0 items-center justify-center px-1 py-2 ${excluded ? "opacity-50" : ""}`}>
 				{/* Same `derivedStats` list as the mobile card above — one strip
 				    instead of 2x2, with rule dividers between the boxes. */}
 				<div className="flex items-stretch rounded-lg bg-gray-700 border border-gray-600 overflow-hidden w-full">
@@ -1076,7 +1178,7 @@ export const BannerRow = ({
 			{/* py-1 when the strip carries its caption line: strip (41px) plus
 			    caption (13px) is 54px, and py-2 leaves only 48px inside this h-16
 			    row. Same trade as the reserved cell's py-0.5 above. */}
-			<div className={`flex items-center justify-center px-2 min-w-0 ${oddsCaption ? "py-1" : "py-2"}`}>
+			<div className={`flex items-center justify-center px-2 min-w-0 ${oddsCaption ? "py-1" : "py-2"} ${excluded ? "opacity-50" : ""}`}>
 				{odds ? (
 					<MLBChanceDisplay
 						plannedBanner={plannedBanner}
@@ -1114,6 +1216,9 @@ export const BannerRow = ({
 		    row keeps its fixed h-16 and the columns stay aligned; the motion.div
 		    around each row (CaratCalculator) animates the height change. */}
 		{/* The odds-card picker, the same way: a strip under the row. */}
+		{renderExcludedNotice(
+			"hidden @banner-table:block border-t border-gray-700 bg-gray-800 px-3 py-1.5"
+		)}
 		{renderOddsPanel(
 			"hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2"
 		)}

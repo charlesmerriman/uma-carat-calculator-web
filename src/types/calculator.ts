@@ -150,7 +150,17 @@ export interface CalculatorContextType {
 	dailyLegendRaceData: DailyLegendRaceRelease[]
 	userPlannedPurchaseData: UserPlannedPurchase[]
 	userStepUpSelectionData: UserStepUpSelection[]
+	/**
+	 * The ledger the projection reads: every row, minus the race events the
+	 * player is skipping (`skipped_race_events`). Every engine consumer takes
+	 * THIS one, so a skip reaches all of them at once.
+	 */
 	incomeLedger: IncomeLedgerRow[]
+	/**
+	 * Every row, skips included. Only for the Timeline's "taking part" switch,
+	 * which must find a skipped event to offer it back. Never project from it.
+	 */
+	fullIncomeLedger: IncomeLedgerRow[]
 	calculationConstants: CalculationConstants
 	timerIsGoing: boolean
 	// The initial /calculator-data fetch. Exposed rather than gated inside the

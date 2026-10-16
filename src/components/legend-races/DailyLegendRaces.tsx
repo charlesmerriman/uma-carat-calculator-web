@@ -7,6 +7,7 @@ import { useSiteContent } from "../../services/SiteContentContext"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
 import { useBackToTop } from "../../hooks/useBackToTop"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import { FloatingBackToTop } from "../BackToTop"
 import { formatDate } from "../../utils/dateFormat"
 import {
@@ -65,7 +66,9 @@ export const DailyLegendRaces = () => {
 		() => (account ? account.oshis.slice(0, account.oshi_slots) : []),
 		[account]
 	)
-	const oshiIds = useMemo(() => new Set(coveredOshis.map((oshi) => oshi.id)), [coveredOshis])
+	// The tiles' rainbow frame: every outfit of each covered favourite, the
+	// set every page frames. The lines above the list stay one per pick.
+	const oshiIds = useOshiIds()
 	const oshiReleases = useMemo(() => {
 		const byUma = releaseByUmaId<DailyLegendRaceRelease>([...dated, ...tentative])
 		return coveredOshis.flatMap((oshi) => {

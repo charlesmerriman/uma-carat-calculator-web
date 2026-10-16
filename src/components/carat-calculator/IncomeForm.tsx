@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react"
+import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import Select from "react-select"
 import type { SingleValue, CSSObjectWithLabel, StylesConfig } from "react-select"
@@ -9,6 +10,8 @@ import { UncapCrystalsPanel } from "./UncapCrystalsPanel"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { NumberField } from "../NumberField"
 import { shopTicketsPerMonth } from "../../utils/cumulativeIncome"
+import { upcomingSkipCount } from "../../utils/raceParticipation"
+import { countLabel } from "../../utils/plural"
 import type { CalculationConstants, ClubRank, TeamTrialsRank, ChampionsMeetingRank, LeagueOfHeroesRank } from "../../types"
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -254,6 +257,7 @@ export const IncomeForm = () => {
 		championsMeetingRankData,
 		leagueOfHeroesRankData,
 		incomeLedger,
+		fullIncomeLedger,
 		calculationConstants,
 		setUserStatsData,
 	} = useCalculatorData()
@@ -289,6 +293,11 @@ export const IncomeForm = () => {
 	const clubRank = clubRankData.find((r) => r.id === userStatsData.club_rank)
 	const championsMeetingRank = championsMeetingRankData.find((r) => r.id === userStatsData.champions_meeting_rank)
 	const leagueOfHeroesRank = leagueOfHeroesRankData.find((r) => r.id === userStatsData.league_of_heroes_rank)
+	// Skips are set on the Timeline, a page away from these totals, so the
+	// panel says when some are in force. Otherwise a player who skipped a CM
+	// weeks ago sees lower numbers here and no reason why. The full ledger,
+	// because the projection's has the skipped rows taken out already.
+	const skippedRaces = upcomingSkipCount(fullIncomeLedger, userStatsData.skipped_race_events, new Date())
 
 	const monthlyItems = [
 		{
@@ -547,6 +556,14 @@ export const IncomeForm = () => {
 											</div>
 										</div>
 									</div>
+									{skippedRaces > 0 && (
+										<p className="mt-2 text-center text-xs text-gray-400">
+											Skipping {countLabel(skippedRaces, "upcoming event")}, so {skippedRaces === 1 ? "it isn't" : "they aren't"} counted.{" "}
+											<Link to="/app/timeline" className="text-brand underline-offset-2 hover:underline">
+												Change it on the Timeline
+											</Link>
+										</p>
+									)}
 								</div>
 
 								{/* Separator */}

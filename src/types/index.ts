@@ -35,6 +35,7 @@ export type {
 
 export type {
 	UserStats,
+	PaidCaratUse,
 	UserPlannedBanner,
 	SavedPlannedBanner,
 	LocalPlannedBanner,

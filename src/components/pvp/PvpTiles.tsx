@@ -212,7 +212,9 @@ export function UmaTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: num
 export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCardRef; note: string; borrow?: boolean }) {
 	return (
 		<div className="min-w-0">
-			<div className="relative overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
+			{/* A card's art bakes in its own border, so no box of ours round it:
+			    only a slot with no art yet gets the grey square. */}
+			<div className={`relative overflow-hidden ${card.image ? "" : "rounded-lg border border-gray-600 bg-gray-700"}`}>
 				<TileArt src={card.image} alt={card.name} />
 				{borrow && <BorrowRibbon />}
 			</div>

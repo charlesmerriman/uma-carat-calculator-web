@@ -61,9 +61,32 @@ function buildVersionPlugin(): Plugin {
   }
 }
 
+/**
+ * A shared plan's link is /plan/<id> (src/utils/appRoutes.ts sharedPlanLinkPath).
+ * Deployed, an ingress rule sends it to the API, which serves the link-preview
+ * page and moves people on to /app/<id>. The dev server has no such rule, so
+ * without this a link copied locally would render NotFound. It skips the
+ * preview (no crawler can reach localhost anyway) and goes straight to the card.
+ * Dev only: the build has no server to hook.
+ */
+function sharedPlanLinkPlugin(): Plugin {
+  return {
+    name: 'shared-plan-link',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const match = req.url?.split('?')[0].match(/^\/plan\/([A-Za-z0-9]{8})\/?$/)
+        if (!match) return next()
+        res.statusCode = 302
+        res.setHeader('Location', `/app/${match[1]}`)
+        res.end()
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), buildVersionPlugin()],
+  plugins: [react(), tailwindcss(), buildVersionPlugin(), sharedPlanLinkPlugin()],
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
   },

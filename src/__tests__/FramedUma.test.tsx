@@ -7,21 +7,22 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { FramedUma } from "../components/FramedUma"
-import { useOshiIds } from "../hooks/useOshiIds"
+import { useOshiIds, useOshiPickIds } from "../hooks/useOshiIds"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 
-function Favourites() {
-	const ids = useOshiIds()
-	return <output>{[...ids].join(",")}</output>
+function Favourites({ exact = false }: { exact?: boolean }) {
+	const frame = useOshiIds()
+	const picks = useOshiPickIds()
+	return <output>{[...(exact ? picks : frame)].join(",")}</output>
 }
 
-function withAccount(oshis: number[], slots: number) {
+function withAccount(oshis: number[], slots: number, extra: { oshi_uma_ids?: number[] } = {}, exact = false) {
 	const value = {
-		account: { oshis: oshis.map((id) => ({ id })), oshi_slots: slots },
+		account: { oshis: oshis.map((id) => ({ id })), oshi_slots: slots, ...extra },
 	} as unknown as AuthContextType
 	render(
 		<AuthContext.Provider value={value}>
-			<Favourites />
+			<Favourites exact={exact} />
 		</AuthContext.Provider>
 	)
 }
@@ -48,9 +49,21 @@ describe("useOshiIds", () => {
 		expect(screen.getByRole("status").textContent).toBe("12,41")
 	})
 
+	it("frames every outfit the server resolved for the covered picks", () => {
+		withAccount([12], 1, { oshi_uma_ids: [12, 13, 14] })
+		expect(screen.getByRole("status").textContent).toBe("12,13,14")
+	})
+
 	it("is empty outside a sign-in provider", () => {
 		render(<Favourites />)
 		expect(screen.getByRole("status").textContent).toBe("")
+	})
+})
+
+describe("useOshiPickIds", () => {
+	it("is the exact covered picks, never their other outfits", () => {
+		withAccount([12, 41, 77], 2, { oshi_uma_ids: [12, 13, 41] }, true)
+		expect(screen.getByRole("status").textContent).toBe("12,41")
 	})
 })
 

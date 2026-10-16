@@ -59,6 +59,13 @@ export interface PullStrategyInput {
 	 * ON when absent, because that is what every caller did before it existed.
 	 */
 	spendTickets?: boolean
+	/**
+	 * At most this many matching tickets pay for the row (its tickets_to_use).
+	 * Applies to the spend AND to "Max Pulls", the same way spendTickets off
+	 * does, so the max never counts tickets the row has said it won't use.
+	 * Optional and unlimited when absent. Resolved by rowSpendSettings.
+	 */
+	ticketLimit?: number
 }
 
 /**
@@ -130,17 +137,22 @@ export function applyPullStrategy(input: PullStrategyInput): PullStrategyResult 
 		discountedPaidPulls,
 		fullPricePaidPulls,
 		spendTickets = true,
+		ticketLimit = Infinity,
 	} = input
 
 	// With ticket spending off the banner has NO tickets as far as the strategy
 	// is concerned. Zeroing them here, once, is what keeps the max, its
 	// breakdown and the spend below in agreement, the same way a switched-off
 	// paid toggle keeps paid carats out of all three.
+	const heldTickets = isUmaBanner ? input.umaTickets : input.supportTickets
+	// The row's ceiling caps what it may use, never a DEBT: a negative balance
+	// (see the breakdown's note below) still counts against the max in full.
+	const usableTickets = Math.max(0, Math.floor(ticketLimit))
 	const matchingTickets = !spendTickets
 		? 0
-		: isUmaBanner
-		? input.umaTickets
-		: input.supportTickets
+		: heldTickets < 0
+		? heldTickets
+		: Math.min(heldTickets, usableTickets)
 
 	// ── maxPossiblePulls (greedy; ignores plannedPulls) ──────────────────────
 	// NOTE: `discountDays` is the banner's full window length, so this figure is
@@ -204,11 +216,11 @@ export function applyPullStrategy(input: PullStrategyInput): PullStrategyResult 
 	if (!spendTickets) {
 		// Nothing to do: both balances pass through to the next banner as-is.
 	} else if (isUmaBanner) {
-		const use = Math.min(remaining, umaTickets)
+		const use = Math.min(remaining, umaTickets, usableTickets)
 		umaTickets -= use
 		remaining -= use
 	} else {
-		const use = Math.min(remaining, supportTickets)
+		const use = Math.min(remaining, supportTickets, usableTickets)
 		supportTickets -= use
 		remaining -= use
 	}
@@ -430,15 +442,19 @@ export type PullCountStatus = "ok" | "neutral" | "over"
  * @param maxPulls Upper bound of affordable pulls. Pass `Infinity` where no
  *   bound is known (e.g. a staged banner, which has no projection yet) to opt
  *   out of the "over" state entirely.
+ * @param priorPulls Pulls already made on the banner (the row's
+ *   pulls_already_made). The threshold is the banner's whole counter, so 120
+ *   made plus 80 planned is green and 200 planned on top of 120 is not.
  */
 export function getPullCountStatus(
 	pulls: number,
-	maxPulls: number
+	maxPulls: number,
+	priorPulls = 0
 ): PullCountStatus {
 	if (pulls > maxPulls) return "over"
 	// 0 is a multiple of the pity threshold, but an untouched row is not a
 	// planning achievement — greening every empty row would drain the signal.
-	if (pulls > 0 && pulls % PULLS_PER_PITY_COPY === 0) return "ok"
+	if (pulls > 0 && (pulls + Math.max(0, priorPulls)) % PULLS_PER_PITY_COPY === 0) return "ok"
 	return "neutral"
 }
 

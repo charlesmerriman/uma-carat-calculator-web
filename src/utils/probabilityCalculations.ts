@@ -113,11 +113,28 @@ function getAtLeastProbability(
 }
 
 /**
+ * Exchanges the planned pulls unlock, uncapped. The game's counter is per
+ * banner, so pulls ALREADY made on it (the row's pulls_already_made) count
+ * toward the next 200 without being rolled again: 120 made plus 80 planned
+ * is one exchange, not none. Exchanges the counter passed BEFORE the plan are
+ * the player's history, not something these pulls hand over, so they are
+ * subtracted. With nothing made, this is the old `floor(pulls / 200)`.
+ */
+export function pityExchanges(pulls: number, priorPulls = 0): number {
+	const planned = Math.max(0, Math.floor(pulls))
+	const prior = Math.max(0, Math.floor(priorPulls))
+	return (
+		Math.floor((prior + planned) / PULLS_PER_PITY_COPY) -
+		Math.floor(prior / PULLS_PER_PITY_COPY)
+	)
+}
+
+/**
  * Copies the pity exchange hands over for free at this pull count — one per
  * 200 pulls, capped at MLB since further exchanges have nothing left to break.
  */
-export function getGuaranteedCopies(pulls: number): number {
-	return Math.min(Math.floor(pulls / PULLS_PER_PITY_COPY), MAX_COPIES)
+export function getGuaranteedCopies(pulls: number, priorPulls = 0): number {
+	return Math.min(pityExchanges(pulls, priorPulls), MAX_COPIES)
 }
 
 /**
@@ -131,10 +148,11 @@ export function getGuaranteedCopies(pulls: number): number {
 export function calculateSuccessProbability(
 	pulls: number,
 	copiesNeeded: number,
-	rate: number
+	rate: number,
+	priorPulls = 0
 ): number {
 	return getAtLeastProbability(
-		{ trials: pulls, rate, guaranteed: getGuaranteedCopies(pulls) },
+		{ trials: pulls, rate, guaranteed: getGuaranteedCopies(pulls, priorPulls) },
 		copiesNeeded
 	)
 }
@@ -223,12 +241,17 @@ export function copyDistribution({
 /**
  * The copy distribution for a STANDARD banner at `pulls` pulls, at `rate` per
  * pull (the chased card's rate-up rate; see utils/rateUpRates.ts), with pity
- * credited every 200 pulls.
+ * credited every 200 pulls. `priorPulls` are pulls already made on the
+ * banner: they move the exchange counter and are never rolled (pityExchanges).
  */
-export function calculateCopyDistribution(pulls: number, rate: number): number[] {
+export function calculateCopyDistribution(
+	pulls: number,
+	rate: number,
+	priorPulls = 0
+): number[] {
 	return copyDistribution({
 		attempts: [{ trials: pulls, rate }],
-		guaranteed: getGuaranteedCopies(pulls),
+		guaranteed: getGuaranteedCopies(pulls, priorPulls),
 	})
 }
 
@@ -288,6 +311,11 @@ export interface TwoCardInput {
 	 * the odds panel's toggle (oddsTarget in utils/oddsDisplay).
 	 */
 	targetA: number
+	/**
+	 * Pulls already made on the banner: they move the exchange counter (so
+	 * the pot) and are never rolled. Absent = 0. See pityExchanges.
+	 */
+	priorPulls?: number
 }
 
 /**
@@ -331,6 +359,7 @@ export function twoCardDistribution({
 	rateB,
 	reservedCopies,
 	targetA,
+	priorPulls = 0,
 }: TwoCardInput): number[] {
 	const n = Math.max(0, Math.floor(pulls))
 	// A target the strip cannot show falls back to MLB rather than throwing;
@@ -338,8 +367,7 @@ export function twoCardDistribution({
 	const target = isTargetCopies(targetA) ? targetA : MAX_COPIES
 	// NOT getGuaranteedCopies: that caps at MLB because one card can use no
 	// more, but here a copy A cannot use still buys a copy of B.
-	const pot =
-		Math.floor(n / PULLS_PER_PITY_COPY) + Math.max(0, Math.floor(reservedCopies))
+	const pot = pityExchanges(n, priorPulls) + Math.max(0, Math.floor(reservedCopies))
 	// B's chance on a pull that did not give A. Guarded so a (nonsensical)
 	// rateA of 1 cannot divide by zero.
 	const rateBGivenNotA = rateA < 1 ? Math.min(rateB / (1 - rateA), 1) : 0

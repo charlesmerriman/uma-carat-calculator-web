@@ -48,6 +48,8 @@ import type {
 } from "./calculatorFetchCalls"
 import { DEFAULT_GUEST_STATS, statsAreDirty } from "./guestMigration"
 import { isTargetCopies } from "../utils/probabilityCalculations"
+import { readSkippedRaceEvents } from "../utils/raceParticipation"
+import { isPaidCaratUse } from "../utils/rowOptions"
 
 const STORAGE_KEY = "guestPlan.v1"
 
@@ -104,6 +106,14 @@ function readBanner(raw: unknown): PlannedBannerPayload | null {
 		...(isCount(row.second_card) ? { second_card: row.second_card } : {}),
 		// And the first card's target only when it is one the strip can show.
 		...(isTargetCopies(row.primary_target) ? { primary_target: row.primary_target } : {}),
+		// The row options, each kept only when it is a value the option can
+		// hold, so a damaged one degrades to its default on its own.
+		...(isCount(row.tickets_to_use) ? { tickets_to_use: row.tickets_to_use } : {}),
+		...(isPaidCaratUse(row.paid_carat_use) ? { paid_carat_use: row.paid_carat_use } : {}),
+		...(isCount(row.pulls_already_made) && row.pulls_already_made > 0
+			? { pulls_already_made: row.pulls_already_made }
+			: {}),
+		...(row.excluded_from_projection === true ? { excluded_from_projection: true } : {}),
 		banner_uma: row.banner_uma,
 		banner_support: row.banner_support,
 		banner_step_up: row.banner_step_up
@@ -155,6 +165,12 @@ function readStats(raw: unknown): UserStats | null {
 	const stats: Record<string, unknown> = { ...DEFAULT_GUEST_STATS }
 	for (const [key, fallback] of Object.entries(DEFAULT_GUEST_STATS)) {
 		const value = stored[key]
+		// The one non-scalar stat, read by its own reader. Any damage there
+		// degrades to "skipping nothing" on its own, like a bad scalar does.
+		if (key === "skipped_race_events") {
+			stats[key] = readSkippedRaceEvents(value) ?? {}
+			continue
+		}
 		const fits =
 			typeof fallback === "boolean"
 				? typeof value === "boolean"
@@ -354,6 +370,10 @@ export function guestPlanToState(
 			...(row.primary_card != null ? { primary_card: row.primary_card } : {}),
 			...(row.second_card != null ? { second_card: row.second_card } : {}),
 			...(row.primary_target != null ? { primary_target: row.primary_target } : {}),
+			...(row.tickets_to_use != null ? { tickets_to_use: row.tickets_to_use } : {}),
+			...(row.paid_carat_use != null ? { paid_carat_use: row.paid_carat_use } : {}),
+			...(row.pulls_already_made ? { pulls_already_made: row.pulls_already_made } : {}),
+			...(row.excluded_from_projection ? { excluded_from_projection: true } : {}),
 			...target
 		})
 	}

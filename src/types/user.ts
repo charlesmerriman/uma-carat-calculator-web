@@ -1,4 +1,19 @@
 import type { BannerUma, BannerSupport, BannerStepUp } from "./banner"
+import type { LedgerRowKind } from "./ledger"
+
+/**
+ * Race events the player is NOT taking part in, as event ids per ledger race
+ * kind. Empty or absent = taking part in everything. Read and change it only
+ * through utils/raceParticipation, which also owns where the skip is applied.
+ */
+export type SkippedRaceEvents = Partial<Record<Exclude<LedgerRowKind, "event">, number[]>>
+
+/**
+ * A row's paid-carat override (UserPlannedBanner.paid_carat_use): no paid
+ * carats at all, the once-a-day 50-carat discount pull only, or both the
+ * discount and full-price pulls.
+ */
+export type PaidCaratUse = "none" | "discount" | "all"
 
 /**
  * Represents the user's current resources and income settings.
@@ -50,6 +65,11 @@ export interface UserStats {
 	sr_crystals: number
 	ssr_shards: number
 	sr_shards: number
+	/**
+	 * Optional because an API older than the field doesn't send it, and that
+	 * has to mean "skipping nothing", which is what every plan did before.
+	 */
+	skipped_race_events?: SkippedRaceEvents
 }
 
 /**
@@ -115,6 +135,27 @@ interface BasePlannedBanner {
 	 * utils/oddsDisplay, which ignores a value outside 1..5.
 	 */
 	primary_target?: number | null
+	/**
+	 * Row options, from the panel under the row. Each is optional because its
+	 * absence (an API older than the field, a row staged before it) has to
+	 * mean exactly what every row did before it existed. Read them through the
+	 * helpers in utils/rowOptions, never raw.
+	 *
+	 * tickets_to_use: at most this many matching gacha tickets pay for the
+	 * row. Null/absent = automatic. A number wins over the global "spend
+	 * tickets" switch; 0 holds them all back on this row.
+	 */
+	tickets_to_use?: number | null
+	/** Which paid-carat pulls the row may buy. Null/absent = the global toggles. */
+	paid_carat_use?: PaidCaratUse | null
+	/**
+	 * Pulls ALREADY made on this live banner. Free in the projection (those
+	 * carats have left the typed-in balance); they only move the 200-pull
+	 * exchange the odds and the pity colouring count. Absent = 0.
+	 */
+	pulls_already_made?: number
+	/** The row stays in the plan but spends nothing. Absent = false. */
+	excluded_from_projection?: boolean
 	banner_uma?: BannerUma | null
 	banner_support?: BannerSupport | null
 	/**
