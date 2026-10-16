@@ -20,9 +20,10 @@ import { useOshiIds } from "../../hooks/useOshiIds"
  * A SHARED PLAN IS COPIED, NEVER VIEWED. The owner's rule (2026-10-12): a plan
  * is editable only by the person who made it, and anyone else sees it by
  * taking a copy that is then theirs. So this is a card, not the calculator: it
- * says what the plan holds (which banners, how many, how recently changed, how
- * often copied) and offers "Copy". No pull counts, no numbers, nothing
- * editable. The summary the server sends carries catalogue ids only; names and
+ * says what the plan holds (which banners, how many, the pull and step totals,
+ * how recently changed, how often copied) and offers "Copy". Nothing per row,
+ * nothing editable. (The totals came with the link preview, owner 2026-10-16;
+ * backend views/plan_share.py states the same two numbers.) The summary the server sends carries catalogue ids only; names and
  * art come from the catalogue the app already holds, which is why this renders
  * INSIDE the /app loading gate.
  *
@@ -59,7 +60,18 @@ type SummaryState =
 	| { status: "ready"; summary: SharedPlanSummary }
 
 const plural = (count: number, one: string, many: string): string =>
-	`${count} ${count === 1 ? one : many}`
+	`${count.toLocaleString()} ${count === 1 ? one : many}`
+
+/** "230 pulls", "230 pulls, 6 steps", or "6 steps" for a plan of only
+ * step-ups. A step-up row counts steps, never pulls (plannedSteps()), and the
+ * server sums the two apart. */
+const totalsLine = (pulls: number, steps: number): string =>
+	[
+		(pulls > 0 || steps === 0) && plural(pulls, "pull", "pulls"),
+		steps > 0 && plural(steps, "step", "steps")
+	]
+		.filter(Boolean)
+		.join(", ")
 
 const copiedLine = (count: number): string =>
 	count === 0 ? "Not copied yet" : count === 1 ? "Copied once" : `Copied ${count} times`
@@ -360,6 +372,9 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 				<p className="text-sm text-gray-400">
 					{[
 						plural(summary.row_count, "banner", "banners"),
+						// Absent from an API older than the link preview (dev:live
+						// against prod before the release), so the line just skips them.
+						summary.pull_count !== undefined && totalsLine(summary.pull_count, summary.step_count ?? 0),
 						`Updated ${formatDate(summary.updated_at.slice(0, 10))}`,
 						copiedLine(summary.copy_count),
 						includes

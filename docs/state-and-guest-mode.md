@@ -177,7 +177,8 @@ plan has no rows to make the box taller than the menu.
 
 ### Copying a shared plan
 
-A plan's owner can switch on a link, `/app/<public_id>`, from the plan menu ("Share this
+A plan's owner can switch on a link, `/app/<public_id>` (copied as `/plan/<public_id>`,
+which the API serves with a link preview and redirects here), from the plan menu ("Share this
 plan", `setPlanSharing` / `resetPlanLink`). **A shared plan is copied, never viewed**:
 nobody but its owner ever has it on screen, so there is no read-only mode anywhere in the
 provider and no save path to gate. The link opens `SharedPlanLanding` (a card, see

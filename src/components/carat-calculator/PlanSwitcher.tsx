@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
 import type { PlanSharingChanges } from "../../types"
-import { sharedPlanPath } from "../../utils/appRoutes"
+import { sharedPlanLinkPath } from "../../utils/appRoutes"
 import { NAV_POPOVER } from "../navbar/navStyles"
 
 /**
@@ -325,8 +325,9 @@ export const PlanSwitcher = () => {
 
 	// Read at click time, from the page the person is on, so a link copied on a
 	// local dev server points at that server. Only ever called from the open
-	// panel, which never renders during a build.
-	const shareLink = (id: string): string => `${window.location.origin}${sharedPlanPath(id)}`
+	// panel, which never renders during a build. /plan, not /app: the API
+	// serves /plan with the link preview (sharedPlanLinkPath explains).
+	const shareLink = (id: string): string => `${window.location.origin}${sharedPlanLinkPath(id)}`
 
 	const copyLink = async (id: string): Promise<void> => {
 		try {
@@ -686,7 +687,7 @@ export const PlanSwitcher = () => {
 								<span>
 									<span className="block text-sm text-gray-200">Include my notes</span>
 									<span className="block text-xs leading-snug text-gray-400">
-										Copies keep the notes you wrote on each banner.
+										Copies keep the notes you wrote on each banner. Link previews in Discord and other apps show them too.
 									</span>
 								</span>
 							</label>
