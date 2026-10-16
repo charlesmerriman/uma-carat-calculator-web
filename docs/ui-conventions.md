@@ -1789,7 +1789,12 @@ notes"), the copy count, and Reset link, which asks first like Delete does becau
 a link that may already be out. The options are off by default and greyed while sharing is
 off, so the owner can read what each would hand out before anything is on. The link is
 built from `window.location.origin` at click time (a dev server's link points at the dev
-server), never `SITE_ORIGIN`. The item is hidden on an API older than sharing (no
+server), never `SITE_ORIGIN`. Its path is `/plan/<id>` (`sharedPlanLinkPath`), not
+`/app/<id>`: the API serves `/plan` with a link preview of the plan (backend
+`views/plan_share.py`) and redirects to the card. The dev server has no ingress, so
+`vite.config.ts` redirects `/plan/<id>` to `/app/<id>` itself. "Include my notes" says the
+notes show in link previews too, because Discord keeps a preview after the owner turns
+notes off. The item is hidden on an API older than sharing (no
 `public_id` on the plan).
 
 **The landing card** (`components/shared-plan/SharedPlanLanding.tsx`, at `/app/<id>`):
@@ -1809,8 +1814,9 @@ server), never `SITE_ORIGIN`. The item is hidden on an API older than sharing (n
   A banner that has left the catalogue is left off the list; the count still says how many
   rows the plan holds.
 - KEEP IT SHORT (owner, 2026-10-12: the first draft explained too much). A heading, ONE
-  info line ("5 banners · Updated <formatDate> · Copied N times · Includes their notes"),
-  the banners, the controls. No pull counts, ever (the summary carries none).
+  info line ("5 banners · 230 pulls · Updated <formatDate> · Copied N times · Includes their
+  notes"), the banners, the controls. The totals are the plan's only numbers (owner,
+  2026-10-16, with the link preview): pulls, plus steps when it has step-ups. Nothing per row.
 - Signed in: a name field prefilled "Copied plan", "Copy to my plans", greyed at the plan
   cap with one line why. The owner opening their own link sees "This is your plan. Open
   it". "Includes their resources" is stated, since an account copy takes them.

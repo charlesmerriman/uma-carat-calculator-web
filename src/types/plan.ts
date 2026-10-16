@@ -76,6 +76,11 @@ export interface SharedPlanSummary {
 	share_stats: boolean
 	share_notes: boolean
 	row_count: number
+	/** Pulls across the plan's ordinary rows, and steps across its step-up rows
+	 * (a step-up row counts steps). Optional only because an API older than the
+	 * link preview omits them. */
+	pull_count?: number
+	step_count?: number
 	/** In the owner's order. Exactly one id is set on each. */
 	rows: { banner_uma: number | null; banner_support: number | null; banner_step_up: number | null }[]
 }
