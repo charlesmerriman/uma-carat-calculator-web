@@ -93,6 +93,13 @@ export interface Account {
 	 */
 	oshi_slots: number
 	/**
+	 * Every uma the rainbow favourite frame goes on: each covered pick and every
+	 * other outfit of its character, resolved by the server. Read it through
+	 * useOshiIds. Optional only because a frontend deployed ahead of the API
+	 * can briefly get an account without it.
+	 */
+	oshi_uma_ids?: number[]
+	/**
 	 * Whether a costume variant ("Special Week (Summer)") may be ADDED as a
 	 * favourite: supporters and staff. Resolved by the server like
 	 * `oshi_slots`, so the picker only locks tiles; the rule lives in the

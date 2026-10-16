@@ -341,27 +341,6 @@ export function drawerTeam(teams: PvpTeam[], events: RaceEvent[], now: Date): Dr
 }
 
 /**
- * "Is this uma one of my favourites?" for the team grids' frame. A favourite
- * (an oshi on the account) counts for every outfit of its character, so a
- * favourite Oguri Cap frames Oguri Cap (Christmas) too; an uma the catalogue
- * has no character for matches by id alone.
- */
-export function favouriteCheck(
-	oshiIds: number[],
-	umasById: Map<number, Pick<CatalogueUma, "character_id">>
-): (umaId: number) => boolean {
-	const ids = new Set(oshiIds)
-	const characters = new Set(
-		oshiIds.map((id) => umasById.get(id)?.character_id).filter((character): character is number => character != null)
-	)
-	return (umaId) => {
-		if (ids.has(umaId)) return true
-		const character = umasById.get(umaId)?.character_id
-		return character != null && characters.has(character)
-	}
-}
-
-/**
  * A team as it may be added to an event: anything not out by the event's last
  * day removed (utils/cardRelease.ts). Every path into a team applies the
  * release rule, and a team copied from the gallery is a path in: its poster's

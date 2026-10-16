@@ -5,7 +5,7 @@ import { OguriSpinner } from "../OguriSpinner"
 import { umasFetch } from "../../services/umasFetchCalls"
 import type { OshiOption } from "../../types/account"
 import { FramedUma } from "../FramedUma"
-import { useOshiIds } from "../../hooks/useOshiIds"
+import { useOshiPickIds } from "../../hooks/useOshiIds"
 
 /**
  * The modal for choosing a favourite uma ("oshi" in the code and on the wire;
@@ -70,7 +70,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 	onChoose,
 }) => {
 	const [catalogue, setCatalogue] = useState<Catalogue>({ state: "idle" })
-	const oshiIds = useOshiIds()
+	const oshiIds = useOshiPickIds()
 	const [search, setSearch] = useState("")
 	const [saving, setSaving] = useState<number | null>(null)
 	// Whether the catalogue has ever arrived, as a ref rather than read from
