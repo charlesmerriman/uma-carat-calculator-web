@@ -196,11 +196,13 @@ export function GalleryTeam({ members, index }: {
 									borrowed ? <li key="divider" aria-hidden="true" className="h-full w-0.5 rounded bg-gray-600" /> : null,
 									<li key={slot} className="flex min-w-0 flex-col gap-0.5">
 										{art?.image ? (
+											// The card's art bakes in its own border: no fill or
+											// radius of ours around it, or a grey edge shows.
 											<img
 												src={art.image}
 												alt=""
 												loading="lazy"
-												className="aspect-[3/4] w-full rounded-md bg-gray-700 object-cover"
+												className="aspect-[3/4] w-full object-contain"
 											/>
 										) : (
 											<div className="aspect-[3/4] w-full rounded-md bg-gray-700" />
