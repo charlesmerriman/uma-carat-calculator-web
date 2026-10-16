@@ -199,9 +199,7 @@ function PickTile({ item, shape, open, onClick }: {
 	const aspect = shape === "card" ? "aspect-[3/4]" : "aspect-square"
 	const oshiIds = useOshiIds()
 	// The open / on-team ring is a state, drawn round whatever the art is;
-	// on an uma it follows the frame's corner (App.css "Uma frames"). A
-	// support card has no edge of ours at rest: its art bakes in its own
-	// border, and a grey ring or fill round it read as a second one.
+	// on an uma it follows the frame's corner (App.css "Uma frames").
 	const ring = open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : ""
 	return (
 		<li className="min-w-0">
@@ -216,7 +214,7 @@ function PickTile({ item, shape, open, onClick }: {
 					className={
 						item.uma
 							? `relative block rounded-[10.75%] transition ${ring}`
-							: `relative block transition group-hover:brightness-110 ${item.image ? "" : "rounded-md bg-gray-700"} ${ring}`
+							: `relative block overflow-hidden rounded-md bg-gray-700 transition ${ring || "ring-1 ring-gray-600 group-hover:ring-gray-400"}`
 					}
 				>
 					{item.uma ? (
