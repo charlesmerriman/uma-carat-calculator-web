@@ -1367,6 +1367,20 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
   kind, so the Timeline card links to a guide without branching on the tag. No parameter
   opens on the running event, else the next, else the newest (`defaultPvpEvent`).
+- **So does the guide's running style**: `?style=front` / `pace` / ... (`PVP_STYLE_PARAM`,
+  `parsePvpStyle`; never `everyone`, which is not a tab). The page owns it and
+  `PvpGuideView`'s tabs are controlled; a tab click `replace`s, so Back never steps through
+  tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
+  first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event
+  that has it.
+- **The tab remembers where it left the page** (`services/pvpPageMemory.ts`, sessionStorage,
+  so a new tab opens on the current event). A bare `/app/pvp`, the navbar link, `<Navigate
+  replace>`s to the last address; an address that names no style (a Timeline card's link)
+  opens on the last style shown. Two keys on purpose: the page key is rewritten on every
+  visit and would drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
+- **"Copy link" in the header** copies the event (always, even on the default landing),
+  the style on screen, and `view=gallery`. Never `view=team` (the builder is the reader's
+  own, so the link opens the guide) and never `post` (a post's link is `/post/<id>`).
 - **The header renders from the calculator payload**, guide or not, and stays COMPACT
   and LIGHT (owner, 2026-10-13: boxed grids, then pills, both read as congested): art
   thumbnail, "Champions Meeting 20" kicker over the cup name, countdown; then the course

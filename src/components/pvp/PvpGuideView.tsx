@@ -14,7 +14,6 @@
  * the superset of the sheet's two formats, and most guides fill only one.
  */
 
-import { useState } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
@@ -24,6 +23,7 @@ import {
 	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
 	groupSkillsByTier,
+	pickStyle,
 	skillsForPosition,
 	stylesWithContent,
 } from "../../utils/pvpGuide"
@@ -296,13 +296,18 @@ function StyleTabs({ styles, active, onChange, label }: {
 	)
 }
 
-function StyleColumn({ guide, styles }: { guide: PvpGuide; styles: PvpStyle[] }) {
-	const [active, setActive] = useState<PvpStyle>(styles[0])
-	// A guide reload with fewer styles can leave the old pick behind.
-	const shown = styles.includes(active) ? active : styles[0]
+function StyleColumn({ guide, styles, style, onStyleChange }: {
+	guide: PvpGuide
+	styles: PvpStyle[]
+	style: PvpStyle | null
+	onStyleChange: (style: PvpStyle) => void
+}) {
+	// The page owns the pick (it is `?style=` in the URL, so a link can name
+	// it). A guide without that style shows its first, and the pick is kept.
+	const shown = pickStyle(styles, style) ?? styles[0]
 	return (
 		<div className="flex min-w-0 flex-col gap-3">
-			<StyleTabs styles={styles} active={shown} onChange={setActive} label="Running style" />
+			<StyleTabs styles={styles} active={shown} onChange={onStyleChange} label="Running style" />
 			<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 				<StylePane guide={guide} style={shown} />
 			</div>
@@ -310,7 +315,15 @@ function StyleColumn({ guide, styles }: { guide: PvpGuide; styles: PvpStyle[] })
 	)
 }
 
-export function PvpGuideView({ guide }: { guide: PvpGuide }) {
+/**
+ * `style` is the running style asked for (the URL's, or the reader's last),
+ * not necessarily one this guide has; `pickStyle` settles which tab shows.
+ */
+export function PvpGuideView({ guide, style, onStyleChange }: {
+	guide: PvpGuide
+	style: PvpStyle | null
+	onStyleChange: (style: PvpStyle) => void
+}) {
 	const styles = stylesWithContent(guide)
 	// General skills (every position) show inside each position's tab. With
 	// no position tabs at all they get a section of their own instead.
@@ -389,7 +402,7 @@ export function PvpGuideView({ guide }: { guide: PvpGuide }) {
 				)}
 
 				{styles.length > 0 ? (
-					<StyleColumn guide={guide} styles={styles} />
+					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} />
 				) : (
 					generalSkills.length > 0 && (
 						<div className={SECTION}>
