@@ -162,6 +162,16 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   the event too: League of Heroes #1 only ran to Platinum 1, so it pays at
   `min(user's rank, Platinum 1)`. Rows say which event they are via
   `event_number`; the rule lives in `RACE_RANK_CAPS` (`utils/incomeLedger.ts`).
+- **A skipped race event is removed from the ledger, once, upstream of every
+  consumer.** The player turns "Taking part" off on the Timeline card; that writes
+  `skipped_race_events` on the stats block (`{champions_meeting: [ids],
+  league_of_heroes: [ids]}`), and `CalculatorProvider` exposes `incomeLedger` with
+  those rows already gone (`withoutSkippedRaces`, `utils/raceParticipation.ts`).
+  The planner rows, the income tiles and the uncap panel therefore can't disagree
+  about a skip, and no engine function knows skips exist. `fullIncomeLedger` keeps
+  every row, for the Timeline switch alone (it must find a skipped event to offer
+  it back); never project from it. The switch is drawn only while the row's date is
+  `>= today`, the same bound `raceEventsInWindow` uses.
 - **`throughout_end` is the linked banner's end**, with the game-event buffer
   already removed, because the decay curve runs over the banner rather than the
   event. The client no longer keeps its own copy of that constant.

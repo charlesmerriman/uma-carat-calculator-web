@@ -1,4 +1,12 @@
 import type { BannerUma, BannerSupport, BannerStepUp } from "./banner"
+import type { LedgerRowKind } from "./ledger"
+
+/**
+ * Race events the player is NOT taking part in, as event ids per ledger race
+ * kind. Empty or absent = taking part in everything. Read and change it only
+ * through utils/raceParticipation, which also owns where the skip is applied.
+ */
+export type SkippedRaceEvents = Partial<Record<Exclude<LedgerRowKind, "event">, number[]>>
 
 /**
  * Represents the user's current resources and income settings.
@@ -50,6 +58,11 @@ export interface UserStats {
 	sr_crystals: number
 	ssr_shards: number
 	sr_shards: number
+	/**
+	 * Optional because an API older than the field doesn't send it, and that
+	 * has to mean "skipping nothing", which is what every plan did before.
+	 */
+	skipped_race_events?: SkippedRaceEvents
 }
 
 /**
