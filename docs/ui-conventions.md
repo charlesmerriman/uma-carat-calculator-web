@@ -614,8 +614,10 @@ ours. A route that sends an uma sends `portrait` with it (`/calculator-data`, th
 the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `image`).
 
 - **Two frames**, SVGs in `src/assets/`: `uma-frame.svg` (silver) for everyone and
-  `uma-frame-oshi.svg` (the rainbow) for the person's favourite umas that their tier covers
-  (`useOshiIds`, the slice the Legend Races tab already used). App.css ("Uma frames") lays the
+  `uma-frame-oshi.svg` (the rainbow) for EVERY OUTFIT of each favourite their tier covers
+  (`useOshiIds`, owner 2026-10-16: a favourite Oguri Cap frames Oguri Cap (Christmas) too,
+  on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
+  `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
   frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
   pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
 - **Support cards keep their own art**: there is no borderless set for them. A list that can
@@ -624,9 +626,10 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   carries `uma` (`SelectedCardArt`), a planner row narrows on `target.type`.
 - **`useOshiIds` reads `AuthContext` directly**, so a row or picker rendered on its own (in
   a test) draws silver frames instead of throwing for want of an AuthProvider.
-- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds` for
-  most lists; the team builder keeps its own any-outfit-of-the-character match
-  (`isFavourite`) and adds its heart; an avatar is rainbow when it is yours (your own
+- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds`
+  everywhere, the team builder included (it adds its heart). The ONE exact-match place is
+  the favourites picker (`useOshiPickIds`), where the rainbow says "you picked THIS card";
+  an avatar is rainbow when it is yours (your own
   avatar, your own gallery posts and comments, your covered favourites on the account page)
   and silver on someone else's.
 - **A state rings the frame, never replaces it.** The guide picks panel's open and

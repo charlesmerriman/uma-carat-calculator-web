@@ -3,7 +3,6 @@ import {
 	cardBlockReason,
 	clearMember,
 	drawerTeam,
-	favouriteCheck,
 	firstOpenCardSlot,
 	memberStyleFrom,
 	recommendedIds,
@@ -200,23 +199,3 @@ describe("drawerTeam", () => {
 	})
 })
 
-describe("favouriteCheck", () => {
-	it("frames every outfit of a favourite's character, and only those", () => {
-		const isFavourite = favouriteCheck([OGURI.id], UMAS)
-		expect(isFavourite(OGURI.id)).toBe(true)
-		expect(isFavourite(OGURI_XMAS.id)).toBe(true)
-		expect(isFavourite(MARU.id)).toBe(false)
-		expect(favouriteCheck([], UMAS)(OGURI.id)).toBe(false)
-	})
-
-	it("works from a costume too: a favourite outfit frames the original and every other outfit", () => {
-		const isFavourite = favouriteCheck([OGURI_XMAS.id], UMAS)
-		expect(isFavourite(OGURI.id)).toBe(true)
-		expect(isFavourite(OGURI_XMAS.id)).toBe(true)
-		expect(isFavourite(MARU.id)).toBe(false)
-	})
-
-	it("matches by id when the catalogue has no character for an uma", () => {
-		expect(favouriteCheck([99], new Map())(99)).toBe(true)
-	})
-})

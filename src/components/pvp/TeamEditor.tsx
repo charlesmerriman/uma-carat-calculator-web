@@ -12,8 +12,8 @@
  * grid and sort first in the pickers.
  */
 
-import { useContext, useMemo, useState } from "react"
-import { AuthContext } from "../../services/AuthContext"
+import { useMemo, useState } from "react"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useCardReleases } from "../../hooks/useCardReleases"
 import { releaseBlockReason, releaseNote } from "../../utils/cardRelease"
@@ -23,7 +23,6 @@ import {
 	cardBlockReason,
 	clearCard,
 	clearMember,
-	favouriteCheck,
 	memberAt,
 	recommendedIds,
 	setCard,
@@ -50,13 +49,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
-	// The account's favourite umas (oshis it covers) get the frame. Read
-	// without useAccount so a test without an AuthProvider just has none.
-	const account = useContext(AuthContext)?.account ?? null
-	const isFavourite = useMemo(() => {
-		const covered = (account?.oshis ?? []).filter((oshi) => oshi.position < (account?.oshi_slots ?? 0))
-		return favouriteCheck(covered.map((oshi) => oshi.id), index.umasById)
-	}, [account, index.umasById])
+	// The account's favourite umas, every outfit of each, get the rainbow
+	// frame: the same set every other page frames (useOshiIds).
+	const oshiIds = useOshiIds()
+	const isFavourite = (umaId: number): boolean => oshiIds.has(umaId)
 	// Only what is out by the event's last day can be picked; what lands
 	// mid-event is marked (utils/cardRelease.ts).
 	const releaseFor = useCardReleases(event, index)
