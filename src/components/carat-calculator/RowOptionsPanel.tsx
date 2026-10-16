@@ -96,7 +96,9 @@ export const RowOptionsPanel = ({
 							<NumberField
 								value={ticketLimit ?? autoTickets}
 								onChange={(value) => onChange({ tickets_to_use: value })}
-								className={`pull-input w-14 ${ticketLimit === null ? "text-gray-400" : ""}`}
+								// The neutral status style the other count fields use: the
+								// bare .pull-input carries no colours of its own.
+								className="pull-input pull-input--neutral w-14"
 								ariaLabel="Most tickets to use on this banner"
 								title={
 									ticketLimit === null
@@ -147,7 +149,7 @@ export const RowOptionsPanel = ({
 						<NumberField
 							value={alreadyMade}
 							onChange={(value) => onChange({ pulls_already_made: value })}
-							className="pull-input w-16"
+							className="pull-input pull-input--neutral w-16"
 							ariaLabel="Pulls you have already made on this banner"
 							title="Pulls you've already made here. They count toward the 200-pull exchange and cost nothing more."
 						/>

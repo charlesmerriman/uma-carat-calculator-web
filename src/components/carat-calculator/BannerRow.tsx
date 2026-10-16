@@ -86,6 +86,11 @@ import { buildCopyChips, buildCountChips, coarsePullDelta } from "../../utils/co
 // Static, so built once rather than per render.
 const copyChips = buildCopyChips()
 
+// The row options' "Set pulls" shortcuts, switched off for now (owner,
+// 2026-10-16). The maths and the panel's rendering stay in place, so turning
+// them back on is this one line.
+const SHOW_PULL_SHORTCUTS = false
+
 interface BannerRowProps {
 	plannedBanner: UserPlannedBanner
 	userStatsData: UserStats
@@ -878,7 +883,13 @@ export const BannerRow = ({
 		? chosenCards.primary?.rate ?? constants.rate_up_rate_3
 		: undefined
 	const pullShortcuts: PullShortcut[] = []
-	if (!isStepUp && hasBanner && !bannerHasEnded && shortcutRate !== undefined) {
+	if (
+		SHOW_PULL_SHORTCUTS &&
+		!isStepUp &&
+		hasBanner &&
+		!bannerHasEnded &&
+		shortcutRate !== undefined
+	) {
 		const toExchange = pullsToNextExchange(alreadyMade, plannedCount)
 		pullShortcuts.push({
 			label: `Next exchange (${toExchange})`,

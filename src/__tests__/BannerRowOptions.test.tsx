@@ -103,7 +103,8 @@ describe('row options panel', () => {
     expect(screen.getAllByText(/Not counted: this banner spends nothing/).length).toBeGreaterThan(0)
   })
 
-  it('sets the pulls from a shortcut', () => {
+  // The shortcuts are switched off for now (SHOW_PULL_SHORTCUTS in BannerRow).
+  it.skip('sets the pulls from a shortcut', () => {
     const { lastRow } = renderRow()
     fireEvent.click(screen.getAllByRole('button', { name: 'Next exchange (200)' })[0])
     expect(lastRow().number_of_pulls).toBe(200)
