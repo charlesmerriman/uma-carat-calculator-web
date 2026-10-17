@@ -128,7 +128,7 @@ export function memberStyleFrom(styles: readonly string[]): MemberStyle | undefi
 /** The catalogue lookups the team rules read. PvpCatalogueIndex is one. */
 export type TeamRuleLookups = {
 	umasById: Map<number, Pick<CatalogueUma, "name" | "character_id">>
-	cardsById: Map<number, Pick<CatalogueSupportCard, "name" | "card_type">>
+	cardsById: Map<number, Pick<CatalogueSupportCard, "name" | "card_type" | "group_members">>
 }
 
 /**
@@ -138,8 +138,10 @@ export type TeamRuleLookups = {
  *
  * Swapping the uma keeps the deck (setMemberUma), so an uma whose own card is
  * in that spot's deck is refused too: the mirror of cardBlockReason's
- * "can't support herself", which a swap would otherwise walk round. The
- * server checks the first two rules (pvp_teams.py), not this one.
+ * "can't support herself", which a swap would otherwise walk round. A group
+ * card counts for each of its umas (Rice Shower can't take a spot whose deck
+ * holds Team Sirius). The server checks the first two rules (pvp_teams.py),
+ * not this one.
  */
 export function umaBlockReason(
 	members: PvpTeamMember[],
@@ -162,9 +164,10 @@ export function umaBlockReason(
 	const deck = members.find((member) => member.position === position)?.cards ?? []
 	for (const card of deck) {
 		const held = lookups.cardsById.get(card.support_card)
-		if (held && held.card_type !== "group" && sameUma(held.name, candidate.name)) {
-			return `${held.name}'s card is in this deck`
-		}
+		if (!held) continue
+		const self = cardUmas(held).find((uma) => sameUma(uma, candidate.name))
+		if (self === undefined) continue
+		return held.card_type === "group" ? `${self} is in ${held.name}` : `${held.name}'s card is in this deck`
 	}
 	return null
 }
@@ -180,10 +183,10 @@ export function umaBlockReason(
  *   - and a second card of the same uma (two Agnes Tachyon cards, whatever
  *     their titles).
  *
- * Group cards are exempt from the last two. A group card is filed under one
- * of its umas in the game data (Team Sirius under Special Week), which is why
- * the exemption reads the card type. Those two are client-only: the server
- * checks the same card twice, not the uma behind it.
+ * A group card is a card of EACH of its umas for the last two (cardUmas):
+ * Team Sirius can't support Rice Shower, and can't share a deck with a
+ * Special Week card. Those two are client-only: the server checks the same
+ * card twice, not the umas behind it.
  *
  * The card in `slot`, which the pick replaces, does not count against it.
  */
@@ -197,23 +200,49 @@ export function cardBlockReason(
 	const others = member.cards.filter((card) => card.slot !== slot)
 	if (others.some((card) => card.support_card === cardId)) return "Already in this deck"
 	const candidate = lookups.cardsById.get(cardId)
-	if (!candidate || candidate.card_type === "group") return null
+	if (!candidate) return null
+	const candidateUmas = cardUmas(candidate)
 	const trainee = lookups.umasById.get(member.uma)
-	if (trainee && sameUma(trainee.name, candidate.name)) return `${candidate.name} can't support herself`
+	// For an ordinary card the matched name is the card's own, so the message
+	// reads as it always has; for a group card it names the member training.
+	const self = trainee ? candidateUmas.find((uma) => sameUma(uma, trainee.name)) : undefined
+	if (self !== undefined) return `${self} can't support herself`
 	for (const card of others) {
 		const other = lookups.cardsById.get(card.support_card)
-		if (other && other.card_type !== "group" && sameUma(other.name, candidate.name)) {
-			return `${other.name} already has a card in this deck`
-		}
+		if (!other) continue
+		const shared = cardUmas(other).find((uma) => candidateUmas.some((mine) => sameUma(mine, uma)))
+		if (shared === undefined) continue
+		// Two cards of one uma, or two of one group (Team Sirius twice).
+		if (sameUma(other.name, candidate.name)) return `${other.name} already has a card in this deck`
+		// The uma is in this deck through a group card: "Special Week is in Team Sirius".
+		if (other.card_type === "group") return `${shared} is in ${other.name}`
+		// A group card meeting a card of one of its umas.
+		return `${shared} already has a card in this deck`
 	}
 	return null
+}
+
+/**
+ * The umas a card counts as in a deck, by name: its own uma for an ordinary
+ * card, every member for a group card (group_members, from the game's
+ * support_card_group table via the import). The game files a group card under
+ * ONE of its umas (Team Sirius under Special Week), so neither its name nor
+ * that one character would be right.
+ *
+ * A group card with no members listed (not on global yet, so never imported,
+ * or an API older than the field) counts as none of them: it can still be
+ * refused as the same card twice, but blocks no uma.
+ */
+function cardUmas(card: Pick<CatalogueSupportCard, "name" | "card_type" | "group_members">): string[] {
+	return card.card_type === "group" ? (card.group_members ?? []) : [card.name]
 }
 
 /**
  * Whether two names are the same uma: a support card's name is its uma's
  * name (the title is what tells the cards apart), and an uma's name adds its
  * outfit in brackets. The API sends no character id for cards (and the ~300
- * not on global yet have none at all), so the name is the key.
+ * not on global yet have none at all), so the name is the key. A group
+ * card's members come as names for the same reason.
  *
  * Compared as letters and digits only, outfit dropped, because a few umas
  * and their cards are spelled differently ("T.M. Opera O" / "TM Opera O",
