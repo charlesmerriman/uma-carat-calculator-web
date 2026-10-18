@@ -200,7 +200,7 @@ export const CaratCalculator: React.FC = () => {
 	)
 
 	return (
-		<div className="w-full bg-gray-900">
+		<div className="w-full">
 			{/* The calculator gets a wider desktop canvas without changing Timeline's
 			    shared .page-container. Income & Resources and the banner sheet share
 			    this same width so their edges stay aligned. */}

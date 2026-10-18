@@ -873,7 +873,7 @@ export const Timeline = () => {
 	)
 
 	return (
-		<div className="w-full bg-gray-900 pb-6">
+		<div className="w-full pb-6">
 			{/* Scroll anchor for "back to top" — zero-height, so it costs no layout.
 			    First child, above the controls band, so returning to it returns to the
 			    top of the PAGE rather than to the top of the list. */}
