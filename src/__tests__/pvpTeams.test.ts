@@ -10,6 +10,7 @@ import {
 	setMemberUma,
 	teamSkillSources,
 	umaBlockReason,
+	whiteSkillPairs,
 } from "../utils/pvpTeams"
 import type { PvpGuide } from "../types/pvpGuide"
 import type { PvpTeam, PvpTeamMember } from "../types/pvpTeam"
@@ -228,3 +229,31 @@ describe("drawerTeam", () => {
 	})
 })
 
+
+describe("whiteSkillPairs", () => {
+	const skill = (id: number, rarity: number, tier: number, group_id: number | null) => ({
+		id, name: `Skill ${id}`, description: "", image: null, rarity, tier, group_id, cost: null,
+	})
+
+	it("pairs a group's ○ and ◎ whites, never its gold or its × penalty", () => {
+		const pairs = whiteSkillPairs([
+			skill(1, 1, 1, 20001), // Right-Handed ○
+			skill(2, 1, 2, 20001), // Right-Handed ◎
+			skill(3, 2, 3, 20001), // Right-Handed Demon (gold)
+			skill(4, 1, -1, 20001), // Right-Handed ×
+		])
+		expect(pairs.get(1)).toEqual([1, 2])
+		expect(pairs.get(2)).toEqual([1, 2])
+		expect(pairs.has(3)).toBe(false)
+		expect(pairs.has(4)).toBe(false)
+	})
+
+	it("leaves out a white with no second white: a ○ and its gold are two skills", () => {
+		const pairs = whiteSkillPairs([
+			skill(5, 1, 1, 20033), // Corner Adept ○
+			skill(6, 2, 2, 20033), // Professor of Curvature (gold)
+			skill(7, 1, 1, null),
+		])
+		expect(pairs.size).toBe(0)
+	})
+})

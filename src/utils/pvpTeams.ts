@@ -14,10 +14,11 @@
 
 import type { RaceEvent } from "../types"
 import type { PvpGuide } from "../types/pvpGuide"
-import { hasEnded, isRunning } from "./pvpGuide"
+import { hasEnded, isRunning, WHITE_SKILL_RARITY } from "./pvpGuide"
 import { refForRaceEvent, sameEvent } from "./pvpEvent"
 import { releaseBlockReason, type ReleaseStatus } from "./cardRelease"
 import type {
+	CatalogueSkill,
 	CatalogueSupportCard,
 	CatalogueUma,
 	MemberStyle,
@@ -312,6 +313,36 @@ export function teamSkillSources(
 		}
 	}
 	return sources
+}
+
+/** `skill_data.group_rate` of a × penalty version: never part of a pair. */
+const PENALTY_SKILL_TIER = -1
+
+/**
+ * Each white skill's ○/◎ pair, by skill id: the ids of every white in its
+ * group, itself included, the × penalty version left out. A skill with no
+ * other white is not in the map, so read it as `pairs.get(id) ?? [id]`.
+ *
+ * Most green skills, and the Straightaways / Corners whites, come as a ○ and
+ * a ◎, both white, and a team treats them as one skill (owner, 2026-10-16).
+ * No card or uma teaches a ◎ in the game data, so a search for the ◎ has to
+ * find the cards that teach the ○. A gold in the same group (Right-Handed
+ * Demon) is a different skill and stays out: its rarity is gold.
+ */
+export function whiteSkillPairs(skills: Iterable<CatalogueSkill>): Map<number, number[]> {
+	const whitesByGroup = new Map<number, number[]>()
+	for (const skill of skills) {
+		if (skill.rarity !== WHITE_SKILL_RARITY || skill.tier === PENALTY_SKILL_TIER || skill.group_id === null) continue
+		const group = whitesByGroup.get(skill.group_id) ?? []
+		group.push(skill.id)
+		whitesByGroup.set(skill.group_id, group)
+	}
+	const pairs = new Map<number, number[]>()
+	for (const ids of whitesByGroup.values()) {
+		if (ids.length < 2) continue
+		for (const id of ids) pairs.set(id, ids)
+	}
+	return pairs
 }
 
 /**
