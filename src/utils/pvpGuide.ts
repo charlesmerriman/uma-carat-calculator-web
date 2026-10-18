@@ -241,17 +241,29 @@ export function skillFamilyIds(skill: PvpSkillRef): number[] {
 }
 
 /**
+ * The game's skill rarities a family is made of. A family's ○ and ◎ are both
+ * white; only a gold is gold. Read the colour from these, never from `tier`:
+ * in a ○/◎ family tier 2 is the white ◎ and the gold is tier 3.
+ */
+export const WHITE_SKILL_RARITY = 1
+export const GOLD_SKILL_RARITY = 2
+
+/**
  * Does a source teaching `version` give a team the pick `skill`?
  *
  * The direction matters: a card that teaches the gold teaches the white too
  * (owner, 2026-10-14), so a gold on the team covers a white pick, and a
- * white never covers a gold. No card teaches an evolved skill; an evolved
- * pick is covered by a base version, which is what gets evolved.
+ * white never covers a gold. The ○ and ◎ of one white are one skill to a
+ * team (owner, 2026-10-16), so each covers the other: no card or uma teaches
+ * a ◎ in the game data, so a ◎ pick is only ever met through its ○. No card
+ * teaches an evolved skill; an evolved pick is covered by a base version,
+ * which is what gets evolved.
  */
 function versionCovers(skill: PvpSkillRef, version: PvpSkillVersion): boolean {
 	if (skill.is_evolved) return !version.is_evolved
 	if (version.is_evolved) return false
-	return version.tier >= skill.tier
+	// Anything else in the family covers, except a white for a gold pick.
+	return version.rarity === GOLD_SKILL_RARITY || skill.rarity !== GOLD_SKILL_RARITY
 }
 
 /**
@@ -272,9 +284,15 @@ export function familySources(sources: Map<number, string[]>, skill: PvpSkillRef
 	return found.length > 0 ? found : null
 }
 
-/** True when a white skill has a gold version to show a ◎ badge for. */
+/**
+ * True when a white skill has a gold version to show a ◎ badge for. A ◎ white
+ * is not one: Sunny Days ○ has a ◎ and no gold, so no badge.
+ */
 export function hasGoldVersion(skill: PvpSkillRef): boolean {
-	return skill.rarity === 1 && skill.versions.some((version) => version.tier === 2 && !version.is_evolved)
+	return (
+		skill.rarity === WHITE_SKILL_RARITY &&
+		skill.versions.some((version) => version.rarity === GOLD_SKILL_RARITY && !version.is_evolved)
+	)
 }
 
 /** One recommended uma or card in the team builder's Guide picks panel. */
