@@ -317,6 +317,8 @@ html {
    1. Add a [data-theme="x"] block here
    2. Add one entry with its mode to THEMES in src/services/themeStore.ts
    3. Add the id (and light-mode membership) to the inline script in index.html
+   4. For a page glow, set --page-glow in its polish block and list the theme
+      in the PAGE GLOW selectors (see that section for why it is opt-in)
 */
 
 [data-theme="gold"] {
@@ -590,8 +592,7 @@ html {
 	--color-gray-700: #f0eeeb;
 	--color-gray-900: #f8f7f5;
 	--color-gray-950: #fdfcfa;
-	--light-glow-start: transparent;
-	--light-glow-end: transparent;
+	/* No page glow: Pearl stays out of the PAGE GLOW layer's theme list. */
 }
 
 /* Blue/orange is distinguishable for the common red-green colour vision
@@ -634,6 +635,63 @@ html {
 	--color-step-up-border: #b91c1c;
 }
 
+/* ===== PAGE GLOW =====
+   The soft colour blooms behind the page. A theme that has them sets
+   --page-glow to its gradients in its polish block below, AND is listed in the
+   two selectors here. The list is opt-in on purpose: Dark (gold) and Pearl
+   have no glow, and must not get the layer at all, not even an empty one.
+   Any layer under the page moves the page's content onto a compositor layer
+   of its own, and Chrome then draws text that sits straight on the page
+   background (page titles, the home page prose) with grayscale instead of
+   subpixel antialiasing on 1x screens. A glow theme pays that; the default
+   theme should not. Forgetting to list a new theme fails loudly (no glow),
+   which is the safer way round.
+
+   It is ONE position: fixed layer, never `background-attachment: fixed`. Until
+   2026-10 every theme but the default painted these gradients as a fixed
+   background on body AND on the page shell. A fixed background stays still
+   while the content painted into the same tiles moves, so the browser can no
+   longer scroll by sliding tiles it has already painted: it repainted the
+   viewport on the main thread on every frame, twice (once per element). On
+   /faq at phone size a 2,500px scroll measured 153 repaints against the
+   default theme's 2, which is what the "other themes are laggy" reports were.
+   A position: fixed element gets a compositor layer of its own, painted once
+   and left alone while the page scrolls past it, so a glow now costs what the
+   default theme does.
+
+   z-index -1 puts the layer above the canvas (body's gray-900, which the
+   browser paints across the whole viewport) and below every box in the page.
+   So the page shells, the #root children that carry bg-gray-900 (the /app
+   frame, the home page, the info pages, Login), must be transparent, or their
+   own gray-900 hides the layer. It is the canvas's colour, so on screen
+   nothing changes. */
+:is(
+	[data-theme-mode="light"]:not([data-theme="light-pearl"]),
+	[data-theme="gilded"],
+	[data-theme="midnight"],
+	[data-theme="race-day"],
+	[data-theme="violet"],
+	[data-theme="teal"]
+) body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background-image: var(--page-glow);
+}
+
+:is(
+	[data-theme-mode="light"]:not([data-theme="light-pearl"]),
+	[data-theme="gilded"],
+	[data-theme="midnight"],
+	[data-theme="race-day"],
+	[data-theme="violet"],
+	[data-theme="teal"]
+) #root > .bg-gray-900 {
+	background-color: transparent;
+}
+
 /* Light-theme polish lives here rather than in each component so every existing
    card, form, timeline entry, and auth view gains the same sense of hierarchy.
    The two low-opacity glows keep large empty areas intentional without competing
@@ -647,13 +705,10 @@ html {
 	color: var(--light-button-ink);
 }
 
-[data-theme-mode="light"] body,
-[data-theme-mode="light"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme-mode="light"] {
+	--page-glow:
 		radial-gradient(circle at 10% -10%, var(--light-glow-start), transparent 28rem),
 		radial-gradient(circle at 94% 8%, var(--light-glow-end), transparent 25rem);
-	background-attachment: fixed;
 }
 
 [data-theme-mode="light"] .card-panel,
@@ -674,13 +729,10 @@ html {
 
 /* Violet gets depth from coloured light rather than brighter flat panels. This
    keeps the calculator data-first while making the selected theme unmistakable. */
-[data-theme="violet"] body,
-[data-theme="violet"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="violet"] {
+	--page-glow:
 		radial-gradient(circle at 8% -12%, rgb(124 58 237 / 30%), transparent 30rem),
 		radial-gradient(circle at 96% 4%, rgb(217 70 239 / 14%), transparent 24rem);
-	background-attachment: fixed;
 }
 
 [data-theme="violet"] .card-panel,
@@ -701,13 +753,10 @@ html {
 
 /* Teal uses low, underwater colour blooms for depth. Their placement keeps the
    calculator surface quiet while stopping the large dark canvas from feeling flat. */
-[data-theme="teal"] body,
-[data-theme="teal"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="teal"] {
+	--page-glow:
 		radial-gradient(circle at 6% -10%, rgb(20 184 166 / 24%), transparent 29rem),
 		radial-gradient(circle at 96% 2%, rgb(14 116 144 / 19%), transparent 25rem);
-	background-attachment: fixed;
 }
 
 [data-theme="teal"] .card-panel,
@@ -728,13 +777,10 @@ html {
 
 /* Midnight's illumination is cooler and more restrained than Violet or Teal:
    a subtle horizon glow makes the page feel spacious while data remains dominant. */
-[data-theme="midnight"] body,
-[data-theme="midnight"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="midnight"] {
+	--page-glow:
 		radial-gradient(circle at 10% -14%, rgb(37 99 235 / 22%), transparent 31rem),
 		radial-gradient(circle at 96% 3%, rgb(14 165 233 / 12%), transparent 25rem);
-	background-attachment: fixed;
 }
 
 [data-theme="midnight"] .card-panel,
@@ -755,13 +801,10 @@ html {
 
 /* Race Day's cool illumination is deliberately compact: it gives the chrome a
    confident track-light feel without washing out the calculator's data rows. */
-[data-theme="race-day"] body,
-[data-theme="race-day"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="race-day"] {
+	--page-glow:
 		radial-gradient(circle at 8% -12%, rgb(14 165 233 / 24%), transparent 30rem),
 		radial-gradient(circle at 96% 4%, rgb(37 99 235 / 15%), transparent 24rem);
-	background-attachment: fixed;
 }
 
 [data-theme="race-day"] .card-panel,
@@ -789,13 +832,10 @@ html {
 
 /* Gilded's burnished gold atmosphere stops well short of the content area so
    projection data remains effortless to scan. */
-[data-theme="gilded"] body,
-[data-theme="gilded"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="gilded"] {
+	--page-glow:
 		radial-gradient(circle at 7% -12%, rgb(211 154 48 / 25%), transparent 31rem),
 		radial-gradient(circle at 97% 4%, rgb(151 88 33 / 15%), transparent 25rem);
-	background-attachment: fixed;
 }
 
 [data-theme="gilded"] .card-panel,

@@ -64,6 +64,19 @@ mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
 
+**A theme's page glow is a `--page-glow` value, never a page background.** One
+`position: fixed` layer (`body::before`) paints it, and the page shells
+(`#root > .bg-gray-900`) are transparent so it shows through. Both rules list the
+glow themes explicitly. Dark (gold) and Pearl have no glow, so they get no layer:
+any layer under the page costs text on the page background its subpixel
+antialiasing on 1x screens in Chrome, a price only a theme with a glow should pay.
+Never use
+`background-attachment: fixed`: until 2026-10 every theme except the default painted
+its glow that way, on `body` and on the shell, and scrolling repainted the viewport
+twice per frame on the main thread (153 repaints in a 2,500px scroll on `/faq` at
+phone size, against 2 for the default). That was the "other themes are laggy"
+reports. The PAGE GLOW comment in `src/index.css` has the details.
+
 ### Semantic status colors must be theme tokens, not palette classes
 
 Tailwind's stock `green-400` / `red-500` are **not** theme-aware and measure ~1.35:1
