@@ -21,7 +21,7 @@ export function PvpEarlyAccess({ pending }: { pending: boolean }) {
 	const { signInState } = useSignInPrompt()
 
 	return (
-		<div className="w-full bg-gray-900 px-4 py-10">
+		<div className="w-full px-4 py-10">
 			{pending ? (
 				<div className="flex items-center justify-center gap-2 text-sm text-gray-400" role="status">
 					<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

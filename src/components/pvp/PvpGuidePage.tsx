@@ -214,7 +214,7 @@ const PvpGuide = () => {
 	}
 
 	return (
-		<div className="w-full bg-gray-900 pb-8">
+		<div className="w-full pb-8">
 			<ControlBand
 				events={choices}
 				event={event}

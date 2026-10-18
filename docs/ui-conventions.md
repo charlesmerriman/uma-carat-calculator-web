@@ -77,6 +77,12 @@ twice per frame on the main thread (153 repaints in a 2,500px scroll on `/faq` a
 phone size, against 2 for the default). That was the "other themes are laggy"
 reports. The PAGE GLOW comment in `src/index.css` has the details.
 
+**A page's root never paints the page colour.** The shell already does, so a
+`bg-gray-900` on a page's outer wrapper changes nothing on Dark and hides the glow on
+every other theme. The calculator, Timeline and PvP roots carried one from 2026-08-06
+until 2026-10, which is why those tabs showed no glow. Sticky bands and panels keep
+their own backgrounds.
+
 ### Semantic status colors must be theme tokens, not palette classes
 
 Tailwind's stock `green-400` / `red-500` are **not** theme-aware and measure ~1.35:1
