@@ -64,17 +64,17 @@ const BENEFIT_LABELS: Record<string, string> = {
 const CARD = "card-panel p-5"
 const CARD_TITLE = "text-base font-semibold text-gray-100"
 const BUTTON_PRIMARY =
-	"rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
+	"rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
 const BUTTON_GHOST =
-	"rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+	"rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
 // Red is the one status colour that means the same thing in every theme here,
 // and it is used only for this button — see the semantic-colour note in
 // frontend/docs/ui-conventions.md.
 const BUTTON_DANGER =
-	"rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-500/10"
+	"rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-500/10"
 
 const INPUT =
-	"rounded-lg border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-gray-100 outline-none transition focus:border-brand"
+	"rounded-md border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-gray-100 outline-none transition focus:border-brand"
 
 /** What the person has to type before the delete button arms. */
 const DELETE_PHRASE = "delete"

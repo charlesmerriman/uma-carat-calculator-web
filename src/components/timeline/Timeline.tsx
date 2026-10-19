@@ -156,9 +156,9 @@ function storePage(page: number): void {
 // than derived from pageIndicatorClass, because every one of its utilities
 // needs an `lg:` prefix here and Tailwind only finds complete class strings.
 const countClass =
-	"order-last text-xs text-gray-400 lg:order-none lg:inline-flex lg:items-center lg:justify-center lg:rounded lg:border lg:border-gray-700 lg:bg-gray-950/50 lg:px-4 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-gray-200 lg:shadow-inner"
+	"order-last text-xs text-gray-400 lg:order-none lg:inline-flex lg:items-center lg:justify-center lg:rounded-md lg:border lg:border-gray-700 lg:bg-gray-950/50 lg:px-4 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-gray-200 lg:shadow-inner"
 const searchInputClass =
-	"w-full rounded border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
+	"w-full rounded-md border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
 
 /**
  * The filter's value: the absence of a filter, a banner category, a marker

@@ -36,7 +36,7 @@ export const ACTION_BUTTON =
 
 /** The small buttons under a comment. */
 export const SMALL_BUTTON =
-	"flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+	"flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
 
 /** A text input or textarea. */
 export const FIELD =

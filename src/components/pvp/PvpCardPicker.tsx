@@ -248,7 +248,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 					{onRemove && (
 						<button
 							type="button"
-							className="flex h-9 items-center gap-1.5 rounded border border-gray-600 px-3 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+							className="flex h-9 items-center gap-1.5 rounded-md border border-gray-600 px-3 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 							onClick={onRemove}
 						>
 							<Trash2 className="h-4 w-4" />
@@ -258,7 +258,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 					<button
 						type="button"
 						aria-label="Close"
-						className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+						className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 						onClick={onClose}
 					>
 						<X className="h-5 w-5" />

@@ -86,7 +86,7 @@ const selectStyles: StylesConfig<any, false> = {
 // each field a hair under 4rem, the rank badges a full 5rem) and baking one in
 // meant overriding it at the site that disagreed.
 const numInputClass =
-	"border border-gray-600 rounded py-1 px-1 text-xs text-center bg-gray-700 text-gray-100 outline-none focus:border-gray-500 @income-wide:px-2 @income-wide:text-sm"
+	"border border-gray-600 rounded-md py-1 px-1 text-xs text-center bg-gray-700 text-gray-100 outline-none focus:border-gray-500 @income-wide:px-2 @income-wide:text-sm"
 
 // ── ResourceRow ───────────────────────────────────────────────────────
 

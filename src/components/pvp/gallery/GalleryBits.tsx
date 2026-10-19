@@ -153,7 +153,7 @@ export function GalleryUpvote({ post, layout }: { post: GalleryRow; layout: "col
 			aria-label={voted ? `Remove your upvote (${count} upvotes)` : `Upvote (${count} upvotes)`}
 			disabled={vote.isPending}
 			onClick={press}
-			className={`flex shrink-0 items-center rounded-lg border text-sm font-semibold tabular-nums transition disabled:cursor-wait ${shape} ${
+			className={`flex shrink-0 items-center rounded-md border text-sm font-semibold tabular-nums transition disabled:cursor-wait ${shape} ${
 				voted
 					? "border-brand bg-brand/15 text-brand"
 					: "border-gray-600 text-gray-300 enabled:hover:border-brand enabled:hover:text-brand"

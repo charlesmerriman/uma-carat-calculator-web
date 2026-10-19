@@ -14,11 +14,11 @@
 export const HOME_CARD = "card-panel"
 
 /**
- * A small link tile: same edge as a card, no shadow, tighter radius, and the
- * hover lift that every clickable tile on the page shares.
+ * A small link tile: a card's fill (--card-fill), no shadow, tighter radius,
+ * and the hover lift that every clickable tile on the page shares.
  */
 export const HOME_TILE =
-	"rounded-lg border border-gray-700 bg-gray-800 transition hover:border-gray-500 hover:bg-gray-700"
+	"rounded-lg border border-gray-700 bg-(--card-fill) transition hover:border-gray-500 hover:bg-gray-700"
 
 /**
  * The square icon chip that leads a tile or a step. Brand-tinted through a

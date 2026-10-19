@@ -221,7 +221,7 @@ export const SelectorTargetPicker = ({
 							<button
 								type="button"
 								aria-label="Close card picker"
-								className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+								className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 								onClick={() => setIsOpen(false)}
 							>
 								<X className="h-5 w-5" />

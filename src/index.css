@@ -334,9 +334,9 @@ html {
 }
 
 /* ===== SURFACES =====
-   A card's shadow, read by .card-panel (App.css) and by the few card-shaped
-   boxes that cannot wear that class (`shadow-(--card-shadow)`). Its partner is
-   the --color-edge token in @theme above.
+   A card's shadow and fill, read by .card-panel (App.css) and by the few
+   card-shaped boxes that cannot wear that class (`shadow-(--card-shadow)`,
+   `bg-(--card-fill)`). Its partner is the --color-edge token in @theme above.
 
    This is Dark's value; a theme with a look of its own sets --card-shadow in
    its polish block at the bottom of this file. Until 2026-10-18 each theme
@@ -351,6 +351,16 @@ html {
    [data-theme="x"], so source order is what lets a theme win. */
 :root {
 	--card-shadow: 0 8px 20px rgb(0 0 0 / 20%), 0 1px 0 rgb(255 255 255 / 3%) inset;
+	/* A card's fill: 40% of the way from gray-800 to gray-700, so a card sits a
+	   step above the page on every dark theme (owner, 2026-10-19; plain
+	   gray-800 was 1.1:1 against the canvas and cards barely separated). Built
+	   from the theme's own ramp, so each dark theme lifts in its own hue. A
+	   light theme's cards are already white, so the light block resets it.
+	   Read by .card-panel and by everything painted to look like a card (the
+	   gallery's SR and SSR edges, the home page tiles): a box that keeps a bare
+	   bg-gray-800 now reads a shade darker than a card, which is right for an
+	   inset and wrong for a card. */
+	--card-fill: color-mix(in oklab, var(--color-gray-800) 60%, var(--color-gray-700));
 }
 
 /* ===== THEME OVERRIDES =====
@@ -481,6 +491,7 @@ html {
 	   The edge is solid on a light theme: a low-alpha white edge vanishes on a
 	   white card, so it is the divider gray with a touch of the brand. */
 	--card-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+	--card-fill: var(--color-gray-800);
 	--color-edge: color-mix(in srgb, var(--color-brand) 10%, var(--color-gray-600));
 	--color-brand: #1d4ed8;
 	--color-gray-50:  #0f172a; /* darkest slate ink */

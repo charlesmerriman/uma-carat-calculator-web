@@ -82,14 +82,17 @@ twice per frame on the main thread (153 repaints in a 2,500px scroll on `/faq` a
 phone size, against 2 for the default). That was the "other themes are laggy"
 reports. The PAGE GLOW comment in `src/index.css` has the details.
 
-**Surfaces are two tokens and one class (2026-10-18).** A theme says everything about its
-surfaces through `--color-edge` (a colour token, so it is the `border-edge` utility) and
-`--card-shadow` (a plain variable, because Tailwind writes shadow utilities out literally
-and a theme could never override a `--shadow-*` token). Use them by role:
+**Surfaces are three tokens and one class (2026-10-18, the fill 2026-10-19).** A theme says
+everything about its surfaces through `--color-edge` (a colour token, so it is the
+`border-edge` utility), `--card-shadow` (a plain variable, because Tailwind writes shadow
+utilities out literally and a theme could never override a `--shadow-*` token) and
+`--card-fill` (a step above gray-800 on the dark themes, gray-800 itself on the light ones).
+Use them by role:
 
 | Surface | Classes |
 |---|---|
 | A card: any raised box on a page | `card-panel` (fill, edge, shadow, 12px radius) |
+| Anything painted to look like a card (a link tile, the gallery's SR/SSR edges) | `bg-(--card-fill)`, or `var(--card-fill)` in CSS |
 | A card-shaped box that can't wear the class (the calculator's sheet frame paints gray-900) | `border border-edge shadow-(--card-shadow)` |
 | A popover, dialog or drawer | `border border-edge` plus Tailwind's own `shadow-lg` / `shadow-2xl` |
 | A quieter inset panel (a translucent `bg-gray-800/60`) | `border border-edge`, no shadow |
@@ -104,6 +107,13 @@ utility classes in a theme block. Until 2026-10-18 every theme matched `.shadow-
 and dialog wore the card shadow, a card without one of those utilities wore none, and the
 class sat unlayered, beating every utility a caller put on it. The SURFACES comment in
 `src/index.css` has the values.
+
+**One radius scale (2026-10-19): controls 6px, cards 12px.** Every button, input, select,
+textarea and button-shaped link is `rounded-md` (6px), the shared class strings included
+(`NAV_BUTTON`, `controlButtonClass`, the `BUTTON_*` sets, `.input-currency`, `.pull-input`).
+Cards are `card-panel`'s 12px. Three things keep their own on purpose: tiles (picker and team
+slots, link tiles) stay `rounded-lg`, a pill stays `rounded-full`, and the navbar's profile
+trigger stays 8px so its edge is an even width around the 6px avatar inside it.
 
 **A page's root never paints the page colour.** The shell already does, so a
 `bg-gray-900` on a page's outer wrapper changes nothing on Dark and hides the glow on

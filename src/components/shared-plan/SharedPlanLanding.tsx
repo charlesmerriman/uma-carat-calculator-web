@@ -51,9 +51,9 @@ const TYPE_LABEL: Record<BannerRowType, string> = {
 }
 
 const BUTTON_PRIMARY =
-	"rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
+	"rounded-md bg-brand px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
 const BUTTON_GHOST =
-	"rounded-lg border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+	"rounded-md border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
 
 type SummaryState =
 	| { status: "loading" }

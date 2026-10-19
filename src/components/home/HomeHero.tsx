@@ -25,7 +25,7 @@ function HeroActions({ isLoggedIn, onPrefetch }: HeroProps) {
 		<div className="flex shrink-0 flex-col gap-2 sm:flex-row">
 			<Link
 				to="/app"
-				className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand px-5 text-sm font-bold text-black transition hover:brightness-110"
+				className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-bold text-black transition hover:brightness-110"
 				onMouseEnter={onPrefetch}
 				onFocus={onPrefetch}
 			>
@@ -35,7 +35,7 @@ function HeroActions({ isLoggedIn, onPrefetch }: HeroProps) {
 			{!isLoggedIn && (
 				<Link
 					to="/login"
-					className="inline-flex h-11 items-center justify-center rounded-lg border border-gray-600 px-5 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-gray-700"
+					className="inline-flex h-11 items-center justify-center rounded-md border border-gray-600 px-5 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-gray-700"
 				>
 					Sign in to sync your plan
 				</Link>

@@ -684,7 +684,7 @@ function FeaturePanel({
 						type="button"
 						onClick={onAdd}
 						disabled={status !== "available"}
-						className={`flex shrink-0 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-medium leading-tight transition ${getBannerStatusClasses(status)} ${
+						className={`flex shrink-0 items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs font-medium leading-tight transition ${getBannerStatusClasses(status)} ${
 							status === "available" ? "cursor-pointer" : "cursor-not-allowed"
 						} ${
 							// A solid backing on the SSR surface: the button's brand text is
