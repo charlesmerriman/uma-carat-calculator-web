@@ -1,4 +1,4 @@
-import { Gift, Ticket, Package } from "lucide-react"
+import { ChevronDown, Gift, Ticket, Package } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
 import { formatDate } from "../../utils/dateFormat"
 import { formatUsd } from "../../utils/formatCurrency"
@@ -9,7 +9,7 @@ import { SelectorTargetPicker } from "./SelectorTargetPicker"
 import { StepUpSelectionStrip } from "./StepUpSelectionStrip"
 import type { PlannedCampaign, PlannedProduct } from "../../hooks/useSelectorPlanner"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
-import type { RefObject } from "react"
+import { useState, type RefObject } from "react"
 import type {
 	BannerUma,
 	BannerSupport,
@@ -36,6 +36,12 @@ interface CampaignCardProps {
 	 * matches, so no card can claim it twice. See utils/selectorsFocus.
 	 */
 	focusRef?: RefObject<HTMLElement | null>
+	/**
+	 * Open regardless of the screen: the soonest campaign, and the one a deep
+	 * link names. Every other card starts open only where the card is three
+	 * columns wide (lg); below that it starts folded. See the state below.
+	 */
+	defaultOpen?: boolean
 }
 
 export const CampaignCard = ({
@@ -48,8 +54,21 @@ export const CampaignCard = ({
 	onTargetChange,
 	onStepUpSelectionChange,
 	focusRef,
+	defaultOpen = false,
 }: CampaignCardProps) => {
 	const { event, lines, isUndated } = campaign
+	// FOLDED BELOW lg (design polish item 24). Stacked into one column, every
+	// campaign open ran the page to about 11,000px on a phone: the same two
+	// packs and five checkboxes, campaign after campaign. A folded card is one
+	// line, the name, dates and this campaign's totals, and opens on tap. From
+	// lg the card is three columns and short, so it starts open there, as it
+	// always has. The breakpoint is read once, as IncomeForm does: the default
+	// is a first-paint question, and a listener would undo the reader's own
+	// toggling on every resize. This page only renders behind /app's loading
+	// gate, so `window` is always there.
+	const [open, setOpen] = useState(
+		() => defaultOpen || (typeof window !== "undefined" && window.matchMedia("(min-width: 64rem)").matches)
+	)
 	// Passed campaigns are removed before this component receives them. Undated
 	// campaigns stay visible but can't be projected, so they remain read-only.
 	const locked = isUndated
@@ -68,6 +87,40 @@ export const CampaignCard = ({
 	// so "claimed" is just a non-zero row, and the tile strip renders exactly
 	// these in exactly this order.
 	const claimedSelectors = selectors.filter((line) => line.quantity > 0)
+
+	const dates = isUndated
+		? "Dates unknown"
+		: `${formatDate(event.start_date)} – ${formatDate(event.end_date)}`
+
+	if (!open) {
+		return (
+			<section
+				ref={focusRef}
+				className={`card-panel overflow-hidden ${FOCUS_SCROLL_MARGIN} ${locked ? "opacity-60" : ""}`}
+			>
+				<button
+					type="button"
+					aria-expanded={false}
+					onClick={() => setOpen(true)}
+					className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left transition hover:bg-gray-700/30"
+				>
+					<h3 className="text-base font-semibold text-gray-100">{event.name}</h3>
+					{event.is_predicted && <PredictedBadge />}
+					<span className="text-sm text-gray-400">{dates}</span>
+					<span className="ml-auto flex items-center gap-2 text-sm">
+						{campaign.usd > 0 ? (
+							<span className="text-gray-200">
+								{campaign.paidCarats.toLocaleString()} paid carats · {formatUsd(campaign.usd)}
+							</span>
+						) : (
+							<span className="text-gray-500">Nothing planned yet</span>
+						)}
+						<ChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+					</span>
+				</button>
+			</section>
+		)
+	}
 
 	return (
 		<section
@@ -93,12 +146,19 @@ export const CampaignCard = ({
 						<h3 className="text-base font-semibold text-gray-100">{event.name}</h3>
 						{event.is_predicted && <PredictedBadge />}
 					</div>
-					<p className="mt-2 text-sm font-medium text-gray-300">
-						{isUndated
-							? "Dates unknown"
-							: `${formatDate(event.start_date)} – ${formatDate(event.end_date)}`}
-					</p>
-					<p className="mt-1 text-xs text-gray-500">Campaign purchases</p>
+					<p className="mt-2 text-sm font-medium text-gray-300">{dates}</p>
+					<div className="mt-1 flex items-center justify-between gap-2">
+						<p className="text-xs text-gray-500">Campaign purchases</p>
+						<button
+							type="button"
+							aria-expanded={true}
+							onClick={() => setOpen(false)}
+							className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+						>
+							Hide
+							<ChevronDown className="h-3.5 w-3.5 shrink-0 rotate-180" aria-hidden="true" />
+						</button>
+					</div>
 				</header>
 
 				<div className="min-w-0 border-b border-gray-700 px-4 py-3 lg:border-b-0 lg:border-r">
