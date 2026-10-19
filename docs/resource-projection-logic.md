@@ -549,7 +549,7 @@ Never read the field directly.
 
 ## The carat forecast
 
-The chart above the planner rows (`CaratForecastChart`, data from
+The chart beside the planner rows (`CaratForecastChart`, below them by default, data from
 `utils/caratForecast.ts`) draws free carats from today to 30 days past the last
 planned banner. It is a third reader of the same engine, so it cannot add a model
 of its own:

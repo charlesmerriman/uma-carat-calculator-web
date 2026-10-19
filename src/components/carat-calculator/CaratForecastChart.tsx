@@ -1,7 +1,7 @@
 import type React from "react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { motion, useReducedMotion } from "framer-motion"
-import { AlertTriangle, ChevronDown } from "lucide-react"
+import { AlertTriangle, ArrowDownToLine, ArrowUpToLine, ChevronDown } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import type { BannerResources } from "../../hooks/bannerResources"
 import { createIncomeProjection, projectionWalkOrder } from "../../utils/incomeProjection"
@@ -9,6 +9,7 @@ import { buildCaratForecast } from "../../utils/caratForecast"
 import type { ForecastMarker } from "../../utils/caratForecast"
 import { plannedBannerTarget, plannedBannerTimeline } from "../../utils/bannerHelpers"
 import { formatDate, formatMonth } from "../../utils/dateFormat"
+import type { ForecastPosition } from "../../hooks/useForecastPosition"
 
 /**
  * THE CARAT FORECAST: free carats from today to past the last planned banner,
@@ -41,7 +42,6 @@ import { formatDate, formatMonth } from "../../utils/dateFormat"
 
 /** localStorage: whether the viewer folded the chart away. Absent means open. */
 const OPEN_STORAGE_KEY = "uma-planner-forecast-open"
-
 const MARGIN = { top: 16, right: 16, bottom: 26, left: 48 }
 /** Hover within this many pixels of a banner's dot snaps the readout to it. */
 const MARKER_SNAP_PX = 14
@@ -108,8 +108,22 @@ type Readout =
 	| { kind: "marker"; marker: ForecastMarker }
 	| { kind: "day"; t: number; value: number }
 
-export const CaratForecastChart: React.FC<{ resources: BannerResources[] }> = ({
+interface CaratForecastChartProps {
+	resources: BannerResources[]
+	/** Which slot the page put it in; names the move button's direction. */
+	position: ForecastPosition
+	onMove: () => void
+	/** Scroll into view on mount: true when it just moved here. */
+	scrollIntoViewOnMount: boolean
+	className?: string
+}
+
+export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	resources,
+	position,
+	onMove,
+	scrollIntoViewOnMount,
+	className = "",
 }) => {
 	const {
 		userStatsData,
@@ -178,6 +192,13 @@ export const CaratForecastChart: React.FC<{ resources: BannerResources[] }> = ({
 		})
 	}
 
+	const sectionRef = useRef<HTMLElement>(null)
+	useEffect(() => {
+		if (!scrollIntoViewOnMount) return
+		const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+		sectionRef.current?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" })
+	}, [scrollIntoViewOnMount])
+
 	if (!forecast) return null
 
 	// The headline: the plan's tightest moment, after the banner that causes it.
@@ -186,6 +207,7 @@ export const CaratForecastChart: React.FC<{ resources: BannerResources[] }> = ({
 		(low, m) => (!low || m.after < low.after ? m : low),
 		null
 	)
+	const moveLabel = position === "top" ? "Move below banners" : "Move above banners"
 	const bannerName = (marker: ForecastMarker) => {
 		const banner = userPlannedBannerData[marker.index]
 		const target = banner ? plannedBannerTarget(banner) : null
@@ -193,45 +215,70 @@ export const CaratForecastChart: React.FC<{ resources: BannerResources[] }> = ({
 	}
 
 	return (
-		<section className="card-panel mb-3 overflow-hidden" aria-labelledby="carat-forecast-heading">
-			<button
-				type="button"
-				onClick={toggleOpen}
-				aria-expanded={open}
-				className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-700/30"
-			>
-				<div className="min-w-0 flex-1">
-					<h2 id="carat-forecast-heading" className="font-display text-sm font-semibold text-gray-100">
-						Carat forecast
-					</h2>
-					{lowest && (
-						<p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
-							{lowest.after < 0 ? (
-								<>
-									<AlertTriangle
-										className="h-3.5 w-3.5 shrink-0 text-(--color-pull-over)"
-										aria-hidden="true"
-									/>
+		<section
+			ref={sectionRef}
+			className={`card-panel overflow-hidden ${className}`}
+			aria-labelledby="carat-forecast-heading"
+		>
+			{/* Two buttons side by side, never one inside the other: the heading
+			    folds the chart, the button on the right moves it. */}
+			<div className="flex items-start gap-2 pr-3">
+				<button
+					type="button"
+					onClick={toggleOpen}
+					aria-expanded={open}
+					className="flex min-w-0 flex-1 items-start gap-2 py-3 pl-4 text-left transition hover:opacity-80"
+				>
+					<ChevronDown
+						className={`mt-0.5 h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "" : "-rotate-90"}`}
+						aria-hidden="true"
+					/>
+					<div className="min-w-0 flex-1">
+						<h2 id="carat-forecast-heading" className="font-display text-sm font-semibold text-gray-100">
+							Carat forecast
+						</h2>
+						{lowest && (
+							<p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
+								{lowest.after < 0 ? (
+									<>
+										<AlertTriangle
+											className="h-3.5 w-3.5 shrink-0 text-(--color-pull-over)"
+											aria-hidden="true"
+										/>
+										<span className="truncate">
+											Short by <span className="font-semibold text-gray-200">{fullCarats(-lowest.after)}</span>{" "}
+											carats after {bannerName(lowest)}
+										</span>
+									</>
+								) : (
 									<span className="truncate">
-										Short by <span className="font-semibold text-gray-200">{fullCarats(-lowest.after)}</span>{" "}
-										carats after {bannerName(lowest)}
+										Lowest point:{" "}
+										<span className="font-semibold text-gray-200">{fullCarats(lowest.after)}</span>{" "}
+										carats, after {bannerName(lowest)}
 									</span>
-								</>
-							) : (
-								<span className="truncate">
-									Lowest point:{" "}
-									<span className="font-semibold text-gray-200">{fullCarats(lowest.after)}</span>{" "}
-									carats, after {bannerName(lowest)}
-								</span>
-							)}
-						</p>
+								)}
+							</p>
+						)}
+					</div>
+				</button>
+				<button
+					type="button"
+					onClick={onMove}
+					title={moveLabel}
+					aria-label={moveLabel}
+					className="mt-2 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-2 py-1 text-xs font-medium text-gray-300 transition hover:bg-gray-700/40 hover:text-gray-100"
+				>
+					{position === "top" ? (
+						<ArrowDownToLine className="h-3.5 w-3.5" aria-hidden="true" />
+					) : (
+						<ArrowUpToLine className="h-3.5 w-3.5" aria-hidden="true" />
 					)}
-				</div>
-				<ChevronDown
-					className={`mt-0.5 h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-					aria-hidden="true"
-				/>
-			</button>
+					{/* The icon alone on a phone, where the headline needs the room. */}
+					<span className="hidden sm:inline" aria-hidden="true">
+						{moveLabel}
+					</span>
+				</button>
+			</div>
 			{open && (
 				<ForecastPlot
 					forecast={forecast}

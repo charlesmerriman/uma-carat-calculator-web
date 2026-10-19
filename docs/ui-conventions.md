@@ -1963,7 +1963,11 @@ the team.
 
 ## Carat forecast chart (`carat-calculator/CaratForecastChart.tsx`)
 
-The chart above the planner rows. Its numbers are explained in
+The chart below the planner rows, or above them if the viewer moves it (the button in
+its header; `hooks/useForecastPosition.ts`, remembered per device as
+`uma-planner-forecast-position`). Bottom is the default (owner, 2026-10-19): the rows
+are what a visitor came to edit. Moving it remounts the chart in the other slot, which
+then scrolls itself into view. Its numbers are explained in
 `resource-projection-logic.md` ("The carat forecast"); this is how it is drawn.
 
 - **Hand-drawn SVG, no chart library.** One series on one axis did not justify ~100 KB

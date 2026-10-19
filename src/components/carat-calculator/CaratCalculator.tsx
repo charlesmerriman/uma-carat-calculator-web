@@ -13,6 +13,7 @@ import { PlannerSectionBand } from "./PlannerSectionBand"
 import { buildPlannerRows, SCENARIO_BANDS_ONLY } from "../../utils/plannerSections"
 import { PlanSwitcher } from "./PlanSwitcher"
 import { CaratForecastChart } from "./CaratForecastChart"
+import { useForecastPosition } from "../../hooks/useForecastPosition"
 import { EMPTY_BANNER_RESOURCES } from "../../hooks/bannerResources"
 import { useBannerResources } from "../../hooks/useBannerResources"
 import {
@@ -122,6 +123,9 @@ export const CaratCalculator: React.FC = () => {
 		-1
 	)
 
+	// Above the rows or below them (the default), remembered per device.
+	const forecastPosition = useForecastPosition()
+
 	if (!userStatsData) {
 		return <div>Loading...</div>
 	}
@@ -199,6 +203,20 @@ export const CaratCalculator: React.FC = () => {
 	// empty-state placeholder below. With nothing staged and nothing planned
 	// there is no section at all.
 	const showCalculatorSection = userPlannedBannerData.length > 0 || stagedBanners.length > 0
+
+	// The forecast chart, in whichever slot the viewer chose: above the rows or
+	// below them. It reads the same results the rows show, and draws nothing
+	// until a row with a future end date exists. One render function, so the
+	// two slots can't drift apart.
+	const renderForecast = (spacing: string) => (
+		<CaratForecastChart
+			resources={bannerResources}
+			position={forecastPosition.position}
+			onMove={forecastPosition.move}
+			scrollIntoViewOnMount={forecastPosition.justMoved}
+			className={spacing}
+		/>
+	)
 
 	// Icon-only header, shared by the staging and sheet header rows below so the
 	// two can't drift. Same icons the mobile card labels its Reserved cell with.
@@ -381,9 +399,7 @@ export const CaratCalculator: React.FC = () => {
 											<div className="flex-1 h-px bg-brand/20" />
 										</div>
 									)}
-									{/* The forecast reads the same results the rows below show, and
-									    draws nothing until a row with a future end date exists. */}
-									<CaratForecastChart resources={bannerResources} />
+									{forecastPosition.position === "top" && renderForecast("mb-3")}
 									{/* Own @container, as in the staging area above. */}
 									<div className="@container">
 										<div className="banner-grid hidden w-full items-center text-xs text-gray-400 font-medium bg-gray-800 border-b border-edge rounded-t-lg py-1.5 @banner-table:grid">
@@ -466,6 +482,7 @@ export const CaratCalculator: React.FC = () => {
 											</AnimatePresence>
 										</div>
 									</div>
+									{forecastPosition.position === "bottom" && renderForecast("mt-4")}
 								</div>
 							)}
 						</div>
