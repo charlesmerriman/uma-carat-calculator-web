@@ -117,7 +117,11 @@ export const DailyLegendRaces = () => {
 
 	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 
-	const renderCard = (release: DailyLegendRaceRelease, isAvailable: boolean) => (
+	// Only the next two batches start open; every other card is its heading
+	// line until tapped (design polish item 22a, see LegendRaceReleaseCard). A
+	// search, or the batch a link names, opens a card regardless.
+	const OPEN_UPCOMING = 2
+	const renderCard = (release: DailyLegendRaceRelease, isAvailable: boolean, defaultOpen = false) => (
 		<LegendRaceReleaseCard
 			key={release.id}
 			release={release}
@@ -126,6 +130,8 @@ export const DailyLegendRaces = () => {
 			oshiIds={oshiIds}
 			focusRef={release.id === focusId ? focusRef : undefined}
 			isFocused={release.id === focusId}
+			defaultOpen={defaultOpen}
+			forceOpen={search !== "" || release.id === focusId}
 		/>
 	)
 
@@ -199,7 +205,7 @@ export const DailyLegendRaces = () => {
 					Coming up
 				</h2>
 				{shownUpcoming.length > 0 ? (
-					shownUpcoming.map((release) => renderCard(release, false))
+					shownUpcoming.map((release, index) => renderCard(release, false, index < OPEN_UPCOMING))
 				) : (
 					<p className="text-sm text-gray-500">
 						{search !== ""
