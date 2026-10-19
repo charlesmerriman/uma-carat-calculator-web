@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect } from 'vitest'
 import { PlannerSectionBand } from '../components/carat-calculator/PlannerSectionBand'
@@ -99,6 +99,19 @@ describe('PlannerSectionBand strip fills', () => {
 		expect(c).not.toBe(a)
 	})
 
+	it('keeps a line\'s fill when the band is unfolded', () => {
+		const markers = [
+			marker('scenario-1', 'scenario', 'Mecha', '2028-03-01T00:00:00Z'),
+			marker('scenario-2', 'scenario', 'Twinkle', '2028-05-01T00:00:00Z'),
+			marker('scenario-3', 'scenario', 'Island', '2028-07-01T00:00:00Z'),
+			marker('scenario-4', 'scenario', 'Hot Springs', '2028-10-01T00:00:00Z'),
+		]
+		const { container, getByRole } = render(<PlannerSectionBand markers={markers} />, { wrapper: MemoryRouter })
+		const folded = tones(container)[0]
+		fireEvent.click(getByRole('button'))
+		expect(tones(container)[0]).toBe(folded)
+	})
+
 	it('draws no icon on a scenario line and one on an anniversary', () => {
 		const { container } = render(
 			<PlannerSectionBand
@@ -112,5 +125,44 @@ describe('PlannerSectionBand strip fills', () => {
 		const strips = Array.from(container.firstElementChild!.children)
 		expect(strips[0].querySelector('svg')).toBeNull()
 		expect(strips[1].querySelector('svg')).not.toBeNull()
+	})
+})
+
+describe('PlannerSectionBand folding', () => {
+	const many = [
+		marker('scenario-1', 'scenario', 'Grand Masters', '2027-01-01T00:00:00Z'),
+		marker('scenario-2', 'scenario', 'Mecha', '2027-03-01T00:00:00Z'),
+		marker('scenario-3', 'scenario', 'Twinkle', '2027-05-01T00:00:00Z'),
+		marker('scenario-4', 'scenario', 'Island', '2027-07-01T00:00:00Z'),
+	]
+
+	it('shows every line when there are three or fewer', () => {
+		const { queryByRole, getAllByRole } = render(<PlannerSectionBand markers={many.slice(0, 3)} />, {
+			wrapper: MemoryRouter,
+		})
+		expect(getAllByRole('link')).toHaveLength(3)
+		expect(queryByRole('button')).toBeNull()
+	})
+
+	it('folds a longer band to its first line and a count of the rest', () => {
+		const { getAllByRole, getByRole } = render(<PlannerSectionBand markers={many} />, { wrapper: MemoryRouter })
+		expect(getAllByRole('link').map((link) => link.textContent)).toEqual(['Grand Masters'])
+		const toggle = getByRole('button', { name: /Show 3 more scenarios/ })
+		expect(toggle.getAttribute('aria-expanded')).toBe('false')
+	})
+
+	it('opens to every line and closes again', () => {
+		const { getAllByRole, getByRole } = render(<PlannerSectionBand markers={many} />, { wrapper: MemoryRouter })
+		fireEvent.click(getByRole('button'))
+		expect(getAllByRole('link')).toHaveLength(4)
+		expect(getByRole('button', { name: /Show fewer/ }).getAttribute('aria-expanded')).toBe('true')
+		fireEvent.click(getByRole('button'))
+		expect(getAllByRole('link')).toHaveLength(1)
+	})
+
+	it('names no kind when the hidden lines are mixed', () => {
+		const mixed = [...many.slice(0, 3), marker('anniversary-1', 'anniversary', '3rd Anniversary', '2027-08-01T00:00:00Z')]
+		const { getByRole } = render(<PlannerSectionBand markers={mixed} />, { wrapper: MemoryRouter })
+		expect(getByRole('button').textContent).toBe('Show 3 more')
 	})
 })
