@@ -71,8 +71,8 @@ const FLOATING_POSITION = {
 	"64rem": "right-[max(1.5rem,calc((100vw-64rem)/2-4.5rem))]",
 	/** `page-container` pages: the Timeline and Selectors. */
 	"96rem": "right-[max(1.5rem,calc((100vw-96rem)/2-4.5rem))]",
-	/** The home page. */
-	"104rem": "right-[max(1.5rem,calc((100vw-104rem)/2-4.5rem))]",
+	/** The home page (104rem until 2026-10-18). */
+	"80rem": "right-[max(1.5rem,calc((100vw-80rem)/2-4.5rem))]",
 } as const
 
 type FloatingBackToTopProps = {
