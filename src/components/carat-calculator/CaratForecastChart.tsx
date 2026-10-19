@@ -1,6 +1,16 @@
 import type React from "react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { motion, useReducedMotion } from "framer-motion"
+import { useReducedMotion } from "framer-motion"
+import {
+	Area,
+	ComposedChart,
+	CartesianGrid,
+	ReferenceLine,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts"
 import { AlertTriangle, ArrowDownToLine, ArrowUpToLine, ChevronDown } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import type { BannerResources } from "../../hooks/bannerResources"
@@ -19,14 +29,15 @@ import type { ForecastPosition } from "../../hooks/useForecastPosition"
  * the rows' own results, so every dot on the line is the number its row shows.
  * This file only draws it.
  *
- * WHY HAND-DRAWN SVG, NOT A CHART LIBRARY
- * ---------------------------------------
- * It is one series on one axis. Recharts (the usual pick) would add roughly
- * 100 KB gzipped to the calculator chunk for that, and its colours are props,
- * so every theme would need JavaScript to re-skin it. Drawn here, the marks are
- * plain SVG wearing Tailwind classes (`stroke-brand`, `fill-gray-400`), and the
- * twelve themes and colorblind mode re-skin it the way they re-skin everything
- * else: by redefining the tokens.
+ * DRAWN WITH RECHARTS
+ * --------------------
+ * Recharts owns the plumbing: scales, ticks, resizing (ResponsiveContainer),
+ * the hover crosshair and tooltip, keyboard stepping (its accessibility layer)
+ * and the draw-in animation. This file owns what Recharts cannot know: the
+ * data, the dots at each banner, the colour split at zero, and the readout.
+ *
+ * Colours are passed as CSS variables (`var(--color-brand)`), never hex, so
+ * the twelve themes and colorblind mode still re-skin it by redefining tokens.
  *
  * FORM, PER THE DATAVIZ RULES
  * ---------------------------
@@ -42,10 +53,6 @@ import type { ForecastPosition } from "../../hooks/useForecastPosition"
 
 /** localStorage: whether the viewer folded the chart away. Absent means open. */
 const OPEN_STORAGE_KEY = "uma-planner-forecast-open"
-const MARGIN = { top: 16, right: 16, bottom: 26, left: 48 }
-/** Hover within this many pixels of a banner's dot snaps the readout to it. */
-const MARKER_SNAP_PX = 14
-
 /** 12,345 → "12.3K". Axis ticks only; readouts use full numbers. */
 function compactCarats(value: number): string {
 	const abs = Math.abs(value)
@@ -55,26 +62,6 @@ function compactCarats(value: number): string {
 }
 
 const fullCarats = (value: number) => Math.round(value).toLocaleString("en-US")
-
-/**
- * Round tick steps (1, 2, 2.5, 5 x 10^n) covering [min, max] in about `count`
- * steps. Always includes 0 when the range crosses it, because zero is the line
- * that matters here: below it is a carat debt.
- */
-function niceTicks(min: number, max: number, count: number): number[] {
-	const span = Math.max(1, max - min)
-	const raw = span / count
-	const magnitude = 10 ** Math.floor(Math.log10(raw))
-	const step =
-		[1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s >= raw) ?? 10 * magnitude
-	// Outward on both ends: the first tick at or below `min`, the last at or
-	// above `max`, so the line never runs off the plot.
-	const first = Math.floor(min / step)
-	const last = Math.max(first + 1, Math.ceil(max / step))
-	const ticks: number[] = []
-	for (let i = first; i <= last; i++) ticks.push(Math.round(i * step))
-	return ticks
-}
 
 /** First-of-month UTC instants inside [start, end]. */
 function monthStarts(start: number, end: number): number[] {
@@ -89,24 +76,13 @@ function monthStarts(start: number, end: number): number[] {
 	return out
 }
 
-/** The readout's width cap (14rem) plus its 10px gap from the crosshair. */
-const TOOLTIP_ROOM = 234
-
-/** Where the readout sits: right of the crosshair, left of it, or across the plot. */
-function tooltipSide(crosshairX: number, width: number): React.CSSProperties {
-	const fitsRight = crosshairX + TOOLTIP_ROOM <= width
-	const fitsLeft = crosshairX - TOOLTIP_ROOM >= 0
-	if (fitsRight && (!fitsLeft || crosshairX <= width / 2)) {
-		return { left: crosshairX + 10, width: "max-content" }
-	}
-	if (fitsLeft) return { right: width - crosshairX + 10, width: "max-content" }
-	return { left: MARGIN.left, right: MARGIN.right, maxWidth: "none" }
+/** One row of the chart's data: a vertex of the line, maybe a banner's dot. */
+interface ChartDatum {
+	t: number
+	value: number
+	/** Set on the vertex where a banner's dot sits (its "before" value). */
+	marker?: ForecastMarker
 }
-
-/** What the readout is showing: a banner's dot, or a plain day on the line. */
-type Readout =
-	| { kind: "marker"; marker: ForecastMarker }
-	| { kind: "day"; t: number; value: number }
 
 interface CaratForecastChartProps {
 	resources: BannerResources[]
@@ -300,286 +276,119 @@ interface PlotProps {
 }
 
 const ForecastPlot: React.FC<PlotProps> = ({ forecast, bannerName, endDateOf }) => {
-	const containerRef = useRef<HTMLDivElement>(null)
-	const [width, setWidth] = useState(0)
-	const [readout, setReadout] = useState<Readout | null>(null)
-	// Keyboard position among the banner dots; -1 is "not stepping".
-	const [keyIndex, setKeyIndex] = useState(-1)
 	const reduceMotion = useReducedMotion() ?? false
-	const clipId = useId()
-
-	// The SVG is drawn at its real pixel width, not stretched through a
-	// viewBox, so its text stays at its true size at every width. Measured in
-	// an effect: there is no width to read during render.
-	useEffect(() => {
-		const el = containerRef.current
-		if (!el) return
-		const measure = () => setWidth(el.clientWidth)
-		measure()
-		const observer = new ResizeObserver(measure)
-		observer.observe(el)
-		return () => observer.disconnect()
-	}, [])
-
-	const height = width > 0 && width < 640 ? 190 : 240
-	const plotW = Math.max(0, width - MARGIN.left - MARGIN.right)
-	const plotH = height - MARGIN.top - MARGIN.bottom
-
+	const gradientId = useId()
 	const { points, markers, start, end } = forecast
+
+	// Recharts reads one array. Each banner's dot rides on the vertex where the
+	// line meets the row's number (the first point at its instant with that
+	// value), so the dot and the hover both find it there.
+	const data = useMemo<ChartDatum[]>(() => {
+		const rows: ChartDatum[] = points.map((p) => ({ t: p.t, value: p.value }))
+		for (const marker of markers) {
+			const at = rows.find((r) => r.t === marker.t && r.value === marker.before && !r.marker)
+			if (at) at.marker = marker
+		}
+		return rows
+	}, [points, markers])
+
+	// THE SPLIT AT ZERO. One gradient, two stops at the same offset: brand above
+	// zero, the over-budget colour below. The offset is where zero falls in the
+	// shape's bounding box, which for both the line and the filled area runs
+	// from the highest value down to the lowest (or down to zero, for an area
+	// that never goes negative, where the offset is 1 and it is all brand).
 	const values = points.map((p) => p.value)
-	const yTicks = niceTicks(Math.min(0, ...values), Math.max(0, ...values), height < 200 ? 3 : 4)
-	const yMin = yTicks[0]
-	const yMax = yTicks[yTicks.length - 1]
-
-	const x = (t: number) => MARGIN.left + ((t - start) / (end - start)) * plotW
-	const y = (v: number) => MARGIN.top + (1 - (v - yMin) / (yMax - yMin)) * plotH
-	const zeroY = y(0)
-
-	const linePath = points.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.value).toFixed(1)}`).join("")
-	const last = points[points.length - 1]
-	const areaPath = `${linePath}L${x(last.t).toFixed(1)},${zeroY.toFixed(1)}L${x(points[0].t).toFixed(1)},${zeroY.toFixed(1)}Z`
-
-	// Month ticks, thinned so labels never touch: about one per 72px.
-	const months = monthStarts(start, end)
-	const every = Math.max(1, Math.ceil(months.length / Math.max(1, Math.floor(plotW / 72))))
-	const xTicks = months.filter((_, i) => i % every === 0)
-
-	/** The line's value at an instant: the last vertex at or before it. */
-	const nearestDay = (t: number): Readout => {
-		let best = points[0]
-		for (const p of points) {
-			if (Math.abs(p.t - t) < Math.abs(best.t - t) || p.t === best.t) best = p
-		}
-		return { kind: "day", t: best.t, value: best.value }
-	}
-
-	const handlePointer = (event: React.PointerEvent<SVGSVGElement>) => {
-		const rect = event.currentTarget.getBoundingClientRect()
-		const px = event.clientX - rect.left
-		if (px < MARGIN.left - 4 || px > width - MARGIN.right + 4) {
-			setReadout(null)
-			return
-		}
-		const nearMarker = markers.reduce<ForecastMarker | null>((bestMarker, m) => {
-			const d = Math.abs(x(m.t) - px)
-			if (d > MARKER_SNAP_PX) return bestMarker
-			return !bestMarker || d < Math.abs(x(bestMarker.t) - px) ? m : bestMarker
-		}, null)
-		const t = start + ((px - MARGIN.left) / plotW) * (end - start)
-		setReadout(nearMarker ? { kind: "marker", marker: nearMarker } : nearestDay(t))
-	}
-
-	const handleKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
-		if (markers.length === 0) return
-		let nextIndex = keyIndex
-		if (event.key === "ArrowRight") nextIndex = Math.min(markers.length - 1, keyIndex + 1)
-		else if (event.key === "ArrowLeft") nextIndex = Math.max(0, keyIndex < 0 ? 0 : keyIndex - 1)
-		else if (event.key === "Home") nextIndex = 0
-		else if (event.key === "End") nextIndex = markers.length - 1
-		else if (event.key === "Escape") {
-			setKeyIndex(-1)
-			setReadout(null)
-			return
-		} else return
-		event.preventDefault()
-		setKeyIndex(nextIndex)
-		setReadout({ kind: "marker", marker: markers[nextIndex] })
-	}
-
-	const readoutX = readout ? x(readout.kind === "marker" ? readout.marker.t : readout.t) : 0
-	const readoutY = readout ? y(readout.kind === "marker" ? readout.marker.before : readout.value) : 0
-	const draw = reduceMotion
-		? {}
-		: {
-				initial: { pathLength: 0 },
-				animate: { pathLength: 1 },
-				transition: { duration: 0.9, ease: "easeOut" as const },
-		  }
+	const high = Math.max(...values)
+	const low = Math.min(...values)
+	const zeroOffset = high <= 0 ? 0 : low >= 0 ? 1 : high / (high - low)
 
 	return (
-		<div
-			ref={containerRef}
-			className="relative px-1 pb-2 outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
-			style={{ height: height + 8 }}
-			tabIndex={0}
-			role="group"
-			aria-label="Carat forecast chart. Use the left and right arrow keys to step through your banners."
-			onKeyDown={handleKey}
-			onBlur={() => {
-				setKeyIndex(-1)
-				setReadout(null)
-			}}
-		>
-			{width > 0 && (
-				<svg
-					width={width}
-					height={height}
-					className="block touch-pan-y select-none"
-					aria-hidden="true"
-					onPointerMove={handlePointer}
-					onPointerDown={handlePointer}
-					onPointerLeave={() => setReadout(null)}
-				>
+		// ResponsiveContainer fills this box, so its height is the chart's.
+		<div className="h-[198px] px-1 pb-2 sm:h-[248px]">
+			<ResponsiveContainer width="100%" height="100%">
+				<ComposedChart data={data} margin={{ top: 16, right: 20, bottom: 4, left: 4 }}>
 					<defs>
-						{/* Above zero the line wears the brand; below it, the
-						    over-budget colour. Two clips, one path drawn twice. */}
-						<clipPath id={`${clipId}-above`}>
-							<rect x={0} y={0} width={width} height={Math.max(0, zeroY)} />
-						</clipPath>
-						<clipPath id={`${clipId}-below`}>
-							<rect x={0} y={zeroY} width={width} height={Math.max(0, height - zeroY)} />
-						</clipPath>
+						<linearGradient id={`${gradientId}-stroke`} x1="0" y1="0" x2="0" y2="1">
+							<stop offset={zeroOffset} style={{ stopColor: "var(--color-brand)" }} />
+							<stop offset={zeroOffset} style={{ stopColor: "var(--color-pull-over)" }} />
+						</linearGradient>
+						<linearGradient id={`${gradientId}-fill`} x1="0" y1="0" x2="0" y2="1">
+							<stop offset={zeroOffset} style={{ stopColor: "var(--color-brand)", stopOpacity: 0.1 }} />
+							<stop offset={zeroOffset} style={{ stopColor: "var(--color-pull-over)", stopOpacity: 0.1 }} />
+						</linearGradient>
 					</defs>
-
-					{/* Gridlines and y labels. Zero is drawn a step stronger. */}
-					{yTicks.map((tick) => (
-						<g key={tick}>
-							<line
-								x1={MARGIN.left}
-								x2={width - MARGIN.right}
-								y1={y(tick)}
-								y2={y(tick)}
-								className={tick === 0 ? "stroke-gray-500" : "stroke-gray-700"}
-								strokeWidth={1}
-								shapeRendering="crispEdges"
-							/>
-							<text
-								x={MARGIN.left - 8}
-								y={y(tick)}
-								dy="0.32em"
-								textAnchor="end"
-								className="fill-gray-400 text-[11px] tabular-nums"
-							>
-								{compactCarats(tick)}
-							</text>
-						</g>
-					))}
-
-					{xTicks.map((t) => (
-						<text
-							key={t}
-							x={x(t)}
-							y={height - 8}
-							textAnchor="middle"
-							className="fill-gray-400 text-[11px] tabular-nums"
-						>
-							{formatMonth(new Date(t))}
-						</text>
-					))}
-
-					<path d={areaPath} className="fill-brand/10" clipPath={`url(#${clipId}-above)`} />
-					<path d={areaPath} className="fill-(--color-pull-over)/10" clipPath={`url(#${clipId}-below)`} />
-					<motion.path
-						d={linePath}
-						fill="none"
-						className="stroke-brand"
-						strokeWidth={2}
-						strokeLinejoin="round"
-						strokeLinecap="round"
-						clipPath={`url(#${clipId}-above)`}
-						{...draw}
+					<CartesianGrid vertical={false} stroke="var(--color-gray-700)" />
+					<XAxis
+						dataKey="t"
+						type="number"
+						scale="time"
+						domain={[start, end]}
+						ticks={monthStarts(start, end)}
+						tickFormatter={(t: number) => formatMonth(new Date(t))}
+						minTickGap={28}
+						tick={{ fill: "var(--color-gray-400)", fontSize: 11 }}
+						axisLine={false}
+						tickLine={false}
 					/>
-					<motion.path
-						d={linePath}
-						fill="none"
-						className="stroke-(--color-pull-over)"
-						strokeWidth={2}
-						strokeLinejoin="round"
-						strokeLinecap="round"
-						clipPath={`url(#${clipId}-below)`}
-						{...draw}
+					<YAxis
+						domain={[(dataMin: number) => Math.min(0, dataMin), "auto"]}
+						tickFormatter={compactCarats}
+						tick={{ fill: "var(--color-gray-400)", fontSize: 11 }}
+						axisLine={false}
+						tickLine={false}
+						width={44}
 					/>
-
-					{/* Crosshair, under the dots so they stay on top of it. */}
-					{readout && (
-						<line
-							x1={readoutX}
-							x2={readoutX}
-							y1={MARGIN.top}
-							y2={MARGIN.top + plotH}
-							className="stroke-gray-400"
-							strokeWidth={1}
-							shapeRendering="crispEdges"
-						/>
-					)}
-
-					{/* One dot per banner, at what the row says is available. The
-					    2px ring in the card's own fill keeps a dot legible where it
-					    sits on the line. A row left out of the projection is hollow. */}
-					{markers.map((m) => {
-						const short = m.after < 0 && !m.excluded
-						const active = readout?.kind === "marker" && readout.marker === m
-						return (
-							<circle
-								key={`${m.index}-${m.t}`}
-								cx={x(m.t)}
-								cy={y(m.before)}
-								r={active ? 6 : 4.5}
-								strokeWidth={2}
-								style={{ stroke: m.excluded ? "var(--color-brand)" : "var(--card-fill)" }}
-								className={
-									m.excluded
-										? "fill-(--card-fill)"
-										: short
-										? "fill-(--color-pull-over)"
-										: "fill-brand"
-								}
-							/>
-						)
-					})}
-
-					{readout?.kind === "day" && (
-						<circle
-							cx={readoutX}
-							cy={readoutY}
-							r={4}
-							strokeWidth={2}
-							style={{ stroke: "var(--card-fill)" }}
-							className={readout.value < 0 ? "fill-(--color-pull-over)" : "fill-brand"}
-						/>
-					)}
-
-					{/* The one direct label: where the line ends up. */}
-					<text
-						x={width - MARGIN.right}
-						y={y(last.value) - 8}
-						textAnchor="end"
-						className="fill-gray-200 text-[11px] font-semibold tabular-nums"
-					>
-						{fullCarats(last.value)}
-					</text>
-				</svg>
-			)}
-
-			{readout && width > 0 && (
-				// Pinned to the top of the plot beside the crosshair, on whichever
-				// side fits it. Above the dot it would run into the heading and be
-				// cut off by the card's edge. On a phone neither side may fit, and
-				// then it spans the plot's width instead.
-				<div
-					className="pointer-events-none absolute z-10 max-w-[14rem] rounded-md border border-edge bg-gray-800 px-3 py-2 text-xs shadow-lg"
-					style={{ top: MARGIN.top, ...tooltipSide(readoutX, width) }}
-					aria-live="polite"
-				>
-					{readout.kind === "marker" ? (
-						<MarkerReadout
-							marker={readout.marker}
-							name={bannerName(readout.marker)}
-							endDate={endDateOf(readout.marker)}
-						/>
-					) : (
-						<>
-							<div className="text-sm font-semibold text-gray-100 tabular-nums">
-								{fullCarats(readout.value)} carats
-							</div>
-							<div className="text-gray-400">{formatDate(new Date(readout.t).toISOString())}</div>
-						</>
-					)}
-				</div>
-			)}
+					<ReferenceLine y={0} stroke="var(--color-gray-500)" />
+					<Tooltip
+						content={(props) => (
+							<ForecastTooltip {...props} bannerName={bannerName} endDateOf={endDateOf} />
+						)}
+						cursor={{ stroke: "var(--color-gray-400)", strokeWidth: 1 }}
+						// Pinned near the top of the plot, so it never covers the dot
+						// it describes or runs into the heading above the chart.
+						position={{ y: 8 }}
+						isAnimationActive={false}
+					/>
+					<Area
+						type="linear"
+						dataKey="value"
+						baseValue={0}
+						stroke={`url(#${gradientId}-stroke)`}
+						strokeWidth={2}
+						fill={`url(#${gradientId}-fill)`}
+						isAnimationActive={!reduceMotion}
+						animationDuration={900}
+						dot={(props: { cx?: number; cy?: number; index?: number; payload?: ChartDatum }) => {
+							const marker = props.payload?.marker
+							if (!marker || props.cx === undefined || props.cy === undefined) {
+								return <g key={`none-${props.index}`} />
+							}
+							const short = marker.after < 0 && !marker.excluded
+							return (
+								<circle
+									key={`dot-${props.index}`}
+									cx={props.cx}
+									cy={props.cy}
+									r={4.5}
+									strokeWidth={2}
+									style={{
+										stroke: marker.excluded ? "var(--color-brand)" : "var(--card-fill)",
+										fill: marker.excluded
+											? "var(--card-fill)"
+											: short
+											? "var(--color-pull-over)"
+											: "var(--color-brand)",
+									}}
+								/>
+							)
+						}}
+						activeDot={{ r: 5, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-brand)" }}
+					/>
+				</ComposedChart>
+			</ResponsiveContainer>
 
 			{/* The table view, for screen readers: every banner's numbers in order.
-			    Sighted readers have the planner rows below, which carry the same. */}
+			    Sighted readers have the planner rows, which carry the same. */}
 			<ul className="sr-only">
 				{markers.map((m) => (
 					<li key={`${m.index}-${m.t}`}>
@@ -589,6 +398,38 @@ const ForecastPlot: React.FC<PlotProps> = ({ forecast, bannerName, endDateOf }) 
 					</li>
 				))}
 			</ul>
+		</div>
+	)
+}
+
+// Only the two fields of Recharts' tooltip props this readout reads.
+type ForecastTooltipProps = {
+	active?: boolean
+	payload?: ReadonlyArray<{ payload?: unknown }>
+	bannerName: (marker: ForecastMarker) => string
+	endDateOf: (marker: ForecastMarker) => string | null
+}
+
+/** The hover readout. Recharts hands it the nearest vertex. */
+const ForecastTooltip: React.FC<ForecastTooltipProps> = ({ active, payload, bannerName, endDateOf }) => {
+	const datum = payload?.[0]?.payload as ChartDatum | undefined
+	if (!active || !datum) return null
+	return (
+		<div className="max-w-[14rem] rounded-md border border-edge bg-gray-800 px-3 py-2 text-xs shadow-lg">
+			{datum.marker ? (
+				<MarkerReadout
+					marker={datum.marker}
+					name={bannerName(datum.marker)}
+					endDate={endDateOf(datum.marker)}
+				/>
+			) : (
+				<>
+					<div className="text-sm font-semibold text-gray-100 tabular-nums">
+						{fullCarats(datum.value)} carats
+					</div>
+					<div className="text-gray-400">{formatDate(new Date(datum.t).toISOString())}</div>
+				</>
+			)}
 		</div>
 	)
 }
