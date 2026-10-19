@@ -1991,25 +1991,32 @@ then scrolls itself into view. Its numbers are explained in
   banner under the chart. Recharts' accessibility layer steps the tooltip with the arrow
   keys.
 - **Two views, Carats and Pulls** (switch under the heading, remembered per device as
-  `uma-planner-forecast-unit`). Pulls is one bar per banner: the row's Max Pulls WITHOUT
-  the banner's own free pulls (owner, 2026-10-19), read off `maxPullBreakdown`
-  (`buildPullBars`), never recomputed. Bars, not a line, because that figure depends on
-  the banner's kind and paid-pull settings, so it has no value between banners. Step-ups
-  count steps and are left out of Pulls. A bar that reaches the pity is solid, one that
-  falls short is faint.
+  `uma-planner-forecast-unit`). Pulls is TWO lines, day by day like Carats (owner,
+  2026-10-19): "Uma pulls" (carats + uma tickets) and "Support pulls" (carats + support
+  tickets), because a banner spends only its own kind. Free pulls never count. A day's
+  pulls follow the player's settings (`buildPullSeries`): free carats ÷ pull cost, plus
+  paid carats ÷ pull cost when full-price paid pulls are on, plus the line's tickets when
+  spending tickets is on. The four balances come from `buildCaratForecast`, each
+  re-anchored to the row like free carats. At each banner the dot sits on its own kind's
+  line at the row's Max Pulls without free pulls (`buildPullBars`, read off
+  `maxPullBreakdown`); that can sit a little above the line's arrival, because the row
+  counts the daily discounted pull, which only exists while a banner runs. Step-ups get
+  no dot (they count steps), though their paid spend still drops both lines. The lines
+  wear `--color-series-uma` / `--color-series-support` (validated pair, see index.css),
+  with a legend under the heading and end labels when they don't collide.
 - **The pity line** is `PULLS_PER_PITY_COPY` (200): always drawn in Pulls; in Carats at
   200 × `pull_cost_carats`, drawn only when the line comes within 25% of it, so a small
   plan is not squashed under an empty band. Its label sits just above the line.
 - **Y ticks are ours** (`niceTicks`: 1, 2, 5 × 10ⁿ), passed to Recharts with the domain,
   because Recharts' own rounding picked 12.5K steps.
-- **A banner's dot or bar jumps to its row**: `onSelectBanner(index)` scrolls to
+- **A banner's dot jumps to its row**: `onSelectBanner(index)` scrolls to
   `[data-planner-index]` in CaratCalculator and flashes it with `.row-arrival`, the same
   flash as a row confirmed from staging (`flashIndex`, by index: a tempId and a saved id
   can collide). On touch the first tap opens the readout and a second tap jumps.
 - **Skipped PvP events are red dots on the line** (`buildSkipMarkers`), at the instant
   each skipped Champions Meeting / League of Heroes would have paid, read from
   `fullIncomeLedger` through `upcomingSkippedRaces` (the projection ledger has them
-  removed, which is how a skip works). Carats view only.
+  removed, which is how a skip works). In Pulls the dot sits on both lines.
 - **Folded or open is remembered per device** (`uma-planner-forecast-open`), read in an
   effect because `/app` is prerendered.
 - The line draws itself in on mount (Recharts' own animation), skipped under

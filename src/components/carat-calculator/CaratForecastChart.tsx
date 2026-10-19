@@ -7,6 +7,7 @@ import { createIncomeProjection, projectionWalkOrder } from "../../utils/incomeP
 import {
 	buildCaratForecast,
 	buildPullBars,
+	buildPullSeries,
 	buildSkipMarkers,
 	formatCarats,
 } from "../../utils/caratForecast"
@@ -114,6 +115,9 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 			walkOrder: projectionWalkOrder(userPlannedBannerData),
 			resources,
 			currentFreeCarats: userStatsData.current_carat || 0,
+			currentPaidCarats: userStatsData.current_paid_carat || 0,
+			currentUmaTickets: userStatsData.uma_ticket || 0,
+			currentSupportTickets: userStatsData.support_ticket || 0,
 		})
 	}, [
 		userStatsData,
@@ -137,10 +141,26 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		[userPlannedBannerData]
 	)
 
-	// The pulls view's bars, read off the rows.
+	// Each banner's Max Pulls without free pulls, read off its row: the pulls
+	// lines' dots (buildPullSeries puts each on its own kind's line).
 	const pullBars = useMemo(
 		() => (forecast ? buildPullBars(forecast.markers, resources, userPlannedBannerData) : []),
 		[forecast, resources, userPlannedBannerData]
+	)
+
+	// The pulls view's two lines, day by day, counted the way the player's
+	// settings say (owner, 2026-10-19). A missing switch (an older API) means
+	// the default the engine also assumes: spend tickets, full-price paid off.
+	const pullSeries = useMemo(
+		() =>
+			forecast && userStatsData
+				? buildPullSeries(forecast, pullBars, userPlannedBannerData, {
+						pullCost: calculationConstants.pull_cost_carats,
+						fullPricePaidPulls: userStatsData.full_price_paid_pulls === true,
+						spendTickets: userStatsData.spend_tickets_on_banners !== false,
+				  })
+				: [],
+		[forecast, pullBars, userPlannedBannerData, userStatsData, calculationConstants]
 	)
 
 	// A red dot for each skipped Champions Meeting or League of Heroes still
@@ -214,7 +234,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		null
 	)
 	const moveLabel = position === "top" ? "Move below banners" : "Move above banners"
-	// Stable across renders: the plot memoises its bars on it.
+	// Stable across renders, so memos keyed on it keep their cache.
 	const endDateOf = endDateLookup
 	const bannerName = (marker: ForecastMarker) => {
 		const banner = userPlannedBannerData[marker.index]
@@ -309,13 +329,23 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 								</button>
 							))}
 						</div>
-						{/* Wraps rather than truncates: in the pulls view it is the
-						    definition of what the bars count. */}
-						<p className="min-w-0 text-xs text-pretty text-gray-500">
-							{unit === "carats"
-								? "Free carats over time"
-								: "Max pulls at each banner, not counting its free pulls"}
-						</p>
+						{unit === "carats" ? (
+							<p className="min-w-0 text-xs text-gray-500">Free carats over time</p>
+						) : (
+							// The legend: two series always get one. Line keys, not boxes,
+							// to mirror the marks. Wraps on a phone rather than truncating.
+							<p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-400">
+								<span className="inline-flex items-center gap-1.5">
+									<span className="h-0.5 w-3 rounded-full bg-(--color-series-uma)" aria-hidden="true" />
+									Uma pulls
+								</span>
+								<span className="inline-flex items-center gap-1.5">
+									<span className="h-0.5 w-3 rounded-full bg-(--color-series-support)" aria-hidden="true" />
+									Support pulls
+								</span>
+								<span className="text-gray-500">Free pulls not counted</span>
+							</p>
+						)}
 					</div>
 					{/* While the plot's chunk is still on its way, a box of the plot's
 					    own height holds its place, so nothing below the chart jumps
@@ -326,7 +356,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 						<ForecastPlot
 							forecast={forecast}
 							unit={unit}
-							pullBars={pullBars}
+							pullSeries={pullSeries}
 							skipMarkers={skipMarkers}
 							pityPulls={PULLS_PER_PITY_COPY}
 							pullCost={calculationConstants.pull_cost_carats}
@@ -335,11 +365,6 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 							onSelectMarker={(marker) => onSelectBanner(marker.index)}
 						/>
 					</Suspense>
-					{unit === "pulls" && pullBars.length > 0 && pullBars.length < forecast.markers.length && (
-						<p className="px-4 pb-3 text-xs text-gray-500">
-							Step-ups count steps, not pulls, so they only show in the carats view.
-						</p>
-					)}
 				</>
 			)}
 		</section>

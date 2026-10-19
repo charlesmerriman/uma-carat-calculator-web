@@ -3,10 +3,12 @@ import { renderHook } from '@testing-library/react'
 import {
   buildCaratForecast,
   buildPullBars,
+  buildPullSeries,
   buildSkipMarkers,
   forecastValueAt,
   FORECAST_MAX_SAMPLES,
 } from '../utils/caratForecast'
+import type { CaratForecast } from '../utils/caratForecast'
 import { createIncomeProjection, projectionWalkOrder } from '../utils/incomeProjection'
 import type { WalkEntry } from '../utils/incomeProjection'
 import { EMPTY_BANNER_RESOURCES } from '../hooks/bannerResources'
@@ -96,7 +98,7 @@ describe('buildCaratForecast', () => {
     expect(valuesAt(forecast.points, day(20).getTime())).toEqual([1500, 900])
     // Between banners it is the balance plus income.
     expect(valuesAt(forecast.points, day(15).getTime())).toEqual([1000])
-    expect(forecast.points[0]).toEqual({ t: TODAY.getTime(), value: 1000 })
+    expect(forecast.points[0]).toMatchObject({ t: TODAY.getTime(), value: 1000 })
   })
 
   it('runs 30 days past the last banner, and never shorter than 60 days', () => {
@@ -329,7 +331,7 @@ describe('forecastValueAt / buildSkipMarkers', () => {
   })
 
   it('places a skipped event on the line, and drops one outside the chart', () => {
-    const forecast = { start: 0, end: 20, points, markers: [] }
+    const forecast = { start: 0, end: 20, points, markers: [] } as unknown as CaratForecast
     const row = (date: number, name: string) => ({
       date: new Date(date).toISOString(),
       kind: 'champions_meeting' as const,
@@ -338,5 +340,50 @@ describe('forecastValueAt / buildSkipMarkers', () => {
     })
     const skips = buildSkipMarkers(forecast, [row(5, 'Cup A'), row(25, 'Cup B')] as never)
     expect(skips).toEqual([{ t: 5, value: 150, name: 'Cup A', kind: 'champions_meeting' }])
+  })
+})
+
+describe('buildPullSeries', () => {
+  const marker = { index: 0, t: 10, before: 3000, after: 0, excluded: false }
+  const forecast = {
+    start: 0,
+    end: 20,
+    markers: [marker],
+    points: [
+      { t: 0, value: 1500, paid: 450, umaTickets: 4, supportTickets: 7 },
+      { t: 10, value: 3000, paid: 0, umaTickets: 0, supportTickets: 2, marker: 0 },
+      { t: 20, value: -300, paid: 0, umaTickets: 0, supportTickets: 2 },
+    ],
+  } as unknown as CaratForecast
+  const uma = { banner_uma: { banner_timeline: {} } } as unknown as UserPlannedBanner
+  const bar = {
+    marker,
+    pulls: 33,
+    breakdown: { freePulls: 0, tickets: 0, paidPulls: 0, freeCaratPulls: 20 },
+  }
+  const settings = { pullCost: 150, fullPricePaidPulls: true, spendTickets: true }
+
+  it('counts carats at 150 a pull plus each line\'s own tickets', () => {
+    const [first] = buildPullSeries(forecast, [], [uma], settings)
+    // 1,500 free (10) + 450 paid (3) + its tickets.
+    expect(first).toMatchObject({ uma: 17, support: 20 })
+  })
+
+  it('follows the settings: no paid carats, no tickets', () => {
+    const [first] = buildPullSeries(forecast, [], [uma], {
+      ...settings,
+      fullPricePaidPulls: false,
+      spendTickets: false,
+    })
+    expect(first).toMatchObject({ uma: 10, support: 10 })
+  })
+
+  it("puts the row's number on its own line at the dot, and never goes below zero", () => {
+    const series = buildPullSeries(forecast, [bar], [uma], settings)
+    // The uma banner's dot: the row's 33 on the uma line; support stays daily.
+    expect(series[1]).toMatchObject({ uma: 33, support: 22, kind: 'uma' })
+    expect(series[1].bar).toBe(bar)
+    // A carat debt is no pulls, not negative ones.
+    expect(series[2]).toMatchObject({ uma: 0, support: 2 })
   })
 })

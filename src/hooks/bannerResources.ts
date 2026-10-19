@@ -59,6 +59,12 @@ export interface BannerResources {
 	 * which spends paid carats only.
 	 */
 	freeCaratsSpent: number
+	/**
+	 * Paid carats this row's pulls (or steps) commit, the paid twin of
+	 * `freeCaratsSpent`. The forecast chart's pulls lines track the paid
+	 * balance with it.
+	 */
+	paidCaratsSpent: number
 	/** Which resources paid for this banner's reserved copies. */
 	reservedFunding: ReservedFunding
 	/**
@@ -109,6 +115,7 @@ export const EMPTY_BANNER_RESOURCES: BannerResources = Object.freeze({
 	ssrShards: 0,
 	usdSpent: 0,
 	freeCaratsSpent: 0,
+	paidCaratsSpent: 0,
 	ticketsSpent: 0,
 	reservedFunding: Object.freeze({ selectors: 0, crystals: 0, unfunded: 0 }),
 	unpickedSelectorTickets: 0,
