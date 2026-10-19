@@ -899,8 +899,14 @@ function BannerSection({
 
 			{columnPanelCount > 0 &&
 				(showArt ? (
-					<div className={`grid gap-4 xl:items-stretch ${artRowColumns}`}>
-						<div className="min-w-0">
+					// Below xl every template is one stacked column. With BOTH panels
+					// in columns (two tiles or fewer each, nothing banded) the two
+					// share a row from sm instead, the art spanning above them (design
+					// polish item 21a): stacked on a tablet, a lone uma was a single
+					// portrait centred in a 780px box. Phones keep the stack. Literal
+					// class strings, so Tailwind finds them.
+					<div className={`grid gap-4 xl:items-stretch ${columnPanelCount === 2 ? "sm:grid-cols-2" : ""} ${artRowColumns}`}>
+						<div className={`min-w-0 ${columnPanelCount === 2 ? "sm:col-span-2 xl:col-span-1" : ""}`}>
 							{section.image ? (
 								<img
 									src={section.image}
