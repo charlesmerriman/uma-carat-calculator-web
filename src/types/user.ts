@@ -53,6 +53,14 @@ export interface UserStats {
 	spend_tickets_on_banners: boolean
 	discounted_paid_pulls: boolean
 	full_price_paid_pulls: boolean
+	/**
+	 * Take the 50-paid-carat daily pull on every uma / support banner the plan
+	 * has no counted row on, up to its farthest banner (utils/backgroundDailyPulls).
+	 * Off by default. Optional because an API older than the fields doesn't
+	 * send them, and that has to mean off.
+	 */
+	daily_pulls_other_uma_banners?: boolean
+	daily_pulls_other_support_banners?: boolean
 	/** Off by default — planned purchases are budgeting-only until switched on. */
 	include_purchases_in_projection: boolean
 	/** Apply each pack's webstore multiplier. The whole amount stays paid carats. */

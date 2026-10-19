@@ -106,6 +106,12 @@ interface BuildParams {
 	currentPaidCarats?: number
 	currentUmaTickets?: number
 	currentSupportTickets?: number
+	/**
+	 * What the daily pulls on banners outside the plan took (the engine's
+	 * `backgroundSpends`). Paid carats only, each taken off at its `at`. Absent
+	 * means none, which is everyone with both switches off.
+	 */
+	backgroundSpends?: { at: Date; paidCarats: number }[]
 }
 
 /**
@@ -154,6 +160,7 @@ export function buildCaratForecast({
 	currentPaidCarats = 0,
 	currentUmaTickets = 0,
 	currentSupportTickets = 0,
+	backgroundSpends = [],
 }: BuildParams): CaratForecast | null {
 	const { today, now, incomeTo } = projection
 	const income = (at: Date): Balances => {
@@ -187,6 +194,19 @@ export function buildCaratForecast({
 	})
 	if (upcoming.length === 0) return null
 
+	// Background banners' daily pulls: a drop on the paid layer with no dot,
+	// since there is no row to jump to. One already due comes off the start,
+	// like a past banner's spend. The engine has placed each `at` no later than
+	// the first row that includes it, which is what stops the re-anchor below
+	// counting it a second time.
+	const drains: { at: Date; paidCarats: number }[] = []
+	for (const spend of backgroundSpends) {
+		if (spend.paidCarats <= 0) continue
+		if (spend.at < now) offset = { ...offset, paid: offset.paid - spend.paidCarats }
+		else drains.push(spend)
+	}
+	drains.sort((a, b) => a.at.getTime() - b.at.getTime())
+
 	// Time order for the axis; banners ending together keep the engine's order
 	// so their drops stack the way the rows were charged.
 	upcoming.sort(
@@ -210,9 +230,27 @@ export function buildCaratForecast({
 	const points: ForecastPoint[] = [toPoint(today.getTime(), add(offset, income(today)))]
 	const markers: ForecastMarker[] = []
 
+	let nextDrain = 0
+	const placeDrain = () => {
+		const { at, paidCarats } = drains[nextDrain++]
+		const t = at.getTime()
+		points.push(toPoint(t, add(offset, income(at))))
+		offset = { ...offset, paid: offset.paid - paidCarats }
+		points.push(toPoint(t, add(offset, income(at))))
+	}
+
 	let next = 0
 	const placeMarkersUpTo = (limit: number) => {
-		while (next < upcoming.length && upcoming[next].entry.endDate.getTime() <= limit) {
+		for (;;) {
+			const markerT = next < upcoming.length ? upcoming[next].entry.endDate.getTime() : Infinity
+			const drainT = nextDrain < drains.length ? drains[nextDrain].at.getTime() : Infinity
+			if (Math.min(markerT, drainT) > limit) return
+			// A drop sharing an instant with a dot goes first: that row's own
+			// numbers already have it taken off.
+			if (drainT <= markerT) {
+				placeDrain()
+				continue
+			}
 			const { entry } = upcoming[next++]
 			const t = entry.endDate.getTime()
 			const row = resources[entry.index]

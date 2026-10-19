@@ -78,8 +78,12 @@ today = midnight UTC          // the sheet's $AG$3 (TODAY) — measures spans
 now   = the live instant      // the sheet's $AG$2 (NOW)  — filters reward instants
 
 sort banners by (start day, display position)
+merge in the background banners (below), after the rows on a shared start day
 spent = { free, paid, umaTickets, supportTickets, ssrCrystals } = 0
 
+for each background banner B:                      // only with its switch on
+    paid  = max(0, startingPaid + income(B.end).paid - spent.paid)
+    spent.paid += min(B.days, floor(paid / 50)) * 50
 for each banner:
     E        = its end date
     income   = cumulativeIncome(today, now, E)     // absolute, order-independent
@@ -105,6 +109,41 @@ day.
 
 **Results are written to each banner's display slot**, so `bannerResources[i]`
 always belongs to `userPlannedBannerData[i]` regardless of pass order.
+
+### Daily pulls on banners outside the plan
+
+Two gear-menu switches, both **off** by default: `daily_pulls_other_uma_banners`
+and `daily_pulls_other_support_banners` (owner, 2026-10-19). They are for a whale
+who takes the 50-paid-carat daily pull on every banner, wanted or not.
+`utils/backgroundDailyPulls.ts` picks the **background banners**; the pass charges them.
+
+- **Which banners:** every catalogue banner of a switched-on kind with no
+  *counted* row on it. An excluded row does not count, so its banner gets the
+  background pull (it no longer spends through Discounted Paid Pulls). A counted
+  row's own daily pull stays with Discounted Paid Pulls and the row's options, so
+  the two never overlap. Every banner has its own daily pull, so two uma banners
+  running at once are two pulls a day. Step-ups have none.
+- **How many days:** from **today** (not the banner's start, unlike a planned row:
+  the paid balance typed in already reflects the days gone) to the end of the
+  plan's farthest counted banner, clipped to the banner's own window.
+- **How much:** `min(days, paid available / 50)`, paid carats only. A background
+  banner never makes a debt; it takes fewer pulls when paid carats run low.
+- **Order:** by start day with the rows; on a shared start day the plan's rows
+  are charged first.
+- **On the chart:** `useBannerProjection` returns them as `backgroundSpends`, each
+  with an `at`: its end, or the end of the first row charged after it if that is
+  earlier. The chart drops the paid layer there. Drawing it later would count it
+  twice, because that row's dot already has it taken off.
+
+Worked example (1,000 paid carats, no paid income, one planned uma banner X on
+days 20 to 30, uma switch on):
+
+| Days | Banner | Pulls | Paid left |
+|---|---|---|---|
+| 0 to 9 | uma A (no row) | 10 | 500 |
+| 10 to 19 | uma C (no row) | 10 | 0 |
+| 20 to 30 | X (planned) | its discount pulls find 0 | 0 |
+| 31+ | uma F | past the horizon | 0 |
 
 ---
 
@@ -568,6 +607,8 @@ of its own:
   engine, the line meets every row with no step at all.
 - **An ended banner** is not drawn, but its spend comes off the starting balance,
   because the engine charged it before every later row.
+- **Background daily pulls** (banners outside the plan, see above) drop the paid
+  layer at their `at`, with no dot.
 
 Paid carats, tickets and step-up spend (paid only) are not on the chart: it is one
 series on one axis, and its job is the free balance the rows go red on.

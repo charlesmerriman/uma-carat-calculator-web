@@ -48,6 +48,9 @@ export const DEFAULT_GUEST_STATS: UserStats = {
 	spend_tickets_on_banners: true,
 	discounted_paid_pulls: true,
 	full_price_paid_pulls: true,
+	// Off, like the backend: daily pulls on banners outside the plan are opt-in.
+	daily_pulls_other_uma_banners: false,
+	daily_pulls_other_support_banners: false,
 	// Off so planned purchases stay budgeting-only until explicitly opted into,
 	// and estimates never move on their own.
 	include_purchases_in_projection: false,

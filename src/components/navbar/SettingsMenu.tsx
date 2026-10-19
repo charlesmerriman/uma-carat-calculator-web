@@ -10,9 +10,12 @@ import type { CalculationConstants, UserStats } from "../../types"
 /** The boolean-valued keys of UserStats — the only fields these toggles set. */
 // `-?` strips the optional marker while mapping. Without it, UserStats'
 // optional fields (the shop ticket counts) leak `undefined` into this union
-// and it stops being usable as an index.
+// and it stops being usable as an index. The value is read off
+// `Required<UserStats>` for the same reason: an optional boolean (the daily
+// pulls on other banners) is `boolean | undefined` on UserStats itself, which
+// does not extend `boolean`, and would drop out of the union.
 type BooleanStatKey = {
-	[K in keyof UserStats]-?: UserStats[K] extends boolean ? K : never
+	[K in keyof UserStats]-?: Required<UserStats>[K] extends boolean ? K : never
 }[keyof UserStats]
 
 /**
@@ -24,11 +27,16 @@ type BooleanStatKey = {
  * rather than a fixed string: any blurb quoting a number the content editor can
  * change has to read it from the API, or it silently goes stale the first time
  * that constant moves (Misc Earnings did exactly that, 1,800 -> 2,700/month).
+ *
+ * `defaultOn: false` marks a setting that starts OFF. It decides how a field
+ * the API didn't send (one newer than the deployed backend) reads, which has
+ * to match what the projection assumes for it.
  */
 const SETTINGS: {
 	key: BooleanStatKey
 	label: string
 	description: string | ((constants: CalculationConstants) => string)
+	defaultOn?: boolean
 }[] = [
 	{
 		key: "spend_tickets_on_banners",
@@ -53,6 +61,23 @@ const SETTINGS: {
 		key: "full_price_paid_pulls",
 		label: "Full-Price Paid Pulls",
 		description: "Spend paid carats on normal 150-carat pulls.",
+	},
+	// The two below cover the banners the plan has NO row on (an excluded row
+	// counts as none); the two above keep the rows the plan does have. See
+	// utils/backgroundDailyPulls.
+	{
+		key: "daily_pulls_other_uma_banners",
+		label: "Daily Pull on Every Uma Banner",
+		description: (k) =>
+			`Take the ${k.discounted_pull_cost_carats}-carat daily pull on uma banners you aren't planning on too, up to your last planned banner. Paid carats only.`,
+		defaultOn: false,
+	},
+	{
+		key: "daily_pulls_other_support_banners",
+		label: "Daily Pull on Every Support Banner",
+		description: (k) =>
+			`Take the ${k.discounted_pull_cost_carats}-carat daily pull on support banners you aren't planning on too, up to your last planned banner. Paid carats only.`,
+		defaultOn: false,
 	},
 ]
 
@@ -119,7 +144,7 @@ export const SettingsMenu = () => {
 						Projection Settings
 					</h3>
 					<div className="flex flex-col gap-1">
-						{SETTINGS.map(({ key, label, description }) => (
+						{SETTINGS.map(({ key, label, description, defaultOn = true }) => (
 							<div
 								key={key}
 								className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 rounded-md px-1 py-2 hover:bg-gray-700/50"
@@ -132,11 +157,10 @@ export const SettingsMenu = () => {
 								</div>
 								<div className="shrink-0 pt-0.5">
 									<ToggleSwitch
-										// Every setting in this panel is ON by default, so a
-										// field the API didn't send (one newer than the
-										// deployed backend) has to read as on. `!!` would
-										// show it off while the projection treats it as on.
-										checked={userStatsData[key] !== false}
+										// A field the API didn't send (one newer than the
+										// deployed backend) reads as the setting's default,
+										// the same thing the projection assumes for it.
+										checked={defaultOn ? userStatsData[key] !== false : userStatsData[key] === true}
 										onChange={(checked) =>
 											setUserStatsData({ ...userStatsData, [key]: checked })
 										}

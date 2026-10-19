@@ -244,6 +244,42 @@ function stepUpBanner(id: number, startDay: number, endDay: number, steps: numbe
   }
 }
 
+describe('buildCaratForecast with background daily pulls', () => {
+  // Two rows, and a background banner the engine charged BEFORE both of them
+  // (it started first), so both rows' paid numbers already have its 300 off.
+  // The engine dates it at the first row's end, day 10.
+  const paidRow = (freeCarats: number, paidCarats: number): BannerResources => ({
+    ...EMPTY_BANNER_RESOURCES,
+    freeCarats,
+    paidCarats,
+  })
+  const build = (at: Date) =>
+    buildCaratForecast({
+      projection: fakeProjection,
+      walkOrder: [entry(0, 0, 10), entry(1, 11, 20)],
+      resources: [paidRow(1000, 700), paidRow(2000, 700)],
+      currentFreeCarats: 0,
+      currentPaidCarats: 1000,
+      backgroundSpends: [{ at, paidCarats: 300 }],
+    })!
+
+  it('drops the paid layer at the spend, once, with no correction at the rows', () => {
+    const forecast = build(day(10))
+    const paidAt = (t: number) => forecast.points.filter((p) => p.t === t).map((p) => p.paid)
+    expect(paidAt(day(5).getTime())).toEqual([1000])
+    // Arrival, the drop, then the row's dot meeting it: no re-anchor step.
+    expect(paidAt(day(10).getTime())).toEqual([1000, 700, 700])
+    // Not taken off a second time later on.
+    expect(forecast.points[forecast.points.length - 1].paid).toBe(700)
+  })
+
+  it("takes a spend that is already due off the starting balance", () => {
+    const forecast = build(day(-1))
+    expect(forecast.points[0].paid).toBe(700)
+    expect(forecast.points[forecast.points.length - 1].paid).toBe(700)
+  })
+})
+
 describe('buildCaratForecast with the real engine', () => {
   it('meets every row without a correction step', () => {
     const userStatsData = {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useBannerResources } from '../hooks/useBannerResources'
+import { projectBannerResources, useBannerResources } from '../hooks/useBannerResources'
 import { PULL_COST_CARATS, DEFAULT_CONSTANTS } from '../constants/gameConstants'
 import type {
   UserStats,
@@ -14,6 +14,8 @@ import type {
   AnniversaryEvent,
   UserPlannedPurchase,
   IncomeLedgerRow,
+  BannerUma,
+  BannerSupport,
 } from '../types'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -832,5 +834,134 @@ describe('picked selectors', () => {
     })
 
     expect(rows[2].unpickedSelectorTickets).toBe(0)
+  })
+})
+
+// ── Daily pulls on banners outside the plan ──────────────────────────────────
+
+describe('daily pulls on banners outside the plan', () => {
+  // The catalogue entries, built from the planned-row fixtures so a row and
+  // its catalogue banner share an id the way the API's do.
+  const umaCatalogue = (id: number, startDay: number, endDay: number) =>
+    umaBanner(id, startDay, endDay).banner_uma!
+  const supportCatalogue = (id: number, startDay: number, endDay: number): BannerSupport => ({
+    id,
+    name: `Support Banner ${id}`,
+    admin_comments: '',
+    support_cards: [],
+    free_pulls: 0,
+    is_recommended: false,
+    banner_timeline: timeline(100 + id, startDay, endDay),
+  })
+
+  function project(
+    banners: UserPlannedBanner[],
+    stats: Partial<UserStats>,
+    catalogue: { uma?: BannerUma[]; support?: BannerSupport[] }
+  ) {
+    return projectBannerResources({
+      userStatsData: { ...zeroStats, ...stats },
+      ...noIncome,
+      userPlannedBannerData: banners,
+      umaBannerData: catalogue.uma ?? [],
+      supportBannerData: catalogue.support ?? [],
+    })
+  }
+
+  // The worked example agreed with the owner: 1,000 paid carats, one planned
+  // banner X (days 20 to 30), and banners around it the plan has no row on.
+  const x = umaBanner(1, 20, 30)
+  const catalogue = {
+    uma: [umaCatalogue(2, 0, 9), umaCatalogue(3, 10, 19), umaCatalogue(1, 20, 30), umaCatalogue(4, 31, 40)],
+    support: [supportCatalogue(10, 0, 9)],
+  }
+
+  it('changes nothing while both switches are off, which is the default', () => {
+    const off = project([x], { current_paid_carat: 1000 }, catalogue)
+    expect(off.backgroundSpends).toEqual([])
+    expect(off.rows[0].paidCarats).toBe(1000)
+  })
+
+  it('spends 50 paid carats a day on each uma banner outside the plan', () => {
+    const { rows, backgroundSpends } = project(
+      [x],
+      { current_paid_carat: 1000, daily_pulls_other_uma_banners: true },
+      catalogue
+    )
+    // A: 10 days, C: 10 days. The support banner is not switched on, the
+    // planned banner X takes no background pull, and banner 4 opens after X
+    // ends, past the horizon.
+    expect(backgroundSpends.map((s) => [s.bannerId, s.pulls])).toEqual([[2, 10], [3, 10]])
+    expect(rows[0].paidCarats).toBe(0)
+  })
+
+  it('stops when the paid carats run out, and never touches free carats', () => {
+    const { rows, backgroundSpends } = project(
+      [x],
+      {
+        current_paid_carat: 1000,
+        current_carat: 5000,
+        daily_pulls_other_uma_banners: true,
+        daily_pulls_other_support_banners: true,
+      },
+      catalogue
+    )
+    // A and the support banner share days 0 to 9 and take the 1,000 between
+    // them, so C, ten days later, has nothing left to pull with.
+    const pulls = Object.fromEntries(backgroundSpends.map((s) => [`${s.kind}${s.bannerId}`, s.pulls]))
+    expect(pulls).toEqual({ uma2: 10, support10: 10, uma3: 0 })
+    expect(rows[0].paidCarats).toBe(0)
+    // Free carats are what they would be with both switches off.
+    const off = project([x], { current_paid_carat: 1000, current_carat: 5000 }, catalogue)
+    expect(rows[0].freeCarats).toBe(off.rows[0].freeCarats)
+  })
+
+  it("gives an excluded row's banner the background pull, since the row spends nothing", () => {
+    const excluded = { ...umaBanner(5, 5, 9), excluded_from_projection: true }
+    const { backgroundSpends } = project(
+      [excluded, x],
+      { current_paid_carat: 10000, daily_pulls_other_uma_banners: true },
+      { uma: [umaCatalogue(5, 5, 9), umaCatalogue(1, 20, 30)] }
+    )
+    expect(backgroundSpends.map((s) => [s.bannerId, s.pulls])).toEqual([[5, 5]])
+  })
+
+  it('counts from today on a running banner and stops at the last planned banner', () => {
+    const { backgroundSpends } = project(
+      [x],
+      { current_paid_carat: 10000, daily_pulls_other_uma_banners: true },
+      // One started five days ago; one runs past X's end on day 30.
+      { uma: [umaCatalogue(6, -5, 4), umaCatalogue(7, 25, 40)] }
+    )
+    expect(backgroundSpends.map((s) => [s.bannerId, s.days])).toEqual([[6, 5], [7, 6]])
+  })
+
+  it('lets a planned row starting the same day take the paid carats first', () => {
+    const planned = umaBanner(1, 20, 30, 10)
+    const { rows, backgroundSpends } = project(
+      [planned],
+      {
+        current_paid_carat: 500,
+        discounted_paid_pulls: true,
+        full_price_paid_pulls: false,
+        daily_pulls_other_support_banners: true,
+      },
+      { support: [supportCatalogue(10, 20, 30)] }
+    )
+    expect(rows[0].paidCaratsSpent).toBe(500)
+    expect(backgroundSpends[0].pulls).toBe(0)
+  })
+
+  it('dates a spend no later than the first row measured after it', () => {
+    // A long background banner (days 0 to 30) is charged before X (5 to 15)
+    // and Y (16 to 40), so the chart must take it off by X's end.
+    const plan = [umaBanner(1, 5, 15), umaBanner(8, 16, 40)]
+    const { backgroundSpends } = project(
+      plan,
+      { current_paid_carat: 10000, daily_pulls_other_uma_banners: true },
+      { uma: [umaCatalogue(9, 0, 30)] }
+    )
+    expect(backgroundSpends[0].endDate.toISOString()).toBe(daysFromNow(30).replace('Z', '.000Z'))
+    expect(backgroundSpends[0].at.toISOString()).toBe(daysFromNow(15).replace('Z', '.000Z'))
   })
 })
