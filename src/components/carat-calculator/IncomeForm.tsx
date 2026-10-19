@@ -24,6 +24,10 @@ interface RankOption<T> {
 
 // ── Shared Styles ─────────────────────────────────────────────────────
 
+// The rank selects' empty text. react-select's own "Select..." names no
+// thing; this names the one thing all four of them want.
+const RANK_PLACEHOLDER = "Choose a rank"
+
 // Colors reference the theme's CSS variables (the same gray tokens the Tailwind
 // utilities use) so these rank selects repaint with the active [data-theme]
 // instead of being locked to the dark palette. gray-700 = surface, gray-600 =
@@ -195,6 +199,10 @@ const PassToggle = ({
 	</div>
 )
 
+// Section icons keep the brand tint; the headings beside them are gray. The
+// panel had the title, five headings, every figure and the primary button all
+// in brand gold, so nothing stood out (design-polish item 9, 2026-10-18). Gold
+// is for the one primary action, the active nav tab and these small marks.
 const iconCls = "w-4 h-4 shrink-0 text-brand"
 
 /**
@@ -341,7 +349,7 @@ export const IncomeForm = () => {
 				aria-expanded={isOpen}
 				className="flex w-full cursor-pointer items-center justify-between gap-2 border-b border-gray-700 bg-gray-800/50 px-4 py-3 text-left transition-colors hover:bg-gray-800/80 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
 			>
-				<span className="font-display min-w-0 truncate text-base font-semibold text-brand uppercase tracking-wide">Income &amp; Resources</span>
+				<span className="font-display min-w-0 truncate text-base font-semibold text-gray-100 uppercase tracking-wide">Income &amp; Resources</span>
 				{/* A title with a chevron beside it reads as a title. The word and the
 				    boxed chevron together read as a control — and this panel starts
 				    CLOSED on a phone, so the header is all there is to go on: if it
@@ -377,7 +385,7 @@ export const IncomeForm = () => {
 							<div className="grid grid-cols-1 gap-4 @income-wide:grid-cols-[3fr_auto_2fr]">
 								{/* Competitive Progress */}
 								<div className="min-w-0">
-									<h3 className="font-display font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Trophy className={iconCls} />
 										Competitive Progress
 									</h3>
@@ -402,6 +410,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												// Controlled, not defaultValue: userStatsData can be replaced
@@ -445,6 +454,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												value={
@@ -484,6 +494,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												value={
@@ -523,6 +534,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												value={
@@ -571,7 +583,7 @@ export const IncomeForm = () => {
 
 								{/* Purchases */}
 								<div className="flex min-w-0 flex-col">
-									<h3 className="font-display font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Gift className={iconCls} />
 										Purchases
 									</h3>
@@ -712,7 +724,7 @@ export const IncomeForm = () => {
 
 						{/* Current Resources */}
 						<div className="border-t border-gray-700 p-3 @income-wide:p-5 @income-wide:border-t-0 @income-wide:border-l">
-							<h3 className="font-display font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+							<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 								<Diamond className={iconCls} />
 								Current Resources
 							</h3>
@@ -778,7 +790,7 @@ export const IncomeForm = () => {
 					{/* ── Bottom row: Average Monthly Income + Uncap Crystals ── */}
 					<div className="grid grid-cols-1 border-t border-gray-700 @income-wide:grid-cols-[2fr_1fr]">
 						<div className="p-3 @income-wide:p-5 flex flex-col">
-							<h3 className="font-display font-semibold text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
+							<h3 className="font-display font-semibold text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
 								<TrendingUp className={iconCls} />
 								Average Monthly Income
 							</h3>
@@ -800,7 +812,7 @@ export const IncomeForm = () => {
 										<span className="min-w-0 text-xs text-gray-400 leading-tight @income-wide:text-center">{item.label}</span>
 										<div className="flex shrink-0 items-center gap-1.5 @income-wide:w-full @income-wide:justify-center">
 											<span className="text-brand">{item.icon}</span>
-											<span className="text-lg font-bold text-brand @income-wide:text-2xl">{item.value.toLocaleString()}</span>
+											<span className="text-lg font-bold text-gray-100 @income-wide:text-2xl">{item.value.toLocaleString()}</span>
 										</div>
 									</div>
 								))}

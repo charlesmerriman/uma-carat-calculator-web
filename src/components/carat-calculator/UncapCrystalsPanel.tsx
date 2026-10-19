@@ -110,7 +110,7 @@ export const UncapCrystalsPanel = () => {
 		// Capped and centred while the income panel is compact, matching the
 		// blocks above it — see the rank grid in IncomeForm.
 		<div className="mx-auto max-w-[34rem] p-4 @income-wide:max-w-none @income-wide:p-5">
-			<h3 className="font-display font-semibold text-sm text-brand mb-2 flex items-center justify-center gap-1.5">
+			<h3 className="font-display font-semibold text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5">
 				<Gem className={iconCls} />
 				Uncap Crystals
 			</h3>
