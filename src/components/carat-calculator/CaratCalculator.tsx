@@ -1,5 +1,5 @@
 import type React from "react"
-import { Fragment, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
@@ -126,6 +126,13 @@ export const CaratCalculator: React.FC = () => {
 	// Above the rows or below them (the default), remembered per device.
 	const forecastPosition = useForecastPosition()
 
+	// The row that just landed from staging, by its key (its tempId: a row
+	// confirmed this session has no server id yet). It wears .row-arrival, a
+	// one-off brand flash, so the eye can follow it from the staging area to
+	// wherever the date sort put it, often far down the sheet. Cleared when the
+	// flash ends, so the class (and its position: relative) never lingers.
+	const [arrivedKey, setArrivedKey] = useState<number | null>(null)
+
 	if (!userStatsData) {
 		return <div>Loading...</div>
 	}
@@ -178,6 +185,7 @@ export const CaratCalculator: React.FC = () => {
 
 		setUserPlannedBannerData(updated)
 		setStagedBanners((prev) => prev.filter((b) => b.tempId !== tempId))
+		setArrivedKey(tempId)
 	}
 
 	const handleDiscardStagedBanner = (tempId: number): void => {
@@ -450,14 +458,25 @@ export const CaratCalculator: React.FC = () => {
 													const resources =
 														bannerResources[plannerRow.index] ?? EMPTY_BANNER_RESOURCES
 
+													const rowKey = plannedBanner.id ?? plannedBanner.tempId
+													const justArrived = rowKey !== undefined && rowKey === arrivedKey
+
 													return (
 														<motion.div
-															key={plannedBanner.id ?? plannedBanner.tempId}
+															key={rowKey}
 															layout
 															initial={{ opacity: 0, y: -6 }}
 															animate={{ opacity: 1, y: 0 }}
 															exit={{ opacity: 0, y: -6 }}
 															transition={{ duration: 0.18 }}
+															className={justArrived ? "row-arrival" : undefined}
+															onAnimationEnd={(event) => {
+																// CSS animationend bubbles up from every row's own
+																// animations; only the flash's own end clears it.
+																if (justArrived && event.animationName === "row-arrival") {
+																	setArrivedKey(null)
+																}
+															}}
 														>
 															<BannerRow
 																plannedBanner={plannedBanner}

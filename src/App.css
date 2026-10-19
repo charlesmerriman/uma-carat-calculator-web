@@ -1089,3 +1089,50 @@ input[type="number"] {
 	}
 }
 
+
+/* A PLANNER ROW JUST ADDED FROM STAGING (CaratCalculator's arrivedKey).
+
+   A brand tint and edge that fade out over 1.6s, so the eye can follow the row
+   to wherever the date sort put it. Drawn on ::after so it sits over the row's
+   own background; the wrapper underneath has none. Rounded like the phone card
+   and square on the desktop table, matching each form of the row.
+
+   Only when the visitor has not asked for reduced motion. Under reduced motion
+   nothing here applies, animationend never fires and the class stays on the
+   row until the next arrival: harmless, as it then styles nothing. */
+@media (prefers-reduced-motion: no-preference) {
+	.row-arrival {
+		position: relative;
+	}
+
+	.row-arrival::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		border-radius: var(--radius-xl);
+		box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-brand) 75%, transparent);
+		background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+		opacity: 0;
+		animation: row-arrival 1.6s ease-out;
+	}
+
+	/* The sheet's table form (the `@banner-table:` breakpoint). A container
+	   query cannot read a CSS variable, so this repeats
+	   --container-banner-table (index.css); move the two together. */
+	@container (min-width: 76.625rem) {
+		.row-arrival::after {
+			border-radius: 0;
+		}
+	}
+}
+
+@keyframes row-arrival {
+	0%,
+	25% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
