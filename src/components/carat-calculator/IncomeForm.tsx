@@ -377,8 +377,15 @@ export const IncomeForm = () => {
 				style={{ overflow: "hidden" }}
 			>
 				<div className="bg-gray-800">
-					{/* ── Top row: Income Sources + Current Resources ── */}
-					<div className="grid grid-cols-1 @income-wide:grid-cols-[2fr_1fr]">
+					{/* ── Top row: Income Sources + Current Resources ──
+					    Two columns from @3xl (48rem of panel) up to @income-wide, where
+					    the three-track desktop grid takes over (design polish item
+					    19a). Without the middle step a 1024 to 1258px window (a
+					    landscape tablet, a small laptop) drew the whole panel as one
+					    centred phone-width column under a full desktop navbar. In the
+					    middle layout the left column is ranks over purchases and the
+					    right one is resources, each block in its compact form. */}
+					<div className="grid grid-cols-1 @3xl:grid-cols-2 @income-wide:grid-cols-[2fr_1fr]">
 						{/* Related settings share one bordered surface; dividers describe the
 					    relationship without turning each group into its own card. */}
 						<div className="p-3 @income-wide:p-5">
@@ -400,9 +407,10 @@ export const IncomeForm = () => {
 									    stretched that far gives you a 1140px-wide rank select and a
 									    hand's width of dead space between a label and its input. 34rem
 									    is about what the widest phone gives these blocks, so capping
-									    there is the same layout rather than a wider variant of it — the
-									    whole point being that there is no third layout. The cap lifts
-									    at `@income-wide:`, where the real desktop grid takes over. */}
+									    there is the same layout rather than a wider variant of it. From
+									    @3xl the block sits in half the panel (the middle layout, see the
+									    top row), and the cap still fits it. The cap lifts at
+									    `@income-wide:`, where the real desktop grid takes over. */}
 									<div className="mx-auto grid w-full max-w-[34rem] grid-cols-1 gap-y-2 @income-wide:max-w-none @income-wide:grid-cols-[auto_auto_1fr_auto] @income-wide:items-center @income-wide:gap-x-2 @income-wide:gap-y-3">
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<Sword className={iconCls} />
@@ -723,7 +731,7 @@ export const IncomeForm = () => {
 						</div>
 
 						{/* Current Resources */}
-						<div className="border-t border-gray-700 p-3 @income-wide:p-5 @income-wide:border-t-0 @income-wide:border-l">
+						<div className="border-t border-gray-700 p-3 @3xl:border-t-0 @3xl:border-l @income-wide:p-5">
 							<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 								<Diamond className={iconCls} />
 								Current Resources
@@ -788,7 +796,7 @@ export const IncomeForm = () => {
 					</div>
 
 					{/* ── Bottom row: Average Monthly Income + Uncap Crystals ── */}
-					<div className="grid grid-cols-1 border-t border-gray-700 @income-wide:grid-cols-[2fr_1fr]">
+					<div className="grid grid-cols-1 border-t border-gray-700 @3xl:grid-cols-2 @income-wide:grid-cols-[2fr_1fr]">
 						<div className="p-3 @income-wide:p-5 flex flex-col">
 							<h3 className="font-display font-semibold text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
 								<TrendingUp className={iconCls} />
@@ -800,9 +808,10 @@ export const IncomeForm = () => {
 							    across. Same markup either way: the tile is a flex box that runs
 							    across when it's a row and down when it's a tile.
 
-							    There is no 2-column middle step any more. It only ever appeared
-							    between 640px and 1280px of VIEWPORT, which is the band this panel
-							    is now compact in end to end. */}
+							    Rows, not tiles, in the 2-column middle layout too (@3xl up to
+							    @income-wide): five tiles across a half-width column would be
+							    about 100px each. The old 2-column step keyed to 640 to 1280px
+							    of VIEWPORT is gone; the middle layout is keyed to the panel. */}
 							<div className="mx-auto w-full max-w-[34rem] flex-1 grid grid-cols-1 overflow-hidden rounded-lg border border-gray-700 @income-wide:max-w-none @income-wide:grid-cols-5">
 								{monthlyItems.map((item) => (
 									<div
@@ -819,7 +828,7 @@ export const IncomeForm = () => {
 							</div>
 						</div>
 
-						<div className="border-t border-gray-700 @income-wide:border-t-0 @income-wide:border-l">
+						<div className="border-t border-gray-700 @3xl:border-t-0 @3xl:border-l">
 							<UncapCrystalsPanel />
 						</div>
 					</div>
