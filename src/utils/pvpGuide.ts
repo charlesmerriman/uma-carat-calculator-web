@@ -284,17 +284,6 @@ export function familySources(sources: Map<number, string[]>, skill: PvpSkillRef
 	return found.length > 0 ? found : null
 }
 
-/**
- * True when a white skill has a gold version to show a ◎ badge for. A ◎ white
- * is not one: Sunny Days ○ has a ◎ and no gold, so no badge.
- */
-export function hasGoldVersion(skill: PvpSkillRef): boolean {
-	return (
-		skill.rarity === WHITE_SKILL_RARITY &&
-		skill.versions.some((version) => version.rarity === GOLD_SKILL_RARITY && !version.is_evolved)
-	)
-}
-
 /** One recommended uma or card in the team builder's Guide picks panel. */
 export interface GuidePick<Ref> {
 	ref: Ref
