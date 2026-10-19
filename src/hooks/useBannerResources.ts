@@ -27,34 +27,17 @@
  */
 
 import { useMemo } from "react"
-import {
-	cumulativeClubRankCarats,
-	cumulativeDailyCarats,
-	cumulativeDailyCaratPack,
-	cumulativeLoginAndGiftCarats,
-	cumulativeMiscEarningsCarats,
-	cumulativeMonthlyShopTickets,
-	cumulativeTeamTrialsCarats,
-	cumulativeTrainingPassIncome,
-} from "../utils/cumulativeIncome"
-import {
-	cumulativeEventRewards,
-	cumulativeRaceRewards,
-	cumulativeThroughoutCarats,
-	parseLedger,
-} from "../utils/incomeLedger"
-import { startOfUtcDay, utcDaysBetween } from "../utils/utcDates"
+import { createIncomeProjection, projectionWalkOrder } from "../utils/incomeProjection"
+import { utcDaysBetween } from "../utils/utcDates"
 import {
 	applyPullStrategy,
 	applyStepUpStrategy,
 	allocateReservedCopies,
 	plannedBannerTarget,
-	plannedBannerTimeline,
 	plannedPulls,
 	plannedSteps,
 } from "../utils/bannerHelpers"
 import type { PullStrategyResult } from "../utils/bannerHelpers"
-import { purchaseCarats } from "../utils/campaignPurchases"
 import { isExcludedFromProjection, rowSpendSettings } from "../utils/rowOptions"
 import { addSelectorTickets, isCardSelectable } from "../utils/selectorTickets"
 import type { SelectorTicketBucket } from "../utils/selectorTickets"
@@ -115,70 +98,20 @@ export function useBannerResources({
 			() => EMPTY_BANNER_RESOURCES
 		)
 
-		// Two anchors, and they are NOT interchangeable — the sheet keeps them
-		// apart too. `today` (its $AG$3, TODAY) measures spans, so every estimate
-		// on a given calendar day is identical no matter when the page is opened.
-		// `now` (its $AG$2, NOW) filters reward instants: an event that already
-		// opened today has paid out, and its carats are in the balance the user
-		// typed in.
-		const now = new Date()
-		const today = startOfUtcDay(now)
-
-		const ledger = parseLedger(incomeLedger)
-
-		const clubRank = clubRankData.find((r) => r.id === userStatsData.club_rank)
-		const teamTrialsRank = teamTrialsRankData.find(
-			(r) => r.id === userStatsData.team_trials_rank
-		)
-		const championsMeetingRank = championsMeetingRankData.find(
-			(r) => r.id === userStatsData.champions_meeting_rank
-		)
-		const leagueOfHeroesRank = leagueOfHeroesRankData.find(
-			(r) => r.id === userStatsData.league_of_heroes_rank
-		)
-
-		// Campaign purchases, resolved to the instant they are credited: the
-		// campaign's MAIN part start — the anniversary itself, not the Part 1
-		// run-up that opens the campaign, because that is when the packs go on
-		// sale. Its SELECTOR TICKETS are the exception and are banked up front;
-		// see the note below them.
-		const productsById = new Map(
-			anniversaryEventData.flatMap((event) =>
-				event.products.map((product) => [product.id, { product, event }] as const)
-			)
-		)
-		const purchaseCredits = userStatsData.include_purchases_in_projection
-			? userPlannedPurchaseData.flatMap((purchase) => {
-					const entry = productsById.get(purchase.product)
-					const startDate =
-						entry?.event.main_start_date ?? entry?.event.start_date
-					if (!entry || !startDate) return []
-					const quantity = Math.max(0, purchase.quantity)
-					if (quantity === 0) return []
-					const { product } = entry
-					// The pack's own carats are paid; the webstore bonus on top is
-					// granted as FREE carats. Split here rather than folding the
-					// multiplier into paidCarats, or the bonus would silently
-					// enlarge the balance a step-up is allowed to spend.
-					const { paidCarats, freeCarats } = purchaseCarats(
-						product, quantity, userStatsData.webstore_bonus
-					)
-					return [{
-						creditAt: new Date(startDate),
-						productType: product.product_type,
-						jpCutoff: product.jp_cutoff_date,
-						// The card picked for a selector on the Selectors page. The
-						// serializer sends at most one of the two (a check constraint
-						// guarantees it), and neither for a carat pack.
-						targetCardId:
-							purchase.target_uma ?? purchase.target_support ?? null,
-						paidCarats,
-						freeCarats,
-						usd: product.usd_cost * quantity,
-						quantity,
-					}]
-				})
-			: []
+		// The income side (the two anchors, the campaign credits and
+		// `incomeTo`) lives in utils/incomeProjection, because the forecast
+		// chart reads the very same function. See that module for the model.
+		const { today, purchaseCredits, incomeTo } = createIncomeProjection({
+			userStatsData,
+			clubRankData,
+			teamTrialsRankData,
+			championsMeetingRankData,
+			leagueOfHeroesRankData,
+			anniversaryEventData,
+			userPlannedPurchaseData,
+			incomeLedger,
+			constants,
+		})
 
 		// Selector tickets are banked UP FRONT rather than credited at their
 		// campaign's date — unlike the paid carats from the very same purchase.
@@ -222,131 +155,8 @@ export function useBannerResources({
 			}
 		}
 
-		/**
-		 * Everything the user will have earned between today and `end`, before
-		 * any spending. A pure function of `end` — nothing about the rest of the
-		 * plan reaches it, which is the property the whole rewrite is for.
-		 */
-		const incomeTo = (end: Date) => {
-			const events = cumulativeEventRewards(ledger, now, end)
-			// Valued per event, not count x rank amount: an event can pay below
-			// the user's rank (League of Heroes #1 only ran to Platinum 1).
-			const cmRewards = cumulativeRaceRewards(
-				ledger, "champions_meeting", today, end,
-				championsMeetingRank, championsMeetingRankData
-			)
-			const lohRewards = cumulativeRaceRewards(
-				ledger, "league_of_heroes", today, end,
-				leagueOfHeroesRank, leagueOfHeroesRankData
-			)
-			const pack = userStatsData.daily_carat
-				? cumulativeDailyCaratPack(today, end, constants)
-				: { freeCarats: 0, paidCarats: 0 }
-			const pass = cumulativeTrainingPassIncome(
-				today, end, userStatsData.training_pass, constants
-			)
-			const shop = userStatsData.monthly_shop_tickets
-				? cumulativeMonthlyShopTickets(today, end, constants, {
-						uma: userStatsData.shop_uma_tickets_bought,
-						support: userStatsData.shop_support_tickets_bought,
-				  })
-				: { umaTickets: 0, supportTickets: 0 }
-
-			// One pass over the campaign credits: free carats, paid carats and
-			// USD all come off the same rows and share the same window test, so
-			// splitting them across two loops would only invite the two filters
-			// to drift apart.
-			let purchaseFree = 0
-			let purchasePaid = 0
-			let purchaseUsd = 0
-			for (const credit of purchaseCredits) {
-				if (credit.creditAt < now || credit.creditAt > end) continue
-				purchaseFree += credit.freeCarats
-				purchasePaid += credit.paidCarats
-				purchaseUsd += credit.usd
-			}
-
-			const freeCarats =
-				events.carats +
-				cumulativeThroughoutCarats(ledger, now, end, constants) +
-				cmRewards.carats +
-				lohRewards.carats +
-				cumulativeDailyCarats(today, end, constants) +
-				cumulativeTeamTrialsCarats(today, end, teamTrialsRank?.income_amount ?? 0) +
-				cumulativeClubRankCarats(today, end, clubRank?.income_amount ?? 0) +
-				cumulativeLoginAndGiftCarats(today, end, constants) +
-				(userStatsData.misc_earnings
-					? cumulativeMiscEarningsCarats(today, end, constants)
-					: 0) +
-				pack.freeCarats +
-				pass.freeCarats +
-				purchaseFree
-
-			// A campaign pack's own carats are PAID — they were bought, so they
-			// land in the balance that funds discounted pulls and step-ups. Its
-			// webstore bonus is free and is summed into `freeCarats` above.
-			// Credited at an absolute instant, never per-window.
-			const paidCarats = pack.paidCarats + pass.paidCarats + purchasePaid
-			const usdSpent = purchaseUsd
-
-			const umaTickets =
-				events.umaTickets +
-				cmRewards.umaTickets +
-				lohRewards.umaTickets +
-				shop.umaTickets +
-				pass.umaTickets
-			const supportTickets =
-				events.supportTickets +
-				cmRewards.supportTickets +
-				lohRewards.supportTickets +
-				shop.supportTickets +
-				pass.supportTickets
-
-			const ssrShards =
-				events.ssrShards +
-				cmRewards.ssrShards +
-				lohRewards.ssrShards +
-				pass.ssrShards
-
-			return {
-				freeCarats,
-				paidCarats,
-				usdSpent,
-				umaTickets,
-				supportTickets,
-				ssrShards,
-				ssrCrystals: events.ssrCrystals,
-			}
-		}
-
-		// THE ORDER. Income no longer depends on it — only spend attribution
-		// does, so this decides which banner is charged first when two compete
-		// for the same carats.
-		//
-		// Keyed on the banner's START day, which is the sheet's AH44. The sheet
-		// implements the tiebreak by nudging duplicate start dates forward a day
-		// each (`AH42 + count of earlier rows sharing that start`); sorting by
-		// (start day, display position) is the same ordering without the artifact
-		// that a nudged banner can collide with one genuinely starting the next
-		// day. A banner with no resolvable end date keeps its zeroed slot.
-		const walkOrder = userPlannedBannerData
-			.map((banner, index) => {
-				const timeline = plannedBannerTimeline(banner)
-				const endDate = timeline?.end_date ? new Date(timeline.end_date) : null
-				const startDate = timeline?.start_date
-					? new Date(timeline.start_date)
-					: null
-				return { banner, index, endDate, startDate }
-			})
-			.filter(
-				(entry): entry is typeof entry & { endDate: Date } => entry.endDate !== null
-			)
-			.sort((a, b) => {
-				const aStart = a.startDate ? startOfUtcDay(a.startDate).getTime() : Infinity
-				const bStart = b.startDate ? startOfUtcDay(b.startDate).getTime() : Infinity
-				if (aStart !== bStart) return aStart - bStart
-				return a.index - b.index
-			})
+		// Start day, then display position: see projectionWalkOrder.
+		const walkOrder = projectionWalkOrder(userPlannedBannerData)
 
 		const spent: SpendTotals = {
 			freeCarats: 0,
@@ -512,6 +322,9 @@ export function useBannerResources({
 				ssrCrystals,
 				ssrShards,
 				usdSpent: income.usdSpent,
+				// What this row's pulls take from the free balance. The forecast
+				// chart draws it as the drop at the banner's end date.
+				freeCaratsSpent: freeCarats - strategy.freeCarats,
 				ticketsSpent: isUmaBanner
 					? umaTickets - strategy.umaTickets
 					: supportTickets - strategy.supportTickets,

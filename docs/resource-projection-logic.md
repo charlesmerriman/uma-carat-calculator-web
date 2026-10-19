@@ -58,7 +58,9 @@ running spend total — it just stops carrying income.
 | `utils/utcDates.ts` | `DATEDIF` / `EOMONTH` / `WEEKDAY` / `CEILING` equivalents, in UTC |
 | `utils/cumulativeIncome.ts` | One closed form per income source |
 | `utils/incomeLedger.ts` | Queries over the ledger (event lumps, race counts, throughout decay) |
+| `utils/incomeProjection.ts` | `incomeTo(end)`, the campaign credits and the walk order, shared by the rows and the forecast chart |
 | `hooks/useBannerResources.ts` | The engine: income − spend, per banner |
+| `utils/caratForecast.ts` | The forecast chart's line: the same `incomeTo` per day, anchored to each row (see "The carat forecast") |
 | `utils/bannerHelpers.ts` | `applyPullStrategy`, `applyStepUpStrategy`, `allocateReservedCopies` |
 | `utils/stepUpLadder.ts` | The step-up cost ladder and its odds, in closed form |
 | `utils/rateUpRates.ts` | Each rate-up card's per-pull rate on an ordinary banner |
@@ -545,13 +547,39 @@ Never read the field directly.
 
 ---
 
+## The carat forecast
+
+The chart beside the planner rows (`CaratForecastChart`, below them by default, data from
+`utils/caratForecast.ts`) draws free carats from today to 30 days past the last
+planned banner. It is a third reader of the same engine, so it cannot add a model
+of its own:
+
+- **Between banners** the line is `offset + incomeTo(day)`: the balance held
+  today, plus `incomeTo` (the very function the rows use), minus what earlier
+  banners took. Sampled daily, or every few days on a plan reaching years out
+  (at most 400 samples).
+- **At a banner's end date** the line meets that row's `freeCarats` (its "Carat
+  Est." box) and drops by `freeCaratsSpent`, which the engine now reports per row.
+  A row left out of the projection is drawn hollow and drops by nothing.
+- **Each dot is anchored to its row.** The engine charges in START order, the axis
+  runs in END order. They agree unless one banner sits inside another's window;
+  there the line steps straight to the row's number instead of disagreeing with it.
+  The test `caratForecast.test.ts` pins both: on an ordinary plan, against the real
+  engine, the line meets every row with no step at all.
+- **An ended banner** is not drawn, but its spend comes off the starting balance,
+  because the engine charged it before every later row.
+
+Paid carats, tickets and step-up spend (paid only) are not on the chart: it is one
+series on one axis, and its job is the free balance the rows go red on.
+
 ## Adding a new income source
 
 1. If it's event-driven, add it to `backend/calculatorapi/ledger.py` and the
    serializer; if it's a rate or schedule, add a field to `CalculationConstants`.
 2. Add a closed form to `utils/cumulativeIncome.ts` (or a query to
    `utils/incomeLedger.ts`), naming the sheet cell it reproduces.
-3. Call it from `incomeTo()` in `useBannerResources` **and** from
+3. Call it from `incomeTo()` in `utils/incomeProjection.ts` (the rows and the
+   forecast chart both read it) **and** from
    `useAverageMonthlyIncome` — unless it is one-off rather than recurring
    (campaign purchases are the standing exception; averaging them would report a
    recurring income nobody earns).
