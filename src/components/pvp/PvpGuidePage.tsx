@@ -110,6 +110,26 @@ function parseView(value: string | null): PvpView {
 	return VIEWS.some((view) => view.id === value) ? (value as PvpView) : "recommendations"
 }
 
+/** The page's own parameters, in the order an address names them. "Copy link" builds the same order. */
+const PARAM_ORDER = [PVP_EVENT_PARAM, VIEW_PARAM, PVP_STYLE_PARAM]
+
+/**
+ * The params with the page's own first, in PARAM_ORDER, so the address bar
+ * reads the same whichever control was clicked last. Anything else (the
+ * gallery's `sort`, `uma`, `post`) follows in the order it already had.
+ */
+function inPageOrder(params: URLSearchParams): URLSearchParams {
+	const ordered = new URLSearchParams()
+	for (const name of PARAM_ORDER) {
+		const value = params.get(name)
+		if (value !== null) ordered.set(name, value)
+	}
+	params.forEach((value, name) => {
+		if (!PARAM_ORDER.includes(name)) ordered.append(name, value)
+	})
+	return ordered
+}
+
 /**
  * The route's component: the page itself, or the early-access card while the
  * page is for supporters and staff only (hooks/usePvpAccess.ts). A wrapper so
@@ -170,11 +190,21 @@ const PvpGuide = () => {
 		if (urlStyle) rememberPvpStyle(urlStyle)
 	}, [urlStyle])
 
+	/**
+	 * Every address the page writes names its event, the one on screen when the
+	 * address lacks it. Without that, Recommendations (which DELETES `?view=`)
+	 * turned a page opened bare from the navbar back into the bare `/app/pvp`,
+	 * and the wrapper above read that as a fresh arrival and sent it back to the
+	 * remembered `?view=team`: the tab could not be reached until the event was
+	 * changed. Pinned, the bare address only ever comes from outside the page,
+	 * and the memory only ever gets an address this page wrote with its event.
+	 */
 	const setParam = (key: string, value: string | null, options?: { replace?: boolean }) =>
 		setSearchParams((params) => {
 			if (value === null) params.delete(key)
 			else params.set(key, value)
-			return params
+			if (event && !params.has(PVP_EVENT_PARAM)) params.set(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(event)))
+			return inPageOrder(params)
 		}, options)
 	// Changing the event keeps `?style=`, so Next stays on the reader's style.
 	const select = (next: RaceEvent | undefined) => {

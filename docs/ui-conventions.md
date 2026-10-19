@@ -1400,6 +1400,11 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   replace>`s to the last address; an address that names no style (a Timeline card's link)
   opens on the last style shown. Two keys on purpose: the page key is rewritten on every
   visit and would drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
+  **Every address the page writes names its event** (`setParam` pins the one on screen,
+  then writes event, view, style in that order, the same as "Copy link"). Without it,
+  Recommendations (which deletes `?view=`) turned a page opened from the navbar back into
+  the bare `/app/pvp`, the restore sent it to the remembered `?view=team`, and the tab was
+  unreachable until the event changed.
 - **"Copy link" in the header** copies the event (always, even on the default landing),
   the style on screen, and `view=gallery`. Never `view=team` (the builder is the reader's
   own, so the link opens the guide) and never `post` (a post's link is `/post/<id>`).
