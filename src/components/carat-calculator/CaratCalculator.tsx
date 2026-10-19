@@ -12,6 +12,7 @@ import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcon
 import { PlannerSectionBand } from "./PlannerSectionBand"
 import { buildPlannerRows, SCENARIO_BANDS_ONLY } from "../../utils/plannerSections"
 import { PlanSwitcher } from "./PlanSwitcher"
+import { CaratForecastChart } from "./CaratForecastChart"
 import { EMPTY_BANNER_RESOURCES } from "../../hooks/bannerResources"
 import { useBannerResources } from "../../hooks/useBannerResources"
 import {
@@ -380,6 +381,9 @@ export const CaratCalculator: React.FC = () => {
 											<div className="flex-1 h-px bg-brand/20" />
 										</div>
 									)}
+									{/* The forecast reads the same results the rows below show, and
+									    draws nothing until a row with a future end date exists. */}
+									<CaratForecastChart resources={bannerResources} />
 									{/* Own @container, as in the staging area above. */}
 									<div className="@container">
 										<div className="banner-grid hidden w-full items-center text-xs text-gray-400 font-medium bg-gray-800 border-b border-edge rounded-t-lg py-1.5 @banner-table:grid">

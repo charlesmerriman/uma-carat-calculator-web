@@ -1960,3 +1960,28 @@ the team.
   the header (`SaveStatus`).
 - **Stacking**: page < window (`z-40` from `desktop-nav`, `z-50` below, where it covers the
   screen) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
+
+## Carat forecast chart (`carat-calculator/CaratForecastChart.tsx`)
+
+The chart above the planner rows. Its numbers are explained in
+`resource-projection-logic.md` ("The carat forecast"); this is how it is drawn.
+
+- **Hand-drawn SVG, no chart library.** One series on one axis did not justify ~100 KB
+  of Recharts, and plain SVG wearing Tailwind classes (`stroke-brand`, `fill-gray-400`,
+  `fill-(--color-pull-over)`) re-skins with every theme and colorblind mode for free.
+  Pick a library when a second chart with real interaction needs arrives, not before.
+- **Drawn at its real pixel width**, measured with a `ResizeObserver` in an effect, never
+  stretched through a `viewBox`: stretching scales the axis text with it.
+- **Below zero is the over-budget colour** (`--color-pull-over`, the pull field's token):
+  the same path drawn twice through two clip rects split at y = 0. The headline says
+  "Short by" beside an icon, so the state never rides on colour alone.
+- **Dots wear a 2px ring in `--card-fill`**, the card's own fill, so they stay legible
+  on the line. A row left out of the projection is a hollow dot.
+- **One direct label** (where the line ends). Everything else is the crosshair readout,
+  which is pinned to the top of the plot beside the crosshair (above the dot it was cut
+  off by the card), and a screen-reader list of every banner under the chart. Arrow keys
+  step through the banners when the chart has focus.
+- **Folded or open is remembered per device** (`uma-planner-forecast-open`), read in an
+  effect because `/app` is prerendered.
+- The line draws itself in once on mount (`pathLength`), skipped under
+  `prefers-reduced-motion`.
