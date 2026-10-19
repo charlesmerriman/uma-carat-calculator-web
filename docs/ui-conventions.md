@@ -1456,8 +1456,9 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   covers a gold; an evolved pick is covered by a base, "(evolve it)". **Colour is
   `rarity`, never `tier`**: most green skills (and the Straightaways / Corners whites) come
   as a ○ and a ◎, BOTH white at tiers 1 and 2, some with a gold at tier 3. A ○ and its ◎
-  are one skill to a team (owner, 2026-10-16), since nothing teaches a ◎ and the guides
-  recommend the ◎: they cover each other in the panel, and the picker's skill search and
+  are one skill to a team (owner, 2026-10-16), since nothing teaches a ◎ and a guide may
+  name either (the admin's track-greens button and sheet import add the ○ since 2026-10-18;
+  older guides still name the ◎): they cover each other in the panel, and the picker's skill search and
   pinned chips treat them as one (`whiteSkillPairs` in `utils/pvpTeams.ts`). The gold
   above them stays a separate skill to search. A guide may
   list the white and the gold as two rows when their usefulness differs (owner,
