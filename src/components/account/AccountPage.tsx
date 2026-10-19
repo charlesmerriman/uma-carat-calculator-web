@@ -184,6 +184,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 	const storedName = account.display_name ?? ""
 	const oshis = account.oshis ?? []
 	const oshiSlots = account.oshi_slots ?? 0
+	// Covered slots with no pick yet. Never negative: a lapse can leave more
+	// held picks than covered slots.
+	const openSlots = Math.max(0, oshiSlots - oshis.length)
 	const oshiIds = oshis.map((oshi) => oshi.id)
 	const nameChanged = trimmedName !== storedName
 	// What the header and the avatar fallback go by: the chosen name, else the handle.
@@ -424,8 +427,15 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					{oshis.length > oshiSlots &&
 						" The greyed ones are kept, but not shown, until your tier covers them again."}
 				</p>
+				{/* The held picks, then ONE tile for the next empty slot (design
+				    polish item 25). Every empty slot used to be its own large dashed
+				    box: seven of them, two rows, before anything was picked. The add
+				    tile says how many slots are left instead. With nothing picked it
+				    is "Pick your picture" alone: the first pick IS the picture, so
+				    offering "Add a favourite" beside it would have one choice do
+				    something its label does not say. */}
 				<ul className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3">
-					{Array.from({ length: Math.max(oshiSlots, oshis.length) }, (_, slot) => {
+					{Array.from({ length: oshis.length + (openSlots > 0 ? 1 : 0) }, (_, slot) => {
 						const oshi = oshis[slot]
 						const covered = slot < oshiSlots
 						if (!oshi) {
@@ -438,7 +448,12 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 										className="flex h-full min-h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-600 p-3 text-xs font-medium text-gray-400 transition hover:border-brand/60 hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
 									>
 										<ImagePlus className="h-6 w-6" aria-hidden="true" />
-										{slot === 0 ? "Pick your picture" : "Pick a favourite"}
+										{slot === 0 ? "Pick your picture" : "Add a favourite"}
+										{slot > 0 && (
+											<span className="text-[11px] font-normal text-gray-500">
+												{openSlots === 1 ? "1 slot left" : `${openSlots} slots left`}
+											</span>
+										)}
 									</button>
 								</li>
 							)
