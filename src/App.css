@@ -93,6 +93,19 @@
 	}
 }
 
+/* The home page's hero (HomePage.tsx), the one card on the site with colour of
+   its own: a brand wash INSIDE the card. It cannot live under the page, because
+   Dark and Pearl stay off the page-glow layer on purpose (PAGE GLOW in
+   index.css), so this is where the default theme gets its colour. Built from
+   the brand and the gray ramp, so each theme tints it its own way; on a light
+   theme it is a pale wash over the white card. Over the card's own fill, which
+   stays underneath as the background colour. */
+.home-hero {
+	background-image:
+		radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--color-brand) 16%, transparent), transparent 62%),
+		linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 6%, var(--color-gray-800)), var(--color-gray-800) 72%);
+}
+
 /* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
 
    The ordinary banner row is image | umas | supports at 1.28fr | 0.88fr |
