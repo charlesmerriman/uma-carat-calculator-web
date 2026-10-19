@@ -12,17 +12,13 @@
  * track means raising --container-banner-table, which is the minimum width at
  * which cards become the spreadsheet and must not move for a badge. Overlaying
  * costs no width at all. The caller's container needs `relative`.
- *
- * `className` is for responsive visibility: the phone card shows one
- * thumbnail below a width and two above it, so it draws two badges and lets
- * the container query pick one (MobileBannerCard's Thumbnails).
  */
-export function ExtraCardsBadge({ hidden, className = "" }: { hidden: number; className?: string }) {
+export function ExtraCardsBadge({ hidden }: { hidden: number }) {
 	if (hidden < 1) return null
 
 	return (
 		<span
-			className={`absolute bottom-0 right-0 rounded-md bg-gray-950/85 px-1 text-[0.6875rem] font-semibold leading-snug text-brand ring-1 ring-gray-600 ${className}`}
+			className="absolute bottom-0 right-0 rounded-md bg-gray-950/85 px-1 text-[0.6875rem] font-semibold leading-snug text-brand ring-1 ring-gray-600"
 			title={`${hidden} more featured card${hidden === 1 ? "" : "s"} on this banner`}
 		>
 			+{hidden}
