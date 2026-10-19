@@ -12,7 +12,6 @@ import {
 	skillsForPosition,
 	stylesWithContent,
 	familySources,
-	hasGoldVersion,
 	skillFamilyIds,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
@@ -221,12 +220,6 @@ describe("skill versions", () => {
 		expect(familySources(new Map([[13, ["Oguri Cap (evolution)"]]]), white)).toBeNull()
 	})
 
-	it("badges a white skill that has a gold version", () => {
-		expect(hasGoldVersion(white)).toBe(true)
-		expect(hasGoldVersion(lone)).toBe(false)
-		expect(hasGoldVersion({ ...white, rarity: 2 })).toBe(false)
-	})
-
 	// A green skill's family: ○ and ◎ are both white (tiers 1 and 2), and the
 	// gold above them is tier 3. Nothing teaches the ◎, and guides pick it.
 	const single = { id: 31, name: "Right-Handed ○", description: "", image: null, rarity: 1, tier: 1, version: "○ white", is_evolved: false }
@@ -242,11 +235,6 @@ describe("skill versions", () => {
 	it("the gold above a ○/◎ pair covers both, and neither white covers it", () => {
 		expect(familySources(new Map([[33, ["Oguri Cap (awakening)"]]]), pickOf(double, [single, demon]))).toEqual(["Oguri Cap (awakening), as ◎ gold"])
 		expect(familySources(new Map([[31, ["Kitasan Black (hint)"]], [32, ["Fine Motion (hint)"]]]), pickOf(demon, [single, double]))).toBeNull()
-	})
-
-	it("a ◎ white is not a gold version for the badge", () => {
-		expect(hasGoldVersion(pickOf(single, [double]))).toBe(false)
-		expect(hasGoldVersion(pickOf(single, [double, demon]))).toBe(true)
 	})
 })
 

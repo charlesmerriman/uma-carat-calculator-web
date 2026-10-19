@@ -12,7 +12,6 @@ import { useId, useState, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
-import { hasGoldVersion } from "../../utils/pvpGuide"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
@@ -49,6 +48,15 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
  * A `[[Skill name]]` mention inside text: the skill's icon and name, with its
  * description on hover, focus or tap. Inline (a span), so it sits in a
  * sentence. A name the guide's map does not hold renders as plain text.
+ *
+ * Sized to the text it sits in, because it sits in very different lines: a
+ * deck note is 11px at leading-tight (a 13.75px line) in a column about 120px
+ * wide, a guide paragraph is 14px at leading-relaxed. `leading-none`, no
+ * vertical padding and an icon of 1.1em keep the pill inside the shortest of
+ * those lines; at a fixed 16px icon with padding it stood taller than a deck
+ * note's line and crowded the card name above it. It may wrap (`max-w-full`,
+ * no `nowrap`): a long name such as "Professor of Curvature" is wider than a
+ * deck column, and unbreakable it ran into the next slot's note.
  */
 export function SkillMention({ name }: { name: string }) {
 	const skill = useSkillMentions()[name.toLowerCase()]
@@ -65,12 +73,12 @@ export function SkillMention({ name }: { name: string }) {
 				if (event.pointerType === "touch") setTapped((open) => !open)
 			}}
 			onBlur={() => setTapped(false)}
-			className="group relative inline-flex items-center gap-1 whitespace-nowrap rounded border border-gray-600 bg-gray-800 py-px pl-0.5 pr-1.5 align-baseline text-[0.95em] font-medium text-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			className="group relative inline-flex max-w-full items-center gap-1 rounded border border-gray-600 bg-gray-800 pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none text-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-brand"
 		>
 			{skill.image ? (
-				<img src={skill.image} alt="" className="h-4 w-4 shrink-0" loading="lazy" decoding="async" />
+				<img src={skill.image} alt="" className="h-[1.1em] w-[1.1em] shrink-0" loading="lazy" decoding="async" />
 			) : (
-				<span className="h-4 w-4 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+				<span className="h-[1.1em] w-[1.1em] shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 			)}
 			{skill.name}
 			<span
@@ -278,7 +286,10 @@ export function SkillChip({ skill, note, general = false }: { skill: PvpSkillRef
 	)
 	return (
 		<WithDetail label={skill.name} detail={detail}>
-			<div className={`flex max-w-full items-center gap-1.5 rounded-full border bg-gray-800 py-0.5 pl-0.5 pr-2.5 ${skillRarityClass(skill.rarity)}`}>
+			{/* rounded-lg, not a capsule: the square icon's corners stuck out
+			    through a capsule's round ends. The skills panel's rows and the
+			    mention pill are rounded rectangles too. */}
+			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border bg-gray-800 py-0.5 pl-0.5 pr-2.5 ${skillRarityClass(skill.rarity)}`}>
 				{skill.image ? (
 					<img src={skill.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
 				) : (
@@ -288,12 +299,9 @@ export function SkillChip({ skill, note, general = false }: { skill: PvpSkillRef
 					{skill.name}
 					{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
 				</span>
-				{/* A white skill with a gold version: the ◎ says "there is a better one". */}
-				{hasGoldVersion(skill) && (
-					<span className="shrink-0 text-xs text-recommended" title="Has a gold version" aria-label="Has a gold version">
-						◎
-					</span>
-				)}
+				{/* No ◎ badge for "has a gold version": the game prints ○/◎ in the
+				    name itself, so a badge in the same glyph read as a version that
+				    doesn't exist. The hover detail's "Also as" names the gold. */}
 				{note && <InlineNote text={note} className="hidden truncate text-xs text-gray-400 sm:inline" />}
 			</div>
 		</WithDetail>

@@ -1444,7 +1444,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `version` label (`○ white`, `◎ white`, `◎ gold`, `evolved`) and `versions`, its other
   forms, derived server side from the game data (same group plus the evolution link), never
   stored. `SkillVersions` (PvpTiles) lists them under the chip's and the mention's hover
-  detail, a white chip with a gold form shows a ◎ badge (`hasGoldVersion`), and the team
+  detail (a chip carries no badge for its other versions: the game prints ○/◎ in the name,
+  and a ◎ badge beside it read as a version that doesn't exist; removed 2026-10-18), and the team
   builder's skills panel counts a source that teaches the pick or a version that covers it
   (`familySources` in `utils/pvpGuide.ts`): a card that teaches the gold teaches the white
   too (owner, 2026-10-14), so a gold on the team covers a white pick and a white never
