@@ -300,6 +300,30 @@
 	color: var(--color-type-step-up-ink);
 }
 
+/* The row options drawer (RowOptionsPanel) under a desktop planner row. It
+   opened as a plain full-width strip with nothing tying it to its row, so it
+   read as a loose panel between two rows. A bar in the row's type colour (the
+   badge's own fill) down its left edge and a small inset make it that row's
+   drawer. The --color-type-* tokens are already redrawn for the light themes
+   and colorblind mode, so the bar follows them. */
+.row-drawer {
+	margin-left: 0.75rem;
+	border-left: 4px solid var(--row-drawer-edge);
+	border-bottom-left-radius: 0.375rem;
+}
+
+.row-drawer--uma {
+	--row-drawer-edge: var(--color-type-uma);
+}
+
+.row-drawer--support {
+	--row-drawer-edge: var(--color-type-support);
+}
+
+.row-drawer--step-up {
+	--row-drawer-edge: var(--color-type-step-up);
+}
+
 /* Everything drawn ON the mobile header strip: the banner select
    (mobileBannerSelectStyles reads these), and the note and delete buttons.
 

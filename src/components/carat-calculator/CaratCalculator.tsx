@@ -1,6 +1,8 @@
 import type React from "react"
 import { Fragment, useMemo } from "react"
+import { Link } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
+import { ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { BannerRow } from "./BannerRow"
@@ -111,6 +113,12 @@ export const CaratCalculator: React.FC = () => {
 				SCENARIO_BANDS_ONLY
 			),
 		[userPlannedBannerData, scenarioData, anniversaryEventData]
+	)
+	// The last banner row on screen (bands skipped), whose bulk-adjust pads open
+	// above their fields. Its original index, the same key the rows carry.
+	const lastRowIndex = plannerRows.reduce(
+		(last, row) => (row.kind === "banner" ? row.index : last),
+		-1
 	)
 
 	if (!userStatsData) {
@@ -259,6 +267,29 @@ export const CaratCalculator: React.FC = () => {
 									</Fragment>
 								))}
 							</div>
+
+							{/* The empty plan: nothing planned and nothing staged. Without it a
+							    first visit is three buttons over blank canvas. It says what
+							    to do first and points at the Timeline, the other way in (a
+							    banner staged there lands in the staging area below). Gone
+							    as soon as a row exists, staged or planned. */}
+							{userPlannedBannerData.length === 0 && stagedBanners.length === 0 && (
+								<div className="mx-3 rounded-lg border border-dashed border-gray-600 bg-gray-800/40 px-4 py-6 text-center sm:mx-4">
+									<p className="text-sm font-semibold text-gray-200">Your plan is empty</p>
+									<p className="mx-auto mt-1 max-w-xl text-sm text-pretty text-gray-400">
+										Add a banner with the buttons above, then set how many pulls you
+										want. The Timeline lists every upcoming banner, and you can stage
+										one from there too.
+									</p>
+									<Link
+										to="/app/timeline"
+										className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition hover:text-brand/75"
+									>
+										Open the Timeline
+										<ArrowRight className="h-4 w-4" aria-hidden="true" />
+									</Link>
+								</div>
+							)}
 
 							{/* Staging area — slides in/out as stagedBanners are added or cleared */}
 							<AnimatePresence>
@@ -423,6 +454,7 @@ export const CaratCalculator: React.FC = () => {
 																setUserPlannedBannerData={setUserPlannedBannerData}
 																resources={resources}
 																initialBannerType={plannedBanner.initialBannerType}
+																isLastRow={plannerRow.index === lastRowIndex}
 															/>
 														</motion.div>
 													)
