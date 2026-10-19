@@ -25,7 +25,7 @@ export const Feedback: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-2xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">Feedback</h1>
+					<h1 className="font-display text-3xl font-bold text-gray-100">Feedback</h1>
 					<p className="mt-2 leading-relaxed text-gray-400">
 						Found a bug, spotted wrong data, or thought of something the calculator should
 						do? Tell us on Discord. That is where reports get read, and where you can get

@@ -38,7 +38,7 @@ export const About: React.FC = () => {
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					{page ? (
 						<>
-							<h1 className="text-3xl font-bold text-gray-100">{page.title}</h1>
+							<h1 className="font-display text-3xl font-bold text-gray-100">{page.title}</h1>
 							{/* The date half only: the build renders in UTC and the browser
 							    in local time, and an instant near midnight would otherwise
 							    format to different days on the two sides of hydration. */}
@@ -47,7 +47,7 @@ export const About: React.FC = () => {
 						</>
 					) : (
 						<>
-							<h1 className="text-3xl font-bold text-gray-100">About</h1>
+							<h1 className="font-display text-3xl font-bold text-gray-100">About</h1>
 							<ContentLoading what="the page" />
 						</>
 					)}

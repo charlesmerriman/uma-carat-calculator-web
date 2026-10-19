@@ -29,6 +29,7 @@ import { MarkdownContent } from "../info/MarkdownContent"
 import type { ChangelogEntry } from "../../types"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
 import { useBackToTop } from "../../hooks/useBackToTop"
+import { useAccount } from "../../services/AuthContext"
 
 const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@HenryHandsomeDerby"
 // A fixed video (Henry's walkthrough of this site), NOT the channel's uploads
@@ -86,16 +87,27 @@ const infoLinks = [
 // The four quick-link tiles under the video share one shape: icon chip, bold
 // label, muted caption. Built once here so the external sheet link and the three
 // internal routes cannot end up a pixel apart.
+//
+// Two by two at every width. Four across left each tile ~155px on desktop and
+// ~80px on a phone, and both truncated their text ("Henry's Sh...", "Updated
+// yester..."). On a phone the caption is dropped as well: two columns fit the
+// label alone.
 const tileClass = `${HOME_TILE} flex min-w-0 items-center gap-2.5 px-3 py-2.5 text-left`
+const tileCaptionClass = "hidden truncate text-xs text-gray-500 sm:block"
 
 // The below-the-fold sections all open the same way: a divider, then a heading.
 const sectionClass = "mt-10 border-t border-gray-800 pt-8"
-const sectionHeadingClass = "text-xl font-bold tracking-tight text-gray-100"
+const sectionHeadingClass = "font-display text-xl font-bold tracking-tight text-gray-100"
 
 export const HomePage = () => {
 	useDocumentMeta(null, "A carat planner and banner timeline for Uma Musume. See every upcoming banner and how many carats and tickets you will have when it arrives.")
 
 	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
+	// Signed in, the hero offers the plan and not "Sign in to sync". Safe on a
+	// prerendered page: useAccount reads the token through a server snapshot,
+	// so the prerender and the hydration both draw the signed-out hero and a
+	// signed-in visitor sees it swap once the token is read, as the navbar does.
+	const { isLoggedIn } = useAccount()
 	// The FAQ teaser. Null only on the empty shell before the fetch lands; the
 	// prerendered homepage embeds the FAQ, so a normal load always has it.
 	const faq = useSiteContent().faq()
@@ -154,11 +166,14 @@ export const HomePage = () => {
 			    vertically centre a single screenful and leave no room below the fold
 			    for the sections that explain the tool to a first-time visitor. */}
 			<main className="flex-1">
-				<div className="mx-auto w-full max-w-[104rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-5">
+				{/* 80rem, down from 104rem (2026-10-18): at the old width the prose
+				    under "What this is" filled a third of the row and the rest was
+				    empty canvas. */}
+				<div className="mx-auto w-full max-w-[80rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-5">
 					<section className={`${HOME_CARD} px-5 py-5 sm:px-6`}>
 						<div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 							<div>
-								<h1 className="text-3xl font-bold tracking-tight text-balance text-gray-100 sm:text-4xl">Plan your pulls. Know your carats.</h1>
+								<h1 className="font-display text-3xl font-bold tracking-tight text-balance text-gray-100 sm:text-4xl">Plan your pulls. Know your carats.</h1>
 								<p className="mt-2 max-w-2xl text-base text-pretty text-gray-400">A simple planner for your Uma Musume banners, income, and pull goals.</p>
 							</div>
 							<div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
@@ -168,15 +183,17 @@ export const HomePage = () => {
 									onMouseEnter={prefetchCalculatorData}
 									onFocus={prefetchCalculatorData}
 								>
-									Open the calculator
+									{isLoggedIn ? "Open your plan" : "Open the calculator"}
 									<ArrowRight className="h-4 w-4" aria-hidden="true" />
 								</Link>
-								<Link
-									to="/login"
-									className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-gray-700"
-								>
-									Sign in to sync your plan
-								</Link>
+								{!isLoggedIn && (
+									<Link
+										to="/login"
+										className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-gray-700"
+									>
+										Sign in to sync your plan
+									</Link>
+								)}
 							</div>
 						</div>
 					</section>
@@ -215,10 +232,10 @@ export const HomePage = () => {
 									<iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_FEATURED_VIDEO_ID}`} title="Henry Handsome Derby's video about this site" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
 								</div>
 							</div>
-							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+							<div className="mt-3 grid grid-cols-2 gap-2">
 								<a href={HENRY_SHEET_URL} target="_blank" rel="noopener noreferrer" className={tileClass}>
 									<span className={HOME_ICON_CHIP}><FileText className="h-4 w-4" aria-hidden="true" /></span>
-									<span className="min-w-0"><span className="block truncate text-sm font-semibold text-gray-100">Henry's Sheet</span><span className="block truncate text-xs text-gray-500">Resource guide</span></span>
+									<span className="min-w-0"><span className="block truncate text-sm font-semibold text-gray-100">Henry's Sheet</span><span className={tileCaptionClass}>Resource guide</span></span>
 								</a>
 								{infoLinks.map((item) => {
 									const Icon = item.icon
@@ -226,7 +243,7 @@ export const HomePage = () => {
 									return (
 										<Link key={item.to} to={item.to} className={tileClass}>
 											<span className={HOME_ICON_CHIP}><Icon className="h-4 w-4" aria-hidden="true" /></span>
-											<span className="min-w-0"><span className="block truncate text-sm font-semibold text-gray-100">{item.label}</span><span className="block truncate text-xs text-gray-500">{caption}</span></span>
+											<span className="min-w-0"><span className="block truncate text-sm font-semibold text-gray-100">{item.label}</span><span className={tileCaptionClass}>{caption}</span></span>
 										</Link>
 									)
 								})}
@@ -236,7 +253,7 @@ export const HomePage = () => {
 						<section className={`${HOME_CARD} flex h-full flex-col p-4`}>
 							<div className="flex items-baseline justify-between gap-3">
 								<div>
-									<h2 className="text-lg font-bold tracking-tight text-gray-100">How it works</h2>
+									<h2 className="font-display text-lg font-bold tracking-tight text-gray-100">How it works</h2>
 									<p className="mt-0.5 text-sm text-gray-400">From your stash to a clear pull plan.</p>
 								</div>
 								<span className="shrink-0 rounded-full border border-gray-700 bg-gray-900/60 px-2.5 py-0.5 text-xs font-medium text-gray-400">5 steps</span>
@@ -271,7 +288,7 @@ export const HomePage = () => {
 					<section className={sectionClass}>
 						{/* The pitch and the coverage grid are ONE section on purpose. As its
 						    own section the prose was a heading, two paragraphs and then a
-						    full-width divider, which made the empty right half of the 104rem
+						    full-width divider, which made the empty right half of the then-104rem
 						    canvas the most visible thing about it. As the intro to the grid
 						    below it reads the way every other section here does: heading,
 						    short left-aligned lead, then content that fills the width. */}
@@ -346,7 +363,7 @@ export const HomePage = () => {
 				</div>
 			</main>
 			<Footer />
-			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="104rem" />
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="80rem" />
 		</div>
 	)
 }

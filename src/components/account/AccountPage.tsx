@@ -110,7 +110,7 @@ const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 		<Navbar />
 		<main className="flex-1">
 			<div className="mx-auto max-w-2xl px-4 py-8">
-				<h1 className="text-3xl font-bold text-gray-100">Account</h1>
+				<h1 className="font-display text-3xl font-bold text-gray-100">Account</h1>
 				{children}
 			</div>
 		</main>

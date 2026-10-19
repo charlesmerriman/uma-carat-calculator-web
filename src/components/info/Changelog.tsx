@@ -82,7 +82,7 @@ export const Changelog: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">Changelog</h1>
+					<h1 className="font-display text-3xl font-bold text-gray-100">Changelog</h1>
 					<p className="mt-2 text-sm text-gray-500">
 						Updates and fixes to the calculator, newest first.
 					</p>

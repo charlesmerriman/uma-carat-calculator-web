@@ -21,6 +21,9 @@
  *
  * Every access is wrapped: private browsing and strict privacy settings can
  * make sessionStorage throw, and then the page just opens on its default.
+ *
+ * Plus one flag that is NOT per tab, at the bottom: whether this device has
+ * had a guide on screen, which decides how much of the intro to show.
  */
 
 import { parsePvpStyle } from "../utils/pvpGuide"
@@ -64,5 +67,31 @@ export function recalledPvpStyle(): PvpStyle | null {
 		return parsePvpStyle(sessionStorage.getItem(STYLE_KEY))
 	} catch {
 		return null
+	}
+}
+
+/**
+ * Whether a guide has been on screen on this device. The page's intro (the
+ * admin's "pvp-guides" text, two paragraphs above the event card) shows in full
+ * until one has, and after that folds behind an "About these guides" link: a
+ * returning reader has read it, and on a phone it pushed the event card below
+ * the fold on every visit. localStorage, unlike the keys above, because "has
+ * this person read it" should outlast the tab.
+ */
+const INTRO_KEY = "uma-planner-pvp-intro-seen"
+
+export function pvpIntroSeen(): boolean {
+	try {
+		return localStorage.getItem(INTRO_KEY) === "1"
+	} catch {
+		return false
+	}
+}
+
+export function markPvpIntroSeen(): void {
+	try {
+		localStorage.setItem(INTRO_KEY, "1")
+	} catch {
+		// Storage refused: the intro keeps showing in full.
 	}
 }

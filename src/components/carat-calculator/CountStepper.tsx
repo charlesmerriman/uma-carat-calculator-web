@@ -19,9 +19,13 @@ import type { CountChip, CountChipSet } from "../../utils/countChips"
  * that measurement is somehow unavailable.
  */
 const PANEL_FALLBACK_WIDTH = 300
-/** Gap between the field and the panel, and the panel and the viewport edge. */
-const GAP = 6
+/** Gap between the field and the panel (room for the caret), and the panel and the viewport edge. */
+const GAP = 8
 const EDGE = 8
+/** How close the caret may get to the pad's rounded corners. */
+const CARET_INSET = 12
+
+type Placement = "below" | "above"
 
 interface CountStepperProps {
 	value: number
@@ -32,6 +36,12 @@ interface CountStepperProps {
 	label: string
 	/** The NumberField this pad drives. Rendered above the trigger. */
 	children: ReactNode
+	/**
+	 * Open above the field when there is room, rather than below. The planner's
+	 * last row sets it: below that row there is only the sheet's bottom edge, so
+	 * a pad hanging under it covered the footer instead of anything it adjusts.
+	 */
+	preferAbove?: boolean
 }
 
 /**
@@ -62,9 +72,16 @@ export const CountStepper = ({
 	chips,
 	label,
 	children,
+	preferAbove = false,
 }: CountStepperProps) => {
 	const [open, setOpen] = useState(false)
-	const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
+	const [position, setPosition] = useState<{
+		left: number
+		top: number
+		placement: Placement
+		/** The caret's x inside the pad, pointing at the field's centre. */
+		caretLeft: number
+	} | null>(null)
 	const anchorRef = useRef<HTMLDivElement>(null)
 	const panelRef = useRef<HTMLDivElement>(null)
 
@@ -84,23 +101,33 @@ export const CountStepper = ({
 		// makes a wider row than "Max 20".
 		const panelWidth = panelRef.current?.offsetWidth ?? PANEL_FALLBACK_WIDTH
 
-		// Centred on the field, then pulled inside both edges. The outer max()
-		// is not redundant with the inner one: on a viewport narrower than the
-		// panel itself the min() would otherwise return a negative left.
+		// LEFT-ALIGNED with the field, then pulled inside both edges. It was
+		// centred on the field until 2026-10-18; the pad is about five fields
+		// wide, so centring hung half of it over the derived-stats cells to the
+		// field's left, the numbers you watch while adjusting. Starting at the
+		// field's left edge it runs right instead, over the copies and odds
+		// cells, and the caret below says which field it belongs to. The outer
+		// max() is not redundant with the inner one: on a viewport narrower than
+		// the panel itself the min() would otherwise return a negative left.
 		const left = Math.max(
 			EDGE,
-			Math.min(
-				Math.max(rect.left + rect.width / 2 - panelWidth / 2, EDGE),
-				window.innerWidth - panelWidth - EDGE
-			)
+			Math.min(Math.max(rect.left, EDGE), window.innerWidth - panelWidth - EDGE)
 		)
-		// Below by preference, flipped above when the room isn't there. Flipping
-		// rather than scrolling the pad into view: the field it is adjusting has
-		// to stay on screen, and scrolling to fit the pad is what moves it off.
+		const caretLeft = Math.min(
+			Math.max(rect.left + rect.width / 2 - left, CARET_INSET),
+			panelWidth - CARET_INSET
+		)
+		// Below by default, above for `preferAbove`; either flips when its side
+		// lacks the room. Flipping rather than scrolling the pad into view: the
+		// field it is adjusting has to stay on screen, and scrolling to fit the
+		// pad is what moves it off.
 		const fitsBelow = rect.bottom + GAP + panelHeight <= viewportHeight - EDGE
-		const top = fitsBelow ? rect.bottom + GAP : Math.max(EDGE, rect.top - GAP - panelHeight)
-		setPosition({ left, top })
-	}, [])
+		const fitsAbove = rect.top - GAP - panelHeight >= EDGE
+		const placement: Placement =
+			preferAbove ? (fitsAbove || !fitsBelow ? "above" : "below") : fitsBelow ? "below" : "above"
+		const top = placement === "below" ? rect.bottom + GAP : Math.max(EDGE, rect.top - GAP - panelHeight)
+		setPosition({ left, top, placement, caretLeft })
+	}, [preferAbove])
 
 	/**
 	 * The only way this pad closes. Placement is cleared with it rather than in
@@ -244,6 +271,19 @@ export const CountStepper = ({
 						// space blurs the field too, and closed it mid-use.
 						onMouseDown={(event) => event.preventDefault()}
 					>
+						{/* The caret: a small square turned 45 degrees, half of it
+						    outside the pad, pointing at the field's centre. Drawn
+						    with the pad's own edge and fill so it reads as part of
+						    the pad. */}
+						{position && (
+							<span
+								aria-hidden="true"
+								className={`pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-gray-600 bg-gray-800 ${
+									position.placement === "below" ? "-top-[6px] border-l border-t" : "-bottom-[6px] border-b border-r"
+								}`}
+								style={{ left: position.caretLeft }}
+							/>
+						)}
 						{/* ONE row, and chips and nothing else. This pad opens over the
 						    sheet, so every pixel of it is hiding a number the user is
 						    adjusting it to watch — two chip rows plus a "PULLS 200"

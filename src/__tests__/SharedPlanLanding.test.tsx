@@ -38,11 +38,14 @@ const UMA_BANNER = {
 	id: 100,
 	name: 'Kitasan Black banner',
 	umas: [{ name: 'Kitasan Black', image: '/media/kitasan.png' }],
+	// Midday UTC, so the calendar date is the same in any test time zone.
+	banner_timeline: { start_date: '2026-10-14T12:00:00Z', end_date: '2026-10-23T12:00:00Z' },
 } as unknown as BannerUma
 const SUPPORT_BANNER = {
 	id: 300,
 	name: 'Satono support banner',
 	support_cards: [{ name: 'Satono Diamond', image: '/media/satono.png' }],
+	banner_timeline: { start_date: '2026-10-20T12:00:00Z', end_date: '2026-11-01T12:00:00Z' },
 } as unknown as BannerSupport
 
 const SUMMARY: SharedPlanSummary = {
@@ -114,6 +117,9 @@ describe('SharedPlanLanding', () => {
 		expect(screen.getByText('Satono support banner')).toBeInTheDocument()
 		expect(screen.getByText('Uma banner')).toBeInTheDocument()
 		expect(screen.getByText('Support banner')).toBeInTheDocument()
+		// Each row's end date comes from the catalogue, not the summary.
+		expect(screen.getByText('· ends 2026/10/23')).toBeInTheDocument()
+		expect(screen.getByText('· ends 2026/11/1')).toBeInTheDocument()
 		expect(screen.getByAltText('Kitasan Black')).toHaveAttribute('src', '/media/kitasan.png')
 		expect(
 			screen.getByText('2 banners · 1,200 pulls · Updated 2026/10/11 · Copied 3 times · Includes their notes')

@@ -30,7 +30,7 @@ export function PvpEarlyAccess({ pending }: { pending: boolean }) {
 			) : (
 				<section className="card-panel mx-auto flex max-w-lg flex-col items-center gap-4 p-6 text-center" aria-labelledby="pvp-early-access">
 					<Swords className="h-8 w-8 text-brand" aria-hidden="true" />
-					<h1 id="pvp-early-access" className="text-lg font-bold text-gray-100">
+					<h1 id="pvp-early-access" className="font-display text-lg font-bold text-gray-100">
 						PvP is in early access
 					</h1>
 					<p className="text-sm leading-relaxed text-gray-300">

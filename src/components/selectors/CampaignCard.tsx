@@ -197,26 +197,23 @@ export const CampaignCard = ({
 							</ul>
 
 							{/* One tile per CLAIMED ticket, in the column's own order, so
-							    a tile and its checkbox always line up left to right. */}
+							    a tile and its checkbox always line up left to right.
+							    Empty until one is ticked: the "tick a selector" hint is
+							    said once above the campaign list (Selectors.tsx), not
+							    once per campaign. */}
 							<div className="flex min-w-0 flex-1 flex-wrap content-start items-start gap-2">
-								{claimedSelectors.length === 0 ? (
-									<p className="text-xs text-gray-500">
-										Tick a selector to choose the card it takes.
-									</p>
-								) : (
-									claimedSelectors.map((line) => (
-										<SelectorTargetPicker
-											key={line.product.id}
-											product={line.product}
-											umaBannerData={umaBannerData}
-											supportBannerData={supportBannerData}
-											targetUma={line.purchase?.target_uma ?? null}
-											targetSupport={line.purchase?.target_support ?? null}
-											disabled={locked}
-											onChange={(target) => onTargetChange(line, target)}
-										/>
-									))
-								)}
+								{claimedSelectors.map((line) => (
+									<SelectorTargetPicker
+										key={line.product.id}
+										product={line.product}
+										umaBannerData={umaBannerData}
+										supportBannerData={supportBannerData}
+										targetUma={line.purchase?.target_uma ?? null}
+										targetSupport={line.purchase?.target_support ?? null}
+										disabled={locked}
+										onChange={(target) => onTargetChange(line, target)}
+									/>
+								))}
 							</div>
 						</div>
 					</div>
