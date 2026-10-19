@@ -250,6 +250,17 @@ html {
 	--color-type-step-up: oklch(38.1% 0.176 304.987);
 	--color-type-step-up-ink: #ffffff;
 
+	/* SERIES COLOURS: the carat forecast's two pulls lines (uma and support).
+	   Not the type tiles above: those are dark fills here and pastel fills on
+	   the light themes, and a 2px line in either vanishes. Blue and teal echo
+	   the tiles; green is avoided because it is the on-pity status colour.
+	   Validated with the dataviz palette script against the dark card fill
+	   (lightness band, chroma, colorblind separation, contrast); the light
+	   steps are under [data-theme-mode="light"]. The tritan pair is the weak
+	   one, so the lines also carry end labels and a legend. */
+	--color-series-uma: #4f8ef7;
+	--color-series-support: #0fa898;
+
 	/* Text on the New Year and Campaign variants of the Timeline's campaign
 	   strip (AnniversaryEventStrip). The dark values are the stock amber-300 /
 	   sky-300 they used to be; a light surface needs the deep counterparts. The
@@ -548,6 +559,10 @@ html {
 	--color-type-support-ink: #14532d;
 	--color-type-step-up: #e2d0f8;
 	--color-type-step-up-ink: #581c87;
+	/* The forecast's pulls lines, light-mode steps (validated on white with
+	   the dataviz palette script: lightness band, chroma, CVD, contrast). */
+	--color-series-uma: #2563eb;
+	--color-series-support: #0a9a8a;
 
 	/* Revival categories retain their rose accent, deepened for white cards. */
 	--color-category-revival: #a3325c;

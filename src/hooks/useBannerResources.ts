@@ -325,6 +325,7 @@ export function useBannerResources({
 				// What this row's pulls take from the free balance. The forecast
 				// chart draws it as the drop at the banner's end date.
 				freeCaratsSpent: freeCarats - strategy.freeCarats,
+				paidCaratsSpent: paidCarats - strategy.paidCarats,
 				ticketsSpent: isUmaBanner
 					? umaTickets - strategy.umaTickets
 					: supportTickets - strategy.supportTickets,

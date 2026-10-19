@@ -3,10 +3,9 @@ import { useId, useMemo, useRef, useState } from "react"
 import { useReducedMotion } from "framer-motion"
 import {
 	Area,
-	Bar,
-	Cell,
 	ComposedChart,
 	CartesianGrid,
+	Line,
 	ReferenceDot,
 	ReferenceLine,
 	ResponsiveContainer,
@@ -14,8 +13,14 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts"
-import type { CaratForecast, ForecastMarker, PullBar, SkipMarker } from "../../utils/caratForecast"
-import { formatCarats } from "../../utils/caratForecast"
+import type {
+	CaratForecast,
+	ForecastMarker,
+	PullBar,
+	PullPoint,
+	SkipMarker,
+} from "../../utils/caratForecast"
+import { forecastValueAt, formatCarats } from "../../utils/caratForecast"
 import { formatDate, formatMonth } from "../../utils/dateFormat"
 
 /**
@@ -29,10 +34,10 @@ import { formatDate, formatMonth } from "../../utils/dateFormat"
  * ---------
  * - Carats: free carats over time, a dot at each banner where the line meets
  *   its row, a red dot at each skipped PvP event where it would have paid.
- * - Pulls: one bar per banner, the row's Max Pulls without the banner's own
- *   free pulls. A bar, not a line, because that figure exists only at a
- *   banner: it depends on the banner's kind (uma or support tickets) and its
- *   paid-pull settings, so there is no honest value for the days between.
+ * - Pulls: two lines, day by day (buildPullSeries): "Uma pulls" (carats and
+ *   uma tickets) and "Support pulls" (carats and support tickets), since a
+ *   banner spends only its own kind of ticket. Each banner's dot sits on its
+ *   own kind's line, at its row's Max Pulls without free pulls.
  *
  * Both views draw the 200-pull pity line and send a click on a banner back to
  * the page, which scrolls to that row and flashes it.
@@ -86,11 +91,18 @@ interface LineDatum {
 	skip?: SkipMarker
 }
 
-/** One bar of the pulls view. */
-interface BarDatum {
-	label: string
-	pulls: number
-	bar: PullBar
+/** One row of the pulls view's data: a vertex of both lines, maybe a dot. */
+interface PullDatum extends PullPoint {
+	skip?: SkipMarker
+}
+
+/** Which pulls line a series is. */
+type PullLine = "uma" | "support"
+
+const LINE_LABEL: Record<PullLine, string> = { uma: "Uma pulls", support: "Support pulls" }
+const LINE_COLOR: Record<PullLine, string> = {
+	uma: "var(--color-series-uma)",
+	support: "var(--color-series-support)",
 }
 
 export type ForecastUnit = "carats" | "pulls"
@@ -98,7 +110,8 @@ export type ForecastUnit = "carats" | "pulls"
 export interface PlotProps {
 	forecast: CaratForecast
 	unit: ForecastUnit
-	pullBars: PullBar[]
+	/** The pulls view's two lines (buildPullSeries). */
+	pullSeries: PullPoint[]
 	skipMarkers: SkipMarker[]
 	/** Pulls per pity copy (PULLS_PER_PITY_COPY, 200). */
 	pityPulls: number
@@ -119,7 +132,7 @@ const RACE_KIND_LABEL: Record<string, string> = {
 const ForecastPlot: React.FC<PlotProps> = ({
 	forecast,
 	unit,
-	pullBars,
+	pullSeries,
 	skipMarkers,
 	pityPulls,
 	pullCost,
@@ -150,28 +163,29 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	// line meets the row's number; a skipped event gets a vertex of its own,
 	// placed ON the line (buildSkipMarkers), so the line's shape is unchanged.
 	const lineData = useMemo<LineDatum[]>(() => {
-		const rows: LineDatum[] = points.map((p) => ({ t: p.t, value: p.value }))
-		for (const marker of markers) {
-			const at = rows.find((r) => r.t === marker.t && r.value === marker.before && !r.marker)
-			if (at) at.marker = marker
-		}
-		for (const skip of skipMarkers) {
-			// After every vertex at or before its instant, so it never splits a
-			// banner's arrival from its drop.
-			const i = rows.findIndex((r) => r.t > skip.t)
-			rows.splice(i === -1 ? rows.length : i, 0, { t: skip.t, value: skip.value, skip })
-		}
-		return rows
+		const rows: LineDatum[] = points.map((p) => ({
+			t: p.t,
+			value: p.value,
+			...(p.marker !== undefined && { marker: markers[p.marker] }),
+		}))
+		return withSkips(rows, skipMarkers, (skip) => ({ t: skip.t, value: skip.value, skip }))
 	}, [points, markers, skipMarkers])
 
-	const barData = useMemo<BarDatum[]>(
+	// The pulls lines, with each skipped event placed on both of them: a skip
+	// lowers every balance, so it is on both lines' path.
+	const pullData = useMemo<PullDatum[]>(
 		() =>
-			pullBars.map((bar) => ({
-				label: formatDate(endDateOf(bar.marker)),
-				pulls: bar.pulls,
-				bar,
-			})),
-		[pullBars, endDateOf]
+			withSkips<PullDatum>(
+				pullSeries.map((p) => ({ ...p })),
+				skipMarkers,
+				(skip) => ({
+					t: skip.t,
+					uma: Math.round(forecastValueAt(pullSeries, skip.t, (p) => p.uma)),
+					support: Math.round(forecastValueAt(pullSeries, skip.t, (p) => p.support)),
+					skip,
+				})
+			),
+		[pullSeries, skipMarkers]
 	)
 
 	// THE SPLIT AT ZERO (carats view). One gradient, two stops at the same
@@ -191,9 +205,16 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	const pityCarats = pityPulls * pullCost
 	const showCaratPity = high > 0 && pityCarats <= high * 1.25
 	const caratTicks = niceTicks(Math.min(0, low), Math.max(high, showCaratPity ? pityCarats : high), 4)
-	const pullTicks = niceTicks(0, Math.max(pityPulls, ...pullBars.map((b) => b.pulls)), 4)
+	const pullHigh = Math.max(pityPulls, ...pullSeries.map((p) => Math.max(p.uma, p.support)))
+	const pullTicks = niceTicks(0, pullHigh, 4)
+	// End labels name the two lines where they finish. When the two ends are
+	// within ~14px of each other they would collide, so the legend alone
+	// carries the names (dataviz: never stack colliding end labels).
+	const lastPull = pullSeries[pullSeries.length - 1]
+	const pullSpan = pullTicks[pullTicks.length - 1] || 1
+	const endLabelsFit = Math.abs(lastPull.uma - lastPull.support) / pullSpan >= 0.09
 	// Set just ABOVE its line ("inside bottom left" of the band above it):
-	// below it, it sat on the first bar and on the start of the line.
+	// below it, it sat on the start of the lines.
 	const pityLabel = `${pityPulls} pulls (pity)`
 
 	const tooltip = (
@@ -208,22 +229,13 @@ const ForecastPlot: React.FC<PlotProps> = ({
 					endDateOf={endDateOf}
 				/>
 			)}
-			cursor={unit === "carats" ? { stroke: "var(--color-gray-400)", strokeWidth: 1 } : { fill: "var(--color-gray-700)", fillOpacity: 0.35 }}
+			cursor={{ stroke: "var(--color-gray-400)", strokeWidth: 1 }}
 			// Pinned near the top of the plot, so it never covers the mark it
 			// describes or runs into the heading above the chart.
 			position={{ y: 8 }}
 			isAnimationActive={false}
 		/>
 	)
-
-	if (unit === "pulls" && barData.length === 0) {
-		return (
-			<p className="px-4 pb-4 text-sm text-gray-400">
-				There are no pull banners in this plan to show. Step-ups count steps, so they only
-				appear in the carats view.
-			</p>
-		)
-	}
 
 	return (
 		<div
@@ -308,9 +320,20 @@ const ForecastPlot: React.FC<PlotProps> = ({
 						/>
 					</ComposedChart>
 				) : (
-					<ComposedChart data={barData} margin={{ top: 16, right: 20, bottom: 4, left: 4 }}>
+					<ComposedChart data={pullData} margin={{ top: 16, right: 20, bottom: 4, left: 4 }}>
 						<CartesianGrid vertical={false} stroke="var(--color-gray-700)" />
-						<XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={12} />
+						<XAxis
+							dataKey="t"
+							type="number"
+							scale="time"
+							domain={[start, end]}
+							ticks={monthStarts(start, end)}
+							tickFormatter={(t: number) => formatMonth(new Date(t))}
+							minTickGap={28}
+							tick={AXIS_TICK}
+							axisLine={false}
+							tickLine={false}
+						/>
 						<YAxis
 							domain={[0, pullTicks[pullTicks.length - 1]]}
 							ticks={pullTicks}
@@ -319,40 +342,45 @@ const ForecastPlot: React.FC<PlotProps> = ({
 							tickLine={false}
 							width={44}
 						/>
+						<ReferenceLine
+							y={pityPulls}
+							stroke="var(--color-gray-400)"
+							label={{ value: pityLabel, position: "insideBottomLeft", fill: "var(--color-gray-400)", fontSize: 11 }}
+						/>
 						{tooltip}
-						<Bar
-							dataKey="pulls"
-							maxBarSize={24}
-							radius={[4, 4, 0, 0]}
-							isAnimationActive={!reduceMotion}
-							animationDuration={600}
-							cursor="pointer"
-							onClick={(_data: unknown, index: number) => {
-								const bar = barData[index]?.bar
-								if (bar) select(bar.marker)
-							}}
-						>
-							{/* Solid where the bar reaches the pity, faint where it falls
-							    short, hollow for a row left out of the projection. The
-							    readout says the same in words. */}
-							{barData.map(({ bar }) => (
-								<Cell
-									key={`${bar.marker.index}-${bar.marker.t}`}
-									style={{
-										fill: bar.marker.excluded ? "var(--card-fill)" : "var(--color-brand)",
-										fillOpacity: bar.marker.excluded || bar.pulls >= pityPulls ? 1 : 0.45,
-										stroke: bar.marker.excluded ? "var(--color-brand)" : "none",
-										strokeWidth: 1.5,
+						{(["support", "uma"] as const).map((line) => (
+							<Line
+								key={line}
+								type="linear"
+								dataKey={line}
+								name={LINE_LABEL[line]}
+								stroke={LINE_COLOR[line]}
+								strokeWidth={2}
+								isAnimationActive={!reduceMotion}
+								animationDuration={900}
+								dot={(props: { cx?: number; cy?: number; index?: number; payload?: PullDatum }) => (
+									<PullDot key={`${line}-${props.index}`} {...props} line={line} onSelect={select} />
+								)}
+								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: LINE_COLOR[line] }}
+							/>
+						))}
+						{endLabelsFit &&
+							(["uma", "support"] as const).map((line) => (
+								<ReferenceDot
+									key={`end-${line}`}
+									x={lastPull.t}
+									y={lastPull[line]}
+									r={0}
+									label={{
+										value: `${line === "uma" ? "Uma" : "Support"} ${lastPull[line]}`,
+										position: "insideBottomRight",
+										offset: 8,
+										fill: "var(--color-gray-200)",
+										fontSize: 11,
+										fontWeight: 600,
 									}}
 								/>
 							))}
-						</Bar>
-						{/* After the bars, so the line reads across them. */}
-						<ReferenceLine
-							y={pityPulls}
-							stroke="var(--color-gray-300)"
-							label={{ value: pityLabel, position: "insideBottomLeft", fill: "var(--color-gray-300)", fontSize: 11 }}
-						/>
 					</ComposedChart>
 				)}
 			</ResponsiveContainer>
@@ -378,6 +406,62 @@ const ForecastPlot: React.FC<PlotProps> = ({
 }
 
 /**
+ * Rows with a vertex added for each skipped event, after every vertex at or
+ * before its instant, so it never splits a banner's arrival from its drop.
+ */
+function withSkips<R extends { t: number }>(
+	rows: R[],
+	skips: SkipMarker[],
+	make: (skip: SkipMarker) => R
+): R[] {
+	const out = [...rows]
+	for (const skip of skips) {
+		const i = out.findIndex((r) => r.t > skip.t)
+		out.splice(i === -1 ? out.length : i, 0, make(skip))
+	}
+	return out
+}
+
+/** The red dot for a skipped PvP event, on whichever line it sits. */
+const SkipDot: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
+	// Red, the over-budget token: a skip is rewards left on the table, and the
+	// token follows the theme and colorblind mode like the rest.
+	<circle cx={cx} cy={cy} r={4.5} strokeWidth={2} style={{ stroke: "var(--card-fill)", fill: "var(--color-pull-over)" }} />
+)
+
+/**
+ * A dot on a pulls line: a banner's, on its own kind's line only (clickable),
+ * or a skipped event's (red, on both lines).
+ */
+const PullDot: React.FC<{
+	cx?: number
+	cy?: number
+	payload?: PullDatum
+	line: PullLine
+	onSelect: (marker: ForecastMarker) => void
+}> = ({ cx, cy, payload, line, onSelect }) => {
+	if (cx === undefined || cy === undefined || !payload) return <g />
+	if (payload.skip) return <SkipDot cx={cx} cy={cy} />
+	if (!payload.bar || payload.kind !== line) return <g />
+	const { marker } = payload.bar
+	return (
+		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
+			<circle cx={cx} cy={cy} r={12} fill="transparent" />
+			<circle
+				cx={cx}
+				cy={cy}
+				r={4.5}
+				strokeWidth={2}
+				style={{
+					stroke: marker.excluded ? LINE_COLOR[line] : "var(--card-fill)",
+					fill: marker.excluded ? "var(--card-fill)" : LINE_COLOR[line],
+				}}
+			/>
+		</g>
+	)
+}
+
+/**
  * A dot on the line: a banner (clickable, with a hit area wider than the dot)
  * or a skipped PvP event (red). Every other vertex draws nothing.
  */
@@ -388,19 +472,7 @@ const LineDot: React.FC<{
 	onSelect: (marker: ForecastMarker) => void
 }> = ({ cx, cy, payload, onSelect }) => {
 	if (cx === undefined || cy === undefined || !payload) return <g />
-	if (payload.skip) {
-		// Red, the over-budget token: a skip is money left on the table, and
-		// the token follows the theme and colorblind mode like the rest.
-		return (
-			<circle
-				cx={cx}
-				cy={cy}
-				r={4.5}
-				strokeWidth={2}
-				style={{ stroke: "var(--card-fill)", fill: "var(--color-pull-over)" }}
-			/>
-		)
-	}
+	if (payload.skip) return <SkipDot cx={cx} cy={cy} />
 	const marker = payload.marker
 	if (!marker) return <g />
 	const short = marker.after < 0 && !marker.excluded
@@ -436,7 +508,7 @@ type ForecastTooltipProps = {
 	endDateOf: (marker: ForecastMarker) => string | null
 }
 
-/** The hover readout. Recharts hands it the nearest vertex or bar. */
+/** The hover readout. Recharts hands it the nearest vertex. */
 const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 	active,
 	payload,
@@ -445,13 +517,13 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 	bannerName,
 	endDateOf,
 }) => {
-	const datum = payload?.[0]?.payload as (LineDatum & Partial<BarDatum>) | undefined
+	const datum = payload?.[0]?.payload as (Partial<LineDatum> & Partial<PullDatum>) | undefined
 	if (!active || !datum) return null
 	const goHint = touch ? "Tap again to go to its row" : "Click to go to its row"
 
 	let body: React.ReactNode
 	if (datum.bar) {
-		const { bar } = datum
+		const { bar } = datum as { bar: PullBar }
 		const short = pityPulls - bar.pulls
 		body = (
 			<>
@@ -485,18 +557,33 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 				<div className="text-sm font-semibold text-(--color-pull-over)">Skipped</div>
 				<div className="font-medium text-gray-300">{datum.skip.name}</div>
 				<div className="text-gray-400">
-					{RACE_KIND_LABEL[datum.skip.kind] ?? "PvP event"}, {formatDate(new Date(datum.t).toISOString())}
+					{RACE_KIND_LABEL[datum.skip.kind] ?? "PvP event"}, {formatDate(new Date(datum.skip.t).toISOString())}
 				</div>
 				<div className="mt-1 text-gray-400">Its rewards aren't counted in your carats.</div>
+			</>
+		)
+	} else if (datum.uma !== undefined && datum.support !== undefined) {
+		// Values lead, labels follow, keyed by a short stroke of each line's
+		// colour (dataviz: line keys, not boxes).
+		body = (
+			<>
+				{(["uma", "support"] as const).map((line) => (
+					<div key={line} className="flex items-center gap-2">
+						<span className="h-0.5 w-3 shrink-0 rounded-full" style={{ background: LINE_COLOR[line] }} />
+						<span className="text-sm font-semibold text-gray-100 tabular-nums">{datum[line]}</span>
+						<span className="text-gray-400">{LINE_LABEL[line].toLowerCase()}</span>
+					</div>
+				))}
+				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
 			</>
 		)
 	} else {
 		body = (
 			<>
 				<div className="text-sm font-semibold text-gray-100 tabular-nums">
-					{formatCarats(datum.value)} carats
+					{formatCarats(datum.value ?? 0)} carats
 				</div>
-				<div className="text-gray-400">{formatDate(new Date(datum.t).toISOString())}</div>
+				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
 			</>
 		)
 	}
