@@ -1008,7 +1008,8 @@ describe('Timeline recommended banners and card purposes', () => {
     // Per banner: the support side of the same window keeps its ordinary surface.
     const supportPanel = panelFor('Kitasan Black')
     expect(supportPanel).not.toHaveClass('ssr-panel')
-    expect(supportPanel).toHaveClass('bg-gray-800')
+    // The ordinary card surface (the site's one card class since the surface tokens).
+    expect(supportPanel).toHaveClass('card-panel')
     expect(document.querySelectorAll('.recommended-chip')).toHaveLength(1)
   })
 

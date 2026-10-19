@@ -59,8 +59,8 @@ Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
 each mode six themes. Purple keeps its saved `light-lilac` id.
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
-labels and surface polish. Individual `data-theme` selectors override the palette,
-including the original Light theme's glows and shadows. Every light theme puts
+labels and surface tokens. Individual `data-theme` selectors override the palette,
+including the original Light theme's glows and card shadow. Every light theme puts
 white labels on its solid brand buttons (Light had black ones until 2026-10-18).
 Pearl uses softer paper-white surfaces and a near-black charcoal accent. Red
 and Green each move the pull status colour that matches their brand (over-budget
@@ -81,6 +81,29 @@ its glow that way, on `body` and on the shell, and scrolling repainted the viewp
 twice per frame on the main thread (153 repaints in a 2,500px scroll on `/faq` at
 phone size, against 2 for the default). That was the "other themes are laggy"
 reports. The PAGE GLOW comment in `src/index.css` has the details.
+
+**Surfaces are two tokens and one class (2026-10-18).** A theme says everything about its
+surfaces through `--color-edge` (a colour token, so it is the `border-edge` utility) and
+`--card-shadow` (a plain variable, because Tailwind writes shadow utilities out literally
+and a theme could never override a `--shadow-*` token). Use them by role:
+
+| Surface | Classes |
+|---|---|
+| A card: any raised box on a page | `card-panel` (fill, edge, shadow, 12px radius) |
+| A card-shaped box that can't wear the class (the calculator's sheet frame paints gray-900) | `border border-edge shadow-(--card-shadow)` |
+| A popover, dialog or drawer | `border border-edge` plus Tailwind's own `shadow-lg` / `shadow-2xl` |
+| A quieter inset panel (a translucent `bg-gray-800/60`) | `border border-edge`, no shadow |
+
+On a dark theme the edge is low-alpha light with 5% of the brand, so one value serves all
+six dark themes at about 1.5:1 against a card. A light theme redraws it as solid tinted
+gray. `.card-panel` lives in `@layer components`, so a utility at the call site beats it
+(`rounded-t-none` on a card welded to the strip above it, the scenario card's
+`border-brand/40`, the delete-account card's red edge). Never re-skin surfaces by matching
+utility classes in a theme block. Until 2026-10-18 every theme matched `.shadow-sm`,
+`.shadow-md`, `.shadow-lg` and `.shadow-2xl` literally. So every toggle knob, segmented tab
+and dialog wore the card shadow, a card without one of those utilities wore none, and the
+class sat unlayered, beating every utility a caller put on it. The SURFACES comment in
+`src/index.css` has the values.
 
 **A page's root never paints the page colour.** The shell already does, so a
 `bg-gray-900` on a page's outer wrapper changes nothing on Dark and hides the glow on

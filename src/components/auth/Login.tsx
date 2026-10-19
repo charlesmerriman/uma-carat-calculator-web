@@ -48,7 +48,7 @@ export const Login: React.FC = () => {
 
 	return (
 		<div className="flex min-h-screen flex-col bg-gray-900 p-4">
-			<div className="m-auto w-full max-w-sm overflow-hidden rounded-2xl border border-gray-700 bg-gray-800 shadow-2xl">
+			<div className="card-panel m-auto w-full max-w-sm overflow-hidden">
 				{/* Brand header strip */}
 				<div className="flex justify-center border-b border-gray-700 px-8 py-4">
 					<Wordmark size="card" />

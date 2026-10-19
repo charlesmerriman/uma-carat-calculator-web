@@ -264,7 +264,7 @@ export const CountStepper = ({
 						// once. Chips carry their own titles, so this shows on the
 						// pad's dead space only.
 						title={chips.hint}
-						className="fixed z-50 rounded-lg border border-gray-600 bg-gray-800 p-1 shadow-lg"
+						className="fixed z-50 rounded-lg border border-edge bg-gray-800 p-1 shadow-lg"
 						// Focus never leaves the field, so the pad stays open for the
 						// next click and the arrow keys keep working. On the whole
 						// panel rather than each chip: a press on the pad's own dead

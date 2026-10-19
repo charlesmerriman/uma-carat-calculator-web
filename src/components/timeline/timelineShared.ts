@@ -279,11 +279,11 @@ export interface TimelineFocusProps {
  * the panel's own rounding and sits just off its edge.
  *
  * An OUTLINE, not a Tailwind `ring-*`. A ring is drawn with `box-shadow`, and
- * the gold and gilded themes set `box-shadow` on `.card-panel` themselves
- * (index.css, `[data-theme="gold"] .card-panel`). That selector outranks a
- * utility class, so the ring was silently dropped in the default theme. No
- * shadow rule can touch an outline, and its offset gap is see-through, so it
- * needs no colour matched to the page background either.
+ * until 2026-10-18 every theme set `box-shadow` on `.card-panel` itself
+ * (index.css), which outranked the utility, so the ring was silently dropped.
+ * The card's shadow now composes with a ring, but the outline stays: no
+ * shadow rule can touch it, and its offset gap is see-through, so it needs no
+ * colour matched to the page background either.
  *
  * Shared with the Legend Races page's cards (LegendRaceReleaseCard).
  */

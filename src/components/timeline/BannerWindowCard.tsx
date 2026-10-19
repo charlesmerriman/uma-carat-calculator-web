@@ -564,7 +564,7 @@ function FeaturePanel({
 	// to draw the eye to.
 	const surfaceClass = recommended
 		? `ssr-panel ${status === "expired" ? "ssr-panel--still" : ""}`
-		: "border-gray-600 bg-gray-800 shadow-sm"
+		: "card-panel"
 
 	// Whether anything shares the title line. Both chips are sized to the
 	// title's 20px line box, so the line is exactly as tall with them as without.
@@ -1039,7 +1039,7 @@ export function BannerWindowCard({
 			)}
 			<div
 				className={`card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
-					attachedEvent ? "card-panel-joined-top" : ""
+					attachedEvent ? "rounded-t-none" : ""
 				} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
 			>
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

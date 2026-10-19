@@ -48,7 +48,7 @@ export const CookieConsentBanner: React.FC = () => {
 			role="dialog"
 			aria-label="Cookie preferences"
 			// Above the app shell's sticky bits, below the toaster.
-			className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700 bg-gray-800 text-sm text-gray-300 shadow-2xl"
+			className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-gray-800 text-sm text-gray-300 shadow-2xl"
 		>
 			<div className="mx-auto flex max-w-[96rem] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-6 sm:px-6">
 				<p className="min-w-0 flex-1 leading-relaxed">

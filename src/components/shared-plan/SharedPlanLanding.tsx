@@ -374,7 +374,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 				)}
 			</form>
 
-			<div className="mt-6 rounded-xl border border-gray-700 bg-gray-800/50 p-4 sm:p-5">
+			<div className="mt-6 rounded-xl border border-edge bg-gray-800/50 p-4 sm:p-5">
 				<p className="text-sm text-gray-400">
 					{[
 						plural(summary.row_count, "banner", "banners"),

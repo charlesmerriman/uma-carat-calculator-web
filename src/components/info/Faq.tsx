@@ -102,7 +102,7 @@ export const Faq: React.FC = () => {
 												// to someone asking. Clears the navbar the same way as the
 												// section above.
 												id={item.slug}
-												className="scroll-mt-6 rounded-xl border border-gray-700 bg-gray-800 p-5 shadow-md"
+												className="card-panel scroll-mt-6 p-5"
 											>
 												<h3 className={question}>{item.question}</h3>
 												<MarkdownContent markdown={item.answer} />

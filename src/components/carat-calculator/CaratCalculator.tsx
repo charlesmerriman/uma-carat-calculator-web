@@ -232,7 +232,7 @@ export const CaratCalculator: React.FC = () => {
 					    one and shadow it, so `@banner-table:` still measures the sheet's
 					    box, not this one — that is the whole reason the two tokens differ
 					    by the gutter. */}
-					<div className="@container w-full overflow-hidden rounded-none border border-gray-600 bg-gray-900 shadow-sm sm:rounded-b-xl">
+					<div className="@container w-full overflow-hidden rounded-none border border-edge bg-gray-900 shadow-(--card-shadow) sm:rounded-b-xl">
 						<IncomeForm />
 
 						<div className="border-t border-gray-700 pb-4">
@@ -382,7 +382,7 @@ export const CaratCalculator: React.FC = () => {
 									)}
 									{/* Own @container, as in the staging area above. */}
 									<div className="@container">
-										<div className="banner-grid hidden w-full items-center text-xs text-gray-400 font-medium bg-gray-800 border-b border-gray-700 rounded-t-lg py-1.5 @banner-table:grid">
+										<div className="banner-grid hidden w-full items-center text-xs text-gray-400 font-medium bg-gray-800 border-b border-edge rounded-t-lg py-1.5 @banner-table:grid">
 											<div className="text-center">Type</div>
 											<div className="text-center">Images</div>
 											<div className="text-center">Banner</div>

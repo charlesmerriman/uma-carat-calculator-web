@@ -44,4 +44,4 @@ export const NAV_PROFILE_TRIGGER =
 	"flex h-10 items-center rounded-lg border p-px transition desktop-nav:gap-2 desktop-nav:pr-2.5"
 
 /** A popover panel anchored under one of the buttons above. */
-export const NAV_POPOVER = "rounded-xl border border-gray-700 bg-gray-800 shadow-lg"
+export const NAV_POPOVER = "rounded-xl border border-edge bg-gray-800 shadow-lg"

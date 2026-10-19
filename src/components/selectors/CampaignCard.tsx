@@ -72,7 +72,7 @@ export const CampaignCard = ({
 	return (
 		<section
 			ref={focusRef}
-			className={`overflow-hidden rounded-xl border border-gray-700 bg-gray-800 shadow-sm ${FOCUS_SCROLL_MARGIN} ${locked ? "opacity-60" : ""}`}
+			className={`card-panel overflow-hidden ${FOCUS_SCROLL_MARGIN} ${locked ? "opacity-60" : ""}`}
 		>
 			{/* WHY 49rem IS A CONSTANT AND NOT `max-content`
 			    Every card is its own grid, so an intrinsic track sizes each one to its
