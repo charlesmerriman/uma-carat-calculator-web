@@ -118,6 +118,18 @@ export const CampaignCard = ({
 						<ChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 					</span>
 				</button>
+				{/* A campaign's step-ups stay in view when it is folded: they are the
+				    page's rarest content (an anniversary sells one or two) and a
+				    folded line gave no sign of them. The strip is a heading and a
+				    row each, and every row still opens its ten-pick picker. */}
+				<StepUpSelectionStrip
+					stepUps={stepUps}
+					selections={stepUpSelections}
+					umaBannerData={umaBannerData}
+					supportBannerData={supportBannerData}
+					disabled={locked}
+					onChange={onStepUpSelectionChange}
+				/>
 			</section>
 		)
 	}
