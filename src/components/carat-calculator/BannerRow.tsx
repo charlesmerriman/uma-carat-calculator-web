@@ -78,6 +78,8 @@ import { RecommendedMark } from "./RecommendedMark"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { usePhoneOddsHidden } from "../../hooks/usePhoneOddsHidden"
+import { ChevronDown } from "lucide-react"
 import { BannerTypeBadge } from "./BannerTypeBadge"
 import { TrashIcon } from "./TrashIcon"
 import { CountStepper } from "./CountStepper"
@@ -208,6 +210,8 @@ export const BannerRow = ({
 	const isStepUp = bannerType === "StepUp"
 	// The person's favourite umas, drawn in the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	// Phone cards only: one device-wide switch that folds every card's odds strip.
+	const phoneOdds = usePhoneOddsHidden()
 
 	const targetBannerData = bannersForRowType(bannerType, {
 		umaBannerData,
@@ -830,12 +834,34 @@ export const BannerRow = ({
 			</div>
 			<div className="border-t border-gray-700">
 				{odds ? (
-					<MLBChanceDisplay
-						plannedBanner={plannedBanner}
-						values={odds}
-						header={oddsCaption}
-						pairedWith={pairedTopLabel}
-					/>
+					<>
+						{/* The fold switch. Its own thin bar rather than a button on the
+						    caption: the caption only exists on a banner with a card to
+						    choose, and its chevron already opens the card picker. Folded,
+						    this bar is all that is left of the odds, about 20px against
+						    the strip's 45 to 58. */}
+						<button
+							type="button"
+							onClick={phoneOdds.toggle}
+							aria-expanded={!phoneOdds.hidden}
+							title={phoneOdds.hidden ? "Show the odds on every card" : "Hide the odds on every card"}
+							className="flex w-full items-center justify-center gap-1 bg-gray-800/60 py-0.5 text-[10px] font-medium text-gray-400 transition hover:text-gray-200"
+						>
+							{phoneOdds.hidden ? "Show odds" : "Hide odds"}
+							<ChevronDown
+								aria-hidden="true"
+								className={`h-3 w-3 transition-transform ${phoneOdds.hidden ? "" : "rotate-180"}`}
+							/>
+						</button>
+						{!phoneOdds.hidden && (
+							<MLBChanceDisplay
+								plannedBanner={plannedBanner}
+								values={odds}
+								header={oddsCaption}
+								pairedWith={pairedTopLabel}
+							/>
+						)}
+					</>
 				) : (
 					<div className="py-2.5 text-center text-xs text-gray-500">Select a banner</div>
 				)}
@@ -1108,7 +1134,7 @@ export const BannerRow = ({
 			noteButton={renderNoteButton(
 				"my-auto mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-(--tile-button-border) bg-black/10 transition hover:bg-black/25"
 			)}
-			oddsPanel={renderOddsPanel("border-t border-gray-700 p-2")}
+			oddsPanel={phoneOdds.hidden ? null : renderOddsPanel("border-t border-gray-700 p-2")}
 			noteEditor={renderNoteEditor("border-t border-gray-700 p-2")}
 			onRemove={handleDeleteBannerClick}
 			removeLabel="Delete banner"
