@@ -25,10 +25,13 @@ const CONTACT_EMAIL = "Henryhandsomederby@gmail.com"
  * ad networks' publisher policies. It describes what the site ACTUALLY does, so
  * a change to data handling anywhere in the codebase is a change here too:
  * visits.py (the counter), index.html (Analytics and the ad tag), the account
- * views, and the Feedback page. It is not legal advice.
+ * views, the Feedback page, and the Patreon supporter sync (MEMBER_FIELDS in the
+ * API's patreon_api.py, and the PatreonSupporter model it fills: those rows are
+ * about people who may never visit the Site, which is GDPR Article 14 territory).
+ * It is not legal advice.
  */
 export const PrivacyPolicy: React.FC = () => {
-	useDocumentMeta("Privacy Policy", "What the Uma Musume Carat Calculator collects, why, how long it is kept, and your rights. No email address, no real name and no IP address is ever stored.")
+	useDocumentMeta("Privacy Policy", "What the Uma Musume Carat Calculator collects, why, how long it is kept, and your rights. Accounts hold no email address or real name, and no IP address is ever stored.")
 
 	return (
 		// flex-1 on <main> absorbs any leftover viewport height so the footer keeps its
@@ -42,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 14, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 18, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -53,8 +56,8 @@ export const PrivacyPolicy: React.FC = () => {
 
 					<h2 className={heading}>The Short Version</h2>
 					<p className={paragraph}>
-						The Site holds as little about you as it can. We do <strong>not</strong> collect
-						or store:
+						The Site holds as little about you as it can. Whether you visit as a guest or
+						sign in, we do <strong>not</strong> collect or store:
 					</p>
 					<ul className={list}>
 						<li>your email address</li>
@@ -68,6 +71,11 @@ export const PrivacyPolicy: React.FC = () => {
 						in, the plan you build, anything you choose to post in the PvP gallery, an
 						anonymous visitor count, and the data that Google Analytics and (if ads run) our
 						advertising partner collect with your consent.
+					</p>
+					<p className={paragraph}>
+						Patreon supporters are the one exception. If you pledge to us on Patreon, Patreon
+						shares your name and email address with us, and we keep them in our supporter
+						list. See &quot;Patreon Supporters&quot; below.
 					</p>
 
 					<h2 className={heading}>Who Is Responsible</h2>
@@ -116,9 +124,10 @@ export const PrivacyPolicy: React.FC = () => {
 						permission each provider offers, so your email address and profile details
 						are never sent to us in the first place; where a provider includes something
 						about you anyway, such as a username, we discard it without storing it. In
-						Patreon&apos;s case that means we can see that an account exists and, if you
-						link it, whether it currently supports us. We never see your email address,
-						your pledge amount, or your billing details.
+						Patreon&apos;s case, signing in tells us that an account exists and, if you link
+						it, whether it currently supports us. Signing in never sends us your email
+						address, your pledge amount or your billing details. Supporters are covered
+						separately in &quot;Patreon Supporters&quot; below.
 					</p>
 					<p className={paragraph}>
 						When you use the calculator, we store the planning data you enter, including
@@ -169,6 +178,46 @@ export const PrivacyPolicy: React.FC = () => {
 						name.
 					</p>
 
+					<h2 className={heading}>Patreon Supporters</h2>
+					<p className={paragraph}>
+						If you pledge to us on a paid Patreon tier, Patreon shares some of your membership
+						details with us as the page&apos;s creator. This happens whether or not you have an
+						account on the Site. Every day we copy these details into our supporter list:
+					</p>
+					<ul className={list}>
+						<li>the name on your Patreon account</li>
+						<li>the email address on your Patreon account, if Patreon provides one</li>
+						<li>your tier, the date your pledge started, and whether it is still active</li>
+						<li>
+							Patreon&apos;s ID number for your account, which lets us match your pledge to a
+							Site account you sign in or link with Patreon
+						</li>
+					</ul>
+					<p className={paragraph}>
+						We don&apos;t ask Patreon for your postal address, phone number or payment
+						history, so we never receive them. Free members of our Patreon page are not on
+						the list.
+					</p>
+					<p className={paragraph}>
+						We use the list to give supporters their benefits on the Site and to thank them.
+						Your email address is seen only by Site staff, in our admin area, and only to
+						tell supporters apart when two have similar names or one changes theirs. It is
+						never shown on the Site, and we never use it to contact you.
+					</p>
+					<p className={paragraph}>
+						Your name appears in the supporter list on the home page only if you have agreed
+						to it. Everyone else is counted without a name. If you link Patreon to your
+						account, your tier can also show next to your gallery posts, and you can switch
+						that off on your Account page.
+					</p>
+					<p className={paragraph}>
+						When a pledge ends, we keep your entry marked as inactive, so your start date
+						and your choice about being named are still there if you come back. Deleting
+						your Site account unlinks your entry but does not delete it. To see what we hold
+						about you as a supporter, correct it, or have it deleted, email us from the
+						address on your Patreon account.
+					</p>
+
 					<h2 className={heading}>Why We Use It, and the Legal Basis</h2>
 					<p className={paragraph}>
 						GDPR requires a legal basis for each thing we do with your data. These are ours:
@@ -185,6 +234,13 @@ export const PrivacyPolicy: React.FC = () => {
 							comments, display name, picture and tier). Basis: <strong>your consent</strong>,
 							Article 6(1)(a), given when you post. You withdraw it by taking the post down or
 							deleting the comment.
+						</li>
+						<li>
+							<strong>Keeping the supporter list</strong> (the Patreon details described
+							above). Basis: <strong>legitimate interest</strong>, Article 6(1)(f), in giving
+							supporters the benefits they pledged for, thanking them, and keeping an accurate
+							record of who supports us. Showing your name on the home page is based on{" "}
+							<strong>your consent</strong>, Article 6(1)(a).
 						</li>
 						<li>
 							<strong>Moderating the gallery</strong> (reports, and limits on how often you
@@ -214,8 +270,9 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 					</ul>
 					<p className={paragraph}>
-						We do not sell your personal information, and because we hold no contact
-						details, we cannot send you marketing of any kind.
+						We do not sell your personal information, and we send no marketing of any kind.
+						The only contact details we hold are supporters&apos; email addresses, used only
+						as described in &quot;Patreon Supporters&quot;.
 					</p>
 
 					<h2 className={heading}>Traffic Measurement</h2>
@@ -364,6 +421,10 @@ export const PrivacyPolicy: React.FC = () => {
 							your account reference removed if you delete your account.
 						</li>
 						<li>
+							<strong>Patreon supporter list</strong>: while you pledge, then kept marked as
+							inactive until you ask us to delete it.
+						</li>
+						<li>
 							<strong>Visitor scrambled values</strong>: 90 days. The daily and monthly
 							totals they produce contain nothing about anyone and are kept.
 						</li>
@@ -388,8 +449,8 @@ export const PrivacyPolicy: React.FC = () => {
 						Switzerland this is a transfer outside your region. Google is certified under
 						the EU-US Data Privacy Framework, and its UK and Swiss extensions, which the
 						European Commission recognizes as adequate protection. For the database, the
-						only personal data transferred is the anonymous account data described above,
-						and it is protected by Standard Contractual Clauses in DigitalOcean&apos;s data
+						only personal data transferred is the anonymous account data and the supporter
+						list described above, and both are protected by Standard Contractual Clauses in DigitalOcean&apos;s data
 						processing agreement.
 					</p>
 
@@ -413,7 +474,8 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							<strong>Erasure</strong>: to have it deleted. The &quot;Delete account&quot;
-							button on the Account page does this immediately and completely.
+							button on the Account page does this immediately and completely. A Patreon
+							supporter entry is kept separately: email us to have it deleted.
 						</li>
 						<li>
 							<strong>Portability</strong>: to receive a copy of your data in a usable
@@ -436,13 +498,15 @@ export const PrivacyPolicy: React.FC = () => {
 					</ul>
 					<p className={paragraph}>
 						To make a request by email, include the username shown on your Account page. It
-						is the only way we can tell which account is yours, because we hold no email
-						address to match you against. We answer within one month.
+						is the only way we can tell which account is yours, because accounts have no
+						email address to match you against. For a request about your Patreon supporter
+						entry, write from the email address on your Patreon account. We answer within
+						one month.
 					</p>
 
 					<h2 className={heading}>Account Recovery</h2>
 					<p className={paragraph}>
-						Because we store no email address, there is no password reset and no way for
+						Because accounts have no email address, there is no password reset and no way for
 						us to verify your identity if you lose access to every Google, Discord, or
 						Patreon account you signed in with. If that happens, your saved plan cannot be
 						recovered, and you would need to start a new plan. That is the trade-off
