@@ -1,10 +1,16 @@
 import { useSyncExternalStore } from "react"
 
-/** localStorage: "1" when the phone cards fold their odds strip away. Absent means shown. */
+/**
+ * localStorage: "0" when the phone cards show their odds strip. Absent (or the
+ * "1" the first version wrote) means folded: folded is the default, so only the
+ * choice to show them needs remembering.
+ */
 const STORAGE_KEY = "uma-planner-phone-odds-hidden"
 
 /**
  * Whether the planner's phone cards show their odds strip, remembered per device.
+ * Folded by default: on a phone the strip is most of a card's height, and the
+ * card's own numbers are what most people scroll the sheet for.
  *
  * ONE switch for every card, not one per row: someone who folds the odds away
  * wants them gone from the whole sheet, and a per-row flag would have them
@@ -14,8 +20,9 @@ const STORAGE_KEY = "uma-planner-phone-odds-hidden"
  * An external store rather than useState in each card, for two reasons: the
  * cards are siblings with no shared parent state to lift into, and /app is
  * prerendered, so the stored value must not be read during render.
- * `useSyncExternalStore` reads the server snapshot (shown) for the prerender
- * and the hydration, then the stored value straight after.
+ * `useSyncExternalStore` reads the server snapshot (folded, the default) for
+ * the prerender and the hydration, then the stored value straight after, so
+ * only someone who chose to show the odds sees the cards change on load.
  *
  * The desktop table never reads this: its odds sit in a fixed track of a
  * fixed-height row, where folding them would save nothing.
@@ -29,10 +36,10 @@ let current: boolean | null = null
 function read(): boolean {
 	if (current === null) {
 		try {
-			current = localStorage.getItem(STORAGE_KEY) === "1"
+			current = localStorage.getItem(STORAGE_KEY) !== "0"
 		} catch {
-			// Storage blocked: the strip shows.
-			current = false
+			// Storage blocked: the default, folded.
+			current = true
 		}
 	}
 	return current
@@ -46,8 +53,8 @@ function subscribe(listener: () => void): () => void {
 function setHidden(hidden: boolean): void {
 	current = hidden
 	try {
-		if (hidden) localStorage.setItem(STORAGE_KEY, "1")
-		else localStorage.removeItem(STORAGE_KEY)
+		if (hidden) localStorage.removeItem(STORAGE_KEY)
+		else localStorage.setItem(STORAGE_KEY, "0")
 	} catch {
 		// Not remembered past this visit; the switch itself still happens.
 	}
@@ -55,6 +62,6 @@ function setHidden(hidden: boolean): void {
 }
 
 export function usePhoneOddsHidden() {
-	const hidden = useSyncExternalStore(subscribe, read, () => false)
+	const hidden = useSyncExternalStore(subscribe, read, () => true)
 	return { hidden, toggle: () => setHidden(!hidden) }
 }
