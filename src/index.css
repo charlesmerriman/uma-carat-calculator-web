@@ -329,21 +329,28 @@ html {
 	--color-brand: #E6D28A;
 }
 
-/* Gilded deliberately turns the warmth up: it retains the cinematic, amber-lit
-   approach that is too decorative for the default planning experience. */
+/* Gilded turns the warmth up: the cinematic, amber-lit look that is too
+   decorative for the default planning experience.
+
+   Pushed further on 2026-10-18 (design-polish item 5b): with a pale gold
+   accent and grays only a hair warmer than Dark's, the calculator looked the
+   same on both and only the home page's glow told them apart. The accent is
+   now amber rather than Dark's straw gold, and the ramp is brown, not
+   near-neutral. gray-400 on gray-800 measures 5.2:1, the brand on gray-800
+   9.3:1, black on the brand 11.5:1. */
 [data-theme="gilded"] {
-	--color-brand: #f1cf75;
+	--color-brand: #f2b544;
 	--color-gray-50:  #fffaf0;
-	--color-gray-100: #f5eddf;
-	--color-gray-200: #ded2bf;
-	--color-gray-300: #bcae98;
-	--color-gray-400: #998a73;
-	--color-gray-500: #766750;
-	--color-gray-600: #51463a;
-	--color-gray-700: #302a25;
-	--color-gray-800: #211d1a;
-	--color-gray-900: #151210;
-	--color-gray-950: #0d0b0a;
+	--color-gray-100: #f6ecdc;
+	--color-gray-200: #e2d2b8;
+	--color-gray-300: #c4ae8f;
+	--color-gray-400: #a38a6a;
+	--color-gray-500: #7d6447;
+	--color-gray-600: #5a4328;
+	--color-gray-700: #362717;
+	--color-gray-800: #261b10;
+	--color-gray-900: #1a1209;
+	--color-gray-950: #0f0a05;
 }
 
 [data-theme="midnight"] {
@@ -534,13 +541,23 @@ html {
 	--color-gray-950: #fffdfb;
 	--light-glow-start: rgb(210 142 53 / 18%);
 	--light-glow-end: rgb(129 73 114 / 10%);
-	--light-button-ink: #000000;
 	--light-shadow: 0 12px 30px rgb(70 37 47 / 9%);
 	--light-panel-border: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
 	--light-nav-border: color-mix(in srgb, var(--color-brand) 16%, var(--color-gray-600));
 }
 
+/* Red and Green move the status colour that matches their brand. On Red the
+   primary button, the headings and an over-budget pull field were all the same
+   red, so the warning stopped reading as one: over-budget turns orange (the
+   colorblind mode's light pair). On Green the on-pity count matched the brand,
+   so on-pity turns blue and its drained "neutral" follows it to slate. The
+   other state keeps the shared light value. Colorblind mode still wins: its
+   block has two attributes in its selector to these blocks' one. */
 [data-theme="light-green"] {
+	--color-pull-ok: #1d4ed8;
+	--color-pull-ok-border: #2563eb;
+	--color-pull-neutral: #526273;
+	--color-pull-neutral-border: #64748b;
 	--color-brand: #166534;
 	--color-gray-50:  #10221a;
 	--color-gray-100: #1a3026;
@@ -555,6 +572,8 @@ html {
 }
 
 [data-theme="light-red"] {
+	--color-pull-over: #9a3412;
+	--color-pull-over-border: #c2410c;
 	--color-brand: #b91c1c;
 	--color-gray-50:  #1f1418;
 	--color-gray-100: #321f25;
@@ -582,9 +601,12 @@ html {
 	--color-gray-950: #fcfaff;
 }
 
-/* Pearl is the softer neutral option: paper-white surfaces and charcoal actions. */
+/* Pearl is the softer neutral option: paper-white surfaces and charcoal actions.
+   The accent was a mid charcoal (#52525b) until 2026-10-18, which made the
+   primary button and the active tab gray on gray; near-black (stone-800, the
+   ramp's own hue) gives the one primary action a focus. White on it: 14.9:1. */
 [data-theme="light-pearl"] {
-	--color-brand: #52525b;
+	--color-brand: #292524;
 	--color-gray-50:  #1c1917;
 	--color-gray-100: #292524;
 	--color-gray-200: #44403c;
@@ -703,7 +725,10 @@ html {
 	color-scheme: light;
 }
 
-/* Original Light retains its black button labels; the newer palettes use white. */
+/* Solid brand buttons are written `bg-brand text-black` for the dark themes;
+   on a light theme the brand is deep, so the label turns white. Warm Light kept
+   black labels until 2026-10-18, which measured 3.9:1 on its brown-gold and
+   read as a muddy block; white measures 5.3:1. */
 [data-theme-mode="light"] .bg-brand.text-black {
 	color: var(--light-button-ink);
 }
@@ -846,7 +871,7 @@ html {
 [data-theme="gilded"] .shadow-sm,
 [data-theme="gilded"] .shadow-lg,
 [data-theme="gilded"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(241 207 117 / 6%) inset;
+	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(242 181 68 / 6%) inset;
 }
 
 [data-theme="gilded"] .card-panel {
@@ -858,7 +883,7 @@ html {
 }
 
 [data-theme="gilded"] .font-display .text-brand {
-	text-shadow: 0 0 1.25rem rgb(241 207 117 / 20%);
+	text-shadow: 0 0 1.25rem rgb(242 181 68 / 20%);
 }
 
 /* Default is intentionally restrained. These are small hierarchy and interaction

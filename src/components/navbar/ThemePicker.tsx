@@ -29,12 +29,16 @@ export const ThemePicker = () => {
 					: "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
 			}`}
 		>
-			{/* Static hex, not var(--color-brand) — all swatches visible at once */}
+			{/* Static hex, not var(--color-brand): all swatches are visible at
+			    once. Two-tone, the theme's surface with its accent as a dot, so
+			    Dark, Gilded and Midnight (all gold accents) can be told apart. */}
 			<span
 				aria-hidden="true"
-				className="h-3.5 w-3.5 shrink-0 rounded-full border border-gray-500"
-				style={{ backgroundColor: theme.swatch }}
-			/>
+				className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-500"
+				style={{ backgroundColor: theme.canvas }}
+			>
+				<span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.swatch }} />
+			</span>
 			{PRIMARY_THEME_IDS.has(theme.id) && theme.label}
 		</button>
 	)

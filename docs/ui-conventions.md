@@ -51,15 +51,20 @@ working unchanged. Read the comments there before adding a theme.
 
 The compact picker puts **Dark** and **Light** first as the primary choices, with
 small swatches for alternative **Dark themes** and **Light themes** underneath,
-grouped by the `mode` in `themeStore.ts`. Dark retains the saved `gold` id and
+grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
+`canvas` (its card colour on a dark theme, its page colour on a light one) with
+its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
 remains the initial default. Light (`light`) restores the original warm palette;
 Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
 each mode six themes. Purple keeps its saved `light-lilac` id.
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
 labels and surface polish. Individual `data-theme` selectors override the palette,
-including the original Light theme's glows, shadows and black button labels.
-Pearl uses softer paper-white surfaces and charcoal actions. Toasts use the same
+including the original Light theme's glows and shadows. Every light theme puts
+white labels on its solid brand buttons (Light had black ones until 2026-10-18).
+Pearl uses softer paper-white surfaces and a near-black charcoal accent. Red
+and Green each move the pull status colour that matches their brand (over-budget
+orange on Red, on-pity blue on Green). Gilded is the amber, brown-gray dark theme. Toasts use the same
 mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.

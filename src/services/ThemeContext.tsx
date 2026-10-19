@@ -7,6 +7,8 @@ export interface ThemeConfig {
 	// Static hex — NOT a CSS var. All swatches render simultaneously, so each must
 	// show its own color regardless of which theme is currently active on documentElement.
 	swatch: string
+	/** The theme's main surface, drawn behind the swatch dot. Static hex, same reason. */
+	canvas: string
 }
 
 export interface ThemeContextType {
