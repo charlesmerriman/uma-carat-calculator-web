@@ -4,6 +4,7 @@ import {
   racePayoutAhead,
   readSkippedRaceEvents,
   upcomingSkipCount,
+  upcomingSkippedRaces,
   withRaceParticipation,
   withoutSkippedRaces,
 } from '../utils/raceParticipation'
@@ -158,5 +159,25 @@ describe('statsAreDirty with skips', () => {
     expect(
       statsAreDirty({ ...DEFAULT_GUEST_STATS, skipped_race_events: { league_of_heroes: [3] } })
     ).toBe(true)
+  })
+})
+
+describe('upcomingSkippedRaces (the forecast chart\'s red dots)', () => {
+  it('returns the skipped race rows still ahead, never a game event or a past race', () => {
+    const rows = upcomingSkippedRaces(
+      LEDGER,
+      { champions_meeting: [6, 7], league_of_heroes: [7] },
+      NOW
+    )
+    // CM 6 already paid out; the game event with id 7 is not a race.
+    expect(rows.map((r) => [r.kind, r.source_id])).toEqual([
+      ['champions_meeting', 7],
+      ['league_of_heroes', 7],
+    ])
+  })
+
+  it('is empty when nothing is skipped', () => {
+    expect(upcomingSkippedRaces(LEDGER, undefined, NOW)).toEqual([])
+    expect(upcomingSkippedRaces(LEDGER, {}, NOW)).toEqual([])
   })
 })

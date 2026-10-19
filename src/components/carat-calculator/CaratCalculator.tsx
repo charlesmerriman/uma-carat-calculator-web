@@ -126,12 +126,14 @@ export const CaratCalculator: React.FC = () => {
 	// Above the rows or below them (the default), remembered per device.
 	const forecastPosition = useForecastPosition()
 
-	// The row that just landed from staging, by its key (its tempId: a row
-	// confirmed this session has no server id yet). It wears .row-arrival, a
-	// one-off brand flash, so the eye can follow it from the staging area to
-	// wherever the date sort put it, often far down the sheet. Cleared when the
-	// flash ends, so the class (and its position: relative) never lingers.
-	const [arrivedKey, setArrivedKey] = useState<number | null>(null)
+	// The row wearing .row-arrival, a one-off brand flash, by its index in
+	// userPlannedBannerData. Two things flash a row: confirming it from staging
+	// (so the eye can follow it to wherever the date sort put it) and clicking
+	// its dot or bar on the forecast chart (which scrolls to it first). By
+	// index, not by key: a new row's tempId and a saved row's id are separate
+	// counters that can collide. Cleared when the flash ends, so the class (and
+	// its position: relative) never lingers.
+	const [flashIndex, setFlashIndex] = useState<number | null>(null)
 
 	if (!userStatsData) {
 		return <div>Loading...</div>
@@ -185,7 +187,21 @@ export const CaratCalculator: React.FC = () => {
 
 		setUserPlannedBannerData(updated)
 		setStagedBanners((prev) => prev.filter((b) => b.tempId !== tempId))
-		setArrivedKey(tempId)
+		setFlashIndex(updated.indexOf(banner))
+	}
+
+	// From the forecast chart: bring the banner's row on screen and flash it.
+	// Cleared for a frame first, so a second click on the same banner restarts
+	// the flash rather than doing nothing.
+	const handleSelectBanner = (index: number): void => {
+		setFlashIndex(null)
+		requestAnimationFrame(() => {
+			setFlashIndex(index)
+			const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+			document
+				.querySelector(`[data-planner-index="${index}"]`)
+				?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" })
+		})
 	}
 
 	const handleDiscardStagedBanner = (tempId: number): void => {
@@ -222,6 +238,7 @@ export const CaratCalculator: React.FC = () => {
 			position={forecastPosition.position}
 			onMove={forecastPosition.move}
 			scrollIntoViewOnMount={forecastPosition.justMoved}
+			onSelectBanner={handleSelectBanner}
 			className={spacing}
 		/>
 	)
@@ -459,7 +476,7 @@ export const CaratCalculator: React.FC = () => {
 														bannerResources[plannerRow.index] ?? EMPTY_BANNER_RESOURCES
 
 													const rowKey = plannedBanner.id ?? plannedBanner.tempId
-													const justArrived = rowKey !== undefined && rowKey === arrivedKey
+													const justArrived = plannerRow.index === flashIndex
 
 													return (
 														<motion.div
@@ -470,11 +487,13 @@ export const CaratCalculator: React.FC = () => {
 															exit={{ opacity: 0, y: -6 }}
 															transition={{ duration: 0.18 }}
 															className={justArrived ? "row-arrival" : undefined}
+															// The forecast chart's jump target (handleSelectBanner).
+															data-planner-index={plannerRow.index}
 															onAnimationEnd={(event) => {
 																// CSS animationend bubbles up from every row's own
 																// animations; only the flash's own end clears it.
 																if (justArrived && event.animationName === "row-arrival") {
-																	setArrivedKey(null)
+																	setFlashIndex(null)
 																}
 															}}
 														>

@@ -32,6 +32,10 @@
  */
 
 import type { BannerResources } from "../hooks/bannerResources"
+import type { IncomeLedgerRow } from "../types/ledger"
+import type { UserPlannedBanner } from "../types"
+import type { MaxPullBreakdown } from "./bannerHelpers"
+import { plannedBannerTarget } from "./bannerHelpers"
 import type { IncomeProjection, WalkEntry } from "./incomeProjection"
 import { isExcludedFromProjection } from "./rowOptions"
 import { addUtcDays, utcDaysBetween } from "./utcDates"
@@ -164,3 +168,88 @@ export function buildCaratForecast({
 
 /** A carat count for display: whole, with thousands separators ("12,345"). */
 export const formatCarats = (value: number) => Math.round(value).toLocaleString("en-US")
+
+// ── The pulls view ────────────────────────────────────────────────────────────
+
+/** One planned banner in the pulls view: a bar of the pulls its row affords. */
+export interface PullBar {
+	marker: ForecastMarker
+	/**
+	 * The row's Max Pulls WITHOUT the banner's own free pulls (owner,
+	 * 2026-10-19): what the player's tickets and carats can buy. Free pulls
+	 * come with the banner whatever you hold, so counting them would flatter
+	 * every banner that has them.
+	 */
+	pulls: number
+	breakdown: MaxPullBreakdown
+}
+
+/**
+ * The bars, one per upcoming banner, in the forecast's own (end date) order.
+ *
+ * Read straight off the rows (`maxPullBreakdown`), never recomputed, so a bar
+ * and its row cannot disagree. A step-up is left out: its row counts steps,
+ * not pulls, and it spends paid carats only.
+ */
+export function buildPullBars(
+	markers: ForecastMarker[],
+	resources: BannerResources[],
+	banners: UserPlannedBanner[]
+): PullBar[] {
+	return markers.flatMap((marker) => {
+		const banner = banners[marker.index]
+		const row = resources[marker.index]
+		if (!banner || !row || plannedBannerTarget(banner).type === "StepUp") return []
+		const { tickets, paidPulls, freeCaratPulls } = row.maxPullBreakdown
+		return [{
+			marker,
+			pulls: tickets + paidPulls + freeCaratPulls,
+			breakdown: row.maxPullBreakdown,
+		}]
+	})
+}
+
+// ── Skipped PvP events ────────────────────────────────────────────────────────
+
+/** A skipped Champions Meeting or League of Heroes, placed on the line. */
+export interface SkipMarker {
+	t: number
+	/** The line's value at that instant, so the dot sits on the line. */
+	value: number
+	name: string
+	kind: IncomeLedgerRow["kind"]
+}
+
+/**
+ * The line's value at an instant: straight-line between the two vertices
+ * around it, the way the line is drawn. At an instant with several vertices
+ * (a banner's arrival and drop) the last one wins: what is left after it.
+ */
+export function forecastValueAt(points: ForecastPoint[], t: number): number {
+	let before = points[0]
+	for (const point of points) {
+		if (point.t > t) {
+			if (point.t === before.t) return before.value
+			const share = (t - before.t) / (point.t - before.t)
+			return before.value + share * (point.value - before.value)
+		}
+		before = point
+	}
+	return before.value
+}
+
+/**
+ * A dot for each skipped event whose payout falls inside the chart, on the
+ * line at the instant it would have paid. `rows` come from
+ * upcomingSkippedRaces (utils/raceParticipation), read off the FULL ledger.
+ */
+export function buildSkipMarkers(
+	forecast: CaratForecast,
+	rows: IncomeLedgerRow[]
+): SkipMarker[] {
+	return rows.flatMap((row) => {
+		const t = new Date(row.date).getTime()
+		if (t < forecast.start || t > forecast.end) return []
+		return [{ t, value: forecastValueAt(forecast.points, t), name: row.name, kind: row.kind }]
+	})
+}

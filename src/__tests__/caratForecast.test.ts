@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { buildCaratForecast, FORECAST_MAX_SAMPLES } from '../utils/caratForecast'
+import {
+  buildCaratForecast,
+  buildPullBars,
+  buildSkipMarkers,
+  forecastValueAt,
+  FORECAST_MAX_SAMPLES,
+} from '../utils/caratForecast'
 import { createIncomeProjection, projectionWalkOrder } from '../utils/incomeProjection'
 import type { WalkEntry } from '../utils/incomeProjection'
 import { EMPTY_BANNER_RESOURCES } from '../hooks/bannerResources'
@@ -279,5 +285,58 @@ describe('buildCaratForecast with the real engine', () => {
     }
     // The pulls really did spend something, or this test proves nothing.
     expect(result.current.every((r) => r.freeCaratsSpent > 0)).toBe(true)
+  })
+})
+
+// ── The pulls view and the skip dots ─────────────────────────────────────────
+
+describe('buildPullBars', () => {
+  it("takes the row's max pulls without the banner's free pulls, and leaves step-ups out", () => {
+    const uma = { banner_uma: { banner_timeline: {} } } as unknown as UserPlannedBanner
+    const stepUp = { banner_step_up: { banner_timeline: {} } } as unknown as UserPlannedBanner
+    const markers = [
+      { index: 0, t: day(10).getTime(), before: 0, after: 0, excluded: false },
+      { index: 1, t: day(20).getTime(), before: 0, after: 0, excluded: false },
+    ]
+    const resources = [
+      {
+        ...EMPTY_BANNER_RESOURCES,
+        maxPossiblePulls: 260,
+        maxPullBreakdown: { freePulls: 50, tickets: 10, paidPulls: 20, freeCaratPulls: 180 },
+      },
+      { ...EMPTY_BANNER_RESOURCES, maxPossibleSteps: 5 },
+    ]
+    const bars = buildPullBars(markers, resources, [uma, stepUp])
+    expect(bars).toHaveLength(1)
+    expect(bars[0].pulls).toBe(210)
+    expect(bars[0].marker.index).toBe(0)
+  })
+})
+
+describe('forecastValueAt / buildSkipMarkers', () => {
+  const points = [
+    { t: 0, value: 100 },
+    { t: 10, value: 200 },
+    { t: 10, value: 50 },
+    { t: 20, value: 150 },
+  ]
+
+  it('reads the line between vertices, and the last vertex at a drop', () => {
+    expect(forecastValueAt(points, 5)).toBe(150)
+    expect(forecastValueAt(points, 10)).toBe(50)
+    expect(forecastValueAt(points, 15)).toBe(100)
+    expect(forecastValueAt(points, 30)).toBe(150)
+  })
+
+  it('places a skipped event on the line, and drops one outside the chart', () => {
+    const forecast = { start: 0, end: 20, points, markers: [] }
+    const row = (date: number, name: string) => ({
+      date: new Date(date).toISOString(),
+      kind: 'champions_meeting' as const,
+      source_id: 1,
+      name,
+    })
+    const skips = buildSkipMarkers(forecast, [row(5, 'Cup A'), row(25, 'Cup B')] as never)
+    expect(skips).toEqual([{ t: 5, value: 150, name: 'Cup A', kind: 'champions_meeting' }])
   })
 })

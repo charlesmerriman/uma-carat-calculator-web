@@ -1990,6 +1990,26 @@ then scrolls itself into view. Its numbers are explained in
   is the tooltip, pinned near the top of the plot, and a screen-reader list of every
   banner under the chart. Recharts' accessibility layer steps the tooltip with the arrow
   keys.
+- **Two views, Carats and Pulls** (switch under the heading, remembered per device as
+  `uma-planner-forecast-unit`). Pulls is one bar per banner: the row's Max Pulls WITHOUT
+  the banner's own free pulls (owner, 2026-10-19), read off `maxPullBreakdown`
+  (`buildPullBars`), never recomputed. Bars, not a line, because that figure depends on
+  the banner's kind and paid-pull settings, so it has no value between banners. Step-ups
+  count steps and are left out of Pulls. A bar that reaches the pity is solid, one that
+  falls short is faint.
+- **The pity line** is `PULLS_PER_PITY_COPY` (200): always drawn in Pulls; in Carats at
+  200 × `pull_cost_carats`, drawn only when the line comes within 25% of it, so a small
+  plan is not squashed under an empty band. Its label sits just above the line.
+- **Y ticks are ours** (`niceTicks`: 1, 2, 5 × 10ⁿ), passed to Recharts with the domain,
+  because Recharts' own rounding picked 12.5K steps.
+- **A banner's dot or bar jumps to its row**: `onSelectBanner(index)` scrolls to
+  `[data-planner-index]` in CaratCalculator and flashes it with `.row-arrival`, the same
+  flash as a row confirmed from staging (`flashIndex`, by index: a tempId and a saved id
+  can collide). On touch the first tap opens the readout and a second tap jumps.
+- **Skipped PvP events are red dots on the line** (`buildSkipMarkers`), at the instant
+  each skipped Champions Meeting / League of Heroes would have paid, read from
+  `fullIncomeLedger` through `upcomingSkippedRaces` (the projection ledger has them
+  removed, which is how a skip works). Carats view only.
 - **Folded or open is remembered per device** (`uma-planner-forecast-open`), read in an
   effect because `/app` is prerendered.
 - The line draws itself in on mount (Recharts' own animation), skipped under
