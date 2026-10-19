@@ -24,6 +24,7 @@ import {
 	CATEGORY_LABELS,
 	TIMELINE_FOCUS_HIGHLIGHT,
 	buildWindowSections,
+	featuredTitle,
 	getCountdownLabel,
 } from "./timelineShared"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
@@ -993,6 +994,14 @@ export function BannerWindowCard({
 	// Usually one section per banner. The two halves of a staggered release
 	// fuse into one — see buildWindowSections.
 	const sections = buildWindowSections(group.banners)
+	// Every section's names, both halves of a fused one included, so a
+	// staggered release is titled by the pair.
+	const title = featuredTitle(
+		sections.flatMap((section) => section.umaWindow.banner_umas.flatMap((b) => b.umas.map((uma) => uma.name))),
+		sections.flatMap((section) =>
+			section.supportWindow.banner_supports.flatMap((b) => b.support_cards.map((card) => card.name))
+		)
+	)
 
 	// How each side of a staggered release differs from the window in the
 	// header, e.g. "Support banner starts 2026/10/27". A side that matches the
@@ -1047,14 +1056,29 @@ export function BannerWindowCard({
 						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
 							<CalendarDays className="h-5 w-5" />
 						</div>
-						<div className="min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
-							<div className="flex flex-wrap items-center gap-2">
-								<span>
-									{formatDate(group.start_date)} through {formatDate(group.end_date)}
-								</span>
-								{group.is_predicted && <PredictedBadge />}
+						{title ? (
+							// Names lead, dates follow (design polish item 20). The date
+							// range stays one element with the same text, which is what
+							// the Timeline tests find a card by.
+							<div className="min-w-0">
+								<h3 className="text-lg leading-snug font-semibold text-balance text-gray-100 sm:text-xl">{title}</h3>
+								<div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+									<span>
+										{formatDate(group.start_date)} through {formatDate(group.end_date)}
+									</span>
+									{group.is_predicted && <PredictedBadge />}
+								</div>
 							</div>
-						</div>
+						) : (
+							<div className="min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
+								<div className="flex flex-wrap items-center gap-2">
+									<span>
+										{formatDate(group.start_date)} through {formatDate(group.end_date)}
+									</span>
+									{group.is_predicted && <PredictedBadge />}
+								</div>
+							</div>
+						)}
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						{legendRaces.map((release) => (

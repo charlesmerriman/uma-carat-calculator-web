@@ -403,6 +403,26 @@ export interface BannerWindowSection {
 }
 
 /**
+ * A Timeline banner card's title: who the window features (design polish item
+ * 20). The card used to lead with its date range and put the names three
+ * levels down, inside the panels; a reader scanning the list is looking for a
+ * character, so the names lead and the dates become the subtitle.
+ *
+ * Umas first, the primary axis, then support cards, each name once (a support
+ * card often shares an uma's name). Three names at most, "A, B and C"; past
+ * that the first two and a count, because a Golden Week revival features up to
+ * eleven and a title that wraps to four lines is no longer a title. Null when
+ * nothing is announced yet, and the card keeps the dates as its title.
+ */
+export function featuredTitle(umaNames: string[], supportNames: string[]): string | null {
+	const names = [...new Set([...umaNames, ...supportNames])]
+	if (names.length === 0) return null
+	if (names.length > 3) return `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`
+	if (names.length === 1) return names[0]
+	return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
+}
+
+/**
  * A group's banners as the sections its card draws, fusing a staggered pair.
  *
  * Two rows fuse when they are COMPLEMENTARY: one carries an uma banner and no

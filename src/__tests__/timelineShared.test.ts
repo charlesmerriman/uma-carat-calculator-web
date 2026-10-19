@@ -9,6 +9,7 @@ import {
   markerRowMatchesSearch,
   timelineRowKey,
   formatStepUpChip,
+  featuredTitle,
 } from '../components/timeline/timelineShared'
 import type {
   BannerWindowGroup,
@@ -683,5 +684,28 @@ describe('mergeTimelineMarkers', () => {
       [marker('sce-3', 'scenario', 'Mecha', '2028-01-01T00:00:00Z')],
     )
     expect(timelineRowKey(merged[0])).toBe('sce-3')
+  })
+})
+
+describe('featuredTitle', () => {
+  it('names a single featured card', () => {
+    expect(featuredTitle(['Narita Brian (Blaze)'], [])).toBe('Narita Brian (Blaze)')
+  })
+
+  it('leads with umas, then support cards', () => {
+    expect(featuredTitle(['Narita Brian (Blaze)'], ['Yamanin Zephyr'])).toBe('Narita Brian (Blaze) and Yamanin Zephyr')
+    expect(featuredTitle(['Hokko Tarumae'], ['Agnes Tachyon', 'Tokai Teio'])).toBe('Hokko Tarumae, Agnes Tachyon and Tokai Teio')
+  })
+
+  it('names a card once when an uma and a support card share it', () => {
+    expect(featuredTitle(['Special Week'], ['Special Week'])).toBe('Special Week')
+  })
+
+  it('names two and counts the rest past three', () => {
+    expect(featuredTitle(['A', 'B', 'C'], ['D', 'E'])).toBe('A, B and 3 more')
+  })
+
+  it('is null when nothing is announced', () => {
+    expect(featuredTitle([], [])).toBeNull()
   })
 })
