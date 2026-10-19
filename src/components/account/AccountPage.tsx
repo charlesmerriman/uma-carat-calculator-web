@@ -61,7 +61,7 @@ const BENEFIT_LABELS: Record<string, string> = {
 	oshi: "Extra favourite slots and costume variants",
 }
 
-const CARD = "rounded-xl border border-gray-700 bg-gray-800 p-5"
+const CARD = "card-panel p-5"
 const CARD_TITLE = "text-base font-semibold text-gray-100"
 const BUTTON_PRIMARY =
 	"rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"

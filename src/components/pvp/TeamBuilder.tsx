@@ -768,5 +768,5 @@ function IconButton({ label, onClick, submit = false, children }: {
 }
 
 function Notice({ children }: { children: ReactNode }) {
-	return <p className="rounded-xl border border-gray-700 bg-gray-800/60 p-4 text-sm text-gray-300">{children}</p>
+	return <p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">{children}</p>
 }

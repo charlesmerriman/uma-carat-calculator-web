@@ -87,7 +87,7 @@ export function SideDrawer({ side, title, icon, open, onClose, children }: Panel
 				role="dialog"
 				aria-modal="true"
 				aria-label={title}
-				className={`absolute inset-y-0 flex w-[min(20rem,88vw)] flex-col border-gray-600 bg-gray-800 shadow-2xl ${classes.sheet}`}
+				className={`absolute inset-y-0 flex w-[min(20rem,88vw)] flex-col border-edge bg-gray-800 shadow-2xl ${classes.sheet}`}
 			>
 				<header className="flex items-center justify-between border-b border-gray-700 py-1.5 pl-3 pr-1.5">
 					<h2 className={HEADING}>

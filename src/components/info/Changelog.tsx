@@ -18,7 +18,7 @@ const fadeUp = {
 	transition: { duration: 0.4, ease: "easeOut" as const },
 }
 
-const card = "rounded-xl border border-gray-700 bg-gray-800 p-5 shadow-md"
+const card = "card-panel p-5"
 
 // Semantic chip colors per category, tinted like the homepage number badge.
 const categoryStyles: Record<ChangeCategory, string> = {

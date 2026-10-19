@@ -56,8 +56,9 @@ export const Navbar = () => {
 	const guestPlanStored = calculatorData?.isGuestPlanStored ?? true
 
 	// The active pill is a brand tint with a brand edge and nothing else. It
-	// used to carry `shadow-sm`, which every theme block in index.css re-skins
-	// into a 14px drop shadow — on a 36px tab that read as a floating chip.
+	// used to carry `shadow-sm`, which every theme block in index.css re-skinned
+	// into a 14px drop shadow (until 2026-10-18) — on a 36px tab that read as a
+	// floating chip.
 	//
 	// Icon ABOVE label since the fourth tab (Legend Races) arrived. Side by
 	// side, measured at 375px, every label truncated: the icon and gap left

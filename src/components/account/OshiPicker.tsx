@@ -217,7 +217,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 				role="dialog"
 				aria-modal="true"
 				aria-label="Choose a favourite uma musume"
-				className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-800 shadow-2xl"
+				className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-edge bg-gray-800 shadow-2xl"
 			>
 				<header className="flex flex-wrap items-center gap-3 border-b border-gray-700 bg-gray-800/80 px-4 py-3">
 					<div className="min-w-0 flex-1">

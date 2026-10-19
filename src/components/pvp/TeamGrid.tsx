@@ -145,7 +145,7 @@ function MemberPanel({
 	}
 
 	return (
-		<section className="rounded-xl border border-gray-600 bg-gray-800 p-2.5 shadow-md sm:p-3" aria-label={umaLabel}>
+		<section className="card-panel p-2.5 sm:p-3" aria-label={umaLabel}>
 			<header className="mb-2.5 flex items-center gap-2">
 				<span
 					className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-black"

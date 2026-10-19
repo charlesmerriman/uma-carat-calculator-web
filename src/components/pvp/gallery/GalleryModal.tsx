@@ -65,7 +65,7 @@ export function GalleryModal({ title, onClose, children }: {
 			onMouseDown={(mouse) => {
 				if (mouse.target === mouse.currentTarget) onClose()
 			}}
-			className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-xl border border-gray-600 bg-gray-800 p-0 text-gray-100 shadow-2xl backdrop:bg-gray-950/75"
+			className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-xl border border-edge bg-gray-800 p-0 text-gray-100 shadow-2xl backdrop:bg-gray-950/75"
 		>
 			<div className="flex max-h-[calc(100dvh-2rem)] flex-col">
 				<header className="flex items-center gap-2 border-b border-gray-700 px-4 py-3">

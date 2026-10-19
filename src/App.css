@@ -69,9 +69,28 @@
 	@apply justify-center w-full bg-gray-900 lg:max-w-[96rem] mx-auto;
 }
 
-/* Neutral card panel (used in IncomeForm, BannerRow, Timeline) */
-.card-panel {
-	@apply bg-gray-800 rounded-xl border border-gray-600 shadow-md;
+/* THE CARD. Every raised box on a page wears this one class: the planner's
+   panels, the Timeline's cards, the home, info and account cards, the PvP
+   panels. Its edge and shadow are the two surface tokens in index.css
+   (--color-edge and --card-shadow, see SURFACES there), so a theme restyles
+   every card by setting variables, never by matching class names.
+
+   In @layer components, so a utility at the call site beats it (a tinted
+   edge, square top corners, a dashed border), the way Tailwind means a
+   component class to work. It was unlayered until 2026-10-18, and unlayered
+   CSS beats every layer: `rounded-t-none` needed a class of its own here, and
+   a scenario card's `border-brand/40` (EventMarkerCard) never drew at all.
+   The [data-gallery-style] edges further down stay unlayered on purpose,
+   since they must beat this AND any utility.
+
+   The shadow goes through Tailwind's `shadow-(...)` so a `ring-*` on a card
+   adds to it instead of replacing it. Popovers and dialogs are not cards:
+   they wear `border-edge` with Tailwind's deeper `shadow-lg` / `shadow-2xl`. */
+@layer components {
+	.card-panel {
+		@apply rounded-xl border bg-gray-800 shadow-(--card-shadow);
+		border-color: var(--color-edge);
+	}
 }
 
 /* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
@@ -96,24 +115,6 @@
    layouts below xl, where this variable is not applied. */
 :root {
 	--timeline-art-width: calc((100cqw - 2rem) * 0.4354);
-}
-
-/* A card welded to a strip sitting flush above it (AnniversaryEventStrip): the
-   top corners square off so the two read as one box instead of two with a seam.
-
-   This has to live HERE rather than as a `rounded-t-none` utility at the call
-   site. App.css is UNLAYERED, while Tailwind's utilities land in
-   `@layer utilities`, and unlayered CSS beats every layer regardless of
-   specificity — so .card-panel's own `rounded-xl` silently wins over any
-   rounding utility a caller adds. Same-file, same-layer, declared after it, so
-   this one wins on source order. */
-.card-panel-joined-top {
-	@apply rounded-t-none;
-}
-
-/* Inner section with light gray background */
-.card-section {
-	@apply border-0 rounded-2xl bg-gray-700 p-3 text-gray-100;
 }
 
 /* ===== BANNER ROW ===== */

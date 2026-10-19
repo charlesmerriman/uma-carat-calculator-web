@@ -37,7 +37,7 @@ import type {
 	PvpStyle,
 } from "../../types/pvpGuide"
 
-const SECTION = "rounded-xl border border-gray-700 bg-gray-800/60 p-3"
+const SECTION = "rounded-xl border border-edge bg-gray-800/60 p-3"
 const HEADING = "text-sm font-semibold uppercase tracking-wide text-gray-400"
 const SUBHEADING = "text-sm font-semibold text-brand"
 const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"

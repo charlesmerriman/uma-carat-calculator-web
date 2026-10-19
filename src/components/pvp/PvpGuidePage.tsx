@@ -319,12 +319,12 @@ const PvpGuide = () => {
 										</div>
 									)}
 									{guideState.status === "none" && (
-										<p className="rounded-xl border border-gray-700 bg-gray-800/60 p-4 text-sm text-gray-300">
+										<p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">
 											No guide for this event yet.
 										</p>
 									)}
 									{guideState.status === "error" && (
-										<p className="rounded-xl border border-gray-700 bg-gray-800/60 p-4 text-sm text-gray-300">
+										<p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">
 											The guide didn't load. Try another event, or reload the page.
 										</p>
 									)}
@@ -651,7 +651,7 @@ function NewCardsSection({ event, previous, umaBanners, supportBanners }: {
 	const count = cards.umas.length + cards.supports.length
 	if (count === 0) return null
 	return (
-		<section className="rounded-xl border border-gray-700 bg-gray-800/60 p-3" aria-labelledby="pvp-new-cards">
+		<section className="rounded-xl border border-edge bg-gray-800/60 p-3" aria-labelledby="pvp-new-cards">
 			<h3 id="pvp-new-cards" className="text-sm font-semibold text-gray-100">
 				<button
 					type="button"

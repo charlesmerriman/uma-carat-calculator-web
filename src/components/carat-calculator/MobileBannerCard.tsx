@@ -203,8 +203,8 @@ export const MobileBannerCard = ({
 
 	return (
 		<div
-			className={`@banner-table:hidden overflow-hidden rounded-lg border shadow-sm ${
-				staged ? "staged-surface border-staging/45" : "border-gray-600 bg-gray-800"
+			className={`card-panel @banner-table:hidden overflow-hidden ${
+				staged ? "staged-surface border-staging/45" : ""
 			}`}
 		>
 			<div className={`flex min-h-[64px] items-stretch ${style.tile}`}>

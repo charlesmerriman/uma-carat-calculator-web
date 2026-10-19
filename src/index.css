@@ -133,6 +133,28 @@ html {
 	--color-gray-900: #101014;
 	--color-gray-950: #08080c;
 
+	/* ── Surface edge ──────────────────────────────────────────────────────
+	   The one edge every surface wears: .card-panel (App.css), the popovers and
+	   dialogs, and the quieter inset panels, through the `border-edge` utility.
+	   Its partner is --card-shadow (SURFACES, below @theme); between them they
+	   are everything a theme says about its surfaces.
+
+	   Low-alpha light rather than a solid gray, so it reads the same over
+	   whatever fill it sits on: a card, a translucent inset, a staged row. The
+	   5% of brand tints it toward each theme's hue, which is why ONE value
+	   serves all six dark themes: it measures 1.47:1 to 1.52:1 against gray-800
+	   on every one of them. That sits between the two edges it replaced, the
+	   gray-700 the home and info cards wore (1.15 to 1.25:1, close to
+	   invisible) and the planner's gray-600 (1.9 to 2.8:1, the heaviest line on
+	   the page). The light themes redraw it as a solid tinted gray under
+	   [data-theme-mode="light"].
+
+	   A colour token while the shadow is a plain variable, because Tailwind
+	   compiles colour utilities to var() but writes a shadow utility's value out
+	   literally: a theme can override this at runtime, and could not override
+	   a --shadow-* token. */
+	--color-edge: color-mix(in srgb, var(--color-brand) 5%, rgb(255 255 255 / 10%));
+
 	/* ── Pull-count status colors ──────────────────────────────────────────
 	   Used by the .pull-input classes in App.css to flag a planned pull count
 	   as on-pity (ok) or unaffordable (over).
@@ -311,6 +333,26 @@ html {
 	--color-gallery-rose-tint: rgb(251 113 133 / 14%);
 }
 
+/* ===== SURFACES =====
+   A card's shadow, read by .card-panel (App.css) and by the few card-shaped
+   boxes that cannot wear that class (`shadow-(--card-shadow)`). Its partner is
+   the --color-edge token in @theme above.
+
+   This is Dark's value; a theme with a look of its own sets --card-shadow in
+   its polish block at the bottom of this file. Until 2026-10-18 each theme
+   re-skinned cards with a rule matching `.shadow-sm, .shadow-md, .shadow-lg,
+   .shadow-2xl` literally, so every element carrying any of those utilities
+   (segmented tabs, the colorblind switch's knob, inputs, dialogs) wore the card
+   shadow too, and a card that forgot the utility wore none. Floating layers
+   now keep Tailwind's own `shadow-lg` / `shadow-2xl`, which are deeper than a
+   card's on purpose.
+
+   Declared on :root before the theme blocks: same specificity as
+   [data-theme="x"], so source order is what lets a theme win. */
+:root {
+	--card-shadow: 0 8px 20px rgb(0 0 0 / 20%), 0 1px 0 rgb(255 255 255 / 3%) inset;
+}
+
 /* ===== THEME OVERRIDES =====
    Tailwind CSS 4 compiles @theme tokens to CSS variables at :root, and utility
    classes like bg-gray-900 reference var(--color-gray-900) at runtime. Overriding
@@ -322,6 +364,9 @@ html {
    3. Add the id (and light-mode membership) to the inline script in index.html
    4. For a page glow, set --page-glow in its polish block and list the theme
       in the PAGE GLOW selectors (see that section for why it is opt-in)
+   5. For cards of its own, set --card-shadow (and --color-edge, if the shared
+      edge does not suit) in that same block. Never re-skin cards by matching
+      utility classes such as `.shadow-md`: see SURFACES above.
 */
 
 [data-theme="gold"] {
@@ -430,9 +475,13 @@ html {
 	--light-glow-start: color-mix(in srgb, var(--color-brand) 7%, transparent);
 	--light-glow-end: color-mix(in srgb, var(--color-brand) 4%, transparent);
 	--light-button-ink: #ffffff;
-	--light-shadow: 0 8px 24px rgb(15 23 42 / 6%);
-	--light-panel-border: color-mix(in srgb, var(--color-brand) 10%, var(--color-gray-600));
-	--light-nav-border: color-mix(in srgb, var(--color-brand) 8%, var(--color-gray-600));
+	/* Surfaces (SURFACES, above). Set HERE rather than in the light polish
+	   block at the bottom: that block comes after [data-theme="light"] below,
+	   at the same specificity, and would override the warm Light's own pair.
+	   The edge is solid on a light theme: a low-alpha white edge vanishes on a
+	   white card, so it is the divider gray with a touch of the brand. */
+	--card-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+	--color-edge: color-mix(in srgb, var(--color-brand) 10%, var(--color-gray-600));
 	--color-brand: #1d4ed8;
 	--color-gray-50:  #0f172a; /* darkest slate ink */
 	--color-gray-100: #1e293b; /* primary text */
@@ -541,9 +590,8 @@ html {
 	--color-gray-950: #fffdfb;
 	--light-glow-start: rgb(210 142 53 / 18%);
 	--light-glow-end: rgb(129 73 114 / 10%);
-	--light-shadow: 0 12px 30px rgb(70 37 47 / 9%);
-	--light-panel-border: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
-	--light-nav-border: color-mix(in srgb, var(--color-brand) 16%, var(--color-gray-600));
+	--card-shadow: 0 12px 30px rgb(70 37 47 / 9%);
+	--color-edge: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
 }
 
 /* Red and Green move the status colour that matches their brand. On Red the
@@ -739,21 +787,9 @@ html {
 		radial-gradient(circle at 94% 8%, var(--light-glow-end), transparent 25rem);
 }
 
-[data-theme-mode="light"] .card-panel,
-[data-theme-mode="light"] .shadow-md,
-[data-theme-mode="light"] .shadow-sm,
-[data-theme-mode="light"] .shadow-lg,
-[data-theme-mode="light"] .shadow-2xl {
-	box-shadow: var(--light-shadow);
-}
-
-[data-theme-mode="light"] .card-panel {
-	border-color: var(--light-panel-border);
-}
-
-[data-theme-mode="light"] .bg-gray-800.border-b {
-	border-color: var(--light-nav-border);
-}
+/* The polish blocks below carry each theme's atmosphere: its page glow and its
+   card shadow (SURFACES). The light themes set their surface pair in their
+   palette blocks instead; see the comment there for why. */
 
 /* Violet gets depth from coloured light rather than brighter flat panels. This
    keeps the calculator data-first while making the selected theme unmistakable. */
@@ -761,22 +797,7 @@ html {
 	--page-glow:
 		radial-gradient(circle at 8% -12%, rgb(124 58 237 / 30%), transparent 30rem),
 		radial-gradient(circle at 96% 4%, rgb(217 70 239 / 14%), transparent 24rem);
-}
-
-[data-theme="violet"] .card-panel,
-[data-theme="violet"] .shadow-md,
-[data-theme="violet"] .shadow-sm,
-[data-theme="violet"] .shadow-lg,
-[data-theme="violet"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 28%), 0 1px 0 rgb(216 193 255 / 5%) inset;
-}
-
-[data-theme="violet"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 24%, var(--color-gray-600));
-}
-
-[data-theme="violet"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 28%), 0 1px 0 rgb(216 193 255 / 5%) inset;
 }
 
 /* Teal uses low, underwater colour blooms for depth. Their placement keeps the
@@ -785,22 +806,7 @@ html {
 	--page-glow:
 		radial-gradient(circle at 6% -10%, rgb(20 184 166 / 24%), transparent 29rem),
 		radial-gradient(circle at 96% 2%, rgb(14 116 144 / 19%), transparent 25rem);
-}
-
-[data-theme="teal"] .card-panel,
-[data-theme="teal"] .shadow-md,
-[data-theme="teal"] .shadow-sm,
-[data-theme="teal"] .shadow-lg,
-[data-theme="teal"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 26%), 0 1px 0 rgb(113 230 211 / 5%) inset;
-}
-
-[data-theme="teal"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 22%, var(--color-gray-600));
-}
-
-[data-theme="teal"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 26%), 0 1px 0 rgb(113 230 211 / 5%) inset;
 }
 
 /* Midnight's illumination is cooler and more restrained than Violet or Teal:
@@ -809,22 +815,7 @@ html {
 	--page-glow:
 		radial-gradient(circle at 10% -14%, rgb(37 99 235 / 22%), transparent 31rem),
 		radial-gradient(circle at 96% 3%, rgb(14 165 233 / 12%), transparent 25rem);
-}
-
-[data-theme="midnight"] .card-panel,
-[data-theme="midnight"] .shadow-md,
-[data-theme="midnight"] .shadow-sm,
-[data-theme="midnight"] .shadow-lg,
-[data-theme="midnight"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(229 237 249 / 4%) inset;
-}
-
-[data-theme="midnight"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 17%, var(--color-gray-600));
-}
-
-[data-theme="midnight"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 14%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(229 237 249 / 4%) inset;
 }
 
 /* Race Day's cool illumination is deliberately compact: it gives the chrome a
@@ -833,22 +824,7 @@ html {
 	--page-glow:
 		radial-gradient(circle at 8% -12%, rgb(14 165 233 / 24%), transparent 30rem),
 		radial-gradient(circle at 96% 4%, rgb(37 99 235 / 15%), transparent 24rem);
-}
-
-[data-theme="race-day"] .card-panel,
-[data-theme="race-day"] .shadow-md,
-[data-theme="race-day"] .shadow-sm,
-[data-theme="race-day"] .shadow-lg,
-[data-theme="race-day"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(124 200 255 / 6%) inset;
-}
-
-[data-theme="race-day"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-gray-600));
-}
-
-[data-theme="race-day"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 16%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(124 200 255 / 6%) inset;
 }
 
 [data-theme="race-day"] button:focus-visible,
@@ -864,46 +840,16 @@ html {
 	--page-glow:
 		radial-gradient(circle at 7% -12%, rgb(211 154 48 / 25%), transparent 31rem),
 		radial-gradient(circle at 97% 4%, rgb(151 88 33 / 15%), transparent 25rem);
-}
-
-[data-theme="gilded"] .card-panel,
-[data-theme="gilded"] .shadow-md,
-[data-theme="gilded"] .shadow-sm,
-[data-theme="gilded"] .shadow-lg,
-[data-theme="gilded"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(242 181 68 / 6%) inset;
-}
-
-[data-theme="gilded"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 21%, var(--color-gray-600));
-}
-
-[data-theme="gilded"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 17%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(242 181 68 / 6%) inset;
 }
 
 [data-theme="gilded"] .font-display .text-brand {
 	text-shadow: 0 0 1.25rem rgb(242 181 68 / 20%);
 }
 
-/* Default is intentionally restrained. These are small hierarchy and interaction
-   improvements on the familiar palette, not a reinterpretation of the theme. */
-[data-theme="gold"] .card-panel,
-[data-theme="gold"] .shadow-md,
-[data-theme="gold"] .shadow-sm,
-[data-theme="gold"] .shadow-lg,
-[data-theme="gold"] .shadow-2xl {
-	box-shadow: 0 8px 20px rgb(0 0 0 / 20%), 0 1px 0 rgb(255 255 255 / 3%) inset;
-}
-
-[data-theme="gold"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 8%, var(--color-gray-600));
-}
-
-[data-theme="gold"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 7%, var(--color-gray-600));
-}
-
+/* Default is intentionally restrained: its card shadow is the SURFACES
+   default, and this is a small interaction improvement on the familiar
+   palette, not a reinterpretation of the theme. */
 [data-theme="gold"] button:focus-visible,
 [data-theme="gold"] a:focus-visible,
 [data-theme="gold"] input:focus-visible {
