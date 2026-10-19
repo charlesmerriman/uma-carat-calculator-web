@@ -161,3 +161,6 @@ export function buildCaratForecast({
 
 	return { start: today.getTime(), end: horizon.getTime(), points, markers }
 }
+
+/** A carat count for display: whole, with thousands separators ("12,345"). */
+export const formatCarats = (value: number) => Math.round(value).toLocaleString("en-US")

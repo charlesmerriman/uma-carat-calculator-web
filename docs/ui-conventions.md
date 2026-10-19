@@ -1970,22 +1970,27 @@ are what a visitor came to edit. Moving it remounts the chart in the other slot,
 then scrolls itself into view. Its numbers are explained in
 `resource-projection-logic.md` ("The carat forecast"); this is how it is drawn.
 
-- **Hand-drawn SVG, no chart library.** One series on one axis did not justify ~100 KB
-  of Recharts, and plain SVG wearing Tailwind classes (`stroke-brand`, `fill-gray-400`,
-  `fill-(--color-pull-over)`) re-skins with every theme and colorblind mode for free.
-  Pick a library when a second chart with real interaction needs arrives, not before.
-- **Drawn at its real pixel width**, measured with a `ResizeObserver` in an effect, never
-  stretched through a `viewBox`: stretching scales the axis text with it.
+- **Drawn with Recharts, loaded lazily** (owner, 2026-10-19). The plot lives in
+  `ForecastPlot.tsx`, reached only through `loadForecastPlot()` (a dynamic `import()`), so
+  Vite puts it and Recharts in a chunk of their own (~109 kB gzipped). The app otherwise
+  ships as ONE bundle that every page downloads: a static import of `recharts` anywhere
+  else would put it on the home page and the FAQ. Keep every Recharts import inside the
+  lazy chunk. `AppShell` starts the chunk while `/calculator-data` loads (calculator route
+  only); `CaratForecastChart` holds the plot's height in a `Suspense` fallback meanwhile.
+  A hand-drawn SVG version was built first and dropped (web #135's first commit).
+- **Colours are CSS variables**, passed to Recharts as `var(--color-brand)` and friends,
+  never hex, so every theme and colorblind mode re-skin it by redefining tokens.
 - **Below zero is the over-budget colour** (`--color-pull-over`, the pull field's token):
-  the same path drawn twice through two clip rects split at y = 0. The headline says
-  "Short by" beside an icon, so the state never rides on colour alone.
+  one vertical gradient with two stops at the same offset, where zero falls in the
+  shape's bounding box. The headline says "Short by" beside an icon, so the state never
+  rides on colour alone.
 - **Dots wear a 2px ring in `--card-fill`**, the card's own fill, so they stay legible
   on the line. A row left out of the projection is a hollow dot.
-- **One direct label** (where the line ends). Everything else is the crosshair readout,
-  which is pinned to the top of the plot beside the crosshair (above the dot it was cut
-  off by the card), and a screen-reader list of every banner under the chart. Arrow keys
-  step through the banners when the chart has focus.
+- **One direct label** (where the line ends, a zero-size `ReferenceDot`). Everything else
+  is the tooltip, pinned near the top of the plot, and a screen-reader list of every
+  banner under the chart. Recharts' accessibility layer steps the tooltip with the arrow
+  keys.
 - **Folded or open is remembered per device** (`uma-planner-forecast-open`), read in an
   effect because `/app` is prerendered.
-- The line draws itself in once on mount (`pathLength`), skipped under
+- The line draws itself in on mount (Recharts' own animation), skipped under
   `prefers-reduced-motion`.

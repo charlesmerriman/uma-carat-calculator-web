@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
-import { Outlet, Route, Routes, useParams } from "react-router-dom"
+import { useEffect, type ReactNode } from "react"
+import { Outlet, Route, Routes, useLocation, useParams } from "react-router-dom"
 import { useCalculatorData } from "../services/CalculatorContext"
 import { Navbar } from "../components/navbar/Navbar.tsx"
 import { CaratCalculator } from "../components/carat-calculator/CaratCalculator"
@@ -10,6 +10,7 @@ import { PvpGuidePage } from "../components/pvp/PvpGuidePage"
 import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
 import { OguriSpinner } from "../components/OguriSpinner"
+import { loadForecastPlot } from "../components/carat-calculator/loadForecastPlot"
 import { AppRouteMeta } from "./AppRouteMeta"
 import { SharedPlanLanding } from "../components/shared-plan/SharedPlanLanding"
 import { isPublicId } from "../utils/appRoutes"
@@ -68,6 +69,17 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 	// immediately, so /app is visibly the app while the payload is still in
 	// flight rather than a spinner on a blank background.
 	const { isLoading, fetchError, retryLoad } = useCalculatorData()
+
+	// Start the forecast chart's chunk (Recharts) downloading while the
+	// calculator's data is still in flight, so the two waits overlap instead of
+	// queueing. Calculator route only: the other tabs never draw the chart.
+	// The promise is dropped on purpose; a failure here just means the chart
+	// loads when it first renders instead (its lazy() retries the import).
+	const { pathname } = useLocation()
+	const onCalculator = pathname === "/app" || pathname === "/app/"
+	useEffect(() => {
+		if (onCalculator) void loadForecastPlot().catch(() => {})
+	}, [onCalculator])
 
 	return (
 		// The player's PvP teams, shared by the PvP page and (R2b) the team
