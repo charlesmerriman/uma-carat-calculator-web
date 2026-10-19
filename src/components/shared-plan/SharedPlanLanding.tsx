@@ -128,7 +128,7 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 				<p className="truncate text-sm font-medium text-gray-100">{target.banner.name}</p>
 				<p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">
 					<BannerTypeIcon type={target.type} className="h-3.5 w-3.5" />
-					{TYPE_LABEL[target.type]}
+					<span>{TYPE_LABEL[target.type]}</span>
 					<span className="text-gray-500">· ends {formatDate(target.timeline.end_date)}</span>
 				</p>
 			</div>
