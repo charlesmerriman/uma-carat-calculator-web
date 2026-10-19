@@ -89,8 +89,8 @@ describe('buildCaratForecast', () => {
     })!
 
     expect(forecast.markers).toEqual([
-      { index: 0, t: day(10).getTime(), before: 2000, after: 500, excluded: false },
-      { index: 1, t: day(20).getTime(), before: 1500, after: 900, excluded: false },
+      { index: 0, t: day(10).getTime(), before: 2000, after: 500, excluded: false, paidBefore: 0, paidAfter: 0, stepUp: false },
+      { index: 1, t: day(20).getTime(), before: 1500, after: 900, excluded: false, paidBefore: 0, paidAfter: 0, stepUp: false },
     ])
     // Arrives at the row's own number, then drops: no re-anchoring step,
     // because the line already agrees with the rows.
@@ -221,6 +221,29 @@ function umaBanner(id: number, startDay: number, endDay: number, pulls: number):
   }
 }
 
+function stepUpBanner(id: number, startDay: number, endDay: number, steps: number): UserPlannedBanner {
+  return {
+    id,
+    user: 1,
+    // number_of_pulls carries steps on a step-up row.
+    number_of_pulls: steps,
+    reserved_copies: 0,
+    banner_step_up: {
+      id,
+      banner_timeline: timeline(id, startDay, endDay),
+      anniversary_event: 1,
+      name: `Step-Up ${id}`,
+      card_type: 'uma',
+      banner_count: 3,
+      max_steps: 15,
+      jp_cutoff_date: '2026-01-30',
+      image: null,
+      admin_comments: '',
+      order: 0,
+    },
+  }
+}
+
 describe('buildCaratForecast with the real engine', () => {
   it('meets every row without a correction step', () => {
     const userStatsData = {
@@ -297,8 +320,8 @@ describe('buildPullBars', () => {
     const uma = { banner_uma: { banner_timeline: {} } } as unknown as UserPlannedBanner
     const stepUp = { banner_step_up: { banner_timeline: {} } } as unknown as UserPlannedBanner
     const markers = [
-      { index: 0, t: day(10).getTime(), before: 0, after: 0, excluded: false },
-      { index: 1, t: day(20).getTime(), before: 0, after: 0, excluded: false },
+      { index: 0, t: day(10).getTime(), before: 0, after: 0, excluded: false, paidBefore: 0, paidAfter: 0, stepUp: false },
+      { index: 1, t: day(20).getTime(), before: 0, after: 0, excluded: false, paidBefore: 0, paidAfter: 0, stepUp: false },
     ]
     const resources = [
       {
@@ -344,7 +367,7 @@ describe('forecastValueAt / buildSkipMarkers', () => {
 })
 
 describe('buildPullSeries', () => {
-  const marker = { index: 0, t: 10, before: 3000, after: 0, excluded: false }
+  const marker = { index: 0, t: 10, before: 3000, after: 0, excluded: false, paidBefore: 0, paidAfter: 0, stepUp: false }
   const forecast = {
     start: 0,
     end: 20,
@@ -385,5 +408,72 @@ describe('buildPullSeries', () => {
     expect(series[1].bar).toBe(bar)
     // A carat debt is no pulls, not negative ones.
     expect(series[2]).toMatchObject({ uma: 0, support: 2 })
+  })
+})
+
+describe('the paid layer against the real engine', () => {
+  it("drops the paid balance at a step-up, leaving free carats alone, and matches the row", () => {
+    const userStatsData = {
+      current_carat: 5000,
+      current_paid_carat: 12000,
+      uma_ticket: 0,
+      support_ticket: 0,
+      uma_selector_ticket: 0,
+      support_selector_ticket: 0,
+      include_purchases_in_projection: false,
+      webstore_bonus: false,
+      daily_carat: false,
+      training_pass: false,
+      misc_earnings: false,
+      monthly_shop_tickets: false,
+      spend_tickets_on_banners: true,
+      discounted_paid_pulls: false,
+      full_price_paid_pulls: false,
+      club_rank: 1,
+      team_trials_rank: 1,
+      champions_meeting_rank: 1,
+      league_of_heroes_rank: 1,
+      ssr_crystals: 0,
+      sr_crystals: 0,
+      ssr_shards: 0,
+      sr_shards: 0,
+    } as UserStats
+    const params = {
+      userStatsData,
+      clubRankData: [{ id: 1, name: 'A', income_amount: 0 }] as ClubRank[],
+      teamTrialsRankData: [{ id: 1, name: 'A', income_amount: 0 }] as TeamTrialsRank[],
+      championsMeetingRankData: [] as ChampionsMeetingRank[],
+      leagueOfHeroesRankData: [] as LeagueOfHeroesRank[],
+      anniversaryEventData: [],
+      userPlannedPurchaseData: [],
+      incomeLedger: [],
+      constants: DEFAULT_CONSTANTS,
+    }
+    const banners = [stepUpBanner(1, 0, 20, 5)]
+    const { result } = renderHook(() =>
+      useBannerResources({ ...params, userPlannedBannerData: banners })
+    )
+    const row = result.current[0]
+    expect(row.paidCaratsSpent).toBeGreaterThan(0)
+    expect(row.freeCaratsSpent).toBe(0)
+
+    const forecast = buildCaratForecast({
+      projection: createIncomeProjection(params),
+      walkOrder: projectionWalkOrder(banners),
+      resources: result.current,
+      currentFreeCarats: 5000,
+      currentPaidCarats: 12000,
+    })!
+    const [marker] = forecast.markers
+    expect(marker).toMatchObject({
+      stepUp: true,
+      before: row.freeCarats,
+      after: row.freeCarats,
+      paidBefore: row.paidCarats,
+      paidAfter: row.paidCarats - row.paidCaratsSpent,
+    })
+    // After the step-up the paid balance is what the row leaves.
+    const last = forecast.points[forecast.points.length - 1]
+    expect(last.paid).toBe(row.paidCarats - row.paidCaratsSpent)
   })
 })

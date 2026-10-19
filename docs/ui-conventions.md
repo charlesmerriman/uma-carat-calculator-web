@@ -2017,6 +2017,16 @@ then scrolls itself into view. Its numbers are explained in
   each skipped Champions Meeting / League of Heroes would have paid, read from
   `fullIncomeLedger` through `upcomingSkippedRaces` (the projection ledger has them
   removed, which is how a skip works). In Pulls the dot sits on both lines.
+- **Every layer added after the first release is OPTIONAL** (owner, 2026-10-19: "this and
+  future changes to the chart should be optional, checked on and off"). Each is one entry in
+  `FORECAST_LAYERS` (CaratForecastChart), starts OFF, and gets a checkbox in the legend row
+  of the views it belongs to; the set is remembered per device as JSON under
+  `uma-planner-forecast-layers`, read defensively (unknown keys and non-booleans ignored).
+  The first is **Paid carats**: a grey band stacked on the free area (grey because the free
+  layer wears each theme's brand colour, and any second hue clashes with one of the twelve),
+  so the top edge is the total. With it on, a step-up's dot moves to the band's top edge in
+  `--color-step-up` and its readout leads with paid carats ("short by" when over-planned);
+  with it off, the step-up's dot stays on the free line.
 - **Folded or open is remembered per device** (`uma-planner-forecast-open`), read in an
   effect because `/app` is prerendered.
 - The line draws itself in on mount (Recharts' own animation), skipped under
