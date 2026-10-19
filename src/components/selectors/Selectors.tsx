@@ -232,6 +232,10 @@ export const Selectors = () => {
 				</p>
 			) : (
 				<div className="flex flex-col gap-4">
+					{/* Said once here; each campaign card used to repeat it. */}
+					<p className="-mb-1 text-sm text-gray-400">
+						Tick a selector in a campaign to choose the card it takes.
+					</p>
 					{plan.campaigns.map((campaign, index) => (
 						<CampaignCard
 							key={campaign.event.id}
