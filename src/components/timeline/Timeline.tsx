@@ -13,6 +13,7 @@ import { OguriSpinner } from "../OguriSpinner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { nextTempId, plannedBannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
+import { motion } from "framer-motion"
 import { RaceEventCard } from "./RaceEventCard"
 import { BannerWindowCard } from "./BannerWindowCard"
 import { EventMarkerCard, EventMarkerPairCard } from "./EventMarkerCard"
@@ -66,6 +67,9 @@ const PAGE_SIZE = 10
  * reaches the bottom.
  */
 const INFINITE_CHUNK_SIZE = 10
+
+/** Cards per entrance stagger: one page, or one reveal chunk. */
+const TIMELINE_STAGGER_BATCH = Math.min(PAGE_SIZE, INFINITE_CHUNK_SIZE)
 const INFINITE_ROOT_MARGIN = "800px"
 
 /**
@@ -1046,7 +1050,7 @@ export const Timeline = () => {
 				{timelineRows.length === 0 && (
 					<div className="text-gray-500 mt-8">No events found.</div>
 				)}
-				{visibleRows.map((row) => {
+				{visibleRows.map((row, rowIndex) => {
 					const rowKey = timelineRowKey(row)
 
 					// THE REF AND THE RING ARE NO LONGER THE SAME QUESTION.
@@ -1071,20 +1075,18 @@ export const Timeline = () => {
 					//
 					// A race event is a deep link target too since the PvP page's
 					// "View on Timeline" link (?focus=cm-12), so it takes both props.
-					return row.kind === "race" ? (
-						<RaceEventCard key={rowKey} event={row.event} today={today} {...focusProps} />
+					const card = row.kind === "race" ? (
+						<RaceEventCard event={row.event} today={today} {...focusProps} />
 					) : row.kind === "marker" ? (
-						<EventMarkerCard key={rowKey} marker={row.marker} {...focusProps} />
+						<EventMarkerCard marker={row.marker} {...focusProps} />
 					) : row.kind === "marker_pair" ? (
 						<EventMarkerPairCard
-							key={rowKey}
 							scenario={row.scenario}
 							anniversary={row.anniversary}
 							{...focusProps}
 						/>
 					) : (
 						<BannerWindowCard
-							key={rowKey}
 							group={row.group}
 							today={today}
 							plannedBannerKeys={plannedBannerKeys}
@@ -1095,6 +1097,35 @@ export const Timeline = () => {
 							)}
 							{...focusProps}
 						/>
+					)
+
+					// THE ENTRANCE. Each card rises in as it mounts, staggered within
+					// its batch of ten (the page and the reveal chunk are both ten), so
+					// a page or a freshly revealed chunk arrives top to bottom instead
+					// of all at once. Mount-only: a card already on screen never
+					// replays it when a filter or the search changes around it.
+					//
+					// The wrapper repeats the list's own column (flex-col,
+					// items-center, full width), so every card lays out exactly as it
+					// did as a direct child. Reduced motion is the app-wide
+					// MotionConfig's job (App.tsx): the rise goes and the fade stays.
+					//
+					// The list is inside the /app loading gate, so the opacity-0
+					// first frame never reaches prerendered HTML.
+					return (
+						<motion.div
+							key={rowKey}
+							className="flex w-full flex-col items-center"
+							initial={{ opacity: 0, y: 14 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{
+								duration: 0.35,
+								ease: "easeOut",
+								delay: (rowIndex % TIMELINE_STAGGER_BATCH) * 0.04,
+							}}
+						>
+							{card}
+						</motion.div>
 					)
 				})}
 
