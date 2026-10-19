@@ -37,7 +37,7 @@ export const NotFound: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-16 text-center">
 					<p className="text-sm font-semibold tracking-widest text-brand">404</p>
-					<h1 className="mt-3 text-3xl font-bold text-gray-100">Page not found</h1>
+					<h1 className="font-display mt-3 text-3xl font-bold text-gray-100">Page not found</h1>
 					<p className="mt-3 text-gray-400">
 						That address doesn't match anything on the site. It may have been mistyped, or
 						the page may have moved.

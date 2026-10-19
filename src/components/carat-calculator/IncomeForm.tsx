@@ -341,7 +341,7 @@ export const IncomeForm = () => {
 				aria-expanded={isOpen}
 				className="flex w-full cursor-pointer items-center justify-between gap-2 border-b border-gray-700 bg-gray-800/50 px-4 py-3 text-left transition-colors hover:bg-gray-800/80 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
 			>
-				<span className="min-w-0 truncate text-base font-semibold text-brand uppercase tracking-wide">Income &amp; Resources</span>
+				<span className="font-display min-w-0 truncate text-base font-semibold text-brand uppercase tracking-wide">Income &amp; Resources</span>
 				{/* A title with a chevron beside it reads as a title. The word and the
 				    boxed chevron together read as a control — and this panel starts
 				    CLOSED on a phone, so the header is all there is to go on: if it
@@ -377,7 +377,7 @@ export const IncomeForm = () => {
 							<div className="grid grid-cols-1 gap-4 @income-wide:grid-cols-[3fr_auto_2fr]">
 								{/* Competitive Progress */}
 								<div className="min-w-0">
-									<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="font-display font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Trophy className={iconCls} />
 										Competitive Progress
 									</h3>
@@ -571,7 +571,7 @@ export const IncomeForm = () => {
 
 								{/* Purchases */}
 								<div className="flex min-w-0 flex-col">
-									<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="font-display font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Gift className={iconCls} />
 										Purchases
 									</h3>
@@ -712,7 +712,7 @@ export const IncomeForm = () => {
 
 						{/* Current Resources */}
 						<div className="border-t border-gray-700 p-3 @income-wide:p-5 @income-wide:border-t-0 @income-wide:border-l">
-							<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+							<h3 className="font-display font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 								<Diamond className={iconCls} />
 								Current Resources
 							</h3>
@@ -778,7 +778,7 @@ export const IncomeForm = () => {
 					{/* ── Bottom row: Average Monthly Income + Uncap Crystals ── */}
 					<div className="grid grid-cols-1 border-t border-gray-700 @income-wide:grid-cols-[2fr_1fr]">
 						<div className="p-3 @income-wide:p-5 flex flex-col">
-							<h3 className="font-semibold text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
+							<h3 className="font-display font-semibold text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
 								<TrendingUp className={iconCls} />
 								Average Monthly Income
 							</h3>

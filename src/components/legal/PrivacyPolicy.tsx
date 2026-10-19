@@ -44,7 +44,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">Privacy Policy</h1>
+					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
 					<p className="mt-2 text-sm text-gray-500">Last updated: October 18, 2026</p>
 
 					<p className={paragraph}>

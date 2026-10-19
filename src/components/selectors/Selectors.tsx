@@ -161,7 +161,7 @@ export const Selectors = () => {
 			<div ref={topRef} aria-hidden="true" />
 			<header className="flex flex-col gap-3">
 				<div>
-					<h1 className="flex items-center gap-2 text-xl font-bold text-brand">
+					<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
 						<Sparkles className="h-5 w-5 shrink-0" />
 						Selectors &amp; Purchases
 					</h1>

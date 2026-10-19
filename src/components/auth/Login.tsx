@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
 				</div>
 
 				<div className="px-8 py-7">
-					<h2 className="mb-6 text-xl font-semibold text-gray-100">Sign In</h2>
+					<h2 className="font-display mb-6 text-xl font-semibold text-gray-100">Sign In</h2>
 
 					{/* Shown when this device holds a guest plan, which the calculator
 					    moves into the account on the first load after sign-in */}

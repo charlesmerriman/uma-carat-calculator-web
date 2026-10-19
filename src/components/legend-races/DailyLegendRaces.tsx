@@ -137,7 +137,7 @@ export const DailyLegendRaces = () => {
 				    flex column with gap-4: a sibling anchor would push the title down by a
 				    gap's worth. Here it marks the same spot for free. */}
 				<div ref={topRef} aria-hidden="true" />
-				<h1 className="flex items-center gap-2 text-xl font-bold text-brand">
+				<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
 					<Trophy className="h-5 w-5 shrink-0" />
 					{page?.title ?? FALLBACK_TITLE}
 				</h1>

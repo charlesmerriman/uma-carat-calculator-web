@@ -257,7 +257,7 @@ const PvpGuide = () => {
 
 			<div className="mx-auto mt-3 flex w-[calc(100%-1rem)] max-w-[96rem] flex-col gap-3 sm:w-[calc(100%-2rem)]">
 				<header>
-					<h1 className="flex items-center gap-2 text-lg font-bold text-brand">
+					<h1 className="font-display flex items-center gap-2 text-lg font-bold text-brand">
 						<Swords className="h-5 w-5 shrink-0" />
 						{page?.title ?? FALLBACK_TITLE}
 					</h1>

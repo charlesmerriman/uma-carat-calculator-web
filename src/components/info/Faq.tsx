@@ -61,7 +61,7 @@ export const Faq: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">Frequently Asked Questions</h1>
+					<h1 className="font-display text-3xl font-bold text-gray-100">Frequently Asked Questions</h1>
 					<p className="mt-2 text-gray-400">
 						How the calculator works, where its numbers come from, and what it does with your
 						data.

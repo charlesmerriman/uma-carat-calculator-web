@@ -108,10 +108,13 @@ html {
 	   the 2rem. */
 	--container-income-wide: 78.625rem;
 
-	/* Display face for the brand wordmark only — body text stays on the default
-	   system stack. The font itself is imported in main.tsx (@fontsource-variable),
-	   so it is bundled rather than fetched from a CDN. Exposed as a theme token so
-	   it compiles to the `font-display` utility class. */
+	/* Display face for the brand wordmark and for headings: every page's h1, the
+	   home page's section headings, the sign-in card and the income panel's
+	   section titles. Body text stays on the default system stack. The font
+	   itself is imported in main.tsx (@fontsource-variable), so it is bundled
+	   rather than fetched from a CDN, and using it for headings costs no extra
+	   bytes. Exposed as a theme token so it compiles to the `font-display`
+	   utility class; add that class to a new page's h1. */
 	--font-display: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
 
 	/* Default / Gold stays deliberately familiar: a neutral dark interface with

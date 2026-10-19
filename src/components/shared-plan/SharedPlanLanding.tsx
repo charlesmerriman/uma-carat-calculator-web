@@ -190,7 +190,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	if (state.status === "notFound" || state.status === "error") {
 		return (
 			<div className="mx-auto max-w-xl px-4 py-16 text-center">
-				<h1 className="text-2xl font-bold text-gray-100">
+				<h1 className="font-display text-2xl font-bold text-gray-100">
 					{state.status === "notFound" ? "Plan not found" : "Couldn't load this plan"}
 				</h1>
 				<p className="mt-3 text-gray-400">
@@ -284,7 +284,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 
 	return (
 		<div className="mx-auto max-w-2xl px-4 py-10">
-			<h1 className="text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
+			<h1 className="font-display text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
 
 			{/* The copy controls sit ABOVE the banner list: a long plan pushed them
 			    off the bottom of the screen, behind dozens of rows. */}

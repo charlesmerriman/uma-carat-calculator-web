@@ -90,7 +90,7 @@ const tileClass = `${HOME_TILE} flex min-w-0 items-center gap-2.5 px-3 py-2.5 te
 
 // The below-the-fold sections all open the same way: a divider, then a heading.
 const sectionClass = "mt-10 border-t border-gray-800 pt-8"
-const sectionHeadingClass = "text-xl font-bold tracking-tight text-gray-100"
+const sectionHeadingClass = "font-display text-xl font-bold tracking-tight text-gray-100"
 
 export const HomePage = () => {
 	useDocumentMeta(null, "A carat planner and banner timeline for Uma Musume. See every upcoming banner and how many carats and tickets you will have when it arrives.")
@@ -158,7 +158,7 @@ export const HomePage = () => {
 					<section className={`${HOME_CARD} px-5 py-5 sm:px-6`}>
 						<div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 							<div>
-								<h1 className="text-3xl font-bold tracking-tight text-balance text-gray-100 sm:text-4xl">Plan your pulls. Know your carats.</h1>
+								<h1 className="font-display text-3xl font-bold tracking-tight text-balance text-gray-100 sm:text-4xl">Plan your pulls. Know your carats.</h1>
 								<p className="mt-2 max-w-2xl text-base text-pretty text-gray-400">A simple planner for your Uma Musume banners, income, and pull goals.</p>
 							</div>
 							<div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
@@ -236,7 +236,7 @@ export const HomePage = () => {
 						<section className={`${HOME_CARD} flex h-full flex-col p-4`}>
 							<div className="flex items-baseline justify-between gap-3">
 								<div>
-									<h2 className="text-lg font-bold tracking-tight text-gray-100">How it works</h2>
+									<h2 className="font-display text-lg font-bold tracking-tight text-gray-100">How it works</h2>
 									<p className="mt-0.5 text-sm text-gray-400">From your stash to a clear pull plan.</p>
 								</div>
 								<span className="shrink-0 rounded-full border border-gray-700 bg-gray-900/60 px-2.5 py-0.5 text-xs font-medium text-gray-400">5 steps</span>
