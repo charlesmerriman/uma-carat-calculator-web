@@ -48,6 +48,12 @@ export interface CatalogueSupportCard {
 	card_type: string | null
 	rarity: number | null
 	title: string
+	/**
+	 * A group card's umas, by name (Team Sirius's six), from the game data.
+	 * The deck rules count the card as one of each (utils/pvpTeams.ts). [] on
+	 * every other card; absent from an API older than the field.
+	 */
+	group_members?: string[]
 	/** In the global game today (has skill links from the global snapshot). */
 	on_global?: boolean
 	skills: CatalogueSkillLink[]

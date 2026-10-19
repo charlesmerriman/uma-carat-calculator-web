@@ -117,7 +117,11 @@ export const DailyLegendRaces = () => {
 
 	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 
-	const renderCard = (release: DailyLegendRaceRelease, isAvailable: boolean) => (
+	// Only the next two batches start open; every other card is its heading
+	// line until tapped (design polish item 22a, see LegendRaceReleaseCard). A
+	// search, or the batch a link names, opens a card regardless.
+	const OPEN_UPCOMING = 2
+	const renderCard = (release: DailyLegendRaceRelease, isAvailable: boolean, defaultOpen = false) => (
 		<LegendRaceReleaseCard
 			key={release.id}
 			release={release}
@@ -126,6 +130,8 @@ export const DailyLegendRaces = () => {
 			oshiIds={oshiIds}
 			focusRef={release.id === focusId ? focusRef : undefined}
 			isFocused={release.id === focusId}
+			defaultOpen={defaultOpen}
+			forceOpen={search !== "" || release.id === focusId}
 		/>
 	)
 
@@ -137,7 +143,7 @@ export const DailyLegendRaces = () => {
 				    flex column with gap-4: a sibling anchor would push the title down by a
 				    gap's worth. Here it marks the same spot for free. */}
 				<div ref={topRef} aria-hidden="true" />
-				<h1 className="flex items-center gap-2 text-xl font-bold text-brand">
+				<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
 					<Trophy className="h-5 w-5 shrink-0" />
 					{page?.title ?? FALLBACK_TITLE}
 				</h1>
@@ -199,7 +205,7 @@ export const DailyLegendRaces = () => {
 					Coming up
 				</h2>
 				{shownUpcoming.length > 0 ? (
-					shownUpcoming.map((release) => renderCard(release, false))
+					shownUpcoming.map((release, index) => renderCard(release, false, index < OPEN_UPCOMING))
 				) : (
 					<p className="text-sm text-gray-500">
 						{search !== ""

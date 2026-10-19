@@ -65,14 +65,14 @@ export const BackToTopButton = ({ onClick, disabled, className = "" }: BackToTop
  * only emits a class it can read whole from the source.
  */
 const FLOATING_POSITION = {
-	/** The Changelog and FAQ pages (`max-w-3xl`). */
+	/** The Changelog page (`max-w-3xl`). */
 	"48rem": "right-[max(1.5rem,calc((100vw-48rem)/2-4.5rem))]",
-	/** The Legend Races page (`max-w-5xl`). */
+	/** The Legend Races page (`max-w-5xl`), and the FAQ with its rail from lg. */
 	"64rem": "right-[max(1.5rem,calc((100vw-64rem)/2-4.5rem))]",
 	/** `page-container` pages: the Timeline and Selectors. */
 	"96rem": "right-[max(1.5rem,calc((100vw-96rem)/2-4.5rem))]",
-	/** The home page. */
-	"104rem": "right-[max(1.5rem,calc((100vw-104rem)/2-4.5rem))]",
+	/** The home page (104rem until 2026-10-18). */
+	"80rem": "right-[max(1.5rem,calc((100vw-80rem)/2-4.5rem))]",
 } as const
 
 type FloatingBackToTopProps = {

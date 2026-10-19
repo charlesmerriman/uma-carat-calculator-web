@@ -42,10 +42,14 @@ export interface PvpSkillVersion {
 	name: string
 	description: string
 	image: string | null
+	/** 1 white, 2 gold: what says the colour (WHITE_SKILL_RARITY in utils/pvpGuide). */
 	rarity: number
-	/** 1 white, 2 gold (the game's own number). */
+	/**
+	 * The game's place in the group: 1 a ○, 2 a ◎ white or an ordinary gold,
+	 * 3 the gold above a ◎. Never read the colour from it.
+	 */
 	tier: number
-	/** "○ white", "◎ gold" or "evolved": the label a chip shows. */
+	/** "○ white", "◎ white", "◎ gold" or "evolved": the label a chip shows. */
 	version: string
 	is_evolved: boolean
 }
@@ -60,9 +64,9 @@ export interface PvpSkillRef {
 	rarity: number
 	/** The outfit whose unique this skill is, or null. */
 	unique_of: string | null
-	/** This skill's own version label: "○ white", "◎ gold", "evolved". */
+	/** This skill's own version label: "○ white", "◎ white", "◎ gold", "evolved". */
 	version: string
-	/** 1 white, 2 gold (the game's own number). */
+	/** The game's place in the group, as on PvpSkillVersion; `rarity` says the colour. */
 	tier: number
 	is_evolved: boolean
 	/** Its other versions, white then gold then evolved; empty when it has none. */

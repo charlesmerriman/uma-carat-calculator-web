@@ -122,6 +122,22 @@ interface BannerRowProps {
 		React.SetStateAction<UserPlannedBanner[]>
 	>
 	initialBannerType?: BannerRowType
+	/**
+	 * The last banner row on screen. Its bulk-adjust pads open above their
+	 * fields (CountStepper preferAbove), since below it is only the sheet's edge.
+	 */
+	isLastRow?: boolean
+}
+
+/**
+ * The row options drawer's edge, one per kind: a bar in the row's type colour
+ * (the same --color-type-* fill as its badge) so the drawer reads as this
+ * row's. See .row-drawer in App.css.
+ */
+const ROW_DRAWER_CLASS: Record<BannerRowType, string> = {
+	Uma: "row-drawer row-drawer--uma",
+	Support: "row-drawer row-drawer--support",
+	StepUp: "row-drawer row-drawer--step-up",
 }
 
 interface BannerOption {
@@ -177,7 +193,8 @@ export const BannerRow = ({
 	constants,
 	resources,
 	setUserPlannedBannerData,
-	initialBannerType
+	initialBannerType,
+	isLastRow = false
 }: BannerRowProps) => {
 	// The row's kind: from its FK when it has one, else the kind it was staged
 	// as. Never sniffed inline — see plannedBannerRowType for why the old
@@ -1010,6 +1027,7 @@ export const BannerRow = ({
 			onChange={handlePullCountChange}
 			chips={countChips}
 			label={isStepUp ? "Steps" : "Pulls"}
+			preferAbove={isLastRow}
 		>
 			<NumberField
 				value={plannedCount}
@@ -1040,6 +1058,7 @@ export const BannerRow = ({
 				onChange={handleReservedChange}
 				chips={copyChips}
 				label="Copies"
+				preferAbove={isLastRow}
 			>
 				<NumberField
 					value={plannedBanner.reserved_copies}
@@ -1223,7 +1242,7 @@ export const BannerRow = ({
 			"hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2"
 		)}
 		{renderNoteEditor(
-			"hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2"
+			`hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2 ${ROW_DRAWER_CLASS[bannerType]}`
 		)}
 		</>
 	)

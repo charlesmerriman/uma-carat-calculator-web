@@ -134,7 +134,7 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	for (const row of guide.style_notes) used.add(row.style)
 	for (const row of guide.decks) used.add(row.style)
 	for (const row of guide.skill_recommendations) used.add(row.style)
-	// "Everyone" rows show above the tabs, never as a tab of their own.
+	// "Everyone" rows show in the side column, never as a tab of their own.
 	used.delete("everyone")
 	return STYLE_ORDER.filter((style) => used.has(style))
 }
@@ -197,8 +197,9 @@ export interface GuideSkillPick {
  * then the guide's order.
  *
  * With a `position`, only that position's rows and the general ("everyone")
- * ones count, the same merge the Recommendations view makes, so a skill's
- * tier and category are the ones the guide gives for that position.
+ * ones count, so a skill's tier and category are the ones the guide gives for
+ * that position. (The Recommendations view does NOT merge them: it shows the
+ * general skills in a section of their own, see skillsForPosition.)
  */
 export function guideSkillsByCategory(
 	guide: PvpGuide,
@@ -241,17 +242,29 @@ export function skillFamilyIds(skill: PvpSkillRef): number[] {
 }
 
 /**
+ * The game's skill rarities a family is made of. A family's ○ and ◎ are both
+ * white; only a gold is gold. Read the colour from these, never from `tier`:
+ * in a ○/◎ family tier 2 is the white ◎ and the gold is tier 3.
+ */
+export const WHITE_SKILL_RARITY = 1
+export const GOLD_SKILL_RARITY = 2
+
+/**
  * Does a source teaching `version` give a team the pick `skill`?
  *
  * The direction matters: a card that teaches the gold teaches the white too
  * (owner, 2026-10-14), so a gold on the team covers a white pick, and a
- * white never covers a gold. No card teaches an evolved skill; an evolved
- * pick is covered by a base version, which is what gets evolved.
+ * white never covers a gold. The ○ and ◎ of one white are one skill to a
+ * team (owner, 2026-10-16), so each covers the other: no card or uma teaches
+ * a ◎ in the game data, so a ◎ pick is only ever met through its ○. No card
+ * teaches an evolved skill; an evolved pick is covered by a base version,
+ * which is what gets evolved.
  */
 function versionCovers(skill: PvpSkillRef, version: PvpSkillVersion): boolean {
 	if (skill.is_evolved) return !version.is_evolved
 	if (version.is_evolved) return false
-	return version.tier >= skill.tier
+	// Anything else in the family covers, except a white for a gold pick.
+	return version.rarity === GOLD_SKILL_RARITY || skill.rarity !== GOLD_SKILL_RARITY
 }
 
 /**
@@ -270,11 +283,6 @@ export function familySources(sources: Map<number, string[]>, skill: PvpSkillRef
 		for (const from of sources.get(version.id) ?? []) found.push(`${from}, as ${version.version}${suffix}`)
 	}
 	return found.length > 0 ? found : null
-}
-
-/** True when a white skill has a gold version to show a ◎ badge for. */
-export function hasGoldVersion(skill: PvpSkillRef): boolean {
-	return skill.rarity === 1 && skill.versions.some((version) => version.tier === 2 && !version.is_evolved)
 }
 
 /** One recommended uma or card in the team builder's Guide picks panel. */
@@ -335,26 +343,22 @@ export function guidePicks(guide: PvpGuide): GuidePicks {
 }
 
 /**
- * One position's recommended skills: its own picks merged with the GENERAL
- * ones (style "everyone", which apply to every position), as one list.
+ * One style's recommended skills, that style's OWN rows only: a position's
+ * picks for its tab, or "everyone" for the general skills, which the
+ * Recommendations view shows once, in the side column under the Overview
+ * (owner, 2026-10-17). Merged into every tab, they read as that position's
+ * picks. The team builder's skills panel still merges them, through
+ * guideSkillsByCategory, because it is a checklist for one position's team.
  *
- * Ordered by tier (0 first, untiered last), then the position's own picks
- * before the general ones within a tier, then the editor's order. Category is
- * left to the caller, which splits the list into its subcategories.
+ * Ordered by tier (0 first, untiered last), then the editor's order. Category
+ * is left to the caller, which splits the list into its subcategories.
  */
 export function skillsForPosition(rows: PvpSkillRecommendation[], style: PvpStyle): PvpSkillRecommendation[] {
 	const tierRank = (row: PvpSkillRecommendation) => (row.tier === null ? Number.MAX_SAFE_INTEGER : row.tier)
-	const generalRank = (row: PvpSkillRecommendation) => (row.style === "everyone" ? 1 : 0)
 	return rows
 		.map((row, index) => ({ row, index }))
-		.filter(({ row }) => row.style === style || row.style === "everyone")
-		.sort(
-			(a, b) =>
-				tierRank(a.row) - tierRank(b.row) ||
-				generalRank(a.row) - generalRank(b.row) ||
-				a.row.order - b.row.order ||
-				a.index - b.index
-		)
+		.filter(({ row }) => row.style === style)
+		.sort((a, b) => tierRank(a.row) - tierRank(b.row) || a.row.order - b.row.order || a.index - b.index)
 		.map(({ row }) => row)
 }
 

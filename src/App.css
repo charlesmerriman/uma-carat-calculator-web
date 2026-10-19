@@ -4,7 +4,7 @@
 
 /* Green-bordered input used for carat/ticket/crystal number fields */
 .input-currency {
-	@apply px-2 py-1 w-full border border-green-600 rounded-lg h-9
+	@apply px-2 py-1 w-full border border-green-600 rounded-md h-9
 		bg-gray-700 text-gray-100 focus:border-green-400 focus:outline-none
 		shadow-sm text-base font-medium text-center;
 }
@@ -48,7 +48,7 @@
 
 /* Bordered value box (used next to rank selects in IncomeForm) */
 .value-display {
-	@apply border border-[#cccccc] rounded px-2 py-1 text-center text-base font-medium;
+	@apply border border-[#cccccc] rounded-md px-2 py-1 text-center text-base font-medium;
 }
 
 /* Inline bold value */
@@ -69,9 +69,32 @@
 	@apply justify-center w-full bg-gray-900 lg:max-w-[96rem] mx-auto;
 }
 
-/* Neutral card panel (used in IncomeForm, BannerRow, Timeline) */
-.card-panel {
-	@apply bg-gray-800 rounded-xl border border-gray-600 shadow-md;
+/* THE CARD. Every raised box on a page wears this one class: the planner's
+   panels, the Timeline's cards, the home, info and account cards, the PvP
+   panels. Its edge and shadow are the two surface tokens in index.css
+   (--color-edge and --card-shadow, see SURFACES there), so a theme restyles
+   every card by setting variables, never by matching class names.
+
+   In @layer components, so a utility at the call site beats it (a tinted
+   edge, square top corners, a dashed border), the way Tailwind means a
+   component class to work. It was unlayered until 2026-10-18, and unlayered
+   CSS beats every layer: `rounded-t-none` needed a class of its own here, and
+   a scenario card's `border-brand/40` (EventMarkerCard) never drew at all.
+   The [data-gallery-style] edges further down stay unlayered on purpose,
+   since they must beat this AND any utility.
+
+   The fill is --card-fill, a step above gray-800 on the dark themes (see
+   SURFACES in index.css); anything painted to look like a card reads it too.
+
+   The shadow goes through Tailwind's `shadow-(...)` so a `ring-*` on a card
+   adds to it instead of replacing it. Popovers and dialogs are not cards:
+   they wear `border-edge` with Tailwind's deeper `shadow-lg` / `shadow-2xl`. */
+@layer components {
+	.card-panel {
+		@apply rounded-xl border shadow-(--card-shadow);
+		background-color: var(--card-fill);
+		border-color: var(--color-edge);
+	}
 }
 
 /* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
@@ -96,24 +119,6 @@
    layouts below xl, where this variable is not applied. */
 :root {
 	--timeline-art-width: calc((100cqw - 2rem) * 0.4354);
-}
-
-/* A card welded to a strip sitting flush above it (AnniversaryEventStrip): the
-   top corners square off so the two read as one box instead of two with a seam.
-
-   This has to live HERE rather than as a `rounded-t-none` utility at the call
-   site. App.css is UNLAYERED, while Tailwind's utilities land in
-   `@layer utilities`, and unlayered CSS beats every layer regardless of
-   specificity — so .card-panel's own `rounded-xl` silently wins over any
-   rounding utility a caller adds. Same-file, same-layer, declared after it, so
-   this one wins on source order. */
-.card-panel-joined-top {
-	@apply rounded-t-none;
-}
-
-/* Inner section with light gray background */
-.card-section {
-	@apply border-0 rounded-2xl bg-gray-700 p-3 text-gray-100;
 }
 
 /* ===== BANNER ROW ===== */
@@ -300,6 +305,30 @@
 	color: var(--color-type-step-up-ink);
 }
 
+/* The row options drawer (RowOptionsPanel) under a desktop planner row. It
+   opened as a plain full-width strip with nothing tying it to its row, so it
+   read as a loose panel between two rows. A bar in the row's type colour (the
+   badge's own fill) down its left edge and a small inset make it that row's
+   drawer. The --color-type-* tokens are already redrawn for the light themes
+   and colorblind mode, so the bar follows them. */
+.row-drawer {
+	margin-left: 0.75rem;
+	border-left: 4px solid var(--row-drawer-edge);
+	border-bottom-left-radius: 0.375rem;
+}
+
+.row-drawer--uma {
+	--row-drawer-edge: var(--color-type-uma);
+}
+
+.row-drawer--support {
+	--row-drawer-edge: var(--color-type-support);
+}
+
+.row-drawer--step-up {
+	--row-drawer-edge: var(--color-type-step-up);
+}
+
 /* Everything drawn ON the mobile header strip: the banner select
    (mobileBannerSelectStyles reads these), and the note and delete buttons.
 
@@ -420,7 +449,7 @@
    It is also load-bearing VERTICALLY: see BannerRow's reserved cell, which pays
    for this height plus a funding hint out of an h-16 row. */
 .pull-input {
-	@apply h-11 rounded border px-2 text-center text-sm
+	@apply h-11 rounded-md border px-2 text-center text-sm
 		transition-colors focus:outline-none;
 }
 
@@ -745,7 +774,7 @@
    one. The surface stays the ordinary card. */
 .ssr-panel--quiet {
 	background:
-		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(var(--card-fill), var(--card-fill)) padding-box,
 		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
 	box-shadow: 0 0 6px var(--color-ssr-glow);
 }
@@ -778,7 +807,7 @@
 .ssr-panel--rainbow {
 	background:
 		linear-gradient(115deg, #f3a9e880 0%, #da76f380 18%, #ba8cf480 32%, #73e0fd80 48%, #73e0fd80 74%, #c5f58f80 100%) padding-box,
-		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(var(--card-fill), var(--card-fill)) padding-box,
 		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
 	/* The plain panel's inner gold haze, dropped: it tinted the pastel edge
 	   on the open post but not on the row. */
@@ -814,7 +843,7 @@
 .card-panel[data-gallery-style="sr"] {
 	border-color: transparent;
 	background:
-		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(var(--card-fill), var(--card-fill)) padding-box,
 		linear-gradient(
 			120deg,
 			var(--color-gallery-sr-light) 0%,
@@ -1060,3 +1089,50 @@ input[type="number"] {
 	}
 }
 
+
+/* A PLANNER ROW JUST ADDED FROM STAGING (CaratCalculator's arrivedKey).
+
+   A brand tint and edge that fade out over 1.6s, so the eye can follow the row
+   to wherever the date sort put it. Drawn on ::after so it sits over the row's
+   own background; the wrapper underneath has none. Rounded like the phone card
+   and square on the desktop table, matching each form of the row.
+
+   Only when the visitor has not asked for reduced motion. Under reduced motion
+   nothing here applies, animationend never fires and the class stays on the
+   row until the next arrival: harmless, as it then styles nothing. */
+@media (prefers-reduced-motion: no-preference) {
+	.row-arrival {
+		position: relative;
+	}
+
+	.row-arrival::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		border-radius: var(--radius-xl);
+		box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-brand) 75%, transparent);
+		background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+		opacity: 0;
+		animation: row-arrival 1.6s ease-out;
+	}
+
+	/* The sheet's table form (the `@banner-table:` breakpoint). A container
+	   query cannot read a CSS variable, so this repeats
+	   --container-banner-table (index.css); move the two together. */
+	@container (min-width: 76.625rem) {
+		.row-arrival::after {
+			border-radius: 0;
+		}
+	}
+}
+
+@keyframes row-arrival {
+	0%,
+	25% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}

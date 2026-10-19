@@ -48,14 +48,14 @@ export const Login: React.FC = () => {
 
 	return (
 		<div className="flex min-h-screen flex-col bg-gray-900 p-4">
-			<div className="m-auto w-full max-w-sm overflow-hidden rounded-2xl border border-gray-700 bg-gray-800 shadow-2xl">
+			<div className="card-panel m-auto w-full max-w-sm overflow-hidden">
 				{/* Brand header strip */}
 				<div className="flex justify-center border-b border-gray-700 px-8 py-4">
 					<Wordmark size="card" />
 				</div>
 
 				<div className="px-8 py-7">
-					<h2 className="mb-6 text-xl font-semibold text-gray-100">Sign In</h2>
+					<h2 className="font-display mb-6 text-xl font-semibold text-gray-100">Sign In</h2>
 
 					{/* Shown when this device holds a guest plan, which the calculator
 					    moves into the account on the first load after sign-in */}
@@ -105,12 +105,13 @@ export const Login: React.FC = () => {
 					</p>
 
 					{/* The point of the whole flow — worth saying out loud, since
-					    "sign in with Google" usually implies handing over an email. The
-					    picture is the one profile detail we keep, and it is named here
-					    because the consent screen will show it being shared. */}
+					    "sign in with Google" usually implies handing over an email. No
+					    profile detail is kept at all since 2026-09-13 (the account
+					    picture is the first favourite uma), so the provider picture is
+					    not named here: the privacy policy lists it as NOT stored. */}
 					<p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
 						We never see your password, and we don't store your email address or
-						name. We keep only an anonymous ID and your profile picture from your provider.{" "}
+						name. We keep only an anonymous ID from your provider.{" "}
 						<Link to="/privacy-policy" className="text-gray-400 underline hover:text-gray-300">
 							Privacy policy
 						</Link>

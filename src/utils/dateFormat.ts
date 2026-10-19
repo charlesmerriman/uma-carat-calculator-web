@@ -52,3 +52,15 @@ export function formatDate(dateStr: string | null | undefined): string {
 
 	return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
 }
+
+/**
+ * Format a UTC month as `YYYY/M`, the month-only sibling of `formatDate`.
+ *
+ * For chart axes, whose ticks are UTC month starts produced by the projection
+ * (utils/utcDates). Read in UTC on purpose: a tick at 2026-11-01T00:00Z is
+ * November everywhere, where a local reading would call it October west of
+ * Greenwich.
+ */
+export function formatMonth(date: Date): string {
+	return `${date.getUTCFullYear()}/${date.getUTCMonth() + 1}`
+}

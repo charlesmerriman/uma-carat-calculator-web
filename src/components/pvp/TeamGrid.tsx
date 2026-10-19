@@ -46,12 +46,21 @@ const OWNED_SLOTS = [1, 2, 3, 4, 5]
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 
 /**
- * The portrait is a little wider than a card so it reads as the row's
- * subject, and at 1.35fr its square is as tall as a 1fr card at 3:4 (1.33),
- * so the row's tops and bottoms line up. The 2px column is the divider
- * before the borrowed card.
+ * Two layouts, as Tailwind classes so a breakpoint can switch them.
+ *
+ * From `sm:` the row is ONE line: the portrait is a little wider than a card
+ * so it reads as the row's subject, and at 1.35fr its square is as tall as a
+ * 1fr card at 3:4 (1.33), so the row's tops and bottoms line up. The 2px
+ * column is the divider before the borrowed card.
+ *
+ * Below `sm:` that line made seven ~40px tiles per uma, too small to tell the
+ * cards apart. A phone gets a large portrait with the six cards 3x2 beside
+ * it: the portrait spans both card rows, and at 2.7fr its square is about as
+ * tall as two 1fr cards at 3:4 (2 x 1.33, plus the gap). The divider goes; the
+ * borrowed card keeps its handshake badge, which is what marks it anyway.
  */
-const ROW_COLUMNS = "minmax(0,1.35fr) repeat(5,minmax(0,1fr)) 2px minmax(0,1fr)"
+const ROW_GRID =
+	"grid-cols-[minmax(0,2.7fr)_repeat(3,minmax(0,1fr))] sm:grid-cols-[minmax(0,1.35fr)_repeat(5,minmax(0,1fr))_2px_minmax(0,1fr)]"
 
 export function TeamGrid(props: TeamGridProps) {
 	return (
@@ -136,7 +145,7 @@ function MemberPanel({
 	}
 
 	return (
-		<section className="rounded-xl border border-gray-600 bg-gray-800 p-2.5 shadow-md sm:p-3" aria-label={umaLabel}>
+		<section className="card-panel p-2.5 sm:p-3" aria-label={umaLabel}>
 			<header className="mb-2.5 flex items-center gap-2">
 				<span
 					className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-black"
@@ -174,8 +183,9 @@ function MemberPanel({
 				</button>
 			</header>
 
-			<div className="grid items-start gap-1.5 sm:gap-2" style={{ gridTemplateColumns: ROW_COLUMNS }}>
+			<div className={`grid items-start gap-1.5 sm:gap-2 ${ROW_GRID}`}>
 				<Tile
+					className="row-span-2 sm:row-span-1"
 					art={uma?.portrait ?? uma?.image ?? null}
 					framed
 					large
@@ -187,7 +197,7 @@ function MemberPanel({
 					empty={null}
 				/>
 				{OWNED_SLOTS.map(cardTile)}
-				<span className="self-stretch rounded-full bg-gray-600" aria-hidden="true" />
+				<span className="hidden self-stretch rounded-full bg-gray-600 sm:block" aria-hidden="true" />
 				{cardTile(PVP_BORROW_SLOT)}
 			</div>
 		</section>
@@ -215,6 +225,7 @@ function Tile({
 	badge = null,
 	onClear,
 	clearLabel,
+	className = "",
 }: {
 	art: string | null | undefined
 	label: string
@@ -235,10 +246,12 @@ function Tile({
 	badge?: ReactNode
 	onClear?: () => void
 	clearLabel?: string
+	/** Placement in the row's grid (the portrait spans two rows on a phone). */
+	className?: string
 }) {
 	const filled = art !== undefined
 	return (
-		<div className="min-w-0">
+		<div className={`min-w-0 ${className}`}>
 			<div className="group relative">
 				<button
 					type="button"

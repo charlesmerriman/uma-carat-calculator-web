@@ -6,7 +6,10 @@
  *   - SEARCH BY SKILL. The search matches a card's name OR the name of any
  *     skill it teaches, so "Groundwork" finds every card with Groundwork.
  *     Skills that match the search show as chips; a chip pins as a filter, and
- *     pinned filters stack (a card must teach all of them).
+ *     pinned filters stack (a card must teach all of them). The ○ and ◎ of
+ *     one white skill count as one (whiteSkillPairs in utils/pvpTeams):
+ *     searching or pinning either finds the cards that teach either, which
+ *     matters because nothing teaches a ◎ and the guides recommend the ◎.
  *   - APTITUDE BADGES (umas). The letters for this event's surface and
  *     distance and the style the place runs, from utils/courseAptitude.ts.
  *   - THE GUIDE'S STAR. Cards the event's guide recommends for this style
@@ -38,6 +41,7 @@ import type {
 } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { whiteSkillPairs } from "../../utils/pvpTeams"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -153,25 +157,32 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const items = useMemo(() => toItems(props), [props.items, props.pool])
 	const query = search.trim().toLocaleLowerCase()
+	// Skill id -> its ○/◎ pair, so either answers for the other. Built once:
+	// the catalogue never changes while the dialog is open.
+	const pairs = useMemo(() => whiteSkillPairs(skillsById.values()), [skillsById])
 
 	// Skills whose name holds the query, among the skills this pool teaches.
-	// Two letters at least, or "a" would chip half the skill list.
+	// Two letters at least, or "a" would chip half the skill list. A taught
+	// white also matches by its pair's name, so "Right-Handed ◎" chips the
+	// Right-Handed ○ that the cards teach.
 	const matchingSkills = useMemo(() => {
 		if (query.length < 2) return []
 		const taught = new Set(items.flatMap((item) => item.skills.map((link) => link.skill)))
 		const found: CatalogueSkill[] = []
 		for (const id of taught) {
 			const skill = skillsById.get(id)
-			if (skill && skill.name.toLocaleLowerCase().includes(query)) found.push(skill)
+			const names = (pairs.get(id) ?? [id]).map((member) => skillsById.get(member)?.name ?? "")
+			if (skill && names.some((name) => name.toLocaleLowerCase().includes(query))) found.push(skill)
 		}
 		return found.sort((a, b) => a.name.localeCompare(b.name))
-	}, [items, query, skillsById])
+	}, [items, query, skillsById, pairs])
 	const matchingSkillIds = new Set(matchingSkills.map((skill) => skill.id))
 
 	const shown = items
 		.filter((item) => {
 			const skillIds = new Set(item.skills.map((link) => link.skill))
-			if (!pinnedSkills.every((id) => skillIds.has(id))) return false
+			// A pinned white is met by either half of its pair.
+			if (!pinnedSkills.every((id) => (pairs.get(id) ?? [id]).some((member) => skillIds.has(member)))) return false
 			// Support-only filters (see the header). A card with no rarity
 			// reads as SSR, the convention on SupportCard.rarity.
 			if (pool === "support") {
@@ -213,7 +224,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				role="dialog"
 				aria-modal="true"
 				aria-label={title}
-				className="flex max-h-[min(48rem,calc(100vh-2rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-800 shadow-2xl"
+				className="flex max-h-[min(48rem,calc(100vh-2rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-edge bg-gray-800 shadow-2xl"
 			>
 				<header className="flex flex-wrap items-center gap-3 border-b border-gray-700 px-4 py-3">
 					<div className="min-w-0 flex-1">
@@ -237,7 +248,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 					{onRemove && (
 						<button
 							type="button"
-							className="flex h-9 items-center gap-1.5 rounded border border-gray-600 px-3 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+							className="flex h-9 items-center gap-1.5 rounded-md border border-gray-600 px-3 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 							onClick={onRemove}
 						>
 							<Trash2 className="h-4 w-4" />
@@ -247,7 +258,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 					<button
 						type="button"
 						aria-label="Close"
-						className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+						className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 						onClick={onClose}
 					>
 						<X className="h-5 w-5" />

@@ -108,10 +108,13 @@ html {
 	   the 2rem. */
 	--container-income-wide: 78.625rem;
 
-	/* Display face for the brand wordmark only — body text stays on the default
-	   system stack. The font itself is imported in main.tsx (@fontsource-variable),
-	   so it is bundled rather than fetched from a CDN. Exposed as a theme token so
-	   it compiles to the `font-display` utility class. */
+	/* Display face for the brand wordmark and for headings: every page's h1, the
+	   home page's section headings, the sign-in card and the income panel's
+	   section titles. Body text stays on the default system stack. The font
+	   itself is imported in main.tsx (@fontsource-variable), so it is bundled
+	   rather than fetched from a CDN, and using it for headings costs no extra
+	   bytes. Exposed as a theme token so it compiles to the `font-display`
+	   utility class; add that class to a new page's h1. */
 	--font-display: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
 
 	/* Default / Gold stays deliberately familiar: a neutral dark interface with
@@ -129,6 +132,28 @@ html {
 	--color-gray-800: #1a1a22;
 	--color-gray-900: #101014;
 	--color-gray-950: #08080c;
+
+	/* ── Surface edge ──────────────────────────────────────────────────────
+	   The one edge every surface wears: .card-panel (App.css), the popovers and
+	   dialogs, and the quieter inset panels, through the `border-edge` utility.
+	   Its partner is --card-shadow (SURFACES, below @theme); between them they
+	   are everything a theme says about its surfaces.
+
+	   Low-alpha light rather than a solid gray, so it reads the same over
+	   whatever fill it sits on: a card, a translucent inset, a staged row. The
+	   5% of brand tints it toward each theme's hue, which is why ONE value
+	   serves all six dark themes: it measures 1.47:1 to 1.52:1 against gray-800
+	   on every one of them. That sits between the two edges it replaced, the
+	   gray-700 the home and info cards wore (1.15 to 1.25:1, close to
+	   invisible) and the planner's gray-600 (1.9 to 2.8:1, the heaviest line on
+	   the page). The light themes redraw it as a solid tinted gray under
+	   [data-theme-mode="light"].
+
+	   A colour token while the shadow is a plain variable, because Tailwind
+	   compiles colour utilities to var() but writes a shadow utility's value out
+	   literally: a theme can override this at runtime, and could not override
+	   a --shadow-* token. */
+	--color-edge: color-mix(in srgb, var(--color-brand) 5%, rgb(255 255 255 / 10%));
 
 	/* ── Pull-count status colors ──────────────────────────────────────────
 	   Used by the .pull-input classes in App.css to flag a planned pull count
@@ -225,6 +250,17 @@ html {
 	--color-type-step-up: oklch(38.1% 0.176 304.987);
 	--color-type-step-up-ink: #ffffff;
 
+	/* SERIES COLOURS: the carat forecast's two pulls lines (uma and support).
+	   Not the type tiles above: those are dark fills here and pastel fills on
+	   the light themes, and a 2px line in either vanishes. Blue and teal echo
+	   the tiles; green is avoided because it is the on-pity status colour.
+	   Validated with the dataviz palette script against the dark card fill
+	   (lightness band, chroma, colorblind separation, contrast); the light
+	   steps are under [data-theme-mode="light"]. The tritan pair is the weak
+	   one, so the lines also carry end labels and a legend. */
+	--color-series-uma: #4f8ef7;
+	--color-series-support: #0fa898;
+
 	/* Text on the New Year and Campaign variants of the Timeline's campaign
 	   strip (AnniversaryEventStrip). The dark values are the stock amber-300 /
 	   sky-300 they used to be; a light surface needs the deep counterparts. The
@@ -308,6 +344,36 @@ html {
 	--color-gallery-rose-tint: rgb(251 113 133 / 14%);
 }
 
+/* ===== SURFACES =====
+   A card's shadow and fill, read by .card-panel (App.css) and by the few
+   card-shaped boxes that cannot wear that class (`shadow-(--card-shadow)`,
+   `bg-(--card-fill)`). Its partner is the --color-edge token in @theme above.
+
+   This is Dark's value; a theme with a look of its own sets --card-shadow in
+   its polish block at the bottom of this file. Until 2026-10-18 each theme
+   re-skinned cards with a rule matching `.shadow-sm, .shadow-md, .shadow-lg,
+   .shadow-2xl` literally, so every element carrying any of those utilities
+   (segmented tabs, the colorblind switch's knob, inputs, dialogs) wore the card
+   shadow too, and a card that forgot the utility wore none. Floating layers
+   now keep Tailwind's own `shadow-lg` / `shadow-2xl`, which are deeper than a
+   card's on purpose.
+
+   Declared on :root before the theme blocks: same specificity as
+   [data-theme="x"], so source order is what lets a theme win. */
+:root {
+	--card-shadow: 0 8px 20px rgb(0 0 0 / 20%), 0 1px 0 rgb(255 255 255 / 3%) inset;
+	/* A card's fill: 40% of the way from gray-800 to gray-700, so a card sits a
+	   step above the page on every dark theme (owner, 2026-10-19; plain
+	   gray-800 was 1.1:1 against the canvas and cards barely separated). Built
+	   from the theme's own ramp, so each dark theme lifts in its own hue. A
+	   light theme's cards are already white, so the light block resets it.
+	   Read by .card-panel and by everything painted to look like a card (the
+	   gallery's SR and SSR edges, the home page tiles): a box that keeps a bare
+	   bg-gray-800 now reads a shade darker than a card, which is right for an
+	   inset and wrong for a card. */
+	--card-fill: color-mix(in oklab, var(--color-gray-800) 60%, var(--color-gray-700));
+}
+
 /* ===== THEME OVERRIDES =====
    Tailwind CSS 4 compiles @theme tokens to CSS variables at :root, and utility
    classes like bg-gray-900 reference var(--color-gray-900) at runtime. Overriding
@@ -317,6 +383,11 @@ html {
    1. Add a [data-theme="x"] block here
    2. Add one entry with its mode to THEMES in src/services/themeStore.ts
    3. Add the id (and light-mode membership) to the inline script in index.html
+   4. For a page glow, set --page-glow in its polish block and list the theme
+      in the PAGE GLOW selectors (see that section for why it is opt-in)
+   5. For cards of its own, set --card-shadow (and --color-edge, if the shared
+      edge does not suit) in that same block. Never re-skin cards by matching
+      utility classes such as `.shadow-md`: see SURFACES above.
 */
 
 [data-theme="gold"] {
@@ -324,21 +395,28 @@ html {
 	--color-brand: #E6D28A;
 }
 
-/* Gilded deliberately turns the warmth up: it retains the cinematic, amber-lit
-   approach that is too decorative for the default planning experience. */
+/* Gilded turns the warmth up: the cinematic, amber-lit look that is too
+   decorative for the default planning experience.
+
+   Pushed further on 2026-10-18 (design-polish item 5b): with a pale gold
+   accent and grays only a hair warmer than Dark's, the calculator looked the
+   same on both and only the home page's glow told them apart. The accent is
+   now amber rather than Dark's straw gold, and the ramp is brown, not
+   near-neutral. gray-400 on gray-800 measures 5.2:1, the brand on gray-800
+   9.3:1, black on the brand 11.5:1. */
 [data-theme="gilded"] {
-	--color-brand: #f1cf75;
+	--color-brand: #f2b544;
 	--color-gray-50:  #fffaf0;
-	--color-gray-100: #f5eddf;
-	--color-gray-200: #ded2bf;
-	--color-gray-300: #bcae98;
-	--color-gray-400: #998a73;
-	--color-gray-500: #766750;
-	--color-gray-600: #51463a;
-	--color-gray-700: #302a25;
-	--color-gray-800: #211d1a;
-	--color-gray-900: #151210;
-	--color-gray-950: #0d0b0a;
+	--color-gray-100: #f6ecdc;
+	--color-gray-200: #e2d2b8;
+	--color-gray-300: #c4ae8f;
+	--color-gray-400: #a38a6a;
+	--color-gray-500: #7d6447;
+	--color-gray-600: #5a4328;
+	--color-gray-700: #362717;
+	--color-gray-800: #261b10;
+	--color-gray-900: #1a1209;
+	--color-gray-950: #0f0a05;
 }
 
 [data-theme="midnight"] {
@@ -418,9 +496,14 @@ html {
 	--light-glow-start: color-mix(in srgb, var(--color-brand) 7%, transparent);
 	--light-glow-end: color-mix(in srgb, var(--color-brand) 4%, transparent);
 	--light-button-ink: #ffffff;
-	--light-shadow: 0 8px 24px rgb(15 23 42 / 6%);
-	--light-panel-border: color-mix(in srgb, var(--color-brand) 10%, var(--color-gray-600));
-	--light-nav-border: color-mix(in srgb, var(--color-brand) 8%, var(--color-gray-600));
+	/* Surfaces (SURFACES, above). Set HERE rather than in the light polish
+	   block at the bottom: that block comes after [data-theme="light"] below,
+	   at the same specificity, and would override the warm Light's own pair.
+	   The edge is solid on a light theme: a low-alpha white edge vanishes on a
+	   white card, so it is the divider gray with a touch of the brand. */
+	--card-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+	--card-fill: var(--color-gray-800);
+	--color-edge: color-mix(in srgb, var(--color-brand) 10%, var(--color-gray-600));
 	--color-brand: #1d4ed8;
 	--color-gray-50:  #0f172a; /* darkest slate ink */
 	--color-gray-100: #1e293b; /* primary text */
@@ -476,6 +559,10 @@ html {
 	--color-type-support-ink: #14532d;
 	--color-type-step-up: #e2d0f8;
 	--color-type-step-up-ink: #581c87;
+	/* The forecast's pulls lines, light-mode steps (validated on white with
+	   the dataviz palette script: lightness band, chroma, CVD, contrast). */
+	--color-series-uma: #2563eb;
+	--color-series-support: #0a9a8a;
 
 	/* Revival categories retain their rose accent, deepened for white cards. */
 	--color-category-revival: #a3325c;
@@ -529,13 +616,22 @@ html {
 	--color-gray-950: #fffdfb;
 	--light-glow-start: rgb(210 142 53 / 18%);
 	--light-glow-end: rgb(129 73 114 / 10%);
-	--light-button-ink: #000000;
-	--light-shadow: 0 12px 30px rgb(70 37 47 / 9%);
-	--light-panel-border: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
-	--light-nav-border: color-mix(in srgb, var(--color-brand) 16%, var(--color-gray-600));
+	--card-shadow: 0 12px 30px rgb(70 37 47 / 9%);
+	--color-edge: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
 }
 
+/* Red and Green move the status colour that matches their brand. On Red the
+   primary button, the headings and an over-budget pull field were all the same
+   red, so the warning stopped reading as one: over-budget turns orange (the
+   colorblind mode's light pair). On Green the on-pity count matched the brand,
+   so on-pity turns blue and its drained "neutral" follows it to slate. The
+   other state keeps the shared light value. Colorblind mode still wins: its
+   block has two attributes in its selector to these blocks' one. */
 [data-theme="light-green"] {
+	--color-pull-ok: #1d4ed8;
+	--color-pull-ok-border: #2563eb;
+	--color-pull-neutral: #526273;
+	--color-pull-neutral-border: #64748b;
 	--color-brand: #166534;
 	--color-gray-50:  #10221a;
 	--color-gray-100: #1a3026;
@@ -550,6 +646,8 @@ html {
 }
 
 [data-theme="light-red"] {
+	--color-pull-over: #9a3412;
+	--color-pull-over-border: #c2410c;
 	--color-brand: #b91c1c;
 	--color-gray-50:  #1f1418;
 	--color-gray-100: #321f25;
@@ -577,9 +675,12 @@ html {
 	--color-gray-950: #fcfaff;
 }
 
-/* Pearl is the softer neutral option: paper-white surfaces and charcoal actions. */
+/* Pearl is the softer neutral option: paper-white surfaces and charcoal actions.
+   The accent was a mid charcoal (#52525b) until 2026-10-18, which made the
+   primary button and the active tab gray on gray; near-black (stone-800, the
+   ramp's own hue) gives the one primary action a focus. White on it: 14.9:1. */
 [data-theme="light-pearl"] {
-	--color-brand: #52525b;
+	--color-brand: #292524;
 	--color-gray-50:  #1c1917;
 	--color-gray-100: #292524;
 	--color-gray-200: #44403c;
@@ -590,8 +691,7 @@ html {
 	--color-gray-700: #f0eeeb;
 	--color-gray-900: #f8f7f5;
 	--color-gray-950: #fdfcfa;
-	--light-glow-start: transparent;
-	--light-glow-end: transparent;
+	/* No page glow: Pearl stays out of the PAGE GLOW layer's theme list. */
 }
 
 /* Blue/orange is distinguishable for the common red-green colour vision
@@ -634,6 +734,63 @@ html {
 	--color-step-up-border: #b91c1c;
 }
 
+/* ===== PAGE GLOW =====
+   The soft colour blooms behind the page. A theme that has them sets
+   --page-glow to its gradients in its polish block below, AND is listed in the
+   two selectors here. The list is opt-in on purpose: Dark (gold) and Pearl
+   have no glow, and must not get the layer at all, not even an empty one.
+   Any layer under the page moves the page's content onto a compositor layer
+   of its own, and Chrome then draws text that sits straight on the page
+   background (page titles, the home page prose) with grayscale instead of
+   subpixel antialiasing on 1x screens. A glow theme pays that; the default
+   theme should not. Forgetting to list a new theme fails loudly (no glow),
+   which is the safer way round.
+
+   It is ONE position: fixed layer, never `background-attachment: fixed`. Until
+   2026-10 every theme but the default painted these gradients as a fixed
+   background on body AND on the page shell. A fixed background stays still
+   while the content painted into the same tiles moves, so the browser can no
+   longer scroll by sliding tiles it has already painted: it repainted the
+   viewport on the main thread on every frame, twice (once per element). On
+   /faq at phone size a 2,500px scroll measured 153 repaints against the
+   default theme's 2, which is what the "other themes are laggy" reports were.
+   A position: fixed element gets a compositor layer of its own, painted once
+   and left alone while the page scrolls past it, so a glow now costs what the
+   default theme does.
+
+   z-index -1 puts the layer above the canvas (body's gray-900, which the
+   browser paints across the whole viewport) and below every box in the page.
+   So the page shells, the #root children that carry bg-gray-900 (the /app
+   frame, the home page, the info pages, Login), must be transparent, or their
+   own gray-900 hides the layer. It is the canvas's colour, so on screen
+   nothing changes. */
+:is(
+	[data-theme-mode="light"]:not([data-theme="light-pearl"]),
+	[data-theme="gilded"],
+	[data-theme="midnight"],
+	[data-theme="race-day"],
+	[data-theme="violet"],
+	[data-theme="teal"]
+) body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background-image: var(--page-glow);
+}
+
+:is(
+	[data-theme-mode="light"]:not([data-theme="light-pearl"]),
+	[data-theme="gilded"],
+	[data-theme="midnight"],
+	[data-theme="race-day"],
+	[data-theme="violet"],
+	[data-theme="teal"]
+) #root > .bg-gray-900 {
+	background-color: transparent;
+}
+
 /* Light-theme polish lives here rather than in each component so every existing
    card, form, timeline entry, and auth view gains the same sense of hierarchy.
    The two low-opacity glows keep large empty areas intentional without competing
@@ -642,142 +799,58 @@ html {
 	color-scheme: light;
 }
 
-/* Original Light retains its black button labels; the newer palettes use white. */
+/* Solid brand buttons are written `bg-brand text-black` for the dark themes;
+   on a light theme the brand is deep, so the label turns white. Warm Light kept
+   black labels until 2026-10-18, which measured 3.9:1 on its brown-gold and
+   read as a muddy block; white measures 5.3:1. */
 [data-theme-mode="light"] .bg-brand.text-black {
 	color: var(--light-button-ink);
 }
 
-[data-theme-mode="light"] body,
-[data-theme-mode="light"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme-mode="light"] {
+	--page-glow:
 		radial-gradient(circle at 10% -10%, var(--light-glow-start), transparent 28rem),
 		radial-gradient(circle at 94% 8%, var(--light-glow-end), transparent 25rem);
-	background-attachment: fixed;
 }
 
-[data-theme-mode="light"] .card-panel,
-[data-theme-mode="light"] .shadow-md,
-[data-theme-mode="light"] .shadow-sm,
-[data-theme-mode="light"] .shadow-lg,
-[data-theme-mode="light"] .shadow-2xl {
-	box-shadow: var(--light-shadow);
-}
-
-[data-theme-mode="light"] .card-panel {
-	border-color: var(--light-panel-border);
-}
-
-[data-theme-mode="light"] .bg-gray-800.border-b {
-	border-color: var(--light-nav-border);
-}
+/* The polish blocks below carry each theme's atmosphere: its page glow and its
+   card shadow (SURFACES). The light themes set their surface pair in their
+   palette blocks instead; see the comment there for why. */
 
 /* Violet gets depth from coloured light rather than brighter flat panels. This
    keeps the calculator data-first while making the selected theme unmistakable. */
-[data-theme="violet"] body,
-[data-theme="violet"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="violet"] {
+	--page-glow:
 		radial-gradient(circle at 8% -12%, rgb(124 58 237 / 30%), transparent 30rem),
 		radial-gradient(circle at 96% 4%, rgb(217 70 239 / 14%), transparent 24rem);
-	background-attachment: fixed;
-}
-
-[data-theme="violet"] .card-panel,
-[data-theme="violet"] .shadow-md,
-[data-theme="violet"] .shadow-sm,
-[data-theme="violet"] .shadow-lg,
-[data-theme="violet"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 28%), 0 1px 0 rgb(216 193 255 / 5%) inset;
-}
-
-[data-theme="violet"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 24%, var(--color-gray-600));
-}
-
-[data-theme="violet"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 28%), 0 1px 0 rgb(216 193 255 / 5%) inset;
 }
 
 /* Teal uses low, underwater colour blooms for depth. Their placement keeps the
    calculator surface quiet while stopping the large dark canvas from feeling flat. */
-[data-theme="teal"] body,
-[data-theme="teal"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="teal"] {
+	--page-glow:
 		radial-gradient(circle at 6% -10%, rgb(20 184 166 / 24%), transparent 29rem),
 		radial-gradient(circle at 96% 2%, rgb(14 116 144 / 19%), transparent 25rem);
-	background-attachment: fixed;
-}
-
-[data-theme="teal"] .card-panel,
-[data-theme="teal"] .shadow-md,
-[data-theme="teal"] .shadow-sm,
-[data-theme="teal"] .shadow-lg,
-[data-theme="teal"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 26%), 0 1px 0 rgb(113 230 211 / 5%) inset;
-}
-
-[data-theme="teal"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 22%, var(--color-gray-600));
-}
-
-[data-theme="teal"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 18%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 26%), 0 1px 0 rgb(113 230 211 / 5%) inset;
 }
 
 /* Midnight's illumination is cooler and more restrained than Violet or Teal:
    a subtle horizon glow makes the page feel spacious while data remains dominant. */
-[data-theme="midnight"] body,
-[data-theme="midnight"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="midnight"] {
+	--page-glow:
 		radial-gradient(circle at 10% -14%, rgb(37 99 235 / 22%), transparent 31rem),
 		radial-gradient(circle at 96% 3%, rgb(14 165 233 / 12%), transparent 25rem);
-	background-attachment: fixed;
-}
-
-[data-theme="midnight"] .card-panel,
-[data-theme="midnight"] .shadow-md,
-[data-theme="midnight"] .shadow-sm,
-[data-theme="midnight"] .shadow-lg,
-[data-theme="midnight"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(229 237 249 / 4%) inset;
-}
-
-[data-theme="midnight"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 17%, var(--color-gray-600));
-}
-
-[data-theme="midnight"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 14%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(229 237 249 / 4%) inset;
 }
 
 /* Race Day's cool illumination is deliberately compact: it gives the chrome a
    confident track-light feel without washing out the calculator's data rows. */
-[data-theme="race-day"] body,
-[data-theme="race-day"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="race-day"] {
+	--page-glow:
 		radial-gradient(circle at 8% -12%, rgb(14 165 233 / 24%), transparent 30rem),
 		radial-gradient(circle at 96% 4%, rgb(37 99 235 / 15%), transparent 24rem);
-	background-attachment: fixed;
-}
-
-[data-theme="race-day"] .card-panel,
-[data-theme="race-day"] .shadow-md,
-[data-theme="race-day"] .shadow-sm,
-[data-theme="race-day"] .shadow-lg,
-[data-theme="race-day"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(124 200 255 / 6%) inset;
-}
-
-[data-theme="race-day"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-gray-600));
-}
-
-[data-theme="race-day"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 16%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(124 200 255 / 6%) inset;
 }
 
 [data-theme="race-day"] button:focus-visible,
@@ -789,53 +862,20 @@ html {
 
 /* Gilded's burnished gold atmosphere stops well short of the content area so
    projection data remains effortless to scan. */
-[data-theme="gilded"] body,
-[data-theme="gilded"] #root > .bg-gray-900 {
-	background-color: var(--color-gray-900);
-	background-image:
+[data-theme="gilded"] {
+	--page-glow:
 		radial-gradient(circle at 7% -12%, rgb(211 154 48 / 25%), transparent 31rem),
 		radial-gradient(circle at 97% 4%, rgb(151 88 33 / 15%), transparent 25rem);
-	background-attachment: fixed;
-}
-
-[data-theme="gilded"] .card-panel,
-[data-theme="gilded"] .shadow-md,
-[data-theme="gilded"] .shadow-sm,
-[data-theme="gilded"] .shadow-lg,
-[data-theme="gilded"] .shadow-2xl {
-	box-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(241 207 117 / 6%) inset;
-}
-
-[data-theme="gilded"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 21%, var(--color-gray-600));
-}
-
-[data-theme="gilded"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 17%, var(--color-gray-600));
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(242 181 68 / 6%) inset;
 }
 
 [data-theme="gilded"] .font-display .text-brand {
-	text-shadow: 0 0 1.25rem rgb(241 207 117 / 20%);
+	text-shadow: 0 0 1.25rem rgb(242 181 68 / 20%);
 }
 
-/* Default is intentionally restrained. These are small hierarchy and interaction
-   improvements on the familiar palette, not a reinterpretation of the theme. */
-[data-theme="gold"] .card-panel,
-[data-theme="gold"] .shadow-md,
-[data-theme="gold"] .shadow-sm,
-[data-theme="gold"] .shadow-lg,
-[data-theme="gold"] .shadow-2xl {
-	box-shadow: 0 8px 20px rgb(0 0 0 / 20%), 0 1px 0 rgb(255 255 255 / 3%) inset;
-}
-
-[data-theme="gold"] .card-panel {
-	border-color: color-mix(in srgb, var(--color-brand) 8%, var(--color-gray-600));
-}
-
-[data-theme="gold"] .bg-gray-800.border-b {
-	border-color: color-mix(in srgb, var(--color-brand) 7%, var(--color-gray-600));
-}
-
+/* Default is intentionally restrained: its card shadow is the SURFACES
+   default, and this is a small interaction improvement on the familiar
+   palette, not a reinterpretation of the theme. */
 [data-theme="gold"] button:focus-visible,
 [data-theme="gold"] a:focus-visible,
 [data-theme="gold"] input:focus-visible {

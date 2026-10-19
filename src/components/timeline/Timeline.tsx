@@ -13,6 +13,7 @@ import { OguriSpinner } from "../OguriSpinner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { nextTempId, plannedBannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
+import { motion } from "framer-motion"
 import { RaceEventCard } from "./RaceEventCard"
 import { BannerWindowCard } from "./BannerWindowCard"
 import { EventMarkerCard, EventMarkerPairCard } from "./EventMarkerCard"
@@ -66,6 +67,9 @@ const PAGE_SIZE = 10
  * reaches the bottom.
  */
 const INFINITE_CHUNK_SIZE = 10
+
+/** Cards per entrance stagger: one page, or one reveal chunk. */
+const TIMELINE_STAGGER_BATCH = Math.min(PAGE_SIZE, INFINITE_CHUNK_SIZE)
 const INFINITE_ROOT_MARGIN = "800px"
 
 /**
@@ -151,8 +155,14 @@ function storePage(page: number): void {
 		// Position simply won't survive leaving the route.
 	}
 }
+// The "Showing 10 of 195" count: a caption under the search below lg, the
+// band's centre pill (pageIndicatorClass's look) from lg. Written out rather
+// than derived from pageIndicatorClass, because every one of its utilities
+// needs an `lg:` prefix here and Tailwind only finds complete class strings.
+const countClass =
+	"order-last text-xs text-gray-400 lg:order-none lg:inline-flex lg:items-center lg:justify-center lg:rounded-md lg:border lg:border-gray-700 lg:bg-gray-950/50 lg:px-4 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-gray-200 lg:shadow-inner"
 const searchInputClass =
-	"w-full rounded border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
+	"w-full rounded-md border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
 
 /**
  * The filter's value: the absence of a filter, a banner category, a marker
@@ -873,7 +883,7 @@ export const Timeline = () => {
 	)
 
 	return (
-		<div className="w-full bg-gray-900 pb-6">
+		<div className="w-full pb-6">
 			{/* Scroll anchor for "back to top" — zero-height, so it costs no layout.
 			    First child, above the controls band, so returning to it returns to the
 			    top of the PAGE rather than to the top of the list. */}
@@ -893,8 +903,15 @@ export const Timeline = () => {
 				ref={controlsRef}
 				className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950"
 			>
-				<div className="mx-auto grid w-full max-w-[96rem] grid-cols-1 items-stretch gap-3 px-3 py-3 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-2">
-					<div className="flex w-full flex-col gap-2 justify-self-start sm:flex-row sm:flex-wrap md:w-auto">
+				{/* Below lg (phones AND tablets), two compact rows and a caption:
+				    the two toggles side by side, then the filter beside the search,
+				    then the count under them (design polish items 21 and 21a). It was
+				    five stacked full-width controls on a phone, about 290px before the
+				    first card, and from md the three-column band squeezed into 820px,
+				    where "Show past events" wrapped onto two lines. The band now waits
+				    for lg, where its three columns have room. */}
+				<div className="mx-auto grid w-full max-w-[96rem] grid-cols-1 items-stretch gap-2 px-3 py-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-3 lg:px-2">
+					<div className="grid w-full grid-cols-2 gap-2 justify-self-start sm:flex sm:flex-wrap lg:w-auto">
 						{/* Desktop only — on a phone this band scrolls away, so the floating
 						    button at the foot of the component is the only arrow there. On
 						    desktop the floating one shows too; this is the in-band companion.
@@ -911,7 +928,7 @@ export const Timeline = () => {
 						</span>
 						<button
 							type="button"
-							className={`${controlButtonClass} w-full sm:w-auto`}
+							className={`${controlButtonClass} min-w-0 text-center leading-tight`}
 							onClick={() => { setShowPastOverride(!showPast); resetListWindow() }}
 						>
 							<History className="h-4 w-4 text-brand" />
@@ -921,7 +938,7 @@ export const Timeline = () => {
 						    button beside it rather than reading as a state indicator. */}
 						<button
 							type="button"
-							className={`${controlButtonClass} w-full sm:w-auto`}
+							className={`${controlButtonClass} min-w-0 text-center leading-tight`}
 							title={
 								viewMode === "infinite"
 									? "Show a fixed number of events per page"
@@ -937,24 +954,29 @@ export const Timeline = () => {
 							{viewMode === "infinite" ? "Use pages" : "Use infinite scroll"}
 						</button>
 					</div>
+					{/* Below lg these sit under the narrowing controls (order-last): the
+					    pager as its own row, the count as a caption. ONE count element
+					    styled two ways, not two copies, so it is read once. */}
 					{viewMode === "paged" && totalPages > 1 ? (
-						<PaginationControls
-							currentPage={effectivePage}
-							totalPages={totalPages}
-							onPrevious={() => goToPage(Math.max(1, effectivePage - 1))}
-							onNext={() => goToPage(Math.min(totalPages, effectivePage + 1))}
-						/>
+						<div className="order-last flex justify-center lg:order-none">
+							<PaginationControls
+								currentPage={effectivePage}
+								totalPages={totalPages}
+								onPrevious={() => goToPage(Math.max(1, effectivePage - 1))}
+								onNext={() => goToPage(Math.min(totalPages, effectivePage + 1))}
+							/>
+						</div>
 					) : viewMode === "infinite" && timelineRows.length > 0 ? (
-						<span className={pageIndicatorClass}>
+						<span className={countClass}>
 							Showing <span className="mx-1 text-brand">{visibleRows.length}</span> of{" "}
 							{timelineRows.length}
 						</span>
-					) : <div />}
+					) : <div className="hidden lg:block" />}
 					{/* Narrowing controls, grouped at the trailing edge: the category
 					    filter and the search box both cut the list down, so they belong
 					    beside each other rather than one of them sitting among the
 					    view-mode toggles on the far side of the bar. */}
-					<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end md:w-auto md:justify-self-end">
+					<div className="flex w-full items-center gap-2 lg:w-auto lg:justify-self-end">
 						{/* Hidden only when there is nothing to choose between — a
 						    single-option filter is just clutter. Counted across all three
 						    axes: one banner category plus one marker kind is still a real
@@ -970,7 +992,7 @@ export const Timeline = () => {
 								</label>
 								<select
 									id="timeline-event-filter"
-									className={`${categorySelectClass} w-full sm:w-auto`}
+									className={`${categorySelectClass} max-w-[45%] shrink-0 lg:max-w-none`}
 									value={eventFilter}
 									onChange={(e) => handleFilterChange(e.target.value as EventFilter)}
 								>
@@ -1010,7 +1032,7 @@ export const Timeline = () => {
 								</select>
 							</>
 						)}
-						<div className="relative w-full md:w-64">
+						<div className="relative min-w-0 flex-1 lg:w-64 lg:flex-none">
 							<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 							<input
 								type="text"
@@ -1028,7 +1050,7 @@ export const Timeline = () => {
 				{timelineRows.length === 0 && (
 					<div className="text-gray-500 mt-8">No events found.</div>
 				)}
-				{visibleRows.map((row) => {
+				{visibleRows.map((row, rowIndex) => {
 					const rowKey = timelineRowKey(row)
 
 					// THE REF AND THE RING ARE NO LONGER THE SAME QUESTION.
@@ -1053,20 +1075,18 @@ export const Timeline = () => {
 					//
 					// A race event is a deep link target too since the PvP page's
 					// "View on Timeline" link (?focus=cm-12), so it takes both props.
-					return row.kind === "race" ? (
-						<RaceEventCard key={rowKey} event={row.event} today={today} {...focusProps} />
+					const card = row.kind === "race" ? (
+						<RaceEventCard event={row.event} today={today} {...focusProps} />
 					) : row.kind === "marker" ? (
-						<EventMarkerCard key={rowKey} marker={row.marker} {...focusProps} />
+						<EventMarkerCard marker={row.marker} {...focusProps} />
 					) : row.kind === "marker_pair" ? (
 						<EventMarkerPairCard
-							key={rowKey}
 							scenario={row.scenario}
 							anniversary={row.anniversary}
 							{...focusProps}
 						/>
 					) : (
 						<BannerWindowCard
-							key={rowKey}
 							group={row.group}
 							today={today}
 							plannedBannerKeys={plannedBannerKeys}
@@ -1077,6 +1097,35 @@ export const Timeline = () => {
 							)}
 							{...focusProps}
 						/>
+					)
+
+					// THE ENTRANCE. Each card rises in as it mounts, staggered within
+					// its batch of ten (the page and the reveal chunk are both ten), so
+					// a page or a freshly revealed chunk arrives top to bottom instead
+					// of all at once. Mount-only: a card already on screen never
+					// replays it when a filter or the search changes around it.
+					//
+					// The wrapper repeats the list's own column (flex-col,
+					// items-center, full width), so every card lays out exactly as it
+					// did as a direct child. Reduced motion is the app-wide
+					// MotionConfig's job (App.tsx): the rise goes and the fade stays.
+					//
+					// The list is inside the /app loading gate, so the opacity-0
+					// first frame never reaches prerendered HTML.
+					return (
+						<motion.div
+							key={rowKey}
+							className="flex w-full flex-col items-center"
+							initial={{ opacity: 0, y: 14 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{
+								duration: 0.35,
+								ease: "easeOut",
+								delay: (rowIndex % TIMELINE_STAGGER_BATCH) * 0.04,
+							}}
+						>
+							{card}
+						</motion.div>
 					)
 				})}
 

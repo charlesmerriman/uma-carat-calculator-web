@@ -98,7 +98,10 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 				// Only Escapes from inside the window itself.
 				if (keydown.key === "Escape" && windowRef.current?.contains(keydown.target as Node)) close()
 			}}
-			className="fixed inset-2 z-50 flex flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-900 shadow-2xl desktop-nav:inset-auto desktop-nav:right-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[24rem] desktop-nav:-translate-y-1/2"
+			// Phone: pinned to the top and as tall as its content, up to the
+			// window. It was `inset-2`, the whole screen, so a team of three
+			// empty slots sat over a blank half-page under "Go to PvP".
+			className="fixed inset-x-2 top-2 z-50 flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl border border-edge bg-gray-900 shadow-2xl desktop-nav:inset-auto desktop-nav:right-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[24rem] desktop-nav:-translate-y-1/2"
 		>
 			<header className="flex items-center gap-2 border-b border-gray-700 px-3 py-2">
 				<h2 ref={headingRef} tabIndex={-1} className="flex flex-1 items-center gap-1.5 text-sm font-semibold text-gray-100 outline-none">
@@ -241,5 +244,5 @@ function EventSelect({ teams, events, now, autoEvent, onPin }: {
 }
 
 function Notice({ children }: { children: ReactNode }) {
-	return <p className="rounded-xl border border-gray-700 bg-gray-800/60 p-4 text-sm text-gray-300">{children}</p>
+	return <p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">{children}</p>
 }

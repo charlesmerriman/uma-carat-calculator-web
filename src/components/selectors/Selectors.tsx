@@ -161,7 +161,7 @@ export const Selectors = () => {
 			<div ref={topRef} aria-hidden="true" />
 			<header className="flex flex-col gap-3">
 				<div>
-					<h1 className="flex items-center gap-2 text-xl font-bold text-brand">
+					<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
 						<Sparkles className="h-5 w-5 shrink-0" />
 						Selectors &amp; Purchases
 					</h1>
@@ -232,11 +232,18 @@ export const Selectors = () => {
 				</p>
 			) : (
 				<div className="flex flex-col gap-4">
+					{/* Said once here; each campaign card used to repeat it. */}
+					<p className="-mb-1 text-sm text-gray-400">
+						Tick a selector in a campaign to choose the card it takes.
+					</p>
 					{plan.campaigns.map((campaign, index) => (
 						<CampaignCard
 							key={campaign.event.id}
 							campaign={campaign}
 							focusRef={index === focusIndex ? focusCardRef : undefined}
+							// The soonest campaign and a deep link's start open at
+							// every width; see CampaignCard for the rest.
+							defaultOpen={index === 0 || index === focusIndex}
 							umaBannerData={umaBannerData}
 							supportBannerData={supportBannerData}
 							stepUpBannerData={stepUpBannerData}

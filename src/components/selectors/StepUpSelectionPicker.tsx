@@ -149,7 +149,7 @@ export const StepUpSelectionPicker = ({
 							aria-label={`Guarantee slot ${slotNumber} at step 5`}
 							aria-pressed={isTargetSlot}
 							title="Guarantee this one at step 5"
-							className={`flex h-6 w-6 items-center justify-center rounded border text-xs transition ${
+							className={`flex h-6 w-6 items-center justify-center rounded-md border text-xs transition ${
 								isTargetSlot
 									? "border-brand bg-brand/20 text-brand"
 									: "border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-200"
@@ -161,7 +161,7 @@ export const StepUpSelectionPicker = ({
 						<button
 							type="button"
 							aria-label={`Clear slot ${slotNumber}`}
-							className="flex h-6 w-6 items-center justify-center rounded border border-gray-600 text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
+							className="flex h-6 w-6 items-center justify-center rounded-md border border-gray-600 text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
 							onClick={() => onChange(clearSlot(selections, slotNumber))}
 						>
 							<X className="h-3 w-3" />
@@ -225,7 +225,7 @@ export const StepUpSelectionPicker = ({
 				role="dialog"
 				aria-modal="true"
 				aria-label={`Choose cards for ${stepUp.name}`}
-				className="flex max-h-[min(48rem,calc(100vh-2rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-800 shadow-2xl"
+				className="flex max-h-[min(48rem,calc(100vh-2rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-edge bg-gray-800 shadow-2xl"
 			>
 				<header className="flex flex-wrap items-center gap-3 border-b border-gray-700 bg-gray-800/80 px-4 py-3">
 					<div className="min-w-0 flex-1">
@@ -254,7 +254,7 @@ export const StepUpSelectionPicker = ({
 					<button
 						type="button"
 						aria-label="Close card picker"
-						className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+						className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 						onClick={onClose}
 					>
 						<X className="h-5 w-5" />

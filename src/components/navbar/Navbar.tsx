@@ -56,8 +56,9 @@ export const Navbar = () => {
 	const guestPlanStored = calculatorData?.isGuestPlanStored ?? true
 
 	// The active pill is a brand tint with a brand edge and nothing else. It
-	// used to carry `shadow-sm`, which every theme block in index.css re-skins
-	// into a 14px drop shadow — on a 36px tab that read as a floating chip.
+	// used to carry `shadow-sm`, which every theme block in index.css re-skinned
+	// into a 14px drop shadow (until 2026-10-18) — on a 36px tab that read as a
+	// floating chip.
 	//
 	// Icon ABOVE label since the fourth tab (Legend Races) arrived. Side by
 	// side, measured at 375px, every label truncated: the icon and gap left
@@ -172,7 +173,13 @@ export const Navbar = () => {
 					</div>
 				</div>
 
-				<div className="grid grid-cols-5 gap-1 border-t border-gray-700 px-2 py-2">
+				{/* The rule spans the bar; the five tabs are capped at 32rem and
+				    centred. Uncapped, a landscape phone (844px) spread them across
+				    the whole width with wide gaps between small labels; a portrait
+				    phone never reaches the cap. Height unchanged, so the
+				    scroll-padding figures in index.css still hold. */}
+				<div className="border-t border-gray-700 px-2 py-2">
+				<div className="mx-auto grid max-w-[32rem] grid-cols-5 gap-1">
 					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="h-4 w-4 shrink-0" />
 						<span className="truncate max-[359px]:sr-only">Calculator</span>
@@ -195,6 +202,7 @@ export const Navbar = () => {
 						<Swords className="h-4 w-4 shrink-0" />
 						<span className="truncate max-[359px]:sr-only">PvP</span>
 					</Link>
+				</div>
 				</div>
 			</nav>
 

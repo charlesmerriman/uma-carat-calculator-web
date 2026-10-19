@@ -25,14 +25,14 @@ export const Feedback: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-2xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">Feedback</h1>
+					<h1 className="font-display text-3xl font-bold text-gray-100">Feedback</h1>
 					<p className="mt-2 leading-relaxed text-gray-400">
 						Found a bug, spotted wrong data, or thought of something the calculator should
 						do? Tell us on Discord. That is where reports get read, and where you can get
 						a reply.
 					</p>
 
-					<div className="mt-8 rounded-xl border border-gray-700 bg-gray-800 p-6 shadow-md">
+					<div className="card-panel mt-8 p-6">
 						<h2 className="text-lg font-semibold text-gray-100">What helps most</h2>
 						<ul className="mt-3 list-disc space-y-1 pl-6 leading-relaxed text-gray-400">
 							<li>Which screen or banner it was on.</li>

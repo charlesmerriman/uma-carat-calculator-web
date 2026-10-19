@@ -9,17 +9,20 @@ import { Link } from "react-router-dom"
  * typeface only ever have to change in one file.
  *
  * Two variants, because the slots are shaped very differently:
- *  - "nav"  — sits in a 56px-tall bar next to other controls, so it stacks onto
- *             two lines and only unfolds to a single line from `lg` up. Wrapped
- *             in a link to the homepage, matching the old logo's behaviour.
+ *  - "nav"  — sits in the navbar next to other controls. Wrapped in a link to
+ *             the homepage, matching the old logo's behaviour.
  *
- *             The breakpoint is `lg`, not `md` where the desktop nav begins:
- *             in app mode that nav carries three centre links plus save/theme/
- *             settings/auth controls, and the single-line wordmark (~208px vs
- *             the old logo's ~74px) overflows the `grid-cols-[1fr_auto_1fr]`
- *             row between 768px and ~900px — the centre links collide and the
- *             auth button wraps to three lines. Stacked it is ~85px, narrower
- *             than the image it replaced, so it fits everywhere the logo did.
+ *             In the phone bar (below `desktop-nav:`) it is "Uma Carat" alone,
+ *             one 18px line, about as wide (~85px) as the two stacked 16px
+ *             lines it replaced, which read cramped in a 56px bar beside three
+ *             controls (design polish item 16). "Calculator" stays in the
+ *             link's accessible name there (`sr-only`), so the link still
+ *             announces the full brand.
+ *
+ *             The full single line (~208px vs the old logo's ~74px) waits for
+ *             `desktop-nav:`, the navbar's own switch: below it the desktop
+ *             row's `grid-cols-[1fr_auto_1fr]` cannot hold it beside the
+ *             centre links, which collide while the auth button wraps.
  *  - "card" — the tall centred header strip on the auth cards. Always a
  *             stacked lockup, with "CALCULATOR" letter-spaced underneath.
  *
@@ -50,12 +53,14 @@ export const Wordmark: React.FC<WordmarkProps> = ({ size = "nav" }) => {
 	return (
 		<Link
 			to="/"
-			className="font-display flex flex-col leading-none font-semibold tracking-tight text-gray-100 transition hover:text-white lg:flex-row lg:gap-[0.28em]"
+			className="font-display flex items-baseline gap-[0.28em] whitespace-nowrap text-lg leading-none font-semibold tracking-tight text-gray-100 transition hover:text-white desktop-nav:text-xl"
 		>
-			<span className="text-base lg:text-xl">
+			<span>
 				<span className="text-brand">Uma</span> Carat
 			</span>
-			<span className="text-base lg:text-xl">Calculator</span>
+			{/* sr-only is absolutely positioned, so the hidden word takes no
+			    gap in the flex row on a phone. */}
+			<span className="sr-only desktop-nav:not-sr-only">Calculator</span>
 		</Link>
 	)
 }

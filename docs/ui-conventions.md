@@ -51,18 +51,75 @@ working unchanged. Read the comments there before adding a theme.
 
 The compact picker puts **Dark** and **Light** first as the primary choices, with
 small swatches for alternative **Dark themes** and **Light themes** underneath,
-grouped by the `mode` in `themeStore.ts`. Dark retains the saved `gold` id and
+grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
+`canvas` (its card colour on a dark theme, its page colour on a light one) with
+its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
 remains the initial default. Light (`light`) restores the original warm palette;
 Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
 each mode six themes. Purple keeps its saved `light-lilac` id.
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
-labels and surface polish. Individual `data-theme` selectors override the palette,
-including the original Light theme's glows, shadows and black button labels.
-Pearl uses softer paper-white surfaces and charcoal actions. Toasts use the same
+labels and surface tokens. Individual `data-theme` selectors override the palette,
+including the original Light theme's glows and card shadow. Every light theme puts
+white labels on its solid brand buttons (Light had black ones until 2026-10-18).
+Pearl uses softer paper-white surfaces and a near-black charcoal accent. Red
+and Green each move the pull status colour that matches their brand (over-budget
+orange on Red, on-pity blue on Green). Gilded is the amber, brown-gray dark theme. Toasts use the same
 mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
+
+**A theme's page glow is a `--page-glow` value, never a page background.** One
+`position: fixed` layer (`body::before`) paints it, and the page shells
+(`#root > .bg-gray-900`) are transparent so it shows through. Both rules list the
+glow themes explicitly. Dark (gold) and Pearl have no glow, so they get no layer:
+any layer under the page costs text on the page background its subpixel
+antialiasing on 1x screens in Chrome, a price only a theme with a glow should pay.
+Never use
+`background-attachment: fixed`: until 2026-10 every theme except the default painted
+its glow that way, on `body` and on the shell, and scrolling repainted the viewport
+twice per frame on the main thread (153 repaints in a 2,500px scroll on `/faq` at
+phone size, against 2 for the default). That was the "other themes are laggy"
+reports. The PAGE GLOW comment in `src/index.css` has the details.
+
+**Surfaces are three tokens and one class (2026-10-18, the fill 2026-10-19).** A theme says
+everything about its surfaces through `--color-edge` (a colour token, so it is the
+`border-edge` utility), `--card-shadow` (a plain variable, because Tailwind writes shadow
+utilities out literally and a theme could never override a `--shadow-*` token) and
+`--card-fill` (a step above gray-800 on the dark themes, gray-800 itself on the light ones).
+Use them by role:
+
+| Surface | Classes |
+|---|---|
+| A card: any raised box on a page | `card-panel` (fill, edge, shadow, 12px radius) |
+| Anything painted to look like a card (a link tile, the gallery's SR/SSR edges) | `bg-(--card-fill)`, or `var(--card-fill)` in CSS |
+| A card-shaped box that can't wear the class (the calculator's sheet frame paints gray-900) | `border border-edge shadow-(--card-shadow)` |
+| A popover, dialog or drawer | `border border-edge` plus Tailwind's own `shadow-lg` / `shadow-2xl` |
+| A quieter inset panel (a translucent `bg-gray-800/60`) | `border border-edge`, no shadow |
+
+On a dark theme the edge is low-alpha light with 5% of the brand, so one value serves all
+six dark themes at about 1.5:1 against a card. A light theme redraws it as solid tinted
+gray. `.card-panel` lives in `@layer components`, so a utility at the call site beats it
+(`rounded-t-none` on a card welded to the strip above it, the scenario card's
+`border-brand/40`, the delete-account card's red edge). Never re-skin surfaces by matching
+utility classes in a theme block. Until 2026-10-18 every theme matched `.shadow-sm`,
+`.shadow-md`, `.shadow-lg` and `.shadow-2xl` literally. So every toggle knob, segmented tab
+and dialog wore the card shadow, a card without one of those utilities wore none, and the
+class sat unlayered, beating every utility a caller put on it. The SURFACES comment in
+`src/index.css` has the values.
+
+**One radius scale (2026-10-19): controls 6px, cards 12px.** Every button, input, select,
+textarea and button-shaped link is `rounded-md` (6px), the shared class strings included
+(`NAV_BUTTON`, `controlButtonClass`, the `BUTTON_*` sets, `.input-currency`, `.pull-input`).
+Cards are `card-panel`'s 12px. Three things keep their own on purpose: tiles (picker and team
+slots, link tiles) stay `rounded-lg`, a pill stays `rounded-full`, and the navbar's profile
+trigger stays 8px so its edge is an even width around the 6px avatar inside it.
+
+**A page's root never paints the page colour.** The shell already does, so a
+`bg-gray-900` on a page's outer wrapper changes nothing on Dark and hides the glow on
+every other theme. The calculator, Timeline and PvP roots carried one from 2026-08-06
+until 2026-10, which is why those tabs showed no glow. Sticky bands and panels keep
+their own backgrounds.
 
 ### Semantic status colors must be theme tokens, not palette classes
 
@@ -1381,6 +1438,11 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   replace>`s to the last address; an address that names no style (a Timeline card's link)
   opens on the last style shown. Two keys on purpose: the page key is rewritten on every
   visit and would drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
+  **Every address the page writes names its event** (`setParam` pins the one on screen,
+  then writes event, view, style in that order, the same as "Copy link"). Without it,
+  Recommendations (which deletes `?view=`) turned a page opened from the navbar back into
+  the bare `/app/pvp`, the restore sent it to the remembered `?view=team`, and the tab was
+  unreachable until the event changed.
 - **"Copy link" in the header** copies the event (always, even on the default landing),
   the style on screen, and `view=gallery`. Never `view=team` (the builder is the reader's
   own, so the link opens the guide) and never `post` (a post's link is `/post/<id>`).
@@ -1399,13 +1461,17 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar.
 - **Every guide section is optional** and steps aside when empty. From `xl` the guide is two
-  columns: a side column for the whole team (overview, team comps, stats) and ONE style pane.
-- **General skills (`style: "everyone"`) live inside every position's "Recommended skills"**,
-  merged with that position's own picks by `skillsForPosition` (tier first, the position's
-  own before general within a tier, then order), then split into subcategories
-  (Acceleration, Core skills, Speed, Recovery, Green, Debuffs). A general chip looks the
-  same and says "Recommended for every position" on hover. Never a separate block: a guide
-  with general skills but no position content shows them as one section instead. Style tabs list only styles with content (`stylesWithContent`).
+  columns: a side column for the whole team (overview, general skills, team comps, stats)
+  and ONE style pane.
+- **General skills (`style: "everyone"`) are a side-column section, "General skills",
+  directly under the Overview** (owner, 2026-10-17). They are team-wide, like the stats;
+  merged into every position's tab (as the page first shipped) they read as that
+  position's own picks. A position's "Recommended skills" shows its OWN rows only.
+  `skillsForPosition` feeds both (one style's rows, tier then order), and `SkillCategories`
+  splits each into subcategories (Acceleration, Core skills, Speed, Recovery, Green,
+  Debuffs). **The My team skills panel still merges them** (`guideSkillsByCategory(guide,
+  position)`): it is a checklist for one position's team, and says it includes the general
+  skills. Style tabs list only styles with content (`stylesWithContent`).
   Never add a second "compare" pane: it was tried and read as every card listed twice.
   "New since <previous event>" is collapsed by default for the same reason.
 - **`==words==` is red and `[[Skill name]]` is a skill** in any guide text:
@@ -1417,14 +1483,22 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
   otherwise a markdown link. Token `--color-highlight`.
 - **A skill's other versions ride along.** The API sends each embedded skill with its own
-  `version` label (`○ white`, `◎ gold`, `evolved`) and `versions`, its other forms,
-  derived server side from the game data (same group plus the evolution link), never
+  `version` label (`○ white`, `◎ white`, `◎ gold`, `evolved`) and `versions`, its other
+  forms, derived server side from the game data (same group plus the evolution link), never
   stored. `SkillVersions` (PvpTiles) lists them under the chip's and the mention's hover
-  detail, a white chip with a gold form shows a ◎ badge (`hasGoldVersion`), and the team
-  builder's skills panel counts a source that teaches the pick or a HIGHER version
+  detail (a chip carries no badge for its other versions: the game prints ○/◎ in the name,
+  and a ◎ badge beside it read as a version that doesn't exist; removed 2026-10-18), and the team
+  builder's skills panel counts a source that teaches the pick or a version that covers it
   (`familySources` in `utils/pvpGuide.ts`): a card that teaches the gold teaches the white
   too (owner, 2026-10-14), so a gold on the team covers a white pick and a white never
-  covers a gold; an evolved pick is covered by a base, "(evolve it)". A guide may
+  covers a gold; an evolved pick is covered by a base, "(evolve it)". **Colour is
+  `rarity`, never `tier`**: most green skills (and the Straightaways / Corners whites) come
+  as a ○ and a ◎, BOTH white at tiers 1 and 2, some with a gold at tier 3. A ○ and its ◎
+  are one skill to a team (owner, 2026-10-16), since nothing teaches a ◎ and a guide may
+  name either (the admin's track-greens button and sheet import add the ○ since 2026-10-18;
+  older guides still name the ◎): they cover each other in the panel, and the picker's skill search and
+  pinned chips treat them as one (`whiteSkillPairs` in `utils/pvpTeams.ts`). The gold
+  above them stays a separate skill to search. A guide may
   list the white and the gold as two rows when their usefulness differs (owner,
   2026-10-14); they show as two chips.
 - **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the
@@ -1886,3 +1960,74 @@ the team.
   the header (`SaveStatus`).
 - **Stacking**: page < window (`z-40` from `desktop-nav`, `z-50` below, where it covers the
   screen) < navbar popovers (`z-50`) < pickers (`z-[10000]`) < sonner.
+
+## Carat forecast chart (`carat-calculator/CaratForecastChart.tsx`)
+
+The chart below the planner rows, or above them if the viewer moves it (the button in
+its header; `hooks/useForecastPosition.ts`, remembered per device as
+`uma-planner-forecast-position`). Bottom is the default (owner, 2026-10-19): the rows
+are what a visitor came to edit. Moving it remounts the chart in the other slot, which
+then scrolls itself into view. Its numbers are explained in
+`resource-projection-logic.md` ("The carat forecast"); this is how it is drawn.
+
+- **Drawn with Recharts, loaded lazily** (owner, 2026-10-19). The plot lives in
+  `ForecastPlot.tsx`, reached only through `loadForecastPlot()` (a dynamic `import()`), so
+  Vite puts it and Recharts in a chunk of their own (~109 kB gzipped). The app otherwise
+  ships as ONE bundle that every page downloads: a static import of `recharts` anywhere
+  else would put it on the home page and the FAQ. Keep every Recharts import inside the
+  lazy chunk. `AppShell` starts the chunk while `/calculator-data` loads (calculator route
+  only); `CaratForecastChart` holds the plot's height in a `Suspense` fallback meanwhile.
+  A hand-drawn SVG version was built first and dropped (web #135's first commit).
+- **Colours are CSS variables**, passed to Recharts as `var(--color-brand)` and friends,
+  never hex, so every theme and colorblind mode re-skin it by redefining tokens.
+- **Below zero is the over-budget colour** (`--color-pull-over`, the pull field's token):
+  one vertical gradient with two stops at the same offset, where zero falls in the
+  shape's bounding box. The headline says "Short by" beside an icon, so the state never
+  rides on colour alone.
+- **Dots wear a 2px ring in `--card-fill`**, the card's own fill, so they stay legible
+  on the line. A row left out of the projection is a hollow dot.
+- **One direct label** (where the line ends, a zero-size `ReferenceDot`). Everything else
+  is the tooltip, pinned near the top of the plot, and a screen-reader list of every
+  banner under the chart. Recharts' accessibility layer steps the tooltip with the arrow
+  keys.
+- **Two views, Carats and Pulls** (switch under the heading, remembered per device as
+  `uma-planner-forecast-unit`). Pulls is TWO lines, day by day like Carats (owner,
+  2026-10-19): "Uma pulls" (carats + uma tickets) and "Support pulls" (carats + support
+  tickets), because a banner spends only its own kind. Free pulls never count. A day's
+  pulls follow the player's settings (`buildPullSeries`): free carats ÷ pull cost, plus
+  paid carats ÷ pull cost when full-price paid pulls are on, plus the line's tickets when
+  spending tickets is on. The four balances come from `buildCaratForecast`, each
+  re-anchored to the row like free carats. At each banner the dot sits on its own kind's
+  line at the row's Max Pulls without free pulls (`buildPullBars`, read off
+  `maxPullBreakdown`); that can sit a little above the line's arrival, because the row
+  counts the daily discounted pull, which only exists while a banner runs. Step-ups get
+  no dot (they count steps), though their paid spend still drops both lines. The lines
+  wear `--color-series-uma` / `--color-series-support` (validated pair, see index.css),
+  with a legend under the heading and end labels when they don't collide.
+- **The pity line** is `PULLS_PER_PITY_COPY` (200): always drawn in Pulls; in Carats at
+  200 × `pull_cost_carats`, drawn only when the line comes within 25% of it, so a small
+  plan is not squashed under an empty band. Its label sits just above the line.
+- **Y ticks are ours** (`niceTicks`: 1, 2, 5 × 10ⁿ), passed to Recharts with the domain,
+  because Recharts' own rounding picked 12.5K steps.
+- **A banner's dot jumps to its row**: `onSelectBanner(index)` scrolls to
+  `[data-planner-index]` in CaratCalculator and flashes it with `.row-arrival`, the same
+  flash as a row confirmed from staging (`flashIndex`, by index: a tempId and a saved id
+  can collide). On touch the first tap opens the readout and a second tap jumps.
+- **Skipped PvP events are red dots on the line** (`buildSkipMarkers`), at the instant
+  each skipped Champions Meeting / League of Heroes would have paid, read from
+  `fullIncomeLedger` through `upcomingSkippedRaces` (the projection ledger has them
+  removed, which is how a skip works). In Pulls the dot sits on both lines.
+- **Every layer added after the first release is OPTIONAL** (owner, 2026-10-19: "this and
+  future changes to the chart should be optional, checked on and off"). Each is one entry in
+  `FORECAST_LAYERS` (CaratForecastChart), starts OFF, and gets a checkbox in the legend row
+  of the views it belongs to; the set is remembered per device as JSON under
+  `uma-planner-forecast-layers`, read defensively (unknown keys and non-booleans ignored).
+  The first is **Paid carats**: a grey band stacked on the free area (grey because the free
+  layer wears each theme's brand colour, and any second hue clashes with one of the twelve),
+  so the top edge is the total. With it on, a step-up's dot moves to the band's top edge in
+  `--color-step-up` and its readout leads with paid carats ("short by" when over-planned);
+  with it off, the step-up's dot stays on the free line.
+- **Folded or open is remembered per device** (`uma-planner-forecast-open`), read in an
+  effect because `/app` is prerendered.
+- The line draws itself in on mount (Recharts' own animation), skipped under
+  `prefers-reduced-motion`.

@@ -311,7 +311,7 @@ export const StagedBannerRow = ({
 		<button
 			onClick={onConfirm}
 			disabled={!hasBanner}
-			className="add-to-calculator-button flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-40"
+			className="add-to-calculator-button flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-40"
 		>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
 				<polyline points="20 6 9 17 4 12" />
@@ -464,7 +464,7 @@ export const StagedBannerRow = ({
 				<button
 					onClick={onConfirm}
 					disabled={!hasBanner}
-					className="add-to-calculator-button w-full h-full rounded-lg bg-green-700 hover:bg-green-600 text-white font-semibold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+					className="add-to-calculator-button w-full h-full rounded-md bg-green-700 hover:bg-green-600 text-white font-semibold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
 				>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
 						<polyline points="20 6 9 17 4 12" />

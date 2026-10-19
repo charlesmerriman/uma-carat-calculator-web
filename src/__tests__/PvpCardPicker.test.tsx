@@ -76,6 +76,36 @@ describe("PvpCardPicker", () => {
 		expect(screen.getByRole("button", { name: "Groundwork" })).toHaveAttribute("aria-pressed", "true")
 	})
 
+	it("treats a white's ○ and ◎ as one skill, and keeps its gold apart", () => {
+		// A green skill's family as the game files it. No card teaches the ◎,
+		// which is the version the guides recommend.
+		const green = (id: number, name: string, rarity: number, tier: number): CatalogueSkill => ({
+			id, name, description: "", image: null, rarity, tier, group_id: 20001, cost: null,
+		})
+		const skills = new Map([
+			green(20, "Right-Handed ○", 1, 1),
+			green(21, "Right-Handed ◎", 1, 2),
+			green(22, "Right-Handed Demon", 2, 3),
+			green(23, "Right-Handed ×", 1, -1),
+		].map((s) => [s.id, s]))
+		renderSupportPicker({
+			skillsById: skills,
+			items: [card(30, "Fine Motion", [20]), card(31, "Kitasan Black", [21]), card(32, "Super Creek", [22])],
+		})
+		const search = screen.getByRole("searchbox", { name: "Search" })
+
+		fireEvent.change(search, { target: { value: "Right-Handed ◎" } })
+		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black"])
+		fireEvent.change(search, { target: { value: "Right-Handed Demon" } })
+		expect(tileNames()).toEqual(["Super Creek"])
+
+		// A pinned ○ is met by a card teaching the ◎ too, and the gold stays out.
+		fireEvent.change(search, { target: { value: "Right-Handed ○" } })
+		fireEvent.click(screen.getByRole("button", { name: "Right-Handed ○" }))
+		fireEvent.change(search, { target: { value: "" } })
+		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black"])
+	})
+
 	it("filters by card type", () => {
 		renderSupportPicker()
 		fireEvent.click(within(screen.getByRole("group", { name: "Card type" })).getByRole("button", { name: "Stamina" }))

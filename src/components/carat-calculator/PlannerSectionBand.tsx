@@ -1,5 +1,6 @@
+import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Sparkles } from "lucide-react"
+import { ChevronDown, Sparkles } from "lucide-react"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import type { PlannerMarker } from "../../utils/plannerSections"
 
@@ -91,10 +92,32 @@ function toneIndices(markers: PlannerMarker[]): number[] {
 	})
 }
 
+/**
+ * Above this many lines a band folds to its first line plus a "Show N more"
+ * toggle (design polish item 18). A plan with one row this month and one a year
+ * out puts every landmark in between into ONE band, and at a line each that
+ * was ten gold bars, a screen and a half of them on a phone, between two rows.
+ * Three or fewer still show in full: folding one or two lines away saves less
+ * than the toggle costs.
+ */
+const FOLD_ABOVE = 3
+
+/** "Show 9 more scenarios" when the hidden lines are all one kind, else "Show 9 more". */
+function moreLabel(hidden: PlannerMarker[]): string {
+	const kinds = new Set(hidden.map((marker) => marker.kind))
+	const noun = kinds.size === 1 ? (kinds.has("scenario") ? " scenarios" : " campaigns") : ""
+	return `Show ${hidden.length} more${noun}`
+}
+
 export const PlannerSectionBand = ({ markers }: { markers: PlannerMarker[] }) => {
+	const [expanded, setExpanded] = useState(false)
 	// Markers arrive sorted by date (see compareMarkers), which is what lets the
 	// tone walk be a single pass over neighbours rather than a grouping pass.
+	// Computed over ALL markers, so a line keeps its fill whether the band is
+	// folded or not.
 	const tones = toneIndices(markers)
+	const folds = markers.length > FOLD_ABOVE
+	const shown = folds && !expanded ? markers.slice(0, 1) : markers
 
 	/*
 	 * role="presentation" so the band doesn't read as a data row to a screen
@@ -111,7 +134,7 @@ export const PlannerSectionBand = ({ markers }: { markers: PlannerMarker[] }) =>
 			role="presentation"
 			className="flex w-full flex-col border-y border-brand/20 bg-gray-900/20"
 		>
-			{markers.map((marker, index) => {
+			{shown.map((marker, index) => {
 				const style = MARKER_STYLES[marker.kind]
 				const Icon = style.icon
 				const tone = STRIP_TONES[tones[index] % STRIP_TONES.length]
@@ -141,6 +164,22 @@ export const PlannerSectionBand = ({ markers }: { markers: PlannerMarker[] }) =>
 					</Link>
 				)
 			})}
+			{folds && (
+				/* Quieter than a landmark line (small gray text, no fill of its own)
+				   so it reads as the band's control, not as one more landmark. */
+				<button
+					type="button"
+					onClick={() => setExpanded((open) => !open)}
+					aria-expanded={expanded}
+					className="flex min-h-8 w-full items-center justify-center gap-1.5 border-t border-gray-700/80 px-4 py-1 text-xs font-medium text-gray-400 transition-colors hover:bg-brand/10 hover:text-gray-100"
+				>
+					{expanded ? "Show fewer" : moreLabel(markers.slice(1))}
+					<ChevronDown
+						className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
+						aria-hidden="true"
+					/>
+				</button>
+			)}
 		</div>
 	)
 }

@@ -21,8 +21,10 @@ import { useOshiIds } from "../../hooks/useOshiIds"
  * is editable only by the person who made it, and anyone else sees it by
  * taking a copy that is then theirs. So this is a card, not the calculator: it
  * says what the plan holds (which banners, how many, the pull and step totals,
- * how recently changed, how often copied) and offers "Copy". Nothing per row,
- * nothing editable. (The totals came with the link preview, owner 2026-10-16;
+ * how recently changed, how often copied) and offers "Copy". Per row it shows
+ * only what the catalogue says (art, name, kind, end date), never the owner's
+ * counts or notes: the summary carries totals only (.claude/rules/auth-privacy.md),
+ * and nothing here is editable. (The totals came with the link preview, owner 2026-10-16;
  * backend views/plan_share.py states the same two numbers.) The summary the server sends carries catalogue ids only; names and
  * art come from the catalogue the app already holds, which is why this renders
  * INSIDE the /app loading gate.
@@ -49,9 +51,9 @@ const TYPE_LABEL: Record<BannerRowType, string> = {
 }
 
 const BUTTON_PRIMARY =
-	"rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
+	"rounded-md bg-brand px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
 const BUTTON_GHOST =
-	"rounded-lg border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+	"rounded-md border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
 
 type SummaryState =
 	| { status: "loading" }
@@ -86,7 +88,10 @@ const includesLine = (resources: boolean, notes: boolean): string | null =>
 				? "Includes their notes"
 				: null
 
-/** One banner of the plan as the card shows it: art, name and kind. */
+/** One banner of the plan as the card shows it: art, name, kind and end date.
+ * The date is the catalogue's, so it says when the banner closes, which is
+ * what a reader weighs a plan by; the owner's pull count for the row is not
+ * in the summary and is not shown. */
 const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "Empty" }> }) => {
 	const oshiIds = useOshiIds()
 	// The same two thumbnails a planner row shows. A step-up features no cards,
@@ -121,9 +126,10 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 			</div>
 			<div className="min-w-0">
 				<p className="truncate text-sm font-medium text-gray-100">{target.banner.name}</p>
-				<p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+				<p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">
 					<BannerTypeIcon type={target.type} className="h-3.5 w-3.5" />
-					{TYPE_LABEL[target.type]}
+					<span>{TYPE_LABEL[target.type]}</span>
+					<span className="text-gray-500">· ends {formatDate(target.timeline.end_date)}</span>
 				</p>
 			</div>
 		</li>
@@ -190,7 +196,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	if (state.status === "notFound" || state.status === "error") {
 		return (
 			<div className="mx-auto max-w-xl px-4 py-16 text-center">
-				<h1 className="text-2xl font-bold text-gray-100">
+				<h1 className="font-display text-2xl font-bold text-gray-100">
 					{state.status === "notFound" ? "Plan not found" : "Couldn't load this plan"}
 				</h1>
 				<p className="mt-3 text-gray-400">
@@ -284,7 +290,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 
 	return (
 		<div className="mx-auto max-w-2xl px-4 py-10">
-			<h1 className="text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
+			<h1 className="font-display text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
 
 			{/* The copy controls sit ABOVE the banner list: a long plan pushed them
 			    off the bottom of the screen, behind dozens of rows. */}
@@ -368,7 +374,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 				)}
 			</form>
 
-			<div className="mt-6 rounded-xl border border-gray-700 bg-gray-800/50 p-4 sm:p-5">
+			<div className="mt-6 rounded-xl border border-edge bg-gray-800/50 p-4 sm:p-5">
 				<p className="text-sm text-gray-400">
 					{[
 						plural(summary.row_count, "banner", "banners"),

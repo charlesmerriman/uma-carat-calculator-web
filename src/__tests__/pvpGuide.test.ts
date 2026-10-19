@@ -12,7 +12,6 @@ import {
 	skillsForPosition,
 	stylesWithContent,
 	familySources,
-	hasGoldVersion,
 	skillFamilyIds,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
@@ -143,7 +142,7 @@ describe("skillsForPosition", () => {
 	const row = (style: string, tier: number | null, order: number, id: number) =>
 		({ style, tier, order, category: "other", note: "", skill: { id } }) as unknown as PvpSkillRecommendation
 
-	it("merges the position's picks with the general ones: by tier, own picks first", () => {
+	it("keeps one style's own rows, by tier then order; the general ones only for 'everyone'", () => {
 		const rows = [
 			row("everyone", 0, 0, 1),
 			row("front", 1, 0, 2),
@@ -152,8 +151,9 @@ describe("skillsForPosition", () => {
 			row("everyone", null, 0, 5),
 			row("front", null, 0, 6),
 		]
-		expect(skillsForPosition(rows, "front").map((r) => r.skill.id)).toEqual([3, 1, 2, 6, 5])
-		expect(skillsForPosition(rows, "pace").map((r) => r.skill.id)).toEqual([4, 1, 5])
+		expect(skillsForPosition(rows, "front").map((r) => r.skill.id)).toEqual([3, 2, 6])
+		expect(skillsForPosition(rows, "pace").map((r) => r.skill.id)).toEqual([4])
+		expect(skillsForPosition(rows, "everyone").map((r) => r.skill.id)).toEqual([1, 5])
 	})
 })
 
@@ -221,10 +221,21 @@ describe("skill versions", () => {
 		expect(familySources(new Map([[13, ["Oguri Cap (evolution)"]]]), white)).toBeNull()
 	})
 
-	it("badges a white skill that has a gold version", () => {
-		expect(hasGoldVersion(white)).toBe(true)
-		expect(hasGoldVersion(lone)).toBe(false)
-		expect(hasGoldVersion({ ...white, rarity: 2 })).toBe(false)
+	// A green skill's family: ○ and ◎ are both white (tiers 1 and 2), and the
+	// gold above them is tier 3. Nothing teaches the ◎, and guides pick it.
+	const single = { id: 31, name: "Right-Handed ○", description: "", image: null, rarity: 1, tier: 1, version: "○ white", is_evolved: false }
+	const double = { id: 32, name: "Right-Handed ◎", description: "", image: null, rarity: 1, tier: 2, version: "◎ white", is_evolved: false }
+	const demon = { id: 33, name: "Right-Handed Demon", description: "", image: null, rarity: 2, tier: 3, version: "◎ gold", is_evolved: false }
+	const pickOf = (version: typeof single, others: (typeof single)[]) => ({ ...version, unique_of: null, versions: others })
+
+	it("the ○ and ◎ of a white cover each other", () => {
+		expect(familySources(new Map([[31, ["Kitasan Black (hint)"]]]), pickOf(double, [single, demon]))).toEqual(["Kitasan Black (hint), as ○ white"])
+		expect(familySources(new Map([[32, ["Kitasan Black (hint)"]]]), pickOf(single, [double, demon]))).toEqual(["Kitasan Black (hint), as ◎ white"])
+	})
+
+	it("the gold above a ○/◎ pair covers both, and neither white covers it", () => {
+		expect(familySources(new Map([[33, ["Oguri Cap (awakening)"]]]), pickOf(double, [single, demon]))).toEqual(["Oguri Cap (awakening), as ◎ gold"])
+		expect(familySources(new Map([[31, ["Kitasan Black (hint)"]], [32, ["Fine Motion (hint)"]]]), pickOf(demon, [single, double]))).toBeNull()
 	})
 })
 

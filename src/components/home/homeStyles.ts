@@ -4,23 +4,21 @@
  * again. Before this the page carried three different border/radius/shadow
  * combinations for what reads as a single kind of box.
  *
- * Plain class strings rather than a class in App.css: the seven theme blocks in
- * index.css re-skin cards by matching `.shadow-md` LITERALLY, so the utility has
- * to stay on the element. An `@apply` would inline the shadow and every theme's
- * override would silently stop matching.
- *
- * Not `.card-panel` either: that is the planner's box, with a stronger gray-600
- * edge for a busy surface. Here the cards sit alone on the gray-900 canvas and
- * the quieter gray-700 border is enough.
+ * Since 2026-10-18 that box is the site's one card, `.card-panel` (App.css),
+ * the same as the planner's and the Timeline's. It used to be a plain
+ * gray-700-edged recipe of its own: the theme blocks re-skinned cards by
+ * matching `.shadow-md` literally, and the planner's card wore a heavier
+ * gray-600 edge. Both went with the surface tokens (SURFACES in index.css).
+ * Kept as a constant so the home page's call sites read the same as before.
  */
-export const HOME_CARD = "rounded-xl border border-gray-700 bg-gray-800 shadow-md"
+export const HOME_CARD = "card-panel"
 
 /**
- * A small link tile: same edge as a card, no shadow, tighter radius, and the
- * hover lift that every clickable tile on the page shares.
+ * A small link tile: a card's fill (--card-fill), no shadow, tighter radius,
+ * and the hover lift that every clickable tile on the page shares.
  */
 export const HOME_TILE =
-	"rounded-lg border border-gray-700 bg-gray-800 transition hover:border-gray-500 hover:bg-gray-700"
+	"rounded-lg border border-gray-700 bg-(--card-fill) transition hover:border-gray-500 hover:bg-gray-700"
 
 /**
  * The square icon chip that leads a tile or a step. Brand-tinted through a

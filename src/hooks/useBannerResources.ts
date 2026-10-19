@@ -23,40 +23,29 @@
  * quadratic — it just carries spend rather than income.
  *
  * Returns `BannerResources[]`, positionally aligned with
- * `userPlannedBannerData`.
+ * `userPlannedBannerData`. `useBannerProjection` returns the same rows plus
+ * what the BACKGROUND banners spent (see utils/backgroundDailyPulls): the
+ * daily pulls on banners outside the plan, which take paid carats in the same
+ * walk but have no row to show them on. The forecast chart draws those.
  */
 
 import { useMemo } from "react"
-import {
-	cumulativeClubRankCarats,
-	cumulativeDailyCarats,
-	cumulativeDailyCaratPack,
-	cumulativeLoginAndGiftCarats,
-	cumulativeMiscEarningsCarats,
-	cumulativeMonthlyShopTickets,
-	cumulativeTeamTrialsCarats,
-	cumulativeTrainingPassIncome,
-} from "../utils/cumulativeIncome"
-import {
-	cumulativeEventRewards,
-	cumulativeRaceRewards,
-	cumulativeThroughoutCarats,
-	parseLedger,
-} from "../utils/incomeLedger"
+import { createIncomeProjection, projectionWalkOrder } from "../utils/incomeProjection"
 import { startOfUtcDay, utcDaysBetween } from "../utils/utcDates"
 import {
 	applyPullStrategy,
 	applyStepUpStrategy,
 	allocateReservedCopies,
 	plannedBannerTarget,
-	plannedBannerTimeline,
 	plannedPulls,
 	plannedSteps,
 } from "../utils/bannerHelpers"
 import type { PullStrategyResult } from "../utils/bannerHelpers"
-import { purchaseCarats } from "../utils/campaignPurchases"
 import { isExcludedFromProjection, rowSpendSettings } from "../utils/rowOptions"
 import { addSelectorTickets, isCardSelectable } from "../utils/selectorTickets"
+import { backgroundBanners } from "../utils/backgroundDailyPulls"
+import type { BackgroundBanner } from "../utils/backgroundDailyPulls"
+import type { WalkEntry } from "../utils/incomeProjection"
 import type { SelectorTicketBucket } from "../utils/selectorTickets"
 import { EMPTY_BANNER_RESOURCES } from "./bannerResources"
 import type { BannerResources } from "./bannerResources"
@@ -70,6 +59,8 @@ import type {
 	AnniversaryEvent,
 	UserPlannedPurchase,
 	IncomeLedgerRow,
+	BannerUma,
+	BannerSupport,
 } from "../types"
 import type { CalculationConstants } from "../types/constants"
 
@@ -85,7 +76,44 @@ interface BannerResourcesParams {
 	incomeLedger: IncomeLedgerRow[]
 	/** Admin-editable tunables, already overlaid on DEFAULT_CONSTANTS. */
 	constants: CalculationConstants
+	/**
+	 * The whole banner catalogue, for the daily pulls on banners outside the
+	 * plan. Optional: without it (or with both switches off) there are no
+	 * background banners and the projection is exactly the rows'.
+	 */
+	umaBannerData?: BannerUma[]
+	supportBannerData?: BannerSupport[]
 }
+
+/** What one background banner's daily pulls took. */
+export interface BackgroundSpend extends BackgroundBanner {
+	/** Pulls taken: its days, or fewer when the paid carats ran out. */
+	pulls: number
+	/** Paid carats those pulls cost. Never free carats. */
+	paidCarats: number
+	/**
+	 * When a time axis should take the carats off. Its own end date, or the
+	 * end date of the first row the engine measured after charging it,
+	 * whichever is earlier. The chart re-anchors its line to every row's own
+	 * numbers, so a drop drawn later than a row that already includes it
+	 * would be counted twice.
+	 */
+	at: Date
+}
+
+export interface BannerProjection {
+	/** Positionally aligned with `userPlannedBannerData`. */
+	rows: BannerResources[]
+	backgroundSpends: BackgroundSpend[]
+}
+
+/**
+ * One step of the walk: a planned row, or a background banner. Tagged so the
+ * loop narrows on `kind` rather than on which fields happen to be present.
+ */
+type WalkStep =
+	| { kind: "row"; entry: WalkEntry }
+	| { kind: "background"; banner: BackgroundBanner }
 
 /** Running total of what the banners resolving before this one committed. */
 interface SpendTotals {
@@ -96,7 +124,42 @@ interface SpendTotals {
 	ssrCrystals: number
 }
 
-export function useBannerResources({
+/**
+ * The walk's start-day key, the same one projectionWalkOrder sorts rows by.
+ * Undated starts go last, as they do there.
+ */
+function startDayKey(step: WalkStep): number {
+	const start = step.kind === "row" ? step.entry.startDate : step.banner.startDate
+	return start ? startOfUtcDay(start).getTime() : Infinity
+}
+
+/**
+ * The rows and the background banners in one walk. By start day first, the
+ * order the engine charges in. On a shared start day the plan's own rows go
+ * first: a banner the player wants gets the paid carats before one they only
+ * pull on out of habit. Rows keep projectionWalkOrder's order among
+ * themselves; background banners take uma before support, then start instant
+ * and id, only so the result never depends on catalogue order.
+ */
+function mergeWalk(walkOrder: WalkEntry[], background: BackgroundBanner[]): WalkStep[] {
+	const rows: WalkStep[] = walkOrder.map((entry) => ({ kind: "row", entry }))
+	const extras: WalkStep[] = [...background]
+		.sort(
+			(a, b) =>
+				(a.kind === b.kind ? 0 : a.kind === "uma" ? -1 : 1) ||
+				a.startDate.getTime() - b.startDate.getTime() ||
+				a.bannerId - b.bannerId
+		)
+		.map((banner) => ({ kind: "background", banner }))
+	// Array.prototype.sort is stable, so equal keys keep the order built above.
+	return [...rows, ...extras].sort((a, b) => {
+		const byDay = startDayKey(a) - startDayKey(b)
+		if (byDay !== 0 && !Number.isNaN(byDay)) return byDay
+		return (a.kind === "row" ? 0 : 1) - (b.kind === "row" ? 0 : 1)
+	})
+}
+
+export function projectBannerResources({
 	userStatsData,
 	clubRankData,
 	teamTrialsRankData,
@@ -107,449 +170,341 @@ export function useBannerResources({
 	userPlannedPurchaseData,
 	incomeLedger,
 	constants,
-}: BannerResourcesParams): BannerResources[] {
-	return useMemo(() => {
-		if (!userStatsData) return []
+	umaBannerData = [],
+	supportBannerData = [],
+}: BannerResourcesParams): BannerProjection {
+	if (!userStatsData) return { rows: [], backgroundSpends: [] }
 
-		const results: BannerResources[] = userPlannedBannerData.map(
-			() => EMPTY_BANNER_RESOURCES
-		)
+	const results: BannerResources[] = userPlannedBannerData.map(
+		() => EMPTY_BANNER_RESOURCES
+	)
 
-		// Two anchors, and they are NOT interchangeable — the sheet keeps them
-		// apart too. `today` (its $AG$3, TODAY) measures spans, so every estimate
-		// on a given calendar day is identical no matter when the page is opened.
-		// `now` (its $AG$2, NOW) filters reward instants: an event that already
-		// opened today has paid out, and its carats are in the balance the user
-		// typed in.
-		const now = new Date()
-		const today = startOfUtcDay(now)
+	// The income side (the two anchors, the campaign credits and
+	// `incomeTo`) lives in utils/incomeProjection, because the forecast
+	// chart reads the very same function. See that module for the model.
+	const { now, today, purchaseCredits, incomeTo } = createIncomeProjection({
+		userStatsData,
+		clubRankData,
+		teamTrialsRankData,
+		championsMeetingRankData,
+		leagueOfHeroesRankData,
+		anniversaryEventData,
+		userPlannedPurchaseData,
+		incomeLedger,
+		constants,
+	})
 
-		const ledger = parseLedger(incomeLedger)
-
-		const clubRank = clubRankData.find((r) => r.id === userStatsData.club_rank)
-		const teamTrialsRank = teamTrialsRankData.find(
-			(r) => r.id === userStatsData.team_trials_rank
-		)
-		const championsMeetingRank = championsMeetingRankData.find(
-			(r) => r.id === userStatsData.champions_meeting_rank
-		)
-		const leagueOfHeroesRank = leagueOfHeroesRankData.find(
-			(r) => r.id === userStatsData.league_of_heroes_rank
-		)
-
-		// Campaign purchases, resolved to the instant they are credited: the
-		// campaign's MAIN part start — the anniversary itself, not the Part 1
-		// run-up that opens the campaign, because that is when the packs go on
-		// sale. Its SELECTOR TICKETS are the exception and are banked up front;
-		// see the note below them.
-		const productsById = new Map(
-			anniversaryEventData.flatMap((event) =>
-				event.products.map((product) => [product.id, { product, event }] as const)
-			)
-		)
-		const purchaseCredits = userStatsData.include_purchases_in_projection
-			? userPlannedPurchaseData.flatMap((purchase) => {
-					const entry = productsById.get(purchase.product)
-					const startDate =
-						entry?.event.main_start_date ?? entry?.event.start_date
-					if (!entry || !startDate) return []
-					const quantity = Math.max(0, purchase.quantity)
-					if (quantity === 0) return []
-					const { product } = entry
-					// The pack's own carats are paid; the webstore bonus on top is
-					// granted as FREE carats. Split here rather than folding the
-					// multiplier into paidCarats, or the bonus would silently
-					// enlarge the balance a step-up is allowed to spend.
-					const { paidCarats, freeCarats } = purchaseCarats(
-						product, quantity, userStatsData.webstore_bonus
-					)
-					return [{
-						creditAt: new Date(startDate),
-						productType: product.product_type,
-						jpCutoff: product.jp_cutoff_date,
-						// The card picked for a selector on the Selectors page. The
-						// serializer sends at most one of the two (a check constraint
-						// guarantees it), and neither for a carat pack.
-						targetCardId:
-							purchase.target_uma ?? purchase.target_support ?? null,
-						paidCarats,
-						freeCarats,
-						usd: product.usd_cost * quantity,
-						quantity,
-					}]
-				})
-			: []
-
-		// Selector tickets are banked UP FRONT rather than credited at their
-		// campaign's date — unlike the paid carats from the very same purchase.
-		// A selector is not spent at a banner: it takes a card out of the back
-		// catalogue, and a card stays there after its banner ends. What still
-		// constrains it is its CUTOFF, which is calendar-independent. Carried
-		// through the pass so the pool can't be spent twice.
-		//
-		// Tickets the account already OWNS have no pick anywhere, so they go in
-		// with no target and stay usable on any eligible banner. A PURCHASED
-		// selector is only usable on the card picked for it, and one with no
-		// pick yet is usable on nothing: it is counted rather than banked, so
-		// the row can tell the user why a reserved copy went unfunded.
-		let umaSelectorTickets: SelectorTicketBucket[] = addSelectorTickets(
-			[], null, userStatsData.uma_selector_ticket || 0
-		)
-		let supportSelectorTickets: SelectorTicketBucket[] = addSelectorTickets(
-			[], null, userStatsData.support_selector_ticket || 0
-		)
-		let unpickedUmaSelectors = 0
-		let unpickedSupportSelectors = 0
-		for (const credit of purchaseCredits) {
-			if (credit.productType === "uma_selector") {
-				if (credit.targetCardId === null) {
-					unpickedUmaSelectors += credit.quantity
-					continue
-				}
-				umaSelectorTickets = addSelectorTickets(
-					umaSelectorTickets, credit.jpCutoff, credit.quantity,
-					credit.targetCardId
-				)
-			} else if (credit.productType === "support_selector") {
-				if (credit.targetCardId === null) {
-					unpickedSupportSelectors += credit.quantity
-					continue
-				}
-				supportSelectorTickets = addSelectorTickets(
-					supportSelectorTickets, credit.jpCutoff, credit.quantity,
-					credit.targetCardId
-				)
+	// Selector tickets are banked UP FRONT rather than credited at their
+	// campaign's date — unlike the paid carats from the very same purchase.
+	// A selector is not spent at a banner: it takes a card out of the back
+	// catalogue, and a card stays there after its banner ends. What still
+	// constrains it is its CUTOFF, which is calendar-independent. Carried
+	// through the pass so the pool can't be spent twice.
+	//
+	// Tickets the account already OWNS have no pick anywhere, so they go in
+	// with no target and stay usable on any eligible banner. A PURCHASED
+	// selector is only usable on the card picked for it, and one with no
+	// pick yet is usable on nothing: it is counted rather than banked, so
+	// the row can tell the user why a reserved copy went unfunded.
+	let umaSelectorTickets: SelectorTicketBucket[] = addSelectorTickets(
+		[], null, userStatsData.uma_selector_ticket || 0
+	)
+	let supportSelectorTickets: SelectorTicketBucket[] = addSelectorTickets(
+		[], null, userStatsData.support_selector_ticket || 0
+	)
+	let unpickedUmaSelectors = 0
+	let unpickedSupportSelectors = 0
+	for (const credit of purchaseCredits) {
+		if (credit.productType === "uma_selector") {
+			if (credit.targetCardId === null) {
+				unpickedUmaSelectors += credit.quantity
+				continue
 			}
-		}
-
-		/**
-		 * Everything the user will have earned between today and `end`, before
-		 * any spending. A pure function of `end` — nothing about the rest of the
-		 * plan reaches it, which is the property the whole rewrite is for.
-		 */
-		const incomeTo = (end: Date) => {
-			const events = cumulativeEventRewards(ledger, now, end)
-			// Valued per event, not count x rank amount: an event can pay below
-			// the user's rank (League of Heroes #1 only ran to Platinum 1).
-			const cmRewards = cumulativeRaceRewards(
-				ledger, "champions_meeting", today, end,
-				championsMeetingRank, championsMeetingRankData
+			umaSelectorTickets = addSelectorTickets(
+				umaSelectorTickets, credit.jpCutoff, credit.quantity,
+				credit.targetCardId
 			)
-			const lohRewards = cumulativeRaceRewards(
-				ledger, "league_of_heroes", today, end,
-				leagueOfHeroesRank, leagueOfHeroesRankData
-			)
-			const pack = userStatsData.daily_carat
-				? cumulativeDailyCaratPack(today, end, constants)
-				: { freeCarats: 0, paidCarats: 0 }
-			const pass = cumulativeTrainingPassIncome(
-				today, end, userStatsData.training_pass, constants
-			)
-			const shop = userStatsData.monthly_shop_tickets
-				? cumulativeMonthlyShopTickets(today, end, constants, {
-						uma: userStatsData.shop_uma_tickets_bought,
-						support: userStatsData.shop_support_tickets_bought,
-				  })
-				: { umaTickets: 0, supportTickets: 0 }
-
-			// One pass over the campaign credits: free carats, paid carats and
-			// USD all come off the same rows and share the same window test, so
-			// splitting them across two loops would only invite the two filters
-			// to drift apart.
-			let purchaseFree = 0
-			let purchasePaid = 0
-			let purchaseUsd = 0
-			for (const credit of purchaseCredits) {
-				if (credit.creditAt < now || credit.creditAt > end) continue
-				purchaseFree += credit.freeCarats
-				purchasePaid += credit.paidCarats
-				purchaseUsd += credit.usd
+		} else if (credit.productType === "support_selector") {
+			if (credit.targetCardId === null) {
+				unpickedSupportSelectors += credit.quantity
+				continue
 			}
-
-			const freeCarats =
-				events.carats +
-				cumulativeThroughoutCarats(ledger, now, end, constants) +
-				cmRewards.carats +
-				lohRewards.carats +
-				cumulativeDailyCarats(today, end, constants) +
-				cumulativeTeamTrialsCarats(today, end, teamTrialsRank?.income_amount ?? 0) +
-				cumulativeClubRankCarats(today, end, clubRank?.income_amount ?? 0) +
-				cumulativeLoginAndGiftCarats(today, end, constants) +
-				(userStatsData.misc_earnings
-					? cumulativeMiscEarningsCarats(today, end, constants)
-					: 0) +
-				pack.freeCarats +
-				pass.freeCarats +
-				purchaseFree
-
-			// A campaign pack's own carats are PAID — they were bought, so they
-			// land in the balance that funds discounted pulls and step-ups. Its
-			// webstore bonus is free and is summed into `freeCarats` above.
-			// Credited at an absolute instant, never per-window.
-			const paidCarats = pack.paidCarats + pass.paidCarats + purchasePaid
-			const usdSpent = purchaseUsd
-
-			const umaTickets =
-				events.umaTickets +
-				cmRewards.umaTickets +
-				lohRewards.umaTickets +
-				shop.umaTickets +
-				pass.umaTickets
-			const supportTickets =
-				events.supportTickets +
-				cmRewards.supportTickets +
-				lohRewards.supportTickets +
-				shop.supportTickets +
-				pass.supportTickets
-
-			const ssrShards =
-				events.ssrShards +
-				cmRewards.ssrShards +
-				lohRewards.ssrShards +
-				pass.ssrShards
-
-			return {
-				freeCarats,
-				paidCarats,
-				usdSpent,
-				umaTickets,
-				supportTickets,
-				ssrShards,
-				ssrCrystals: events.ssrCrystals,
-			}
-		}
-
-		// THE ORDER. Income no longer depends on it — only spend attribution
-		// does, so this decides which banner is charged first when two compete
-		// for the same carats.
-		//
-		// Keyed on the banner's START day, which is the sheet's AH44. The sheet
-		// implements the tiebreak by nudging duplicate start dates forward a day
-		// each (`AH42 + count of earlier rows sharing that start`); sorting by
-		// (start day, display position) is the same ordering without the artifact
-		// that a nudged banner can collide with one genuinely starting the next
-		// day. A banner with no resolvable end date keeps its zeroed slot.
-		const walkOrder = userPlannedBannerData
-			.map((banner, index) => {
-				const timeline = plannedBannerTimeline(banner)
-				const endDate = timeline?.end_date ? new Date(timeline.end_date) : null
-				const startDate = timeline?.start_date
-					? new Date(timeline.start_date)
-					: null
-				return { banner, index, endDate, startDate }
-			})
-			.filter(
-				(entry): entry is typeof entry & { endDate: Date } => entry.endDate !== null
+			supportSelectorTickets = addSelectorTickets(
+				supportSelectorTickets, credit.jpCutoff, credit.quantity,
+				credit.targetCardId
 			)
-			.sort((a, b) => {
-				const aStart = a.startDate ? startOfUtcDay(a.startDate).getTime() : Infinity
-				const bStart = b.startDate ? startOfUtcDay(b.startDate).getTime() : Infinity
-				if (aStart !== bStart) return aStart - bStart
-				return a.index - b.index
-			})
-
-		const spent: SpendTotals = {
-			freeCarats: 0,
-			paidCarats: 0,
-			umaTickets: 0,
-			supportTickets: 0,
-			ssrCrystals: 0,
 		}
+	}
 
-		for (const { banner, index, endDate, startDate } of walkOrder) {
-			const income = incomeTo(endDate)
+	// Start day, then display position: see projectionWalkOrder.
+	const walkOrder = projectionWalkOrder(userPlannedBannerData)
 
-			const freeCarats =
-				(userStatsData.current_carat || 0) + income.freeCarats - spent.freeCarats
-			// Paid is floored at 0 (the sheet's MAX(0, ...) on N43) while free is
-			// allowed to go negative — an unaffordable plan surfaces as a carat
-			// debt on the free balance, which is what the red state reads.
-			const paidCarats = Math.max(
+	const spent: SpendTotals = {
+		freeCarats: 0,
+		paidCarats: 0,
+		umaTickets: 0,
+		supportTickets: 0,
+		ssrCrystals: 0,
+	}
+
+	// The banners outside the plan whose daily pull the player takes too.
+	// Empty unless one of the two switches is on.
+	const steps = mergeWalk(
+		walkOrder,
+		backgroundBanners({
+			umaBannerData,
+			supportBannerData,
+			walkOrder,
+			stats: userStatsData,
+			today,
+			now,
+		})
+	)
+	const backgroundSpends: BackgroundSpend[] = []
+	const dailyPullCost = constants.discounted_pull_cost_carats
+
+	for (const step of steps) {
+		if (step.kind === "background") {
+			// Paid carats only, and only what is there: the same balance a
+			// row ending on this date would see, floored at 0 the same way.
+			// So a background banner can never push the plan into debt; it
+			// takes fewer pulls, down to none, when the paid carats run low.
+			const { banner: background } = step
+			const paidAvailable = Math.max(
 				0,
-				(userStatsData.current_paid_carat || 0) + income.paidCarats - spent.paidCarats
+				(userStatsData.current_paid_carat || 0) +
+					incomeTo(background.endDate).paidCarats -
+					spent.paidCarats
 			)
-			const umaTickets =
-				(userStatsData.uma_ticket || 0) + income.umaTickets - spent.umaTickets
-			const supportTickets =
-				(userStatsData.support_ticket || 0) +
-				income.supportTickets -
-				spent.supportTickets
-
-			// Shards roll into crystals at this checkpoint, not once at the end,
-			// so the crystals are spendable on THIS banner's reserved copies.
-			const totalShards = (userStatsData.ssr_shards || 0) + income.ssrShards
-			const ssrShards = totalShards % constants.shards_per_crystal
-			const ssrCrystals =
-				(userStatsData.ssr_crystals || 0) +
-				income.ssrCrystals +
-				Math.floor(totalShards / constants.shards_per_crystal) -
-				spent.ssrCrystals
-
-			// Discounted pulls are once per day, capped by the banner's OWN
-			// window measured from its start — not from today, so the allowance
-			// doesn't shrink under the user while a banner is running. Inclusive
-			// calendar days, matching the sheet's DATEDIF(start, end + 1, "D").
-			const bannerStart = startDate ?? today
-			const discountDays = Math.max(0, utcDaysBetween(bannerStart, endDate) + 1)
-
-			const target = plannedBannerTarget(banner)
-			const isUmaBanner = target.type === "Uma"
-			// The gear menu's switches with this row's own overrides on top
-			// (utils/rowOptions). Ignored on a step-up, which is paid-only.
-			const spendSettings = rowSpendSettings(banner, userStatsData)
-			const freePulls =
-				target.type === "Uma" || target.type === "Support"
-					? target.banner.free_pulls
-					: 0
-
-			// A step-up is paid-carats-only: no free pulls, no tickets, no daily
-			// discount. It runs its own strategy rather than a mode flag through
-			// applyPullStrategy — see applyStepUpStrategy for why.
-			const stepUp =
-				target.type === "StepUp"
-					? applyStepUpStrategy({
-							plannedSteps: plannedSteps(banner),
-							bannerCount: target.banner.banner_count,
-							paidCarats,
-							constants,
-					  })
-					: null
-
-			// Both branches produce the same shape so the spend-banking below
-			// stays one code path. On a step-up every balance but paid carats
-			// passes through untouched, which is exactly what "paid only" means.
-			const strategy: PullStrategyResult = stepUp
-				? {
-						freeCarats,
-						paidCarats: stepUp.paidCarats,
-						umaTickets,
-						supportTickets,
-						maxPossiblePulls: 0,
-						maxPullBreakdown: {
-							freePulls: 0,
-							tickets: 0,
-							paidPulls: 0,
-							freeCaratPulls: 0,
-						},
-				  }
-				: applyPullStrategy({
-						isUmaBanner,
-						plannedPulls: plannedPulls(banner),
-						freePulls,
-						umaTickets,
-						supportTickets,
-						freeCarats,
-						paidCarats,
-						discountDays,
-						discountedPaidPulls: spendSettings.discountedPaidPulls,
-						fullPricePaidPulls: spendSettings.fullPricePaidPulls,
-						// Resolved by rowSpendSettings, which also owns the
-						// "missing switch means spend them" rule for a deploy
-						// where the API does not send it yet.
-						spendTickets: spendSettings.spendTickets,
-						ticketLimit: spendSettings.ticketLimit,
-				  })
-
-			// A selector only has to reach ONE card on the banner — it takes a
-			// single card and the user picks which — so the OLDEST featured card
-			// sets the bar. Cards with no known release date are skipped, so an
-			// unknown neither qualifies a banner nor blocks one.
-			//
-			// Cards barred from selectors outright (time-limited, not ★3) drop
-			// out FIRST, before the date is read: otherwise a banner whose only
-			// old featured unit is time-limited reads as selector-fundable off a
-			// card no selector can actually grant. Filtering rather than
-			// blocking keeps the ONE-card rule intact — barred units sit
-			// alongside ordinary ones, and the siblings still qualify the banner.
-			const featured =
-				target.type === "Uma"
-					? target.banner.umas
-					: target.type === "Support"
-					? target.banner.support_cards
-					: []
-			const selectable = featured.filter(isCardSelectable)
-			// Only a banner that HAS featured cards, none of them takeable, bars
-			// selectors. An empty list is a data gap, not a bar — see
-			// ReservedCopiesInput.selectorsBarred.
-			const selectorsBarred = featured.length > 0 && selectable.length === 0
-			const oldestFeaturedJpDate = selectable.reduce<string | null>(
-				(oldest, card) => {
-					if (!card.first_jp_date) return oldest
-					return !oldest || card.first_jp_date < oldest
-						? card.first_jp_date
-						: oldest
-				},
-				null
-			)
-			const reserved = allocateReservedCopies({
-				// Disabled on step-up rows in v1. Reserving a copy needs a featured
-				// card list to date a selector ticket against, and a step-up has
-				// none — it draws from the back catalogue under the campaign's own
-				// cutoff. The sheet has no equivalent concept either. Passing 0
-				// returns the buckets untouched, so tickets still carry forward.
-				reservedCopies: stepUp ? 0 : banner.reserved_copies,
-				isUmaBanner,
-				oldestFeaturedJpDate,
-				selectorsBarred,
-				// What a PICKED ticket is matched against: it pays only if its
-				// card is one of these. Already past the intrinsic gate above.
-				selectableFeatured: selectable,
-				umaSelectorTickets,
-				supportSelectorTickets,
-				ssrCrystals,
+			const pulls = Math.min(background.days, Math.floor(paidAvailable / dailyPullCost))
+			spent.paidCarats += pulls * dailyPullCost
+			backgroundSpends.push({
+				...background,
+				pulls,
+				paidCarats: pulls * dailyPullCost,
+				// Settled after the walk, once every later row is known.
+				at: background.endDate,
 			})
-
-			results[index] = {
-				carats: freeCarats + paidCarats,
-				freeCarats,
-				paidCarats,
-				maxPossiblePulls: strategy.maxPossiblePulls,
-				maxPullBreakdown: strategy.maxPullBreakdown,
-				umaTickets,
-				supportTickets,
-				umaSelectorTickets,
-				supportSelectorTickets,
-				ssrCrystals,
-				ssrShards,
-				usdSpent: income.usdSpent,
-				ticketsSpent: isUmaBanner
-					? umaTickets - strategy.umaTickets
-					: supportTickets - strategy.supportTickets,
-				reservedFunding: reserved.funding,
-				unpickedSelectorTickets: stepUp
-					? 0
-					: isUmaBanner
-					? unpickedUmaSelectors
-					: unpickedSupportSelectors,
-				...(stepUp && {
-					maxPossibleSteps: stepUp.maxPossibleSteps,
-					chargeableSteps: stepUp.chargeableSteps,
-					stepLabel: stepUp.stepLabel,
-				}),
-			}
-
-			// A row left out of the projection is shown with what it WOULD cost
-			// (the result above is filled in as usual) but commits nothing, so
-			// the banners after it see the balances as if it were not planned.
-			// Its selectors and crystals stay in the pool for the same reason.
-			if (isExcludedFromProjection(banner)) continue
-
-			// Bank what this banner committed, so the banners after it start from
-			// a balance that already accounts for it.
-			spent.freeCarats += freeCarats - strategy.freeCarats
-			spent.paidCarats += paidCarats - strategy.paidCarats
-			spent.umaTickets += umaTickets - strategy.umaTickets
-			spent.supportTickets += supportTickets - strategy.supportTickets
-			spent.ssrCrystals += ssrCrystals - reserved.ssrCrystals
-
-			// Selector buckets are a pool rather than a scalar, so they carry
-			// directly instead of being differenced.
-			umaSelectorTickets = reserved.umaSelectorTickets
-			supportSelectorTickets = reserved.supportSelectorTickets
+			continue
 		}
 
-		return results
-	}, [
+		const { banner, index, endDate, startDate } = step.entry
+		const income = incomeTo(endDate)
+
+		const freeCarats =
+			(userStatsData.current_carat || 0) + income.freeCarats - spent.freeCarats
+		// Paid is floored at 0 (the sheet's MAX(0, ...) on N43) while free is
+		// allowed to go negative — an unaffordable plan surfaces as a carat
+		// debt on the free balance, which is what the red state reads.
+		const paidCarats = Math.max(
+			0,
+			(userStatsData.current_paid_carat || 0) + income.paidCarats - spent.paidCarats
+		)
+		const umaTickets =
+			(userStatsData.uma_ticket || 0) + income.umaTickets - spent.umaTickets
+		const supportTickets =
+			(userStatsData.support_ticket || 0) +
+			income.supportTickets -
+			spent.supportTickets
+
+		// Shards roll into crystals at this checkpoint, not once at the end,
+		// so the crystals are spendable on THIS banner's reserved copies.
+		const totalShards = (userStatsData.ssr_shards || 0) + income.ssrShards
+		const ssrShards = totalShards % constants.shards_per_crystal
+		const ssrCrystals =
+			(userStatsData.ssr_crystals || 0) +
+			income.ssrCrystals +
+			Math.floor(totalShards / constants.shards_per_crystal) -
+			spent.ssrCrystals
+
+		// Discounted pulls are once per day, capped by the banner's OWN
+		// window measured from its start — not from today, so the allowance
+		// doesn't shrink under the user while a banner is running. Inclusive
+		// calendar days, matching the sheet's DATEDIF(start, end + 1, "D").
+		const bannerStart = startDate ?? today
+		const discountDays = Math.max(0, utcDaysBetween(bannerStart, endDate) + 1)
+
+		const target = plannedBannerTarget(banner)
+		const isUmaBanner = target.type === "Uma"
+		// The gear menu's switches with this row's own overrides on top
+		// (utils/rowOptions). Ignored on a step-up, which is paid-only.
+		const spendSettings = rowSpendSettings(banner, userStatsData)
+		const freePulls =
+			target.type === "Uma" || target.type === "Support"
+				? target.banner.free_pulls
+				: 0
+
+		// A step-up is paid-carats-only: no free pulls, no tickets, no daily
+		// discount. It runs its own strategy rather than a mode flag through
+		// applyPullStrategy — see applyStepUpStrategy for why.
+		const stepUp =
+			target.type === "StepUp"
+				? applyStepUpStrategy({
+						plannedSteps: plannedSteps(banner),
+						bannerCount: target.banner.banner_count,
+						paidCarats,
+						constants,
+				  })
+				: null
+
+		// Both branches produce the same shape so the spend-banking below
+		// stays one code path. On a step-up every balance but paid carats
+		// passes through untouched, which is exactly what "paid only" means.
+		const strategy: PullStrategyResult = stepUp
+			? {
+					freeCarats,
+					paidCarats: stepUp.paidCarats,
+					umaTickets,
+					supportTickets,
+					maxPossiblePulls: 0,
+					maxPullBreakdown: {
+						freePulls: 0,
+						tickets: 0,
+						paidPulls: 0,
+						freeCaratPulls: 0,
+					},
+			  }
+			: applyPullStrategy({
+					isUmaBanner,
+					plannedPulls: plannedPulls(banner),
+					freePulls,
+					umaTickets,
+					supportTickets,
+					freeCarats,
+					paidCarats,
+					discountDays,
+					discountedPaidPulls: spendSettings.discountedPaidPulls,
+					fullPricePaidPulls: spendSettings.fullPricePaidPulls,
+					// Resolved by rowSpendSettings, which also owns the
+					// "missing switch means spend them" rule for a deploy
+					// where the API does not send it yet.
+					spendTickets: spendSettings.spendTickets,
+					ticketLimit: spendSettings.ticketLimit,
+			  })
+
+		// A selector only has to reach ONE card on the banner — it takes a
+		// single card and the user picks which — so the OLDEST featured card
+		// sets the bar. Cards with no known release date are skipped, so an
+		// unknown neither qualifies a banner nor blocks one.
+		//
+		// Cards barred from selectors outright (time-limited, not ★3) drop
+		// out FIRST, before the date is read: otherwise a banner whose only
+		// old featured unit is time-limited reads as selector-fundable off a
+		// card no selector can actually grant. Filtering rather than
+		// blocking keeps the ONE-card rule intact — barred units sit
+		// alongside ordinary ones, and the siblings still qualify the banner.
+		const featured =
+			target.type === "Uma"
+				? target.banner.umas
+				: target.type === "Support"
+				? target.banner.support_cards
+				: []
+		const selectable = featured.filter(isCardSelectable)
+		// Only a banner that HAS featured cards, none of them takeable, bars
+		// selectors. An empty list is a data gap, not a bar — see
+		// ReservedCopiesInput.selectorsBarred.
+		const selectorsBarred = featured.length > 0 && selectable.length === 0
+		const oldestFeaturedJpDate = selectable.reduce<string | null>(
+			(oldest, card) => {
+				if (!card.first_jp_date) return oldest
+				return !oldest || card.first_jp_date < oldest
+					? card.first_jp_date
+					: oldest
+			},
+			null
+		)
+		const reserved = allocateReservedCopies({
+			// Disabled on step-up rows in v1. Reserving a copy needs a featured
+			// card list to date a selector ticket against, and a step-up has
+			// none — it draws from the back catalogue under the campaign's own
+			// cutoff. The sheet has no equivalent concept either. Passing 0
+			// returns the buckets untouched, so tickets still carry forward.
+			reservedCopies: stepUp ? 0 : banner.reserved_copies,
+			isUmaBanner,
+			oldestFeaturedJpDate,
+			selectorsBarred,
+			// What a PICKED ticket is matched against: it pays only if its
+			// card is one of these. Already past the intrinsic gate above.
+			selectableFeatured: selectable,
+			umaSelectorTickets,
+			supportSelectorTickets,
+			ssrCrystals,
+		})
+
+		results[index] = {
+			carats: freeCarats + paidCarats,
+			freeCarats,
+			paidCarats,
+			maxPossiblePulls: strategy.maxPossiblePulls,
+			maxPullBreakdown: strategy.maxPullBreakdown,
+			umaTickets,
+			supportTickets,
+			umaSelectorTickets,
+			supportSelectorTickets,
+			ssrCrystals,
+			ssrShards,
+			usdSpent: income.usdSpent,
+			// What this row's pulls take from the free balance. The forecast
+			// chart draws it as the drop at the banner's end date.
+			freeCaratsSpent: freeCarats - strategy.freeCarats,
+			paidCaratsSpent: paidCarats - strategy.paidCarats,
+			ticketsSpent: isUmaBanner
+				? umaTickets - strategy.umaTickets
+				: supportTickets - strategy.supportTickets,
+			reservedFunding: reserved.funding,
+			unpickedSelectorTickets: stepUp
+				? 0
+				: isUmaBanner
+				? unpickedUmaSelectors
+				: unpickedSupportSelectors,
+			...(stepUp && {
+				maxPossibleSteps: stepUp.maxPossibleSteps,
+				chargeableSteps: stepUp.chargeableSteps,
+				stepLabel: stepUp.stepLabel,
+			}),
+		}
+
+		// A row left out of the projection is shown with what it WOULD cost
+		// (the result above is filled in as usual) but commits nothing, so
+		// the banners after it see the balances as if it were not planned.
+		// Its selectors and crystals stay in the pool for the same reason.
+		if (isExcludedFromProjection(banner)) continue
+
+		// Bank what this banner committed, so the banners after it start from
+		// a balance that already accounts for it.
+		spent.freeCarats += freeCarats - strategy.freeCarats
+		spent.paidCarats += paidCarats - strategy.paidCarats
+		spent.umaTickets += umaTickets - strategy.umaTickets
+		spent.supportTickets += supportTickets - strategy.supportTickets
+		spent.ssrCrystals += ssrCrystals - reserved.ssrCrystals
+
+		// Selector buckets are a pool rather than a scalar, so they carry
+		// directly instead of being differenced.
+		umaSelectorTickets = reserved.umaSelectorTickets
+		supportSelectorTickets = reserved.supportSelectorTickets
+	}
+
+	// When each background spend shows on a time axis: no later than the
+	// first row measured after it (see BackgroundSpend.at). Read backwards
+	// so each step knows the earliest end among the rows that follow it.
+	let earliestLaterRowEnd = Infinity
+	let spendIndex = backgroundSpends.length - 1
+	for (let i = steps.length - 1; i >= 0; i--) {
+		const step = steps[i]
+		if (step.kind === "row") {
+			earliestLaterRowEnd = Math.min(earliestLaterRowEnd, step.entry.endDate.getTime())
+			continue
+		}
+		const spend = backgroundSpends[spendIndex--]
+		if (earliestLaterRowEnd < spend.endDate.getTime()) spend.at = new Date(earliestLaterRowEnd)
+	}
+
+	return { rows: results, backgroundSpends }
+}
+
+/** The projection, memoised on its inputs. */
+export function useBannerProjection(params: BannerResourcesParams): BannerProjection {
+	const {
 		userStatsData,
 		clubRankData,
 		teamTrialsRankData,
@@ -560,5 +515,43 @@ export function useBannerResources({
 		userPlannedPurchaseData,
 		incomeLedger,
 		constants,
-	])
+		umaBannerData,
+		supportBannerData,
+	} = params
+	return useMemo(
+		() =>
+			projectBannerResources({
+				userStatsData,
+				clubRankData,
+				teamTrialsRankData,
+				championsMeetingRankData,
+				leagueOfHeroesRankData,
+				userPlannedBannerData,
+				anniversaryEventData,
+				userPlannedPurchaseData,
+				incomeLedger,
+				constants,
+				umaBannerData,
+				supportBannerData,
+			}),
+		[
+			userStatsData,
+			clubRankData,
+			teamTrialsRankData,
+			championsMeetingRankData,
+			leagueOfHeroesRankData,
+			userPlannedBannerData,
+			anniversaryEventData,
+			userPlannedPurchaseData,
+			incomeLedger,
+			constants,
+			umaBannerData,
+			supportBannerData,
+		]
+	)
+}
+
+/** The rows alone, for everything that has no use for the background spends. */
+export function useBannerResources(params: BannerResourcesParams): BannerResources[] {
+	return useBannerProjection(params).rows
 }

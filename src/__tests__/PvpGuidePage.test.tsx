@@ -291,10 +291,12 @@ describe("PvpGuidePage views and layout", () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		const views = within(screen.getByRole("tablist", { name: "View" }))
-		expect(views.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-			"Recommendations",
-			"My team",
-			"Gallery",
+		// By accessible name: on a phone the first tab shows "Guide", but its
+		// name stays "Recommendations" (the short label is aria-hidden).
+		expect(views.getAllByRole("tab")).toEqual([
+			views.getByRole("tab", { name: "Recommendations" }),
+			views.getByRole("tab", { name: "My team" }),
+			views.getByRole("tab", { name: "Gallery" }),
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")
@@ -373,30 +375,24 @@ describe("PvpGuidePage skill mentions", () => {
 })
 
 describe("PvpGuidePage recommended skills", () => {
-	it("merges the general skills into each position's Recommended skills", async () => {
+	it("shows the general skills once, under the Overview, and each position's tab only its own", async () => {
 		respond(200, GUIDE)
 		renderPage()
 		await screen.findByText("Recommended stats")
-		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
-		// Front's own acceleration pick and the general green skill, side by side.
-		expect(section.getByText("Acceleration")).toBeInTheDocument()
-		expect(section.getByText("Green skills")).toBeInTheDocument()
-		const general = section.getByRole("group", { name: "Left-Handed ○" })
-		expect(within(general).getByRole("tooltip").textContent).toContain("Recommended for every position.")
-		const own = section.getByRole("group", { name: "Angling and Scheming" })
-		expect(within(own).getByRole("tooltip").textContent).not.toContain("every position")
-		// No separate block for the general skills any more.
-		expect(screen.queryByText("Skills for every style")).not.toBeInTheDocument()
-	})
-
-	it("shows the general skills in every position's tab", async () => {
-		respond(200, GUIDE)
-		renderPage()
-		await screen.findByText("Recommended stats")
+		const general = () => within(screen.getByRole("region", { name: "General skills" }))
+		const own = () => within(screen.getByRole("region", { name: "Recommended skills" }))
+		expect(general().getByText("Green skills")).toBeInTheDocument()
+		expect(general().getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
+		expect(general().queryByRole("group", { name: "Angling and Scheming" })).not.toBeInTheDocument()
+		// Front's tab: its acceleration pick, and no general green skill.
+		expect(own().getByText("Acceleration")).toBeInTheDocument()
+		expect(own().getByRole("group", { name: "Angling and Scheming" })).toBeInTheDocument()
+		expect(own().queryByRole("group", { name: "Left-Handed ○" })).not.toBeInTheDocument()
+		// End has no skills of its own, so no Recommended skills; the general
+		// section stays where it is.
 		fireEvent.click(within(screen.getByRole("tablist", { name: "Running style" })).getByRole("tab", { name: "End" }))
-		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
-		expect(section.getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
-		expect(section.queryByRole("group", { name: "Angling and Scheming" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("region", { name: "Recommended skills" })).not.toBeInTheDocument()
+		expect(general().getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
 	})
 })
 
@@ -462,6 +458,20 @@ describe("PvpGuidePage style links and memory", () => {
 		renderPage("/app/pvp")
 		expect(location()).toBe("/app/pvp?event=cm-11&view=gallery")
 		expect(screen.getByTestId("gallery-view").textContent).toBe("cm-11")
+	})
+
+	it("comes back to Recommendations from My team on the bare page", async () => {
+		// The navbar link: no event in the address. Recommendations clears
+		// `?view=`, and the address must still name the event, or the bare
+		// page reads as a fresh arrival and sends the tab back to My team.
+		respond(200, GUIDE)
+		renderPage("/app/pvp")
+		const views = within(screen.getByRole("tablist", { name: "View" }))
+		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
+		expect(location()).toBe("/app/pvp?event=cm-10&view=team")
+		fireEvent.click(views.getByRole("tab", { name: "Recommendations" }))
+		expect(location()).toBe("/app/pvp?event=cm-10")
+		expect(await screen.findByText("Recommended stats")).toBeInTheDocument()
 	})
 
 	it("goes where a link to an event says, on the last style shown", async () => {

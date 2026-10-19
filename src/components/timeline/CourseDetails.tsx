@@ -15,7 +15,7 @@ export function CourseDetails({ event }: { event: RaceEvent }) {
 	const details = availableCourseDetails(event)
 	if (details.length === 0) return null
 	return (
-		<section className="rounded-xl border border-gray-600 bg-gray-800 p-3 shadow-sm">
+		<section className="card-panel p-3">
 			<div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand">
 				<MapPinned className="h-4 w-4" />
 				<span>Course details</span>

@@ -24,6 +24,10 @@ interface RankOption<T> {
 
 // ── Shared Styles ─────────────────────────────────────────────────────
 
+// The rank selects' empty text. react-select's own "Select..." names no
+// thing; this names the one thing all four of them want.
+const RANK_PLACEHOLDER = "Choose a rank"
+
 // Colors reference the theme's CSS variables (the same gray tokens the Tailwind
 // utilities use) so these rank selects repaint with the active [data-theme]
 // instead of being locked to the dark palette. gray-700 = surface, gray-600 =
@@ -82,7 +86,7 @@ const selectStyles: StylesConfig<any, false> = {
 // each field a hair under 4rem, the rank badges a full 5rem) and baking one in
 // meant overriding it at the site that disagreed.
 const numInputClass =
-	"border border-gray-600 rounded py-1 px-1 text-xs text-center bg-gray-700 text-gray-100 outline-none focus:border-gray-500 @income-wide:px-2 @income-wide:text-sm"
+	"border border-gray-600 rounded-md py-1 px-1 text-xs text-center bg-gray-700 text-gray-100 outline-none focus:border-gray-500 @income-wide:px-2 @income-wide:text-sm"
 
 // ── ResourceRow ───────────────────────────────────────────────────────
 
@@ -195,6 +199,10 @@ const PassToggle = ({
 	</div>
 )
 
+// Section icons keep the brand tint; the headings beside them are gray. The
+// panel had the title, five headings, every figure and the primary button all
+// in brand gold, so nothing stood out (design-polish item 9, 2026-10-18). Gold
+// is for the one primary action, the active nav tab and these small marks.
 const iconCls = "w-4 h-4 shrink-0 text-brand"
 
 /**
@@ -341,7 +349,7 @@ export const IncomeForm = () => {
 				aria-expanded={isOpen}
 				className="flex w-full cursor-pointer items-center justify-between gap-2 border-b border-gray-700 bg-gray-800/50 px-4 py-3 text-left transition-colors hover:bg-gray-800/80 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
 			>
-				<span className="min-w-0 truncate text-base font-semibold text-brand uppercase tracking-wide">Income &amp; Resources</span>
+				<span className="font-display min-w-0 truncate text-base font-semibold text-gray-100 uppercase tracking-wide">Income &amp; Resources</span>
 				{/* A title with a chevron beside it reads as a title. The word and the
 				    boxed chevron together read as a control — and this panel starts
 				    CLOSED on a phone, so the header is all there is to go on: if it
@@ -369,7 +377,16 @@ export const IncomeForm = () => {
 				style={{ overflow: "hidden" }}
 			>
 				<div className="bg-gray-800">
-					{/* ── Top row: Income Sources + Current Resources ── */}
+					{/* ── Top row: Income Sources + Current Resources ──
+					    ONE column up to @income-wide, where the three-track desktop
+					    grid takes over. From @3xl (48rem of panel) each block spreads
+					    across that column instead of sitting in a capped phone-width
+					    strip: the four ranks two by two, purchases on one line, the
+					    eight resources four across (design polish item 19a). Below
+					    @3xl it was one centred phone-width column under a full desktop
+					    navbar on a 1024 to 1258px window. Splitting the row into two
+					    columns was tried first and left a tall empty well under the
+					    resources, which are half the height of ranks plus purchases. */}
 					<div className="grid grid-cols-1 @income-wide:grid-cols-[2fr_1fr]">
 						{/* Related settings share one bordered surface; dividers describe the
 					    relationship without turning each group into its own card. */}
@@ -377,7 +394,7 @@ export const IncomeForm = () => {
 							<div className="grid grid-cols-1 gap-4 @income-wide:grid-cols-[3fr_auto_2fr]">
 								{/* Competitive Progress */}
 								<div className="min-w-0">
-									<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Trophy className={iconCls} />
 										Competitive Progress
 									</h3>
@@ -392,16 +409,18 @@ export const IncomeForm = () => {
 									    stretched that far gives you a 1140px-wide rank select and a
 									    hand's width of dead space between a label and its input. 34rem
 									    is about what the widest phone gives these blocks, so capping
-									    there is the same layout rather than a wider variant of it — the
-									    whole point being that there is no third layout. The cap lifts
-									    at `@income-wide:`, where the real desktop grid takes over. */}
-									<div className="mx-auto grid w-full max-w-[34rem] grid-cols-1 gap-y-2 @income-wide:max-w-none @income-wide:grid-cols-[auto_auto_1fr_auto] @income-wide:items-center @income-wide:gap-x-2 @income-wide:gap-y-3">
+									    there is the same layout rather than a wider variant of it. From
+									    @3xl (the middle layout, see the top row) the cap lifts and the
+									    ranks go two by two, so each select is about half the panel. The
+									    real desktop grid takes over at `@income-wide:`. */}
+									<div className="mx-auto grid w-full max-w-[34rem] grid-cols-1 gap-y-2 @3xl:max-w-none @3xl:grid-cols-2 @3xl:gap-x-8 @3xl:gap-y-3 @income-wide:grid-cols-[auto_auto_1fr_auto] @income-wide:items-center @income-wide:gap-x-2 @income-wide:gap-y-3">
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<Sword className={iconCls} />
 											<span className="min-w-0 text-xs text-gray-400 text-left leading-tight @income-wide:pr-2 @income-wide:text-sm @income-wide:text-right @income-wide:whitespace-nowrap">Team Trials:</span>
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												// Controlled, not defaultValue: userStatsData can be replaced
@@ -445,6 +464,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												value={
@@ -484,6 +504,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												value={
@@ -523,6 +544,7 @@ export const IncomeForm = () => {
 											<Select
 												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
 												styles={selectStyles}
+												placeholder={RANK_PLACEHOLDER}
 												menuPortalTarget={document.body}
 												menuPosition="fixed"
 												value={
@@ -571,7 +593,7 @@ export const IncomeForm = () => {
 
 								{/* Purchases */}
 								<div className="flex min-w-0 flex-col">
-									<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Gift className={iconCls} />
 										Purchases
 									</h3>
@@ -712,12 +734,15 @@ export const IncomeForm = () => {
 
 						{/* Current Resources */}
 						<div className="border-t border-gray-700 p-3 @income-wide:p-5 @income-wide:border-t-0 @income-wide:border-l">
-							<h3 className="font-semibold text-center text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+							<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 								<Diamond className={iconCls} />
 								Current Resources
 							</h3>
-							{/* Capped and centred while compact — see the rank grid above. */}
-							<div className="mx-auto grid w-full max-w-[34rem] grid-cols-2 gap-x-2 gap-y-1.5 @income-wide:max-w-none @income-wide:gap-x-6 @income-wide:gap-y-2">
+							{/* Capped and centred while compact — see the rank grid above.
+							    From @3xl four across in two rows, filled down the columns, so
+							    the top row reads carats and tickets and the bottom one crystals
+							    and shards. Back to two columns in the narrow desktop track. */}
+							<div className="mx-auto grid w-full max-w-[34rem] grid-cols-2 gap-x-2 gap-y-1.5 @3xl:max-w-none @3xl:grid-flow-col @3xl:grid-cols-4 @3xl:grid-rows-2 @3xl:gap-x-6 @income-wide:grid-flow-row @income-wide:grid-cols-2 @income-wide:grid-rows-none @income-wide:gap-y-2">
 								<ResourceRow
 									icon={<img src="/item_icon_00043.png" alt="Carats" className="w-8 h-8 object-contain" />}
 									label="Carats"
@@ -776,9 +801,9 @@ export const IncomeForm = () => {
 					</div>
 
 					{/* ── Bottom row: Average Monthly Income + Uncap Crystals ── */}
-					<div className="grid grid-cols-1 border-t border-gray-700 @income-wide:grid-cols-[2fr_1fr]">
+					<div className="grid grid-cols-1 border-t border-gray-700 @3xl:grid-cols-2 @income-wide:grid-cols-[2fr_1fr]">
 						<div className="p-3 @income-wide:p-5 flex flex-col">
-							<h3 className="font-semibold text-sm text-brand mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
+							<h3 className="font-display font-semibold text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
 								<TrendingUp className={iconCls} />
 								Average Monthly Income
 							</h3>
@@ -788,9 +813,10 @@ export const IncomeForm = () => {
 							    across. Same markup either way: the tile is a flex box that runs
 							    across when it's a row and down when it's a tile.
 
-							    There is no 2-column middle step any more. It only ever appeared
-							    between 640px and 1280px of VIEWPORT, which is the band this panel
-							    is now compact in end to end. */}
+							    Rows, not tiles, in the 2-column middle layout too (@3xl up to
+							    @income-wide): five tiles across a half-width column would be
+							    about 100px each. The old 2-column step keyed to 640 to 1280px
+							    of VIEWPORT is gone; the middle layout is keyed to the panel. */}
 							<div className="mx-auto w-full max-w-[34rem] flex-1 grid grid-cols-1 overflow-hidden rounded-lg border border-gray-700 @income-wide:max-w-none @income-wide:grid-cols-5">
 								{monthlyItems.map((item) => (
 									<div
@@ -800,14 +826,14 @@ export const IncomeForm = () => {
 										<span className="min-w-0 text-xs text-gray-400 leading-tight @income-wide:text-center">{item.label}</span>
 										<div className="flex shrink-0 items-center gap-1.5 @income-wide:w-full @income-wide:justify-center">
 											<span className="text-brand">{item.icon}</span>
-											<span className="text-lg font-bold text-brand @income-wide:text-2xl">{item.value.toLocaleString()}</span>
+											<span className="text-lg font-bold text-gray-100 @income-wide:text-2xl">{item.value.toLocaleString()}</span>
 										</div>
 									</div>
 								))}
 							</div>
 						</div>
 
-						<div className="border-t border-gray-700 @income-wide:border-t-0 @income-wide:border-l">
+						<div className="border-t border-gray-700 @3xl:border-t-0 @3xl:border-l">
 							<UncapCrystalsPanel />
 						</div>
 					</div>

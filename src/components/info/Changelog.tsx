@@ -1,6 +1,7 @@
 import type React from "react"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
+import { ChevronDown } from "lucide-react"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { OguriSpinner } from "../OguriSpinner"
@@ -18,7 +19,8 @@ const fadeUp = {
 	transition: { duration: 0.4, ease: "easeOut" as const },
 }
 
-const card = "rounded-xl border border-gray-700 bg-gray-800 p-5 shadow-md"
+// `group` so the chevron can turn with the element's open state (group-open:).
+const card = "card-panel group"
 
 // Semantic chip colors per category, tinted like the homepage number badge.
 const categoryStyles: Record<ChangeCategory, string> = {
@@ -82,7 +84,7 @@ export const Changelog: React.FC = () => {
 			<Navbar />
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
-					<h1 className="text-3xl font-bold text-gray-100">Changelog</h1>
+					<h1 className="font-display text-3xl font-bold text-gray-100">Changelog</h1>
 					<p className="mt-2 text-sm text-gray-500">
 						Updates and fixes to the calculator, newest first.
 					</p>
@@ -118,23 +120,39 @@ export const Changelog: React.FC = () => {
 
 					{/* Entries */}
 					{!isLoading && !error && entries.length > 0 && (
-						<div className="mt-8 space-y-6">
-							{entries.map((entry) => (
-								<motion.article key={entry.id} {...fadeUp} className={card}>
-									<div className="flex flex-wrap items-center gap-3">
-										<time className="text-sm font-medium text-gray-400">
-											{formatDate(entry.date)}
-										</time>
-										{entry.version && (
-											<span className="rounded-full bg-brand/15 px-2 py-0.5 text-xs font-semibold text-brand">
-												{entry.version}
-											</span>
-										)}
-									</div>
-									<h2 className="mt-1 text-lg font-semibold text-gray-100">{entry.title}</h2>
+						/* Every release is a native <details>: the newest open, the rest
+						   folded to their heading line (date, version, title) until tapped
+						   (design polish item 22). All open, the page ran to about
+						   23,000px on a phone. Native rather than state so the folded
+						   text stays in the page for find-in-page and screen readers, and
+						   the keyboard works with no code of ours. `open` is only ever the
+						   initial value: it never changes for an entry, so React leaves
+						   the reader's own toggling alone on later renders. */
+						<div className="mt-8 space-y-3">
+							{entries.map((entry, index) => (
+								<motion.details key={entry.id} {...fadeUp} open={index === 0} className={card}>
+									<summary className="flex cursor-pointer list-none items-start gap-3 p-5 [&::-webkit-details-marker]:hidden">
+										<div className="min-w-0 flex-1">
+											<div className="flex flex-wrap items-center gap-3">
+												<time className="text-sm font-medium text-gray-400">
+													{formatDate(entry.date)}
+												</time>
+												{entry.version && (
+													<span className="rounded-full bg-brand/15 px-2 py-0.5 text-xs font-semibold text-brand">
+														{entry.version}
+													</span>
+												)}
+											</div>
+											<h2 className="mt-1 text-lg font-semibold text-gray-100">{entry.title}</h2>
+										</div>
+										<ChevronDown
+											className="mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform group-open:rotate-180"
+											aria-hidden="true"
+										/>
+									</summary>
 
 									{entry.changes.length > 0 && (
-										<ul className="mt-3 space-y-2">
+										<ul className="-mt-2 space-y-2 px-5 pb-5">
 											{entry.changes.map((change) => (
 												<li key={change.id} className="flex items-start gap-2.5">
 													<span
@@ -147,7 +165,7 @@ export const Changelog: React.FC = () => {
 											))}
 										</ul>
 									)}
-								</motion.article>
+								</motion.details>
 							))}
 						</div>
 					)}

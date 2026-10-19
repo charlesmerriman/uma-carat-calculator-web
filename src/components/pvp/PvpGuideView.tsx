@@ -2,8 +2,8 @@
  * One event's guide, the "Recommendations" view of the PvP page.
  *
  * Two columns from xl up: a narrow side column with what applies to the whole
- * team (overview, team comps, stats, skills for every style) and a main
- * column with one running style at a time (umas, notes, skills, decks).
+ * team (overview, general skills, team comps, stats) and a main column with
+ * one running style at a time (umas, notes, that style's skills, decks).
  * Below xl the side column stacks on top.
  *
  * ONE style pane, never two. A second "compare" pane beside the first was
@@ -37,7 +37,7 @@ import type {
 	PvpStyle,
 } from "../../types/pvpGuide"
 
-const SECTION = "rounded-xl border border-gray-700 bg-gray-800/60 p-3"
+const SECTION = "rounded-xl border border-edge bg-gray-800/60 p-3"
 const HEADING = "text-sm font-semibold uppercase tracking-wide text-gray-400"
 const SUBHEADING = "text-sm font-semibold text-brand"
 const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
@@ -59,15 +59,12 @@ function byCategory(rows: PvpSkillRecommendation[]): Array<[PvpSkillCategory, Pv
 }
 
 /**
- * A position's "Recommended skills": its own picks and the general ones
- * (every position) merged, split into subcategories, each by tier. A general
- * pick looks like any other; its hover detail says it applies everywhere.
+ * Skill rows split into subcategories, each by tier: the body of a
+ * position's "Recommended skills" and of the side column's "General skills".
  */
-function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
+function SkillCategories({ rows }: { rows: PvpSkillRecommendation[] }) {
 	return (
-		<section aria-label="Recommended skills">
-			<h4 className={SUBHEADING}>Recommended skills</h4>
-			<div className="mt-2 flex flex-col gap-3 border-l-2 border-gray-700 pl-3">
+		<div className="mt-2 flex flex-col gap-3 border-l-2 border-gray-700 pl-3">
 			{byCategory(rows).map(([category, list]) => (
 				<div key={category}>
 					<h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400">{CATEGORY_LABELS[category]}</h5>
@@ -80,19 +77,23 @@ function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
 									</span>
 								)}
 								{group.skills.map((row) => (
-									<SkillChip
-										key={`${row.style}-${row.skill.id}-${row.order}`}
-										skill={row.skill}
-										note={row.note}
-										general={row.style === "everyone"}
-									/>
+									<SkillChip key={`${row.style}-${row.skill.id}-${row.order}`} skill={row.skill} note={row.note} />
 								))}
 							</div>
 						))}
 					</div>
 				</div>
 			))}
-			</div>
+		</div>
+	)
+}
+
+/** A position's "Recommended skills": its own picks only (the general ones sit in the side column). */
+function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
+	return (
+		<section aria-label="Recommended skills">
+			<h4 className={SUBHEADING}>Recommended skills</h4>
+			<SkillCategories rows={rows} />
 		</section>
 	)
 }
@@ -128,7 +129,7 @@ function StatValue({ value, label }: { value: string; label: string }) {
 	return (
 		<span title={`${label}: ${value}`}>
 			{number && (
-				<span className="text-sm font-semibold tabular-nums text-gray-100">
+				<span className="text-[13px] font-semibold tabular-nums text-gray-100 sm:text-sm">
 					{number}
 					{marks && <sup className="ml-px text-[10px] font-medium text-gray-400">{marks}</sup>}
 				</span>
@@ -148,35 +149,45 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	return (
 		<section className={SECTION} aria-labelledby="pvp-stats">
 			<h3 id="pvp-stats" className={HEADING}>Recommended stats</h3>
-			<table className="mt-2 w-full table-fixed border-collapse text-left">
-				<thead>
-					<tr className="border-b border-gray-600">
-						<th className="w-[5.5rem] pb-2 align-middle text-xs font-bold uppercase tracking-wider text-gray-300">Style</th>
-						{STAT_COLUMNS.map((column) => (
-							<th key={column.key} className="pb-2 text-center" title={column.label}>
-								<img src={column.icon} alt={column.label} width={32} height={32} className="mx-auto h-8 w-8" />
-							</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{rows.map((row, index) => (
-						<tr key={index} className="border-b border-gray-700/80 last:border-b-0">
-							{/* align-top on every cell: the numbers share one line
-							    even when a cell or the label wraps below it. */}
-							<th scope="row" className="py-2 pr-1 align-top font-normal">
-								<span className="block text-sm font-semibold leading-5 text-gray-100">{STYLE_LABELS[row.style]}</span>
-								{row.label && <span className="block text-[11px] leading-tight text-gray-400">{row.label}</span>}
-							</th>
+			{/* Squeezed to a phone's width the five stat columns were about 50px
+			    beside a 5.5rem style column, and "1100++ 900++ 1100++" ran
+			    together (design polish item 26). Below sm the style column is
+			    4.75rem and the numbers 13px, which at 390px leaves about 11px
+			    between "1100++" and its neighbour and keeps "Everyone" clear of
+			    the first stat. Under 20rem of width (the smallest
+			    phones) the table scrolls sideways inside the section rather than
+			    squeezing the numbers back together. */}
+			<div className="mt-2 overflow-x-auto">
+				<table className="w-full min-w-[20rem] table-fixed border-collapse text-left">
+					<thead>
+						<tr className="border-b border-gray-600">
+							<th className="w-[4.75rem] pb-2 align-middle text-xs font-bold uppercase tracking-wider text-gray-300 sm:w-[5.5rem]">Style</th>
 							{STAT_COLUMNS.map((column) => (
-								<td key={column.key} className="py-2 text-center align-top leading-5">
-									<StatValue value={row[column.key] as string} label={column.label} />
-								</td>
+								<th key={column.key} className="pb-2 text-center" title={column.label}>
+									<img src={column.icon} alt={column.label} width={32} height={32} className="mx-auto h-8 w-8" />
+								</th>
 							))}
 						</tr>
-					))}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{rows.map((row, index) => (
+							<tr key={index} className="border-b border-gray-700/80 last:border-b-0">
+								{/* align-top on every cell: the numbers share one line
+								    even when a cell or the label wraps below it. */}
+								<th scope="row" className="py-2 pr-1 align-top font-normal">
+									<span className="block text-sm font-semibold leading-5 text-gray-100">{STYLE_LABELS[row.style]}</span>
+									{row.label && <span className="block text-[11px] leading-tight text-gray-400">{row.label}</span>}
+								</th>
+								{STAT_COLUMNS.map((column) => (
+									<td key={column.key} className="py-2 text-center align-top leading-5">
+										<StatValue value={row[column.key] as string} label={column.label} />
+									</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 			{footnotes.length > 0 && (
 				<ul className="mt-2 space-y-0.5 border-t border-gray-700/70 pt-2 text-xs text-gray-400">
 					{footnotes.map((footnote) => (
@@ -235,7 +246,7 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 	const umas = guide.uma_recommendations.filter((row) => row.style === style)
 	const note = guide.style_notes.find((row) => row.style === style)
-	// The position's own picks and the general ones, merged.
+	// The position's own picks; the general ones are in the side column.
 	const skills = skillsForPosition(guide.skill_recommendations, style)
 	const decks = guide.decks.filter((row) => row.style === style)
 	return (
@@ -325,12 +336,13 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	onStyleChange: (style: PvpStyle) => void
 }) {
 	const styles = stylesWithContent(guide)
-	// General skills (every position) show inside each position's tab. With
-	// no position tabs at all they get a section of their own instead.
-	const generalSkills = guide.skill_recommendations.filter((row) => row.style === "everyone")
+	// General skills (style "everyone") are team-wide, like the stats, so
+	// they get one section in the side column, under the Overview, instead of
+	// a copy inside every position's tab, where they read as its own picks.
+	const generalSkills = skillsForPosition(guide.skill_recommendations, "everyone")
 	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
 	const hasSide =
-		hasOverview || guide.team_comps.length > 0 || guide.stat_configs.length > 0
+		hasOverview || generalSkills.length > 0 || guide.team_comps.length > 0 || guide.stat_configs.length > 0
 
 	return (
 		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
@@ -344,7 +356,7 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 
 			<div
 				className={
-					hasSide && (styles.length > 0 || generalSkills.length > 0)
+					hasSide && styles.length > 0
 						? "grid items-start gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"
 						: "flex flex-col gap-4"
 				}
@@ -371,6 +383,14 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 										<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
 									</div>
 								)}
+							</section>
+						)}
+
+						{generalSkills.length > 0 && (
+							<section className={SECTION} aria-labelledby="pvp-general-skills">
+								<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
+								<p className="mt-1 text-xs text-gray-400">Recommended for every position.</p>
+								<SkillCategories rows={generalSkills} />
 							</section>
 						)}
 
@@ -401,14 +421,8 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 					</aside>
 				)}
 
-				{styles.length > 0 ? (
+				{styles.length > 0 && (
 					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} />
-				) : (
-					generalSkills.length > 0 && (
-						<div className={SECTION}>
-							<RecommendedSkills rows={skillsForPosition(guide.skill_recommendations, "everyone")} />
-						</div>
-					)
 				)}
 			</div>
 		</div>

@@ -27,7 +27,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -47,6 +47,8 @@ import {
 } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import {
+	markPvpIntroSeen,
+	pvpIntroSeen,
 	recalledPvpPage,
 	recalledPvpStyle,
 	rememberPvpPage,
@@ -100,14 +102,35 @@ const FALLBACK_TITLE = "PvP Guides"
 /** The page's views, in tab order. The id is the `?view=` value. */
 type PvpView = "recommendations" | "team" | "gallery"
 const VIEW_PARAM = "view"
-const VIEWS: Array<{ id: PvpView; label: string; icon: LucideIcon; soon: boolean }> = [
-	{ id: "recommendations", label: "Recommendations", icon: BookOpen, soon: false },
+/** `short`, when set, is the label a phone shows; the full one stays the tab's name. */
+const VIEWS: Array<{ id: PvpView; label: string; short?: string; icon: LucideIcon; soon: boolean }> = [
+	{ id: "recommendations", label: "Recommendations", short: "Guide", icon: BookOpen, soon: false },
 	{ id: "team", label: "My team", icon: Users, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
 ]
 
 function parseView(value: string | null): PvpView {
 	return VIEWS.some((view) => view.id === value) ? (value as PvpView) : "recommendations"
+}
+
+/** The page's own parameters, in the order an address names them. "Copy link" builds the same order. */
+const PARAM_ORDER = [PVP_EVENT_PARAM, VIEW_PARAM, PVP_STYLE_PARAM]
+
+/**
+ * The params with the page's own first, in PARAM_ORDER, so the address bar
+ * reads the same whichever control was clicked last. Anything else (the
+ * gallery's `sort`, `uma`, `post`) follows in the order it already had.
+ */
+function inPageOrder(params: URLSearchParams): URLSearchParams {
+	const ordered = new URLSearchParams()
+	for (const name of PARAM_ORDER) {
+		const value = params.get(name)
+		if (value !== null) ordered.set(name, value)
+	}
+	params.forEach((value, name) => {
+		if (!PARAM_ORDER.includes(name)) ordered.append(name, value)
+	})
+	return ordered
 }
 
 /**
@@ -170,11 +193,21 @@ const PvpGuide = () => {
 		if (urlStyle) rememberPvpStyle(urlStyle)
 	}, [urlStyle])
 
+	/**
+	 * Every address the page writes names its event, the one on screen when the
+	 * address lacks it. Without that, Recommendations (which DELETES `?view=`)
+	 * turned a page opened bare from the navbar back into the bare `/app/pvp`,
+	 * and the wrapper above read that as a fresh arrival and sent it back to the
+	 * remembered `?view=team`: the tab could not be reached until the event was
+	 * changed. Pinned, the bare address only ever comes from outside the page,
+	 * and the memory only ever gets an address this page wrote with its event.
+	 */
 	const setParam = (key: string, value: string | null, options?: { replace?: boolean }) =>
 		setSearchParams((params) => {
 			if (value === null) params.delete(key)
 			else params.set(key, value)
-			return params
+			if (event && !params.has(PVP_EVENT_PARAM)) params.set(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(event)))
+			return inPageOrder(params)
 		}, options)
 	// Changing the event keeps `?style=`, so Next stays on the reader's style.
 	const select = (next: RaceEvent | undefined) => {
@@ -186,6 +219,17 @@ const PvpGuide = () => {
 
 	// Fetched only on the view that shows it.
 	const guideState = usePvpGuide(event && view === "recommendations" ? refForRaceEvent(event) : null)
+
+	// The intro shows in full until a guide has been on screen once on this
+	// device, then folds behind a link (services/pvpPageMemory.ts). Read once
+	// per mount, at render, which is safe here: this page renders only behind
+	// the /app loading gate. Marking it does not fold the intro on this visit;
+	// the next one opens folded.
+	const [introSeen] = useState(pvpIntroSeen)
+	const [introOpen, setIntroOpen] = useState(false)
+	useEffect(() => {
+		if (guideState.status === "ready") markPvpIntroSeen()
+	}, [guideState.status])
 	// The tab the guide shows, the same pick PvpGuideView makes, for the link.
 	const shownStyle =
 		guideState.status === "ready" ? pickStyle(stylesWithContent(guideState.guide), wantedStyle) : null
@@ -214,7 +258,7 @@ const PvpGuide = () => {
 	}
 
 	return (
-		<div className="w-full bg-gray-900 pb-8">
+		<div className="w-full pb-8">
 			<ControlBand
 				events={choices}
 				event={event}
@@ -227,11 +271,23 @@ const PvpGuide = () => {
 
 			<div className="mx-auto mt-3 flex w-[calc(100%-1rem)] max-w-[96rem] flex-col gap-3 sm:w-[calc(100%-2rem)]">
 				<header>
-					<h1 className="flex items-center gap-2 text-lg font-bold text-brand">
-						<Swords className="h-5 w-5 shrink-0" />
-						{page?.title ?? FALLBACK_TITLE}
-					</h1>
-					{page && (
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+						<h1 className="font-display flex items-center gap-2 text-lg font-bold text-brand">
+							<Swords className="h-5 w-5 shrink-0" />
+							{page?.title ?? FALLBACK_TITLE}
+						</h1>
+						{page && introSeen && (
+							<button
+								type="button"
+								aria-expanded={introOpen}
+								onClick={() => setIntroOpen((open) => !open)}
+								className="text-xs font-medium text-gray-400 underline-offset-2 transition hover:text-gray-100 hover:underline"
+							>
+								{introOpen ? "Hide the intro" : "About these guides"}
+							</button>
+						)}
+					</div>
+					{page && (!introSeen || introOpen) && (
 						<div className="text-sm">
 							<MarkdownContent markdown={page.body} paragraphClassName="mt-1 leading-relaxed text-gray-400" />
 						</div>
@@ -263,12 +319,12 @@ const PvpGuide = () => {
 										</div>
 									)}
 									{guideState.status === "none" && (
-										<p className="rounded-xl border border-gray-700 bg-gray-800/60 p-4 text-sm text-gray-300">
+										<p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">
 											No guide for this event yet.
 										</p>
 									)}
 									{guideState.status === "error" && (
-										<p className="rounded-xl border border-gray-700 bg-gray-800/60 p-4 text-sm text-gray-300">
+										<p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">
 											The guide didn't load. Try another event, or reload the page.
 										</p>
 									)}
@@ -301,10 +357,12 @@ function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView)
 	return (
 		// No overflow-x-auto here: overflow on one axis makes the other "auto"
 		// too, and each tab's -mb-px underline (which sits on the row's border)
-		// overflowed by 1px and drew a vertical scrollbar. Three short tabs
-		// wrap on a narrow screen instead of scrolling. Each tab is flex-1, so
-		// the three share the page's width.
-		<div role="tablist" aria-label="View" className="flex flex-wrap gap-1 border-b border-gray-700">
+		// overflowed by 1px and drew a vertical scrollbar. A three-column grid,
+		// so the tabs share the width and never wrap: at 390px a flex row
+		// dropped "Gallery" alone onto a second line. On a phone a tab with a
+		// `short` label shows that, while its full label stays its name for a
+		// screen reader (and for tests querying by name).
+		<div role="tablist" aria-label="View" className="grid grid-cols-3 gap-1 border-b border-gray-700">
 			{VIEWS.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
@@ -315,14 +373,21 @@ function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView)
 						role="tab"
 						aria-selected={active}
 						onClick={() => onChange(entry.id)}
-						className={`-mb-px flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition ${
+						className={`-mb-px flex min-w-0 items-center justify-center gap-1.5 border-b-2 px-2 py-2 text-sm font-semibold transition sm:px-3 ${
 							active
 								? "border-brand text-brand"
 								: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
 						}`}
 					>
-						<Icon className="h-4 w-4" />
-						{entry.label}
+						<Icon className="h-4 w-4 shrink-0" />
+						{entry.short ? (
+							<>
+								<span className="sm:hidden" aria-hidden="true">{entry.short}</span>
+								<span className="sr-only sm:not-sr-only">{entry.label}</span>
+							</>
+						) : (
+							entry.label
+						)}
 						{entry.soon && (
 							<span className="rounded-full border border-gray-600 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-gray-400">
 								Soon
@@ -361,13 +426,15 @@ function ControlBand({ events, event, index, now, showPast, onTogglePast, onSele
 	}
 	return (
 		<div className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
-			<div className="mx-auto grid w-full max-w-[96rem] grid-cols-1 items-stretch gap-2 px-3 py-2 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-2">
-				<div className="flex w-full justify-self-start md:w-auto">
-					<button type="button" className={`${controlButtonClass} w-full sm:w-auto`} onClick={onTogglePast}>
-						<History className="h-4 w-4 text-brand" />
-						{showPast ? "Hide past events" : "Show past events"}
-					</button>
-				</div>
+			{/* One centred group from `md:`: the past toggle sits beside the event
+			    controls it changes. It was pinned to the far left of a three-column
+			    grid, with the right column left empty to balance it. Stacked on a
+			    phone, toggle first. */}
+			<div className="mx-auto flex w-full max-w-[96rem] flex-col items-stretch gap-2 px-3 py-2 md:flex-row md:items-center md:justify-center md:px-2">
+				<button type="button" className={`${controlButtonClass} w-full md:w-auto`} onClick={onTogglePast}>
+					<History className="h-4 w-4 text-brand" />
+					{showPast ? "Hide past events" : "Show past events"}
+				</button>
 				<div className="flex items-center justify-center gap-2">
 					<button
 						type="button"
@@ -380,7 +447,7 @@ function ControlBand({ events, event, index, now, showPast, onTogglePast, onSele
 					</button>
 					<select
 						aria-label="Event"
-						className={`${categorySelectClass} min-w-0 max-w-[22rem] flex-1`}
+						className={`${categorySelectClass} min-w-0 max-w-[22rem] flex-1 md:w-[22rem] md:flex-none`}
 						value={event ? formatPvpEvent(refForRaceEvent(event)) : ""}
 						onChange={(change) =>
 							onSelect(events.find((candidate) => formatPvpEvent(refForRaceEvent(candidate)) === change.target.value))
@@ -399,7 +466,6 @@ function ControlBand({ events, event, index, now, showPast, onTogglePast, onSele
 						<ChevronRight className="h-4 w-4" />
 					</button>
 				</div>
-				<div />
 			</div>
 		</div>
 	)
@@ -521,26 +587,33 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 						<h3 className={PANEL_LABEL}>
 							Schedule{event.is_predicted && <span className="normal-case tracking-normal"> (estimated)</span>}
 						</h3>
+						{/* A rail across from sm; below sm a list DOWN the page with the
+						    rail on its left (design polish item 26). Five milestones
+						    across 350px overlapped: "Round 1 2026/10/31Round 2 2026/11/2".
+						    The column count is a variable so the grid template can be an
+						    sm: class; an inline grid-template would apply at every width. */}
 						<ol
-							className="grid gap-y-2"
-							style={{ gridTemplateColumns: `repeat(${keyDates.length}, minmax(0, 1fr))` }}
+							className="flex flex-col gap-3 sm:grid sm:grid-cols-[repeat(var(--schedule-columns),minmax(0,1fr))] sm:gap-y-2"
+							style={{ "--schedule-columns": keyDates.length } as CSSProperties}
 							aria-label="Key dates"
 						>
 							{keyDates.map((milestone, position) => {
 								const done = nextIndex === -1 || position < nextIndex
 								const isNext = position === nextIndex
 								return (
-									<li key={milestone.label} className="relative min-w-0 pr-2" aria-current={isNext ? "step" : undefined}>
-										{/* The line runs from this dot to the next one. */}
+									<li key={milestone.label} className="relative flex min-w-0 items-start gap-3 sm:block sm:pr-2" aria-current={isNext ? "step" : undefined}>
+										{/* The line runs from this dot to the next one: down the
+										    left edge on a phone (through the 12px gap to the next
+										    dot), across on wider screens. */}
 										{position < keyDates.length - 1 && (
 											<span
 												aria-hidden="true"
-												className={`absolute left-1.5 right-0 top-[5px] h-0.5 ${done ? "bg-brand/60" : "bg-gray-700"}`}
+												className={`absolute -bottom-3.5 left-[5px] top-3.5 w-0.5 sm:bottom-auto sm:left-1.5 sm:right-0 sm:top-[5px] sm:h-0.5 sm:w-auto ${done ? "bg-brand/60" : "bg-gray-700"}`}
 											/>
 										)}
 										<span
 											aria-hidden="true"
-											className={`relative block h-3 w-3 rounded-full border-2 ${
+											className={`relative mt-0.5 block h-3 w-3 shrink-0 rounded-full border-2 sm:mt-0 ${
 												isNext
 													? "border-brand bg-gray-900 ring-4 ring-brand/20"
 													: done
@@ -548,11 +621,13 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 														: "border-gray-600 bg-gray-800"
 											}`}
 										/>
-										<div className={`mt-1.5 text-[11px] leading-tight ${isNext ? "text-brand" : "text-gray-400"}`}>
-											{milestone.label}
-										</div>
-										<div className={`text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
-											{formatDate(milestone.date)}
+										<div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 sm:block">
+											<div className={`text-sm leading-tight sm:mt-1.5 sm:text-[11px] ${isNext ? "text-brand" : "text-gray-400"}`}>
+												{milestone.label}
+											</div>
+											<div className={`shrink-0 text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
+												{formatDate(milestone.date)}
+											</div>
 										</div>
 									</li>
 								)
@@ -585,7 +660,7 @@ function NewCardsSection({ event, previous, umaBanners, supportBanners }: {
 	const count = cards.umas.length + cards.supports.length
 	if (count === 0) return null
 	return (
-		<section className="rounded-xl border border-gray-700 bg-gray-800/60 p-3" aria-labelledby="pvp-new-cards">
+		<section className="rounded-xl border border-edge bg-gray-800/60 p-3" aria-labelledby="pvp-new-cards">
 			<h3 id="pvp-new-cards" className="text-sm font-semibold text-gray-100">
 				<button
 					type="button"

@@ -198,7 +198,7 @@ export const SelectorTargetPicker = ({
 						role="dialog"
 						aria-modal="true"
 						aria-label={`Choose ${isUma ? "an uma" : "a support card"}`}
-						className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-gray-600 bg-gray-800 shadow-2xl"
+						className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-edge bg-gray-800 shadow-2xl"
 					>
 						<header className="flex flex-wrap items-center gap-3 border-b border-gray-700 bg-gray-800/80 px-4 py-3">
 							<div className="min-w-0 flex-1">
@@ -221,7 +221,7 @@ export const SelectorTargetPicker = ({
 							<button
 								type="button"
 								aria-label="Close card picker"
-								className="flex h-9 w-9 items-center justify-center rounded border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+								className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
 								onClick={() => setIsOpen(false)}
 							>
 								<X className="h-5 w-5" />

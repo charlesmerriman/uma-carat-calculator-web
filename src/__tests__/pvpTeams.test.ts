@@ -10,6 +10,7 @@ import {
 	setMemberUma,
 	teamSkillSources,
 	umaBlockReason,
+	whiteSkillPairs,
 } from "../utils/pvpTeams"
 import type { PvpGuide } from "../types/pvpGuide"
 import type { PvpTeam, PvpTeamMember } from "../types/pvpTeam"
@@ -19,19 +20,24 @@ const OGURI = { id: 1, name: "Oguri Cap", character_id: 1006, running_style: 3 }
 const OGURI_XMAS = { id: 2, name: "Oguri Cap (Christmas)", character_id: 1006, running_style: 3 }
 const MARU = { id: 3, name: "Maruzensky", character_id: 1004, running_style: 1 }
 const OPERA_O = { id: 4, name: "T.M. Opera O (New Year)", character_id: 1015, running_style: 1 }
-const UMAS = new Map([OGURI, OGURI_XMAS, MARU, OPERA_O].map((uma) => [uma.id, uma]))
+const RICE = { id: 5, name: "Rice Shower (Halloween)", character_id: 1030, running_style: 3 }
+const UMAS = new Map([OGURI, OGURI_XMAS, MARU, OPERA_O, RICE].map((uma) => [uma.id, uma]))
 
-// Two Agnes Tachyon cards with different titles, a third uma, two group
-// cards (Team Sirius is filed under Special Week in the game data), and cards
-// spelled unlike their umas ("TM Opera O" for "T.M. Opera O").
-const CARDS = new Map(
+// The game's six Team Sirius umas. It files the card under Special Week only.
+const SIRIUS = ["Mejiro McQueen", "Rice Shower", "Winning Ticket", "Narita Brian", "Silence Suzuka", "Special Week"]
+
+// Two Agnes Tachyon cards with different titles, a third uma, two Team
+// Sirius group cards, cards spelled unlike their umas ("TM Opera O" for
+// "T.M. Opera O"), and a group card with no members listed (not on global
+// yet, or an older API), named like an uma to show the name never counts.
+const CARDS = new Map<number, { id: number; name: string; card_type: string; group_members?: string[] }>(
 	[
 		{ id: 302, name: "Agnes Tachyon", card_type: "wit" },
 		{ id: 303, name: "Agnes Tachyon", card_type: "speed" },
 		{ id: 304, name: "Kitasan Black", card_type: "speed" },
 		{ id: 305, name: "Special Week", card_type: "guts" },
-		{ id: 306, name: "Team Sirius", card_type: "group" },
-		{ id: 307, name: "Team Sirius", card_type: "group" },
+		{ id: 306, name: "Team Sirius", card_type: "group", group_members: SIRIUS },
+		{ id: 307, name: "Team Sirius", card_type: "group", group_members: SIRIUS },
 		{ id: 308, name: "Oguri Cap", card_type: "power" },
 		{ id: 309, name: "TM Opera O", card_type: "stamina" },
 		{ id: 310, name: "Maruzensky", card_type: "group" },
@@ -71,6 +77,12 @@ describe("pvpTeams", () => {
 		expect(umaBlockReason(members, 1, OGURI_XMAS, LOOKUPS)).toBeNull()
 	})
 
+	it("blocks swapping in an uma whose group card is in that spot's deck", () => {
+		const members = setCard(setMemberUma([], 0, MARU), 0, 1, 306)
+		expect(umaBlockReason(members, 0, RICE, LOOKUPS)).toBe("Rice Shower is in Team Sirius")
+		expect(umaBlockReason(members, 1, RICE, LOOKUPS)).toBeNull()
+	})
+
 	it("blocks a card already in the deck, borrow slot included", () => {
 		const [member] = setCard(setMemberUma([], 0, MARU), 0, 1, 302)
 		expect(cardBlockReason(member, 6, 302, LOOKUPS)).toBe("Already in this deck")
@@ -89,13 +101,27 @@ describe("pvpTeams", () => {
 		expect(cardBlockReason(member, 2, 304, LOOKUPS)).toBeNull()
 	})
 
-	it("lets group cards share a deck with their umas and with each other", () => {
-		const [member] = setCard(setCard(setMemberUma([], 0, MARU), 0, 1, 305), 0, 2, 306)
-		// Team Sirius sits beside a Special Week card, and a second group card is fine.
-		expect(cardBlockReason(member, 3, 307, LOOKUPS)).toBeNull()
-		expect(cardBlockReason(member, 3, 304, LOOKUPS)).toBeNull()
+	it("counts a group card as a card of each of its umas", () => {
+		const [withWeek] = setCard(setMemberUma([], 0, MARU), 0, 1, 305)
+		// Team Sirius beside a Special Week card, the one the game files it under...
+		expect(cardBlockReason(withWeek, 2, 306, LOOKUPS)).toBe("Special Week already has a card in this deck")
+		// ...and a Special Week card beside Team Sirius, borrow slot included.
+		const [withSirius] = setCard(setMemberUma([], 0, MARU), 0, 1, 306)
+		expect(cardBlockReason(withSirius, 2, 305, LOOKUPS)).toBe("Special Week is in Team Sirius")
+		expect(cardBlockReason(withSirius, 6, 305, LOOKUPS)).toBe("Special Week is in Team Sirius")
+		// Two Team Sirius cards share all six umas.
+		expect(cardBlockReason(withSirius, 2, 307, LOOKUPS)).toBe("Team Sirius already has a card in this deck")
 		// The same group card twice is still the same card twice.
-		expect(cardBlockReason(member, 3, 306, LOOKUPS)).toBe("Already in this deck")
+		expect(cardBlockReason(withSirius, 2, 306, LOOKUPS)).toBe("Already in this deck")
+		// Swapping Team Sirius for the Special Week card in its own slot is fine.
+		expect(cardBlockReason(withSirius, 1, 305, LOOKUPS)).toBeNull()
+		expect(cardBlockReason(withSirius, 2, 304, LOOKUPS)).toBeNull()
+	})
+
+	it("lets a group card with no members listed block nothing but itself", () => {
+		const [member] = setCard(setMemberUma([], 0, OGURI), 0, 1, 310)
+		expect(cardBlockReason(member, 2, 306, LOOKUPS)).toBeNull()
+		expect(cardBlockReason(member, 2, 310, LOOKUPS)).toBe("Already in this deck")
 	})
 
 	it("blocks a card of the uma training with the deck, in any outfit and spelling", () => {
@@ -105,7 +131,11 @@ describe("pvpTeams", () => {
 		expect(cardBlockReason(oguri, 1, 304, LOOKUPS)).toBeNull()
 		const [opera] = setMemberUma([], 0, OPERA_O)
 		expect(cardBlockReason(opera, 1, 309, LOOKUPS)).toBe("TM Opera O can't support herself")
-		// A group card filed under the trainee is still exempt.
+		// A group card can't support any of its umas, not just the one it is filed under.
+		const [rice] = setMemberUma([], 0, RICE)
+		expect(cardBlockReason(rice, 1, 306, LOOKUPS)).toBe("Rice Shower can't support herself")
+		expect(cardBlockReason(rice, 6, 306, LOOKUPS)).toBe("Rice Shower can't support herself")
+		// A group card's own name is not an uma: this one lists no members.
 		const [maru] = setMemberUma([], 0, MARU)
 		expect(cardBlockReason(maru, 1, 310, LOOKUPS)).toBeNull()
 	})
@@ -199,3 +229,31 @@ describe("drawerTeam", () => {
 	})
 })
 
+
+describe("whiteSkillPairs", () => {
+	const skill = (id: number, rarity: number, tier: number, group_id: number | null) => ({
+		id, name: `Skill ${id}`, description: "", image: null, rarity, tier, group_id, cost: null,
+	})
+
+	it("pairs a group's ○ and ◎ whites, never its gold or its × penalty", () => {
+		const pairs = whiteSkillPairs([
+			skill(1, 1, 1, 20001), // Right-Handed ○
+			skill(2, 1, 2, 20001), // Right-Handed ◎
+			skill(3, 2, 3, 20001), // Right-Handed Demon (gold)
+			skill(4, 1, -1, 20001), // Right-Handed ×
+		])
+		expect(pairs.get(1)).toEqual([1, 2])
+		expect(pairs.get(2)).toEqual([1, 2])
+		expect(pairs.has(3)).toBe(false)
+		expect(pairs.has(4)).toBe(false)
+	})
+
+	it("leaves out a white with no second white: a ○ and its gold are two skills", () => {
+		const pairs = whiteSkillPairs([
+			skill(5, 1, 1, 20033), // Corner Adept ○
+			skill(6, 2, 2, 20033), // Professor of Curvature (gold)
+			skill(7, 1, 1, null),
+		])
+		expect(pairs.size).toBe(0)
+	})
+})

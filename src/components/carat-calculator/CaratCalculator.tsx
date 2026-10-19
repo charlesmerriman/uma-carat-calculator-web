@@ -1,6 +1,8 @@
 import type React from "react"
-import { Fragment, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
+import { ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { BannerRow } from "./BannerRow"
@@ -10,8 +12,10 @@ import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcon
 import { PlannerSectionBand } from "./PlannerSectionBand"
 import { buildPlannerRows, SCENARIO_BANDS_ONLY } from "../../utils/plannerSections"
 import { PlanSwitcher } from "./PlanSwitcher"
+import { CaratForecastChart } from "./CaratForecastChart"
+import { useForecastPosition } from "../../hooks/useForecastPosition"
 import { EMPTY_BANNER_RESOURCES } from "../../hooks/bannerResources"
-import { useBannerResources } from "../../hooks/useBannerResources"
+import { useBannerProjection } from "../../hooks/useBannerResources"
 import {
 	nextTempId,
 	plannedBannerKey,
@@ -80,7 +84,9 @@ export const CaratCalculator: React.FC = () => {
 		setStagedBanners,
 	} = useCalculatorData()
 
-	const bannerResources = useBannerResources({
+	// The rows, plus what the daily pulls on banners outside the plan took
+	// (the two gear-menu switches); the chart draws the latter.
+	const { rows: bannerResources, backgroundSpends } = useBannerProjection({
 		userStatsData,
 		clubRankData,
 		teamTrialsRankData,
@@ -91,6 +97,8 @@ export const CaratCalculator: React.FC = () => {
 		userPlannedPurchaseData,
 		incomeLedger,
 		constants: calculationConstants,
+		umaBannerData,
+		supportBannerData,
 	})
 
 	// The sheet's render list: the same rows, with section bands interleaved for
@@ -112,6 +120,24 @@ export const CaratCalculator: React.FC = () => {
 			),
 		[userPlannedBannerData, scenarioData, anniversaryEventData]
 	)
+	// The last banner row on screen (bands skipped), whose bulk-adjust pads open
+	// above their fields. Its original index, the same key the rows carry.
+	const lastRowIndex = plannerRows.reduce(
+		(last, row) => (row.kind === "banner" ? row.index : last),
+		-1
+	)
+
+	// Above the rows or below them (the default), remembered per device.
+	const forecastPosition = useForecastPosition()
+
+	// The row wearing .row-arrival, a one-off brand flash, by its index in
+	// userPlannedBannerData. Two things flash a row: confirming it from staging
+	// (so the eye can follow it to wherever the date sort put it) and clicking
+	// its dot or bar on the forecast chart (which scrolls to it first). By
+	// index, not by key: a new row's tempId and a saved row's id are separate
+	// counters that can collide. Cleared when the flash ends, so the class (and
+	// its position: relative) never lingers.
+	const [flashIndex, setFlashIndex] = useState<number | null>(null)
 
 	if (!userStatsData) {
 		return <div>Loading...</div>
@@ -165,6 +191,21 @@ export const CaratCalculator: React.FC = () => {
 
 		setUserPlannedBannerData(updated)
 		setStagedBanners((prev) => prev.filter((b) => b.tempId !== tempId))
+		setFlashIndex(updated.indexOf(banner))
+	}
+
+	// From the forecast chart: bring the banner's row on screen and flash it.
+	// Cleared for a frame first, so a second click on the same banner restarts
+	// the flash rather than doing nothing.
+	const handleSelectBanner = (index: number): void => {
+		setFlashIndex(null)
+		requestAnimationFrame(() => {
+			setFlashIndex(index)
+			const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+			document
+				.querySelector(`[data-planner-index="${index}"]`)
+				?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" })
+		})
 	}
 
 	const handleDiscardStagedBanner = (tempId: number): void => {
@@ -191,6 +232,22 @@ export const CaratCalculator: React.FC = () => {
 	// there is no section at all.
 	const showCalculatorSection = userPlannedBannerData.length > 0 || stagedBanners.length > 0
 
+	// The forecast chart, in whichever slot the viewer chose: above the rows or
+	// below them. It reads the same results the rows show, and draws nothing
+	// until a row with a future end date exists. One render function, so the
+	// two slots can't drift apart.
+	const renderForecast = (spacing: string) => (
+		<CaratForecastChart
+			resources={bannerResources}
+			backgroundSpends={backgroundSpends}
+			position={forecastPosition.position}
+			onMove={forecastPosition.move}
+			scrollIntoViewOnMount={forecastPosition.justMoved}
+			onSelectBanner={handleSelectBanner}
+			className={spacing}
+		/>
+	)
+
 	// Icon-only header, shared by the staging and sheet header rows below so the
 	// two can't drift. Same icons the mobile card labels its Reserved cell with.
 	const reservedHeaderCell = (
@@ -200,7 +257,7 @@ export const CaratCalculator: React.FC = () => {
 	)
 
 	return (
-		<div className="w-full bg-gray-900">
+		<div className="w-full">
 			{/* The calculator gets a wider desktop canvas without changing Timeline's
 			    shared .page-container. Income & Resources and the banner sheet share
 			    this same width so their edges stay aligned. */}
@@ -224,7 +281,7 @@ export const CaratCalculator: React.FC = () => {
 					    one and shadow it, so `@banner-table:` still measures the sheet's
 					    box, not this one — that is the whole reason the two tokens differ
 					    by the gutter. */}
-					<div className="@container w-full overflow-hidden rounded-none border border-gray-600 bg-gray-900 shadow-sm sm:rounded-b-xl">
+					<div className="@container w-full overflow-hidden rounded-none border border-edge bg-gray-900 shadow-(--card-shadow) sm:rounded-b-xl">
 						<IncomeForm />
 
 						<div className="border-t border-gray-700 pb-4">
@@ -241,7 +298,7 @@ export const CaratCalculator: React.FC = () => {
 											<div className="hidden w-px bg-gray-700 self-stretch sm:block" />
 										)}
 										<button
-											className={`flex-1 rounded-lg py-2.5 font-medium transition ${button.className}`}
+											className={`flex-1 rounded-md py-2.5 font-medium transition ${button.className}`}
 											onClick={() => handleAddBanner(button.type)}
 										>
 											⊕{" "}
@@ -259,6 +316,29 @@ export const CaratCalculator: React.FC = () => {
 									</Fragment>
 								))}
 							</div>
+
+							{/* The empty plan: nothing planned and nothing staged. Without it a
+							    first visit is three buttons over blank canvas. It says what
+							    to do first and points at the Timeline, the other way in (a
+							    banner staged there lands in the staging area below). Gone
+							    as soon as a row exists, staged or planned. */}
+							{userPlannedBannerData.length === 0 && stagedBanners.length === 0 && (
+								<div className="mx-3 rounded-lg border border-dashed border-gray-600 bg-gray-800/40 px-4 py-6 text-center sm:mx-4">
+									<p className="text-sm font-semibold text-gray-200">Your plan is empty</p>
+									<p className="mx-auto mt-1 max-w-xl text-sm text-pretty text-gray-400">
+										Add a banner with the buttons above, then set how many pulls you
+										want. The Timeline lists every upcoming banner, and you can stage
+										one from there too.
+									</p>
+									<Link
+										to="/app/timeline"
+										className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition hover:text-brand/75"
+									>
+										Open the Timeline
+										<ArrowRight className="h-4 w-4" aria-hidden="true" />
+									</Link>
+								</div>
+							)}
 
 							{/* Staging area — slides in/out as stagedBanners are added or cleared */}
 							<AnimatePresence>
@@ -349,9 +429,10 @@ export const CaratCalculator: React.FC = () => {
 											<div className="flex-1 h-px bg-brand/20" />
 										</div>
 									)}
+									{forecastPosition.position === "top" && renderForecast("mb-3")}
 									{/* Own @container, as in the staging area above. */}
 									<div className="@container">
-										<div className="banner-grid hidden w-full items-center text-xs text-gray-400 font-medium bg-gray-800 border-b border-gray-700 rounded-t-lg py-1.5 @banner-table:grid">
+										<div className="banner-grid hidden w-full items-center text-xs text-gray-400 font-medium bg-gray-800 border-b border-edge rounded-t-lg py-1.5 @banner-table:grid">
 											<div className="text-center">Type</div>
 											<div className="text-center">Images</div>
 											<div className="text-center">Banner</div>
@@ -399,14 +480,27 @@ export const CaratCalculator: React.FC = () => {
 													const resources =
 														bannerResources[plannerRow.index] ?? EMPTY_BANNER_RESOURCES
 
+													const rowKey = plannedBanner.id ?? plannedBanner.tempId
+													const justArrived = plannerRow.index === flashIndex
+
 													return (
 														<motion.div
-															key={plannedBanner.id ?? plannedBanner.tempId}
+															key={rowKey}
 															layout
 															initial={{ opacity: 0, y: -6 }}
 															animate={{ opacity: 1, y: 0 }}
 															exit={{ opacity: 0, y: -6 }}
 															transition={{ duration: 0.18 }}
+															className={justArrived ? "row-arrival" : undefined}
+															// The forecast chart's jump target (handleSelectBanner).
+															data-planner-index={plannerRow.index}
+															onAnimationEnd={(event) => {
+																// CSS animationend bubbles up from every row's own
+																// animations; only the flash's own end clears it.
+																if (justArrived && event.animationName === "row-arrival") {
+																	setFlashIndex(null)
+																}
+															}}
 														>
 															<BannerRow
 																plannedBanner={plannedBanner}
@@ -423,6 +517,7 @@ export const CaratCalculator: React.FC = () => {
 																setUserPlannedBannerData={setUserPlannedBannerData}
 																resources={resources}
 																initialBannerType={plannedBanner.initialBannerType}
+																isLastRow={plannerRow.index === lastRowIndex}
 															/>
 														</motion.div>
 													)
@@ -430,6 +525,7 @@ export const CaratCalculator: React.FC = () => {
 											</AnimatePresence>
 										</div>
 									</div>
+									{forecastPosition.position === "bottom" && renderForecast("mt-4")}
 								</div>
 							)}
 						</div>
