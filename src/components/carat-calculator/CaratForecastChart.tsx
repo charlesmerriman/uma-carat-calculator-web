@@ -3,6 +3,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { AlertTriangle, ArrowDownToLine, ArrowUpToLine, ChevronDown } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import type { BannerResources } from "../../hooks/bannerResources"
+import type { BackgroundSpend } from "../../hooks/useBannerResources"
 import { createIncomeProjection, projectionWalkOrder } from "../../utils/incomeProjection"
 import {
 	buildCaratForecast,
@@ -100,6 +101,8 @@ const ForecastPlot = lazy(loadForecastPlot)
 
 interface CaratForecastChartProps {
 	resources: BannerResources[]
+	/** The daily pulls on banners outside the plan, from the same engine call. */
+	backgroundSpends: BackgroundSpend[]
 	/** Which slot the page put it in; names the move button's direction. */
 	position: ForecastPosition
 	onMove: () => void
@@ -112,6 +115,7 @@ interface CaratForecastChartProps {
 
 export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	resources,
+	backgroundSpends,
 	position,
 	onMove,
 	scrollIntoViewOnMount,
@@ -148,6 +152,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 			}),
 			walkOrder: projectionWalkOrder(userPlannedBannerData),
 			resources,
+			backgroundSpends,
 			currentFreeCarats: userStatsData.current_carat || 0,
 			currentPaidCarats: userStatsData.current_paid_carat || 0,
 			currentUmaTickets: userStatsData.uma_ticket || 0,
@@ -165,6 +170,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		calculationConstants,
 		userPlannedBannerData,
 		resources,
+		backgroundSpends,
 	])
 
 	const endDateLookup = useCallback(

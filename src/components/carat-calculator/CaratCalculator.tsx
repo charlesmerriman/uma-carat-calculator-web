@@ -15,7 +15,7 @@ import { PlanSwitcher } from "./PlanSwitcher"
 import { CaratForecastChart } from "./CaratForecastChart"
 import { useForecastPosition } from "../../hooks/useForecastPosition"
 import { EMPTY_BANNER_RESOURCES } from "../../hooks/bannerResources"
-import { useBannerResources } from "../../hooks/useBannerResources"
+import { useBannerProjection } from "../../hooks/useBannerResources"
 import {
 	nextTempId,
 	plannedBannerKey,
@@ -84,7 +84,9 @@ export const CaratCalculator: React.FC = () => {
 		setStagedBanners,
 	} = useCalculatorData()
 
-	const bannerResources = useBannerResources({
+	// The rows, plus what the daily pulls on banners outside the plan took
+	// (the two gear-menu switches); the chart draws the latter.
+	const { rows: bannerResources, backgroundSpends } = useBannerProjection({
 		userStatsData,
 		clubRankData,
 		teamTrialsRankData,
@@ -95,6 +97,8 @@ export const CaratCalculator: React.FC = () => {
 		userPlannedPurchaseData,
 		incomeLedger,
 		constants: calculationConstants,
+		umaBannerData,
+		supportBannerData,
 	})
 
 	// The sheet's render list: the same rows, with section bands interleaved for
@@ -235,6 +239,7 @@ export const CaratCalculator: React.FC = () => {
 	const renderForecast = (spacing: string) => (
 		<CaratForecastChart
 			resources={bannerResources}
+			backgroundSpends={backgroundSpends}
 			position={forecastPosition.position}
 			onMove={forecastPosition.move}
 			scrollIntoViewOnMount={forecastPosition.justMoved}
