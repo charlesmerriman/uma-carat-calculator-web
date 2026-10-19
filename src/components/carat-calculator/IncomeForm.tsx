@@ -378,14 +378,16 @@ export const IncomeForm = () => {
 			>
 				<div className="bg-gray-800">
 					{/* ── Top row: Income Sources + Current Resources ──
-					    Two columns from @3xl (48rem of panel) up to @income-wide, where
-					    the three-track desktop grid takes over (design polish item
-					    19a). Without the middle step a 1024 to 1258px window (a
-					    landscape tablet, a small laptop) drew the whole panel as one
-					    centred phone-width column under a full desktop navbar. In the
-					    middle layout the left column is ranks over purchases and the
-					    right one is resources, each block in its compact form. */}
-					<div className="grid grid-cols-1 @3xl:grid-cols-2 @income-wide:grid-cols-[2fr_1fr]">
+					    ONE column up to @income-wide, where the three-track desktop
+					    grid takes over. From @3xl (48rem of panel) each block spreads
+					    across that column instead of sitting in a capped phone-width
+					    strip: the four ranks two by two, purchases on one line, the
+					    eight resources four across (design polish item 19a). Below
+					    @3xl it was one centred phone-width column under a full desktop
+					    navbar on a 1024 to 1258px window. Splitting the row into two
+					    columns was tried first and left a tall empty well under the
+					    resources, which are half the height of ranks plus purchases. */}
+					<div className="grid grid-cols-1 @income-wide:grid-cols-[2fr_1fr]">
 						{/* Related settings share one bordered surface; dividers describe the
 					    relationship without turning each group into its own card. */}
 						<div className="p-3 @income-wide:p-5">
@@ -408,10 +410,10 @@ export const IncomeForm = () => {
 									    hand's width of dead space between a label and its input. 34rem
 									    is about what the widest phone gives these blocks, so capping
 									    there is the same layout rather than a wider variant of it. From
-									    @3xl the block sits in half the panel (the middle layout, see the
-									    top row), and the cap still fits it. The cap lifts at
-									    `@income-wide:`, where the real desktop grid takes over. */}
-									<div className="mx-auto grid w-full max-w-[34rem] grid-cols-1 gap-y-2 @income-wide:max-w-none @income-wide:grid-cols-[auto_auto_1fr_auto] @income-wide:items-center @income-wide:gap-x-2 @income-wide:gap-y-3">
+									    @3xl (the middle layout, see the top row) the cap lifts and the
+									    ranks go two by two, so each select is about half the panel. The
+									    real desktop grid takes over at `@income-wide:`. */}
+									<div className="mx-auto grid w-full max-w-[34rem] grid-cols-1 gap-y-2 @3xl:max-w-none @3xl:grid-cols-2 @3xl:gap-x-8 @3xl:gap-y-3 @income-wide:grid-cols-[auto_auto_1fr_auto] @income-wide:items-center @income-wide:gap-x-2 @income-wide:gap-y-3">
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<Sword className={iconCls} />
 											<span className="min-w-0 text-xs text-gray-400 text-left leading-tight @income-wide:pr-2 @income-wide:text-sm @income-wide:text-right @income-wide:whitespace-nowrap">Team Trials:</span>
@@ -731,13 +733,16 @@ export const IncomeForm = () => {
 						</div>
 
 						{/* Current Resources */}
-						<div className="border-t border-gray-700 p-3 @3xl:border-t-0 @3xl:border-l @income-wide:p-5">
+						<div className="border-t border-gray-700 p-3 @income-wide:p-5 @income-wide:border-t-0 @income-wide:border-l">
 							<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 								<Diamond className={iconCls} />
 								Current Resources
 							</h3>
-							{/* Capped and centred while compact — see the rank grid above. */}
-							<div className="mx-auto grid w-full max-w-[34rem] grid-cols-2 gap-x-2 gap-y-1.5 @income-wide:max-w-none @income-wide:gap-x-6 @income-wide:gap-y-2">
+							{/* Capped and centred while compact — see the rank grid above.
+							    From @3xl four across in two rows, filled down the columns, so
+							    the top row reads carats and tickets and the bottom one crystals
+							    and shards. Back to two columns in the narrow desktop track. */}
+							<div className="mx-auto grid w-full max-w-[34rem] grid-cols-2 gap-x-2 gap-y-1.5 @3xl:max-w-none @3xl:grid-flow-col @3xl:grid-cols-4 @3xl:grid-rows-2 @3xl:gap-x-6 @income-wide:grid-flow-row @income-wide:grid-cols-2 @income-wide:grid-rows-none @income-wide:gap-y-2">
 								<ResourceRow
 									icon={<img src="/item_icon_00043.png" alt="Carats" className="w-8 h-8 object-contain" />}
 									label="Carats"
