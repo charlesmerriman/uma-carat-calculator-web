@@ -142,7 +142,7 @@ describe("skillsForPosition", () => {
 	const row = (style: string, tier: number | null, order: number, id: number) =>
 		({ style, tier, order, category: "other", note: "", skill: { id } }) as unknown as PvpSkillRecommendation
 
-	it("merges the position's picks with the general ones: by tier, own picks first", () => {
+	it("keeps one style's own rows, by tier then order; the general ones only for 'everyone'", () => {
 		const rows = [
 			row("everyone", 0, 0, 1),
 			row("front", 1, 0, 2),
@@ -151,8 +151,9 @@ describe("skillsForPosition", () => {
 			row("everyone", null, 0, 5),
 			row("front", null, 0, 6),
 		]
-		expect(skillsForPosition(rows, "front").map((r) => r.skill.id)).toEqual([3, 1, 2, 6, 5])
-		expect(skillsForPosition(rows, "pace").map((r) => r.skill.id)).toEqual([4, 1, 5])
+		expect(skillsForPosition(rows, "front").map((r) => r.skill.id)).toEqual([3, 2, 6])
+		expect(skillsForPosition(rows, "pace").map((r) => r.skill.id)).toEqual([4])
+		expect(skillsForPosition(rows, "everyone").map((r) => r.skill.id)).toEqual([1, 5])
 	})
 })
 

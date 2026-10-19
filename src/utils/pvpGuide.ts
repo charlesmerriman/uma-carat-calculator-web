@@ -134,7 +134,7 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	for (const row of guide.style_notes) used.add(row.style)
 	for (const row of guide.decks) used.add(row.style)
 	for (const row of guide.skill_recommendations) used.add(row.style)
-	// "Everyone" rows show above the tabs, never as a tab of their own.
+	// "Everyone" rows show in the side column, never as a tab of their own.
 	used.delete("everyone")
 	return STYLE_ORDER.filter((style) => used.has(style))
 }
@@ -197,8 +197,9 @@ export interface GuideSkillPick {
  * then the guide's order.
  *
  * With a `position`, only that position's rows and the general ("everyone")
- * ones count, the same merge the Recommendations view makes, so a skill's
- * tier and category are the ones the guide gives for that position.
+ * ones count, so a skill's tier and category are the ones the guide gives for
+ * that position. (The Recommendations view does NOT merge them: it shows the
+ * general skills in a section of their own, see skillsForPosition.)
  */
 export function guideSkillsByCategory(
 	guide: PvpGuide,
@@ -342,26 +343,22 @@ export function guidePicks(guide: PvpGuide): GuidePicks {
 }
 
 /**
- * One position's recommended skills: its own picks merged with the GENERAL
- * ones (style "everyone", which apply to every position), as one list.
+ * One style's recommended skills, that style's OWN rows only: a position's
+ * picks for its tab, or "everyone" for the general skills, which the
+ * Recommendations view shows once, in the side column under the Overview
+ * (owner, 2026-10-17). Merged into every tab, they read as that position's
+ * picks. The team builder's skills panel still merges them, through
+ * guideSkillsByCategory, because it is a checklist for one position's team.
  *
- * Ordered by tier (0 first, untiered last), then the position's own picks
- * before the general ones within a tier, then the editor's order. Category is
- * left to the caller, which splits the list into its subcategories.
+ * Ordered by tier (0 first, untiered last), then the editor's order. Category
+ * is left to the caller, which splits the list into its subcategories.
  */
 export function skillsForPosition(rows: PvpSkillRecommendation[], style: PvpStyle): PvpSkillRecommendation[] {
 	const tierRank = (row: PvpSkillRecommendation) => (row.tier === null ? Number.MAX_SAFE_INTEGER : row.tier)
-	const generalRank = (row: PvpSkillRecommendation) => (row.style === "everyone" ? 1 : 0)
 	return rows
 		.map((row, index) => ({ row, index }))
-		.filter(({ row }) => row.style === style || row.style === "everyone")
-		.sort(
-			(a, b) =>
-				tierRank(a.row) - tierRank(b.row) ||
-				generalRank(a.row) - generalRank(b.row) ||
-				a.row.order - b.row.order ||
-				a.index - b.index
-		)
+		.filter(({ row }) => row.style === style)
+		.sort((a, b) => tierRank(a.row) - tierRank(b.row) || a.row.order - b.row.order || a.index - b.index)
 		.map(({ row }) => row)
 }
 

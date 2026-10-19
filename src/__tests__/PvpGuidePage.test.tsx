@@ -373,30 +373,24 @@ describe("PvpGuidePage skill mentions", () => {
 })
 
 describe("PvpGuidePage recommended skills", () => {
-	it("merges the general skills into each position's Recommended skills", async () => {
+	it("shows the general skills once, under the Overview, and each position's tab only its own", async () => {
 		respond(200, GUIDE)
 		renderPage()
 		await screen.findByText("Recommended stats")
-		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
-		// Front's own acceleration pick and the general green skill, side by side.
-		expect(section.getByText("Acceleration")).toBeInTheDocument()
-		expect(section.getByText("Green skills")).toBeInTheDocument()
-		const general = section.getByRole("group", { name: "Left-Handed ○" })
-		expect(within(general).getByRole("tooltip").textContent).toContain("Recommended for every position.")
-		const own = section.getByRole("group", { name: "Angling and Scheming" })
-		expect(within(own).getByRole("tooltip").textContent).not.toContain("every position")
-		// No separate block for the general skills any more.
-		expect(screen.queryByText("Skills for every style")).not.toBeInTheDocument()
-	})
-
-	it("shows the general skills in every position's tab", async () => {
-		respond(200, GUIDE)
-		renderPage()
-		await screen.findByText("Recommended stats")
+		const general = () => within(screen.getByRole("region", { name: "General skills" }))
+		const own = () => within(screen.getByRole("region", { name: "Recommended skills" }))
+		expect(general().getByText("Green skills")).toBeInTheDocument()
+		expect(general().getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
+		expect(general().queryByRole("group", { name: "Angling and Scheming" })).not.toBeInTheDocument()
+		// Front's tab: its acceleration pick, and no general green skill.
+		expect(own().getByText("Acceleration")).toBeInTheDocument()
+		expect(own().getByRole("group", { name: "Angling and Scheming" })).toBeInTheDocument()
+		expect(own().queryByRole("group", { name: "Left-Handed ○" })).not.toBeInTheDocument()
+		// End has no skills of its own, so no Recommended skills; the general
+		// section stays where it is.
 		fireEvent.click(within(screen.getByRole("tablist", { name: "Running style" })).getByRole("tab", { name: "End" }))
-		const section = within(screen.getByRole("region", { name: "Recommended skills" }))
-		expect(section.getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
-		expect(section.queryByRole("group", { name: "Angling and Scheming" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("region", { name: "Recommended skills" })).not.toBeInTheDocument()
+		expect(general().getByRole("group", { name: "Left-Handed ○" })).toBeInTheDocument()
 	})
 })
 
