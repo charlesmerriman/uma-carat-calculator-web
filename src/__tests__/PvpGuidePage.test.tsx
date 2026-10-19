@@ -291,10 +291,12 @@ describe("PvpGuidePage views and layout", () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		const views = within(screen.getByRole("tablist", { name: "View" }))
-		expect(views.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-			"Recommendations",
-			"My team",
-			"Gallery",
+		// By accessible name: on a phone the first tab shows "Guide", but its
+		// name stays "Recommendations" (the short label is aria-hidden).
+		expect(views.getAllByRole("tab")).toEqual([
+			views.getByRole("tab", { name: "Recommendations" }),
+			views.getByRole("tab", { name: "My team" }),
+			views.getByRole("tab", { name: "Gallery" }),
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")

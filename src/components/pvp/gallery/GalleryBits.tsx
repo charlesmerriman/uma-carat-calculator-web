@@ -39,7 +39,11 @@ export function YouChip() {
 }
 
 /**
- * Picture, name and tier chip, in one line; `extra` follows them. The
+ * Picture, name and tier chip, in one line when they fit; `extra` follows
+ * them. When they don't, the chips and `extra` wrap to a second line and the
+ * name keeps its room: it used to be the only thing allowed to shrink, so a
+ * phone feed showed "K..." and "Moon...", and comment headers "Kor..." even on
+ * desktop. The name truncates only when it and the picture outgrow the line. The
  * picture is the poster's first favourite uma, framed like every uma: the
  * rainbow frame on your own (`mine`), since it is yours.
  *
@@ -55,9 +59,13 @@ export function PosterLine({ poster, extra, mine = false, avatarClassName = "", 
 	nameClassName?: string
 }) {
 	return (
-		<div className="flex min-w-0 items-center gap-2">
-			<Avatar src={poster.portrait} size="sm" oshi={mine} className={avatarClassName} />
-			<span className={`min-w-0 truncate text-sm font-semibold text-gray-100 ${nameClassName}`}>{posterName(poster)}</span>
+		<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+			{/* Picture and name never part: as one group they wrap together, and
+			    the name truncates only when the pair is wider than the line. */}
+			<span className="flex min-w-0 max-w-full items-center gap-2">
+				<Avatar src={poster.portrait} size="sm" oshi={mine} className={avatarClassName} />
+				<span className={`min-w-0 truncate text-sm font-semibold text-gray-100 ${nameClassName}`}>{posterName(poster)}</span>
+			</span>
 			<TierChip poster={poster} />
 			{extra}
 		</div>
