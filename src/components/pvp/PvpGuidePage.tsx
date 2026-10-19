@@ -27,7 +27,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -587,26 +587,33 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 						<h3 className={PANEL_LABEL}>
 							Schedule{event.is_predicted && <span className="normal-case tracking-normal"> (estimated)</span>}
 						</h3>
+						{/* A rail across from sm; below sm a list DOWN the page with the
+						    rail on its left (design polish item 26). Five milestones
+						    across 350px overlapped: "Round 1 2026/10/31Round 2 2026/11/2".
+						    The column count is a variable so the grid template can be an
+						    sm: class; an inline grid-template would apply at every width. */}
 						<ol
-							className="grid gap-y-2"
-							style={{ gridTemplateColumns: `repeat(${keyDates.length}, minmax(0, 1fr))` }}
+							className="flex flex-col gap-3 sm:grid sm:grid-cols-[repeat(var(--schedule-columns),minmax(0,1fr))] sm:gap-y-2"
+							style={{ "--schedule-columns": keyDates.length } as CSSProperties}
 							aria-label="Key dates"
 						>
 							{keyDates.map((milestone, position) => {
 								const done = nextIndex === -1 || position < nextIndex
 								const isNext = position === nextIndex
 								return (
-									<li key={milestone.label} className="relative min-w-0 pr-2" aria-current={isNext ? "step" : undefined}>
-										{/* The line runs from this dot to the next one. */}
+									<li key={milestone.label} className="relative flex min-w-0 items-start gap-3 sm:block sm:pr-2" aria-current={isNext ? "step" : undefined}>
+										{/* The line runs from this dot to the next one: down the
+										    left edge on a phone (through the 12px gap to the next
+										    dot), across on wider screens. */}
 										{position < keyDates.length - 1 && (
 											<span
 												aria-hidden="true"
-												className={`absolute left-1.5 right-0 top-[5px] h-0.5 ${done ? "bg-brand/60" : "bg-gray-700"}`}
+												className={`absolute -bottom-3.5 left-[5px] top-3.5 w-0.5 sm:bottom-auto sm:left-1.5 sm:right-0 sm:top-[5px] sm:h-0.5 sm:w-auto ${done ? "bg-brand/60" : "bg-gray-700"}`}
 											/>
 										)}
 										<span
 											aria-hidden="true"
-											className={`relative block h-3 w-3 rounded-full border-2 ${
+											className={`relative mt-0.5 block h-3 w-3 shrink-0 rounded-full border-2 sm:mt-0 ${
 												isNext
 													? "border-brand bg-gray-900 ring-4 ring-brand/20"
 													: done
@@ -614,11 +621,13 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 														: "border-gray-600 bg-gray-800"
 											}`}
 										/>
-										<div className={`mt-1.5 text-[11px] leading-tight ${isNext ? "text-brand" : "text-gray-400"}`}>
-											{milestone.label}
-										</div>
-										<div className={`text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
-											{formatDate(milestone.date)}
+										<div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 sm:block">
+											<div className={`text-sm leading-tight sm:mt-1.5 sm:text-[11px] ${isNext ? "text-brand" : "text-gray-400"}`}>
+												{milestone.label}
+											</div>
+											<div className={`shrink-0 text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
+												{formatDate(milestone.date)}
+											</div>
 										</div>
 									</li>
 								)
