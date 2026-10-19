@@ -21,8 +21,10 @@ import { useOshiIds } from "../../hooks/useOshiIds"
  * is editable only by the person who made it, and anyone else sees it by
  * taking a copy that is then theirs. So this is a card, not the calculator: it
  * says what the plan holds (which banners, how many, the pull and step totals,
- * how recently changed, how often copied) and offers "Copy". Nothing per row,
- * nothing editable. (The totals came with the link preview, owner 2026-10-16;
+ * how recently changed, how often copied) and offers "Copy". Per row it shows
+ * only what the catalogue says (art, name, kind, end date), never the owner's
+ * counts or notes: the summary carries totals only (.claude/rules/auth-privacy.md),
+ * and nothing here is editable. (The totals came with the link preview, owner 2026-10-16;
  * backend views/plan_share.py states the same two numbers.) The summary the server sends carries catalogue ids only; names and
  * art come from the catalogue the app already holds, which is why this renders
  * INSIDE the /app loading gate.
@@ -86,7 +88,10 @@ const includesLine = (resources: boolean, notes: boolean): string | null =>
 				? "Includes their notes"
 				: null
 
-/** One banner of the plan as the card shows it: art, name and kind. */
+/** One banner of the plan as the card shows it: art, name, kind and end date.
+ * The date is the catalogue's, so it says when the banner closes, which is
+ * what a reader weighs a plan by; the owner's pull count for the row is not
+ * in the summary and is not shown. */
 const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "Empty" }> }) => {
 	const oshiIds = useOshiIds()
 	// The same two thumbnails a planner row shows. A step-up features no cards,
@@ -121,9 +126,10 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 			</div>
 			<div className="min-w-0">
 				<p className="truncate text-sm font-medium text-gray-100">{target.banner.name}</p>
-				<p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+				<p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">
 					<BannerTypeIcon type={target.type} className="h-3.5 w-3.5" />
 					{TYPE_LABEL[target.type]}
+					<span className="text-gray-500">· ends {formatDate(target.timeline.end_date)}</span>
 				</p>
 			</div>
 		</li>
