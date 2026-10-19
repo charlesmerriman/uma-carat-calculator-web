@@ -464,6 +464,20 @@ describe("PvpGuidePage style links and memory", () => {
 		expect(screen.getByTestId("gallery-view").textContent).toBe("cm-11")
 	})
 
+	it("comes back to Recommendations from My team on the bare page", async () => {
+		// The navbar link: no event in the address. Recommendations clears
+		// `?view=`, and the address must still name the event, or the bare
+		// page reads as a fresh arrival and sends the tab back to My team.
+		respond(200, GUIDE)
+		renderPage("/app/pvp")
+		const views = within(screen.getByRole("tablist", { name: "View" }))
+		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
+		expect(location()).toBe("/app/pvp?event=cm-10&view=team")
+		fireEvent.click(views.getByRole("tab", { name: "Recommendations" }))
+		expect(location()).toBe("/app/pvp?event=cm-10")
+		expect(await screen.findByText("Recommended stats")).toBeInTheDocument()
+	})
+
 	it("goes where a link to an event says, on the last style shown", async () => {
 		respond(200, GUIDE)
 		const first = renderPage("/app/pvp?event=cm-11&style=end")
