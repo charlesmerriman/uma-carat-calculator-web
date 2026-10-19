@@ -1,13 +1,21 @@
 import type React from "react"
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, ArrowDownToLine, ArrowUpToLine, ChevronDown } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import type { BannerResources } from "../../hooks/bannerResources"
 import { createIncomeProjection, projectionWalkOrder } from "../../utils/incomeProjection"
-import { buildCaratForecast, formatCarats } from "../../utils/caratForecast"
+import {
+	buildCaratForecast,
+	buildPullBars,
+	buildSkipMarkers,
+	formatCarats,
+} from "../../utils/caratForecast"
 import type { ForecastMarker } from "../../utils/caratForecast"
 import { plannedBannerTarget, plannedBannerTimeline } from "../../utils/bannerHelpers"
+import { upcomingSkippedRaces } from "../../utils/raceParticipation"
+import { PULLS_PER_PITY_COPY } from "../../utils/probabilityCalculations"
 import { loadForecastPlot } from "./loadForecastPlot"
+import type { ForecastUnit } from "./ForecastPlot"
 import type { ForecastPosition } from "../../hooks/useForecastPosition"
 
 /**
@@ -39,6 +47,13 @@ import type { ForecastPosition } from "../../hooks/useForecastPosition"
 
 /** localStorage: whether the viewer folded the chart away. Absent means open. */
 const OPEN_STORAGE_KEY = "uma-planner-forecast-open"
+/** localStorage: the view, "carats" or "pulls". Absent means carats. */
+const UNIT_STORAGE_KEY = "uma-planner-forecast-unit"
+
+const UNITS: { value: ForecastUnit; label: string }[] = [
+	{ value: "carats", label: "Carats" },
+	{ value: "pulls", label: "Pulls" },
+]
 
 /**
  * The plot itself, in its own chunk with Recharts. See loadForecastPlot for
@@ -55,6 +70,8 @@ interface CaratForecastChartProps {
 	onMove: () => void
 	/** Scroll into view on mount: true when it just moved here. */
 	scrollIntoViewOnMount: boolean
+	/** Scroll to the banner at this index of userPlannedBannerData and flash it. */
+	onSelectBanner: (index: number) => void
 	className?: string
 }
 
@@ -63,6 +80,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	position,
 	onMove,
 	scrollIntoViewOnMount,
+	onSelectBanner,
 	className = "",
 }) => {
 	const {
@@ -75,6 +93,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		anniversaryEventData,
 		userPlannedPurchaseData,
 		incomeLedger,
+		fullIncomeLedger,
 		calculationConstants,
 	} = useCalculatorData()
 
@@ -109,6 +128,53 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		userPlannedBannerData,
 		resources,
 	])
+
+	const endDateLookup = useCallback(
+		(marker: ForecastMarker) => {
+			const banner = userPlannedBannerData[marker.index]
+			return banner ? plannedBannerTimeline(banner)?.end_date ?? null : null
+		},
+		[userPlannedBannerData]
+	)
+
+	// The pulls view's bars, read off the rows.
+	const pullBars = useMemo(
+		() => (forecast ? buildPullBars(forecast.markers, resources, userPlannedBannerData) : []),
+		[forecast, resources, userPlannedBannerData]
+	)
+
+	// A red dot for each skipped Champions Meeting or League of Heroes still
+	// ahead. From the FULL ledger: the one the engine reads has skipped races
+	// removed, which is how a skip works (utils/raceParticipation).
+	const skipMarkers = useMemo(
+		() =>
+			forecast
+				? buildSkipMarkers(
+						forecast,
+						upcomingSkippedRaces(fullIncomeLedger, userStatsData?.skipped_race_events, new Date())
+				  )
+				: [],
+		[forecast, fullIncomeLedger, userStatsData]
+	)
+
+	// Carats or pulls, remembered per device, read in an effect like the rest.
+	const [unit, setUnit] = useState<ForecastUnit>("carats")
+	useEffect(() => {
+		try {
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- storage only exists after mount, as in TeamDrawerProvider
+			if (localStorage.getItem(UNIT_STORAGE_KEY) === "pulls") setUnit("pulls")
+		} catch {
+			// Storage blocked: the carats view.
+		}
+	}, [])
+	const chooseUnit = (next: ForecastUnit) => {
+		setUnit(next)
+		try {
+			localStorage.setItem(UNIT_STORAGE_KEY, next)
+		} catch {
+			// Not remembered this time.
+		}
+	}
 
 	// Folded or open, remembered per device. Read in an effect, never in the
 	// initialiser: the calculator route is prerendered (frontend-ui.md).
@@ -148,6 +214,8 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		null
 	)
 	const moveLabel = position === "top" ? "Move below banners" : "Move above banners"
+	// Stable across renders: the plot memoises its bars on it.
+	const endDateOf = endDateLookup
 	const bannerName = (marker: ForecastMarker) => {
 		const banner = userPlannedBannerData[marker.index]
 		const target = banner ? plannedBannerTarget(banner) : null
@@ -220,21 +288,59 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 				</button>
 			</div>
 			{open && (
-				// While the plot's chunk is still on its way, a box of the plot's
-				// own height holds its place, so nothing below the chart jumps
-				// when it lands. Usually it is already loaded (see loadForecastPlot).
-				<Suspense
-					fallback={<div className="h-[198px] sm:h-[248px]" aria-busy="true" aria-label="Loading the chart" />}
-				>
-					<ForecastPlot
-						forecast={forecast}
-						bannerName={bannerName}
-						endDateOf={(marker) => {
-							const banner = userPlannedBannerData[marker.index]
-							return banner ? plannedBannerTimeline(banner)?.end_date ?? null : null
-						}}
-					/>
-				</Suspense>
+				<>
+					{/* The view switch. Its own row under the heading, so on a phone
+					    it never fights the headline for room. */}
+					<div className="flex items-center gap-3 px-4 pb-1">
+						<div role="group" aria-label="Chart shows" className="inline-flex rounded-md border border-edge p-0.5 text-xs">
+							{UNITS.map((option) => (
+								<button
+									key={option.value}
+									type="button"
+									aria-pressed={unit === option.value}
+									onClick={() => chooseUnit(option.value)}
+									className={`rounded px-2.5 py-1 font-medium transition ${
+										unit === option.value
+											? "bg-gray-700 text-gray-100"
+											: "text-gray-400 hover:text-gray-200"
+									}`}
+								>
+									{option.label}
+								</button>
+							))}
+						</div>
+						{/* Wraps rather than truncates: in the pulls view it is the
+						    definition of what the bars count. */}
+						<p className="min-w-0 text-xs text-pretty text-gray-500">
+							{unit === "carats"
+								? "Free carats over time"
+								: "Max pulls at each banner, not counting its free pulls"}
+						</p>
+					</div>
+					{/* While the plot's chunk is still on its way, a box of the plot's
+					    own height holds its place, so nothing below the chart jumps
+					    when it lands. Usually it is already loaded (see loadForecastPlot). */}
+					<Suspense
+						fallback={<div className="h-[198px] sm:h-[248px]" aria-busy="true" aria-label="Loading the chart" />}
+					>
+						<ForecastPlot
+							forecast={forecast}
+							unit={unit}
+							pullBars={pullBars}
+							skipMarkers={skipMarkers}
+							pityPulls={PULLS_PER_PITY_COPY}
+							pullCost={calculationConstants.pull_cost_carats}
+							bannerName={bannerName}
+							endDateOf={endDateOf}
+							onSelectMarker={(marker) => onSelectBanner(marker.index)}
+						/>
+					</Suspense>
+					{unit === "pulls" && pullBars.length > 0 && pullBars.length < forecast.markers.length && (
+						<p className="px-4 pb-3 text-xs text-gray-500">
+							Step-ups count steps, not pulls, so they only show in the carats view.
+						</p>
+					)}
+				</>
 			)}
 		</section>
 	)

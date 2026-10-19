@@ -95,6 +95,28 @@ export function racePayoutAhead(
 }
 
 /**
+ * The ledger rows of every skipped event whose payout is still ahead, in date
+ * order. Read from the FULL ledger (CalculatorContext's `fullIncomeLedger`):
+ * the projection ledger has these rows removed, which is how a skip works.
+ * The forecast chart marks each one where it would have paid. Same bound as
+ * racePayoutAhead, so the chart marks exactly the skips that change a number.
+ */
+export function upcomingSkippedRaces<T extends IncomeLedgerRow>(
+	ledger: T[],
+	skips: SkippedRaceEvents | undefined,
+	now: Date
+): T[] {
+	if (!skips) return []
+	const from = startOfUtcDay(now).getTime()
+	return ledger.filter(
+		(row) =>
+			row.kind !== "event" &&
+			isRaceSkipped(skips, row.kind, row.source_id) &&
+			new Date(row.date).getTime() >= from
+	)
+}
+
+/**
  * How many events are skipped whose payout is still ahead. Past skips are
  * left out: they change no number, so "Skipping 3 events" when only one
  * still matters would send the player looking for two that don't.
