@@ -1,5 +1,5 @@
 import type React from "react"
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, ArrowDownToLine, ArrowUpToLine, ChevronDown } from "lucide-react"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import type { BannerResources } from "../../hooks/bannerResources"
@@ -122,6 +122,49 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	onSelectBanner,
 	className = "",
 }) => {
+	const calculatorData = useCalculatorData()
+
+	// THE CHART RUNS A BEAT BEHIND THE PLANNER. Everything it reads goes
+	// through useDeferredValue as ONE bundle: on an edit, React first renders
+	// the page with the previous bundle (every memo below hits its cache and
+	// the memoised plot is skipped), so the rows update at once; then it
+	// renders the chart with the new bundle at low priority, and throws that
+	// render away if another edit arrives first. One bundle rather than one
+	// deferred value per input, because `resources` is positional against
+	// `userPlannedBannerData`: deferred separately, the two could be a render
+	// apart and pair a row with another row's numbers.
+	const liveInputs = useMemo(
+		() => ({
+			userStatsData: calculatorData.userStatsData,
+			clubRankData: calculatorData.clubRankData,
+			teamTrialsRankData: calculatorData.teamTrialsRankData,
+			championsMeetingRankData: calculatorData.championsMeetingRankData,
+			leagueOfHeroesRankData: calculatorData.leagueOfHeroesRankData,
+			userPlannedBannerData: calculatorData.userPlannedBannerData,
+			anniversaryEventData: calculatorData.anniversaryEventData,
+			userPlannedPurchaseData: calculatorData.userPlannedPurchaseData,
+			incomeLedger: calculatorData.incomeLedger,
+			fullIncomeLedger: calculatorData.fullIncomeLedger,
+			calculationConstants: calculatorData.calculationConstants,
+			resources,
+			backgroundSpends,
+		}),
+		[
+			calculatorData.userStatsData,
+			calculatorData.clubRankData,
+			calculatorData.teamTrialsRankData,
+			calculatorData.championsMeetingRankData,
+			calculatorData.leagueOfHeroesRankData,
+			calculatorData.userPlannedBannerData,
+			calculatorData.anniversaryEventData,
+			calculatorData.userPlannedPurchaseData,
+			calculatorData.incomeLedger,
+			calculatorData.fullIncomeLedger,
+			calculatorData.calculationConstants,
+			resources,
+			backgroundSpends,
+		]
+	)
 	const {
 		userStatsData,
 		clubRankData,
@@ -134,7 +177,20 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		incomeLedger,
 		fullIncomeLedger,
 		calculationConstants,
-	} = useCalculatorData()
+		resources: chartResources,
+		backgroundSpends: chartBackgroundSpends,
+	} = useDeferredValue(liveInputs)
+
+	// The page hands down a new click handler on every render. The plot is
+	// memoised, so it gets one stable function that calls the latest handler.
+	const onSelectBannerRef = useRef(onSelectBanner)
+	useEffect(() => {
+		onSelectBannerRef.current = onSelectBanner
+	}, [onSelectBanner])
+	const selectMarker = useCallback(
+		(marker: ForecastMarker) => onSelectBannerRef.current(marker.index),
+		[]
+	)
 
 	const forecast = useMemo(() => {
 		if (!userStatsData) return null
@@ -151,8 +207,8 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 				constants: calculationConstants,
 			}),
 			walkOrder: projectionWalkOrder(userPlannedBannerData),
-			resources,
-			backgroundSpends,
+			resources: chartResources,
+			backgroundSpends: chartBackgroundSpends,
 			currentFreeCarats: userStatsData.current_carat || 0,
 			currentPaidCarats: userStatsData.current_paid_carat || 0,
 			currentUmaTickets: userStatsData.uma_ticket || 0,
@@ -169,9 +225,20 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		incomeLedger,
 		calculationConstants,
 		userPlannedBannerData,
-		resources,
-		backgroundSpends,
+		chartResources,
+		chartBackgroundSpends,
 	])
+
+	// Stable while the rows are, like endDateLookup below, so the memoised
+	// plot is not redrawn for a render that changed nothing it shows.
+	const bannerName = useCallback(
+		(marker: ForecastMarker) => {
+			const banner = userPlannedBannerData[marker.index]
+			const target = banner ? plannedBannerTarget(banner) : null
+			return target?.banner?.name ?? "a banner"
+		},
+		[userPlannedBannerData]
+	)
 
 	const endDateLookup = useCallback(
 		(marker: ForecastMarker) => {
@@ -184,8 +251,8 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	// Each banner's Max Pulls without free pulls, read off its row: the pulls
 	// lines' dots (buildPullSeries puts each on its own kind's line).
 	const pullBars = useMemo(
-		() => (forecast ? buildPullBars(forecast.markers, resources, userPlannedBannerData) : []),
-		[forecast, resources, userPlannedBannerData]
+		() => (forecast ? buildPullBars(forecast.markers, chartResources, userPlannedBannerData) : []),
+		[forecast, chartResources, userPlannedBannerData]
 	)
 
 	// The pulls view's two lines, day by day, counted the way the player's
@@ -300,11 +367,6 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	const moveLabel = position === "top" ? "Move below banners" : "Move above banners"
 	// Stable across renders, so memos keyed on it keep their cache.
 	const endDateOf = endDateLookup
-	const bannerName = (marker: ForecastMarker) => {
-		const banner = userPlannedBannerData[marker.index]
-		const target = banner ? plannedBannerTarget(banner) : null
-		return target?.banner?.name ?? "a banner"
-	}
 
 	return (
 		<section
@@ -448,7 +510,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 							pullCost={calculationConstants.pull_cost_carats}
 							bannerName={bannerName}
 							endDateOf={endDateOf}
-							onSelectMarker={(marker) => onSelectBanner(marker.index)}
+							onSelectMarker={selectMarker}
 						/>
 					</Suspense>
 				</>
