@@ -1,5 +1,5 @@
 import type React from "react"
-import { useId, useMemo, useRef, useState } from "react"
+import { memo, useId, useMemo, useRef, useState } from "react"
 import { useReducedMotion } from "framer-motion"
 import {
 	Area,
@@ -149,6 +149,15 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	onSelectMarker,
 }) => {
 	const reduceMotion = useReducedMotion() ?? false
+	// ANIMATE ONCE PER VIEW. Recharts replays a series' animation whenever its
+	// data changes, and the data changes on every planner edit: typing a pull
+	// count restarted a 900ms redraw each keystroke, which read as lag. So
+	// each view animates on its first draw only, and every later change
+	// lands at once. Remembered per view, so switching to the other one
+	// still draws it in. A paid band switched on later appears at once too.
+	const [enteredUnit, setEnteredUnit] = useState<ForecastUnit | null>(null)
+	const animate = !reduceMotion && enteredUnit !== unit
+	const entered = () => setEnteredUnit(unit)
 	const gradientId = useId()
 	const { points, markers, start, end } = forecast
 
@@ -317,8 +326,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 							stroke={`url(#${gradientId}-stroke)`}
 							strokeWidth={2}
 							fill={`url(#${gradientId}-fill)`}
-							isAnimationActive={!reduceMotion}
+							isAnimationActive={animate}
 							animationDuration={900}
+							onAnimationEnd={entered}
 							dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) => (
 								// A step-up's dot rides the paid band instead (below), unless
 								// there is no band to ride.
@@ -340,7 +350,7 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								strokeWidth={1.5}
 								fill="var(--color-gray-400)"
 								fillOpacity={0.16}
-								isAnimationActive={!reduceMotion}
+								isAnimationActive={animate}
 								animationDuration={900}
 								dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) => (
 									<StepUpDot key={`paid-dot-${props.index}`} {...props} onSelect={select} />
@@ -403,8 +413,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								name={LINE_LABEL[line]}
 								stroke={LINE_COLOR[line]}
 								strokeWidth={2}
-								isAnimationActive={!reduceMotion}
+								isAnimationActive={animate}
 								animationDuration={900}
+								onAnimationEnd={entered}
 								dot={(props: { cx?: number; cy?: number; index?: number; payload?: PullDatum }) => (
 									<PullDot key={`${line}-${props.index}`} {...props} line={line} onSelect={select} />
 								)}
@@ -776,4 +787,7 @@ const MarkerReadout: React.FC<{ marker: ForecastMarker; name: string; endDate: s
 	)
 }
 
-export default ForecastPlot
+// Memoised: the page re-renders for many reasons that change nothing here,
+// and each re-render would redraw the whole Recharts tree. The parent keeps
+// every prop stable (memoised data, useCallback'd functions) for this to hold.
+export default memo(ForecastPlot)
