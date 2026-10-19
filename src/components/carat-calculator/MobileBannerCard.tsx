@@ -140,13 +140,20 @@ const Thumbnails = ({
 	thumbTileRadius: string
 }) => {
 	const oshiIds = useOshiIds()
+	// One thumbnail on a phone, two on a wider card (design polish item 19).
+	// At phone width two 48px thumbnails left the banner name about 60px, and a
+	// two-uma banner read "Kitas...". `@md:` is the sheet's container (28rem),
+	// not the screen, so the card decides by its own width. The second
+	// thumbnail goes in a wrapper because .uma-frame sets `display` unlayered,
+	// which a `hidden` utility on the frame itself would lose to. The "+N" badge
+	// is drawn twice for the same reason the thumbnails differ: it counts what
+	// the visible strip leaves out.
 	const strip = slot ?? (
 		<>
 			{images.length > 0
-				? images.slice(0, 2).map((img) =>
-						framed ? (
+				? images.slice(0, 2).map((img, index) => {
+						const thumb = framed ? (
 							<FramedUma
-								key={img.id}
 								src={img.portrait ?? img.image}
 								alt={img.name}
 								oshi={oshiIds.has(img.id)}
@@ -154,15 +161,20 @@ const Thumbnails = ({
 							/>
 						) : (
 							<div
-								key={img.name}
 								className={`flex h-12 min-w-0 shrink-0 items-center justify-center overflow-hidden ${thumbTileRadius} bg-black/10 ring-1 ring-white/10`}
 							>
 								<img src={img.image} alt={img.name} className="h-full w-auto object-contain" />
 							</div>
 						)
-					)
+						return (
+							<span key={img.id} className={index === 0 ? "contents" : "hidden shrink-0 @md:block"}>
+								{thumb}
+							</span>
+						)
+					})
 				: null}
-			<ExtraCardsBadge hidden={images.length - 2} />
+			<ExtraCardsBadge hidden={images.length - 1} className="@md:hidden" />
+			<ExtraCardsBadge hidden={images.length - 2} className="hidden @md:block" />
 		</>
 	)
 
