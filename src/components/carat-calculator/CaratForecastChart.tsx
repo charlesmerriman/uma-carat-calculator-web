@@ -48,6 +48,40 @@ import type { ForecastPosition } from "../../hooks/useForecastPosition"
 
 /** localStorage: whether the viewer folded the chart away. Absent means open. */
 const OPEN_STORAGE_KEY = "uma-planner-forecast-open"
+/**
+ * localStorage: the optional layers the viewer switched on, as JSON
+ * (`{"paid": true}`). Absent or unreadable means every layer off.
+ */
+const LAYERS_STORAGE_KEY = "uma-planner-forecast-layers"
+
+/**
+ * THE OPTIONAL LAYERS (owner, 2026-10-19: "this and future changes to the
+ * chart should be optional, checked on and off"). Every layer added to the
+ * chart after its first release is listed here, starts OFF, and gets a
+ * checkbox beside the view switch; the chart as first shipped is the
+ * baseline everyone sees. A new layer is one entry here plus its drawing.
+ */
+const FORECAST_LAYERS = [
+	{ key: "paid", label: "Paid carats", views: ["carats"] },
+] as const satisfies readonly { key: string; label: string; views: readonly ForecastUnit[] }[]
+
+type LayerKey = (typeof FORECAST_LAYERS)[number]["key"]
+type LayerState = Record<LayerKey, boolean>
+const NO_LAYERS: LayerState = { paid: false }
+
+/** A stored layer set, read defensively: only known keys, only booleans. */
+function readLayers(raw: string | null): LayerState {
+	const layers = { ...NO_LAYERS }
+	if (!raw) return layers
+	try {
+		const stored = JSON.parse(raw) as Record<string, unknown>
+		for (const { key } of FORECAST_LAYERS) if (stored[key] === true) layers[key] = true
+	} catch {
+		// Unreadable: every layer off.
+	}
+	return layers
+}
+
 /** localStorage: the view, "carats" or "pulls". Absent means carats. */
 const UNIT_STORAGE_KEY = "uma-planner-forecast-unit"
 
@@ -187,6 +221,27 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 			// Storage blocked: the carats view.
 		}
 	}, [])
+	const [layers, setLayers] = useState<LayerState>(NO_LAYERS)
+	useEffect(() => {
+		try {
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- storage only exists after mount, as in TeamDrawerProvider
+			setLayers(readLayers(localStorage.getItem(LAYERS_STORAGE_KEY)))
+		} catch {
+			// Storage blocked: every layer off.
+		}
+	}, [])
+	const toggleLayer = (key: LayerKey) => {
+		setLayers((was) => {
+			const next = { ...was, [key]: !was[key] }
+			try {
+				localStorage.setItem(LAYERS_STORAGE_KEY, JSON.stringify(next))
+			} catch {
+				// Not remembered this time.
+			}
+			return next
+		})
+	}
+
 	const chooseUnit = (next: ForecastUnit) => {
 		setUnit(next)
 		try {
@@ -233,6 +288,9 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 		(low, m) => (!low || m.after < low.after ? m : low),
 		null
 	)
+	// The paid band is drawn when it is switched on AND the plan ever holds
+	// paid carats; switched on over a plan with none, there is nothing to draw.
+	const showPaid = layers.paid && forecast.points.some((p) => p.paid > 0)
 	const moveLabel = position === "top" ? "Move below banners" : "Move above banners"
 	// Stable across renders, so memos keyed on it keep their cache.
 	const endDateOf = endDateLookup
@@ -330,7 +388,28 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 							))}
 						</div>
 						{unit === "carats" ? (
-							<p className="min-w-0 text-xs text-gray-500">Free carats over time</p>
+							// The legend, and the optional layers as checkboxes in it: a
+							// layer's key doubles as its switch, so what is drawn and what
+							// can be drawn read as one row.
+							<div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+								<span className="inline-flex items-center gap-1.5">
+									<span className="h-0.5 w-3 rounded-full bg-brand" aria-hidden="true" />
+									Free carats
+								</span>
+								{FORECAST_LAYERS.filter((layer) => (layer.views as readonly ForecastUnit[]).includes(unit)).map((layer) => (
+									<label key={layer.key} className="inline-flex cursor-pointer items-center gap-1.5 hover:text-gray-200">
+										<input
+											type="checkbox"
+											id={`forecast-layer-${layer.key}`}
+											checked={layers[layer.key]}
+											onChange={() => toggleLayer(layer.key)}
+											className="h-3.5 w-3.5 accent-(--color-brand)"
+										/>
+										<span className="h-0.5 w-3 rounded-full bg-gray-400" aria-hidden="true" />
+										{layer.label}
+									</label>
+								))}
+							</div>
 						) : (
 							// The legend: two series always get one. Line keys, not boxes,
 							// to mirror the marks. Wraps on a phone rather than truncating.
@@ -357,6 +436,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 							forecast={forecast}
 							unit={unit}
 							pullSeries={pullSeries}
+							showPaid={showPaid}
 							skipMarkers={skipMarkers}
 							pityPulls={PULLS_PER_PITY_COPY}
 							pullCost={calculationConstants.pull_cost_carats}

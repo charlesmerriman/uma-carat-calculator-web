@@ -34,6 +34,9 @@ import { formatDate, formatMonth } from "../../utils/dateFormat"
  * ---------
  * - Carats: free carats over time, a dot at each banner where the line meets
  *   its row, a red dot at each skipped PvP event where it would have paid.
+ *   Paid carats can stack on top as a grey band (an optional layer, off
+ *   until the viewer checks it), so the top edge is the total and a
+ *   step-up's paid spend shows as a drop there.
  * - Pulls: two lines, day by day (buildPullSeries): "Uma pulls" (carats and
  *   uma tickets) and "Support pulls" (carats and support tickets), since a
  *   banner spends only its own kind of ticket. Each banner's dot sits on its
@@ -85,6 +88,8 @@ function monthStarts(start: number, end: number): number[] {
 interface LineDatum {
 	t: number
 	value: number
+	/** Paid carats, stacked on top of `value` as the paid band. */
+	paid: number
 	/** Set on the vertex where a banner's dot sits (its "before" value). */
 	marker?: ForecastMarker
 	/** Set on a vertex added for a skipped PvP event (on the line already). */
@@ -110,6 +115,8 @@ export type ForecastUnit = "carats" | "pulls"
 export interface PlotProps {
 	forecast: CaratForecast
 	unit: ForecastUnit
+	/** Draw the paid band (an optional layer, switched on by the viewer). */
+	showPaid: boolean
 	/** The pulls view's two lines (buildPullSeries). */
 	pullSeries: PullPoint[]
 	skipMarkers: SkipMarker[]
@@ -132,6 +139,7 @@ const RACE_KIND_LABEL: Record<string, string> = {
 const ForecastPlot: React.FC<PlotProps> = ({
 	forecast,
 	unit,
+	showPaid,
 	pullSeries,
 	skipMarkers,
 	pityPulls,
@@ -166,9 +174,15 @@ const ForecastPlot: React.FC<PlotProps> = ({
 		const rows: LineDatum[] = points.map((p) => ({
 			t: p.t,
 			value: p.value,
+			paid: Math.max(0, p.paid),
 			...(p.marker !== undefined && { marker: markers[p.marker] }),
 		}))
-		return withSkips(rows, skipMarkers, (skip) => ({ t: skip.t, value: skip.value, skip }))
+		return withSkips(rows, skipMarkers, (skip) => ({
+			t: skip.t,
+			value: skip.value,
+			paid: Math.max(0, forecastValueAt(points, skip.t, (p) => p.paid)),
+			skip,
+		}))
 	}, [points, markers, skipMarkers])
 
 	// The pulls lines, with each skipped event placed on both of them: a skip
@@ -193,7 +207,11 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	// where zero falls in the shape's bounding box, which for both the line and
 	// the filled area runs from the highest value to the lowest (or to zero).
 	const values = points.map((p) => p.value)
-	const high = Math.max(...values)
+	// THE PAID BAND. An optional layer: the parent passes `showPaid` only when
+	// the viewer switched it on and the plan ever holds paid carats.
+	const hasPaid = showPaid
+	// The axis must reach the TOP of the stack (free + paid), not the free line.
+	const high = Math.max(...points.map((p) => p.value + (hasPaid ? Math.max(0, p.paid) : 0)))
 	const low = Math.min(...values)
 	const zeroOffset = high <= 0 ? 0 : low >= 0 ? 1 : high / (high - low)
 	const last = points[points.length - 1]
@@ -224,6 +242,7 @@ const ForecastPlot: React.FC<PlotProps> = ({
 					active={props.active}
 					payload={props.payload}
 					touch={touch}
+					hasPaid={hasPaid}
 					pityPulls={pityPulls}
 					bannerName={bannerName}
 					endDateOf={endDateOf}
@@ -290,6 +309,10 @@ const ForecastPlot: React.FC<PlotProps> = ({
 						<Area
 							type="linear"
 							dataKey="value"
+							name="Free carats"
+							// One stack: the paid band sits on top of this area, so its
+							// top edge is the total. Recharts stacks in order, from 0.
+							stackId={hasPaid ? "carats" : undefined}
 							baseValue={0}
 							stroke={`url(#${gradientId}-stroke)`}
 							strokeWidth={2}
@@ -297,10 +320,34 @@ const ForecastPlot: React.FC<PlotProps> = ({
 							isAnimationActive={!reduceMotion}
 							animationDuration={900}
 							dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) => (
-								<LineDot key={`dot-${props.index}`} {...props} onSelect={select} />
+								// A step-up's dot rides the paid band instead (below), unless
+								// there is no band to ride.
+								<LineDot key={`dot-${props.index}`} {...props} onSelect={select} skipStepUps={hasPaid} />
 							)}
 							activeDot={{ r: 5, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-brand)" }}
 						/>
+						{hasPaid && (
+							// Grey on purpose: the free layer wears each theme's brand
+							// colour (gold, blue, green, red, purple across the twelve),
+							// so any second hue clashes with one of them. A neutral reads
+							// as the secondary balance on all of them.
+							<Area
+								type="linear"
+								dataKey="paid"
+								name="Paid carats"
+								stackId="carats"
+								stroke="var(--color-gray-400)"
+								strokeWidth={1.5}
+								fill="var(--color-gray-400)"
+								fillOpacity={0.16}
+								isAnimationActive={!reduceMotion}
+								animationDuration={900}
+								dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) => (
+									<StepUpDot key={`paid-dot-${props.index}`} {...props} onSelect={select} />
+								)}
+								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-gray-400)" }}
+							/>
+						)}
 						{/* The one direct label: where the line ends up. An invisible
 						    dot at the last point, carrying the number above it. */}
 						<ReferenceDot
@@ -393,6 +440,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 						{bannerName(m)}, ends {formatDate(endDateOf(m))}: {formatCarats(m.before)} free carats
 						available
 						{m.excluded ? ", left out of the projection" : `, ${formatCarats(m.after)} left after its pulls`}
+						{!m.excluded && m.paidBefore - m.paidAfter > 0
+							? `; ${formatCarats(m.paidBefore - m.paidAfter)} paid carats spent, ${formatCarats(m.paidAfter)} left`
+							: ""}
 					</li>
 				))}
 				{skipMarkers.map((s) => (
@@ -462,6 +512,37 @@ const PullDot: React.FC<{
 }
 
 /**
+ * A step-up's dot, on the paid band's top edge: a step-up spends paid carats
+ * only, so that is the edge it moves. In the step-up purple the planner row's
+ * type tile wears (`--color-step-up`, which every theme and colorblind mode
+ * set), clickable like every banner's dot.
+ */
+const StepUpDot: React.FC<{
+	cx?: number
+	cy?: number
+	payload?: LineDatum
+	onSelect: (marker: ForecastMarker) => void
+}> = ({ cx, cy, payload, onSelect }) => {
+	const marker = payload?.marker
+	if (cx === undefined || cy === undefined || !marker?.stepUp) return <g />
+	return (
+		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
+			<circle cx={cx} cy={cy} r={12} fill="transparent" />
+			<circle
+				cx={cx}
+				cy={cy}
+				r={4.5}
+				strokeWidth={2}
+				style={{
+					stroke: marker.excluded ? "var(--color-step-up)" : "var(--card-fill)",
+					fill: marker.excluded ? "var(--card-fill)" : "var(--color-step-up)",
+				}}
+			/>
+		</g>
+	)
+}
+
+/**
  * A dot on the line: a banner (clickable, with a hit area wider than the dot)
  * or a skipped PvP event (red). Every other vertex draws nothing.
  */
@@ -470,11 +551,13 @@ const LineDot: React.FC<{
 	cy?: number
 	payload?: LineDatum
 	onSelect: (marker: ForecastMarker) => void
-}> = ({ cx, cy, payload, onSelect }) => {
+	/** Leave step-ups to the paid band's StepUpDot. */
+	skipStepUps: boolean
+}> = ({ cx, cy, payload, onSelect, skipStepUps }) => {
 	if (cx === undefined || cy === undefined || !payload) return <g />
 	if (payload.skip) return <SkipDot cx={cx} cy={cy} />
 	const marker = payload.marker
-	if (!marker) return <g />
+	if (!marker || (skipStepUps && marker.stepUp)) return <g />
 	const short = marker.after < 0 && !marker.excluded
 	return (
 		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
@@ -503,6 +586,8 @@ type ForecastTooltipProps = {
 	active?: boolean
 	payload?: ReadonlyArray<{ payload?: unknown }>
 	touch: boolean
+	/** The plan holds paid carats: a day's readout lists both layers. */
+	hasPaid: boolean
 	pityPulls: number
 	bannerName: (marker: ForecastMarker) => string
 	endDateOf: (marker: ForecastMarker) => string | null
@@ -513,6 +598,7 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 	active,
 	payload,
 	touch,
+	hasPaid,
 	pityPulls,
 	bannerName,
 	endDateOf,
@@ -577,6 +663,23 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
 			</>
 		)
+	} else if (hasPaid) {
+		// Values lead, labels follow, keyed by a short stroke of each layer.
+		body = (
+			<>
+				{[
+					{ key: "free", label: "free carats", value: datum.value ?? 0, color: "var(--color-brand)" },
+					{ key: "paid", label: "paid carats", value: datum.paid ?? 0, color: "var(--color-gray-400)" },
+				].map((row) => (
+					<div key={row.key} className="flex items-center gap-2">
+						<span className="h-0.5 w-3 shrink-0 rounded-full" style={{ background: row.color }} />
+						<span className="text-sm font-semibold text-gray-100 tabular-nums">{formatCarats(row.value)}</span>
+						<span className="text-gray-400">{row.label}</span>
+					</div>
+				))}
+				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
+			</>
+		)
 	} else {
 		body = (
 			<>
@@ -601,6 +704,39 @@ const MarkerReadout: React.FC<{ marker: ForecastMarker; name: string; endDate: s
 	endDate,
 }) => {
 	const spent = marker.before - marker.after
+	const paidSpent = marker.paidBefore - marker.paidAfter
+	if (marker.stepUp) {
+		// A step-up's money is paid carats only, so that is what it leads with.
+		return (
+			<>
+				<div className="text-sm font-semibold text-gray-100 tabular-nums">
+					{formatCarats(marker.paidBefore)} paid carats
+				</div>
+				<div className="font-medium text-gray-300">{name}</div>
+				<div className="text-gray-400">Ends {formatDate(endDate)}</div>
+				<div className="mt-1 text-gray-400">
+					{marker.excluded
+						? "Left out of the projection"
+						: paidSpent > 0 ? (
+							<>
+								Steps spend {formatCarats(paidSpent)} paid,{" "}
+								{marker.paidAfter < 0 ? (
+									// Over-planned past the budget: the deficit is the message,
+									// as on the step-up row itself.
+									<span className="font-semibold text-(--color-pull-over)">
+										short by {formatCarats(-marker.paidAfter)}
+									</span>
+								) : (
+									<>leaving {formatCarats(marker.paidAfter)}</>
+								)}
+							</>
+						) : (
+							"No paid carats spent here"
+						)}
+				</div>
+			</>
+		)
+	}
 	return (
 		<>
 			<div className="text-sm font-semibold text-gray-100 tabular-nums">
@@ -623,6 +759,18 @@ const MarkerReadout: React.FC<{ marker: ForecastMarker; name: string; endDate: s
 				</div>
 			) : (
 				<div className="mt-1 text-gray-400">No free carats spent here</div>
+			)}
+			{!marker.excluded && paidSpent > 0 && (
+				<div className="text-gray-400">
+					and {formatCarats(paidSpent)} paid,{" "}
+					{marker.paidAfter < 0 ? (
+						<span className="font-semibold text-(--color-pull-over)">
+							short by {formatCarats(-marker.paidAfter)}
+						</span>
+					) : (
+						<>leaving {formatCarats(marker.paidAfter)}</>
+					)}
+				</div>
 			)}
 		</>
 	)

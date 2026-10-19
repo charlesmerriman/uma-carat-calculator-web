@@ -67,6 +67,14 @@ export interface ForecastMarker {
 	after: number
 	/** Left out of the projection from its row options: shown, never charged. */
 	excluded: boolean
+	/** Paid carats available for this banner, and left after it (its row's own). */
+	paidBefore: number
+	paidAfter: number
+	/**
+	 * A step-up: it spends paid carats only, so its dot sits on the paid
+	 * layer's top edge, not on the free line it never moves.
+	 */
+	stepUp: boolean
 }
 
 export interface CaratForecast {
@@ -223,7 +231,16 @@ export function buildCaratForecast({
 			const spent = rowSpend(entry, row)
 			offset = subtract(offset, spent)
 			if (CHANNELS.some((k) => spent[k] !== 0)) points.push(toPoint(t, subtract(before, spent)))
-			markers.push({ index: entry.index, t, before: before.free, after: before.free - spent.free, excluded })
+			markers.push({
+				index: entry.index,
+				t,
+				before: before.free,
+				after: before.free - spent.free,
+				excluded,
+				paidBefore: before.paid,
+				paidAfter: before.paid - spent.paid,
+				stepUp: plannedBannerTarget(entry.banner).type === "StepUp",
+			})
 		}
 	}
 
