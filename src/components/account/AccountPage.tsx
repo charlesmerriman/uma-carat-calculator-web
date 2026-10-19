@@ -64,17 +64,17 @@ const BENEFIT_LABELS: Record<string, string> = {
 const CARD = "card-panel p-5"
 const CARD_TITLE = "text-base font-semibold text-gray-100"
 const BUTTON_PRIMARY =
-	"rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
+	"rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-brand/85 disabled:cursor-not-allowed disabled:opacity-50"
 const BUTTON_GHOST =
-	"rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+	"rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
 // Red is the one status colour that means the same thing in every theme here,
 // and it is used only for this button — see the semantic-colour note in
 // frontend/docs/ui-conventions.md.
 const BUTTON_DANGER =
-	"rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-500/10"
+	"rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-500/10"
 
 const INPUT =
-	"rounded-lg border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-gray-100 outline-none transition focus:border-brand"
+	"rounded-md border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-gray-100 outline-none transition focus:border-brand"
 
 /** What the person has to type before the delete button arms. */
 const DELETE_PHRASE = "delete"
@@ -184,6 +184,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 	const storedName = account.display_name ?? ""
 	const oshis = account.oshis ?? []
 	const oshiSlots = account.oshi_slots ?? 0
+	// Covered slots with no pick yet. Never negative: a lapse can leave more
+	// held picks than covered slots.
+	const openSlots = Math.max(0, oshiSlots - oshis.length)
 	const oshiIds = oshis.map((oshi) => oshi.id)
 	const nameChanged = trimmedName !== storedName
 	// What the header and the avatar fallback go by: the chosen name, else the handle.
@@ -424,8 +427,15 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					{oshis.length > oshiSlots &&
 						" The greyed ones are kept, but not shown, until your tier covers them again."}
 				</p>
+				{/* The held picks, then ONE tile for the next empty slot (design
+				    polish item 25). Every empty slot used to be its own large dashed
+				    box: seven of them, two rows, before anything was picked. The add
+				    tile says how many slots are left instead. With nothing picked it
+				    is "Pick your picture" alone: the first pick IS the picture, so
+				    offering "Add a favourite" beside it would have one choice do
+				    something its label does not say. */}
 				<ul className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3">
-					{Array.from({ length: Math.max(oshiSlots, oshis.length) }, (_, slot) => {
+					{Array.from({ length: oshis.length + (openSlots > 0 ? 1 : 0) }, (_, slot) => {
 						const oshi = oshis[slot]
 						const covered = slot < oshiSlots
 						if (!oshi) {
@@ -438,7 +448,12 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 										className="flex h-full min-h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-600 p-3 text-xs font-medium text-gray-400 transition hover:border-brand/60 hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
 									>
 										<ImagePlus className="h-6 w-6" aria-hidden="true" />
-										{slot === 0 ? "Pick your picture" : "Pick a favourite"}
+										{slot === 0 ? "Pick your picture" : "Add a favourite"}
+										{slot > 0 && (
+											<span className="text-[11px] font-normal text-gray-500">
+												{openSlots === 1 ? "1 slot left" : `${openSlots} slots left`}
+											</span>
+										)}
 									</button>
 								</li>
 							)

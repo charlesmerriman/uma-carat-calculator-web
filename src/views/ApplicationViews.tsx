@@ -38,7 +38,7 @@ const PageError = ({ onRetry }: { onRetry: () => void }) => (
 		<h1 className="text-2xl font-bold">The calculator didn't load</h1>
 		<p className="text-white/60">The server might be busy. Wait a moment and try again.</p>
 		<button
-			className="rounded bg-brand px-4 py-2 font-semibold text-black transition-opacity hover:opacity-80"
+			className="rounded-md bg-brand px-4 py-2 font-semibold text-black transition-opacity hover:opacity-80"
 			onClick={onRetry}
 		>
 			Try again

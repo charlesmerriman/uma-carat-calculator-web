@@ -1,6 +1,6 @@
-import type { RefObject } from "react"
+import { useState, type RefObject } from "react"
 import { Link } from "react-router-dom"
-import { CircleDashed } from "lucide-react"
+import { ChevronDown, CircleDashed } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
 import { TIMELINE_FOCUS_HIGHLIGHT } from "../timeline/timelineShared"
@@ -67,6 +67,14 @@ const TentativeBadge = () => (
  * countdown and no Timeline link, since there is no banner card to link to.
  * The card says all that itself, not just the section heading above it,
  * because a search or a deep link can show the card on its own.
+ *
+ * FOLDED BY DEFAULT past the next two batches (design polish item 22a): with
+ * every batch open the page ran to about 6,000px on a phone, through 2029. A
+ * folded card is its heading line (name, date, badges, countdown) and a
+ * "Show N umas" toggle. `defaultOpen` is the first state only; `forceOpen`
+ * (a running search, or the batch a link names) opens it whatever the reader
+ * chose, because then the umas ARE the answer. The list stays in the DOM with
+ * `hidden`, so folding costs no remount and a test can still read it.
  */
 export const LegendRaceReleaseCard = ({
 	release,
@@ -75,6 +83,8 @@ export const LegendRaceReleaseCard = ({
 	oshiIds,
 	focusRef,
 	isFocused = false,
+	defaultOpen = true,
+	forceOpen = false,
 }: {
 	release: DailyLegendRaceRelease
 	now: Date
@@ -82,9 +92,15 @@ export const LegendRaceReleaseCard = ({
 	oshiIds: ReadonlySet<number>
 	focusRef?: RefObject<HTMLElement | null>
 	isFocused?: boolean
+	defaultOpen?: boolean
+	forceOpen?: boolean
 }) => {
 	const start = release.start_date === null ? null : new Date(release.start_date)
 	const headingId = `legend-race-release-${release.id}`
+	const listId = `${headingId}-umas`
+	const [open, setOpen] = useState(defaultOpen)
+	const expanded = forceOpen || open
+	const umaCount = release.umas.length
 
 	return (
 		<section
@@ -114,24 +130,42 @@ export const LegendRaceReleaseCard = ({
 						)}
 					</>
 				)}
-				{release.banner_timeline != null && (
-					<Link
-						to={timelineFocusHref({ kind: "banner", id: release.banner_timeline })}
-						className="ml-auto text-sm text-brand transition hover:text-brand/75"
-					>
-						On the Timeline
-					</Link>
-				)}
+				<div className="ml-auto flex items-center gap-3">
+					{release.banner_timeline != null && (
+						<Link
+							to={timelineFocusHref({ kind: "banner", id: release.banner_timeline })}
+							className="text-sm text-brand transition hover:text-brand/75"
+						>
+							On the Timeline
+						</Link>
+					)}
+					{/* No toggle while forced open: it would do nothing visible. */}
+					{umaCount > 0 && !forceOpen && (
+						<button
+							type="button"
+							aria-expanded={expanded}
+							aria-controls={listId}
+							onClick={() => setOpen((value) => !value)}
+							className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+						>
+							{expanded ? "Hide umas" : `Show ${umaCount} uma${umaCount === 1 ? "" : "s"}`}
+							<ChevronDown
+								className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+								aria-hidden="true"
+							/>
+						</button>
+					)}
+				</div>
 			</div>
 
-			{release.umas.length > 0 && (
+			{umaCount > 0 && (
 				// Star groups stack on a phone. From `sm` up they sit side by side
 				// when a whole group fits beside the last one, so a batch like
 				// "five ★3 and one ★2" is one row of tiles and not two. That works
 				// because each group is a flex item as wide as its tiles: a group
 				// that does not fit drops to the next line, and one wider than the
 				// card shrinks to it and wraps its own tiles.
-				<div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
+				<div id={listId} hidden={!expanded} className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
 					{rarityGroups(release.umas).map((group) => (
 						<div key={group.rarity}>
 							<h4 className="mb-1.5 text-sm font-semibold text-brand">

@@ -60,7 +60,10 @@ export const Faq: React.FC = () => {
 			<div ref={topRef} aria-hidden="true" />
 			<Navbar />
 			<main className="flex-1">
-				<div className="mx-auto max-w-3xl px-4 py-8">
+				{/* 48rem of reading column, and from lg a 64rem page: the section list
+				    becomes a sticky rail in the margin that was empty canvas (design
+				    polish item 23). The answers keep their 48rem measure either way. */}
+				<div className="mx-auto max-w-3xl px-4 py-8 lg:max-w-[64rem]">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Frequently Asked Questions</h1>
 					<p className="mt-2 text-gray-400">
 						How the calculator works, where its numbers come from, and what it does with your
@@ -70,51 +73,59 @@ export const Faq: React.FC = () => {
 					{categories === null ? (
 						<ContentLoading what="the questions" />
 					) : (
-						<>
+						<div className="lg:mt-10 lg:grid lg:grid-cols-[13rem_minmax(0,48rem)] lg:gap-10">
 							{/* Jump list. Plain in-page anchors rather than router links — these
 							    target sections on this page, so letting the browser handle the
-							    hash is both correct and free. */}
-							<nav aria-label="FAQ sections" className="mt-6 flex flex-wrap gap-2">
+							    hash is both correct and free. Chips that wrap on a phone; from
+							    lg a column of quiet links that stays in view (top-24 clears the
+							    sticky navbar), the way a docs page lists its sections. */}
+							<nav
+								aria-label="FAQ sections"
+								className="mt-6 flex flex-wrap gap-2 lg:sticky lg:top-24 lg:mt-0 lg:flex-col lg:gap-0.5 lg:self-start lg:border-l lg:border-gray-700"
+							>
 								{categories.map((category) => (
 									<a
 										key={category.slug}
 										href={`#${category.slug}`}
-										className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
+										className="rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 lg:-ml-px lg:rounded-none lg:border-0 lg:border-l-2 lg:border-transparent lg:bg-transparent lg:hover:border-brand lg:hover:bg-transparent"
 									>
 										{category.title}
 									</a>
 								))}
 							</nav>
 
-							{categories.map((category) => (
-								// html's scroll-padding-top (index.css) keeps the heading clear of
-								// the sticky navbar when a jump link or a deep link lands on it;
-								// scroll-mt is only the air above it.
-								<section key={category.slug} id={category.slug} className="mt-12 scroll-mt-6">
-									<h2 className={categoryHeading}>{category.title}</h2>
+							<div className="min-w-0">
+								{categories.map((category) => (
+									// html's scroll-padding-top (index.css) keeps the heading clear of
+									// the sticky navbar when a jump link or a deep link lands on it;
+									// scroll-mt is only the air above it.
+									<section key={category.slug} id={category.slug} className="mt-12 scroll-mt-6 lg:first:mt-0">
+										<h2 className={categoryHeading}>{category.title}</h2>
 
-									<div className="mt-4 space-y-4">
-										{category.items.map((item) => (
-											<article
-												key={item.slug}
-												// Per-question anchor, so a single answer can be linked
-												// directly — e.g. from the homepage teaser or in a reply
-												// to someone asking. Clears the navbar the same way as the
-												// section above.
-												id={item.slug}
-												className="card-panel scroll-mt-6 p-5"
-											>
-												<h3 className={question}>{item.question}</h3>
-												<MarkdownContent markdown={item.answer} />
-											</article>
-										))}
-									</div>
-								</section>
-							))}
-						</>
+										<div className="mt-4 space-y-4">
+											{category.items.map((item) => (
+												<article
+													key={item.slug}
+													// Per-question anchor, so a single answer can be linked
+													// directly — e.g. from the homepage teaser or in a reply
+													// to someone asking. Clears the navbar the same way as the
+													// section above.
+													id={item.slug}
+													className="card-panel scroll-mt-6 p-5"
+												>
+													<h3 className={question}>{item.question}</h3>
+													<MarkdownContent markdown={item.answer} />
+												</article>
+											))}
+										</div>
+									</section>
+								))}
+							</div>
+						</div>
 					)}
 
-					<p className="mt-12 text-sm text-gray-500">
+					{/* Under the answers, not the rail: 13rem of rail plus the 2.5rem gap. */}
+					<p className="mt-12 text-sm text-gray-500 lg:ml-[15.5rem]">
 						Still stuck? Email{" "}
 						<a
 							href="mailto:Henryhandsomederby@gmail.com"
@@ -127,7 +138,7 @@ export const Faq: React.FC = () => {
 				</div>
 			</main>
 			<Footer />
-			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="48rem" />
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="64rem" />
 		</div>
 	)
 }

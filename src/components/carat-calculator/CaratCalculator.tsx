@@ -249,7 +249,7 @@ export const CaratCalculator: React.FC = () => {
 											<div className="hidden w-px bg-gray-700 self-stretch sm:block" />
 										)}
 										<button
-											className={`flex-1 rounded-lg py-2.5 font-medium transition ${button.className}`}
+											className={`flex-1 rounded-md py-2.5 font-medium transition ${button.className}`}
 											onClick={() => handleAddBanner(button.type)}
 										>
 											⊕{" "}

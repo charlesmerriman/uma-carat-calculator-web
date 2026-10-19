@@ -4,7 +4,7 @@
 
 /* Green-bordered input used for carat/ticket/crystal number fields */
 .input-currency {
-	@apply px-2 py-1 w-full border border-green-600 rounded-lg h-9
+	@apply px-2 py-1 w-full border border-green-600 rounded-md h-9
 		bg-gray-700 text-gray-100 focus:border-green-400 focus:outline-none
 		shadow-sm text-base font-medium text-center;
 }
@@ -48,7 +48,7 @@
 
 /* Bordered value box (used next to rank selects in IncomeForm) */
 .value-display {
-	@apply border border-[#cccccc] rounded px-2 py-1 text-center text-base font-medium;
+	@apply border border-[#cccccc] rounded-md px-2 py-1 text-center text-base font-medium;
 }
 
 /* Inline bold value */
@@ -83,12 +83,16 @@
    The [data-gallery-style] edges further down stay unlayered on purpose,
    since they must beat this AND any utility.
 
+   The fill is --card-fill, a step above gray-800 on the dark themes (see
+   SURFACES in index.css); anything painted to look like a card reads it too.
+
    The shadow goes through Tailwind's `shadow-(...)` so a `ring-*` on a card
    adds to it instead of replacing it. Popovers and dialogs are not cards:
    they wear `border-edge` with Tailwind's deeper `shadow-lg` / `shadow-2xl`. */
 @layer components {
 	.card-panel {
-		@apply rounded-xl border bg-gray-800 shadow-(--card-shadow);
+		@apply rounded-xl border shadow-(--card-shadow);
+		background-color: var(--card-fill);
 		border-color: var(--color-edge);
 	}
 }
@@ -445,7 +449,7 @@
    It is also load-bearing VERTICALLY: see BannerRow's reserved cell, which pays
    for this height plus a funding hint out of an h-16 row. */
 .pull-input {
-	@apply h-11 rounded border px-2 text-center text-sm
+	@apply h-11 rounded-md border px-2 text-center text-sm
 		transition-colors focus:outline-none;
 }
 
@@ -770,7 +774,7 @@
    one. The surface stays the ordinary card. */
 .ssr-panel--quiet {
 	background:
-		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(var(--card-fill), var(--card-fill)) padding-box,
 		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
 	box-shadow: 0 0 6px var(--color-ssr-glow);
 }
@@ -803,7 +807,7 @@
 .ssr-panel--rainbow {
 	background:
 		linear-gradient(115deg, #f3a9e880 0%, #da76f380 18%, #ba8cf480 32%, #73e0fd80 48%, #73e0fd80 74%, #c5f58f80 100%) padding-box,
-		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(var(--card-fill), var(--card-fill)) padding-box,
 		linear-gradient(115deg, var(--ssr-rainbow)) border-box;
 	/* The plain panel's inner gold haze, dropped: it tinted the pastel edge
 	   on the open post but not on the row. */
@@ -839,7 +843,7 @@
 .card-panel[data-gallery-style="sr"] {
 	border-color: transparent;
 	background:
-		linear-gradient(var(--color-gray-800), var(--color-gray-800)) padding-box,
+		linear-gradient(var(--card-fill), var(--card-fill)) padding-box,
 		linear-gradient(
 			120deg,
 			var(--color-gallery-sr-light) 0%,

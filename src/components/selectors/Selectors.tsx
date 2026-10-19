@@ -241,6 +241,9 @@ export const Selectors = () => {
 							key={campaign.event.id}
 							campaign={campaign}
 							focusRef={index === focusIndex ? focusCardRef : undefined}
+							// The soonest campaign and a deep link's start open at
+							// every width; see CampaignCard for the rest.
+							defaultOpen={index === 0 || index === focusIndex}
 							umaBannerData={umaBannerData}
 							supportBannerData={supportBannerData}
 							stepUpBannerData={stepUpBannerData}

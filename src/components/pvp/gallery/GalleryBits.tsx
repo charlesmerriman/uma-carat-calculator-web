@@ -153,7 +153,7 @@ export function GalleryUpvote({ post, layout }: { post: GalleryRow; layout: "col
 			aria-label={voted ? `Remove your upvote (${count} upvotes)` : `Upvote (${count} upvotes)`}
 			disabled={vote.isPending}
 			onClick={press}
-			className={`flex shrink-0 items-center rounded-lg border text-sm font-semibold tabular-nums transition disabled:cursor-wait ${shape} ${
+			className={`flex shrink-0 items-center rounded-md border text-sm font-semibold tabular-nums transition disabled:cursor-wait ${shape} ${
 				voted
 					? "border-brand bg-brand/15 text-brand"
 					: "border-gray-600 text-gray-300 enabled:hover:border-brand enabled:hover:text-brand"
@@ -174,6 +174,12 @@ const SLOTS = [1, 2, 3, 4, 5, PVP_BORROW_SLOT]
  * from the catalogue; an id the catalogue no longer has shows as an empty
  * tile. The deck is capped in width so a wide pane does not blow the cards
  * up to poster size.
+ *
+ * On a phone the deck is three by two (design polish item 26a). Six across
+ * beside the uma left each card about 45px wide, and the names under them
+ * cut to "Kawaka Princ...". Three across they are about 80px, and two lines
+ * of name fit. The gap before the borrowed card would cost a whole cell in
+ * that grid, so it shows from sm only; the name says "(borrowed)" anyway.
  */
 export function GalleryTeam({ members, index }: {
 	members: PvpTeamMember[]
@@ -193,7 +199,7 @@ export function GalleryTeam({ members, index }: {
 							<StyleChip style={member.style} />
 						</div>
 						<ul
-							className="grid min-w-0 max-w-xl flex-1 grid-cols-[repeat(5,minmax(0,1fr))_2px_minmax(0,1fr)] gap-1.5"
+							className="grid min-w-0 max-w-xl flex-1 grid-cols-3 gap-1.5 sm:grid-cols-[repeat(5,minmax(0,1fr))_2px_minmax(0,1fr)]"
 							aria-label={`${uma?.name ?? "Uma"}'s deck`}
 						>
 							{SLOTS.map((slot) => {
@@ -201,7 +207,7 @@ export function GalleryTeam({ members, index }: {
 								const art = card ? index.cardsById.get(card.support_card) : undefined
 								const borrowed = slot === PVP_BORROW_SLOT
 								return [
-									borrowed ? <li key="divider" aria-hidden="true" className="h-full w-0.5 rounded bg-gray-600" /> : null,
+									borrowed ? <li key="divider" aria-hidden="true" className="hidden h-full w-0.5 rounded bg-gray-600 sm:block" /> : null,
 									<li key={slot} className="flex min-w-0 flex-col gap-0.5">
 										{art?.image ? (
 											<img

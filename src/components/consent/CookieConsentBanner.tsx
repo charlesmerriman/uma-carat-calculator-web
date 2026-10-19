@@ -80,7 +80,7 @@ export const CookieConsentBanner: React.FC = () => {
 							type="button"
 							onClick={closeConsentPrompt}
 							aria-label="Close"
-							className="rounded p-1.5 text-gray-500 transition hover:text-gray-200"
+							className="rounded-md p-1.5 text-gray-500 transition hover:text-gray-200"
 						>
 							<X className="h-4 w-4" aria-hidden="true" />
 						</button>

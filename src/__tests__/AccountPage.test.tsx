@@ -366,10 +366,12 @@ describe('AccountPage oshis', () => {
 		renderPage()
 		expect(screen.getByText(/your tier covers 3\./i)).toBeInTheDocument()
 		expect(screen.getByText(/your picture is special week/i)).toBeInTheDocument()
-		// Two empty tiles for the two unfilled slots; none of them is "your picture".
-		const empties = screen.getAllByRole('button', { name: /^pick a favourite$/i })
-		expect(empties).toHaveLength(2)
-		fireEvent.click(empties[0])
+		// ONE add tile for the two unfilled slots, saying how many are left; it is
+		// not "your picture".
+		const add = screen.getByRole('button', { name: /^add a favourite/i })
+		expect(add).toHaveTextContent('2 slots left')
+		expect(screen.queryByRole('button', { name: /pick your picture/i })).toBeNull()
+		fireEvent.click(add)
 		const dialog = await screen.findByRole('dialog')
 		expect(await within(dialog).findByRole('button', { name: /special week/i })).toBeDisabled()
 		fireEvent.click(within(dialog).getByRole('button', { name: /^gold ship$/i }))

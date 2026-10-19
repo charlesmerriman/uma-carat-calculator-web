@@ -12,11 +12,11 @@
 
 /** A text button or link in the bar: Login, Logout, Sign in to sync. */
 export const NAV_BUTTON =
-	"flex h-9 items-center gap-1.5 rounded-lg border border-gray-600 px-3 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+	"flex h-9 items-center gap-1.5 rounded-md border border-gray-600 px-3 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
 
 /** A square icon button: settings gear, theme palette, mobile logout. */
 export const NAV_ICON_BUTTON =
-	"flex h-9 w-9 items-center justify-center rounded-lg border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
+	"flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
 
 /**
  * The "save now" button. Its content is the spinning Oguri image, not an icon,
@@ -26,7 +26,7 @@ export const NAV_ICON_BUTTON =
  * "un-border" utility — the recipe has to be written without it.
  */
 export const NAV_SAVE_BUTTON =
-	"flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-gray-700"
+	"flex h-9 w-9 items-center justify-center rounded-md transition hover:bg-gray-700"
 
 /**
  * The signed-in trigger: the avatar as the left cap of a pill, with the name

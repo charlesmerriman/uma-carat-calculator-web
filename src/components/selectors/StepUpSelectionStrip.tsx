@@ -183,9 +183,12 @@ export const StepUpSelectionStrip = ({
 			    conditional — a half-anniversary sells one, and a lone row stretched
 			    across half the card with the other half empty is the dead space this
 			    page has been shedding. The rule between them only means anything
-			    while they are stacked, so it retires at the same breakpoint. */}
+			    while they are stacked, so it retires at the same breakpoint.
+			    `grid-cols-1` and not a bare grid: an implicit column sizes to its
+			    content, and a step-up's untruncated name pushed the row's 10/10
+			    count past a phone's edge. */}
 			<ul
-				className={`grid gap-x-8 divide-y divide-gray-700/80 ${
+				className={`grid grid-cols-1 gap-x-8 divide-y divide-gray-700/80 ${
 					stepUps.length > 1 ? "md:grid-cols-2 md:divide-y-0" : ""
 				}`}
 			>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import {
-	ArrowRight,
 	ArrowUpRight,
 	CalendarPlus,
 	Carrot,
@@ -17,6 +16,7 @@ import {
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { SupportersSection } from "./SupportersSection"
+import { HomeHero } from "./HomeHero"
 import { FloatingBackToTop } from "../BackToTop"
 import { HOME_CARD, HOME_ICON_CHIP, HOME_TILE } from "./homeStyles"
 import { changelogFetch } from "../../services/changelogFetchCalls"
@@ -170,33 +170,7 @@ export const HomePage = () => {
 				    under "What this is" filled a third of the row and the rest was
 				    empty canvas. */}
 				<div className="mx-auto w-full max-w-[80rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-5">
-					<section className={`${HOME_CARD} px-5 py-5 sm:px-6`}>
-						<div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-							<div>
-								<h1 className="font-display text-3xl font-bold tracking-tight text-balance text-gray-100 sm:text-4xl">Plan your pulls. Know your carats.</h1>
-								<p className="mt-2 max-w-2xl text-base text-pretty text-gray-400">A simple planner for your Uma Musume banners, income, and pull goals.</p>
-							</div>
-							<div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
-								<Link
-									to="/app"
-									className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-bold text-black transition hover:brightness-110"
-									onMouseEnter={prefetchCalculatorData}
-									onFocus={prefetchCalculatorData}
-								>
-									{isLoggedIn ? "Open your plan" : "Open the calculator"}
-									<ArrowRight className="h-4 w-4" aria-hidden="true" />
-								</Link>
-								{!isLoggedIn && (
-									<Link
-										to="/login"
-										className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-gray-700"
-									>
-										Sign in to sync your plan
-									</Link>
-								)}
-							</div>
-						</div>
-					</section>
+					<HomeHero isLoggedIn={isLoggedIn} onPrefetch={prefetchCalculatorData} />
 
 					<div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:items-stretch">
 						<section className="flex min-w-0 flex-col">
