@@ -142,11 +142,21 @@ export function GalleryPostPanel({ publicId, event, index, neighbours, onOpenPos
 					// to show it whole. All flex, no percentage heights: the panel
 					// has a max-height, not a height, so `h-full` would resolve to
 					// nothing and the columns would never be held in.
-					<div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain @4xl:flex-row @4xl:overflow-hidden">
-						<div className="shrink-0 p-4 @4xl:min-w-0 @4xl:flex-1 @4xl:overflow-y-auto @4xl:overscroll-contain">
+					//
+					// Every scroller here is `app-shell:` only, because that is the
+					// only place the panel has its max-height. Below it the panel
+					// is as tall as its content and the page scrolls; an uncapped
+					// overflow-y-auto box there still overflows by a rounding pixel
+					// (the 3/4 card art has fractional heights), so a phone latches
+					// the swipe onto it and overscroll-contain stops it reaching the
+					// page: the post would not scroll from anywhere on the team.
+					// @max-4xl keeps the narrow scroller off the wide layout's
+					// overflow-hidden, so the two never compete on order.
+					<div className="flex min-h-0 flex-1 flex-col app-shell:@max-4xl:overflow-y-auto app-shell:@max-4xl:overscroll-contain @4xl:flex-row @4xl:overflow-hidden">
+						<div className="shrink-0 p-4 @4xl:min-w-0 @4xl:flex-1 app-shell:@4xl:overflow-y-auto app-shell:@4xl:overscroll-contain">
 							<PostBody post={post.data} event={event} index={index} onOpenMyTeam={onOpenMyTeam} onTakenDown={onClose} />
 						</div>
-						<div className="shrink-0 px-4 pt-2 pb-4 @4xl:w-[22rem] @4xl:overflow-y-auto @4xl:overscroll-contain @4xl:border-l @4xl:border-gray-700 @4xl:p-4">
+						<div className="shrink-0 px-4 pt-2 pb-4 @4xl:w-[22rem] app-shell:@4xl:overflow-y-auto app-shell:@4xl:overscroll-contain @4xl:border-l @4xl:border-gray-700 @4xl:p-4">
 							<GalleryComments publicId={publicId} />
 						</div>
 					</div>
