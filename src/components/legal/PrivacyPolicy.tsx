@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 18, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 20, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -160,8 +160,10 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							<strong>Reports</strong>: if you report a post or comment, we keep the report
-							and your account reference for our moderators. The person you reported is never
-							told who you are.
+							and your account reference for our moderators. They see reported posts and
+							comments in a private channel on our Discord server, along with each report and
+							the display name of whoever made it, and once they decide, that message is cut
+							down to the decision alone. The person you reported is never told who you are.
 						</li>
 						<li>
 							<strong>Link previews</strong>: when a post&apos;s link is shared on Discord, X
