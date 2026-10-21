@@ -27,7 +27,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react"
+import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from "react"
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -41,10 +41,12 @@ import {
 	LayoutGrid,
 	Link2,
 	Loader2,
+	PenLine,
 	Swords,
 	Users,
 	type LucideIcon,
 } from "lucide-react"
+import { useAccount } from "../../services/AuthContext"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import {
 	markPvpIntroSeen,
@@ -93,6 +95,7 @@ import { usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { GalleryView } from "./gallery/GalleryView"
+import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
 import type { PvpStyle } from "../../types/pvpGuide"
 
@@ -100,18 +103,29 @@ import type { PvpStyle } from "../../types/pvpGuide"
 const FALLBACK_TITLE = "PvP Guides"
 
 /** The page's views, in tab order. The id is the `?view=` value. */
-type PvpView = "recommendations" | "team" | "gallery"
+type PvpView = "recommendations" | "team" | "gallery" | "editor"
 const VIEW_PARAM = "view"
-/** `short`, when set, is the label a phone shows; the full one stays the tab's name. */
-const VIEWS: Array<{ id: PvpView; label: string; short?: string; icon: LucideIcon; soon: boolean }> = [
+/**
+ * `short`, when set, is the label a phone shows; the full one stays the
+ * tab's name. `editors` marks the view only a guide editor gets
+ * (`account.guide_editor`): for anyone else the tab is not drawn and
+ * `?view=editor` reads as Recommendations.
+ */
+const VIEWS: Array<{ id: PvpView; label: string; short?: string; icon: LucideIcon; soon: boolean; editors?: boolean }> = [
 	{ id: "recommendations", label: "Recommendations", short: "Guide", icon: BookOpen, soon: false },
 	{ id: "team", label: "My team", icon: Users, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
+	{ id: "editor", label: "Edit guide", short: "Edit", icon: PenLine, soon: false, editors: true },
 ]
 
-function parseView(value: string | null): PvpView {
-	return VIEWS.some((view) => view.id === value) ? (value as PvpView) : "recommendations"
+function parseView(value: string | null, isEditor: boolean): PvpView {
+	const view = VIEWS.find((candidate) => candidate.id === value)
+	return view && (!view.editors || isEditor) ? view.id : "recommendations"
 }
+
+// The editor and dnd-kit are a chunk of their own, fetched the first time
+// an editor opens the tab (components/pvp/editor/loadGuideEditor.ts).
+const GuideEditor = lazy(loadGuideEditor)
 
 /** The page's own parameters, in the order an address names them. "Copy link" builds the same order. */
 const PARAM_ORDER = [PVP_EVENT_PARAM, VIEW_PARAM, PVP_STYLE_PARAM]
@@ -161,6 +175,9 @@ const PvpGuide = () => {
 	const page = useSiteContent().page("pvp-guides", { optional: true })
 	const [searchParams, setSearchParams] = useSearchParams()
 	const { search } = useLocation()
+	// Whether the Edit guide tab is drawn. The server checks every write
+	// again, so this only decides what is on screen.
+	const isEditor = Boolean(useAccount().account?.guide_editor)
 
 	// One clock reading per mount, so every label measures from the same "now".
 	const now = useMemo(() => new Date(), [])
@@ -171,7 +188,7 @@ const PvpGuide = () => {
 
 	const requested = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
 	const event = requested ?? defaultPvpEvent(events, now)
-	const view = parseView(searchParams.get(VIEW_PARAM))
+	const view = parseView(searchParams.get(VIEW_PARAM), isEditor)
 
 	// Past events stay out of the dropdown unless asked for, or unless the
 	// event on screen is itself past (a link to an old guide).
@@ -307,7 +324,7 @@ const PvpGuide = () => {
 							onCopyLink={() => copyLink(event)}
 						/>
 
-						<ViewTabs view={view} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
+						<ViewTabs view={view} isEditor={isEditor} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
 
 						<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
 							{view === "recommendations" && (
@@ -345,6 +362,19 @@ const PvpGuide = () => {
 							{view === "gallery" && (
 								<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
 							)}
+							{view === "editor" && (
+								<Suspense
+									fallback={
+										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading the editor…
+										</div>
+									}
+								>
+									{/* Keyed by event, so switching events starts a fresh editor on that guide. */}
+									<GuideEditor key={formatPvpEvent(refForRaceEvent(event))} event={event} onViewAsVisitor={() => setParam(VIEW_PARAM, null)} />
+								</Suspense>
+							)}
 						</div>
 					</>
 				)}
@@ -353,17 +383,19 @@ const PvpGuide = () => {
 	)
 }
 
-function ViewTabs({ view, onChange }: { view: PvpView; onChange: (view: PvpView) => void }) {
+function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boolean; onChange: (view: PvpView) => void }) {
+	const shown = VIEWS.filter((entry) => !entry.editors || isEditor)
 	return (
 		// No overflow-x-auto here: overflow on one axis makes the other "auto"
 		// too, and each tab's -mb-px underline (which sits on the row's border)
-		// overflowed by 1px and drew a vertical scrollbar. A three-column grid,
-		// so the tabs share the width and never wrap: at 390px a flex row
-		// dropped "Gallery" alone onto a second line. On a phone a tab with a
-		// `short` label shows that, while its full label stays its name for a
-		// screen reader (and for tests querying by name).
-		<div role="tablist" aria-label="View" className="grid grid-cols-3 gap-1 border-b border-gray-700">
-			{VIEWS.map((entry) => {
+		// overflowed by 1px and drew a vertical scrollbar. A grid with a column
+		// per tab, so the tabs share the width and never wrap: at 390px a flex
+		// row dropped "Gallery" alone onto a second line. On a phone a tab with
+		// a `short` label shows that, while its full label stays its name for a
+		// screen reader (and for tests querying by name). An editor gets a
+		// fourth column; both class strings are literal so Tailwind sees them.
+		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
+			{shown.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
 				return (
