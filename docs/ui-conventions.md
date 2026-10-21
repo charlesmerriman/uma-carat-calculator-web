@@ -1514,8 +1514,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 
 ### Guide editor view (`components/pvp/editor/`)
 
-`?view=editor`, the fourth tab, drawn only when `account.guide_editor` is true (staff, or the
-content-editor permission; the server checks every write again). For anyone else the
+`?view=editor`, the fourth tab, drawn only when `account.guide_editor` is true (staff
+accounts only, owner 2026-10-21; the server checks every write again). For anyone else the
 parameter reads as Recommendations and the tab is not drawn. "Copy link" never writes it.
 The editor is one lazy chunk (`loadGuideEditor.ts`, like the forecast plot), keyed by the
 event, so switching events starts a fresh editor.
