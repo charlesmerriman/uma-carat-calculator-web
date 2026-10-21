@@ -1512,6 +1512,48 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
+### Guide editor view (`components/pvp/editor/`)
+
+`?view=editor`, the fourth tab, drawn only when `account.guide_editor` is true (staff
+accounts only, owner 2026-10-21; the server checks every write again). For anyone else the
+parameter reads as Recommendations and the tab is not drawn. "Copy link" never writes it.
+The editor is one lazy chunk (`loadGuideEditor.ts`, like the forecast plot), keyed by the
+event, so switching events starts a fresh editor.
+
+- **One document, saved whole.** `hooks/useGuideDocument.ts` holds the guide as the API's
+  document (`types/guideDocument.ts`: catalogue ids, `order` never sent, position is order),
+  changes it with the pure edits in `utils/guideDocumentEdits.ts` (every edit a new
+  document; the old one goes on the undo stack), and PUTs it two seconds after the last
+  change (`useAutoSave`). The answer carries the reader's shape, which `primePvpGuide`
+  (`hooks/usePvpGuide.ts`) puts in the Recommendations cache, so "View as visitor" shows
+  the save at once. If the person typed while the save was out, only the version is taken.
+- **The version handshake.** Every save sends the version it started from; a 409 means
+  someone else saved first, and `ConflictDialog` offers "Load theirs" or "Keep mine" (save
+  over theirs; theirs stays in the history). Undo carries the current version with it.
+- **The reader draws the editor.** `utils/guideDocument.hydrateGuide` turns the document
+  into a `PvpGuide` from the catalogue in memory (uniques from the umas' skill links,
+  versions from the server's last answer), so `UmaTile`, `SkillChip`, `SupportTile`,
+  `NoteOnlyTile` and `MarkdownContent` draw it unchanged. The tab strip mirrors the
+  reader's (Guide, then Runaway … End), with row counts and red problem counts.
+- **The same checks as the server, while typing** (`validateDocument`: duplicates, deck
+  rules, `[[mentions]]` against the catalogue, lengths; the server's own sentences). After
+  a refused save the server's `errors` (with their `path`) replace the local ones until the
+  next save. `useFieldErrors(path)` draws a message beside its field; `errorsByTab` the
+  counts. The checklist (`missingSummary`, the admin's sentences) jumps to
+  `#editor-<tab>-<section>`.
+- **Pickers are the team builder's.** `PvpCardPicker` for umas (aptitude letters for the
+  style) and cards (release notes, "Already in this deck"); `PvpSkillPicker` for skills
+  (version tag, description, category and tier chosen in the dialog). Text boxes are
+  `MentionField`: `[[` offers catalogue names; a markdown box has a toolbar and a Preview.
+- **Drag is dnd-kit** (`Sortable.tsx`): umas within a star group, chips within a tier
+  group, decks in a list; every row's dialog also has Move earlier / later for the keyboard.
+- **Dialogs are `GalleryModal`** (publish with the checklist, the three actions with a
+  preview step, the revision history with Restore, delete for drafts only, the conflict).
+  Actions run on the SAVED guide: the hook flushes the autosave first and takes the
+  document the action answers with.
+- Tests: `GuideEditor.test.tsx` (the flows), `guideDocument.test.ts` (the pure rules),
+  `PvpGuidePage.test.tsx` (the tab).
+
 ### Gallery view (`components/pvp/gallery/`)
 
 Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gallery/<kind>/<id>`

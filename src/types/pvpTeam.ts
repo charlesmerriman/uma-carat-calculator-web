@@ -27,6 +27,8 @@ export interface CatalogueSkillLink {
 export interface CatalogueUma {
 	id: number
 	name: string
+	/** The game's outfit id, for matching the sheet's exports. Absent from an older API. */
+	game_id?: number | null
 	image: string | null
 	/** The borderless art when there is one, else the bordered art. */
 	portrait: string | null
@@ -44,6 +46,8 @@ export interface CatalogueUma {
 export interface CatalogueSupportCard {
 	id: number
 	name: string
+	/** The game's five-digit card id ("30086 Narita Top Road" in the sheet). Absent from an older API. */
+	game_id?: number | null
 	image: string | null
 	card_type: string | null
 	rarity: number | null
@@ -68,6 +72,9 @@ export interface CatalogueSkill {
 	tier: number | null
 	group_id: number | null
 	cost: number | null
+	game_id?: number | null
+	/** "○ white", "◎ white", "◎ gold" or "evolved": the tag the guide editor's picker shows. */
+	version?: string
 }
 
 export interface PvpCatalogue {

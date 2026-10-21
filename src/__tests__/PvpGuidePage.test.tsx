@@ -102,9 +102,17 @@ vi.mock("../components/pvp/TeamBuilder", () => ({
 // rule itself is tested in usePvpAccess.test.tsx.
 const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
 vi.mock("../hooks/usePvpAccess", () => ({ usePvpAccess: () => access.value }))
+// Nobody signed in unless a test says so (the Edit guide tab is for editors).
+const session = vi.hoisted(() => ({ account: null as null | { guide_editor: boolean } }))
 vi.mock("../services/AuthContext", async () => ({
 	...(await vi.importActual<typeof import("../services/AuthContext")>("../services/AuthContext")),
-	useAccount: () => ({ isLoggedIn: false, status: "anonymous", account: null }),
+	useAccount: () => ({ isLoggedIn: session.account !== null, status: session.account ? "ready" : "anonymous", account: session.account }),
+}))
+// The editor has its own tests (GuideEditor.test.tsx); here only that the
+// tab opens it, for the selected event.
+vi.mock("../components/pvp/editor/loadGuideEditor", () => ({
+	loadGuideEditor: () =>
+		Promise.resolve({ default: ({ event: shown }: { event: RaceEvent }) => <div data-testid="guide-editor">{`cm-${shown.id}`}</div> }),
 }))
 // The gallery has its own tests (PvpGallery.test.tsx); here only which view shows.
 vi.mock("../components/pvp/gallery/GalleryView", () => ({
@@ -279,6 +287,26 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.getAllByText("Maruzensky")).toHaveLength(1)
 		expect(screen.getAllByText("Kitasan Black")).toHaveLength(1)
 		expect(screen.getAllByRole("tablist", { name: "Running style" })).toHaveLength(1)
+	})
+
+	it("gives an editor an Edit guide tab, and nobody else", async () => {
+		respond(200, GUIDE)
+		session.account = { guide_editor: true }
+		try {
+			const { unmount } = renderPage("/app/pvp?event=cm-10")
+			const views = within(screen.getByRole("tablist", { name: "View" }))
+			expect(views.getAllByRole("tab")).toHaveLength(4)
+			fireEvent.click(views.getByRole("tab", { name: "Edit guide" }))
+			expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=editor")
+			expect(await screen.findByTestId("guide-editor")).toHaveTextContent("cm-10")
+			unmount()
+		} finally {
+			session.account = null
+		}
+		// A visitor with the same link lands on Recommendations.
+		renderPage("/app/pvp?event=cm-10&view=editor")
+		expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
+		expect(screen.queryByRole("tab", { name: "Edit guide" })).not.toBeInTheDocument()
 	})
 
 	it("keeps the cards new since the last event collapsed until asked", async () => {
