@@ -1,0 +1,15 @@
+name: Team board sync
+
+# A pull request merged into develop moves the #calc-team-board posts its
+# description links to "In progress", with a reply. The logic lives once, in
+# the api repo's reusable workflow and its bot/actions/requests_sync.py.
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop]
+
+jobs:
+  sync:
+    uses: charlesmerriman/uma-carat-calculator-api/.github/workflows/requests-sync.yml@develop
+    secrets:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
