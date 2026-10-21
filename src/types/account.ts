@@ -113,6 +113,13 @@ export interface Account {
 	 * which features are early is the client's (hooks/usePvpAccess.ts).
 	 */
 	early_access: boolean
+	/**
+	 * Whether the PvP page offers this account the guide editor: staff, or
+	 * the content-editor permission (backend pvp_guide_editing.can_edit).
+	 * Draws the tab only; every write is checked again server side. Optional
+	 * because an API older than the field sends nothing.
+	 */
+	guide_editor?: boolean
 	linked_providers: LinkedProvider[]
 	supporter: SupporterStatus
 }
