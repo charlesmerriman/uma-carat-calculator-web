@@ -93,6 +93,11 @@ interface LineDatum {
 	paid: number
 	/** Set on the vertex where a banner's dot sits (its "before" value). */
 	marker?: ForecastMarker
+	/**
+	 * Where a banner charged early draws its dot: its row's number, off the
+	 * line (ForecastMarker.chargedEarly). Read by the invisible float series.
+	 */
+	float?: number
 	/** Set on a vertex added for a skipped PvP event (on the line already). */
 	skip?: SkipMarker
 }
@@ -125,7 +130,7 @@ export interface PlotProps {
 	pityPulls: number
 	/** Carats per pull, from the API's calculation constants. */
 	pullCost: number
-	bannerName: (marker: ForecastMarker) => string
+	bannerName: (marker: Pick<ForecastMarker, "index">) => string
 	endDateOf: (marker: ForecastMarker) => string | null
 	/** Scroll to this banner's row and flash it. */
 	onSelectMarker: (marker: ForecastMarker) => void
@@ -135,6 +140,14 @@ const AXIS_TICK = { fill: "var(--color-gray-400)", fontSize: 11 }
 const RACE_KIND_LABEL: Record<string, string> = {
 	champions_meeting: "Champions Meeting",
 	league_of_heroes: "League of Heroes",
+}
+
+/**
+ * Where a banner charged early draws its dot: its row's free carats, or for a
+ * step-up on the paid band, the band's top (free + paid), like StepUpDot's.
+ */
+function floatingDotValue(marker: ForecastMarker, paidBand: boolean): number {
+	return marker.stepUp && paidBand ? marker.before + Math.max(0, marker.paidBefore) : marker.before
 }
 
 const ForecastPlot: React.FC<PlotProps> = ({
@@ -180,20 +193,26 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	// Recharts reads one array. Each banner's dot rides on the vertex where the
 	// line meets the row's number; a skipped event gets a vertex of its own,
 	// placed ON the line (buildSkipMarkers), so the line's shape is unchanged.
+	// A banner charged early is the exception: its vertex is on the line, for
+	// the hover, but its dot is drawn at `float`, its row's number.
 	const lineData = useMemo<LineDatum[]>(() => {
-		const rows: LineDatum[] = points.map((p) => ({
-			t: p.t,
-			value: p.value,
-			paid: Math.max(0, p.paid),
-			...(p.marker !== undefined && { marker: markers[p.marker] }),
-		}))
+		const rows: LineDatum[] = points.map((p) => {
+			const marker = p.marker === undefined ? undefined : markers[p.marker]
+			return {
+				t: p.t,
+				value: p.value,
+				paid: Math.max(0, p.paid),
+				...(marker && { marker }),
+				...(marker?.chargedEarly && { float: floatingDotValue(marker, showPaid) }),
+			}
+		})
 		return withSkips(rows, skipMarkers, (skip) => ({
 			t: skip.t,
 			value: skip.value,
 			paid: Math.max(0, forecastValueAt(points, skip.t, (p) => p.paid)),
 			skip,
 		}))
-	}, [points, markers, skipMarkers])
+	}, [points, markers, skipMarkers, showPaid])
 
 	// The pulls lines, with each skipped event placed on both of them: a skip
 	// lowers every balance, so it is on both lines' path.
@@ -221,7 +240,11 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	// the viewer switched it on and the plan ever holds paid carats.
 	const hasPaid = showPaid
 	// The axis must reach the TOP of the stack (free + paid), not the free line.
-	const high = Math.max(...points.map((p) => p.value + (hasPaid ? Math.max(0, p.paid) : 0)))
+	// A floating dot (a banner charged early) sits above the line, so it counts too.
+	const high = Math.max(
+		...points.map((p) => p.value + (hasPaid ? Math.max(0, p.paid) : 0)),
+		...markers.filter((m) => m.chargedEarly).map((m) => floatingDotValue(m, hasPaid))
+	)
 	const low = Math.min(...values)
 	const zeroOffset = high <= 0 ? 0 : low >= 0 ? 1 : high / (high - low)
 	const last = points[points.length - 1]
@@ -233,7 +256,10 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	const pityCarats = pityPulls * pullCost
 	const showCaratPity = high > 0 && pityCarats <= high * 1.25
 	const caratTicks = niceTicks(Math.min(0, low), Math.max(high, showCaratPity ? pityCarats : high), 4)
-	const pullHigh = Math.max(pityPulls, ...pullSeries.map((p) => Math.max(p.uma, p.support)))
+	const pullHigh = Math.max(
+		pityPulls,
+		...pullSeries.map((p) => Math.max(p.uma, p.support, p.floatPulls ?? 0))
+	)
 	const pullTicks = niceTicks(0, pullHigh, 4)
 	// End labels name the two lines where they finish. When the two ends are
 	// within ~14px of each other they would collide, so the legend alone
@@ -359,6 +385,25 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-gray-400)" }}
 							/>
 						)}
+						{/* The dots of banners charged early, at their rows' numbers above
+						    the line (see caratForecast's module note). An invisible line
+						    whose only values are those dots, so they sit on the chart's
+						    own scale; every other vertex has no value and draws nothing. */}
+						<Line
+							type="linear"
+							dataKey="float"
+							stroke="none"
+							legendType="none"
+							isAnimationActive={false}
+							activeDot={false}
+							dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) =>
+								props.payload?.marker?.stepUp && hasPaid ? (
+									<StepUpDot key={`float-${props.index}`} {...props} onSelect={select} floating />
+								) : (
+									<LineDot key={`float-${props.index}`} {...props} onSelect={select} skipStepUps={false} floating />
+								)
+							}
+						/>
 						{/* The one direct label: where the line ends up. An invisible
 						    dot at the last point, carrying the number above it. */}
 						<ReferenceDot
@@ -423,6 +468,25 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: LINE_COLOR[line] }}
 							/>
 						))}
+						{/* A banner charged early: its row's pulls, floating above its line
+						    (the carats view's float series, for the pulls lines). */}
+						<Line
+							type="linear"
+							dataKey="floatPulls"
+							stroke="none"
+							legendType="none"
+							isAnimationActive={false}
+							activeDot={false}
+							dot={(props: { cx?: number; cy?: number; index?: number; payload?: PullDatum }) => (
+								<PullDot
+									key={`float-${props.index}`}
+									{...props}
+									line={props.payload?.kind ?? "uma"}
+									onSelect={select}
+									floating
+								/>
+							)}
+						/>
 						{endLabelsFit &&
 							(["uma", "support"] as const).map((line) => (
 								<ReferenceDot
@@ -454,6 +518,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 						{m.excluded ? ", left out of the projection" : `, ${formatCarats(m.after)} left after its pulls`}
 						{!m.excluded && m.paidBefore - m.paidAfter > 0
 							? `; ${formatCarats(m.paidBefore - m.paidAfter)} paid carats spent, ${formatCarats(m.paidAfter)} left`
+							: ""}
+						{m.chargedEarly
+							? `; its pulls come off on ${formatDate(new Date(m.chargedEarly.t).toISOString())}, when ${bannerName({ index: m.chargedEarly.by })} ends`
 							: ""}
 					</li>
 				))}
@@ -501,11 +568,14 @@ const PullDot: React.FC<{
 	payload?: PullDatum
 	line: PullLine
 	onSelect: (marker: ForecastMarker) => void
-}> = ({ cx, cy, payload, line, onSelect }) => {
+	/** Draw only the dots of banners charged early (the float series), or only the rest. */
+	floating?: boolean
+}> = ({ cx, cy, payload, line, onSelect, floating = false }) => {
 	if (cx === undefined || cy === undefined || !payload) return <g />
-	if (payload.skip) return <SkipDot cx={cx} cy={cy} />
+	if (payload.skip) return floating ? <g /> : <SkipDot cx={cx} cy={cy} />
 	if (!payload.bar || payload.kind !== line) return <g />
 	const { marker } = payload.bar
+	if (Boolean(marker.chargedEarly) !== floating) return <g />
 	return (
 		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
 			<circle cx={cx} cy={cy} r={12} fill="transparent" />
@@ -534,9 +604,12 @@ const StepUpDot: React.FC<{
 	cy?: number
 	payload?: LineDatum
 	onSelect: (marker: ForecastMarker) => void
-}> = ({ cx, cy, payload, onSelect }) => {
+	/** Draw only the dots of banners charged early (the float series), or only the rest. */
+	floating?: boolean
+}> = ({ cx, cy, payload, onSelect, floating = false }) => {
 	const marker = payload?.marker
 	if (cx === undefined || cy === undefined || !marker?.stepUp) return <g />
+	if (Boolean(marker.chargedEarly) !== floating) return <g />
 	return (
 		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
 			<circle cx={cx} cy={cy} r={12} fill="transparent" />
@@ -565,11 +638,14 @@ const LineDot: React.FC<{
 	onSelect: (marker: ForecastMarker) => void
 	/** Leave step-ups to the paid band's StepUpDot. */
 	skipStepUps: boolean
-}> = ({ cx, cy, payload, onSelect, skipStepUps }) => {
+	/** Draw only the dots of banners charged early (the float series), or only the rest. */
+	floating?: boolean
+}> = ({ cx, cy, payload, onSelect, skipStepUps, floating = false }) => {
 	if (cx === undefined || cy === undefined || !payload) return <g />
-	if (payload.skip) return <SkipDot cx={cx} cy={cy} />
+	if (payload.skip) return floating ? <g /> : <SkipDot cx={cx} cy={cy} />
 	const marker = payload.marker
 	if (!marker || (skipStepUps && marker.stepUp)) return <g />
+	if (Boolean(marker.chargedEarly) !== floating) return <g />
 	const short = marker.after < 0 && !marker.excluded
 	return (
 		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
@@ -613,7 +689,7 @@ type ForecastTooltipProps = {
 	/** The plan holds paid carats: a day's readout lists both layers. */
 	hasPaid: boolean
 	pityPulls: number
-	bannerName: (marker: ForecastMarker) => string
+	bannerName: (marker: Pick<ForecastMarker, "index">) => string
 	endDateOf: (marker: ForecastMarker) => string | null
 }
 
@@ -640,6 +716,7 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 				<div className="text-sm font-semibold text-gray-100 tabular-nums">{bar.pulls} pulls</div>
 				<div className="font-medium text-gray-300">{bannerName(bar.marker)}</div>
 				<div className="text-gray-400">Ends {formatDate(endDateOf(bar.marker))}</div>
+				<ChargedEarlyNote marker={bar.marker} bannerName={bannerName} />
 				<div className="mt-1 text-gray-400 tabular-nums">
 					{bar.breakdown.tickets} from tickets, {bar.breakdown.freeCaratPulls} from free carats,{" "}
 					{bar.breakdown.paidPulls} from paid
@@ -658,6 +735,7 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 		body = (
 			<>
 				<MarkerReadout marker={datum.marker} name={bannerName(datum.marker)} endDate={endDateOf(datum.marker)} />
+				<ChargedEarlyNote marker={datum.marker} bannerName={bannerName} />
 				<div className="mt-1 text-gray-500">{goHint}</div>
 			</>
 		)
@@ -718,6 +796,24 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 	return (
 		<div className="max-w-[15rem] rounded-md border border-edge bg-gray-800 px-3 py-2 text-xs shadow-lg">
 			{body}
+		</div>
+	)
+}
+
+/**
+ * Why a dot floats above the line: the planner paid for this banner first,
+ * so its pulls came off when the banner inside its window ended.
+ */
+const ChargedEarlyNote: React.FC<{
+	marker: ForecastMarker
+	bannerName: (marker: Pick<ForecastMarker, "index">) => string
+}> = ({ marker, bannerName }) => {
+	if (!marker.chargedEarly) return null
+	const { t, by } = marker.chargedEarly
+	return (
+		<div className="mt-1 text-gray-400">
+			It started first, so its pulls come off on {formatDate(new Date(t).toISOString())}, when{" "}
+			{bannerName({ index: by })} ends.
 		</div>
 	)
 }

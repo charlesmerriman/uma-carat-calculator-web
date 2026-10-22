@@ -142,24 +142,45 @@ describe('buildCaratForecast', () => {
     expect(valuesAt(forecast.points, day(10).getTime())).toEqual([1600])
   })
 
-  it('re-anchors to the row when a banner sits inside another one\'s window', () => {
+  it("takes an outer banner's pulls off at the inner banner's end, and floats its dot", () => {
     // Banner 0 runs days 0-30 and is charged first (it starts first); banner 1
     // runs days 5-10. The engine measures banner 1 AFTER banner 0's spend of
-    // 2,000, so its row says 1,000 + 1,000 - 2,000 = 0. On a time axis banner
-    // 0 has not ended yet at day 10, so the line steps to the row's number.
+    // 2,000, so its row says 1,000 + 1,000 - 2,000 = 0. So banner 0's pulls
+    // come off at day 10, just before banner 1's dot, which then sits on the
+    // line. (Daptrius's report: this used to dip here and spike at day 30.)
     const forecast = buildCaratForecast({
       projection: fakeProjection,
       walkOrder: [entry(0, 0, 30), entry(1, 5, 10)],
-      resources: [row(4000, 2000), row(0, 0)],
+      resources: [row(4000, 2000), row(0, 500)],
       currentFreeCarats: 1000,
     })!
     expect(forecast.markers.map((m) => [m.index, m.before])).toEqual([[1, 0], [0, 4000]])
-    expect(valuesAt(forecast.points, day(10).getTime())).toEqual([2000, 0])
-    // At day 30 the line reads 0 + 20 days of income = 2,000, but banner 0's
-    // row says 4,000 (its own spend is never in its own number). So the line
-    // steps back up to the row, then drops by banner 0's spend. Both dots
-    // match their rows, which is the promise.
-    expect(valuesAt(forecast.points, day(30).getTime())).toEqual([2000, 4000, 2000])
+    // Banner 0's drop, banner 1's dot on the line, banner 1's drop.
+    expect(valuesAt(forecast.points, day(10).getTime())).toEqual([2000, 0, 0, -500])
+    // At day 30 the line carries straight on (-1,500 + 3,000 of income): no
+    // spike up to banner 0's 4,000, and no second drop. That dot floats.
+    expect(valuesAt(forecast.points, day(30).getTime())).toEqual([1500])
+    expect(forecast.markers[1].chargedEarly).toEqual({ t: day(10).getTime(), by: 1 })
+    expect(forecast.markers[0].chargedEarly).toBeUndefined()
+    // And the line is right after the pair: 1,000 + 6,000 - 2,000 - 500. It
+    // used to stay 500 too high (the inner banner's spend) until the next dot.
+    expect(forecast.points[forecast.points.length - 1].value).toBe(4500)
+  })
+
+  it('takes an outer banner charged at an inner end already past off the start', () => {
+    // Banner 1 sat inside banner 0 and has ended, so both spends are behind
+    // us: they come off the starting balance. Banner 0 is still running, so
+    // its dot is drawn, floating, with nothing left to drop.
+    const forecast = buildCaratForecast({
+      projection: fakeProjection,
+      walkOrder: [entry(0, -10, 20), entry(1, -8, -2)],
+      resources: [row(3000, 300), row(1000, 100)],
+      currentFreeCarats: 1000,
+    })!
+    expect(forecast.points[0].value).toBe(600)
+    expect(forecast.markers.map((m) => m.index)).toEqual([0])
+    expect(forecast.markers[0].chargedEarly).toEqual({ t: day(-2).getTime(), by: 1 })
+    expect(valuesAt(forecast.points, day(20).getTime())).toEqual([2600])
   })
 
   it('widens the sample step on a plan years long, keeping markers exact', () => {
@@ -280,44 +301,49 @@ describe('buildCaratForecast with background daily pulls', () => {
   })
 })
 
+/** Stats and ranks for the real-engine cases: 5,000 carats and rank income. */
+function realEngineParams() {
+  const userStatsData = {
+    current_carat: 5000,
+    current_paid_carat: 0,
+    uma_ticket: 0,
+    support_ticket: 0,
+    uma_selector_ticket: 0,
+    support_selector_ticket: 0,
+    include_purchases_in_projection: false,
+    webstore_bonus: false,
+    daily_carat: true,
+    training_pass: true,
+    misc_earnings: true,
+    monthly_shop_tickets: false,
+    spend_tickets_on_banners: true,
+    discounted_paid_pulls: false,
+    full_price_paid_pulls: false,
+    club_rank: 1,
+    team_trials_rank: 1,
+    champions_meeting_rank: 1,
+    league_of_heroes_rank: 1,
+    ssr_crystals: 0,
+    sr_crystals: 0,
+    ssr_shards: 0,
+    sr_shards: 0,
+  } as UserStats
+  return {
+    userStatsData,
+    clubRankData: [{ id: 1, name: 'A', income_amount: 3000 }] as ClubRank[],
+    teamTrialsRankData: [{ id: 1, name: 'A', income_amount: 500 }] as TeamTrialsRank[],
+    championsMeetingRankData: [] as ChampionsMeetingRank[],
+    leagueOfHeroesRankData: [] as LeagueOfHeroesRank[],
+    anniversaryEventData: [],
+    userPlannedPurchaseData: [],
+    incomeLedger: [],
+    constants: DEFAULT_CONSTANTS,
+  }
+}
+
 describe('buildCaratForecast with the real engine', () => {
   it('meets every row without a correction step', () => {
-    const userStatsData = {
-      current_carat: 5000,
-      current_paid_carat: 0,
-      uma_ticket: 0,
-      support_ticket: 0,
-      uma_selector_ticket: 0,
-      support_selector_ticket: 0,
-      include_purchases_in_projection: false,
-      webstore_bonus: false,
-      daily_carat: true,
-      training_pass: true,
-      misc_earnings: true,
-      monthly_shop_tickets: false,
-      spend_tickets_on_banners: true,
-      discounted_paid_pulls: false,
-      full_price_paid_pulls: false,
-      club_rank: 1,
-      team_trials_rank: 1,
-      champions_meeting_rank: 1,
-      league_of_heroes_rank: 1,
-      ssr_crystals: 0,
-      sr_crystals: 0,
-      ssr_shards: 0,
-      sr_shards: 0,
-    } as UserStats
-    const params = {
-      userStatsData,
-      clubRankData: [{ id: 1, name: 'A', income_amount: 3000 }] as ClubRank[],
-      teamTrialsRankData: [{ id: 1, name: 'A', income_amount: 500 }] as TeamTrialsRank[],
-      championsMeetingRankData: [] as ChampionsMeetingRank[],
-      leagueOfHeroesRankData: [] as LeagueOfHeroesRank[],
-      anniversaryEventData: [],
-      userPlannedPurchaseData: [],
-      incomeLedger: [],
-      constants: DEFAULT_CONSTANTS,
-    }
+    const params = realEngineParams()
     const banners = [
       umaBanner(1, 0, 9, 50),
       umaBanner(2, 10, 19, 30),
@@ -346,6 +372,39 @@ describe('buildCaratForecast with the real engine', () => {
     }
     // The pulls really did spend something, or this test proves nothing.
     expect(result.current.every((r) => r.freeCaratsSpent > 0)).toBe(true)
+  })
+
+  it('meets the inner row of a nested pair and is right after the pair', () => {
+    const banners = [umaBanner(1, 0, 30, 100), umaBanner(2, 5, 10, 50), umaBanner(3, 31, 40, 0)]
+    const params = realEngineParams()
+    const { result } = renderHook(() =>
+      useBannerResources({ ...params, userPlannedBannerData: banners })
+    )
+    const projection = createIncomeProjection(params)
+    const forecast = buildCaratForecast({
+      projection,
+      walkOrder: projectionWalkOrder(banners),
+      resources: result.current,
+      currentFreeCarats: 5000,
+    })!
+
+    const [inner, outer, after] = forecast.markers
+    expect([inner.index, outer.index, after.index]).toEqual([1, 0, 2])
+    // Every dot carries its row's numbers.
+    for (const marker of forecast.markers) {
+      expect(marker.before).toBe(result.current[marker.index].freeCarats)
+    }
+    // The inner dot sits on the line: the outer banner's drop came first, so
+    // its instant reads outer drop, inner dot, inner drop.
+    const innerRow = result.current[1]
+    expect(valuesAt(forecast.points, inner.t).slice(-2)).toEqual([
+      innerRow.freeCarats,
+      innerRow.freeCarats - innerRow.freeCaratsSpent,
+    ])
+    expect(outer.chargedEarly).toEqual({ t: inner.t, by: 1 })
+    // The next banner's dot needs no correction step: the line arrived right.
+    const next = result.current[2]
+    expect(valuesAt(forecast.points, after.t)).toEqual([next.freeCarats])
   })
 })
 
@@ -444,6 +503,18 @@ describe('buildPullSeries', () => {
     expect(series[1].bar).toBe(bar)
     // A carat debt is no pulls, not negative ones.
     expect(series[2]).toMatchObject({ uma: 0, support: 2 })
+  })
+
+  it('floats the number of a banner charged early, leaving both lines alone', () => {
+    const early = { ...marker, chargedEarly: { t: 5, by: 1 } }
+    const series = buildPullSeries(
+      { ...forecast, markers: [early] },
+      [{ ...bar, marker: early }],
+      [uma],
+      settings
+    )
+    // 3,000 free is 20 pulls on the line; the row's 33 floats above it.
+    expect(series[1]).toMatchObject({ uma: 20, support: 22, floatPulls: 33, kind: 'uma' })
   })
 })
 

@@ -605,11 +605,19 @@ of its own:
 - **At a banner's end date** the line meets that row's `freeCarats` (its "Carat
   Est." box) and drops by `freeCaratsSpent`, which the engine now reports per row.
   A row left out of the projection is drawn hollow and drops by nothing.
-- **Each dot is anchored to its row.** The engine charges in START order, the axis
-  runs in END order. They agree unless one banner sits inside another's window;
-  there the line steps straight to the row's number instead of disagreeing with it.
-  The test `caratForecast.test.ts` pins both: on an ordinary plan, against the real
-  engine, the line meets every row with no step at all.
+- **Each dot shows its row's number.** The engine charges in START order, the axis
+  runs in END order. They agree unless one banner sits inside another's window.
+  There the engine charges the OUTER banner first, so the inner row already has the
+  outer one's pulls taken off and no line can pass through both dots. The chart takes
+  the outer banner's pulls off at the inner banner's end (the earliest end among the
+  rows the engine charged after it, the rule `BackgroundSpend.at` follows), so the
+  inner dot sits on the line. The outer dot floats above the line at its own end date
+  with its row's numbers and no drop of its own (`ForecastMarker.chargedEarly`), and
+  its hover says why (owner, 2026-10-21; it used to dip, spike, and then run high by
+  the inner banner's spend until the next dot). Any other dot that disagrees with its
+  row re-anchors the line to it, which in practice only a floored paid balance does.
+  `caratForecast.test.ts` pins both: against the real engine, an ordinary plan meets
+  every row with no step, and a nested pair meets the inner row and the next one.
 - **An ended banner** is not drawn, but its spend comes off the starting balance,
   because the engine charged it before every later row.
 - **Background daily pulls** (banners outside the plan, see above) drop the paid
