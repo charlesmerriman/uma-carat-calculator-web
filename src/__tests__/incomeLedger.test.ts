@@ -321,8 +321,8 @@ describe('day-by-day race rewards', () => {
     income_amount: 3450,
     uma_ticket_amount: 1,
     support_ticket_amount: 1,
-    ssr_shard_amount: 0,
-    sr_shard_amount: 0,
+    ssr_shard_amount: 2,
+    sr_shard_amount: 2,
     day_amounts: [390, 300, 600, 1000, 500, 500, 100, 60],
     rewards: [{ from_event_number: 6, income_amount: 3900, day_amounts: [550, 600, 600, 1000, 500, 500, 100, 50] }],
   }
@@ -331,8 +331,18 @@ describe('day-by-day race rewards', () => {
     '2026-08-13T22:00:00Z', '2026-08-14T22:00:00Z', '2026-08-15T22:00:00Z', '2026-08-16T22:00:00Z',
     '2026-08-17T22:00:00Z', '2026-08-18T22:00:00Z', '2026-08-20T22:00:00Z', '2026-08-21T21:59:59Z',
   ]
+  // Shards at the end of day 3, tickets at the end of day 4 (backend race_payouts.ITEM_PAYOUT_DAYS).
   const loh = (eventNumber: number) =>
-    parseLedger([row({ date: PAYOUTS[7], kind: 'league_of_heroes', event_number: eventNumber, payouts: PAYOUTS })])
+    parseLedger([
+      row({
+        date: PAYOUTS[7],
+        kind: 'league_of_heroes',
+        event_number: eventNumber,
+        payouts: PAYOUTS,
+        shards_at: PAYOUTS[2],
+        tickets_at: PAYOUTS[3],
+      }),
+    ])
 
   it("uses the era's own split, else the rank's", () => {
     expect(raceDayAmounts(PLATINUM_4, 3, 8)).toEqual([390, 300, 600, 1000, 500, 500, 100, 60])
@@ -364,11 +374,34 @@ describe('day-by-day race rewards', () => {
     // The worked example in backend docs/income-calculation.md.
     const afterDay4 = cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, utc('2026-08-17T21:59:59Z'), PLATINUM_4)
     expect(afterDay4.carats).toBe(390 + 300 + 600 + 1000)
-    // No tickets yet: they come with the last day.
-    expect(afterDay4.umaTickets).toBe(0)
     const whole = cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, utc('2026-08-31T21:59:59Z'), PLATINUM_4)
     expect(whole.carats).toBe(3450)
     expect(whole.umaTickets).toBe(1)
+  })
+
+  it.each([
+    // [banner ends, shards, tickets]
+    ['before day 3', '2026-08-15T21:59:59Z', 0, 0],
+    ['after day 3, before day 4', '2026-08-16T21:59:59Z', 2, 0],
+    ['after day 4, before the last day', '2026-08-17T21:59:59Z', 2, 1],
+    ['after the last day', '2026-08-31T21:59:59Z', 2, 1],
+  ])('pays shards on day 3 and tickets on day 4: banner ending %s', (_, end, shards, tickets) => {
+    const total = cumulativeRaceRewards(loh(3), 'league_of_heroes', TODAY, utc(end), PLATINUM_4)
+    expect([total.ssrShards, total.srShards]).toEqual([shards, shards])
+    expect([total.umaTickets, total.supportTickets]).toEqual([tickets, tickets])
+  })
+
+  it('pays no tickets or shards once their day is past', () => {
+    // Today is day 5: both were paid on days 3 and 4 and are in the balance.
+    const rest = cumulativeRaceRewards(loh(3), 'league_of_heroes', utc('2026-08-17T00:00:00Z'), utc('2026-08-31T21:59:59Z'), PLATINUM_4)
+    expect([rest.ssrShards, rest.umaTickets]).toEqual([0, 0])
+  })
+
+  it('pays tickets and shards on the last day when the row has no instants for them', () => {
+    // An API older than tickets_at / shards_at.
+    const old = parseLedger([row({ date: PAYOUTS[7], kind: 'league_of_heroes', event_number: 3, payouts: PAYOUTS })])
+    const afterDay4 = cumulativeRaceRewards(old, 'league_of_heroes', TODAY, utc('2026-08-17T21:59:59Z'), PLATINUM_4)
+    expect([afterDay4.ssrShards, afterDay4.umaTickets]).toEqual([0, 0])
   })
 
   it('counts only the days still ahead once an event is under way', () => {

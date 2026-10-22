@@ -47,6 +47,14 @@ export interface IncomeLedgerRow {
 	 * "everything at `date`".
 	 */
 	payouts?: string[]
+	/**
+	 * When a race event pays the rank's gacha tickets, and its shards: a CM
+	 * both on day 4, an LoH shards on day 3 and tickets on day 4 (backend
+	 * `race_payouts.ITEM_PAYOUT_DAYS`), each one of `payouts`. Null on `event`
+	 * rows, absent from an API older than the fields: both mean "at `date`".
+	 */
+	tickets_at?: string | null
+	shards_at?: string | null
 
 	/** Lump carats on `date`. */
 	carats: number
@@ -71,4 +79,7 @@ export interface ParsedLedgerRow extends IncomeLedgerRow {
 	parsedThroughoutEnd: Date | null
 	/** `payouts` parsed; `[parsedDate]` when the row has none. */
 	parsedPayouts: Date[]
+	/** `tickets_at` / `shards_at` parsed; `parsedDate` when the row has none. */
+	parsedTicketsAt: Date
+	parsedShardsAt: Date
 }

@@ -1,12 +1,6 @@
 import type { ReactNode } from "react"
-import NumberFlow from "@number-flow/react"
 import type { UserPlannedBanner } from "../../types"
 import { oddsLabels } from "../../utils/oddsDisplay"
-
-// Prints what `toFixed(1)` + "%" printed: one decimal, always, and a "." for
-// it (hence en-US, where toFixed ignores the locale). The odds never reach
-// 1,000, so grouping never shows. Module scope for a stable identity.
-const ODDS_FORMAT = { minimumFractionDigits: 1, maximumFractionDigits: 1 }
 
 interface MLBChanceDisplayProps {
 	plannedBanner: UserPlannedBanner
@@ -75,16 +69,10 @@ export const MLBChanceDisplay = ({
 					className={`flex flex-col items-center justify-center px-0.5 ${header ? "py-1" : "py-1.5"} text-[10px] leading-tight text-center @banner-table:px-1 ${i < labels.length - 1 ? "border-r border-gray-600" : ""}`}
 				>
 					<div className="mlb-label">{label}</div>
-					{/* The percentage rolls (NumberFlow) and the bar slides with it,
-					    so the two move together; both snap under "reduce motion". */}
-					<div className="mlb-value">
-						<NumberFlow value={values[i]} locales="en-US" format={ODDS_FORMAT} suffix="%" />
-					</div>
+					<div className="mlb-value">{values[i].toFixed(1)}%</div>
 					<div className="h-1 bg-gray-500 rounded-full overflow-hidden mt-0.5 w-full">
 						<div
-							// 900ms is NumberFlow's own default duration, so the bar and
-							// the digits land together.
-							className="h-full bg-blue-400 rounded-full transition-[width] duration-900 ease-out motion-reduce:transition-none"
+							className="h-full bg-blue-400 rounded-full"
 							style={{ width: `${values[i]}%` }}
 						/>
 					</div>

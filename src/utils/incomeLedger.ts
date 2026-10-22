@@ -34,6 +34,8 @@ export function parseLedger(rows: IncomeLedgerRow[]): ParsedLedgerRow[] {
 			parsedDate,
 			parsedThroughoutEnd: row.throughout_end ? new Date(row.throughout_end) : null,
 			parsedPayouts: row.payouts?.length ? row.payouts.map((instant) => new Date(instant)) : [parsedDate],
+			parsedTicketsAt: row.tickets_at ? new Date(row.tickets_at) : parsedDate,
+			parsedShardsAt: row.shards_at ? new Date(row.shards_at) : parsedDate,
 		}
 	})
 }
@@ -258,8 +260,9 @@ export function upcomingRaceRewardRange(
  * within each event (raceDayAmounts), so the carats land on the days the
  * game pays them. Each payout instant is held to raceEventsInWindow's bounds
  * (from the start of today to `end`). Tickets and shards are per rank only, as
- * in the sheet, and come with the event's last day, so they keep that window
- * as it is.
+ * in the sheet, and held to the same bounds at their own instants (the row's
+ * `tickets_at` / `shards_at`: a CM's on day 4, an LoH's shards on day 3 and
+ * tickets on day 4).
  */
 export function cumulativeRaceRewards(
 	ledger: ParsedLedgerRow[],
@@ -281,21 +284,25 @@ export function cumulativeRaceRewards(
 	// already paid and the next banner the rest (raceDayAmounts).
 	const from = startOfUtcDay(today).getTime()
 	const until = end.getTime()
+	const inWindow = (instant: Date) => instant.getTime() >= from && instant.getTime() <= until
 	for (const row of ledger) {
 		if (row.kind !== kind) continue
 		const days = raceDayAmounts(userRank, row.event_number, row.parsedPayouts.length)
 		row.parsedPayouts.forEach((instant, day) => {
-			const time = instant.getTime()
-			if (time >= from && time <= until) total.carats += days[day]
+			if (inWindow(instant)) total.carats += days[day]
 		})
+		// Tickets and shards each arrive whole on their own day (Daptrius,
+		// 2026-10-22), so a banner ending after it gets them even when the
+		// event's last day is past the banner's end.
+		if (inWindow(row.parsedTicketsAt)) {
+			total.umaTickets += userRank.uma_ticket_amount
+			total.supportTickets += userRank.support_ticket_amount
+		}
+		if (inWindow(row.parsedShardsAt)) {
+			total.ssrShards += userRank.ssr_shard_amount
+			total.srShards += userRank.sr_shard_amount
+		}
 	}
-	// Tickets and shards come with the last day, as before: one set per event
-	// whose last day is in the window.
-	const settled = raceEventsInWindow(ledger, kind, today, end).length
-	total.umaTickets += settled * userRank.uma_ticket_amount
-	total.supportTickets += settled * userRank.support_ticket_amount
-	total.ssrShards += settled * userRank.ssr_shard_amount
-	total.srShards += settled * userRank.sr_shard_amount
 	return total
 }
 
