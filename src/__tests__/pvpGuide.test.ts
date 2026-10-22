@@ -137,6 +137,22 @@ describe("splitNoteText", () => {
 			{ kind: "highlight", pieces: [{ kind: "text", text: "then " }, { kind: "skill", name: "Final Push" }] },
 		])
 	})
+	const flagged = (note: string) =>
+		splitNoteText(note).flatMap((piece) => (piece.kind === "highlight" ? piece.pieces : [piece]))
+			.filter((piece) => piece.kind === "skill" && piece.scenarioLink)
+			.map((piece) => (piece.kind === "skill" ? piece.name : ""))
+
+	it("flags a skill followed by '& Scenario Link', in each way the guides write it", () => {
+		expect(flagged("==[[See Ya Later!]] & Scenario Link==")).toEqual(["See Ya Later!"])
+		expect(flagged("[[See Ya Later!]] ==& Scenario Link==")).toEqual(["See Ya Later!"])
+		expect(flagged("==[[Unstoppable]] & 2SP & Scenario Link==")).toEqual(["Unstoppable"])
+	})
+
+	it("leaves other '&' notes and other skills alone", () => {
+		expect(flagged("[[Sharp Streak]] ==& 1SP==")).toEqual([])
+		expect(flagged("==Scenario Link==")).toEqual([])
+		expect(flagged("[[Groundwork]] then [[See Ya Later!]] & Scenario Link")).toEqual(["See Ya Later!"])
+	})
 })
 
 describe("skillsForPosition", () => {

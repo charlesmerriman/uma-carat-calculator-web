@@ -39,7 +39,7 @@ function isInternalHref(href: string): boolean {
  * inheriting the paragraph top margin, and `[&>code]` on <pre> strips the inline-code
  * chip styling from a fenced block, since react-markdown routes both through `code`.
  */
-function buildComponents(paragraph: string, renderSkill?: (name: string) => ReactNode): Components {
+function buildComponents(paragraph: string, renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode): Components {
 	return {
 		h2: ({ node: _node, children, ...props }) => (
 			<h2
@@ -109,11 +109,15 @@ function buildComponents(paragraph: string, renderSkill?: (name: string) => Reac
 		// No background: the <mark> default yellow would fight every theme.
 		mark: ({ node: _node, ...props }) => <mark className="bg-transparent font-semibold text-highlight" {...props} />,
 		// `[[Skill name]]` (utils/remarkHighlight.ts) arrives as a span with
-		// data-skill. A caller that knows skills renders a chip; any other
-		// caller shows the bare name.
+		// data-skill, and data-scenario-link when "& Scenario Link" follows it.
+		// A caller that knows skills renders a chip; any other caller shows the
+		// bare name.
 		span: ({ node: _node, children, ...props }) => {
-			const name = (props as Record<string, unknown>)["data-skill"]
-			if (typeof name === "string") return <>{renderSkill ? renderSkill(name) : name}</>
+			const data = props as Record<string, unknown>
+			const name = data["data-skill"]
+			if (typeof name === "string") {
+				return <>{renderSkill ? renderSkill(name, { scenarioLink: data["data-scenario-link"] !== undefined }) : name}</>
+			}
 			return <span {...props}>{children}</span>
 		},
 	}
@@ -137,7 +141,7 @@ export function MarkdownContent({
 	markdown: string
 	paragraphClassName?: string
 	/** Renders a `[[Skill name]]` mention. Without it the bare name shows. */
-	renderSkill?: (name: string) => ReactNode
+	renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode
 }) {
 	const components = useMemo(() => buildComponents(paragraphClassName, renderSkill), [paragraphClassName, renderSkill])
 	return (
