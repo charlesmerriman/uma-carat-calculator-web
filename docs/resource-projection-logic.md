@@ -208,6 +208,13 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   badge shows the range over the events still ahead (`upcomingRaceRewardRange`).
   This replaced `RACE_RANK_CAPS` (2026-10-21). → backend
   `docs/income-calculation.md` ("Rewards that change with the event number")
+- **A race event pays day by day** (2026-10-22). Each race row carries `payouts` (5 instants
+  for a CM, 8 for an LoH, the last equal to `date`), and `raceDayAmounts` splits the event's
+  carats across them: the era row's `day_amounts`, else the rank's split scaled to the era's
+  total (rounded to tens, the remainder on the last day), else everything on the last day.
+  `cumulativeRaceRewards` sums the days inside the window, so a banner ending mid-LoH gets the
+  days already paid; tickets and shards still come with the last day. → backend
+  `docs/income-calculation.md` ("Rewards paid day by day")
 - **A skipped race event is removed from the ledger, once, upstream of every
   consumer.** The player turns "Taking part" off on the Timeline card; that writes
   `skipped_race_events` on the stats block (`{champions_meeting: [ids],

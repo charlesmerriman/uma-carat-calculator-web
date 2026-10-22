@@ -27,11 +27,15 @@ import { addUtcDays, ceilToTen, startOfUtcDay, utcDaysBetween } from "./utcDates
  * date strings inside those passes is work that only needs doing a single time.
  */
 export function parseLedger(rows: IncomeLedgerRow[]): ParsedLedgerRow[] {
-	return rows.map((row) => ({
-		...row,
-		parsedDate: new Date(row.date),
-		parsedThroughoutEnd: row.throughout_end ? new Date(row.throughout_end) : null,
-	}))
+	return rows.map((row) => {
+		const parsedDate = new Date(row.date)
+		return {
+			...row,
+			parsedDate,
+			parsedThroughoutEnd: row.throughout_end ? new Date(row.throughout_end) : null,
+			parsedPayouts: row.payouts?.length ? row.payouts.map((instant) => new Date(instant)) : [parsedDate],
+		}
+	})
 }
 
 export interface LedgerRewards {
@@ -142,6 +146,7 @@ export interface RaceRank {
 	support_ticket_amount: number
 	ssr_shard_amount: number
 	sr_shard_amount: number
+	day_amounts?: readonly number[]
 	rewards?: readonly RaceRankReward[]
 }
 
@@ -170,16 +175,52 @@ export interface RaceRewards {
  * behaviour from before the rows existed.
  */
 export function raceRewardAmount(rank: RaceRank, eventNumber: number | null): number {
-	if (eventNumber == null) return rank.income_amount
-	let amount = rank.income_amount
-	let from = 0
+	return eraRow(rank, eventNumber)?.income_amount ?? rank.income_amount
+}
+
+/** The "from event #N" row an event pays from, or null for the rank's own amount. */
+function eraRow(rank: RaceRank, eventNumber: number | null): RaceRankReward | null {
+	if (eventNumber == null) return null
+	let found: RaceRankReward | null = null
 	for (const reward of rank.rewards ?? []) {
-		if (reward.from_event_number <= eventNumber && reward.from_event_number > from) {
-			from = reward.from_event_number
-			amount = reward.income_amount
+		if (reward.from_event_number <= eventNumber && reward.from_event_number > (found?.from_event_number ?? 0)) {
+			found = reward
 		}
 	}
-	return amount
+	return found
+}
+
+/**
+ * How one race event's carats arrive, one amount per payout instant (the
+ * ledger row's `payouts`; backend `race_payouts.py`), adding up to
+ * `raceRewardAmount`. An LoH pays most of its reward by day 4 of 9 and a CM
+ * about 20% before its finals (Daptrius, 2026-10-05), so crediting it all on
+ * the last day left a banner ending mid-event short.
+ *
+ * Which split, in order:
+ * 1. The era row's own `day_amounts`, or the rank's when no era row applies.
+ * 2. An era row with none (CM #30+, which has no table of its own): the
+ *    rank's split scaled to the era's total, each day rounded to tens and the
+ *    remainder on the last day, so the total is exact.
+ * 3. No split at all, or one whose length doesn't match the payouts (an API
+ *    from before the field): everything on the last payout, which is how
+ *    every race event paid before this existed.
+ */
+export function raceDayAmounts(rank: RaceRank, eventNumber: number | null, payoutCount: number): number[] {
+	const era = eraRow(rank, eventNumber)
+	const total = era?.income_amount ?? rank.income_amount
+	const fits = (split: readonly number[] | undefined): split is readonly number[] =>
+		!!split && split.length === payoutCount && payoutCount > 0
+	const own = era ? era.day_amounts : rank.day_amounts
+	if (fits(own)) return [...own]
+	const base = rank.day_amounts
+	const baseTotal = fits(base) ? base.reduce((sum, amount) => sum + amount, 0) : 0
+	if (fits(base) && baseTotal > 0) {
+		const early = base.slice(0, -1).map((amount) => Math.round((amount * total) / baseTotal / 10) * 10)
+		const last = total - early.reduce((sum, amount) => sum + amount, 0)
+		if (last >= 0) return [...early, last]
+	}
+	return [...Array(Math.max(payoutCount - 1, 0)).fill(0), total]
 }
 
 /**
@@ -213,9 +254,12 @@ export function upcomingRaceRewardRange(
  * rank: sheet `AS42`/`AT42`, and its ticket columns `BE42`/`BF42`.
  *
  * Summed PER EVENT rather than `count x rank amount`, because what a rank
- * pays depends on the event's number (raceRewardAmount). Tickets and shards
- * are per rank only, as in the sheet. The window is raceEventsInWindow's, so
- * the bounds documented there are the only bounds.
+ * pays depends on the event's number (raceRewardAmount), and per PAYOUT DAY
+ * within each event (raceDayAmounts), so the carats land on the days the
+ * game pays them. Each payout instant is held to raceEventsInWindow's bounds
+ * (from the start of today to `end`). Tickets and shards are per rank only, as
+ * in the sheet, and come with the event's last day, so they keep that window
+ * as it is.
  */
 export function cumulativeRaceRewards(
 	ledger: ParsedLedgerRow[],
@@ -232,13 +276,26 @@ export function cumulativeRaceRewards(
 		srShards: 0,
 	}
 	if (!userRank) return total
-	for (const row of raceEventsInWindow(ledger, kind, today, end)) {
-		total.carats += raceRewardAmount(userRank, row.event_number)
-		total.umaTickets += userRank.uma_ticket_amount
-		total.supportTickets += userRank.support_ticket_amount
-		total.ssrShards += userRank.ssr_shard_amount
-		total.srShards += userRank.sr_shard_amount
+	// Carats day by day: every payout instant inside the window, whether or
+	// not the event's last day is, so a banner ending mid-event gets the days
+	// already paid and the next banner the rest (raceDayAmounts).
+	const from = startOfUtcDay(today).getTime()
+	const until = end.getTime()
+	for (const row of ledger) {
+		if (row.kind !== kind) continue
+		const days = raceDayAmounts(userRank, row.event_number, row.parsedPayouts.length)
+		row.parsedPayouts.forEach((instant, day) => {
+			const time = instant.getTime()
+			if (time >= from && time <= until) total.carats += days[day]
+		})
 	}
+	// Tickets and shards come with the last day, as before: one set per event
+	// whose last day is in the window.
+	const settled = raceEventsInWindow(ledger, kind, today, end).length
+	total.umaTickets += settled * userRank.uma_ticket_amount
+	total.supportTickets += settled * userRank.support_ticket_amount
+	total.ssrShards += settled * userRank.ssr_shard_amount
+	total.srShards += settled * userRank.sr_shard_amount
 	return total
 }
 
