@@ -70,6 +70,7 @@ const GUIDE: PvpGuide = {
 			style: "front",
 			label: "Standard",
 			note: "",
+			is_highlighted: false,
 			slots: [
 				{ slot: 1, order: 0, is_borrow: false, note: "Gold + Link", support_card: card(302, "Kitasan Black") },
 				{ slot: 1, order: 1, is_borrow: false, note: "or any speed", support_card: null },

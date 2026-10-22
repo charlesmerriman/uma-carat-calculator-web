@@ -136,6 +136,8 @@ export interface PvpDeck {
 	style: PvpStyle
 	label: string
 	note: string
+	/** Drawn in a gold box, to set it apart (the sheet's Honorable Mentions row). */
+	is_highlighted: boolean
 	/** Sorted by slot, then order. */
 	slots: PvpDeckSlot[]
 }

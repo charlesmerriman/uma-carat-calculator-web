@@ -218,6 +218,7 @@ export function hydrateGuide(
 			style: deck.style,
 			label: deck.label,
 			note: deck.note,
+			is_highlighted: deck.is_highlighted ?? false,
 			slots: [...deck.slots]
 				.sort((a, b) => a.slot - b.slot || a.order - b.order)
 				.map((slot) => ({
