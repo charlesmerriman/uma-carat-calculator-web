@@ -21,7 +21,8 @@ import type {
 	SkipMarker,
 } from "../../utils/caratForecast"
 import { forecastValueAt, formatCarats } from "../../utils/caratForecast"
-import { formatDate, formatMonth } from "../../utils/dateFormat"
+import { formatDate, formatMonth, formatUtcDay } from "../../utils/dateFormat"
+import { startOfUtcDay } from "../../utils/utcDates"
 
 /**
  * THE FORECAST PLOT, drawn with Recharts. Loaded lazily (loadForecastPlot):
@@ -592,6 +593,18 @@ const LineDot: React.FC<{
 	)
 }
 
+/**
+ * The date under a hovered vertex. A daily sample sits on a UTC midnight and
+ * already holds that UTC day's rewards (the engine counts UTC days), so it is
+ * read in UTC: read locally, 2029-11-02T00:00Z says "Nov 1" west of Greenwich
+ * beside Nov 2's number. Any other vertex is a banner's end or drop instant,
+ * read in local time like its row's "Ends" date.
+ */
+const vertexDate = (t: number) => {
+	const at = new Date(t)
+	return startOfUtcDay(at).getTime() === t ? formatUtcDay(at) : formatDate(at.toISOString())
+}
+
 // Only the fields of Recharts' tooltip props this readout reads.
 type ForecastTooltipProps = {
 	active?: boolean
@@ -671,7 +684,7 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 						<span className="text-gray-400">{LINE_LABEL[line].toLowerCase()}</span>
 					</div>
 				))}
-				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
+				<div className="text-gray-400">{vertexDate(datum.t!)}</div>
 			</>
 		)
 	} else if (hasPaid) {
@@ -688,7 +701,7 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 						<span className="text-gray-400">{row.label}</span>
 					</div>
 				))}
-				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
+				<div className="text-gray-400">{vertexDate(datum.t!)}</div>
 			</>
 		)
 	} else {
@@ -697,7 +710,7 @@ const ForecastTooltip: React.FC<ForecastTooltipProps> = ({
 				<div className="text-sm font-semibold text-gray-100 tabular-nums">
 					{formatCarats(datum.value ?? 0)} carats
 				</div>
-				<div className="text-gray-400">{formatDate(new Date(datum.t!).toISOString())}</div>
+				<div className="text-gray-400">{vertexDate(datum.t!)}</div>
 			</>
 		)
 	}
