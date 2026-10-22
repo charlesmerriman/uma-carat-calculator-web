@@ -1,4 +1,5 @@
 import { useAccount } from "../services/AuthContext"
+import type { RaceEvent } from "../types"
 
 /**
  * The PvP page (guides, My team, the gallery) opens to Patreon supporters and
@@ -13,6 +14,19 @@ import { useAccount } from "../services/AuthContext"
  * gate: it decides what is drawn, and the PvP API itself stays open.
  */
 export const PVP_EARLY_ACCESS = true
+
+/**
+ * The one Champions Meeting open in full while the page is early: its guide,
+ * My team and the Gallery, for everyone (owner, 2026-10-22). From CM 22 on,
+ * only the rolling free guide is open (components/pvp/PvpGuidePage.tsx).
+ * Matched on the CM's number, never its database id. Null closes it again.
+ */
+export const PVP_OPEN_CM_NUMBER: number | null = 21
+
+/** Whether `event` is the CM that is open in full while the page is early. */
+export function isOpenPvpEvent(event: RaceEvent): boolean {
+	return event.event_type === "champions_meeting" && event.cm_number === PVP_OPEN_CM_NUMBER
+}
 
 /**
  * Whether this visitor may use the PvP page right now. `pending` while the

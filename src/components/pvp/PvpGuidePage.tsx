@@ -27,7 +27,8 @@
  * but someone it is locked to can read one guide: the event running now, else
  * the next (`defaultPvpEvent`, the event a bare /app/pvp opens on), so the
  * free guide moves with the calendar (owner, 2026-10-22: the ad review should
- * land on a real guide, not a lock card). Every other guide, My team and the
+ * land on a real guide, not a lock card). One CM is open in full, its My team
+ * and Gallery too (`isOpenPvpEvent`, CM 21). Every other guide, My team and
  * Gallery draw the early-access card in their panel instead.
  *
  * Inside the /app loading gate, so it is never prerendered and may read the
@@ -99,7 +100,7 @@ import {
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
 import { PvpEarlyAccess } from "./PvpEarlyAccess"
-import { usePvpAccess } from "../../hooks/usePvpAccess"
+import { isOpenPvpEvent, usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { loadGalleryView } from "./gallery/loadGallery"
@@ -205,9 +206,13 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const requested = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
 	const event = requested ?? freeEvent
 	const view = parseView(searchParams.get(VIEW_PARAM), isEditor)
-	// Whether the view on screen is closed to this reader: anything but the
-	// free event's guide, while locked. An editor is staff, so never locked.
-	const viewLocked = locked && !(view === "recommendations" && event === freeEvent)
+	// Whether the view on screen is closed to this reader: while locked,
+	// anything but the free event's guide and the open CM's guide, My team and
+	// Gallery. An editor is staff, so never locked.
+	const viewLocked =
+		locked &&
+		!(view === "recommendations" && event === freeEvent) &&
+		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
 
 	// Past events stay out of the dropdown unless asked for, or unless the
 	// event on screen is itself past (a link to an old guide).

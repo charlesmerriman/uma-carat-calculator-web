@@ -1422,7 +1422,9 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   loading, so a supporter never sees the gate flash; `PvpGuidePage` draws only a "checking"
   line) or `locked`. Locked, the page still renders, and the guide of `defaultPvpEvent`
   (the event running now, else the next) is free (owner, 2026-10-22, so the ad review lands
-  on a real guide). Every other guide, My team and the Gallery draw `PvpEarlyAccess` in
+  on a real guide). One CM is open in full, My team and Gallery too
+  (`PVP_OPEN_CM_NUMBER` / `isOpenPvpEvent`, CM 21; null closes it). The team window stays
+  supporters only. Every other guide, My team and the Gallery draw `PvpEarlyAccess` in
   their panel (a link to the free guide, sign in, Patreon, or "link your Patreon on your
   account page"), and a locked guide is never fetched. A bare `/app/pvp` skips the
   tab's remembered address while locked, so the navbar link opens on the free guide. The server says WHO

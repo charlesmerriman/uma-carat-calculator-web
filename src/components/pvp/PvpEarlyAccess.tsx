@@ -16,6 +16,7 @@ import { useAccount } from "../../services/AuthContext"
 import { useSignInPrompt } from "../../hooks/useSignInPrompt"
 import { PATREON_URL } from "../../constants/links"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
+import { PVP_OPEN_CM_NUMBER } from "../../hooks/usePvpAccess"
 import type { RaceEvent } from "../../types"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "./gallery/galleryStyles"
 
@@ -42,7 +43,8 @@ export function PvpEarlyAccess({ pending, freeEvent = null }: { pending: boolean
 					</h2>
 					<p className="text-sm leading-relaxed text-gray-300">
 						Our Patreon supporters get every PvP guide, the team builder and the team gallery first. The guide
-						for the current or next event is free for everyone.
+						for the current or next event is free for everyone
+						{PVP_OPEN_CM_NUMBER !== null && `, and so is all of Champions Meeting ${PVP_OPEN_CM_NUMBER}`}.
 					</p>
 					<div className="flex flex-wrap justify-center gap-2">
 						{freeEvent && (
