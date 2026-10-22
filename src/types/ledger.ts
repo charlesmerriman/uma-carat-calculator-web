@@ -40,6 +40,13 @@ export interface IncomeLedgerRow {
 	 * which covers both.
 	 */
 	event_number: number | null
+	/**
+	 * The instants a race event pays, one per payout day (5 for a CM, 8 for
+	 * an LoH; backend `race_payouts.py`), the last equal to `date`. Empty on
+	 * `event` rows, absent from an API older than the field: both mean
+	 * "everything at `date`".
+	 */
+	payouts?: string[]
 
 	/** Lump carats on `date`. */
 	carats: number
@@ -62,4 +69,6 @@ export interface IncomeLedgerRow {
 export interface ParsedLedgerRow extends IncomeLedgerRow {
 	parsedDate: Date
 	parsedThroughoutEnd: Date | null
+	/** `payouts` parsed; `[parsedDate]` when the row has none. */
+	parsedPayouts: Date[]
 }
