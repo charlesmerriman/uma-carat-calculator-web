@@ -103,7 +103,10 @@ vi.mock("../components/pvp/TeamBuilder", () => ({
 // The page as everyone will have it, unless a test closes it: the early-access
 // rule itself is tested in usePvpAccess.test.tsx.
 const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
-vi.mock("../hooks/usePvpAccess", () => ({ usePvpAccess: () => access.value }))
+vi.mock("../hooks/usePvpAccess", async () => ({
+	...(await vi.importActual<typeof import("../hooks/usePvpAccess")>("../hooks/usePvpAccess")),
+	usePvpAccess: () => access.value,
+}))
 // Nobody signed in unless a test says so (the Edit guide tab is for editors).
 const session = vi.hoisted(() => ({ account: null as null | { guide_editor: boolean } }))
 vi.mock("../services/AuthContext", async () => ({
@@ -122,6 +125,7 @@ vi.mock("../components/pvp/gallery/GalleryView", () => ({
 }))
 
 const { PvpGuidePage } = await import("../components/pvp/PvpGuidePage")
+const { PVP_OPEN_CM_NUMBER } = await import("../hooks/usePvpAccess")
 const { clearPvpGuideCache } = await import("../hooks/usePvpGuide")
 
 function LocationProbe() {
@@ -202,6 +206,19 @@ describe("PvpGuidePage", () => {
 		fireEvent.click(screen.getByRole("tab", { name: "Gallery" }))
 		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
 		expect(screen.queryByTestId("gallery-view")).not.toBeInTheDocument()
+	})
+
+	it("opens all of the open CM to everyone, guide, My team and Gallery", async () => {
+		access.value = "locked"
+		events = [OLD, NEXT, LATER, event(PVP_OPEN_CM_NUMBER ?? 0, "Capricorn Cup", "2100-06-01T00:00:00Z")]
+		respond(200, GUIDE)
+		renderPage(`/app/pvp?event=cm-${PVP_OPEN_CM_NUMBER}&view=team`)
+		expect(screen.getByTestId("team-builder")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Gallery" }))
+		expect(await screen.findByTestId("gallery-view")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Recommendations" }))
+		await screen.findByText("Recommended stats")
+		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
 	})
 
 	it("waits for the account rather than flashing the card at a supporter", () => {
