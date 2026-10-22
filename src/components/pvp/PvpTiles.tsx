@@ -115,7 +115,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
  * No heading: an "Also as" heading read as unclear (Daptrius, 2026-10-17).
  * The rule above the list and each line's colour word say what they are.
  */
-export function SkillVersions({ skill }: { skill: PvpSkillRef }) {
+function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 	if (skill.versions.length === 0) return null
 	return (
 		<span className="mt-1 block border-t border-gray-700/70 pt-1 text-gray-300">

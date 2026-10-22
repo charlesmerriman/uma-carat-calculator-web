@@ -1138,5 +1138,3 @@ export function BannerWindowCard({
 		</div>
 	)
 }
-
-export default BannerWindowCard

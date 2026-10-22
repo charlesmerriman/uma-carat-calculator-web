@@ -54,7 +54,7 @@ export function getThemeMode(id: string): ThemeConfig["mode"] {
 	return THEMES.find((theme) => theme.id === id)?.mode ?? "dark"
 }
 
-export function isThemeId(id: string | null): id is string {
+function isThemeId(id: string | null): id is string {
 	return id !== null && THEMES.some((theme) => theme.id === id)
 }
 

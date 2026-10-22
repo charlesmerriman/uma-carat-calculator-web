@@ -742,7 +742,7 @@ export function plannedBannerTimeline(
  * visible to the same user minutes apart — if they disagree, rows appear to
  * shuffle themselves on refresh.
  */
-export function plannedBannerOrderRank(
+function plannedBannerOrderRank(
 	plannedBanner: BannerTargetFields
 ): number {
 	const target = plannedBannerTarget(plannedBanner)
