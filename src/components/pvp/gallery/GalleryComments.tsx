@@ -1,12 +1,18 @@
 /**
- * A post's comments: the thread, oldest first, one level of replies, and the
+ * A comment thread: the thread, oldest first, one level of replies, and the
  * box to add one. Reading needs nothing; writing needs an account with a
  * display name, and until then the thread says which one is missing instead
  * of offering a Reply that cannot work.
  *
- * The thread is cached per post (services/galleryQueries.ts): a new comment
+ * Whose thread is the `source`'s business (services/galleryQueries.ts): a
+ * gallery post's (postThread) or one section of a PvP guide's (guideThread,
+ * services/guideComments.ts). The thread is cached per source: a new comment
  * or an edit goes straight in from the server's answer, and a delete reloads
  * the pages already open, never just the first.
+ *
+ * Every comment shows its thumbs-up count; a signed-in reader can give one to
+ * anyone's comment but their own (Henry, 2026-10-20). Who gave them is never
+ * shown, and never sent.
  *
  * Plain text only. Line breaks are kept and nothing is turned into a link:
  * the API refuses links outright (gallery_moderation.py), and drawing one
@@ -15,14 +21,19 @@
 
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Flag, Loader2, Pencil, Reply, Trash2 } from "lucide-react"
+import { Flag, Loader2, Pencil, Reply, ThumbsUp, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar } from "../../account/Avatar"
 import { PosterLine, YouChip } from "./GalleryBits"
 import { ReportDialog } from "./ReportDialog"
 import { DANGER_BUTTON_SMALL, FIELD, PRIMARY_BUTTON_SMALL, SECONDARY_BUTTON, SECONDARY_BUTTON_SMALL, SMALL_BUTTON } from "./galleryStyles"
 import { useAccount } from "../../../services/AuthContext"
-import { failureText, useCommentWrites, useGalleryComments } from "../../../services/galleryQueries"
+import {
+	failureText,
+	useCommentWrites,
+	useGalleryComments,
+	type CommentThreadSource,
+} from "../../../services/galleryQueries"
 import { useSignInPrompt } from "../../../hooks/useSignInPrompt"
 import { formatDate } from "../../../utils/dateFormat"
 import { formatTimeAgo } from "../../../utils/relativeDate"
@@ -30,11 +41,23 @@ import { GALLERY_COMMENT_MAX, type GalleryComment } from "../../../types/gallery
 
 type Writes = ReturnType<typeof useCommentWrites>
 
-export function GalleryComments({ publicId }: { publicId: string }) {
+/**
+ * `placeholder` is the new-comment box's prompt, which says what the thread
+ * is for; `heading` is false where the caller already titles the section.
+ */
+export function GalleryComments({
+	source,
+	placeholder = "Leave some feedback on this team",
+	heading = true,
+}: {
+	source: CommentThreadSource
+	placeholder?: string
+	heading?: boolean
+}) {
 	const { isLoggedIn, account } = useAccount()
 	const { signInState } = useSignInPrompt()
-	const thread = useGalleryComments(publicId)
-	const writes = useCommentWrites(publicId)
+	const thread = useGalleryComments(source)
+	const writes = useCommentWrites(source)
 	const [replyTo, setReplyTo] = useState<number | null>(null)
 	const [reporting, setReporting] = useState<number | null>(null)
 	const canWrite = isLoggedIn && Boolean(account?.display_name)
@@ -42,9 +65,9 @@ export function GalleryComments({ publicId }: { publicId: string }) {
 
 	return (
 		<section aria-label="Comments" className="flex min-w-0 flex-col gap-3">
-			<h3 className="text-sm font-semibold text-gray-100">Comments</h3>
+			{heading && <h3 className="text-sm font-semibold text-gray-100">Comments</h3>}
 			{canWrite ? (
-				<CommentBox writes={writes} />
+				<CommentBox writes={writes} placeholder={placeholder} />
 			) : isLoggedIn ? (
 				<p className="text-sm text-gray-400">
 					<Link to="/account" className="text-brand hover:text-brand/75">
@@ -186,6 +209,7 @@ function CommentItem({ comment, canWrite, signedIn, writes, onReply, onReport }:
 			)}
 			{!editing && (
 				<div className="flex flex-wrap items-center gap-1">
+					<ThumbsUpButton comment={comment} signedIn={signedIn} writes={writes} />
 					{canWrite && (
 						<button type="button" className={SMALL_BUTTON} onClick={onReply}>
 							<Reply className="h-3.5 w-3.5" aria-hidden="true" />
@@ -230,16 +254,52 @@ function CommentItem({ comment, canWrite, signedIn, writes, onReply, onReport }:
 }
 
 /**
+ * A comment's thumbs-up: the count, pressed when you gave one. Just the count
+ * on your own comment and for a guest, who has nothing to press.
+ */
+function ThumbsUpButton({ comment, signedIn, writes }: { comment: GalleryComment; signedIn: boolean; writes: Writes }) {
+	const count = comment.upvotes
+	const label = `${count} thumbs-up`
+	if (!signedIn || comment.is_mine) {
+		if (count === 0) return null
+		return (
+			<span className="flex items-center gap-1 px-1.5 text-xs tabular-nums text-gray-400" aria-label={label} title={label}>
+				<ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+				{count}
+			</span>
+		)
+	}
+	return (
+		<button
+			type="button"
+			className={`${SMALL_BUTTON} tabular-nums ${comment.my_vote ? "text-brand" : ""}`}
+			aria-pressed={comment.my_vote}
+			aria-label={comment.my_vote ? `Take back your thumbs-up (${count})` : `Give a thumbs-up (${count})`}
+			onClick={() =>
+				writes.vote.mutate(
+					{ id: comment.id, on: !comment.my_vote },
+					{ onError: (error) => toast.error(failureText(error, "That didn't go through. Try again in a moment.")) }
+				)
+			}
+		>
+			<ThumbsUp className={`h-3.5 w-3.5 ${comment.my_vote ? "fill-current" : ""}`} aria-hidden="true" />
+			{count > 0 && count}
+		</button>
+	)
+}
+
+/**
  * The text box, for a new comment, a reply (`parent`) or an edit
  * (`editing`). Says what will show beside the comment, once, under a new
  * top-level box. `onDone` closes a reply or an edit once it is saved, or
  * when cancelled.
  */
-function CommentBox({ writes, parent, editing, onDone }: {
+function CommentBox({ writes, parent, editing, onDone, placeholder }: {
 	writes: Writes
 	parent?: number
 	editing?: GalleryComment
 	onDone?: () => void
+	placeholder?: string
 }) {
 	const [body, setBody] = useState(editing?.body ?? "")
 	const [error, setError] = useState<string | null>(null)
@@ -277,7 +337,7 @@ function CommentBox({ writes, parent, editing, onDone }: {
 				maxLength={GALLERY_COMMENT_MAX}
 				rows={editing || parent ? 2 : 3}
 				onChange={(change) => setBody(change.target.value)}
-				placeholder={parent ? "Write a reply" : "Leave some feedback on this team"}
+				placeholder={parent || editing ? "Write a reply" : placeholder}
 				aria-invalid={error !== null}
 				className={FIELD}
 			/>

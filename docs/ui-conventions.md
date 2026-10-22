@@ -1436,6 +1436,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
   first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event
   that has it.
+- **Comments on a guide** (Henry, 2026-10-21; `guide-comments-plan.md`): one thread per section,
+  `""` for the whole guide (the side column's last box) and one per running style (under the
+  style's pane). `GuideComments` folds each until opened, showing the guide's `comment_counts`,
+  so nothing is fetched for a section nobody opens; the All tab shows each style's count as a
+  link to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
+  (`services/guideComments.ts`), which keeps the guide's counts in step through
+  `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up (`useCommentWrites().vote`).
 - **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
   shell) or the navbar (phone, document scrolling); the running-style tabs, the guide's side
   column, the gallery's open post and the team builder's docked panels stick under them.

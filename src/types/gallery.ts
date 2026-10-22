@@ -110,6 +110,10 @@ export interface GalleryComment {
 	is_author: boolean
 	is_mine: boolean
 	poster: GalleryPoster | null
+	/** Thumbs-up count (people, blocked accounts not counted); who voted is never sent. */
+	upvotes: number
+	/** The viewer gave it a thumbs-up. */
+	my_vote: boolean
 	replies: GalleryComment[]
 }
 

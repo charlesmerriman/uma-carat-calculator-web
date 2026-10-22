@@ -6,6 +6,7 @@ import { buildSiteContentValue } from "../services/siteContent"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import type { RaceEvent } from "../types"
 import type { PvpGuide } from "../types/pvpGuide"
+import { TestQueryProvider } from "../test/TestQueryProvider"
 
 /**
  * The PvP tab. Pins which event it opens on, what the band's controls write
@@ -130,12 +131,14 @@ function LocationProbe() {
 
 function renderPage(url = "/app/pvp") {
 	return render(
-		<SiteContentContext.Provider value={buildSiteContentValue({ pages: [] })}>
-			<MemoryRouter initialEntries={[url]}>
-				<PvpGuidePage />
-				<LocationProbe />
-			</MemoryRouter>
-		</SiteContentContext.Provider>
+		<TestQueryProvider>
+			<SiteContentContext.Provider value={buildSiteContentValue({ pages: [] })}>
+				<MemoryRouter initialEntries={[url]}>
+					<PvpGuidePage />
+					<LocationProbe />
+				</MemoryRouter>
+			</SiteContentContext.Provider>
+		</TestQueryProvider>
 	)
 }
 
@@ -548,5 +551,51 @@ describe("PvpGuidePage style links and memory", () => {
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		copy()
 		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/app/pvp?event=cm-10`))
+	})
+})
+
+describe("PvpGuidePage comments", () => {
+	const THREAD = {
+		count: 1, page: 1, has_more: false,
+		results: [{
+			id: 5, state: "visible", body: "Why Seiun first?", created_at: "2026-10-11T00:00:00Z", edited: false,
+			earlier_version: false, is_author: false, is_mine: false, upvotes: 2, my_vote: false, replies: [],
+			poster: { display_name: "Trainer", portrait: null, tier_name: null, gallery_style: null },
+		}],
+	}
+
+	beforeEach(() => {
+		// The guide, and a section's thread: told apart by the address.
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(new Response(JSON.stringify(
+				String(url).includes("/comments") ? THREAD : { ...GUIDE, comment_counts: { front: 1, "": 3 } }
+			), { status: 200 }))
+		)
+	})
+
+	it("folds each style's thread under its pane, with the count, and opens it on a click", async () => {
+		renderPage()
+		const toggle = await screen.findByRole("button", { name: "Comments (1)" })
+		expect(toggle).toHaveAttribute("aria-expanded", "false")
+		expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/comments"))).toBe(false)
+		fireEvent.click(toggle)
+		expect(await screen.findByText("Why Seiun first?")).toBeInTheDocument()
+		const asked = fetchMock.mock.calls.map(([url]) => String(url)).find((url) => url.includes("/comments"))
+		expect(asked).toContain(`/pvp-guides/cm/${NEXT.id}/comments?section=front`)
+		// The thumbs-up count shows; a guest has nothing to press.
+		expect(screen.getByLabelText("2 thumbs-up")).toBeInTheDocument()
+	})
+
+	it("keeps a thread for the whole guide in the side column", async () => {
+		renderPage()
+		expect(await screen.findByRole("button", { name: "Comments (3)" })).toBeInTheDocument()
+	})
+
+	it("shows each style's count on the All tab, and goes to that tab", async () => {
+		renderPage()
+		await screen.findByText("Recommended stats")
+		fireEvent.click(within(screen.getAllByRole("tablist", { name: "Running style" })[0]).getByRole("tab", { name: "All" }))
+		fireEvent.click(screen.getByRole("button", { name: "Comments (1) on the Front tab" }))
+		expect(screen.getByTestId("location").textContent).toContain("style=front")
 	})
 })

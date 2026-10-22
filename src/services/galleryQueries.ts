@@ -25,6 +25,7 @@ import {
 	galleryCommentCreate,
 	galleryCommentDelete,
 	galleryCommentEdit,
+	galleryCommentVote,
 	galleryCommentsFetch,
 	galleryFeedFetch,
 	galleryMyPosts,
@@ -103,12 +104,38 @@ export function useGalleryPost(publicId: string | null) {
 	})
 }
 
-/** A post's comments, a page of top-level comments at a time, oldest first. */
-export function useGalleryComments(publicId: string) {
+/**
+ * Where a comment thread lives. A post's comments and each section of a PvP
+ * guide's are the same kind of thread (the API's GalleryComment, with a post
+ * OR a guide as its parent), so one component draws both and only this
+ * differs: the cache key, how a page is fetched, how a comment is added, and
+ * who else counts the thread's comments (a post's stats, a guide's tabs).
+ * Built by postThread here and guideThread (services/guideComments.ts).
+ */
+export interface CommentThreadSource {
+	key: readonly unknown[]
+	fetchPage: (page: number) => Promise<Response>
+	create: (body: string, parent?: number) => Promise<Response>
+	/** A visible comment came (+1) or went (-1): patch whatever else counts them. */
+	countChanged: (client: QueryClient, delta: number) => void
+}
+
+/** A gallery post's thread. */
+export function postThread(publicId: string): CommentThreadSource {
+	return {
+		key: galleryKeys.comments(publicId),
+		fetchPage: (page) => galleryCommentsFetch(publicId, page),
+		create: (body, parent) => galleryCommentCreate(publicId, body, parent),
+		countChanged: (client, delta) => patchPost(client, publicId, { commentsDelta: delta }),
+	}
+}
+
+/** A thread's comments, a page of top-level comments at a time, oldest first. */
+export function useGalleryComments(source: CommentThreadSource) {
 	return useInfiniteQuery({
-		queryKey: galleryKeys.comments(publicId),
+		queryKey: source.key,
 		queryFn: async ({ pageParam }) =>
-			readJson<GalleryThread>(await galleryCommentsFetch(publicId, pageParam), "The comments didn't load."),
+			readJson<GalleryThread>(await source.fetchPage(pageParam), "The comments didn't load."),
 		initialPageParam: 1,
 		getNextPageParam: (last) => (last.has_more ? last.page + 1 : undefined),
 	})
@@ -250,36 +277,42 @@ function withComment(thread: Thread, comment: GalleryComment, parent: number | n
 
 /** The cached thread with `updated` in place of the comment it edits; a top comment keeps its replies. */
 function withEdit(thread: Thread, updated: GalleryComment): Thread {
+	return withPatch(thread, updated.id, (comment) => ({ ...comment, ...updated, replies: comment.replies }))
+}
+
+/** The cached thread with one comment (top or reply) changed by `change`. */
+function withPatch(thread: Thread, id: number, change: (comment: GalleryComment) => GalleryComment): Thread {
 	return {
 		...thread,
 		pages: thread.pages.map((page) => ({
 			...page,
 			results: page.results.map((top) =>
-				top.id === updated.id
-					? { ...top, ...updated, replies: top.replies }
-					: { ...top, replies: top.replies.map((reply) => (reply.id === updated.id ? updated : reply)) }
+				top.id === id
+					? change(top)
+					: { ...top, replies: top.replies.map((reply) => (reply.id === id ? change(reply) : reply)) }
 			),
 		})),
 	}
 }
 
 /**
- * Writing in a post's comments. A new comment or an edit goes straight into
- * the cached thread from the server's answer. A delete refetches the pages
- * already loaded instead, because a comment with replies stays as
- * "[deleted]" and one without vanishes, and only the server knows which.
+ * Writing in a thread. A new comment or an edit goes straight into the cached
+ * thread from the server's answer. A delete refetches the pages already
+ * loaded instead, because a comment with replies stays as "[deleted]" and one
+ * without vanishes, and only the server knows which. A thumbs-up shows at
+ * once and takes the server's count when it answers.
  */
-export function useCommentWrites(publicId: string) {
+export function useCommentWrites(source: CommentThreadSource) {
 	const client = useQueryClient()
-	const key = galleryKeys.comments(publicId)
+	const key = source.key
 	const failed = "Your comment couldn't be posted. Try again in a moment."
 
 	const create = useMutation({
 		mutationFn: async ({ body, parent }: { body: string; parent: number | null }) =>
-			readJson<GalleryComment>(await galleryCommentCreate(publicId, body, parent ?? undefined), failed),
+			readJson<GalleryComment>(await source.create(body, parent ?? undefined), failed),
 		onSuccess: (comment, { parent }) => {
 			client.setQueryData<Thread>(key, (thread) => thread && withComment(thread, comment, parent))
-			patchPost(client, publicId, { commentsDelta: 1 })
+			source.countChanged(client, 1)
 		},
 	})
 
@@ -293,10 +326,28 @@ export function useCommentWrites(publicId: string) {
 		mutationFn: async (id: number) =>
 			expectOk(await galleryCommentDelete(id), "That comment couldn't be deleted. Try again in a moment."),
 		onSuccess: () => {
-			patchPost(client, publicId, { commentsDelta: -1 })
+			source.countChanged(client, -1)
 			void client.invalidateQueries({ queryKey: key })
 		},
 	})
 
-	return { create, edit, remove }
+	const vote = useMutation({
+		mutationFn: async ({ id, on }: { id: number; on: boolean }) =>
+			readJson<{ upvotes: number; my_vote: boolean }>(
+				await galleryCommentVote(id, on),
+				"That didn't go through. Try again in a moment."
+			),
+		onMutate: ({ id, on }) =>
+			client.setQueryData<Thread>(key, (thread) =>
+				thread &&
+				withPatch(thread, id, (comment) =>
+					comment.my_vote === on ? comment : { ...comment, my_vote: on, upvotes: Math.max(comment.upvotes + (on ? 1 : -1), 0) }
+				)
+			),
+		onSuccess: (answer, { id }) =>
+			client.setQueryData<Thread>(key, (thread) => thread && withPatch(thread, id, (comment) => ({ ...comment, ...answer }))),
+		onError: () => void client.invalidateQueries({ queryKey: key }),
+	})
+
+	return { create, edit, remove, vote }
 }
