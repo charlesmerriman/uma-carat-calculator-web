@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
 import { formatDate } from "../../utils/dateFormat"
 import { TIMELINE_FOCUS_HIGHLIGHT } from "./timelineShared"
+import { CopyTimelineLink } from "./CopyTimelineLink"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
 import type { TimelineFocusProps, TimelineMarker } from "./timelineShared"
 
@@ -106,6 +107,9 @@ const EventMarkerBody = ({
 					{marker.name}
 				</h3>
 				{marker.isPredicted && <PredictedBadge />}
+				{/* kind + sourceId is exactly a TimelineFocus. In a pair each half
+				    links to itself, and both land on the shared panel. */}
+				<CopyTimelineLink focus={{ kind: marker.kind, id: marker.sourceId }} name={marker.name} />
 			</div>
 
 			{/* The bottom margin belongs to the art below, so it goes when the art does. */}

@@ -21,6 +21,7 @@ import { formatDate } from "../../utils/dateFormat"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { TIMELINE_FOCUS_HIGHLIGHT, getCountdownLabel } from "./timelineShared"
 import { CourseDetails } from "./CourseDetails"
+import { CopyTimelineLink } from "./CopyTimelineLink"
 import { availableCourseDetails, courseDetails } from "../../utils/courseDetails"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
@@ -107,6 +108,8 @@ export function RaceEventCard({
 								/>
 							</div>
 						)}
+						{/* A race ref is already a TimelineFocus (cm-12 / loh-3). */}
+						<CopyTimelineLink focus={refForRaceEvent(event)} name={event.name} />
 						<div className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
 							<span>{countdownLabel}</span>
 							<Clock3 className="h-4 w-4 text-brand" />
