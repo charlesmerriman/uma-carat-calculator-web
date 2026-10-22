@@ -23,6 +23,14 @@
  * The header reads the calculator payload, so it renders even for an event
  * with no guide; only the guide is fetched (hooks/usePvpGuide.ts).
  *
+ * In early access (hooks/usePvpAccess.ts) the page still renders for everyone,
+ * but someone it is locked to can read one guide: the event running now, else
+ * the next (`defaultPvpEvent`, the event a bare /app/pvp opens on), so the
+ * free guide moves with the calendar (owner, 2026-10-22: the ad review should
+ * land on a real guide, not a lock card). One CM is open in full, its My team
+ * and Gallery too (`isOpenPvpEvent`, CM 21). Every other guide, My team and
+ * Gallery draw the early-access card in their panel instead.
+ *
  * Inside the /app loading gate, so it is never prerendered and may read the
  * clock freely. Its head tags come from AppRouteMeta.
  */
@@ -92,7 +100,7 @@ import {
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
 import { PvpEarlyAccess } from "./PvpEarlyAccess"
-import { usePvpAccess } from "../../hooks/usePvpAccess"
+import { isOpenPvpEvent, lockedPvpEvents, usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { loadGalleryView } from "./gallery/loadGallery"
@@ -151,23 +159,26 @@ function inPageOrder(params: URLSearchParams): URLSearchParams {
 }
 
 /**
- * The route's component: the page itself, or the early-access card while the
- * page is for supporters and staff only (hooks/usePvpAccess.ts). A wrapper so
- * the page's own hooks never run for someone who can't see it.
+ * The route's component: a "checking your account" line while the account
+ * loads (so a supporter never sees the early-access card flash up), then the
+ * page, told whether it is `locked` (hooks/usePvpAccess.ts).
  */
 export const PvpGuidePage = () => {
 	const access = usePvpAccess()
 	const { search } = useLocation()
-	if (access !== "open") return <PvpEarlyAccess pending={access === "pending"} />
+	if (access === "pending") return <PvpEarlyAccess pending />
+	const locked = access === "locked"
 	// A bare /app/pvp (the navbar link) goes back to where this tab left the
 	// page. Read at render: the route renders only behind the /app loading
 	// gate, never during the build. `replace`, so Back skips the bare address.
-	const recalled = search === "" ? recalledPvpPage() : ""
+	// Not while locked: a bare address then opens on the free guide, so the
+	// navbar link always lands somewhere readable.
+	const recalled = search === "" && !locked ? recalledPvpPage() : ""
 	if (recalled) return <Navigate to={{ search: recalled }} replace />
-	return <PvpGuide />
+	return <PvpGuide locked={locked} />
 }
 
-const PvpGuide = () => {
+const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const {
 		championsMeetingData,
 		leagueOfHeroesData,
@@ -189,15 +200,34 @@ const PvpGuide = () => {
 		[championsMeetingData, leagueOfHeroesData]
 	)
 
+	// The event a bare address opens on is also the one guide that is free
+	// while the page is locked (see the header).
+	const freeEvent = defaultPvpEvent(events, now)
 	const requested = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
-	const event = requested ?? defaultPvpEvent(events, now)
+	const event = requested ?? freeEvent
 	const view = parseView(searchParams.get(VIEW_PARAM), isEditor)
+	// Whether the view on screen is closed to this reader: while locked,
+	// anything but the free event's guide and the open CM's guide, My team and
+	// Gallery. An editor is staff, so never locked.
+	const viewLocked =
+		locked &&
+		!(view === "recommendations" && event === freeEvent) &&
+		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
 
+	// The events this reader can open: all of them, or while locked only the
+	// free guide's and the open CM's (lockedPvpEvents), so the list never
+	// offers a lock card. The event on screen is always listed, so a link to a
+	// locked one still shows it selected (with its card).
+	const reachable = locked ? lockedPvpEvents(events, now) : events
 	// Past events stay out of the dropdown unless asked for, or unless the
 	// event on screen is itself past (a link to an old guide).
 	const [showPastChoice, setShowPastChoice] = useState(false)
 	const showPast = showPastChoice || (event !== null && hasEnded(event, now))
-	const choices = events.filter((candidate) => showPast || !hasEnded(candidate, now) || candidate === event)
+	const choices = events.filter(
+		(candidate) => candidate === event || (reachable.includes(candidate) && (showPast || !hasEnded(candidate, now)))
+	)
+	// No past event to offer (a locked reader, before the open CM ends): no toggle.
+	const hasPast = reachable.some((candidate) => hasEnded(candidate, now))
 	const index = event ? choices.indexOf(event) : -1
 
 	// The running style asked for: the URL's, else the last one this tab was
@@ -238,7 +268,7 @@ const PvpGuide = () => {
 	const selectStyle = (next: PvpStyleTab) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
 	// Fetched only on the view that shows it.
-	const guideState = usePvpGuide(event && view === "recommendations" ? refForRaceEvent(event) : null)
+	const guideState = usePvpGuide(event && view === "recommendations" && !viewLocked ? refForRaceEvent(event) : null)
 
 	// The intro shows in full until a guide has been on screen once on this
 	// device, then folds behind a link (services/pvpPageMemory.ts). Read once
@@ -292,6 +322,7 @@ const PvpGuide = () => {
 				index={index}
 				now={now}
 				showPast={showPast}
+				hasPast={hasPast}
 				onTogglePast={() => setShowPastChoice(!showPast)}
 				onSelect={select}
 			/>
@@ -342,6 +373,9 @@ const PvpGuide = () => {
 						</div>
 
 						<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
+							{/* A locked guide fetches nothing (guideState stays idle), so
+							    only the card and the event's new cards show under it. */}
+							{viewLocked && <PvpEarlyAccess pending={false} freeEvent={freeEvent} />}
 							{view === "recommendations" && (
 								<div className="flex flex-col gap-4">
 									{guideState.status === "loading" && (
@@ -373,8 +407,8 @@ const PvpGuide = () => {
 									/>
 								</div>
 							)}
-							{view === "team" && <TeamBuilder event={event} />}
-							{view === "gallery" && (
+							{view === "team" && !viewLocked && <TeamBuilder event={event} />}
+							{view === "gallery" && !viewLocked && (
 								<Suspense
 									fallback={
 										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
@@ -386,7 +420,7 @@ const PvpGuide = () => {
 									<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
 								</Suspense>
 							)}
-							{view === "editor" && (
+							{view === "editor" && !viewLocked && (
 								<Suspense
 									fallback={
 										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
@@ -470,13 +504,14 @@ function optionLabel(event: RaceEvent): string {
 	return `${event.has_guide ? "★ " : ""}${event.name} (${formatDate(event.start_date)})`
 }
 
-function ControlBand({ ref, events, event, index, now, showPast, onTogglePast, onSelect }: {
+function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogglePast, onSelect }: {
 	ref: Ref<HTMLDivElement>
 	events: RaceEvent[]
 	event: RaceEvent | null
 	index: number
 	now: Date
 	showPast: boolean
+	hasPast: boolean
 	onTogglePast: () => void
 	onSelect: (event: RaceEvent | undefined) => void
 }) {
@@ -497,10 +532,12 @@ function ControlBand({ ref, events, event, index, now, showPast, onTogglePast, o
 			    grid, with the right column left empty to balance it. Stacked on a
 			    phone, toggle first. */}
 			<div className="mx-auto flex w-full max-w-[96rem] flex-col items-stretch gap-2 px-3 py-2 md:flex-row md:items-center md:justify-center md:px-2">
-				<button type="button" className={`${controlButtonClass} w-full md:w-auto`} onClick={onTogglePast}>
-					<History className="h-4 w-4 text-brand" />
-					{showPast ? "Hide past events" : "Show past events"}
-				</button>
+				{hasPast && (
+					<button type="button" className={`${controlButtonClass} w-full md:w-auto`} onClick={onTogglePast}>
+						<History className="h-4 w-4 text-brand" />
+						{showPast ? "Hide past events" : "Show past events"}
+					</button>
+				)}
 				<div className="flex items-center justify-center gap-2">
 					<button
 						type="button"

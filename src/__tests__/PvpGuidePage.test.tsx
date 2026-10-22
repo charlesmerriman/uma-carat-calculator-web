@@ -103,7 +103,10 @@ vi.mock("../components/pvp/TeamBuilder", () => ({
 // The page as everyone will have it, unless a test closes it: the early-access
 // rule itself is tested in usePvpAccess.test.tsx.
 const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
-vi.mock("../hooks/usePvpAccess", () => ({ usePvpAccess: () => access.value }))
+vi.mock("../hooks/usePvpAccess", async () => ({
+	...(await vi.importActual<typeof import("../hooks/usePvpAccess")>("../hooks/usePvpAccess")),
+	usePvpAccess: () => access.value,
+}))
 // Nobody signed in unless a test says so (the Edit guide tab is for editors).
 const session = vi.hoisted(() => ({ account: null as null | { guide_editor: boolean } }))
 vi.mock("../services/AuthContext", async () => ({
@@ -122,6 +125,7 @@ vi.mock("../components/pvp/gallery/GalleryView", () => ({
 }))
 
 const { PvpGuidePage } = await import("../components/pvp/PvpGuidePage")
+const { PVP_OPEN_CM_NUMBER } = await import("../hooks/usePvpAccess")
 const { clearPvpGuideCache } = await import("../hooks/usePvpGuide")
 
 function LocationProbe() {
@@ -166,21 +170,81 @@ describe("PvpGuidePage", () => {
 		access.value = "open"
 	})
 
-	it("shows the early-access card to anyone it is closed to, and none of the page", () => {
+	it("gives anyone it is locked to the next event's guide, with no card", async () => {
 		access.value = "locked"
+		respond(200, GUIDE)
 		renderPage()
-		expect(screen.getByRole("heading", { name: "PvP is in early access" })).toBeInTheDocument()
+		await screen.findByText("Recommended stats")
+		expect(fetchMock.mock.calls[0][0]).toMatch(/\/pvp-guides\/cm\/10$/)
+		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
+	})
+
+	it("opens a bare address on the free guide while locked, not where the tab left the page", () => {
+		access.value = "locked"
+		sessionStorage.setItem("pvp-page", "?event=cm-11&view=gallery")
+		respond(200, GUIDE)
+		renderPage()
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp")
+		expect(screen.getByRole("heading", { name: "Aquarius Cup" })).toBeInTheDocument()
+	})
+
+	it("shows the card in place of any other guide, and fetches none", () => {
+		access.value = "locked"
+		renderPage("/app/pvp?event=cm-11")
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "Read the Aquarius Cup guide" })).toHaveAttribute("href", "/app/pvp?event=cm-10")
 		expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
 		expect(screen.getByRole("link", { name: /Support us on Patreon/ })).toHaveAttribute("href", expect.stringContaining("patreon.com"))
-		expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
 		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("keeps My team and the Gallery closed while locked, even on the free event", () => {
+		access.value = "locked"
+		renderPage("/app/pvp?event=cm-10&view=team")
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.queryByTestId("team-builder")).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Gallery" }))
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.queryByTestId("gallery-view")).not.toBeInTheDocument()
+	})
+
+	it("opens all of the open CM to everyone, guide, My team and Gallery", async () => {
+		access.value = "locked"
+		events = [OLD, NEXT, LATER, event(PVP_OPEN_CM_NUMBER ?? 0, "Capricorn Cup", "2100-06-01T00:00:00Z")]
+		respond(200, GUIDE)
+		renderPage(`/app/pvp?event=cm-${PVP_OPEN_CM_NUMBER}&view=team`)
+		expect(screen.getByTestId("team-builder")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Gallery" }))
+		expect(await screen.findByTestId("gallery-view")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Recommendations" }))
+		await screen.findByText("Recommended stats")
+		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
+	})
+
+	it("lists only the free guide's event and the open CM while locked, with no past toggle", () => {
+		access.value = "locked"
+		events = [OLD, NEXT, LATER, event(PVP_OPEN_CM_NUMBER ?? 0, "Capricorn Cup", "2100-06-01T00:00:00Z")]
+		respond(200, GUIDE)
+		renderPage()
+		const options = within(screen.getByRole("combobox", { name: "Event" })).getAllByRole("option")
+		expect(options.map((option) => option.textContent)).toEqual([
+			expect.stringContaining("Aquarius Cup"),
+			expect.stringContaining("Capricorn Cup"),
+		])
+		expect(screen.queryByRole("button", { name: "Show past events" })).not.toBeInTheDocument()
+	})
+
+	it("still lists a locked event a link opened, so the list shows what is on screen", () => {
+		access.value = "locked"
+		renderPage("/app/pvp?event=cm-11")
+		expect(screen.getByRole("combobox", { name: "Event" })).toHaveDisplayValue(/Pisces Cup/)
 	})
 
 	it("waits for the account rather than flashing the card at a supporter", () => {
 		access.value = "pending"
 		renderPage()
 		expect(screen.getByText("Checking your account…")).toBeInTheDocument()
-		expect(screen.queryByRole("heading", { name: "PvP is in early access" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
 	})
 
 	it("opens on the next event and fetches its guide", async () => {

@@ -1417,11 +1417,19 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 `/app/pvp`: one Champions Meeting or League of Heroes event at a time, with its guide
 (`GET /pvp-guides/<kind>/<id>`, `backend/docs/api-reference.md`, "PvP guides").
 
-- **Early access (owner, 2026-10-14, for about a week): supporters and staff only.**
-  `PvpGuidePage` is a wrapper: `usePvpAccess()` (`hooks/usePvpAccess.ts`) gives `open`,
-  `pending` (the account is still loading, so a supporter never sees the gate flash) or
-  `locked`, and anything but `open` draws `PvpEarlyAccess` (sign in, Patreon, or "link your
-  Patreon on your account page") and none of the page's own hooks. The server says WHO
+- **Early access (owner, 2026-10-14): supporters and staff, plus one free guide.**
+  `usePvpAccess()` (`hooks/usePvpAccess.ts`) gives `open`, `pending` (the account is still
+  loading, so a supporter never sees the gate flash; `PvpGuidePage` draws only a "checking"
+  line) or `locked`. Locked, the page still renders, and the guide of `defaultPvpEvent`
+  (the event running now, else the next) is free (owner, 2026-10-22, so the ad review lands
+  on a real guide). One CM is open in full, My team and Gallery too
+  (`PVP_OPEN_CM_NUMBER` / `isOpenPvpEvent`, CM 21; null closes it). Locked, the event list
+  offers only those two events (`lockedPvpEvents`, plus whichever event a link opened) and
+  hides "Show past events" when none of them is past; the team window knows only the open CM
+  (`lockedTeamEvents`) and its Team button shows only while that CM is on. Every other guide, My team and the Gallery draw `PvpEarlyAccess` in
+  their panel (a link to the free guide, sign in, Patreon, or "link your Patreon on your
+  account page"), and a locked guide is never fetched. A bare `/app/pvp` skips the
+  tab's remembered address while locked, so the navbar link opens on the free guide. The server says WHO
   (`account.early_access`, `benefits.early_access_for`: any paid tier, or staff); the
   `PVP_EARLY_ACCESS` constant says the page is still early. The team window and the
   navbar's Team button follow the same answer (`TeamDrawerProvider`'s `available`). A
