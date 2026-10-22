@@ -123,10 +123,19 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					    (no z-index) and does not affect `fixed` descendants. */}
 					{/* `data-app-scroller` is how hooks/useScrollReset.ts finds this
 					    element. It cannot query for the scroller generically: below
-					    the app-shell breakpoint this same div still carries
-					    overflow-y-auto but never scrolls internally, so "has an
-					    overflow style" would not identify the live scroller. */}
-					<div data-app-scroller className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+					    the app-shell breakpoint this div never scrolls internally.
+
+					    It scrolls only at app-shell. Below that it is `overflow-x:
+					    clip` and nothing else, and that is load-bearing too: it used
+					    to carry overflow-y-auto at every width, which made it the
+					    scroll container of every `sticky` inside it even where it
+					    never scrolls, so nothing in /app could pin on a phone (the
+					    PvP page's tabs, 2026-10-22). `clip` makes no scroll
+					    container, so a sticky resolves against the document, and it
+					    still keeps sideways overflow (a hover card past the right
+					    edge) from widening the page. At app-shell, overflow-auto
+					    sets both axes back to what overflow-y-auto gave. */}
+					<div data-app-scroller className="relative flex min-h-0 flex-1 flex-col overflow-x-clip app-shell:overflow-auto">
 						{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
 						    timeline keep a normal block formatting context and don't become
 						    flex items themselves. flex-1 grows it into the slack; min-height:auto

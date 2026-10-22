@@ -1433,6 +1433,16 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
   first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event
   that has it.
+- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
+  shell) or the navbar (phone, document scrolling); the running-style tabs, the guide's side
+  column, the gallery's open post and the team builder's docked panels stick under them.
+  The offsets are MEASURED by `hooks/usePvpStickyOffsets.ts` into CSS variables on the page
+  root (`--pvp-tabs-top`, `--pvp-below-tabs`, `--pvp-viewport-h`); a new pinned row reads
+  those, never a rem guess. The side column (`.pvp-side-sticky`, App.css) pins when it fits
+  and otherwise scrolls with the page until its end shows. Pinning works on a phone only
+  because the /app scroller is `overflow-x-clip` below app-shell, not a scroll container
+  (`views/ApplicationViews.tsx`): put overflow-y back on it and every sticky inside /app
+  stops engaging there.
 - **The tab remembers where it left the page** (`services/pvpPageMemory.ts`, sessionStorage,
   so a new tab opens on the current event). A bare `/app/pvp`, the navbar link, `<Navigate
   replace>`s to the last address; an address that names no style (a Timeline card's link)
@@ -1561,8 +1571,8 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 
 - **One full-width feed until a post opens, then two panes from `lg` up.** With nothing
   open the feed spans the page and each row is one short band. Open a post and the feed
-  moves to the left with the post (`GalleryPostPanel`) beside it, inline and sticky under the
-  PvP page's own sticky event bar (`top-[4.5rem]`; change it if that bar's height changes).
+  moves to the left with the post (`GalleryPostPanel`) beside it, inline and sticky 1rem under
+  the PvP page's pinned View tabs (`--pvp-below-tabs`, see "Pinned rows" under "PvP page").
   Below `lg` the post takes the feed's place (the feed stays mounted, hidden) with an "All
   teams" button.
 - **Rows take their shape from the feed's width, not the screen's**: the feed is

@@ -21,10 +21,12 @@ import { PanelLeftClose, PanelRightClose, X } from "lucide-react"
 
 export type PanelSide = "left" | "right"
 
-// Literal class strings per side, so Tailwind sees every one of them.
+// Literal class strings per side, so Tailwind sees every one of them. Docked
+// 1rem under the PvP page's pinned View tabs and no taller than what is left
+// of the screen below that; both measured (hooks/usePvpStickyOffsets.ts).
 const DOCK_CLASSES: Record<PanelSide, string> = {
-	left: "hidden xl:sticky xl:top-18 xl:flex xl:max-h-[calc(100dvh-10rem)] xl:flex-col",
-	right: "hidden 2xl:sticky 2xl:top-18 2xl:flex 2xl:max-h-[calc(100dvh-10rem)] 2xl:flex-col",
+	left: "hidden xl:sticky xl:top-[calc(var(--pvp-below-tabs,3.5rem)+1rem)] xl:flex xl:max-h-[calc(var(--pvp-viewport-h,100dvh)-var(--pvp-below-tabs,3.5rem)-2rem)] xl:flex-col",
+	right: "hidden 2xl:sticky 2xl:top-[calc(var(--pvp-below-tabs,3.5rem)+1rem)] 2xl:flex 2xl:max-h-[calc(var(--pvp-viewport-h,100dvh)-var(--pvp-below-tabs,3.5rem)-2rem)] 2xl:flex-col",
 }
 const DRAWER_CLASSES: Record<PanelSide, { root: string; sheet: string }> = {
 	left: {
