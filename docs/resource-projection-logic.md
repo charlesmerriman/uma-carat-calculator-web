@@ -213,7 +213,7 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   carats across them: the era row's `day_amounts`, else the rank's split scaled to the era's
   total (rounded to tens, the remainder on the last day), else everything on the last day.
   `cumulativeRaceRewards` sums the days inside the window, so a banner ending mid-LoH gets the
-  days already paid; tickets and shards still come with the last day. → backend
+  days already paid. Tickets and shards come at the row's `tickets_at` / `shards_at` (a CM's on day 4, an LoH's shards on day 3 and tickets on day 4), the last day when absent. → backend
   `docs/income-calculation.md` ("Rewards paid day by day")
 - **A skipped race event is removed from the ledger, once, upstream of every
   consumer.** The player turns "Taking part" off on the Timeline card; that writes
