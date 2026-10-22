@@ -51,7 +51,7 @@ export const SelectorTargetPicker = ({
 	const [isOpen, setIsOpen] = useState(false)
 	const [search, setSearch] = useState("")
 	const isUma = product.product_type === "uma_selector"
-	// The person's favourite umas get the rainbow frame (FramedUma).
+	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 
 	// The catalogue rules — "(All)" exclusion, inclusive cutoff, newest-first

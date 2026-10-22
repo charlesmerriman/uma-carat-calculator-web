@@ -29,8 +29,8 @@ export interface TeamGridProps {
 	cardsById: Map<number, CatalogueSupportCard>
 	/** The event's course, for each uma's aptitude letters. Omitted: no letters. */
 	course?: Pick<RaceEvent, "surface_type" | "distance" | "length">
-	/** Is this uma one of the player's favourites (oshis)? Draws the frame. */
-	isFavourite?: (umaId: number) => boolean
+	/** Is this uma one of the player's favorites (oshis)? Draws the frame. */
+	isFavorite?: (umaId: number) => boolean
 	/** The event's release check, for the During / Too late flags. */
 	releaseFor?: ReleaseCheck
 	/** Does the event's guide recommend this pick for this style? Draws a star. */
@@ -79,7 +79,7 @@ function MemberPanel({
 	cardsById,
 	course,
 	releaseFor,
-	isFavourite,
+	isFavorite,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -191,7 +191,7 @@ function MemberPanel({
 					large
 					starred={starred("uma", member.uma)}
 					flag={releaseFor?.("uma", member.uma)}
-					favourite={isFavourite?.(member.uma) ?? false}
+					favorite={isFavorite?.(member.uma) ?? false}
 					label={`Change uma ${position + 1}: ${umaLabel}`}
 					onClick={() => onPickUma(position)}
 					empty={null}
@@ -220,7 +220,7 @@ function Tile({
 	disabled = false,
 	disabledHint,
 	starred = false,
-	favourite = false,
+	favorite = false,
 	flag,
 	badge = null,
 	onClear,
@@ -234,14 +234,14 @@ function Tile({
 	caption?: string
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
-	/** An uma: drawn in the site's frame (FramedUma), the rainbow one for a favourite. */
+	/** An uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
 	framed?: boolean
 	large?: boolean
 	disabled?: boolean
 	disabledHint?: string
 	starred?: boolean
-	/** A favourite uma: the rainbow frame (FramedUma) and a heart. */
-	favourite?: boolean
+	/** A favorite uma: the rainbow frame (FramedUma) and a heart. */
+	favorite?: boolean
 	flag?: ReleaseStatus
 	badge?: ReactNode
 	onClear?: () => void
@@ -273,7 +273,7 @@ function Tile({
 					}`}
 				>
 					{filled && framed ? (
-						<FramedUma src={art} oshi={favourite} className="w-full" />
+						<FramedUma src={art} oshi={favorite} className="w-full" />
 					) : filled ? (
 						art ? (
 							<img src={art} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
@@ -293,7 +293,7 @@ function Tile({
 					</span>
 				)}
 				<ReleaseFlag status={flag} />
-				{favourite && <FavouriteHeart className="absolute bottom-1 right-1" />}
+				{favorite && <FavoriteHeart className="absolute bottom-1 right-1" />}
 				{badge && (
 					<span className="pointer-events-none absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
 						{badge}
@@ -375,16 +375,16 @@ export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 }
 
 /**
- * The heart on a favourite uma's tile; the rainbow frame around it is FramedUma's.
+ * The heart on a favorite uma's tile; the rainbow frame around it is FramedUma's.
  * `className` places it (absolute in a tile corner, or nothing inside a stack).
  */
-export function FavouriteHeart({ className = "" }: { className?: string }) {
+export function FavoriteHeart({ className = "" }: { className?: string }) {
 	return (
 		<span
 			className={`pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-gray-950/85 ${className}`}
-			title="Your favourite uma"
+			title="Your favorite uma"
 		>
-			<Heart className="h-3 w-3 fill-oshi text-oshi" aria-label="Your favourite uma" />
+			<Heart className="h-3 w-3 fill-oshi text-oshi" aria-label="Your favorite uma" />
 		</span>
 	)
 }

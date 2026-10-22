@@ -322,8 +322,8 @@ html {
 	--color-note-green: #16321f;
 	--color-note-green-edge: #4a9160;
 
-	/* The favourite-uma heart on a PvP team (TeamGrid's FavouriteHeart). The
-	   favourite's frame itself is the rainbow SVG (FramedUma), not a token.
+	/* The favorite-uma heart on a PvP team (TeamGrid's FavoriteHeart). The
+	   favorite's frame itself is the rainbow SVG (FramedUma), not a token.
 	   Redrawn deeper under [data-theme-mode="light"]. */
 	--color-oshi: #f472b6;
 
@@ -332,7 +332,7 @@ html {
 	   SR: a metallic gold EDGE on the ordinary dark card, with a soft glow. On
 	   the gold, gilded and midnight themes the glow is what keeps it apart
 	   from the brand gold, the recommended chip's trick. Rose: a still edge
-	   for the first paid tier, redder than the favourite-uma pink so the two
+	   for the first paid tier, redder than the favorite-uma pink so the two
 	   never read as one signal. Chips carry dark ink on the gold fills (7:1
 	   or better) and the rose text clears 4.5:1 on gray-800. */
 	--color-gallery-sr-edge: #d4a017;
@@ -587,7 +587,7 @@ html {
 	--color-note-green: #d6f0dc;
 	--color-note-green-edge: #7cbf8c;
 
-	/* The favourite-uma frame, deeper so it reads on white cards. */
+	/* The favorite-uma frame, deeper so it reads on white cards. */
 	--color-oshi: #db2777;
 
 	/* Gallery looks, deeper on white cards. */

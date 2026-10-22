@@ -66,7 +66,7 @@ export const DailyLegendRaces = () => {
 		() => (account ? account.oshis.slice(0, account.oshi_slots) : []),
 		[account]
 	)
-	// The tiles' rainbow frame: every outfit of each covered favourite, the
+	// The tiles' rainbow frame: every outfit of each covered favorite, the
 	// set every page frames. The lines above the list stay one per pick.
 	const oshiIds = useOshiIds()
 	const oshiReleases = useMemo(() => {
@@ -159,7 +159,7 @@ export const DailyLegendRaces = () => {
 			{oshiReleases.length > 0 && (
 				<section aria-labelledby="legend-races-oshis" className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-3">
 					<h2 id="legend-races-oshis" className="text-sm font-semibold text-gray-100">
-						Your favourites
+						Your favorites
 					</h2>
 					<ul className="mt-1 space-y-0.5 text-sm text-gray-300">
 						{oshiReleases.map(({ oshi, release }) => {

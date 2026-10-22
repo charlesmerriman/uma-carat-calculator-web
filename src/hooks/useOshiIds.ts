@@ -1,7 +1,7 @@
 /**
  * The umas that get the oshi (rainbow) frame (FramedUma) wherever they appear:
- * every outfit of each favourite the signed-in person's tier covers (the first
- * `oshi_slots`). A favourite Oguri Cap frames Oguri Cap (Christmas) too, on
+ * every outfit of each favorite the signed-in person's tier covers (the first
+ * `oshi_slots`). A favorite Oguri Cap frames Oguri Cap (Christmas) too, on
  * every page (owner, 2026-10-16). Empty for a guest, and before the account
  * loads.
  *
@@ -16,7 +16,7 @@
  * outside an AuthProvider. The frame is decoration on components (planner
  * rows, pickers) that are rendered on their own in tests and must not need
  * the whole sign-in machinery to draw; outside a provider nobody is signed
- * in, so nothing is a favourite.
+ * in, so nothing is a favorite.
  */
 
 import { useContext, useMemo } from "react"
@@ -37,7 +37,7 @@ export function useOshiIds(): ReadonlySet<number> {
 }
 
 /**
- * Only the exact covered picks, no other outfits. For the favourites picker,
+ * Only the exact covered picks, no other outfits. For the favorites picker,
  * where the rainbow says "you picked THIS card": framing a pick's other
  * outfits there would read as them being picked too.
  */

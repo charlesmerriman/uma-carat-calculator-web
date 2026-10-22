@@ -1,6 +1,6 @@
 /**
  * FramedUma and useOshiIds: the silver frame for everyone, the rainbow one for
- * the favourites the person's tier covers, and nothing special outside a
+ * the favorites the person's tier covers, and nothing special outside a
  * sign-in provider.
  */
 
@@ -10,7 +10,7 @@ import { FramedUma } from "../components/FramedUma"
 import { useOshiIds, useOshiPickIds } from "../hooks/useOshiIds"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 
-function Favourites({ exact = false }: { exact?: boolean }) {
+function Favorites({ exact = false }: { exact?: boolean }) {
 	const frame = useOshiIds()
 	const picks = useOshiPickIds()
 	return <output>{[...(exact ? picks : frame)].join(",")}</output>
@@ -22,13 +22,13 @@ function withAccount(oshis: number[], slots: number, extra: { oshi_uma_ids?: num
 	} as unknown as AuthContextType
 	render(
 		<AuthContext.Provider value={value}>
-			<Favourites exact={exact} />
+			<Favorites exact={exact} />
 		</AuthContext.Provider>
 	)
 }
 
 describe("FramedUma", () => {
-	it("draws the borderless art, and marks a favourite for the rainbow frame", () => {
+	it("draws the borderless art, and marks a favorite for the rainbow frame", () => {
 		const { container, rerender } = render(<FramedUma src="p.png" alt="Oguri Cap" />)
 		expect(screen.getByRole("img", { name: "Oguri Cap" })).toHaveAttribute("src", "p.png")
 		expect(container.firstElementChild).not.toHaveAttribute("data-oshi")
@@ -44,7 +44,7 @@ describe("FramedUma", () => {
 })
 
 describe("useOshiIds", () => {
-	it("covers only the favourites the tier has slots for", () => {
+	it("covers only the favorites the tier has slots for", () => {
 		withAccount([12, 41, 77], 2)
 		expect(screen.getByRole("status").textContent).toBe("12,41")
 	})
@@ -55,7 +55,7 @@ describe("useOshiIds", () => {
 	})
 
 	it("is empty outside a sign-in provider", () => {
-		render(<Favourites />)
+		render(<Favorites />)
 		expect(screen.getByRole("status").textContent).toBe("")
 	})
 })
@@ -68,7 +68,7 @@ describe("useOshiPickIds", () => {
 })
 
 describe("an owner-named exception", () => {
-	it("draws the borderless art with no frame, and never as a favourite", () => {
+	it("draws the borderless art with no frame, and never as a favorite", () => {
 		const { container } = render(<FramedUma src="p.png" alt="Oguri Cap" oshi frame={false} />)
 		expect(container.firstElementChild).toHaveClass("uma-frame--bare")
 		expect(container.firstElementChild).not.toHaveAttribute("data-oshi")

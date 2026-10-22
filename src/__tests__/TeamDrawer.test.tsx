@@ -155,7 +155,7 @@ describe("TeamDrawer", () => {
 		expect(screen.getByText("Out 2050/1/1, during this event")).toBeInTheDocument()
 	})
 
-	it("frames a favourite uma on the team", () => {
+	it("frames a favorite uma on the team", () => {
 		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [] }]
 		const auth = { account: { oshis: [{ position: 0, id: 41, name: "Maruzensky", image: "" }], oshi_slots: 1 } } as unknown as AuthContextType
 		render(
@@ -167,15 +167,15 @@ describe("TeamDrawer", () => {
 				</AuthContext.Provider>
 			</MemoryRouter>
 		)
-		expect(screen.getByLabelText("Your favourite uma")).toBeInTheDocument()
-		// The rainbow frame: FramedUma marks a favourite with data-oshi.
+		expect(screen.getByLabelText("Your favorite uma")).toBeInTheDocument()
+		// The rainbow frame: FramedUma marks a favorite with data-oshi.
 		expect(screen.getByRole("button", { name: "Change uma 1: Maruzensky" }).querySelector(".uma-frame[data-oshi]")).not.toBeNull()
 	})
 
 	it("leaves the frame off for a guest", () => {
 		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [] }]
 		renderDrawer(teamsValue([team("a", { members })]))
-		expect(screen.queryByLabelText("Your favourite uma")).not.toBeInTheDocument()
+		expect(screen.queryByLabelText("Your favorite uma")).not.toBeInTheDocument()
 		// Still framed, in the silver frame every uma wears.
 		const tile = screen.getByRole("button", { name: "Change uma 1: Maruzensky" })
 		expect(tile.querySelector(".uma-frame")).not.toBeNull()

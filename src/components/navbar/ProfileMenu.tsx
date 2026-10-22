@@ -15,7 +15,7 @@ import { NAV_POPOVER, NAV_PROFILE_TRIGGER } from "./navStyles"
  * 2026-09-13. Sign-out moved one step further away on purpose — it is the
  * rarest action in the bar, and the slot it held is better spent telling the
  * person WHO is signed in. That matters more now that an account can hold
- * several providers and a chosen name: the picture is their first favourite
+ * several providers and a chosen name: the picture is their first favorite
  * uma (the quiet default until they pick one), and the name is the one they
  * chose (or their handle), which together answer "which account am I in?".
  *

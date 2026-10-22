@@ -1,6 +1,6 @@
 /**
  * An uma's borderless art inside the site's own frame: the silver frame for
- * every uma, the rainbow one for the person's favourites (useOshiIds).
+ * every uma, the rainbow one for the person's favorites (useOshiIds).
  *
  * The game's card art bakes a rarity border into the picture, which left the
  * site no way to mark an uma itself. The borderless cut (the API's
@@ -12,7 +12,7 @@
  * The frames are SVGs in src/assets, laid over the art by App.css
  * ("Uma frames"); `className` sizes the square. With no picture the frame
  * still draws, round a grey square. The frame is only a look: where being a
- * favourite matters to a screen reader, the caller says so beside the name.
+ * favorite matters to a screen reader, the caller says so beside the name.
  */
 
 export function FramedUma({ src, oshi = false, frame = true, alt = "", title, className = "", onError }: {

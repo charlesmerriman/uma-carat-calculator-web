@@ -654,14 +654,14 @@ Today that covers the calculator rows (desktop, staged, mobile, a step-up's step
 the Timeline's featured tiles, the Daily Legend Races tab, the Selectors page and both its
 pickers, the PvP guide's uma tiles, the guide picks panel, the team builder and the team window, the PvP card
 picker, the PvP gallery (its posters' avatars included), a shared plan's landing page, and
-the favourites card and picker on the account page.
+the favorites card and picker on the account page.
 
 **The owner's exceptions** (2026-10-14) draw the same borderless art with NO frame
 (`FramedUma frame={false}`, `Avatar framed={false}`, `UmaPortrait frame={false}`;
 `.uma-frame--bare` in App.css):
 
 - the navbar's profile menu (the trigger and the menu's own avatar);
-- the account page, except the "Your favourite uma musume" card and the favourites picker
+- the account page, except the "Your favorite uma musume" card and the favorites picker
   it opens: the header avatar and the "Your gallery posts" list are bare.
 
 (The Selectors page was an exception for a moment on 2026-10-14 and was taken back the same
@@ -671,8 +671,8 @@ ours. A route that sends an uma sends `portrait` with it (`/calculator-data`, th
 the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `image`).
 
 - **Two frames**, SVGs in `src/assets/`: `uma-frame.svg` (silver) for everyone and
-  `uma-frame-oshi.svg` (the rainbow) for EVERY OUTFIT of each favourite their tier covers
-  (`useOshiIds`, owner 2026-10-16: a favourite Oguri Cap frames Oguri Cap (Christmas) too,
+  `uma-frame-oshi.svg` (the rainbow) for EVERY OUTFIT of each favorite their tier covers
+  (`useOshiIds`, owner 2026-10-16: a favorite Oguri Cap frames Oguri Cap (Christmas) too,
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
   frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
@@ -683,11 +683,11 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   carries `uma` (`SelectedCardArt`), a planner row narrows on `target.type`.
 - **`useOshiIds` reads `AuthContext` directly**, so a row or picker rendered on its own (in
   a test) draws silver frames instead of throwing for want of an AuthProvider.
-- **Whose favourite.** The rainbow frame means "one of YOUR favourites": `useOshiIds`
+- **Whose favorite.** The rainbow frame means "one of YOUR favorites": `useOshiIds`
   everywhere, the team builder included (it adds its heart). The ONE exact-match place is
-  the favourites picker (`useOshiPickIds`), where the rainbow says "you picked THIS card";
+  the favorites picker (`useOshiPickIds`), where the rainbow says "you picked THIS card";
   an avatar is rainbow when it is yours (your own
-  avatar, your own gallery posts and comments, your covered favourites on the account page)
+  avatar, your own gallery posts and comments, your covered favorites on the account page)
   and silver on someone else's.
 - **A state rings the frame, never replaces it.** The guide picks panel's open and
   on-the-team rings follow the frame's corner (`rounded-[10.75%]`); the old turning
@@ -741,7 +741,7 @@ mono under a chosen name, because the handle is the account's identity and what
 an admin would ask for. The name span is omitted while `/account` is in flight,
 so the pill widens once rather than jumping from a placeholder.
 
-**The avatar is the person's first favourite uma, and it is square.**
+**The avatar is the person's first favorite uma, and it is square.**
 `Avatar.tsx` shows `account.avatar_url` — the server sends the first oshi's art,
 `null` until they pick one — and on `null` or a broken image draws the quiet
 default: a muted `UserRound` silhouette on a `bg-gray-700` rounded square,
@@ -755,7 +755,7 @@ portrait and the circle cropped every corner; the navbar trigger
 (`NAV_PROFILE_TRIGGER`) is `rounded-lg` around it so the frame stays even. No
 provider picture is ever held or shown. Three sizes: `sm` (menu rows), `md`
 (the navbar trigger, 36px inside the 40px frame), `lg` (the account header and
-the favourite tiles). Avatars never appear anywhere public today; the
+the favorite tiles). Avatars never appear anywhere public today; the
 supporters list on the home page is names only. (Oshis will be shown publicly
 by a future feature.)
 
@@ -774,10 +774,10 @@ The page also owns the two **preferences**, both written through one
 `PATCH /account` (`accountPatch` in `services/accountFetchCalls.ts`) followed
 by `refresh()`, so the navbar picks the change up: a display-name form (32
 characters, the server's cap, mirrored as `maxLength`; blank clears it) and the
-**favourites card** ("Your favourite uma musume" on screen; `oshi` in the code,
+**favorites card** ("Your favorite uma musume" on screen; `oshi` in the code,
 the wire and the test names).
 
-**The favourites card draws what the server says.** `account.oshi_slots` (1 for
+**The favorites card draws what the server says.** `account.oshi_slots` (1 for
 everyone, 3 / 5 / 7 by tier, already resolved by the server; the page does no
 tier arithmetic) is how many tiles are offered, and `account.oshis` (every
 stored pick, covered or not) fills them. Slot 0 is tagged "Your picture". Tiles
@@ -804,7 +804,7 @@ variants (`is_variant`) are shown locked ("Supporters only") while
 unlocks. The client filters nothing and decides nothing; the server refuses a
 variant a free account somehow sends. The parent owns the write; the dialog
 closes only once the PATCH succeeds, so a refused pick leaves the grid open
-with the server's reason toasted ("Your tier covers 3 favourites.").
+with the server's reason toasted ("Your tier covers 3 favorites.").
 
 ## Brand mark and display font
 

@@ -59,7 +59,7 @@ export const StepUpSelectionPicker = ({
 }: StepUpSelectionPickerProps) => {
 	const [search, setSearch] = useState("")
 	const isUma = poolFor(stepUp) === "uma"
-	// The person's favourite umas get the rainbow frame (FramedUma).
+	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 
 	const options = useEligibleCardCatalogue({

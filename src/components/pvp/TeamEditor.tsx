@@ -49,10 +49,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
-	// The account's favourite umas, every outfit of each, get the rainbow
+	// The account's favorite umas, every outfit of each, get the rainbow
 	// frame: the same set every other page frames (useOshiIds).
 	const oshiIds = useOshiIds()
-	const isFavourite = (umaId: number): boolean => oshiIds.has(umaId)
+	const isFavorite = (umaId: number): boolean => oshiIds.has(umaId)
 	// Only what is out by the event's last day can be picked; what lands
 	// mid-event is marked (utils/cardRelease.ts).
 	const releaseFor = useCardReleases(event, index)
@@ -88,7 +88,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 				cardsById={index.cardsById}
 				course={event}
 				releaseFor={releaseFor}
-				isFavourite={isFavourite}
+				isFavorite={isFavorite}
 				isRecommended={isRecommended}
 				onPickUma={(position) => setPicker({ pool: "uma", position })}
 				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}

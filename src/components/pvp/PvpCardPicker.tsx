@@ -138,7 +138,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 export function PvpCardPicker(props: PvpCardPickerProps) {
 	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
-	// The person's favourite umas get the rainbow frame (FramedUma).
+	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(null)

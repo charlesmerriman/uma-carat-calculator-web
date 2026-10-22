@@ -8,8 +8,8 @@ import { FramedUma } from "../FramedUma"
 import { useOshiPickIds } from "../../hooks/useOshiIds"
 
 /**
- * The modal for choosing a favourite uma ("oshi" in the code and on the wire;
- * "your favourite uma musume" on screen): a search box over a grid of art tiles, the
+ * The modal for choosing a favorite uma ("oshi" in the code and on the wire;
+ * "your favorite uma musume" on screen): a search box over a grid of art tiles, the
  * same browse-and-search shape as the Selectors page's card pickers
  * (SelectorTargetPicker, StepUpSelectionPicker). Those two are bound to the
  * calculator's banner catalogue and to a ticket; this one is bound to GET /umas
@@ -162,7 +162,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 					const isLocked = !isCurrent && !isTaken && variantsLocked && option.is_variant
 					const isSaving = option.id === saving
 					const lockedReason = isTaken
-						? "Already one of your favourites"
+						? "Already one of your favorites"
 						: isLocked
 							? "Costume variants are for Patreon supporters"
 							: undefined
@@ -183,7 +183,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 							}`}
 						>
 							{/* In the frame the avatar wears, so the person sees what they will
-							    get; the ones already picked wear the favourite's rainbow. */}
+							    get; the ones already picked wear the favorite's rainbow. */}
 							<FramedUma
 								src={option.image}
 								oshi={oshiIds.has(option.id)}
@@ -216,12 +216,12 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 			<section
 				role="dialog"
 				aria-modal="true"
-				aria-label="Choose a favourite uma musume"
+				aria-label="Choose a favorite uma musume"
 				className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-edge bg-gray-800 shadow-2xl"
 			>
 				<header className="flex flex-wrap items-center gap-3 border-b border-gray-700 bg-gray-800/80 px-4 py-3">
 					<div className="min-w-0 flex-1">
-						<h2 className="text-base font-semibold text-gray-100">Choose a favourite</h2>
+						<h2 className="text-base font-semibold text-gray-100">Choose a favorite</h2>
 						<p className="text-xs text-gray-400">
 							{description}
 							{catalogue.state === "ready" ? ` ${options.length} umas.` : ""}

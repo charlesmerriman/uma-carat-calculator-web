@@ -113,7 +113,7 @@ export const PrivacyPolicy: React.FC = () => {
 							you have no team posted.
 						</li>
 						<li>
-							The favourite characters you pick on your account page. These are picks from
+							The favorite characters you pick on your account page. These are picks from
 							the Site&apos;s own catalogue, not anything about you, and the first one is used
 							as your picture, including next to anything you post in the gallery.
 						</li>
@@ -145,7 +145,7 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						Posting a team to the gallery is your choice, and the post dialog asks you to
 						agree first. Once you post, everyone can see the team, your caption and strategy, your
-						display name, your favourite character picture and, if you support us on Patreon and
+						display name, your favorite character picture and, if you support us on Patreon and
 						leave it switched on, your tier. The same shows next to any comment you write.
 					</p>
 					<ul className={list}>
@@ -227,7 +227,7 @@ export const PrivacyPolicy: React.FC = () => {
 					<ul className={list}>
 						<li>
 							<strong>Running your account and saving your plan</strong> (your account
-							reference, username, display name, favourite characters and planning data). Basis:{" "}
+							reference, username, display name, favorite characters and planning data). Basis:{" "}
 							<strong>performance of a contract</strong>, Article 6(1)(b). This is the
 							service you asked for when you signed in.
 						</li>
@@ -468,7 +468,7 @@ export const PrivacyPolicy: React.FC = () => {
 								Account page
 							</Link>{" "}
 							shows all of it: your username, your linked sign-in methods, your display
-							name, your favourite characters, and the plans themselves are on the calculator.
+							name, your favorite characters, and the plans themselves are on the calculator.
 						</li>
 						<li>
 							<strong>Rectification</strong>: to correct it. Everything we hold is editable

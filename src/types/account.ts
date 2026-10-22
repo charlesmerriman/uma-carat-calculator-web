@@ -19,8 +19,8 @@ export interface LinkedProvider {
 }
 
 /**
- * One of the person's favourite umas ("oshi" on the wire and in the code;
- * "your favourite uma musume" on screen), in the order they picked them. The
+ * One of the person's favorite umas ("oshi" on the wire and in the code;
+ * "your favorite uma musume" on screen), in the order they picked them. The
  * first is their picture. The server lists EVERY stored row, covered by the
  * current tier or not, so the page can grey out the ones a lapse or downgrade
  * stopped covering rather than pretend they are gone; `oshi_slots` on the
@@ -82,10 +82,10 @@ export interface Account {
 	 * provider picture is ever held or served.
 	 */
 	avatar_url: string | null
-	/** Every favourite they hold, first to last. Empty until they pick one. */
+	/** Every favorite they hold, first to last. Empty until they pick one. */
 	oshis: Oshi[]
 	/**
-	 * How many favourites the account covers: 1 for everyone, more by Patreon
+	 * How many favorites the account covers: 1 for everyone, more by Patreon
 	 * tier (the free slot plus 2, 4 or 6). A count the server has already
 	 * resolved from its ladder, not a tier order — draw this many tiles and do
 	 * no arithmetic. Top-level rather than inside `supporter` because a free
@@ -93,7 +93,7 @@ export interface Account {
 	 */
 	oshi_slots: number
 	/**
-	 * Every uma the rainbow favourite frame goes on: each covered pick and every
+	 * Every uma the rainbow favorite frame goes on: each covered pick and every
 	 * other outfit of its character, resolved by the server. Read it through
 	 * useOshiIds. Optional only because a frontend deployed ahead of the API
 	 * can briefly get an account without it.
@@ -101,7 +101,7 @@ export interface Account {
 	oshi_uma_ids?: number[]
 	/**
 	 * Whether a costume variant ("Special Week (Summer)") may be ADDED as a
-	 * favourite: supporters and staff. Resolved by the server like
+	 * favorite: supporters and staff. Resolved by the server like
 	 * `oshi_slots`, so the picker only locks tiles; the rule lives in the
 	 * serializer. A variant already held is never taken away.
 	 */
@@ -140,7 +140,7 @@ export interface AccountPreferencesPatch {
 }
 
 /**
- * One row of GET /umas: what the favourites picker needs to draw a tile. The
+ * One row of GET /umas: what the favorites picker needs to draw a tile. The
  * route lists only umas that have an image, minus the "(All)" placeholder, so
  * `image` is never "". The same list for everyone: `is_variant` marks the
  * costume variants, which the picker locks unless `account.oshi_variants`.
