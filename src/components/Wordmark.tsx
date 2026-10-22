@@ -50,7 +50,7 @@ export const Wordmark: React.FC<WordmarkProps> = ({ size = "nav" }) => {
 	return (
 		<Link
 			to="/"
-			className="font-display flex flex-col leading-none font-semibold tracking-tight text-gray-100 transition hover:text-white lg:flex-row lg:gap-[0.28em]"
+			className="font-display flex flex-col leading-none font-semibold tracking-tight text-gray-100 transition hover:text-gray-50 lg:flex-row lg:gap-[0.28em]"
 		>
 			<span className="text-base lg:text-xl">
 				<span className="text-brand">Uma</span> Carat
