@@ -2,6 +2,8 @@ import type {
 	BannerStepUp,
 	BannerSupport,
 	BannerUma,
+	SupportCard,
+	Uma,
 	UserStepUpSelection
 } from "../types"
 
@@ -9,10 +11,13 @@ import type {
  * The ten cards a player picks before climbing a Select Step-Up's ladder.
  *
  * Pure slot bookkeeping, deliberately free of React so the rules can be tested
- * directly. NOTHING HERE FEEDS THE PROJECTION — the step-up target rate is
- * 3% / 10 and holds whichever ten are chosen, so none of these functions can
- * move a carat total or an odds figure. See utils/stepUpLadder.ts for the part
- * that does.
+ * directly. The step-up target rate is 3% / 10 and holds whichever ten are
+ * chosen, so no selection moves a carat total or the odds maths itself. See
+ * utils/stepUpLadder.ts for the part that does.
+ *
+ * ONE thing here does reach the projection: the step 5 pick
+ * (`findGuaranteedCard`) is the card a step-up row's reserved copies are of,
+ * so its release date decides which selector tickets can pay for one.
  */
 
 /**
@@ -198,6 +203,44 @@ export interface SelectedCardArt {
 	uma: { id: number; portrait: string | null } | null
 }
 
+/** The step 5 pick, tagged with the pool it came from. */
+export type GuaranteedCard =
+	| { pool: "uma"; card: Uma }
+	| { pool: "support"; card: SupportCard }
+
+/**
+ * The step 5 pick itself, or null when the user hasn't named one or the
+ * catalogue doesn't hold it.
+ *
+ * The card the odds strip is about, so it is also the card a step-up row's
+ * reserved copies are of: the projection dates selector tickets against it.
+ * Searched across every banner because the pick comes from the back catalogue,
+ * not from the step-up.
+ */
+export function findGuaranteedCard(
+	selections: UserStepUpSelection[],
+	umaBannerData: BannerUma[],
+	supportBannerData: BannerSupport[]
+): GuaranteedCard | null {
+	const target = targetOf(selections)
+	if (!target) return null
+
+	if (target.uma !== null && target.uma !== undefined) {
+		for (const banner of umaBannerData) {
+			const uma = banner.umas.find((candidate) => candidate.id === target.uma)
+			if (uma) return { pool: "uma", card: uma }
+		}
+		return null
+	}
+	for (const banner of supportBannerData) {
+		const card = banner.support_cards.find(
+			(candidate) => candidate.id === target.support
+		)
+		if (card) return { pool: "support", card }
+	}
+	return null
+}
+
 /**
  * The art for the step 5 pick, or null when the user hasn't named one.
  *
@@ -216,23 +259,12 @@ export function findGuaranteedCardArt(
 	umaBannerData: BannerUma[],
 	supportBannerData: BannerSupport[]
 ): SelectedCardArt | null {
-	const target = targetOf(selections)
-	if (!target) return null
-
-	if (target.uma !== null && target.uma !== undefined) {
-		for (const banner of umaBannerData) {
-			const uma = banner.umas.find((candidate) => candidate.id === target.uma)
-			if (uma) return { name: uma.name, image: uma.image, uma: { id: uma.id, portrait: uma.portrait ?? null } }
-		}
-		return null
-	}
-	for (const banner of supportBannerData) {
-		const card = banner.support_cards.find(
-			(candidate) => candidate.id === target.support
-		)
-		if (card) return { name: card.name, image: card.image, uma: null }
-	}
-	return null
+	const pick = findGuaranteedCard(selections, umaBannerData, supportBannerData)
+	if (!pick) return null
+	const { name, image } = pick.card
+	return pick.pool === "uma"
+		? { name, image, uma: { id: pick.card.id, portrait: pick.card.portrait ?? null } }
+		: { name, image, uma: null }
 }
 
 /**

@@ -7,7 +7,7 @@ import { FramedUma } from "../FramedUma"
  * The account's picture, or the quiet default when there is none.
  *
  * `src` is the picture the server chose (types/account.ts: the first of the
- * favourite umas the person picked) and is null until they pick one. The
+ * favorite umas the person picked) and is null until they pick one. The
  * default is a muted silhouette on a dark rounded square, styled like the
  * settings and theme icon buttons beside it in the navbar so it reads as one
  * more control rather than as something missing. It is the same for everyone
@@ -26,7 +26,7 @@ import { FramedUma } from "../FramedUma"
  *
  * FRAMED (2026-10-14). The picture is an uma, and every uma on the site is
  * drawn in the site's frame (FramedUma): `oshi` asks for the rainbow one,
- * which the caller sets when the picture is the viewer's own favourite (their
+ * which the caller sets when the picture is the viewer's own favorite (their
  * own avatar, their own gallery posts). `framed={false}` is for the owner's
  * named exceptions only: the navbar's profile menu and the account page's
  * header show the borderless art with no frame. The silhouette has no frame:
@@ -60,7 +60,7 @@ const FRAME_WIDTHS: Record<AvatarSize, string> = {
 interface AvatarProps {
 	src: string | null | undefined
 	size?: AvatarSize
-	/** The picture is the viewer's own favourite: the rainbow frame. */
+	/** The picture is the viewer's own favorite: the rainbow frame. */
 	oshi?: boolean
 	/** False only for the owner's named exceptions (navbar profile, account header). */
 	framed?: boolean

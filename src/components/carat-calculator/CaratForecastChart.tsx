@@ -232,7 +232,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 	// Stable while the rows are, like endDateLookup below, so the memoised
 	// plot is not redrawn for a render that changed nothing it shows.
 	const bannerName = useCallback(
-		(marker: ForecastMarker) => {
+		(marker: Pick<ForecastMarker, "index">) => {
 			const banner = userPlannedBannerData[marker.index]
 			const target = banner ? plannedBannerTarget(banner) : null
 			return target?.banner?.name ?? "a banner"

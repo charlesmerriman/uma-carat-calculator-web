@@ -17,6 +17,7 @@
 
 import type { CalculationConstants } from "../types/constants"
 import type { IncomeLedgerRow, LedgerRowKind, ParsedLedgerRow } from "../types/ledger"
+import type { RaceRankReward } from "../types/ranks"
 import { addUtcDays, ceilToTen, startOfUtcDay, utcDaysBetween } from "./utcDates"
 
 /**
@@ -141,6 +142,7 @@ export interface RaceRank {
 	support_ticket_amount: number
 	ssr_shard_amount: number
 	sr_shard_amount: number
+	rewards?: readonly RaceRankReward[]
 }
 
 export interface RaceRewards {
@@ -152,67 +154,75 @@ export interface RaceRewards {
 }
 
 /**
- * Race events whose rank ladder stopped short of today's top tiers, as
- * `kind -> event number -> the highest rank that event offered`.
+ * The carats one race event pays at a rank: the rank's `rewards` row with the
+ * largest `from_event_number` at or below the event's number, else the rank's
+ * own `income_amount` (backend `docs/income-calculation.md`, "Rewards that
+ * change with the event number").
  *
- * League of Heroes #1 (January 2027) only ran up to Platinum 1. Platinum 2-4 did
- * not exist yet, so a player ranked above that could only have earned Platinum
- * 1's rewards from it. Confirmed by the sheet's maintainer, and it reproduces the
- * sheet's LoH column (`AT42`) exactly: 1800 for #1, then 2800 for every later
- * event, for a Platinum 3 player.
+ * The game has raised CM and LoH payouts at set event numbers (CM 30, LoH 6),
+ * and LoH 1 paid Platinum 2-4 less than LoH 2. Those are rows an editor
+ * enters on the rank, so the rule lives here and the numbers in the admin.
+ * This replaced RACE_RANK_CAPS ("LoH 1 only ran to Platinum 1"), which the
+ * source sheet itself retired by raising LoH 1 for the ranks above it.
  *
- * WHY THIS LIVES IN CODE AND NOT THE ADMIN: it is a historical fact about one
- * event that can never change, and it stops mattering entirely once LoH #1 falls
- * behind `today`, because the projection never counts a past event. A model field
- * and a migration would outlive the rule by years. If another capped event turns
- * up, add it here; if they start turning up routinely, that is the point to
- * promote this to a field on the event instead.
- *
- * Keyed by rank NAME, not id: ids are database keys that differ between
- * environments, while the names are the stable identity, and what the sheet shows.
+ * Doesn't assume the rows are sorted. An event with no number (a ledger
+ * from an API older than `event_number`) pays the rank's own amount, the
+ * behaviour from before the rows existed.
  */
-const RACE_RANK_CAPS: Partial<Record<LedgerRowKind, Readonly<Record<number, string>>>> = {
-	league_of_heroes: { 1: "Platinum 1" },
+export function raceRewardAmount(rank: RaceRank, eventNumber: number | null): number {
+	if (eventNumber == null) return rank.income_amount
+	let amount = rank.income_amount
+	let from = 0
+	for (const reward of rank.rewards ?? []) {
+		if (reward.from_event_number <= eventNumber && reward.from_event_number > from) {
+			from = reward.from_event_number
+			amount = reward.income_amount
+		}
+	}
+	return amount
 }
 
 /**
- * The rank a race event actually pays at: the user's own rank, lowered to the
- * event's ceiling when it had one. Lowered, never raised. A player ranked below
- * the ceiling still earns their own, smaller, rewards.
+ * The lowest and highest carats a rank pays across the race events of one
+ * kind still ahead (from the start of today, like raceEventsInWindow), for
+ * the rank picker's badge. Null when no such event is in the ledger, and the
+ * caller shows the rank's own amount.
  *
- * Ranks are compared by `income_amount`, the same order CalculatorProvider sorts
- * the rank tables into. When the ceiling rank cannot be found (renamed in the
- * admin) or the row has no `event_number` (an API older than the field), this
- * returns the user's rank: the pre-cap behaviour, rather than a silent zero.
+ * Reads the projection's ledger, so a skipped event is not in the range.
  */
-export function effectiveRaceRank<R extends RaceRank>(
-	row: ParsedLedgerRow,
-	userRank: R | undefined,
-	rankTable: readonly R[]
-): R | undefined {
-	if (!userRank || row.event_number == null) return userRank
-	const capName = RACE_RANK_CAPS[row.kind]?.[row.event_number]
-	if (!capName) return userRank
-	const cap = rankTable.find((rank) => rank.name === capName)
-	if (!cap) return userRank
-	return userRank.income_amount > cap.income_amount ? cap : userRank
+export function upcomingRaceRewardRange(
+	ledger: IncomeLedgerRow[],
+	kind: LedgerRowKind,
+	rank: RaceRank,
+	now: Date
+): { min: number; max: number } | null {
+	const from = startOfUtcDay(now).getTime()
+	let range: { min: number; max: number } | null = null
+	for (const row of ledger) {
+		if (row.kind !== kind || new Date(row.date).getTime() < from) continue
+		const amount = raceRewardAmount(rank, row.event_number ?? null)
+		range = range
+			? { min: Math.min(range.min, amount), max: Math.max(range.max, amount) }
+			: { min: amount, max: amount }
+	}
+	return range
 }
 
 /**
  * Everything one kind of race event pays out by `end`, valued at the user's
  * rank: sheet `AS42`/`AT42`, and its ticket columns `BE42`/`BF42`.
  *
- * Summed PER EVENT rather than `count x rank amount`, because an event can pay
- * below the user's rank (RACE_RANK_CAPS). The window is raceEventsInWindow's, so
+ * Summed PER EVENT rather than `count x rank amount`, because what a rank
+ * pays depends on the event's number (raceRewardAmount). Tickets and shards
+ * are per rank only, as in the sheet. The window is raceEventsInWindow's, so
  * the bounds documented there are the only bounds.
  */
-export function cumulativeRaceRewards<R extends RaceRank>(
+export function cumulativeRaceRewards(
 	ledger: ParsedLedgerRow[],
 	kind: LedgerRowKind,
 	today: Date,
 	end: Date,
-	userRank: R | undefined,
-	rankTable: readonly R[]
+	userRank: RaceRank | undefined
 ): RaceRewards {
 	const total: RaceRewards = {
 		carats: 0,
@@ -221,14 +231,13 @@ export function cumulativeRaceRewards<R extends RaceRank>(
 		ssrShards: 0,
 		srShards: 0,
 	}
+	if (!userRank) return total
 	for (const row of raceEventsInWindow(ledger, kind, today, end)) {
-		const rank = effectiveRaceRank(row, userRank, rankTable)
-		if (!rank) continue
-		total.carats += rank.income_amount
-		total.umaTickets += rank.uma_ticket_amount
-		total.supportTickets += rank.support_ticket_amount
-		total.ssrShards += rank.ssr_shard_amount
-		total.srShards += rank.sr_shard_amount
+		total.carats += raceRewardAmount(userRank, row.event_number)
+		total.umaTickets += userRank.uma_ticket_amount
+		total.supportTickets += userRank.support_ticket_amount
+		total.ssrShards += userRank.ssr_shard_amount
+		total.srShards += userRank.sr_shard_amount
 	}
 	return total
 }

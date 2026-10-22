@@ -288,7 +288,7 @@ function CommentBox({ writes, parent, editing, onDone }: {
 			)}
 			<div className="flex flex-wrap items-center gap-2">
 				{!editing && !parent && (
-					<span className="text-xs text-gray-500">Your display name and favourite uma picture show with your comment.</span>
+					<span className="text-xs text-gray-500">Your display name and favorite uma picture show with your comment.</span>
 				)}
 				<span className="ml-auto text-xs tabular-nums text-gray-500">
 					{body.length}/{GALLERY_COMMENT_MAX}

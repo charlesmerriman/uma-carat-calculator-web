@@ -15,18 +15,26 @@
  * the row's pulls spend (`freeCaratsSpent`). The drop is drawn at the END date
  * because that is the checkpoint the row's number is measured at.
  *
- * WHY THE MARKER IS ANCHORED TO THE ROW, NOT DERIVED
- * --------------------------------------------------
+ * A BANNER INSIDE ANOTHER'S WINDOW (owner's call, 2026-10-21)
+ * -----------------------------------------------------------
  * The engine charges banners in START order (projectionWalkOrder); a timeline
  * runs in END order. They agree for ordinary banners, which run back to back.
- * They part ways only when one banner sits inside another's window (a long
- * banner that starts earlier and ends later). There the engine has already
- * charged the outer banner by the time the inner one is measured, while a time
- * axis has not reached the outer banner's end yet. Rather than letting a dot
- * float off the line or disagree with its row, each marker re-anchors the line
- * to the row's own number: if the two differ, the line steps straight to it.
- * The rows stay the source of truth, and the chart never invents a figure the
- * rows don't show.
+ * They part ways when one banner sits inside another's window (the outer one
+ * starts earlier and ends later). The engine charges the outer one first, so
+ * the inner row's number already has the outer one's pulls taken off, while
+ * the outer row's number has none of the inner one's.
+ *
+ * No line can pass through both dots, so the chart takes the OUTER banner's
+ * pulls off early: at the inner banner's end, the first moment a row counts
+ * them as spent (the same rule BackgroundSpend.at follows). The inner dot then
+ * sits on the line. The outer dot keeps its row's own numbers at its own end
+ * date and floats above the line, with no drop of its own, because its drop
+ * has already happened (`chargedEarly`). The line is right everywhere after.
+ *
+ * Every other dot still re-anchors the line to its row if the two differ
+ * (they agree to the carat in practice; a floored paid balance is the case
+ * it covers). The rows stay the source of truth, and the chart never invents
+ * a figure the rows don't show.
  *
  * Everything is UTC midnights and instants (utils/utcDates), like the engine.
  */
@@ -75,6 +83,13 @@ export interface ForecastMarker {
 	 * layer's top edge, not on the free line it never moves.
 	 */
 	stepUp: boolean
+	/**
+	 * Set when this banner's pulls came off the line before its own end date
+	 * (see the module note): `t` is when, and `by` is the position in
+	 * `userPlannedBannerData` of the banner whose end it was. Its dot floats
+	 * at its own end date with its row's numbers, off the line.
+	 */
+	chargedEarly?: { t: number; by: number }
 }
 
 export interface CaratForecast {
@@ -126,6 +141,22 @@ interface Balances {
 	support: number
 }
 
+/**
+ * One thing a planned row puts on the time axis: its dot (and, unless it was
+ * charged early, its drop), or the early drop of a banner charged before its
+ * own end. `walkPosition` is its place in the engine's order, the tiebreak
+ * for things sharing an instant.
+ */
+type RowStep =
+	| {
+			kind: "dot"
+			t: number
+			entry: WalkEntry
+			walkPosition: number
+			chargedEarly?: { t: number; by: number }
+	  }
+	| { kind: "early"; t: number; entry: WalkEntry; walkPosition: number }
+
 const CHANNELS = ["free", "paid", "uma", "support"] as const
 const add = (a: Balances, b: Balances): Balances => ({
 	free: a.free + b.free,
@@ -175,24 +206,50 @@ export function buildCaratForecast({
 		supportTickets: b.support,
 	})
 
-	// A banner that has already ended is not on a forward-looking chart, but the
-	// engine still charged it, and every later row is measured after that. So
-	// its spend comes off the starting balances instead of being drawn.
+	// WHEN EACH ROW'S PULLS COME OFF THE LINE: its own end date, or the end of
+	// a row the engine charged after it, whichever is earlier (see the module
+	// note). Read backwards so each row knows the earliest end among those
+	// that follow it. A tie goes to its own end, so a plan of back-to-back
+	// banners charges every row at its own dot.
+	const charge: { t: number; by: number }[] = []
+	let earliest = { t: Infinity, by: -1 }
+	for (let walkPosition = walkOrder.length - 1; walkPosition >= 0; walkPosition--) {
+		const { endDate, index } = walkOrder[walkPosition]
+		if (endDate.getTime() <= earliest.t) earliest = { t: endDate.getTime(), by: index }
+		charge[walkPosition] = earliest
+	}
+
+	// A charge that has already happened is not on a forward-looking chart,
+	// but the engine still made it, and every later row is measured after it.
+	// So its spend comes off the starting balances instead of being drawn.
+	// A banner still running can be one of those (charged early, at the end
+	// of a banner inside it that has ended): its dot is still drawn.
 	let offset: Balances = {
 		free: currentFreeCarats,
 		paid: currentPaidCarats,
 		uma: currentUmaTickets,
 		support: currentSupportTickets,
 	}
-	const upcoming: { entry: WalkEntry; walkPosition: number }[] = []
+	const steps: RowStep[] = []
 	walkOrder.forEach((entry, walkPosition) => {
-		if (entry.endDate < now) {
+		const chargeAt = charge[walkPosition]
+		const early = chargeAt.t < entry.endDate.getTime()
+		if (chargeAt.t < now.getTime()) {
 			offset = subtract(offset, rowSpend(entry, resources[entry.index]))
-			return
+		} else if (early) {
+			steps.push({ kind: "early", t: chargeAt.t, entry, walkPosition })
 		}
-		upcoming.push({ entry, walkPosition })
+		if (entry.endDate >= now) {
+			steps.push({
+				kind: "dot",
+				t: entry.endDate.getTime(),
+				entry,
+				walkPosition,
+				chargedEarly: early ? chargeAt : undefined,
+			})
+		}
 	})
-	if (upcoming.length === 0) return null
+	if (!steps.some((step) => step.kind === "dot")) return null
 
 	// Background banners' daily pulls: a drop on the paid layer with no dot,
 	// since there is no row to jump to. One already due comes off the start,
@@ -207,15 +264,12 @@ export function buildCaratForecast({
 	}
 	drains.sort((a, b) => a.at.getTime() - b.at.getTime())
 
-	// Time order for the axis; banners ending together keep the engine's order
-	// so their drops stack the way the rows were charged.
-	upcoming.sort(
-		(a, b) =>
-			a.entry.endDate.getTime() - b.entry.endDate.getTime() ||
-			a.walkPosition - b.walkPosition
-	)
+	// Time order for the axis. What shares an instant keeps the engine's
+	// order, so drops stack the way the rows were charged, and an outer
+	// banner's early drop lands before the inner dot whose row includes it.
+	steps.sort((a, b) => a.t - b.t || a.walkPosition - b.walkPosition)
 
-	const lastEnd = upcoming[upcoming.length - 1].entry.endDate
+	const lastEnd = new Date(Math.max(...steps.map((step) => step.t)))
 	const horizon = addUtcDays(
 		today,
 		Math.max(FORECAST_MIN_DAYS, utcDaysBetween(today, lastEnd) + FORECAST_TAIL_DAYS)
@@ -239,46 +293,71 @@ export function buildCaratForecast({
 		points.push(toPoint(t, add(offset, income(at))))
 	}
 
-	let next = 0
-	const placeMarkersUpTo = (limit: number) => {
-		for (;;) {
-			const markerT = next < upcoming.length ? upcoming[next].entry.endDate.getTime() : Infinity
-			const drainT = nextDrain < drains.length ? drains[nextDrain].at.getTime() : Infinity
-			if (Math.min(markerT, drainT) > limit) return
-			// A drop sharing an instant with a dot goes first: that row's own
-			// numbers already have it taken off.
-			if (drainT <= markerT) {
-				placeDrain()
-				continue
-			}
-			const { entry } = upcoming[next++]
-			const t = entry.endDate.getTime()
-			const row = resources[entry.index]
-			const excluded = isExcludedFromProjection(entry.banner)
-			const expected = add(offset, income(entry.endDate))
-			const before: Balances = row
-				? { free: row.freeCarats, paid: row.paidCarats, uma: row.umaTickets, support: row.supportTickets }
-				: expected
+	// A banner's pulls coming off at another banner's end: a drop with no dot.
+	const placeEarlyDrop = (entry: WalkEntry, t: number) => {
+		const spent = rowSpend(entry, resources[entry.index])
+		if (!CHANNELS.some((k) => spent[k] !== 0)) return
+		const at = new Date(t)
+		points.push(toPoint(t, add(offset, income(at))))
+		offset = subtract(offset, spent)
+		points.push(toPoint(t, add(offset, income(at))))
+	}
+
+	const placeDot = (step: Extract<RowStep, { kind: "dot" }>) => {
+		const { entry, t, chargedEarly } = step
+		const row = resources[entry.index]
+		const excluded = isExcludedFromProjection(entry.banner)
+		const expected = add(offset, income(entry.endDate))
+		const before: Balances = row
+			? { free: row.freeCarats, paid: row.paidCarats, uma: row.umaTickets, support: row.supportTickets }
+			: expected
+		const spent = rowSpend(entry, row)
+		if (chargedEarly) {
+			// Its pulls are already off the line, so the line carries straight
+			// on. The vertex is there for the hover; the plot draws the dot at
+			// the row's number (`before`), above the line.
+			points.push(toPoint(t, expected))
+		} else {
 			points.push(toPoint(t, expected))
 			// Re-anchor to the row (see the module note). Usually a no-op.
 			if (CHANNELS.some((k) => Math.abs(expected[k] - before[k]) >= 1)) {
 				offset = add(offset, subtract(before, expected))
 				points.push(toPoint(t, before))
 			}
-			points[points.length - 1].marker = markers.length
-			const spent = rowSpend(entry, row)
+		}
+		points[points.length - 1].marker = markers.length
+		if (!chargedEarly) {
 			offset = subtract(offset, spent)
 			if (CHANNELS.some((k) => spent[k] !== 0)) points.push(toPoint(t, subtract(before, spent)))
-			markers.push({
-				index: entry.index,
-				t,
-				before: before.free,
-				after: before.free - spent.free,
-				excluded,
-				paidBefore: before.paid,
-				paidAfter: before.paid - spent.paid,
-				stepUp: plannedBannerTarget(entry.banner).type === "StepUp",
-			})
+		}
+		markers.push({
+			index: entry.index,
+			t,
+			before: before.free,
+			after: before.free - spent.free,
+			excluded,
+			paidBefore: before.paid,
+			paidAfter: before.paid - spent.paid,
+			stepUp: plannedBannerTarget(entry.banner).type === "StepUp",
+			...(chargedEarly && { chargedEarly }),
+		})
+	}
+
+	let next = 0
+	const placeMarkersUpTo = (limit: number) => {
+		for (;;) {
+			const stepT = next < steps.length ? steps[next].t : Infinity
+			const drainT = nextDrain < drains.length ? drains[nextDrain].at.getTime() : Infinity
+			if (Math.min(stepT, drainT) > limit) return
+			// A drop sharing an instant with a dot goes first: that row's own
+			// numbers already have it taken off.
+			if (drainT <= stepT) {
+				placeDrain()
+				continue
+			}
+			const rowStep = steps[next++]
+			if (rowStep.kind === "early") placeEarlyDrop(rowStep.entry, rowStep.t)
+			else placeDot(rowStep)
 		}
 	}
 
@@ -409,6 +488,11 @@ export interface PullPoint {
 	/** On a banner's dot: its bar (the row's number) and which line it sits on. */
 	bar?: PullBar
 	kind?: "uma" | "support"
+	/**
+	 * On the dot of a banner charged early (ForecastMarker.chargedEarly): the
+	 * row's number, drawn off the line. Its own line keeps the daily figure.
+	 */
+	floatPulls?: number
 }
 
 /**
@@ -434,7 +518,9 @@ function pullsFrom(point: ForecastPoint, tickets: number, settings: PullSettings
  *
  * At each banner's dot vertex, that banner's own line takes the row's number
  * (its Max Pulls without free pulls, from `bars`) so dot and row agree; the
- * other line keeps the daily figure. A step-up has no bar, so no dot here.
+ * other line keeps the daily figure. A banner charged early is the exception:
+ * its pulls are already off the line, so its number floats (`floatPulls`) and
+ * both lines carry straight on. A step-up has no bar, so no dot here.
  */
 export function buildPullSeries(
 	forecast: CaratForecast,
@@ -453,7 +539,8 @@ export function buildPullSeries(
 		if (bar) {
 			const banner = banners[bar.marker.index]
 			const kind = banner && plannedBannerTarget(banner).type === "Uma" ? "uma" : "support"
-			result[kind] = bar.pulls
+			if (bar.marker.chargedEarly) result.floatPulls = bar.pulls
+			else result[kind] = bar.pulls
 			result.bar = bar
 			result.kind = kind
 		}

@@ -329,7 +329,7 @@ function FeaturedTileArt({
 	 * the tile's top and sides, so the frame IS the tile's edge there.
 	 */
 	framed: boolean
-	/** One of the person's favourite umas: the rainbow frame. */
+	/** One of the person's favorite umas: the rainbow frame. */
 	oshi: boolean
 }) {
 	const overlayId = useId()

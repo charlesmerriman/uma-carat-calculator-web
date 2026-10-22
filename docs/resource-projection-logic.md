@@ -90,7 +90,7 @@ for each banner:
     free     = startingFree + income.free - spent.free
     paid     = max(0, startingPaid + income.paid - spent.paid)
     strategy = applyPullStrategy(...)              // OR applyStepUpStrategy on a step-up row
-    reserved = allocateReservedCopies(...)         // reservedCopies forced to 0 on a step-up
+    reserved = allocateReservedCopies(...)         // on a step-up: copies of its step 5 pick
     results[displayIndex] = snapshot(...)
     spent += (pre-spend balance − post-spend balance)
 ```
@@ -199,10 +199,15 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   is its stand-in for the lead time. With both applied, a CM ending the day after a
   banner was credited to that banner a minute before its rewards existed.
 - **Race rows carry no amounts.** They are indicators; what a placement pays
-  depends on the user's rank, which only the client knows. Once, it depends on
-  the event too: League of Heroes #1 only ran to Platinum 1, so it pays at
-  `min(user's rank, Platinum 1)`. Rows say which event they are via
-  `event_number`; the rule lives in `RACE_RANK_CAPS` (`utils/incomeLedger.ts`).
+  depends on the user's rank, which only the client knows, and on the event's
+  number: the game raised payouts at CM 30 and LoH 6, and LoH 1 paid Platinum 2-4
+  less. Each CM / LoH rank carries `rewards` ("from event #N on, pays X"), and
+  `raceRewardAmount` (`utils/incomeLedger.ts`) pays the row with the largest
+  `from_event_number` at or below the row's `event_number`, else the rank's own
+  `income_amount`. Carats only; tickets and shards are per rank. The rank picker's
+  badge shows the range over the events still ahead (`upcomingRaceRewardRange`).
+  This replaced `RACE_RANK_CAPS` (2026-10-21). → backend
+  `docs/income-calculation.md` ("Rewards that change with the event number")
 - **A skipped race event is removed from the ledger, once, upstream of every
   consumer.** The player turns "Taking part" off on the Timeline card; that writes
   `skipped_race_events` on the stats block (`{champions_meeting: [ids],
@@ -521,17 +526,21 @@ its once-per-day discounted pulls.
 ### What a step-up does NOT touch
 
 Free carats, uma tickets, support tickets, free pulls, SSR crystals, and the
-daily discount allowance all pass through a step-up row unchanged. **Reserved
-copies are disabled** on step-up rows: allocating one needs a featured-card list
-to date a selector ticket against, and a step-up has none — its candidates are
-back-catalogue cards bounded by the campaign's `jp_cutoff_date`. The sheet has no
-equivalent concept either.
+daily discount allowance all pass through a step-up row's PULLS unchanged.
 
-### Card selections change nothing
+**Reserved copies work like any row's** (since 2026-10-21): they are copies of the
+step 5 pick, the card the odds strip is about, so that one card stands in for a
+banner's featured list. A selector pays if it can take the pick (the intrinsic gate
+and its date), then, on a support step-up only, SSR crystals. An uma step-up takes no
+crystals, as on an uma banner. The odds shift by the funded copies, the same
+`shiftDistribution` an ordinary row uses. v1 zeroed them in the engine while the field
+still took input, so a typed copy never reached the odds.
+
+### Card selections change no rate
 
 A step-up row can carry the ten cards the user intends to select
 (`UserStepUpSelection`, edited on the campaign card in `/app/selectors`). **None of
-it reaches the projection.** The target rate is `step_up_target_rate` = 3% ÷ 10 —
+it reaches the carats or the odds maths.** The target rate is `step_up_target_rate` = 3% ÷ 10 —
 the pool rate split across the ten cards you named — and the selection slot is
 1 ÷ 10. Both hold whichever ten they are, so a partial, empty or edited selection
 moves no number. It is a planning
@@ -545,10 +554,11 @@ would invent a number neither the sheet nor the game has.
 
 A selection is also **not a reserved copy**. A reserved copy is one taken *instead of
 pulling*, funded by a ticket or crystal; a selection is a candidate for pulls already
-being paid for. Reserved copies stay disabled on step-up rows for the reason above.
+being paid for. What the selection does decide is WHICH card a reserved copy is of:
+the step 5 pick, read through `effectiveSelections` (`stepUpReservedCards` in
+`useBannerResources`), whose date gates the selectors that can pay for it.
 
-The one thing selections do affect is presentation: the row named `is_target` (the
-step 5 pick) supplies the planner row's thumbnail, resolving
+The pick also supplies the planner row's thumbnail, resolving
 guaranteed pick → `BannerStepUp.image` → the typographic `★3` / `SSR` chip.
 
 Slot bookkeeping lives in `utils/stepUpSelection.ts`, deliberately free of React.
@@ -600,11 +610,19 @@ of its own:
 - **At a banner's end date** the line meets that row's `freeCarats` (its "Carat
   Est." box) and drops by `freeCaratsSpent`, which the engine now reports per row.
   A row left out of the projection is drawn hollow and drops by nothing.
-- **Each dot is anchored to its row.** The engine charges in START order, the axis
-  runs in END order. They agree unless one banner sits inside another's window;
-  there the line steps straight to the row's number instead of disagreeing with it.
-  The test `caratForecast.test.ts` pins both: on an ordinary plan, against the real
-  engine, the line meets every row with no step at all.
+- **Each dot shows its row's number.** The engine charges in START order, the axis
+  runs in END order. They agree unless one banner sits inside another's window.
+  There the engine charges the OUTER banner first, so the inner row already has the
+  outer one's pulls taken off and no line can pass through both dots. The chart takes
+  the outer banner's pulls off at the inner banner's end (the earliest end among the
+  rows the engine charged after it, the rule `BackgroundSpend.at` follows), so the
+  inner dot sits on the line. The outer dot floats above the line at its own end date
+  with its row's numbers and no drop of its own (`ForecastMarker.chargedEarly`), and
+  its hover says why (owner, 2026-10-21; it used to dip, spike, and then run high by
+  the inner banner's spend until the next dot). Any other dot that disagrees with its
+  row re-anchors the line to it, which in practice only a floored paid balance does.
+  `caratForecast.test.ts` pins both: against the real engine, an ordinary plan meets
+  every row with no step, and a nested pair meets the inner row and the next one.
 - **An ended banner** is not drawn, but its spend comes off the starting balance,
   because the engine charged it before every later row.
 - **Background daily pulls** (banners outside the plan, see above) drop the paid

@@ -73,7 +73,7 @@ const StepUpRow = ({
 		umaBannerData,
 		supportBannerData
 	)
-	// The person's favourite umas get the rainbow frame (FramedUma).
+	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 
 	return (

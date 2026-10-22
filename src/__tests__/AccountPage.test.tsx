@@ -43,7 +43,7 @@ const auth = vi.hoisted(() => ({
 	signOut: vi.fn(),
 }))
 // The real module, so AuthContext itself exists (useOshiIds reads it for the
-// favourite frame); only useAccount is replaced.
+// favorite frame); only useAccount is replaced.
 vi.mock('../services/AuthContext', async () => ({
 	...(await vi.importActual<typeof import('../services/AuthContext')>('../services/AuthContext')),
 	useAccount: () => auth,
@@ -65,7 +65,7 @@ function account(overrides: Partial<Account> = {}): Account {
 		show_supporter_badge: true,
 		avatar_url: null,
 		oshis: [],
-		// The free slot: every account may hold one favourite.
+		// The free slot: every account may hold one favorite.
 		oshi_slots: 1,
 		oshi_variants: false,
 		early_access: false,
@@ -342,9 +342,9 @@ describe('AccountPage oshis', () => {
 		mockedPatch.mockResolvedValue(response(200))
 
 		renderPage()
-		expect(screen.getByText('Your favourite uma musume')).toBeInTheDocument()
+		expect(screen.getByText('Your favorite uma musume')).toBeInTheDocument()
 		fireEvent.click(screen.getByRole('button', { name: /pick your picture/i }))
-		const dialog = await screen.findByRole('dialog', { name: /choose a favourite/i })
+		const dialog = await screen.findByRole('dialog', { name: /choose a favorite/i })
 		fireEvent.click(await within(dialog).findByRole('button', { name: /^gold ship$/i }))
 
 		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [9] }))
@@ -368,7 +368,7 @@ describe('AccountPage oshis', () => {
 		expect(screen.getByText(/your picture is special week/i)).toBeInTheDocument()
 		// ONE add tile for the two unfilled slots, saying how many are left; it is
 		// not "your picture".
-		const add = screen.getByRole('button', { name: /^add a favourite/i })
+		const add = screen.getByRole('button', { name: /^add a favorite/i })
 		expect(add).toHaveTextContent('2 slots left')
 		expect(screen.queryByRole('button', { name: /pick your picture/i })).toBeNull()
 		fireEvent.click(add)
@@ -377,10 +377,10 @@ describe('AccountPage oshis', () => {
 		fireEvent.click(within(dialog).getByRole('button', { name: /^gold ship$/i }))
 
 		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [7, 9] }))
-		expect(mockedToast.success).toHaveBeenCalledWith('Gold Ship added to your favourites.')
+		expect(mockedToast.success).toHaveBeenCalledWith('Gold Ship added to your favorites.')
 	})
 
-	it('makes a later favourite the picture by moving it first', async () => {
+	it('makes a later favorite the picture by moving it first', async () => {
 		signedIn(account({ oshi_slots: 3, oshis: [SPECIAL_WEEK, GOLD_SHIP], avatar_url: SPECIAL_WEEK.image }))
 		mockedPatch.mockResolvedValue(response(200))
 
@@ -393,7 +393,7 @@ describe('AccountPage oshis', () => {
 		expect(mockedToast.success).toHaveBeenCalledWith('Your picture is now Gold Ship.')
 	})
 
-	it('removes a favourite by saving the list without it', async () => {
+	it('removes a favorite by saving the list without it', async () => {
 		signedIn(account({ oshi_slots: 3, oshis: [SPECIAL_WEEK, GOLD_SHIP], avatar_url: SPECIAL_WEEK.image }))
 		mockedPatch.mockResolvedValue(response(200))
 
@@ -401,7 +401,7 @@ describe('AccountPage oshis', () => {
 		fireEvent.click(screen.getByRole('button', { name: /remove special week/i }))
 
 		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ oshis: [9] }))
-		expect(mockedToast.success).toHaveBeenCalledWith('Special Week removed from your favourites.')
+		expect(mockedToast.success).toHaveBeenCalledWith('Special Week removed from your favorites.')
 	})
 
 	it('replaces the picture in place through Change, marking the current tile', async () => {
@@ -446,14 +446,14 @@ describe('AccountPage oshis', () => {
 	it('keeps the picker open when the server refuses the pick', async () => {
 		signedIn(account({ oshi_slots: 1 }))
 		mockedUmas.mockImplementation(abortableUmas(response(200, UMAS)))
-		mockedPatch.mockResolvedValue(response(400, { oshis: ['Your tier covers 3 favourites.'] }))
+		mockedPatch.mockResolvedValue(response(400, { oshis: ['Your tier covers 3 favorites.'] }))
 
 		renderPage()
 		fireEvent.click(screen.getByRole('button', { name: /pick your picture/i }))
 		const dialog = await screen.findByRole('dialog')
 		fireEvent.click(await within(dialog).findByRole('button', { name: /^gold ship$/i }))
 
-		await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith('Your tier covers 3 favourites.'))
+		await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith('Your tier covers 3 favorites.'))
 		expect(screen.getByRole('dialog')).toBeInTheDocument()
 		expect(auth.refresh).not.toHaveBeenCalled()
 	})

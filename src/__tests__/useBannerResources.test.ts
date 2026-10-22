@@ -372,13 +372,22 @@ describe('ledger rewards', () => {
     expect(withRace[0].umaTickets).toBe(2)
   })
 
-  it('pays League of Heroes #1 at Platinum 1 for a player ranked above it', () => {
-    // The rows' side of the LoH #1 cap: that event only ran to Platinum 1, so a
-    // Platinum 3 player earns 1800 from it and 2800 from every later one. The
+  it("pays each League of Heroes at its own number's reward", () => {
+    // The rows' side of the per-event rewards (raceRewardAmount): Daptrius's
+    // Platinum 3 pays 2250 at #1, its own 2950 for #2-5, 3400 from #6. The
     // tiles have the matching test in useAverageMonthlyIncome.test.ts.
     const platinumLadder = [
-      { id: 8, name: 'Platinum 3', income_amount: 2800, ...zeroRankRewards },
-      { id: 7, name: 'Platinum 1', income_amount: 1800, ...zeroRankRewards },
+      {
+        id: 8,
+        name: 'Platinum 3',
+        income_amount: 2950,
+        ...zeroRankRewards,
+        rewards: [
+          { from_event_number: 1, income_amount: 2250 },
+          { from_event_number: 2, income_amount: 2950 },
+          { from_event_number: 6, income_amount: 3400 },
+        ],
+      },
     ] as LeagueOfHeroesRank[]
     // The same two dates every time; only WHICH events they are changes.
     const withLeagues = (firstEvent: number) =>
@@ -390,8 +399,9 @@ describe('ledger rewards', () => {
           ledgerRow({ kind: 'league_of_heroes', date: daysFromNow(10, 'T21:59:59Z'), event_number: firstEvent + 1 }),
         ],
       })[0].freeCarats
-    // #2 + #3 pay 2800 + 2800; #1 + #2 pay 1800 + 2800.
-    expect(withLeagues(2) - withLeagues(1)).toBe(1000)
+    // #2 + #3 pay 2950 + 2950; #1 + #2 pay 2250 + 2950; #5 + #6 pay 2950 + 3400.
+    expect(withLeagues(2) - withLeagues(1)).toBe(700)
+    expect(withLeagues(5) - withLeagues(2)).toBe(450)
   })
 })
 
@@ -663,16 +673,62 @@ describe('step-up rows', () => {
     expect(row.reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
   })
 
-  it('ignores reserved copies, which are disabled on step-up rows in v1', () => {
+  // A step-up's reserved copies are copies of its step 5 pick, funded like any
+  // row's: a selector that can take that card, then (support only) crystals.
+  // Until 2026-10-21 the engine zeroed them while the field still took input,
+  // so the odds strip ignored what the user typed.
+  function upWithPick(pick: Uma, reserved = 1) {
     const banner = stepUpBanner(1, 1, 10, 5)
-    banner.reserved_copies = 3
-    const [row] = render([banner], {
-      current_paid_carat: 10_000,
-      uma_selector_ticket: 5,
-      ssr_crystals: 5,
-    })
-    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 0 })
-    expect(row.ssrCrystals).toBe(5)
+    banner.reserved_copies = reserved
+    const catalogue = umaBanner(9, -400, -390).banner_uma!
+    catalogue.umas = [pick]
+    return {
+      banner,
+      extra: {
+        umaBannerData: [catalogue],
+        userStepUpSelectionData: [
+          { banner_step_up: 1, uma: pick.id, support: null, slot: 1, is_target: true },
+        ],
+      },
+    }
+  }
+
+  it('lets a selector fund a step-up reserve of its step 5 pick', () => {
+    const { banner, extra } = upWithPick(featuredUma(7, 'Pick'))
+    const [row] = render(
+      [banner],
+      { current_paid_carat: 10_000, uma_selector_ticket: 2, ssr_crystals: 5 },
+      extra
+    )
+    expect(row.reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+  })
+
+  it('bars selectors when the step 5 pick is one no selector can take', () => {
+    const { banner, extra } = upWithPick({ ...featuredUma(7, 'Limited'), is_time_limited: true })
+    const [row] = render(
+      [banner],
+      { current_paid_carat: 10_000, uma_selector_ticket: 2 },
+      extra
+    )
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('keeps SSR crystals off an uma step-up, as on an uma banner', () => {
+    const { banner, extra } = upWithPick(featuredUma(7, 'Pick'))
+    const [row] = render([banner], { current_paid_carat: 10_000, ssr_crystals: 5 }, extra)
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('pays a support step-up reserve from SSR crystals', () => {
+    const banner = stepUpBanner(1, 1, 10, 5)
+    banner.banner_step_up!.card_type = 'support'
+    banner.reserved_copies = 2
+    const [row, after] = render(
+      [banner, umaBanner(2, 20, 30)],
+      { current_paid_carat: 10_000, ssr_crystals: 5 }
+    )
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 2, unfunded: 0 })
+    expect(after.ssrCrystals).toBe(row.ssrCrystals - 2)
   })
 
   it('charges rows sharing a window in display order', () => {

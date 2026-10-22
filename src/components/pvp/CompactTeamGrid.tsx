@@ -12,7 +12,7 @@ import type { ReactNode } from "react"
 import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
-import { FavouriteHeart, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
+import { FavoriteHeart, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
 
@@ -26,7 +26,7 @@ export function CompactTeamGrid({
 	umasById,
 	cardsById,
 	releaseFor,
-	isFavourite,
+	isFavorite,
 	isRecommended,
 	onPickUma,
 	onPickCard,
@@ -44,12 +44,12 @@ export function CompactTeamGrid({
 					const member = memberAt(members, position)
 					const uma = member ? umasById.get(member.uma) : undefined
 					const name = uma?.name ?? `uma ${position + 1}`
-					const favourite = member ? (isFavourite?.(member.uma) ?? false) : false
+					const favorite = member ? (isFavorite?.(member.uma) ?? false) : false
 					return (
 						<li key={position} className="min-w-0">
 							{member ? (
 								<>
-									{/* The uma in the site's frame (FramedUma); a favourite gets the
+									{/* The uma in the site's frame (FramedUma); a favorite gets the
 									    rainbow one. The overlays sit on the framed square. */}
 									<div>
 										<div className="group relative aspect-square transition hover:brightness-110">
@@ -60,16 +60,16 @@ export function CompactTeamGrid({
 												onClick={() => onPickUma(position)}
 												className="block h-full w-full rounded-[10.75%] outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={favourite} className="w-full" />
+												<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={favorite} className="w-full" />
 											</button>
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}
 											</span>
 											{/* Under the number: the guide's star first, then the heart. */}
-											{(starred("uma", member.uma, member) || favourite) && (
+											{(starred("uma", member.uma, member) || favorite) && (
 												<span className="pointer-events-none absolute left-1 top-7 flex flex-col gap-1">
 													{starred("uma", member.uma, member) && <StarBadge />}
-													{favourite && <FavouriteHeart />}
+													{favorite && <FavoriteHeart />}
 												</span>
 											)}
 											<span className="absolute bottom-6 left-0">

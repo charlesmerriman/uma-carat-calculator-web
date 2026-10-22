@@ -12,6 +12,7 @@ import {
   stepsAffordable,
 } from '../utils/stepUpLadder'
 import { DEFAULT_CONSTANTS as C } from '../constants/gameConstants'
+import { shiftDistribution } from '../utils/probabilityCalculations'
 
 // ── stepCosts ─────────────────────────────────────────────────────────────────
 
@@ -234,6 +235,16 @@ describe('stepUpCopyDistribution', () => {
     expect(odds[3]).toBeCloseTo(34.791438, 5)
     expect(odds[4]).toBeCloseTo(37.955353, 5)
     expect(odds[5]).toBeCloseTo(27.253209, 5)
+  })
+
+  it("shifts by a funded reserved copy to Daptrius's numbers", () => {
+    // Two full rounds starting from one copy already in hand (board post
+    // "Step-up odds ignore copies you already own", 2026-10-17). The row
+    // applies the shift (BannerRow), so this is the maths it now reaches.
+    const odds = shiftDistribution(stepUpOdds(10), 1)
+    expect(odds[3]).toBeCloseTo(49.47, 2)
+    expect(odds[4]).toBeCloseTo(35.98, 2)
+    expect(odds[5]).toBeCloseTo(14.56, 2)
   })
 
   it('runs at the 0.3% target rate, not the 0.75% featured rate', () => {
