@@ -218,9 +218,22 @@ describe("PvpGuidePage", () => {
 		renderPage()
 		await screen.findByText("Recommended stats")
 		const tabs = within(screen.getAllByRole("tablist", { name: "Running style" })[0])
-		expect(tabs.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Front", "End"])
+		expect(tabs.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front", "End"])
 		fireEvent.click(tabs.getByRole("tab", { name: "End" }))
 		expect(screen.getAllByText("Gold Ship").length).toBeGreaterThan(0)
+	})
+
+	it("shows every style at once on the All tab, and puts it in the address", async () => {
+		respond(200, GUIDE)
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.queryByText("Gold Ship")).not.toBeInTheDocument()
+		fireEvent.click(within(screen.getAllByRole("tablist", { name: "Running style" })[0]).getByRole("tab", { name: "All" }))
+		const panel = screen.getByRole("tabpanel", { name: "All" })
+		expect(within(panel).getByRole("region", { name: "Front" })).toBeInTheDocument()
+		expect(within(panel).getByRole("region", { name: "End" })).toBeInTheDocument()
+		expect(within(panel).getAllByText("Maruzensky").length).toBeGreaterThan(0)
+		expect(within(panel).getAllByText("Gold Ship").length).toBeGreaterThan(0)
 	})
 
 	it("shows the key dates from the constants", async () => {
