@@ -100,7 +100,7 @@ import {
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
 import { PvpEarlyAccess } from "./PvpEarlyAccess"
-import { isOpenPvpEvent, usePvpAccess } from "../../hooks/usePvpAccess"
+import { isOpenPvpEvent, lockedPvpEvents, usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { loadGalleryView } from "./gallery/loadGallery"
@@ -214,11 +214,20 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 		!(view === "recommendations" && event === freeEvent) &&
 		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
 
+	// The events this reader can open: all of them, or while locked only the
+	// free guide's and the open CM's (lockedPvpEvents), so the list never
+	// offers a lock card. The event on screen is always listed, so a link to a
+	// locked one still shows it selected (with its card).
+	const reachable = locked ? lockedPvpEvents(events, now) : events
 	// Past events stay out of the dropdown unless asked for, or unless the
 	// event on screen is itself past (a link to an old guide).
 	const [showPastChoice, setShowPastChoice] = useState(false)
 	const showPast = showPastChoice || (event !== null && hasEnded(event, now))
-	const choices = events.filter((candidate) => showPast || !hasEnded(candidate, now) || candidate === event)
+	const choices = events.filter(
+		(candidate) => candidate === event || (reachable.includes(candidate) && (showPast || !hasEnded(candidate, now)))
+	)
+	// No past event to offer (a locked reader, before the open CM ends): no toggle.
+	const hasPast = reachable.some((candidate) => hasEnded(candidate, now))
 	const index = event ? choices.indexOf(event) : -1
 
 	// The running style asked for: the URL's, else the last one this tab was
@@ -313,6 +322,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 				index={index}
 				now={now}
 				showPast={showPast}
+				hasPast={hasPast}
 				onTogglePast={() => setShowPastChoice(!showPast)}
 				onSelect={select}
 			/>
@@ -494,13 +504,14 @@ function optionLabel(event: RaceEvent): string {
 	return `${event.has_guide ? "★ " : ""}${event.name} (${formatDate(event.start_date)})`
 }
 
-function ControlBand({ ref, events, event, index, now, showPast, onTogglePast, onSelect }: {
+function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogglePast, onSelect }: {
 	ref: Ref<HTMLDivElement>
 	events: RaceEvent[]
 	event: RaceEvent | null
 	index: number
 	now: Date
 	showPast: boolean
+	hasPast: boolean
 	onTogglePast: () => void
 	onSelect: (event: RaceEvent | undefined) => void
 }) {
@@ -521,10 +532,12 @@ function ControlBand({ ref, events, event, index, now, showPast, onTogglePast, o
 			    grid, with the right column left empty to balance it. Stacked on a
 			    phone, toggle first. */}
 			<div className="mx-auto flex w-full max-w-[96rem] flex-col items-stretch gap-2 px-3 py-2 md:flex-row md:items-center md:justify-center md:px-2">
-				<button type="button" className={`${controlButtonClass} w-full md:w-auto`} onClick={onTogglePast}>
-					<History className="h-4 w-4 text-brand" />
-					{showPast ? "Hide past events" : "Show past events"}
-				</button>
+				{hasPast && (
+					<button type="button" className={`${controlButtonClass} w-full md:w-auto`} onClick={onTogglePast}>
+						<History className="h-4 w-4 text-brand" />
+						{showPast ? "Hide past events" : "Show past events"}
+					</button>
+				)}
 				<div className="flex items-center justify-center gap-2">
 					<button
 						type="button"

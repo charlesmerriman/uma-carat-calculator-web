@@ -221,6 +221,25 @@ describe("PvpGuidePage", () => {
 		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
 	})
 
+	it("lists only the free guide's event and the open CM while locked, with no past toggle", () => {
+		access.value = "locked"
+		events = [OLD, NEXT, LATER, event(PVP_OPEN_CM_NUMBER ?? 0, "Capricorn Cup", "2100-06-01T00:00:00Z")]
+		respond(200, GUIDE)
+		renderPage()
+		const options = within(screen.getByRole("combobox", { name: "Event" })).getAllByRole("option")
+		expect(options.map((option) => option.textContent)).toEqual([
+			expect.stringContaining("Aquarius Cup"),
+			expect.stringContaining("Capricorn Cup"),
+		])
+		expect(screen.queryByRole("button", { name: "Show past events" })).not.toBeInTheDocument()
+	})
+
+	it("still lists a locked event a link opened, so the list shows what is on screen", () => {
+		access.value = "locked"
+		renderPage("/app/pvp?event=cm-11")
+		expect(screen.getByRole("combobox", { name: "Event" })).toHaveDisplayValue(/Pisces Cup/)
+	})
+
 	it("waits for the account rather than flashing the card at a supporter", () => {
 		access.value = "pending"
 		renderPage()

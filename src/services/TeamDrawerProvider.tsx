@@ -9,21 +9,27 @@
  *
  * `available` is false on the PvP page's My team view (?view=team), where the
  * builder already shows the team; the open state is kept, so the drawer comes
- * back on the next page. It is also false for anyone the PvP page is still
- * locked to (early access, hooks/usePvpAccess.ts), who can read the free
- * guide but not build a team: no Team button, no drawer.
+ * back on the next page. For anyone the PvP page is still locked to (early
+ * access, hooks/usePvpAccess.ts) it is true only while the open CM, the one
+ * event they can build a team for (lockedTeamEvents), has not ended; the
+ * window then shows that event alone. Never while the account or the
+ * calculator data is loading, which is also how the prerendered page has it,
+ * so the clock is read only after load.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useLocation } from "react-router-dom"
 import { TeamDrawerContext, isMyTeamView, type TeamDrawerContextType } from "./TeamDrawerContext"
-import { usePvpAccess } from "../hooks/usePvpAccess"
+import { lockedTeamEvents, usePvpAccess } from "../hooks/usePvpAccess"
+import { useCalculatorData } from "./CalculatorContext"
+import { hasEnded, raceEventsInOrder } from "../utils/pvpGuide"
 
 const STORAGE_KEY = "uma-planner-team-drawer"
 
 export function TeamDrawerProvider({ children }: { children: ReactNode }) {
 	const location = useLocation()
 	const access = usePvpAccess()
+	const { championsMeetingData, leagueOfHeroesData, isLoading } = useCalculatorData()
 	const [open, setOpenState] = useState(false)
 
 	useEffect(() => {
@@ -35,8 +41,15 @@ export function TeamDrawerProvider({ children }: { children: ReactNode }) {
 		}
 	}, [])
 
-	const value = useMemo<TeamDrawerContextType>(
-		() => ({
+	const value = useMemo<TeamDrawerContextType>(() => {
+		const allowed =
+			access === "open" ||
+			(access === "locked" &&
+				!isLoading &&
+				lockedTeamEvents(raceEventsInOrder(championsMeetingData, leagueOfHeroesData)).some(
+					(event) => !hasEnded(event, new Date())
+				))
+		return {
 			open,
 			setOpen: (next: boolean) => {
 				setOpenState(next)
@@ -47,10 +60,9 @@ export function TeamDrawerProvider({ children }: { children: ReactNode }) {
 					// A convenience only.
 				}
 			},
-			available: access === "open" && !isMyTeamView(location.pathname, location.search),
-		}),
-		[open, access, location.pathname, location.search]
-	)
+			available: allowed && !isMyTeamView(location.pathname, location.search),
+		}
+	}, [open, access, isLoading, championsMeetingData, leagueOfHeroesData, location.pathname, location.search])
 
 	return <TeamDrawerContext.Provider value={value}>{children}</TeamDrawerContext.Provider>
 }
