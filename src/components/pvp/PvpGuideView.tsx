@@ -208,12 +208,17 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	)
 }
 
-/** A deck's six slots. Alternatives stack under their slot as an "or". */
+/**
+ * A deck's six slots. Alternatives stack under their slot as an "or". A deck
+ * the editor gave the gold box is drawn inside one, to set it apart (Henry,
+ * 2026-10-22, for the Honorable Mentions row): the recommended gold, a theme
+ * token, so it reads on light themes too.
+ */
 function DeckGrid({ deck }: { deck: PvpDeck }) {
 	const slots = new Map<number, PvpDeckSlot[]>()
 	for (const row of deck.slots) slots.set(row.slot, [...(slots.get(row.slot) ?? []), row])
 	return (
-		<div>
+		<div className={deck.is_highlighted ? "rounded-xl border-2 border-recommended p-2 sm:p-3" : undefined}>
 			<div className="flex flex-wrap items-baseline gap-2">
 				<span className="rounded-full border border-brand/50 bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
 					{deck.label}

@@ -69,6 +69,11 @@ export interface GuideDeckRow {
 	style: PvpStyle
 	label: string
 	note: string
+	/**
+	 * The gold box. Optional: a revision saved before it existed has none,
+	 * and the server saves a missing one as false.
+	 */
+	is_highlighted?: boolean
 	slots: GuideSlotRow[]
 }
 

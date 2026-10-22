@@ -155,6 +155,17 @@ describe("GuideEditor", () => {
 		expect((puts()[1].body as GuideDocument).version).toBe(4)
 	})
 
+	it("gives a deck the gold box and saves it", async () => {
+		renderEditor()
+		fireEvent.click(await screen.findByRole("tab", { name: /Front/ }))
+		const toggle = screen.getByRole("button", { name: "Gold box" })
+		expect(toggle).toHaveAttribute("aria-pressed", "false")
+		fireEvent.click(toggle)
+		expect(toggle).toHaveAttribute("aria-pressed", "true")
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect((puts()[0].body as GuideDocument).decks[0].is_highlighted).toBe(true)
+	})
+
 	it("shows a refused save beside its field and on its tab", async () => {
 		answers["PUT /pvp-guides/7/document"] = respond(400, {
 			error: "No skill on global has this name: [[Nope]]",
