@@ -906,12 +906,12 @@ export const BannerRow = ({
 		? countStatus === "over"
 			? `More steps than you can afford here (max ${stepUpperBound})`
 			: countStatus === "ok"
-			? "A completed ladder: every carat bought a full banner, guarantee included"
-			: `Stops part-way up a ladder (${STEPS_PER_ROUND} steps complete one)`
+			? `A completed round (${STEPS_PER_ROUND} steps)`
+			: `Stops partway through a round (${STEPS_PER_ROUND} steps)`
 		: countStatus === "over"
 		? `More pulls than you can afford here (max ${pullUpperBound})`
 		: countStatus === "ok"
-		? "On a pity threshold, with no carats left in a partial counter"
+		? `On a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 		: `Not on a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"
