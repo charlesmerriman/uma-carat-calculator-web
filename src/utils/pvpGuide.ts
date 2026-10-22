@@ -250,6 +250,20 @@ export const WHITE_SKILL_RARITY = 1
 export const GOLD_SKILL_RARITY = 2
 
 /**
+ * A skill version's colour as a reader says it: "white", "gold", "unique" or
+ * "evolved". The guide's hover card shows this rather than the API's
+ * `version` ("○ white", "◎ gold"): the circles read as noise there (Daptrius,
+ * 2026-10-17), and a ○/◎ white already carries its circle in its name. The
+ * team builder keeps `version`, where "as ○ white" vs "as ◎ white" matters.
+ */
+export function skillColour(skill: { rarity: number; is_evolved: boolean }): string {
+	if (skill.is_evolved) return "evolved"
+	if (skill.rarity === GOLD_SKILL_RARITY) return "gold"
+	if (skill.rarity === WHITE_SKILL_RARITY) return "white"
+	return "unique"
+}
+
+/**
  * Does a source teaching `version` give a team the pick `skill`?
  *
  * The direction matters: a card that teaches the gold teaches the white too

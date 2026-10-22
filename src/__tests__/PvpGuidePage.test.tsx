@@ -389,8 +389,8 @@ describe("PvpGuidePage skill mentions", () => {
 		const chips = screen.getAllByRole("group", { name: "Groundwork" })
 		expect(chips).toHaveLength(2)
 		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Front runners speed up early.")
-		// The other version rides along in the hover detail.
-		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Groundwork ◎ ◎ gold")
+		// The other version rides along in the hover detail, its colour as a word.
+		expect(within(chips[0]).getByRole("tooltip").textContent).toContain("Groundwork ◎ gold")
 	})
 
 	it("shows an unresolved mention as its plain name", async () => {

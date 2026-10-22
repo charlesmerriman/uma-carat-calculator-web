@@ -13,6 +13,7 @@ import {
 	stylesWithContent,
 	familySources,
 	skillFamilyIds,
+	skillColour,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
@@ -276,5 +277,14 @@ describe("guideSkillsByCategory", () => {
 
 	it("lists the positions with skills, without everyone", () => {
 		expect(skillPositions(guide)).toEqual(["front", "pace", "late", "end"])
+	})
+})
+
+describe("skillColour", () => {
+	it("names the colour from rarity, never from the circles in the label", () => {
+		expect(skillColour({ rarity: 1, is_evolved: false })).toBe("white")
+		expect(skillColour({ rarity: 2, is_evolved: false })).toBe("gold")
+		expect(skillColour({ rarity: 5, is_evolved: false })).toBe("unique")
+		expect(skillColour({ rarity: 2, is_evolved: true })).toBe("evolved")
 	})
 })

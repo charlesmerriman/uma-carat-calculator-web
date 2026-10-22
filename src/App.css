@@ -927,6 +927,18 @@
 	box-shadow: 0 0 6px var(--color-ssr-glow);
 }
 
+/* A gold skill on a PvP guide (SkillChip, SkillMention in PvpTiles.tsx), drawn
+   the way the game draws one: the SR card's gold gradient behind the name, the
+   two ends Daptrius gave (#fff4d7 to #e8b51a, 2026-10-17). The game's own
+   colours, so fixed hexes rather than theme tokens: it looks the same on every
+   theme, with dark brown text that reads on both ends. The chip supplies its
+   own border width and radius; this sets only the colours. */
+.skill-gold {
+	color: #3f2c00;
+	border-color: #c89a1e;
+	background-image: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+}
+
 /* The free-pulls chip that can share the title line with it: a 20px box too
    (see its padding note below), so it is zero-layout in the same way. The 1px ring is an inset shadow rather than a border because a border
    would add 2px to the box, and to the title line with it.
