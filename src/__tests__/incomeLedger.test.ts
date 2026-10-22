@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   cumulativeEventRewards,
   cumulativeRaceRewards,
+  raceRewardAmount,
+  upcomingRaceRewardRange,
   cumulativeThroughoutCarats,
   parseLedger,
   raceEventsInWindow,
@@ -124,79 +126,125 @@ describe('raceEventsInWindow', () => {
   })
 })
 
-describe('cumulativeRaceRewards', () => {
-  // A trimmed League of Heroes ladder. The ids are deliberately not the real
-  // ones: the cap is looked up by rank NAME, so nothing may depend on an id.
-  const rank = (id: number, name: string, income: number, shards = 0) => ({
-    id,
-    name,
-    income_amount: income,
+describe('raceRewardAmount', () => {
+  // Daptrius's League of Heroes table for Platinum 3 (board, 2026-10-05):
+  // 2250 at #1, 2950 (its own amount) for #2-5, 3400 from #6 on.
+  const PLATINUM_3 = {
+    name: 'Platinum 3',
+    income_amount: 2950,
     uma_ticket_amount: 2,
     support_ticket_amount: 2,
-    ssr_shard_amount: shards,
-    sr_shard_amount: shards,
+    ssr_shard_amount: 2,
+    sr_shard_amount: 2,
+    // Out of order on purpose: the lookup must not lean on the API's sort.
+    rewards: [
+      { from_event_number: 6, income_amount: 3400 },
+      { from_event_number: 1, income_amount: 2250 },
+      { from_event_number: 2, income_amount: 2950 },
+    ],
+  }
+
+  it('pays the row with the largest from-number at or below the event', () => {
+    expect(raceRewardAmount(PLATINUM_3, 1)).toBe(2250)
+    expect(raceRewardAmount(PLATINUM_3, 2)).toBe(2950)
+    expect(raceRewardAmount(PLATINUM_3, 5)).toBe(2950)
+    expect(raceRewardAmount(PLATINUM_3, 6)).toBe(3400)
+    expect(raceRewardAmount(PLATINUM_3, 20)).toBe(3400)
   })
-  const PLATINUM_3 = rank(10, 'Platinum 3', 2800, 2)
-  const PLATINUM_1 = rank(11, 'Platinum 1', 1800, 1)
-  const GOLD_4 = rank(12, 'Gold 4', 1300)
-  const LADDER = [PLATINUM_3, PLATINUM_1, GOLD_4]
+
+  it("pays the rank's own amount before its first row, and with no rows at all", () => {
+    // CM Champion: 3300 until a "from 30" row raises it.
+    const champion = { ...PLATINUM_3, income_amount: 3300, rewards: [{ from_event_number: 30, income_amount: 3800 }] }
+    expect(raceRewardAmount(champion, 29)).toBe(3300)
+    expect(raceRewardAmount(champion, 30)).toBe(3800)
+    expect(raceRewardAmount({ ...champion, rewards: [] }, 30)).toBe(3300)
+    expect(raceRewardAmount({ ...champion, rewards: undefined }, 30)).toBe(3300)
+  })
+
+  it("pays the rank's own amount for an event with no number", () => {
+    // A ledger from an API older than event_number: the old behaviour.
+    expect(raceRewardAmount(PLATINUM_3, null)).toBe(2950)
+  })
+})
+
+describe('upcomingRaceRewardRange', () => {
+  const CHAMPION = {
+    name: 'Champion',
+    income_amount: 3300,
+    uma_ticket_amount: 5,
+    support_ticket_amount: 5,
+    ssr_shard_amount: 0,
+    sr_shard_amount: 0,
+    rewards: [{ from_event_number: 30, income_amount: 3800 }],
+  }
+  const cm = (eventNumber: number, date: string) =>
+    row({ date, kind: 'champions_meeting', event_number: eventNumber })
+
+  it('spans the events still ahead, past ones left out', () => {
+    const ledger = [
+      cm(20, '2020-01-01T21:59:59Z'), // behind us: ignored
+      cm(29, '2027-08-05T21:59:59Z'),
+      cm(30, '2027-09-19T21:59:59Z'),
+    ]
+    expect(upcomingRaceRewardRange(ledger, 'champions_meeting', CHAMPION, TODAY)).toEqual({ min: 3300, max: 3800 })
+    expect(upcomingRaceRewardRange(ledger.slice(0, 2), 'champions_meeting', CHAMPION, TODAY)).toEqual({
+      min: 3300,
+      max: 3300,
+    })
+  })
+
+  it('is null with no event of that kind ahead', () => {
+    expect(upcomingRaceRewardRange([cm(30, '2027-09-19T21:59:59Z')], 'league_of_heroes', CHAMPION, TODAY)).toBeNull()
+  })
+})
+
+describe('cumulativeRaceRewards', () => {
+  const PLATINUM_3 = {
+    name: 'Platinum 3',
+    income_amount: 2950,
+    uma_ticket_amount: 2,
+    support_ticket_amount: 2,
+    ssr_shard_amount: 2,
+    sr_shard_amount: 1,
+    rewards: [
+      { from_event_number: 1, income_amount: 2250 },
+      { from_event_number: 2, income_amount: 2950 },
+      { from_event_number: 6, income_amount: 3400 },
+    ],
+  }
   const END = utc('2027-12-31T21:59:59Z')
   const loh = (eventNumber: number | null, date: string) =>
     row({ date, kind: 'league_of_heroes', event_number: eventNumber })
 
-  it('pays League of Heroes #1 at Platinum 1 for a player ranked above it', () => {
+  it('values each event at its own number, across the raises', () => {
     const ledger = parseLedger([
       loh(1, '2027-01-29T21:59:59Z'),
       loh(2, '2027-03-12T21:59:59Z'),
+      loh(6, '2027-09-10T21:59:59Z'),
     ])
-    const total = cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, PLATINUM_3, LADDER)
-    // 1800 for #1 (capped) + 2800 for #2: the sheet's own figure for a
-    // Platinum 3 player, which the parity audit reproduced exactly.
-    expect(total.carats).toBe(4600)
-    // The whole reward row follows the cap, not only the carats.
-    expect(total.ssrShards).toBe(1 + 2)
+    const total = cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, PLATINUM_3)
+    expect(total.carats).toBe(2250 + 2950 + 3400)
+    // Tickets and shards are per rank, the same at every event.
+    expect(total.umaTickets).toBe(6)
+    expect(total.ssrShards).toBe(6)
+    expect(total.srShards).toBe(3)
   })
 
-  it('is a ceiling, never a floor', () => {
-    // A player below the cap keeps their own, smaller, payout from #1.
-    const ledger = parseLedger([loh(1, '2027-01-29T21:59:59Z')])
-    expect(
-      cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, GOLD_4, LADDER).carats
-    ).toBe(1300)
-  })
-
-  it('caps only that event, and only for its own kind', () => {
+  it('reads only its own kind', () => {
     const ledger = parseLedger([
-      loh(2, '2027-03-12T21:59:59Z'),
-      row({ date: '2027-02-10T00:00:00Z', kind: 'champions_meeting', event_number: 1 }),
+      loh(6, '2027-09-10T21:59:59Z'),
+      row({ date: '2027-02-10T00:00:00Z', kind: 'champions_meeting', event_number: 6 }),
     ])
+    expect(cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, PLATINUM_3).carats).toBe(3400)
+    expect(cumulativeRaceRewards(ledger, 'champions_meeting', TODAY, END, PLATINUM_3).carats).toBe(3400)
     expect(
-      cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, PLATINUM_3, LADDER).carats
-    ).toBe(2800)
-    // Champions Meeting #1 shares the number but not the cap.
-    expect(
-      cumulativeRaceRewards(ledger, 'champions_meeting', TODAY, END, PLATINUM_3, LADDER).carats
-    ).toBe(2800)
-  })
-
-  it('falls back to the uncapped rank rather than to zero', () => {
-    // A ceiling rank renamed in the admin, or a ledger from an API older than
-    // event_number, must degrade to the pre-cap payout, not silently to nothing.
-    const numbered = parseLedger([loh(1, '2027-01-29T21:59:59Z')])
-    expect(
-      cumulativeRaceRewards(numbered, 'league_of_heroes', TODAY, END, PLATINUM_3, [PLATINUM_3, GOLD_4]).carats
-    ).toBe(2800)
-    const unnumbered = parseLedger([loh(null, '2027-01-29T21:59:59Z')])
-    expect(
-      cumulativeRaceRewards(unnumbered, 'league_of_heroes', TODAY, END, PLATINUM_3, LADDER).carats
-    ).toBe(2800)
+      cumulativeRaceRewards(parseLedger([loh(6, '2027-09-10T21:59:59Z')]), 'champions_meeting', TODAY, END, PLATINUM_3).carats
+    ).toBe(0)
   })
 
   it('pays nothing without a rank', () => {
     const ledger = parseLedger([loh(1, '2027-01-29T21:59:59Z')])
-    expect(
-      cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, undefined, LADDER).carats
-    ).toBe(0)
+    expect(cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, undefined).carats).toBe(0)
   })
 
   it('draws exactly the window raceEventsInWindow does', () => {
@@ -205,9 +253,7 @@ describe('cumulativeRaceRewards', () => {
       loh(2, '2020-01-08T00:00:00Z'),
       loh(3, '2028-06-01T00:00:00Z'),
     ])
-    expect(
-      cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, PLATINUM_3, LADDER).carats
-    ).toBe(0)
+    expect(cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, END, PLATINUM_3).carats).toBe(0)
   })
 })
 

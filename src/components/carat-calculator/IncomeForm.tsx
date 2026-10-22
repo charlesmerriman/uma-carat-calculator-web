@@ -11,6 +11,9 @@ import { ToggleSwitch } from "../ToggleSwitch"
 import { NumberField } from "../NumberField"
 import { shopTicketsPerMonth } from "../../utils/cumulativeIncome"
 import { upcomingSkipCount } from "../../utils/raceParticipation"
+import { upcomingRaceRewardRange } from "../../utils/incomeLedger"
+import type { RaceRank } from "../../utils/incomeLedger"
+import type { IncomeLedgerRow, LedgerRowKind } from "../../types/ledger"
 import { countLabel } from "../../utils/plural"
 import type { CalculationConstants, ClubRank, TeamTrialsRank, ChampionsMeetingRank, LeagueOfHeroesRank } from "../../types"
 
@@ -204,6 +207,43 @@ const PassToggle = ({
 // in brand gold, so nothing stood out (design-polish item 9, 2026-10-18). Gold
 // is for the one primary action, the active nav tab and these small marks.
 const iconCls = "w-4 h-4 shrink-0 text-brand"
+
+/**
+ * What the chosen CM or LoH rank pays per event. Payouts rise at set event
+ * numbers (utils/incomeLedger, raceRewardAmount), so when the events still
+ * ahead pay different amounts the badge shows the range, as the source sheet
+ * does. "/event" is dropped then: "+3,300-3,800/event" does not fit the
+ * badge's 5rem, so the title says it in full.
+ */
+const RaceRewardBadge = ({
+	rank,
+	kind,
+	ledger,
+}: {
+	rank: RaceRank
+	kind: LedgerRowKind
+	ledger: IncomeLedgerRow[]
+}) => {
+	const range = upcomingRaceRewardRange(ledger, kind, rank, new Date()) ?? {
+		min: rank.income_amount,
+		max: rank.income_amount,
+	}
+	const single = range.min === range.max
+	return (
+		<div
+			className="w-full h-8 flex items-center justify-center text-xs font-semibold text-brand bg-gray-700 border border-brand rounded"
+			title={
+				single
+					? undefined
+					: `${range.min.toLocaleString()} to ${range.max.toLocaleString()} carats per event, depending on the event`
+			}
+		>
+			{single
+				? `+${range.min.toLocaleString()}/event`
+				: `+${range.min.toLocaleString()}-${range.max.toLocaleString()}`}
+		</div>
+	)
+}
 
 /**
  * The Club Rank glyph — a jersey-and-shoulders figure over a crowd line, drawn
@@ -531,9 +571,7 @@ export const IncomeForm = () => {
 											/>
 											<div className="ml-auto w-20 @income-wide:ml-0 @income-wide:w-20 @income-wide:col-span-1 @income-wide:justify-self-end">
 												{championsMeetingRank && (
-													<div className="w-full h-8 flex items-center justify-center text-xs font-semibold text-brand bg-gray-700 border border-brand rounded">
-														{`+${championsMeetingRank.income_amount.toLocaleString()}/event`}
-													</div>
+													<RaceRewardBadge rank={championsMeetingRank} kind="champions_meeting" ledger={incomeLedger} />
 												)}
 											</div>
 										</div>
@@ -571,9 +609,7 @@ export const IncomeForm = () => {
 											/>
 											<div className="ml-auto w-20 @income-wide:ml-0 @income-wide:w-20 @income-wide:col-span-1 @income-wide:justify-self-end">
 												{leagueOfHeroesRank && (
-													<div className="w-full h-8 flex items-center justify-center text-xs font-semibold text-brand bg-gray-700 border border-brand rounded">
-														{`+${leagueOfHeroesRank.income_amount.toLocaleString()}/event`}
-													</div>
+													<RaceRewardBadge rank={leagueOfHeroesRank} kind="league_of_heroes" ledger={incomeLedger} />
 												)}
 											</div>
 										</div>

@@ -96,7 +96,7 @@ describe('withoutSkippedRaces', () => {
     const credited = (skips: Parameters<typeof withoutSkippedRaces>[1]) =>
       cumulativeRaceRewards(
         parseLedger(withoutSkippedRaces(LEDGER, skips)),
-        'champions_meeting', TODAY, end, rank, [rank]
+        'champions_meeting', TODAY, end, rank
       ).carats
     expect(credited({})).toBe(2000)
     expect(credited({ champions_meeting: [8] })).toBe(1000)
