@@ -349,7 +349,7 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 								/>
 							) : (
 								<div
-									className="card-panel flex items-center justify-center gap-2 p-8 text-sm text-gray-400 app-shell:sticky app-shell:top-[4.5rem]"
+									className="card-panel flex items-center justify-center gap-2 p-8 text-sm text-gray-400 app-shell:sticky app-shell:top-[calc(var(--pvp-below-tabs,3.5rem)+1rem)]"
 									role="status"
 								>
 									{catalogue.status === "error" ? (

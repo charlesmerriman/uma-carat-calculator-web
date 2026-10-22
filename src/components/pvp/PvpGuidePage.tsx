@@ -27,7 +27,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from "react"
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react"
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -66,6 +66,7 @@ import {
 	paginationButtonClass,
 } from "../timeline/timelineShared"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
+import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { availableCourseDetails } from "../../utils/courseDetails"
 import { formatDate } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
@@ -251,6 +252,12 @@ const PvpGuide = () => {
 	const shownStyle =
 		guideState.status === "ready" ? pickStyle(stylesWithContent(guideState.guide), wantedStyle) : null
 
+	// The pinned rows' offsets, as CSS variables on the page root.
+	const rootRef = useRef<HTMLDivElement>(null)
+	const bandRef = useRef<HTMLDivElement>(null)
+	const tabsRef = useRef<HTMLDivElement>(null)
+	usePvpStickyOffsets(rootRef, bandRef, tabsRef, event !== null)
+
 	/**
 	 * A link to what is on screen, for someone else: the event, always (a bare
 	 * /app/pvp moves with the calendar), the style on screen, and the Gallery
@@ -275,8 +282,9 @@ const PvpGuide = () => {
 	}
 
 	return (
-		<div className="w-full pb-8">
+		<div ref={rootRef} className="w-full pb-8">
 			<ControlBand
+				ref={bandRef}
 				events={choices}
 				event={event}
 				index={index}
@@ -324,7 +332,12 @@ const PvpGuide = () => {
 							onCopyLink={() => copyLink(event)}
 						/>
 
-						<ViewTabs view={view} isEditor={isEditor} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
+						{/* Pinned under the event band (desktop) or the navbar (phone)
+						    while the page scrolls, so the views stay one tap away
+						    (Daptrius, 2026-10-22). Opaque, or the page shows through. */}
+						<div ref={tabsRef} className="sticky top-(--pvp-tabs-top,0px) z-20 bg-gray-900">
+							<ViewTabs view={view} isEditor={isEditor} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
+						</div>
 
 						<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
 							{view === "recommendations" && (
@@ -437,7 +450,8 @@ function optionLabel(event: RaceEvent): string {
 	return `${event.has_guide ? "★ " : ""}${event.name} (${formatDate(event.start_date)})`
 }
 
-function ControlBand({ events, event, index, now, showPast, onTogglePast, onSelect }: {
+function ControlBand({ ref, events, event, index, now, showPast, onTogglePast, onSelect }: {
+	ref: Ref<HTMLDivElement>
 	events: RaceEvent[]
 	event: RaceEvent | null
 	index: number
@@ -457,7 +471,7 @@ function ControlBand({ events, event, index, now, showPast, onTogglePast, onSele
 		)
 	}
 	return (
-		<div className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
+		<div ref={ref} className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
 			{/* One centred group from `md:`: the past toggle sits beside the event
 			    controls it changes. It was pinned to the far left of a three-column
 			    grid, with the right column left empty to balance it. Stacked on a

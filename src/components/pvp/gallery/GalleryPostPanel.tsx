@@ -76,11 +76,10 @@ export function GalleryPostPanel({ publicId, event, index, neighbours, onOpenPos
 			onKeyDown={(key) => {
 				if (key.key === "Escape") onClose()
 			}}
-			// Sticky below PvpGuidePage's own sticky event bar (about 54px from
-			// md up, so 4.5rem leaves a gap), and no taller than the app
-			// scroller (the viewport less the 4.125rem navbar) minus that
-			// offset and 1rem underneath, so its own body scrolls.
-			className="card-panel flex flex-col overflow-hidden app-shell:sticky app-shell:top-[4.5rem] app-shell:max-h-[calc(100dvh-9.625rem)]"
+			// Sticky 1rem below the page's pinned View tabs, and no taller than
+			// the scroller less that offset and 1rem underneath, so its own
+			// body scrolls. Both measured: hooks/usePvpStickyOffsets.ts.
+			className="card-panel flex flex-col overflow-hidden app-shell:sticky app-shell:top-[calc(var(--pvp-below-tabs,3.5rem)+1rem)] app-shell:max-h-[calc(var(--pvp-viewport-h,100dvh)-var(--pvp-below-tabs,3.5rem)-2rem)]"
 		>
 			<header className="flex items-center gap-1 border-b border-gray-700 px-2 py-2 lg:px-4">
 				<button

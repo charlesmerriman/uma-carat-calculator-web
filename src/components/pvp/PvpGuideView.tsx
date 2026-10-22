@@ -14,6 +14,7 @@
  * the superset of the sheet's two formats, and most guides fill only one.
  */
 
+import { useEffect, useRef } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { AlternateCard, InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
@@ -313,7 +314,12 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
 	const shown = pickStyle(styles, style) ?? styles[0]
 	return (
 		<div className="flex min-w-0 flex-col gap-3">
-			<StyleTabs styles={styles} active={shown} onChange={onStyleChange} label="Running style" />
+			{/* Pinned under the View tabs while this style's column scrolls by
+			    (Daptrius, 2026-10-22). The opaque strip behind the tabs' own
+			    see-through box keeps the page from showing through it. */}
+			<div className="sticky top-(--pvp-below-tabs,0px) z-10 -mt-1 bg-gray-900 pt-1">
+				<StyleTabs styles={styles} active={shown} onChange={onStyleChange} label="Running style" />
+			</div>
 			<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 				<StylePane guide={guide} style={shown} />
 			</div>
@@ -339,6 +345,18 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	const hasSide =
 		hasOverview || generalSkills.length > 0 || guide.team_comps.length > 0 || guide.stat_configs.length > 0
 
+	// The side column's height, for .pvp-side-sticky (App.css): pinned when it
+	// fits on screen, scrolled with the page to its end when it doesn't.
+	const sideRef = useRef<HTMLElement>(null)
+	useEffect(() => {
+		const side = sideRef.current
+		// No ResizeObserver in jsdom; every browser the site supports has one.
+		if (!side || typeof ResizeObserver === "undefined") return
+		const observer = new ResizeObserver(() => side.style.setProperty("--pvp-side-h", `${side.offsetHeight}px`))
+		observer.observe(side)
+		return () => observer.disconnect()
+	}, [hasSide])
+
 	return (
 		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
 		<div className="flex flex-col gap-4">
@@ -357,7 +375,7 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 				}
 			>
 				{hasSide && (
-					<aside className="flex min-w-0 flex-col gap-4" aria-label="For the whole team">
+					<aside ref={sideRef} className="pvp-side-sticky flex min-w-0 flex-col gap-4" aria-label="For the whole team">
 						{hasOverview && (
 							<section className={SECTION} aria-labelledby="pvp-overview">
 								<h3 id="pvp-overview" className={HEADING}>Overview</h3>

@@ -939,6 +939,29 @@
 	background-image: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
 }
 
+/* The PvP guide's side column (overview, general skills, comps, stats), from
+   xl, where it stands beside the running-style column (PvpGuideView.tsx).
+   Daptrius, 2026-10-22: shorter than the window, it should stay put; longer,
+   it should scroll with the page.
+
+   One `top` does both. The first term pins it 0.75rem under the View tabs.
+   The second is the scroller's height less the column's and 1rem: negative
+   once the column is taller than the screen, and a negative sticky top lets
+   it scroll with the page until its END is on screen, then hold there, so
+   every part of it can be read while the long style column goes by. The
+   smaller of the two wins. The three variables are measured
+   (hooks/usePvpStickyOffsets.ts sets two, PvpGuideView the column's height);
+   the fallbacks only cover the first paint. */
+@media (min-width: 80rem) {
+	.pvp-side-sticky {
+		position: sticky;
+		top: min(
+			calc(var(--pvp-below-tabs, 0px) + 0.75rem),
+			calc(var(--pvp-viewport-h, 100vh) - var(--pvp-side-h, 0px) - 1rem)
+		);
+	}
+}
+
 /* The free-pulls chip that can share the title line with it: a 20px box too
    (see its padding note below), so it is zero-layout in the same way. The 1px ring is an inset shadow rather than a border because a border
    would add 2px to the box, and to the title line with it.
