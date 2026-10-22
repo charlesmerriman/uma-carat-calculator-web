@@ -83,7 +83,7 @@ export const StagedBannerRow = ({
 	const bannerType: BannerRowType = plannedBannerRowType(stagedBanner)
 
 	const isStepUp = bannerType === "StepUp"
-	// The person's favourite umas, drawn in the rainbow frame (FramedUma).
+	// The person's favorite umas, drawn in the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 
 	const targetBannerData = bannersForRowType(bannerType, {

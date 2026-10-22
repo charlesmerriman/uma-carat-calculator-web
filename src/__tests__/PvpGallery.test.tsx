@@ -62,7 +62,7 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 
 const auth = vi.hoisted(() => ({ isLoggedIn: true, account: { display_name: "Rhondal" } as { display_name: string } | null }))
 // The real module, so AuthContext itself exists (useOshiIds reads it); only
-// useAccount is replaced. No provider is mounted, so nobody's favourites.
+// useAccount is replaced. No provider is mounted, so nobody's favorites.
 vi.mock("../services/AuthContext", async () => ({
 	...(await vi.importActual<typeof import("../services/AuthContext")>("../services/AuthContext")),
 	useAccount: () => auth,

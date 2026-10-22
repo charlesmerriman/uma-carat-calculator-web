@@ -152,7 +152,7 @@ interface PickItem {
 	key: string
 	name: string
 	image: string | null
-	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favourite. */
+	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
 	uma: { id: number; portrait: string | null } | null
 	detail: string
 	stars: number

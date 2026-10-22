@@ -131,7 +131,7 @@ function PublishForm({ teamId, displayName, replacing, onPosted, onClose, initia
 		>
 			<p>
 				Everyone who opens the gallery will see this team with your display name,{" "}
-				<span className="font-semibold text-gray-100">{displayName}</span>, your favourite uma picture and,
+				<span className="font-semibold text-gray-100">{displayName}</span>, your favorite uma picture and,
 				if you support us on Patreon, your tier. You can take it down any time.
 			</p>
 			{replacing && (

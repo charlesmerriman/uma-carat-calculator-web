@@ -29,13 +29,13 @@ const UmaTile = ({ uma, isOshi }: { uma: DailyLegendRaceUma; isOshi: boolean }) 
 		// A fixed width from `sm` up, where the tiles are a wrapping flex row
 		// (see the list below). On a phone the list is a grid and sizes them.
 		<li title={uma.name} className="flex min-w-0 flex-col items-center gap-1 sm:w-22">
-			{/* The borderless art in the site's frame; a favourite gets the
+			{/* The borderless art in the site's frame; a favorite gets the
 			    rainbow one. */}
 			<FramedUma src={uma.portrait ?? uma.image} oshi={isOshi} className="w-full" />
 			<span className="text-center text-xs leading-tight text-gray-300">
 				<span className="line-clamp-2">{base}</span>
 				{outfit && <span className="line-clamp-2 text-[0.6875rem] text-gray-400">{outfit}</span>}
-				{isOshi && <span className="sr-only"> (your favourite)</span>}
+				{isOshi && <span className="sr-only"> (your favorite)</span>}
 			</span>
 		</li>
 	)

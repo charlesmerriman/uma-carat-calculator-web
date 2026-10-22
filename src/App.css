@@ -988,7 +988,7 @@
 
 /* ===== UMA FRAMES =====
    components/FramedUma.tsx: an uma's borderless art in the site's own frame,
-   silver for everyone and the rainbow one for the person's favourites
+   silver for everyone and the rainbow one for the person's favorites
    ([data-oshi]). The frame is a 762-unit SVG whose outer edge is a 4-unit
    line on an 80-unit corner, so the art underneath is clipped to the same
    curve (82/762 of the side, as a percentage so it holds at every size) and
@@ -1024,7 +1024,7 @@
 }
 
 /* The owner's named exceptions (the navbar profile, the account page outside
-   the favourites card): the same borderless art and corner, no frame. */
+   the favorites card): the same borderless art and corner, no frame. */
 .uma-frame--bare::after {
 	content: none;
 }

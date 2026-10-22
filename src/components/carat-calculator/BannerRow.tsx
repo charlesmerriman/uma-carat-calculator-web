@@ -208,7 +208,7 @@ export const BannerRow = ({
 	})
 
 	const isStepUp = bannerType === "StepUp"
-	// The person's favourite umas, drawn in the rainbow frame (FramedUma).
+	// The person's favorite umas, drawn in the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 	// Phone cards only: one device-wide switch that folds every card's odds strip.
 	const phoneOdds = usePhoneOddsHidden()

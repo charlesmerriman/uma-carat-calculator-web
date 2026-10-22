@@ -44,7 +44,7 @@ export function YouChip() {
  * name keeps its room: it used to be the only thing allowed to shrink, so a
  * phone feed showed "K..." and "Moon...", and comment headers "Kor..." even on
  * desktop. The name truncates only when it and the picture outgrow the line. The
- * picture is the poster's first favourite uma, framed like every uma: the
+ * picture is the poster's first favorite uma, framed like every uma: the
  * rainbow frame on your own (`mine`), since it is yours.
  *
  * `avatarClassName` and `nameClassName` add to the small defaults, for a
@@ -74,7 +74,7 @@ export function PosterLine({ poster, extra, mine = false, avatarClassName = "", 
 
 /**
  * An uma in the site's frame (FramedUma): the borderless art, silver for
- * everyone and the rainbow frame for the viewer's own favourites, the same
+ * everyone and the rainbow frame for the viewer's own favorites, the same
  * as on every other page. A grey square inside the frame when the uma has
  * no picture or has left the catalogue. Takes a catalogue uma (`portrait`
  * first) or a /umas entry (`image`, already the borderless cut).

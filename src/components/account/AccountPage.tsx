@@ -24,7 +24,7 @@ import type { Account, AccountPreferencesPatch, OshiOption } from "../../types/a
 
 /**
  * /account — the signed-in person's account: their display name, their
- * favourite umas ("oshis" in the code and on the wire; the first pick is their
+ * favorite umas ("oshis" in the code and on the wire; the first pick is their
  * picture, everyone gets one slot and supporters get more), which providers
  * are connected, whether they are a Patreon supporter, and sign-out.
  *
@@ -58,7 +58,7 @@ import type { Account, AccountPreferencesPatch, OshiOption } from "../../types/a
  */
 const BENEFIT_LABELS: Record<string, string> = {
 	ad_free: "Ad-free browsing",
-	oshi: "Extra favourite slots and costume variants",
+	oshi: "Extra favorite slots and costume variants",
 }
 
 const CARD = "card-panel p-5"
@@ -280,7 +280,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 		else ids.push(uma.id)
 		return saveOshis(
 			ids,
-			pickerSlot === 0 ? `Your picture is now ${uma.name}.` : `${uma.name} added to your favourites.`
+			pickerSlot === 0 ? `Your picture is now ${uma.name}.` : `${uma.name} added to your favorites.`
 		)
 	}
 
@@ -297,7 +297,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 		const removed = oshis.find((oshi) => oshi.id === id)
 		await saveOshis(
 			oshiIds.filter((other) => other !== id),
-			`${removed?.name ?? "That uma"} removed from your favourites.`
+			`${removed?.name ?? "That uma"} removed from your favorites.`
 		)
 	}
 
@@ -357,8 +357,8 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 					)}
 					<p className="mt-1 text-xs leading-relaxed text-gray-500">
 						{account.avatar_url && oshis[0]
-							? `Your picture is ${oshis[0].name}, your first favourite.`
-							: "Pick a favourite uma musume below and it becomes your picture."}{" "}
+							? `Your picture is ${oshis[0].name}, your first favorite.`
+							: "Pick a favorite uma musume below and it becomes your picture."}{" "}
 						We never store your real name, email or provider picture.
 					</p>
 				</div>
@@ -369,7 +369,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				currentId={pickerSlot !== null ? (oshiIds[pickerSlot] ?? null) : null}
 				takenIds={oshiIds}
 				variantsLocked={!(account.oshi_variants ?? false)}
-				description={pickerSlot === 0 ? "This one is your picture." : "Added to your favourites."}
+				description={pickerSlot === 0 ? "This one is your picture." : "Added to your favorites."}
 				onClose={() => setPickerSlot(null)}
 				onChoose={handleChooseOshi}
 			/>
@@ -409,13 +409,13 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				</form>
 			</section>
 
-			{/* Favourites: one tile per covered slot (everyone has at least one),
+			{/* Favorites: one tile per covered slot (everyone has at least one),
 			    plus any held picks a lapse or downgrade stopped covering (greyed).
 			    The server says how many are covered; the page does no tier maths. */}
 			<section className={`${CARD} mt-4`} aria-labelledby="oshis">
 				<h2 id="oshis" className={`${CARD_TITLE} flex items-center gap-2`}>
 					<Star className="h-4 w-4 text-brand" aria-hidden="true" />
-					Your favourite uma musume
+					Your favorite uma musume
 				</h2>
 				<p className="mt-1 text-sm leading-relaxed text-gray-400">
 					The first one is your picture in the menu and on this page.{" "}
@@ -432,7 +432,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				    box: seven of them, two rows, before anything was picked. The add
 				    tile says how many slots are left instead. With nothing picked it
 				    is "Pick your picture" alone: the first pick IS the picture, so
-				    offering "Add a favourite" beside it would have one choice do
+				    offering "Add a favorite" beside it would have one choice do
 				    something its label does not say. */}
 				<ul className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3">
 					{Array.from({ length: oshis.length + (openSlots > 0 ? 1 : 0) }, (_, slot) => {
@@ -448,7 +448,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 										className="flex h-full min-h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-600 p-3 text-xs font-medium text-gray-400 transition hover:border-brand/60 hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
 									>
 										<ImagePlus className="h-6 w-6" aria-hidden="true" />
-										{slot === 0 ? "Pick your picture" : "Add a favourite"}
+										{slot === 0 ? "Pick your picture" : "Add a favorite"}
 										{slot > 0 && (
 											<span className="text-[11px] font-normal text-gray-500">
 												{openSlots === 1 ? "1 slot left" : `${openSlots} slots left`}
@@ -710,7 +710,7 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 				</h2>
 				<p className="mt-1 text-sm leading-relaxed text-gray-400">
 					This permanently removes your saved plan, your connected sign-in methods, your
-					display name and your favourite umas. It can't be undone. A Patreon pledge is unaffected,
+					display name and your favorite umas. It can't be undone. A Patreon pledge is unaffected,
 					since it belongs to your Patreon account, not to this one.
 				</p>
 				<form

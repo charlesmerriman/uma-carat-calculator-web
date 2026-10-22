@@ -107,7 +107,7 @@ export const Login: React.FC = () => {
 					{/* The point of the whole flow — worth saying out loud, since
 					    "sign in with Google" usually implies handing over an email. No
 					    profile detail is kept at all since 2026-09-13 (the account
-					    picture is the first favourite uma), so the provider picture is
+					    picture is the first favorite uma), so the provider picture is
 					    not named here: the privacy policy lists it as NOT stored. */}
 					<p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
 						We never see your password, and we don't store your email address or
