@@ -109,6 +109,21 @@ export function galleryCommentDelete(id: number): Promise<Response> {
 	return post(`/gallery/comments/${id}`, undefined, "DELETE")
 }
 
+/** A thumbs-up on a comment (PUT) or taking it back (DELETE); answers `{upvotes, my_vote}`. */
+export function galleryCommentVote(id: number, on: boolean): Promise<Response> {
+	return post(`/gallery/comments/${id}/vote`, undefined, on ? "PUT" : "DELETE")
+}
+
+/** One section of a PvP guide's comments: "" for the whole guide, else a running style. */
+export function guideCommentsFetch(ref: PvpEventRef, section: string, page = 1): Promise<Response> {
+	const query = new URLSearchParams({ section, page: String(page) })
+	return fetch(`${API_URL}/pvp-guides/${ref.kind}/${ref.id}/comments?${query}`, { headers: jsonHeaders() })
+}
+
+export function guideCommentCreate(ref: PvpEventRef, section: string, body: string, parent?: number): Promise<Response> {
+	return post(`/pvp-guides/${ref.kind}/${ref.id}/comments`, parent ? { body, parent, section } : { body, section })
+}
+
 export type GalleryReportTarget = { post: string } | { comment: number }
 
 export function galleryReport(target: GalleryReportTarget, reason: GalleryReportReason, note: string): Promise<Response> {

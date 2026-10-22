@@ -172,4 +172,9 @@ export interface PvpGuide {
 	 * plain name. Optional: an older API omits it.
 	 */
 	skill_mentions?: Record<string, PvpSkillRef>
+	/**
+	 * Visible comments per section: "" for the whole guide, else a running
+	 * style. A section with none is absent. Optional: an older API omits it.
+	 */
+	comment_counts?: Record<string, number>
 }

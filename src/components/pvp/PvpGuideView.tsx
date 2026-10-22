@@ -17,6 +17,8 @@
 import { useEffect, useRef } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
+import { GuideComments } from "./GuideComments"
+import { guideCommentCount } from "../../services/guideComments"
 import { AlternateCard, InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
 import {
@@ -345,12 +347,30 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
 						<section key={each} className={SECTION} aria-label={STYLE_LABELS[each]}>
 							<h3 className={`mb-2 ${HEADING}`}>{STYLE_LABELS[each]}</h3>
 							<StylePane guide={guide} style={each} />
+							{/* The thread lives on the style's own tab; here, its count
+							    and the way there. */}
+							<button
+								type="button"
+								onClick={() => onStyleChange(each)}
+								className="mt-4 w-full border-t border-gray-700/70 pt-3 text-left text-sm font-semibold text-gray-300 transition hover:text-gray-100"
+							>
+								Comments ({guideCommentCount(guide, each)}) on the {STYLE_LABELS[each]} tab
+							</button>
 						</section>
 					))}
 				</div>
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 					<StylePane guide={guide} style={shown} />
+					{/* Its own thread per style (Henry, 2026-10-21); keyed so a new
+					    tab opens folded. */}
+					<GuideComments
+						key={shown}
+						guide={guide}
+						section={shown}
+						placeholder={`Ask a question about ${STYLE_LABELS[shown]}, or share what worked`}
+						className="mt-4 border-t border-gray-700/70 pt-3"
+					/>
 				</div>
 			)}
 		</div>
@@ -461,6 +481,9 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 
 						{guide.stat_configs.length > 0 && <StatConfigTable rows={guide.stat_configs} />}
 
+						<div className={SECTION}>
+							<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
+						</div>
 					</aside>
 				)}
 
@@ -468,9 +491,18 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} />
 				)}
 			</div>
+			{/* A guide with no side column still has a thread for the whole guide. */}
+			{!hasSide && (
+				<div className={SECTION}>
+					<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
+				</div>
+			)}
 		</div>
 		</SkillMentionsContext.Provider>
 	)
 }
 
 const EMPTY_MENTIONS = {}
+
+// The whole guide's thread (section ""), in the side column.
+const WHOLE_GUIDE_PROMPT = "Ask about this guide, or share what worked"

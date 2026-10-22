@@ -18,6 +18,7 @@ import { PublishDialog } from "../components/pvp/gallery/PublishDialog"
 import { PvpTeamsContext, type PvpTeamsContextType } from "../services/PvpTeamsContext"
 import {
 	galleryCommentsFetch,
+	galleryCommentVote,
 	galleryCopy,
 	galleryFeedFetch,
 	galleryPostFetch,
@@ -78,6 +79,7 @@ vi.mock("../services/galleryFetchCalls", async () => {
 		galleryView: vi.fn(),
 		galleryCopy: vi.fn(),
 		galleryCommentsFetch: vi.fn(),
+		galleryCommentVote: vi.fn(),
 		galleryPostTakeDown: vi.fn(),
 		galleryReport: vi.fn(),
 		pvpTeamPublish: vi.fn(),
@@ -418,7 +420,7 @@ describe("the post panel", () => {
 	it("draws each comment state", async () => {
 		const comment = (id: number, extra: Partial<GalleryComment>): GalleryComment => ({
 			id, state: "visible", body: `Body ${id}`, created_at: "2026-10-11T00:00:00Z", edited: false,
-			earlier_version: false, is_author: false, is_mine: false, poster: poster(null), replies: [], ...extra,
+			earlier_version: false, is_author: false, is_mine: false, poster: poster(null), upvotes: 0, my_vote: false, replies: [], ...extra,
 		})
 		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
 			json({
@@ -445,7 +447,7 @@ describe("the post panel", () => {
 				count: 1, page: 1, has_more: false,
 				results: [{
 					id: 1, state: "visible", body: "Nice", created_at: "2026-10-11T00:00:00Z", edited: false,
-					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), replies: [],
+					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), upvotes: 0, my_vote: false, replies: [],
 				}],
 			})
 		)
@@ -453,6 +455,24 @@ describe("the post panel", () => {
 		expect(await screen.findByText("Nice")).toBeInTheDocument()
 		expect(screen.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument()
 		expect(screen.getByRole("link", { name: "Set a display name" })).toHaveAttribute("href", "/account")
+	})
+
+	it("gives a comment a thumbs-up at once, then keeps the server's count", async () => {
+		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
+			json({
+				count: 1, page: 1, has_more: false,
+				results: [{
+					id: 7, state: "visible", body: "Strong pick", created_at: "2026-10-11T00:00:00Z", edited: false,
+					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), upvotes: 1, my_vote: false, replies: [],
+				}],
+			})
+		)
+		vi.mocked(galleryCommentVote).mockImplementation(() => json({ upvotes: 5, my_vote: true }))
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		fireEvent.click(await screen.findByRole("button", { name: "Give a thumbs-up (1)" }))
+		await waitFor(() => expect(vi.mocked(galleryCommentVote)).toHaveBeenCalledWith(7, true))
+		const pressed = await screen.findByRole("button", { name: "Take back your thumbs-up (5)" })
+		expect(pressed).toHaveAttribute("aria-pressed", "true")
 	})
 })
 
