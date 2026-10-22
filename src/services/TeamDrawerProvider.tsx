@@ -10,7 +10,8 @@
  * `available` is false on the PvP page's My team view (?view=team), where the
  * builder already shows the team; the open state is kept, so the drawer comes
  * back on the next page. It is also false for anyone the PvP page is still
- * closed to (early access, hooks/usePvpAccess.ts): no Team button, no drawer.
+ * locked to (early access, hooks/usePvpAccess.ts), who can read the free
+ * guide but not build a team: no Team button, no drawer.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
