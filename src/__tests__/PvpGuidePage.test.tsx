@@ -166,21 +166,49 @@ describe("PvpGuidePage", () => {
 		access.value = "open"
 	})
 
-	it("shows the early-access card to anyone it is closed to, and none of the page", () => {
+	it("gives anyone it is locked to the next event's guide, with no card", async () => {
 		access.value = "locked"
+		respond(200, GUIDE)
 		renderPage()
-		expect(screen.getByRole("heading", { name: "PvP is in early access" })).toBeInTheDocument()
+		await screen.findByText("Recommended stats")
+		expect(fetchMock.mock.calls[0][0]).toMatch(/\/pvp-guides\/cm\/10$/)
+		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
+	})
+
+	it("opens a bare address on the free guide while locked, not where the tab left the page", () => {
+		access.value = "locked"
+		sessionStorage.setItem("pvp-page", "?event=cm-11&view=gallery")
+		respond(200, GUIDE)
+		renderPage()
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp")
+		expect(screen.getByRole("heading", { name: "Aquarius Cup" })).toBeInTheDocument()
+	})
+
+	it("shows the card in place of any other guide, and fetches none", () => {
+		access.value = "locked"
+		renderPage("/app/pvp?event=cm-11")
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "Read the Aquarius Cup guide" })).toHaveAttribute("href", "/app/pvp?event=cm-10")
 		expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
 		expect(screen.getByRole("link", { name: /Support us on Patreon/ })).toHaveAttribute("href", expect.stringContaining("patreon.com"))
-		expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
 		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("keeps My team and the Gallery closed while locked, even on the free event", () => {
+		access.value = "locked"
+		renderPage("/app/pvp?event=cm-10&view=team")
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.queryByTestId("team-builder")).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Gallery" }))
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.queryByTestId("gallery-view")).not.toBeInTheDocument()
 	})
 
 	it("waits for the account rather than flashing the card at a supporter", () => {
 		access.value = "pending"
 		renderPage()
 		expect(screen.getByText("Checking your account…")).toBeInTheDocument()
-		expect(screen.queryByRole("heading", { name: "PvP is in early access" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
 	})
 
 	it("opens on the next event and fetches its guide", async () => {
