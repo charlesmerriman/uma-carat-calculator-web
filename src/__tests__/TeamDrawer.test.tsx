@@ -23,9 +23,14 @@ const LIBRA = {
 // Card 302's first banner lands in the middle of Libra Cup.
 const SUPPORT_BANNERS = [{ banner_timeline: { start_date: "2050-01-01T12:00:00Z" }, support_cards: [{ id: 302 }] }]
 
+// The open CM (usePvpAccess.ts), the one a locked reader may build a team
+// for; listed only by the tests that need it.
+const OPEN = { ...LIBRA, id: 21, cm_number: 21, name: "Capricorn Cup" } as RaceEvent
+let cmEvents: RaceEvent[] = [LIBRA]
+
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({
-		championsMeetingData: [LIBRA],
+		championsMeetingData: cmEvents,
 		leagueOfHeroesData: [],
 		umaBannerData: [],
 		supportBannerData: SUPPORT_BANNERS,
@@ -41,9 +46,13 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 	}),
 }))
 vi.mock("../hooks/usePvpGuide", () => ({ usePvpGuide: () => ({ status: "none" }) }))
-// The drawer as everyone will have it; the early-access gate has its own
-// tests (usePvpAccess.test.tsx, PvpGuidePage.test.tsx).
-vi.mock("../hooks/usePvpAccess", () => ({ usePvpAccess: () => "open" }))
+// The drawer as everyone will have it, unless a test locks it; the rule for
+// WHO is locked has its own tests (usePvpAccess.test.tsx).
+const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
+vi.mock("../hooks/usePvpAccess", async () => ({
+	...(await vi.importActual<typeof import("../hooks/usePvpAccess")>("../hooks/usePvpAccess")),
+	usePvpAccess: () => access.value,
+}))
 
 const { TeamDrawer } = await import("../components/pvp/TeamDrawer")
 
@@ -71,7 +80,11 @@ function renderDrawer(value: PvpTeamsContextType, onClose = vi.fn()) {
 }
 
 beforeEach(() => localStorage.clear())
-afterEach(() => localStorage.clear())
+afterEach(() => {
+	localStorage.clear()
+	access.value = "open"
+	cmEvents = [LIBRA]
+})
 
 describe("TeamDrawerButton", () => {
 	it("renders nothing outside /app", () => {
@@ -106,7 +119,42 @@ describe("TeamDrawerButton", () => {
 	})
 })
 
+describe("TeamDrawerButton, locked (early access)", () => {
+	const renderButton = () =>
+		render(
+			<MemoryRouter initialEntries={["/app/timeline"]}>
+				<TeamDrawerProvider>
+					<TeamDrawerButton />
+				</TeamDrawerProvider>
+			</MemoryRouter>
+		)
+
+	it("is hidden while no open CM is on", () => {
+		access.value = "locked"
+		const { container } = renderButton()
+		expect(container).toBeEmptyDOMElement()
+	})
+
+	it("shows while the open CM is on", () => {
+		access.value = "locked"
+		cmEvents = [LIBRA, OPEN]
+		renderButton()
+		expect(screen.getByRole("button", { name: "Show your PvP team" })).toBeInTheDocument()
+	})
+})
+
 describe("TeamDrawer", () => {
+	it("shows and offers only the open CM while locked", () => {
+		access.value = "locked"
+		cmEvents = [LIBRA, OPEN]
+		renderDrawer(teamsValue([team("a", { name: "Libra team" }), team("b", { event: 21, name: "Capricorn team" })]))
+		const select = screen.getByRole("combobox", { name: "Which event and team to show" })
+		expect(select).toHaveDisplayValue("Next event (auto): CM 21")
+		expect(within(select).queryByText(/Libra team/)).not.toBeInTheDocument()
+		expect(within(select).getByText(/Capricorn team/)).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: /Go to PvP/ })).toHaveAttribute("href", "/app/pvp?event=cm-21")
+	})
+
 	it("shows the team for the running event, editable, with a way to the PvP page", () => {
 		const editTeam = vi.fn()
 		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [{ slot: 6, support_card: 302 }] }]

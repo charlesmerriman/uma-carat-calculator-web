@@ -1,4 +1,5 @@
 import { useAccount } from "../services/AuthContext"
+import { defaultPvpEvent } from "../utils/pvpGuide"
 import type { RaceEvent } from "../types"
 
 /**
@@ -26,6 +27,24 @@ export const PVP_OPEN_CM_NUMBER: number | null = 21
 /** Whether `event` is the CM that is open in full while the page is early. */
 export function isOpenPvpEvent(event: RaceEvent): boolean {
 	return event.event_type === "champions_meeting" && event.cm_number === PVP_OPEN_CM_NUMBER
+}
+
+/**
+ * The events someone the page is locked to can open at all, for the PvP
+ * page's event list: the free guide's (the event running now, else the next,
+ * `defaultPvpEvent`) and the open CM. `events` in start order.
+ */
+export function lockedPvpEvents(events: RaceEvent[], now: Date): RaceEvent[] {
+	const free = defaultPvpEvent(events, now)
+	return events.filter((event) => event === free || isOpenPvpEvent(event))
+}
+
+/**
+ * The events someone the page is locked to can build a team for (My team and
+ * the team window): the open CM only. The free guide is a guide, not a team.
+ */
+export function lockedTeamEvents(events: RaceEvent[]): RaceEvent[] {
+	return events.filter(isOpenPvpEvent)
 }
 
 /**

@@ -23,6 +23,11 @@
  * one edited last, if there are two), else an offer to build one. The
  * selector at the top IS the pin: "Next event (auto)" clears it.
  *
+ * EARLY ACCESS. For someone the PvP page is locked to (hooks/usePvpAccess.ts)
+ * the window only knows the open CM (lockedTeamEvents), so it never shows or
+ * offers a team for an event whose My team is closed to them. The provider
+ * hides the Team button for them once that CM has ended.
+ *
  * NOT A DIALOG. No backdrop, no focus trap: the page behind stays usable.
  * Opening moves focus to the heading; Escape inside closes it and hands
  * focus back to the Team button.
@@ -37,6 +42,7 @@ import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { focusTeamDrawerButton } from "../../services/TeamDrawerContext"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
+import { lockedTeamEvents, usePvpAccess } from "../../hooks/usePvpAccess"
 import { formatDate } from "../../utils/dateFormat"
 import { hasEnded, raceEventsInOrder } from "../../utils/pvpGuide"
 import { formatPvpEvent, pvpEventHref, refForRaceEvent, sameEvent, shortEventName } from "../../utils/pvpEvent"
@@ -68,10 +74,11 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 
 	// One clock reading per opening, so every label measures from the same "now".
 	const now = useMemo(() => new Date(), [])
-	const events = useMemo(
-		() => raceEventsInOrder(championsMeetingData, leagueOfHeroesData),
-		[championsMeetingData, leagueOfHeroesData]
-	)
+	const access = usePvpAccess()
+	const events = useMemo(() => {
+		const all = raceEventsInOrder(championsMeetingData, leagueOfHeroesData)
+		return access === "open" ? all : lockedTeamEvents(all)
+	}, [championsMeetingData, leagueOfHeroesData, access])
 	const choice = drawerTeam(teams, events, now)
 	const shownEvent = choice.kind === "no-events" ? null : choice.event
 	// Stars in the grid and the pickers; usePvpGuide caches per event.
