@@ -34,8 +34,8 @@ export interface IncomeLedgerRow {
 	throughout_end: string | null
 	/**
 	 * Which race event this is (its `cm_number` / `loh_number`), and null on
-	 * `event` rows. The engine needs it to recognise the few events that pay
-	 * below the user's rank (`RACE_RANK_CAPS` in utils/incomeLedger). Absent on a
+	 * `event` rows. The engine needs it because what a rank pays depends on
+	 * the event's number (`raceRewardAmount` in utils/incomeLedger). Absent on a
 	 * response from an API older than the field, so read it with `== null`,
 	 * which covers both.
 	 */

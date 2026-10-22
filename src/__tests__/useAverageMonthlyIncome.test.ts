@@ -117,13 +117,21 @@ describe('useAverageMonthlyIncome', () => {
     expect(withEvent.carats - baseline.carats).toBe(5000 / WINDOW_MONTHS)
   })
 
-  it('pays League of Heroes #1 at its capped rank, same as the banner rows', () => {
-    // The tiles' side of the LoH #1 cap (Platinum 1). Both hooks read one
-    // engine; this and the matching useBannerResources test pin that the rows
-    // and the tiles cannot disagree about it.
+  it("pays each League of Heroes at its own number's reward, same as the banner rows", () => {
+    // The tiles' side of the per-event rewards (raceRewardAmount). Both hooks
+    // read one engine; this and the matching useBannerResources test pin that
+    // the rows and the tiles cannot disagree about it.
     const ladder = [
-      { id: 8, name: 'Platinum 3', income_amount: 2800, ...zeroRankRewards },
-      { id: 7, name: 'Platinum 1', income_amount: 1800, ...zeroRankRewards },
+      {
+        id: 8,
+        name: 'Platinum 3',
+        income_amount: 2950,
+        ...zeroRankRewards,
+        rewards: [
+          { from_event_number: 1, income_amount: 2250 },
+          { from_event_number: 2, income_amount: 2950 },
+        ],
+      },
     ] as LeagueOfHeroesRank[]
     const tiles = (firstEvent: number) =>
       render({ league_of_heroes_rank: 8 }, {
@@ -133,10 +141,10 @@ describe('useAverageMonthlyIncome', () => {
           ledgerRow({ kind: 'league_of_heroes', date: daysFromNow(60), event_number: firstEvent + 1 }),
         ],
       }).carats
-    // The capped pair pays 1000 less: 200 a month over the five-month window.
-    // Exact despite the rounding, because both totals differ from the
+    // The pair with #1 in it pays 700 less: 140 a month over the five-month
+    // window. Exact despite the rounding, because both totals differ from the
     // baseline by a multiple of five.
-    expect(tiles(2) - tiles(1)).toBe(1000 / WINDOW_MONTHS)
+    expect(tiles(2) - tiles(1)).toBe(700 / WINDOW_MONTHS)
   })
 
   it('ignores income landing beyond the window', () => {

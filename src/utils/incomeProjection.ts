@@ -177,15 +177,15 @@ export function createIncomeProjection({
 	 */
 	const incomeTo = (end: Date): IncomeTotals => {
 		const events = cumulativeEventRewards(ledger, now, end)
-		// Valued per event, not count x rank amount: an event can pay below
-		// the user's rank (League of Heroes #1 only ran to Platinum 1).
+		// Valued per event, not count x rank amount: what a rank pays
+		// depends on the event's number (raceRewardAmount).
 		const cmRewards = cumulativeRaceRewards(
 			ledger, "champions_meeting", today, end,
-			championsMeetingRank, championsMeetingRankData
+			championsMeetingRank
 		)
 		const lohRewards = cumulativeRaceRewards(
 			ledger, "league_of_heroes", today, end,
-			leagueOfHeroesRank, leagueOfHeroesRankData
+			leagueOfHeroesRank
 		)
 		const pack = userStatsData.daily_carat
 			? cumulativeDailyCaratPack(today, end, constants)

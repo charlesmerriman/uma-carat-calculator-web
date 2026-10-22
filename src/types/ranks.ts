@@ -45,22 +45,38 @@ export interface TeamTrialsRank {
  */
 export type TeamTrailsRank = TeamTrialsRank
 
+/**
+ * "From event #N on, this rank pays X carats" (backend models/race_rank_reward.py).
+ * The game raised CM and LoH payouts at set event numbers. Read through
+ * `raceRewardAmount` (utils/incomeLedger), never directly.
+ */
+export interface RaceRankReward {
+	from_event_number: number
+	income_amount: number
+}
+
 export interface ChampionsMeetingRank {
 	id: number
 	name: string
+	/** What the rank pays before its first `rewards` row (or always, with none). */
 	income_amount: number
 	uma_ticket_amount: number
 	support_ticket_amount: number
 	ssr_shard_amount: number
 	sr_shard_amount: number
+	/** Ascending. Absent from an API older than the field. */
+	rewards?: RaceRankReward[]
 }
 
 export interface LeagueOfHeroesRank {
 	id: number
 	name: string
+	/** What the rank pays before its first `rewards` row (or always, with none). */
 	income_amount: number
 	uma_ticket_amount: number
 	support_ticket_amount: number
 	ssr_shard_amount: number
 	sr_shard_amount: number
+	/** Ascending. Absent from an API older than the field. */
+	rewards?: RaceRankReward[]
 }

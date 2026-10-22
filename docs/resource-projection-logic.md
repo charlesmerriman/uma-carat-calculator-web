@@ -199,10 +199,15 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   is its stand-in for the lead time. With both applied, a CM ending the day after a
   banner was credited to that banner a minute before its rewards existed.
 - **Race rows carry no amounts.** They are indicators; what a placement pays
-  depends on the user's rank, which only the client knows. Once, it depends on
-  the event too: League of Heroes #1 only ran to Platinum 1, so it pays at
-  `min(user's rank, Platinum 1)`. Rows say which event they are via
-  `event_number`; the rule lives in `RACE_RANK_CAPS` (`utils/incomeLedger.ts`).
+  depends on the user's rank, which only the client knows, and on the event's
+  number: the game raised payouts at CM 30 and LoH 6, and LoH 1 paid Platinum 2-4
+  less. Each CM / LoH rank carries `rewards` ("from event #N on, pays X"), and
+  `raceRewardAmount` (`utils/incomeLedger.ts`) pays the row with the largest
+  `from_event_number` at or below the row's `event_number`, else the rank's own
+  `income_amount`. Carats only; tickets and shards are per rank. The rank picker's
+  badge shows the range over the events still ahead (`upcomingRaceRewardRange`).
+  This replaced `RACE_RANK_CAPS` (2026-10-21). → backend
+  `docs/income-calculation.md` ("Rewards that change with the event number")
 - **A skipped race event is removed from the ledger, once, upstream of every
   consumer.** The player turns "Taking part" off on the Timeline card; that writes
   `skipped_race_events` on the stats block (`{champions_meeting: [ids],
