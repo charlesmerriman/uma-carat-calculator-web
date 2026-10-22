@@ -1428,7 +1428,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   kind, so the Timeline card links to a guide without branching on the tag. No parameter
   opens on the running event, else the next, else the newest (`defaultPvpEvent`).
 - **So does the guide's running style**: `?style=front` / `pace` / ... (`PVP_STYLE_PARAM`,
-  `parsePvpStyle`; never `everyone`, which is not a tab). The page owns it and
+  `parsePvpStyle`; never `everyone`, which is not a tab). `?style=all` is the "All" tab
+  (Henry, 2026-10-21): every style's pane at once, two abreast from `lg`, offered only when
+  a guide has two or more styles (`styleTabs`). Its type is `PvpStyleTab`, which only the
+  guide's tabs and the page memory take; a team member's style stays a `PvpStyle`. The page owns it and
   `PvpGuideView`'s tabs are controlled; a tab click `replace`s, so Back never steps through
   tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
   first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event

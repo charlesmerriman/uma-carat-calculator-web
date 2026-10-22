@@ -98,7 +98,7 @@ import { TeamBuilder } from "./TeamBuilder"
 import { GalleryView } from "./gallery/GalleryView"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
-import type { PvpStyle } from "../../types/pvpGuide"
+import type { PvpStyleTab } from "../../types/pvpGuide"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
 const FALLBACK_TITLE = "PvP Guides"
@@ -233,7 +233,7 @@ const PvpGuide = () => {
 	}
 	// A style is a tab inside the guide: `replace`, so Back leaves the page
 	// (or the event) instead of stepping back through every tab clicked.
-	const selectStyle = (next: PvpStyle) => setParam(PVP_STYLE_PARAM, next, { replace: true })
+	const selectStyle = (next: PvpStyleTab) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
 	// Fetched only on the view that shows it.
 	const guideState = usePvpGuide(event && view === "recommendations" ? refForRaceEvent(event) : null)

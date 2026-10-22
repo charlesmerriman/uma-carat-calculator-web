@@ -20,12 +20,15 @@ import { MarkdownContent } from "../info/MarkdownContent"
 import { AlternateCard, InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
 import {
+	ALL_STYLES_LABEL,
+	ALL_STYLES_TAB,
 	SKILL_CATEGORY_LABELS,
 	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
 	groupSkillsByTier,
 	pickStyle,
 	skillsForPosition,
+	styleTabs,
 	stylesWithContent,
 } from "../../utils/pvpGuide"
 import type {
@@ -36,6 +39,7 @@ import type {
 	PvpSkillRecommendation,
 	PvpStatConfig,
 	PvpStyle,
+	PvpStyleTab,
 } from "../../types/pvpGuide"
 
 const SECTION = "rounded-xl border border-edge bg-gray-800/60 p-3"
@@ -277,10 +281,14 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 	)
 }
 
+function tabLabel(tab: PvpStyleTab): string {
+	return tab === ALL_STYLES_TAB ? ALL_STYLES_LABEL : STYLE_LABELS[tab]
+}
+
 function StyleTabs({ styles, active, onChange, label }: {
-	styles: PvpStyle[]
-	active: PvpStyle
-	onChange: (style: PvpStyle) => void
+	styles: PvpStyleTab[]
+	active: PvpStyleTab
+	onChange: (style: PvpStyleTab) => void
 	label: string
 }) {
 	return (
@@ -298,7 +306,7 @@ function StyleTabs({ styles, active, onChange, label }: {
 							: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 					}`}
 				>
-					{STYLE_LABELS[style]}
+					{tabLabel(style)}
 				</button>
 			))}
 		</div>
@@ -307,9 +315,9 @@ function StyleTabs({ styles, active, onChange, label }: {
 
 function StyleColumn({ guide, styles, style, onStyleChange }: {
 	guide: PvpGuide
-	styles: PvpStyle[]
-	style: PvpStyle | null
-	onStyleChange: (style: PvpStyle) => void
+	styles: Array<Exclude<PvpStyle, "everyone">>
+	style: PvpStyleTab | null
+	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
 	// it). A guide without that style shows its first, and the pick is kept.
@@ -320,11 +328,26 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
 			    (Daptrius, 2026-10-22). The opaque strip behind the tabs' own
 			    see-through box keeps the page from showing through it. */}
 			<div className="sticky top-(--pvp-below-tabs,0px) z-10 -mt-1 bg-gray-900 pt-1">
-				<StyleTabs styles={styles} active={shown} onChange={onStyleChange} label="Running style" />
+				<StyleTabs styles={styleTabs(styles)} active={shown} onChange={onStyleChange} label="Running style" />
 			</div>
-			<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
-				<StylePane guide={guide} style={shown} />
-			</div>
+			{shown === ALL_STYLES_TAB ? (
+				// Every style on one screen, the way the source sheet lays a guide
+				// out (Henry, 2026-10-21): a box per style, two abreast from lg.
+				// Two, not four: four columns left a deck's six cards about 50px
+				// wide, too small to tell apart.
+				<div role="tabpanel" aria-label={ALL_STYLES_LABEL} className="grid items-start gap-3 lg:grid-cols-2">
+					{styles.map((each) => (
+						<section key={each} className={SECTION} aria-label={STYLE_LABELS[each]}>
+							<h3 className={`mb-2 ${HEADING}`}>{STYLE_LABELS[each]}</h3>
+							<StylePane guide={guide} style={each} />
+						</section>
+					))}
+				</div>
+			) : (
+				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
+					<StylePane guide={guide} style={shown} />
+				</div>
+			)}
 		</div>
 	)
 }
@@ -335,8 +358,8 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
  */
 export function PvpGuideView({ guide, style, onStyleChange }: {
 	guide: PvpGuide
-	style: PvpStyle | null
-	onStyleChange: (style: PvpStyle) => void
+	style: PvpStyleTab | null
+	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	const styles = stylesWithContent(guide)
 	// General skills (style "everyone") are team-wide, like the stats, so

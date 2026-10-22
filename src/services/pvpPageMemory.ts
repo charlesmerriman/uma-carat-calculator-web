@@ -27,7 +27,7 @@
  */
 
 import { parsePvpStyle } from "../utils/pvpGuide"
-import type { PvpStyle } from "../types/pvpGuide"
+import type { PvpStyleTab } from "../types/pvpGuide"
 
 const PAGE_KEY = "pvp-page"
 const STYLE_KEY = "pvp-style"
@@ -54,7 +54,7 @@ export function recalledPvpPage(): string {
 	}
 }
 
-export function rememberPvpStyle(style: PvpStyle): void {
+export function rememberPvpStyle(style: PvpStyleTab): void {
 	try {
 		sessionStorage.setItem(STYLE_KEY, style)
 	} catch {
@@ -62,7 +62,7 @@ export function rememberPvpStyle(style: PvpStyle): void {
 	}
 }
 
-export function recalledPvpStyle(): PvpStyle | null {
+export function recalledPvpStyle(): PvpStyleTab | null {
 	try {
 		return parsePvpStyle(sessionStorage.getItem(STYLE_KEY))
 	} catch {

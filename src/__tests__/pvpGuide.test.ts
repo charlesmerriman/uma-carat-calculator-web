@@ -14,6 +14,9 @@ import {
 	familySources,
 	skillFamilyIds,
 	skillColour,
+	parsePvpStyle,
+	pickStyle,
+	styleTabs,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
@@ -302,5 +305,24 @@ describe("skillColour", () => {
 		expect(skillColour({ rarity: 2, is_evolved: false })).toBe("gold")
 		expect(skillColour({ rarity: 5, is_evolved: false })).toBe("unique")
 		expect(skillColour({ rarity: 2, is_evolved: true })).toBe("evolved")
+	})
+})
+
+describe("the All style tab", () => {
+	it("reads ?style=all, and still refuses everyone and junk", () => {
+		expect(parsePvpStyle("all")).toBe("all")
+		expect(parsePvpStyle("pace")).toBe("pace")
+		expect(parsePvpStyle("everyone")).toBeNull()
+		expect(parsePvpStyle("nope")).toBeNull()
+	})
+
+	it("is offered only beside two or more styles", () => {
+		expect(styleTabs(["front", "end"])).toEqual(["all", "front", "end"])
+		expect(styleTabs(["pace"])).toEqual(["pace"])
+	})
+
+	it("keeps All where it is offered, and falls back to the first style where it isn't", () => {
+		expect(pickStyle(["front", "end"], "all")).toBe("all")
+		expect(pickStyle(["pace"], "all")).toBe("pace")
 	})
 })
