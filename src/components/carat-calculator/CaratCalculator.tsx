@@ -99,6 +99,7 @@ export const CaratCalculator: React.FC = () => {
 		constants: calculationConstants,
 		umaBannerData,
 		supportBannerData,
+		userStepUpSelectionData,
 	})
 
 	// The sheet's render list: the same rows, with section bands interleaved for
