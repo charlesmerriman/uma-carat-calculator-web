@@ -90,7 +90,7 @@ for each banner:
     free     = startingFree + income.free - spent.free
     paid     = max(0, startingPaid + income.paid - spent.paid)
     strategy = applyPullStrategy(...)              // OR applyStepUpStrategy on a step-up row
-    reserved = allocateReservedCopies(...)         // reservedCopies forced to 0 on a step-up
+    reserved = allocateReservedCopies(...)         // on a step-up: copies of its step 5 pick
     results[displayIndex] = snapshot(...)
     spent += (pre-spend balance − post-spend balance)
 ```
@@ -521,17 +521,21 @@ its once-per-day discounted pulls.
 ### What a step-up does NOT touch
 
 Free carats, uma tickets, support tickets, free pulls, SSR crystals, and the
-daily discount allowance all pass through a step-up row unchanged. **Reserved
-copies are disabled** on step-up rows: allocating one needs a featured-card list
-to date a selector ticket against, and a step-up has none — its candidates are
-back-catalogue cards bounded by the campaign's `jp_cutoff_date`. The sheet has no
-equivalent concept either.
+daily discount allowance all pass through a step-up row's PULLS unchanged.
 
-### Card selections change nothing
+**Reserved copies work like any row's** (since 2026-10-21): they are copies of the
+step 5 pick, the card the odds strip is about, so that one card stands in for a
+banner's featured list. A selector pays if it can take the pick (the intrinsic gate
+and its date), then, on a support step-up only, SSR crystals. An uma step-up takes no
+crystals, as on an uma banner. The odds shift by the funded copies, the same
+`shiftDistribution` an ordinary row uses. v1 zeroed them in the engine while the field
+still took input, so a typed copy never reached the odds.
+
+### Card selections change no rate
 
 A step-up row can carry the ten cards the user intends to select
 (`UserStepUpSelection`, edited on the campaign card in `/app/selectors`). **None of
-it reaches the projection.** The target rate is `step_up_target_rate` = 3% ÷ 10 —
+it reaches the carats or the odds maths.** The target rate is `step_up_target_rate` = 3% ÷ 10 —
 the pool rate split across the ten cards you named — and the selection slot is
 1 ÷ 10. Both hold whichever ten they are, so a partial, empty or edited selection
 moves no number. It is a planning
@@ -545,10 +549,11 @@ would invent a number neither the sheet nor the game has.
 
 A selection is also **not a reserved copy**. A reserved copy is one taken *instead of
 pulling*, funded by a ticket or crystal; a selection is a candidate for pulls already
-being paid for. Reserved copies stay disabled on step-up rows for the reason above.
+being paid for. What the selection does decide is WHICH card a reserved copy is of:
+the step 5 pick, read through `effectiveSelections` (`stepUpReservedCards` in
+`useBannerResources`), whose date gates the selectors that can pay for it.
 
-The one thing selections do affect is presentation: the row named `is_target` (the
-step 5 pick) supplies the planner row's thumbnail, resolving
+The pick also supplies the planner row's thumbnail, resolving
 guaranteed pick → `BannerStepUp.image` → the typographic `★3` / `SSR` chip.
 
 Slot bookkeeping lives in `utils/stepUpSelection.ts`, deliberately free of React.

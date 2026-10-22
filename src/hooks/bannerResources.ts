@@ -71,7 +71,7 @@ export interface BannerResources {
 	 * Purchased selectors of THIS ROW'S kind (uma or support) that have no card
 	 * picked on the Selectors page yet. Such a ticket pays for nothing, so it is
 	 * never in the pools above — this count exists only so the row can explain
-	 * an unfunded reserved copy. Always 0 on a step-up row, which reserves none.
+	 * an unfunded reserved copy. On a step-up row, the pool its step 5 pick is from.
 	 */
 	unpickedSelectorTickets: number
 

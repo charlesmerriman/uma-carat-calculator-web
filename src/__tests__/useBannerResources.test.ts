@@ -663,16 +663,62 @@ describe('step-up rows', () => {
     expect(row.reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
   })
 
-  it('ignores reserved copies, which are disabled on step-up rows in v1', () => {
+  // A step-up's reserved copies are copies of its step 5 pick, funded like any
+  // row's: a selector that can take that card, then (support only) crystals.
+  // Until 2026-10-21 the engine zeroed them while the field still took input,
+  // so the odds strip ignored what the user typed.
+  function upWithPick(pick: Uma, reserved = 1) {
     const banner = stepUpBanner(1, 1, 10, 5)
-    banner.reserved_copies = 3
-    const [row] = render([banner], {
-      current_paid_carat: 10_000,
-      uma_selector_ticket: 5,
-      ssr_crystals: 5,
-    })
-    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 0 })
-    expect(row.ssrCrystals).toBe(5)
+    banner.reserved_copies = reserved
+    const catalogue = umaBanner(9, -400, -390).banner_uma!
+    catalogue.umas = [pick]
+    return {
+      banner,
+      extra: {
+        umaBannerData: [catalogue],
+        userStepUpSelectionData: [
+          { banner_step_up: 1, uma: pick.id, support: null, slot: 1, is_target: true },
+        ],
+      },
+    }
+  }
+
+  it('lets a selector fund a step-up reserve of its step 5 pick', () => {
+    const { banner, extra } = upWithPick(featuredUma(7, 'Pick'))
+    const [row] = render(
+      [banner],
+      { current_paid_carat: 10_000, uma_selector_ticket: 2, ssr_crystals: 5 },
+      extra
+    )
+    expect(row.reservedFunding).toEqual({ selectors: 1, crystals: 0, unfunded: 0 })
+  })
+
+  it('bars selectors when the step 5 pick is one no selector can take', () => {
+    const { banner, extra } = upWithPick({ ...featuredUma(7, 'Limited'), is_time_limited: true })
+    const [row] = render(
+      [banner],
+      { current_paid_carat: 10_000, uma_selector_ticket: 2 },
+      extra
+    )
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('keeps SSR crystals off an uma step-up, as on an uma banner', () => {
+    const { banner, extra } = upWithPick(featuredUma(7, 'Pick'))
+    const [row] = render([banner], { current_paid_carat: 10_000, ssr_crystals: 5 }, extra)
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 0, unfunded: 1 })
+  })
+
+  it('pays a support step-up reserve from SSR crystals', () => {
+    const banner = stepUpBanner(1, 1, 10, 5)
+    banner.banner_step_up!.card_type = 'support'
+    banner.reserved_copies = 2
+    const [row, after] = render(
+      [banner, umaBanner(2, 20, 30)],
+      { current_paid_carat: 10_000, ssr_crystals: 5 }
+    )
+    expect(row.reservedFunding).toEqual({ selectors: 0, crystals: 2, unfunded: 0 })
+    expect(after.ssrCrystals).toBe(row.ssrCrystals - 2)
   })
 
   it('charges rows sharing a window in display order', () => {

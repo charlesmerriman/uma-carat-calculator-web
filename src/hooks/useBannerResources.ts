@@ -47,6 +47,13 @@ import { backgroundBanners } from "../utils/backgroundDailyPulls"
 import type { BackgroundBanner } from "../utils/backgroundDailyPulls"
 import type { WalkEntry } from "../utils/incomeProjection"
 import type { SelectorTicketBucket } from "../utils/selectorTickets"
+import {
+	effectiveSelections,
+	findGuaranteedCard,
+	poolFor,
+	selectionsForStepUp,
+} from "../utils/stepUpSelection"
+import { buildEligibleCardCatalogue } from "./useEligibleCardCatalogue"
 import { EMPTY_BANNER_RESOURCES } from "./bannerResources"
 import type { BannerResources } from "./bannerResources"
 import type {
@@ -61,6 +68,10 @@ import type {
 	IncomeLedgerRow,
 	BannerUma,
 	BannerSupport,
+	BannerStepUp,
+	SupportCard,
+	Uma,
+	UserStepUpSelection,
 } from "../types"
 import type { CalculationConstants } from "../types/constants"
 
@@ -83,6 +94,13 @@ interface BannerResourcesParams {
 	 */
 	umaBannerData?: BannerUma[]
 	supportBannerData?: BannerSupport[]
+	/**
+	 * The step-up card selections, for a step-up row's reserved copies: they
+	 * are copies of its step 5 pick, so that card's date decides which
+	 * selectors can pay. Optional: without it a step-up reserve is checked
+	 * against no card, which only an unrestricted selector or crystals fund.
+	 */
+	userStepUpSelectionData?: UserStepUpSelection[]
 }
 
 /** What one background banner's daily pulls took. */
@@ -159,6 +177,39 @@ function mergeWalk(walkOrder: WalkEntry[], background: BackgroundBanner[]): Walk
 	})
 }
 
+/**
+ * The card a step-up row's reserved copies are of: its step 5 pick, the card
+ * the odds strip is about. Read through `effectiveSelections`, like the picker
+ * and the row's thumbnail, so an untouched step-up uses its virtual default's
+ * pick. A one-item list, so it slots in where a banner's featured cards go.
+ *
+ * Only built when the row reserves a copy: the default needs the eligible
+ * catalogue, which sorts every card in the pool, and most step-up rows reserve
+ * none. No pick (or one the catalogue doesn't hold) gives an empty list, which
+ * the allocator treats as a data gap: it neither qualifies nor bars a selector.
+ */
+function stepUpReservedCards(
+	stepUp: BannerStepUp,
+	reservedCopies: number,
+	selections: UserStepUpSelection[],
+	umaBannerData: BannerUma[],
+	supportBannerData: BannerSupport[]
+): (Uma | SupportCard)[] {
+	if (reservedCopies <= 0) return []
+	const catalogue = buildEligibleCardCatalogue({
+		pool: poolFor(stepUp),
+		jpCutoffDate: stepUp.jp_cutoff_date,
+		umaBannerData,
+		supportBannerData,
+	})
+	const pick = findGuaranteedCard(
+		effectiveSelections(selectionsForStepUp(selections, stepUp.id), stepUp, catalogue),
+		umaBannerData,
+		supportBannerData
+	)
+	return pick ? [pick.card] : []
+}
+
 export function projectBannerResources({
 	userStatsData,
 	clubRankData,
@@ -172,6 +223,7 @@ export function projectBannerResources({
 	constants,
 	umaBannerData = [],
 	supportBannerData = [],
+	userStepUpSelectionData = [],
 }: BannerResourcesParams): BannerProjection {
 	if (!userStatsData) return { rows: [], backgroundSpends: [] }
 
@@ -398,7 +450,20 @@ export function projectBannerResources({
 				? target.banner.umas
 				: target.type === "Support"
 				? target.banner.support_cards
+				: target.type === "StepUp"
+				? stepUpReservedCards(
+						target.banner,
+						banner.reserved_copies,
+						userStepUpSelectionData,
+						umaBannerData,
+						supportBannerData
+				  )
 				: []
+		// Which selector pool and which rule for crystals: an uma step-up
+		// reserves an uma (selectors only, like an uma banner), a support
+		// step-up a support card.
+		const reservesUma =
+			target.type === "StepUp" ? poolFor(target.banner) === "uma" : isUmaBanner
 		const selectable = featured.filter(isCardSelectable)
 		// Only a banner that HAS featured cards, none of them takeable, bars
 		// selectors. An empty list is a data gap, not a bar — see
@@ -414,13 +479,12 @@ export function projectBannerResources({
 			null
 		)
 		const reserved = allocateReservedCopies({
-			// Disabled on step-up rows in v1. Reserving a copy needs a featured
-			// card list to date a selector ticket against, and a step-up has
-			// none — it draws from the back catalogue under the campaign's own
-			// cutoff. The sheet has no equivalent concept either. Passing 0
-			// returns the buckets untouched, so tickets still carry forward.
-			reservedCopies: stepUp ? 0 : banner.reserved_copies,
-			isUmaBanner,
+			// On a step-up too, since 2026-10-21 (it was off in v1, while the
+			// field still took input, so the odds ignored what the user typed).
+			// There the "featured" list is the step 5 pick, from
+			// stepUpReservedCards above.
+			reservedCopies: banner.reserved_copies,
+			isUmaBanner: reservesUma,
 			oldestFeaturedJpDate,
 			selectorsBarred,
 			// What a PICKED ticket is matched against: it pays only if its
@@ -452,9 +516,7 @@ export function projectBannerResources({
 				? umaTickets - strategy.umaTickets
 				: supportTickets - strategy.supportTickets,
 			reservedFunding: reserved.funding,
-			unpickedSelectorTickets: stepUp
-				? 0
-				: isUmaBanner
+			unpickedSelectorTickets: reservesUma
 				? unpickedUmaSelectors
 				: unpickedSupportSelectors,
 			...(stepUp && {
@@ -517,6 +579,7 @@ export function useBannerProjection(params: BannerResourcesParams): BannerProjec
 		constants,
 		umaBannerData,
 		supportBannerData,
+		userStepUpSelectionData,
 	} = params
 	return useMemo(
 		() =>
@@ -533,6 +596,7 @@ export function useBannerProjection(params: BannerResourcesParams): BannerProjec
 				constants,
 				umaBannerData,
 				supportBannerData,
+				userStepUpSelectionData,
 			}),
 		[
 			userStatsData,
@@ -547,6 +611,7 @@ export function useBannerProjection(params: BannerResourcesParams): BannerProjec
 			constants,
 			umaBannerData,
 			supportBannerData,
+			userStepUpSelectionData,
 		]
 	)
 }
