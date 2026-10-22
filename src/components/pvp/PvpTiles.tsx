@@ -133,11 +133,13 @@ export function SkillVersions({ skill }: { skill: PvpSkillRef }) {
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
  * no `detail` it renders the child plainly and is not focusable.
  */
-function WithDetail({ label, detail, children, className = "" }: {
+function WithDetail({ label, detail, children, className = "", detailClassName = "w-64" }: {
 	label: string
 	detail: ReactNode
 	children: ReactNode
 	className?: string
+	/** The detail box's width; a card's art wants a narrower box than text. */
+	detailClassName?: string
 }) {
 	const detailId = useId()
 	const [tapped, setTapped] = useState(false)
@@ -160,7 +162,7 @@ function WithDetail({ label, detail, children, className = "" }: {
 			<div
 				id={detailId}
 				role="tooltip"
-				className={`pointer-events-none absolute left-1/2 top-full z-40 mt-1 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+				className={`pointer-events-none absolute left-1/2 top-full z-40 mt-1 ${detailClassName} max-w-[80vw] -translate-x-1/2 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
 					tapped ? "opacity-100" : "opacity-0"
 				}`}
 			>
@@ -231,6 +233,46 @@ export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCa
 			</div>
 			{note && (
 				<div className="text-center text-[11px] leading-tight text-gray-400">
+					<InlineNote text={note} />
+				</div>
+			)}
+		</div>
+	)
+}
+
+/**
+ * A slot's alternative, under its main card: "or <name>" and its note. The
+ * name shows the card's art on hover, focus or tap, so a reader can tell which
+ * version of the card is meant (Henry, 2026-10-22: until cards get a page of
+ * their own). A note-only alternative is just the note.
+ *
+ * The name sits on its own line and the note below it, each a block, so the
+ * line can't ride up into the main card's note (Henry's phone showed it drawn
+ * over a two-line skill mention above it).
+ */
+export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; note: string }) {
+	return (
+		<div className="text-center text-[11px] leading-tight text-gray-400">
+			{card && (
+				<div>
+					or{" "}
+					<WithDetail
+						label={card.name}
+						detail={
+							<>
+								<TileArt src={card.image} alt="" />
+								<span className="mt-1 block text-center font-medium text-gray-100">{card.name}</span>
+							</>
+						}
+						className="inline-block max-w-full cursor-pointer align-baseline"
+						detailClassName="w-36"
+					>
+						<span className="text-gray-200 underline decoration-gray-500 decoration-dotted underline-offset-2">{card.name}</span>
+					</WithDetail>
+				</div>
+			)}
+			{note && (
+				<div>
 					<InlineNote text={note} />
 				</div>
 			)}

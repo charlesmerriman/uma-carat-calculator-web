@@ -16,7 +16,7 @@
 
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
-import { InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
+import { AlternateCard, InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
 import {
 	SKILL_CATEGORY_LABELS,
@@ -228,12 +228,7 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 								<div className="aspect-square w-full rounded-lg border border-dashed border-gray-700" aria-hidden="true" />
 							)}
 							{alternates.map((alt, index) => (
-								<div key={index} className="text-center text-[11px] leading-tight text-gray-400">
-									{alt.support_card ? (
-										<>or <span className="text-gray-200">{alt.support_card.name}</span> </>
-									) : null}
-									<InlineNote text={alt.note} />
-								</div>
+								<AlternateCard key={index} card={alt.support_card} note={alt.note} />
 							))}
 						</div>
 					)
