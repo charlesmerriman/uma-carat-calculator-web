@@ -27,7 +27,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from "react"
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react"
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -66,6 +66,7 @@ import {
 	paginationButtonClass,
 } from "../timeline/timelineShared"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
+import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { availableCourseDetails } from "../../utils/courseDetails"
 import { formatDate } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
@@ -94,10 +95,10 @@ import { PvpEarlyAccess } from "./PvpEarlyAccess"
 import { usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
-import { GalleryView } from "./gallery/GalleryView"
+import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
-import type { PvpStyle } from "../../types/pvpGuide"
+import type { PvpStyleTab } from "../../types/pvpGuide"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
 const FALLBACK_TITLE = "PvP Guides"
@@ -126,6 +127,8 @@ function parseView(value: string | null, isEditor: boolean): PvpView {
 // The editor and dnd-kit are a chunk of their own, fetched the first time
 // an editor opens the tab (components/pvp/editor/loadGuideEditor.ts).
 const GuideEditor = lazy(loadGuideEditor)
+// The gallery is a chunk of its own too (gallery/loadGallery.ts).
+const GalleryView = lazy(() => loadGalleryView().then((module) => ({ default: module.GalleryView })))
 
 /** The page's own parameters, in the order an address names them. "Copy link" builds the same order. */
 const PARAM_ORDER = [PVP_EVENT_PARAM, VIEW_PARAM, PVP_STYLE_PARAM]
@@ -232,7 +235,7 @@ const PvpGuide = () => {
 	}
 	// A style is a tab inside the guide: `replace`, so Back leaves the page
 	// (or the event) instead of stepping back through every tab clicked.
-	const selectStyle = (next: PvpStyle) => setParam(PVP_STYLE_PARAM, next, { replace: true })
+	const selectStyle = (next: PvpStyleTab) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
 	// Fetched only on the view that shows it.
 	const guideState = usePvpGuide(event && view === "recommendations" ? refForRaceEvent(event) : null)
@@ -250,6 +253,12 @@ const PvpGuide = () => {
 	// The tab the guide shows, the same pick PvpGuideView makes, for the link.
 	const shownStyle =
 		guideState.status === "ready" ? pickStyle(stylesWithContent(guideState.guide), wantedStyle) : null
+
+	// The pinned rows' offsets, as CSS variables on the page root.
+	const rootRef = useRef<HTMLDivElement>(null)
+	const bandRef = useRef<HTMLDivElement>(null)
+	const tabsRef = useRef<HTMLDivElement>(null)
+	usePvpStickyOffsets(rootRef, bandRef, tabsRef, event !== null)
 
 	/**
 	 * A link to what is on screen, for someone else: the event, always (a bare
@@ -275,8 +284,9 @@ const PvpGuide = () => {
 	}
 
 	return (
-		<div className="w-full pb-8">
+		<div ref={rootRef} className="w-full pb-8">
 			<ControlBand
+				ref={bandRef}
 				events={choices}
 				event={event}
 				index={index}
@@ -324,7 +334,12 @@ const PvpGuide = () => {
 							onCopyLink={() => copyLink(event)}
 						/>
 
-						<ViewTabs view={view} isEditor={isEditor} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
+						{/* Pinned under the event band (desktop) or the navbar (phone)
+						    while the page scrolls, so the views stay one tap away
+						    (Daptrius, 2026-10-22). Opaque, or the page shows through. */}
+						<div ref={tabsRef} className="sticky top-(--pvp-tabs-top,0px) z-20 bg-gray-900">
+							<ViewTabs view={view} isEditor={isEditor} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
+						</div>
 
 						<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
 							{view === "recommendations" && (
@@ -360,7 +375,16 @@ const PvpGuide = () => {
 							)}
 							{view === "team" && <TeamBuilder event={event} />}
 							{view === "gallery" && (
-								<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
+								<Suspense
+									fallback={
+										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading the gallery…
+										</div>
+									}
+								>
+									<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
+								</Suspense>
 							)}
 							{view === "editor" && (
 								<Suspense
@@ -381,6 +405,10 @@ const PvpGuide = () => {
 			</div>
 		</div>
 	)
+}
+
+function prefetchGallery() {
+	void loadGalleryView().catch(() => {})
 }
 
 function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boolean; onChange: (view: PvpView) => void }) {
@@ -405,6 +433,11 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 						role="tab"
 						aria-selected={active}
 						onClick={() => onChange(entry.id)}
+						// Start the gallery's chunk on the way to a click, so the
+						// tab rarely shows its loading line. A failed start just
+						// means the lazy() fetches it on render instead.
+						onPointerEnter={entry.id === "gallery" ? prefetchGallery : undefined}
+						onFocus={entry.id === "gallery" ? prefetchGallery : undefined}
 						className={`-mb-px flex min-w-0 items-center justify-center gap-1.5 border-b-2 px-2 py-2 text-sm font-semibold transition sm:px-3 ${
 							active
 								? "border-brand text-brand"
@@ -437,7 +470,8 @@ function optionLabel(event: RaceEvent): string {
 	return `${event.has_guide ? "★ " : ""}${event.name} (${formatDate(event.start_date)})`
 }
 
-function ControlBand({ events, event, index, now, showPast, onTogglePast, onSelect }: {
+function ControlBand({ ref, events, event, index, now, showPast, onTogglePast, onSelect }: {
+	ref: Ref<HTMLDivElement>
 	events: RaceEvent[]
 	event: RaceEvent | null
 	index: number
@@ -457,7 +491,7 @@ function ControlBand({ events, event, index, now, showPast, onTogglePast, onSele
 		)
 	}
 	return (
-		<div className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
+		<div ref={ref} className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
 			{/* One centred group from `md:`: the past toggle sits beside the event
 			    controls it changes. It was pinned to the far left of a three-column
 			    grid, with the right column left empty to balance it. Stacked on a

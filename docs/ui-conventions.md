@@ -1158,6 +1158,11 @@ rows' card art both link through it, and so does the PvP page's "View on Timelin
 (`cm-<id>` / `loh-<id>`, the same form as its own `?event=`, so a `PvpEventRef` is a
 `TimelineFocus`); the Timeline resolves the target.
 
+Every Timeline card also carries a **Copy link** pill (`CopyTimelineLink`) that copies the
+same URL for itself: a banner window by its first banner, a race by its `cm`/`loh` ref, a
+marker by `kind` + `sourceId` (each half of a pair links to itself; both land on the pair).
+The URL is built in the click handler from `window.location.origin`, never at render time.
+
 - **Why not a `#hash`.** The Timeline windows its list (ten cards a page, or a growing
   prefix under infinite scroll) and hides past events by default, so the element a browser
   would scroll to is usually not in the DOM. The link therefore *names* a target and the
@@ -1428,11 +1433,31 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   kind, so the Timeline card links to a guide without branching on the tag. No parameter
   opens on the running event, else the next, else the newest (`defaultPvpEvent`).
 - **So does the guide's running style**: `?style=front` / `pace` / ... (`PVP_STYLE_PARAM`,
-  `parsePvpStyle`; never `everyone`, which is not a tab). The page owns it and
+  `parsePvpStyle`; never `everyone`, which is not a tab). `?style=all` is the "All" tab
+  (Henry, 2026-10-21): every style's pane at once, two abreast from `lg`, offered only when
+  a guide has two or more styles (`styleTabs`). Its type is `PvpStyleTab`, which only the
+  guide's tabs and the page memory take; a team member's style stays a `PvpStyle`. The page owns it and
   `PvpGuideView`'s tabs are controlled; a tab click `replace`s, so Back never steps through
   tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
   first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event
   that has it.
+- **Comments on a guide** (Henry, 2026-10-21; `guide-comments-plan.md`): one thread per section,
+  `""` for the whole guide (the side column's last box) and one per running style (under the
+  style's pane). `GuideComments` folds each until opened, showing the guide's `comment_counts`,
+  so nothing is fetched for a section nobody opens; the All tab shows each style's count as a
+  link to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
+  (`services/guideComments.ts`), which keeps the guide's counts in step through
+  `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up (`useCommentWrites().vote`).
+- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
+  shell) or the navbar (phone, document scrolling); the running-style tabs, the guide's side
+  column, the gallery's open post and the team builder's docked panels stick under them.
+  The offsets are MEASURED by `hooks/usePvpStickyOffsets.ts` into CSS variables on the page
+  root (`--pvp-tabs-top`, `--pvp-below-tabs`, `--pvp-viewport-h`); a new pinned row reads
+  those, never a rem guess. The side column (`.pvp-side-sticky`, App.css) pins when it fits
+  and otherwise scrolls with the page until its end shows. Pinning works on a phone only
+  because the /app scroller is `overflow-x-clip` below app-shell, not a scroll container
+  (`views/ApplicationViews.tsx`): put overflow-y back on it and every sticky inside /app
+  stops engaging there.
 - **The tab remembers where it left the page** (`services/pvpPageMemory.ts`, sessionStorage,
   so a new tab opens on the current event). A bare `/app/pvp`, the navbar link, `<Navigate
   replace>`s to the last address; an address that names no style (a Timeline card's link)
@@ -1561,8 +1586,8 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 
 - **One full-width feed until a post opens, then two panes from `lg` up.** With nothing
   open the feed spans the page and each row is one short band. Open a post and the feed
-  moves to the left with the post (`GalleryPostPanel`) beside it, inline and sticky under the
-  PvP page's own sticky event bar (`top-[4.5rem]`; change it if that bar's height changes).
+  moves to the left with the post (`GalleryPostPanel`) beside it, inline and sticky 1rem under
+  the PvP page's pinned View tabs (`--pvp-below-tabs`, see "Pinned rows" under "PvP page").
   Below `lg` the post takes the feed's place (the feed stays mounted, hidden) with an "All
   teams" button.
 - **Rows take their shape from the feed's width, not the screen's**: the feed is

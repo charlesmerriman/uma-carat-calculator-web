@@ -13,7 +13,7 @@ import type { AptitudeKey, MemberStyle } from "../types/pvpTeam"
 import type { RaceEvent } from "../types"
 
 /** Which aptitude column a style reads. A runaway is a front runner. */
-export const APTITUDE_FOR_STYLE: Record<MemberStyle, AptitudeKey> = {
+const APTITUDE_FOR_STYLE: Record<MemberStyle, AptitudeKey> = {
 	runaway: "front",
 	front: "front",
 	pace: "pace",

@@ -13,6 +13,7 @@ import { Star } from "lucide-react"
 import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
+import { GOLD_SKILL_RARITY, skillColour } from "../../utils/pvpGuide"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
@@ -23,7 +24,7 @@ function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 				piece.kind === "text" ? (
 					<span key={index}>{piece.text}</span>
 				) : piece.kind === "skill" ? (
-					<SkillMention key={index} name={piece.name} />
+					<SkillMention key={index} name={piece.name} scenarioLink={piece.scenarioLink} />
 				) : (
 					<mark key={index} className="bg-transparent font-semibold text-highlight">
 						<NotePieces pieces={piece.pieces} />
@@ -57,12 +58,19 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
  * note's line and crowded the card name above it. It may wrap (`max-w-full`,
  * no `nowrap`): a long name such as "Professor of Curvature" is wider than a
  * deck column, and unbreakable it ran into the next slot's note.
+ *
+ * `scenarioLink`: the guide wrote "& Scenario Link" after it (the parser
+ * decides, utils/remarkHighlight.ts), so it gets a red ring to stand out
+ * (Daptrius, 2026-10-17). A ring, not a border colour: a gold skill's
+ * .skill-gold border would win over a border utility.
  */
-export function SkillMention({ name }: { name: string }) {
+export function SkillMention({ name, scenarioLink = false }: { name: string; scenarioLink?: boolean }) {
 	const skill = useSkillMentions()[name.toLowerCase()]
 	const detailId = useId()
 	const [tapped, setTapped] = useState(false)
 	if (!skill) return <>{name}</>
+	const surface = skill.rarity === GOLD_SKILL_RARITY ? "skill-gold" : "border-gray-600 bg-gray-800 text-gray-100"
+	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
 	return (
 		<span
 			role="group"
@@ -73,7 +81,7 @@ export function SkillMention({ name }: { name: string }) {
 				if (event.pointerType === "touch") setTapped((open) => !open)
 			}}
 			onBlur={() => setTapped(false)}
-			className="group relative inline-flex max-w-full items-center gap-1 rounded border border-gray-600 bg-gray-800 pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none text-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			className={`group relative inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none outline-none focus-visible:ring-2 focus-visible:ring-brand ${surface} ${ring}`}
 		>
 			{skill.image ? (
 				<img src={skill.image} alt="" className="h-[1.1em] w-[1.1em] shrink-0" loading="lazy" decoding="async" />
@@ -103,14 +111,14 @@ export function SkillMention({ name }: { name: string }) {
  * The other versions of a skill (white, gold, evolved) under its hover
  * detail: a guide names one version, and the rest are worth knowing about
  * because a card may teach the other one. Nothing when it has none.
+ *
+ * No heading: an "Also as" heading read as unclear (Daptrius, 2026-10-17).
+ * The rule above the list and each line's colour word say what they are.
  */
-export function SkillVersions({ skill }: { skill: PvpSkillRef }) {
+function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 	if (skill.versions.length === 0) return null
 	return (
 		<span className="mt-1 block border-t border-gray-700/70 pt-1 text-gray-300">
-			<span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-				Also as {skill.version ? `(this is the ${skill.version})` : ""}
-			</span>
 			{skill.versions.map((version) => (
 				<span key={version.id} className="mt-0.5 flex items-start gap-1">
 					{version.image ? (
@@ -120,7 +128,7 @@ export function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 					)}
 					<span>
 						<span className="font-medium text-gray-100">{version.name}</span>
-						<span className="text-gray-400"> {version.version}</span>
+						<span className="text-gray-400"> {skillColour(version)}</span>
 						{version.description && <span className="block text-gray-400">{version.description}</span>}
 					</span>
 				</span>
@@ -133,11 +141,13 @@ export function SkillVersions({ skill }: { skill: PvpSkillRef }) {
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
  * no `detail` it renders the child plainly and is not focusable.
  */
-function WithDetail({ label, detail, children, className = "" }: {
+function WithDetail({ label, detail, children, className = "", detailClassName = "w-64" }: {
 	label: string
 	detail: ReactNode
 	children: ReactNode
 	className?: string
+	/** The detail box's width; a card's art wants a narrower box than text. */
+	detailClassName?: string
 }) {
 	const detailId = useId()
 	const [tapped, setTapped] = useState(false)
@@ -160,7 +170,7 @@ function WithDetail({ label, detail, children, className = "" }: {
 			<div
 				id={detailId}
 				role="tooltip"
-				className={`pointer-events-none absolute left-1/2 top-full z-40 mt-1 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+				className={`pointer-events-none absolute left-1/2 top-full z-40 mt-1 ${detailClassName} max-w-[80vw] -translate-x-1/2 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
 					tapped ? "opacity-100" : "opacity-0"
 				}`}
 			>
@@ -238,6 +248,46 @@ export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCa
 	)
 }
 
+/**
+ * A slot's alternative, under its main card: "or <name>" and its note. The
+ * name shows the card's art on hover, focus or tap, so a reader can tell which
+ * version of the card is meant (Henry, 2026-10-22: until cards get a page of
+ * their own). A note-only alternative is just the note.
+ *
+ * The name sits on its own line and the note below it, each a block, so the
+ * line can't ride up into the main card's note (Henry's phone showed it drawn
+ * over a two-line skill mention above it).
+ */
+export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; note: string }) {
+	return (
+		<div className="text-center text-[11px] leading-tight text-gray-400">
+			{card && (
+				<div>
+					or{" "}
+					<WithDetail
+						label={card.name}
+						detail={
+							<>
+								<TileArt src={card.image} alt="" />
+								<span className="mt-1 block text-center font-medium text-gray-100">{card.name}</span>
+							</>
+						}
+						className="inline-block max-w-full cursor-pointer align-baseline"
+						detailClassName="w-36"
+					>
+						<span className="text-gray-200 underline decoration-gray-500 decoration-dotted underline-offset-2">{card.name}</span>
+					</WithDetail>
+				</div>
+			)}
+			{note && (
+				<div>
+					<InlineNote text={note} />
+				</div>
+			)}
+		</div>
+	)
+}
+
 /** A slot with no card, only advice ("Any Wit", "or any speed"). */
 export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: boolean }) {
 	return (
@@ -256,13 +306,14 @@ function BorrowRibbon() {
 	)
 }
 
-// The game's skill rarities: 1 white, 2 gold, 3 to 6 the unique kinds. Theme
-// tokens, not stock palette classes, so the frame reads on light themes too:
-// the recommended gold for gold skills, the step-up violet for uniques.
-function skillRarityClass(rarity: number): string {
-	if (rarity === 2) return "border-recommended/70"
-	if (rarity >= 3) return "border-step-up-border/70"
-	return "border-gray-600"
+// The game's skill rarities: 1 white, 2 gold, 3 to 6 the unique kinds. A gold
+// skill is drawn the way the game draws it, on the gold gradient (.skill-gold
+// in App.css). The rest take theme tokens, not stock palette classes, so the
+// frame reads on light themes too: the step-up violet for uniques.
+function skillSurfaceClass(rarity: number): string {
+	if (rarity === GOLD_SKILL_RARITY) return "skill-gold"
+	if (rarity >= 3) return "border-step-up-border/70 bg-gray-800"
+	return "border-gray-600 bg-gray-800"
 }
 
 /** A recommended skill: icon, name, whose unique it is, the description on hover. */
@@ -279,25 +330,28 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 			<SkillVersions skill={skill} />
 		</>
 	)
+	// On the gold the text is the gradient's own dark brown (.skill-gold), so
+	// the grey text classes step aside and the note dims with opacity instead.
+	const gold = skill.rarity === GOLD_SKILL_RARITY
 	return (
 		<WithDetail label={skill.name} detail={detail}>
 			{/* rounded-lg, not a capsule: the square icon's corners stuck out
 			    through a capsule's round ends. The skills panel's rows and the
 			    mention pill are rounded rectangles too. */}
-			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border bg-gray-800 py-0.5 pl-0.5 pr-2.5 ${skillRarityClass(skill.rarity)}`}>
+			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border py-0.5 pl-0.5 pr-2.5 ${skillSurfaceClass(skill.rarity)}`}>
 				{skill.image ? (
 					<img src={skill.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
 				) : (
 					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 				)}
-				<span className="truncate text-sm text-gray-100">
+				<span className={`truncate text-sm ${gold ? "font-medium" : "text-gray-100"}`}>
 					{skill.name}
 					{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
 				</span>
 				{/* No ◎ badge for "has a gold version": the game prints ○/◎ in the
 				    name itself, so a badge in the same glyph read as a version that
-				    doesn't exist. The hover detail's "Also as" names the gold. */}
-				{note && <InlineNote text={note} className="hidden truncate text-xs text-gray-400 sm:inline" />}
+				    doesn't exist. The hover detail lists the other versions. */}
+				{note && <InlineNote text={note} className={`hidden truncate text-xs sm:inline ${gold ? "opacity-80" : "text-gray-400"}`} />}
 			</div>
 		</WithDetail>
 	)

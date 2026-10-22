@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   cumulativeEventRewards,
   cumulativeRaceRewards,
+  raceDayAmounts,
   raceRewardAmount,
   upcomingRaceRewardRange,
   cumulativeThroughoutCarats,
@@ -309,5 +310,71 @@ describe('cumulativeThroughoutCarats', () => {
       row({ date: '2026-08-20T22:00:00Z', kind: 'event', carats: 5000 }),
     ])
     expect(cumulativeThroughoutCarats(ledger, NOW, utc('2026-12-01T00:00:00Z'), K)).toBe(0)
+  })
+})
+
+describe('day-by-day race rewards', () => {
+  // Daptrius's LoH tables (#carat-calculator-website, 2026-09-24) for
+  // Platinum 4: #2-5 is the rank's own amount, #6 on its own row.
+  const PLATINUM_4 = {
+    name: 'Platinum 4',
+    income_amount: 3450,
+    uma_ticket_amount: 1,
+    support_ticket_amount: 1,
+    ssr_shard_amount: 0,
+    sr_shard_amount: 0,
+    day_amounts: [390, 300, 600, 1000, 500, 500, 100, 60],
+    rewards: [{ from_event_number: 6, income_amount: 3900, day_amounts: [550, 600, 600, 1000, 500, 500, 100, 50] }],
+  }
+  // An LoH that opens tomorrow at 22:00: days 1-6, stage 1 on day 8, stage 2 at its end.
+  const PAYOUTS = [
+    '2026-08-13T22:00:00Z', '2026-08-14T22:00:00Z', '2026-08-15T22:00:00Z', '2026-08-16T22:00:00Z',
+    '2026-08-17T22:00:00Z', '2026-08-18T22:00:00Z', '2026-08-20T22:00:00Z', '2026-08-21T21:59:59Z',
+  ]
+  const loh = (eventNumber: number) =>
+    parseLedger([row({ date: PAYOUTS[7], kind: 'league_of_heroes', event_number: eventNumber, payouts: PAYOUTS })])
+
+  it("uses the era's own split, else the rank's", () => {
+    expect(raceDayAmounts(PLATINUM_4, 3, 8)).toEqual([390, 300, 600, 1000, 500, 500, 100, 60])
+    expect(raceDayAmounts(PLATINUM_4, 7, 8)).toEqual([550, 600, 600, 1000, 500, 500, 100, 50])
+  })
+
+  it("scales the rank's split to an era row that has none, keeping the total exact", () => {
+    // CM Champion: Daptrius split #5-29 only; #30+ (3800) follows it scaled.
+    const champion = {
+      ...PLATINUM_4,
+      income_amount: 3300,
+      day_amounts: [130, 130, 270, 270, 2500],
+      rewards: [{ from_event_number: 30, income_amount: 3800, day_amounts: [] }],
+    }
+    const days = raceDayAmounts(champion, 30, 5)
+    expect(days).toEqual([150, 150, 310, 310, 2880])
+    expect(days.reduce((sum, amount) => sum + amount, 0)).toBe(3800)
+  })
+
+  it('pays everything on the last day with no split, or one that does not fit', () => {
+    const plain = { ...PLATINUM_4, day_amounts: [], rewards: [] }
+    expect(raceDayAmounts(plain, 3, 8)).toEqual([0, 0, 0, 0, 0, 0, 0, 3450])
+    // A ledger from an API older than `payouts`: one instant.
+    expect(raceDayAmounts(PLATINUM_4, 3, 1)).toEqual([3450])
+  })
+
+  it('credits a banner ending mid-event with the days already paid, and the next banner the rest', () => {
+    const ledger = loh(3)
+    // The worked example in backend docs/income-calculation.md.
+    const afterDay4 = cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, utc('2026-08-17T21:59:59Z'), PLATINUM_4)
+    expect(afterDay4.carats).toBe(390 + 300 + 600 + 1000)
+    // No tickets yet: they come with the last day.
+    expect(afterDay4.umaTickets).toBe(0)
+    const whole = cumulativeRaceRewards(ledger, 'league_of_heroes', TODAY, utc('2026-08-31T21:59:59Z'), PLATINUM_4)
+    expect(whole.carats).toBe(3450)
+    expect(whole.umaTickets).toBe(1)
+  })
+
+  it('counts only the days still ahead once an event is under way', () => {
+    // Today is day 3 of the event: days 1 and 2 are already paid.
+    const today = utc('2026-08-15T00:00:00Z')
+    const rest = cumulativeRaceRewards(loh(3), 'league_of_heroes', today, utc('2026-08-31T21:59:59Z'), PLATINUM_4)
+    expect(rest.carats).toBe(3450 - 390 - 300)
   })
 })

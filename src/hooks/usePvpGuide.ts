@@ -50,6 +50,19 @@ export function primePvpGuide(ref: PvpEventRef, guide: PvpGuide): void {
 	for (const listener of listeners) listener(key)
 }
 
+/**
+ * Change one event's cached guide in place, if it is cached and ready, and
+ * redraw its readers. For a small fact that moves without the guide itself
+ * changing: a section's comment count after a comment is added or deleted.
+ */
+export function patchPvpGuide(ref: PvpEventRef, change: (guide: PvpGuide) => PvpGuide): void {
+	const key = formatPvpEvent(ref)
+	const held = cache.get(key)
+	if (held?.status !== "ready") return
+	cache.set(key, { status: "ready", guide: change(held.guide) })
+	for (const listener of listeners) listener(key)
+}
+
 /** Forget one event's guide (deleted, or published, so the next read refetches). */
 export function forgetPvpGuide(ref: PvpEventRef): void {
 	const key = formatPvpEvent(ref)

@@ -623,7 +623,7 @@ export function bannerWindowHasFreePulls(banner: BannerTimelineForViewing): bool
  * scenario before campaign), so a pair is always two NEIGHBOURS with the
  * scenario first and one pass over adjacent entries finds every one.
  */
-export function pairSameDayMarkers(sortedMarkers: TimelineMarker[]): TimelineRow[] {
+function pairSameDayMarkers(sortedMarkers: TimelineMarker[]): TimelineRow[] {
 	const utcDay = (iso: string): number => startOfUtcDay(new Date(iso)).getTime()
 
 	const rows: TimelineRow[] = []
@@ -657,7 +657,7 @@ export function pairSameDayMarkers(sortedMarkers: TimelineMarker[]): TimelineRow
  * the list anchors on when a filter is lifted (see anchorRowKey in Timeline),
  * so the reader would lose their place on the way back to "All".
  */
-export function rowMarkers(row: TimelineRow): TimelineMarker[] {
+function rowMarkers(row: TimelineRow): TimelineMarker[] {
 	if (row.kind === "marker") return [row.marker]
 	if (row.kind === "marker_pair") return [row.scenario, row.anniversary]
 	return []

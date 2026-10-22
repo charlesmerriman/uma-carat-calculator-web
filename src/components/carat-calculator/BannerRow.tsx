@@ -11,6 +11,7 @@ import type {
 } from "../../types"
 import React, { useState } from "react"
 import { Link } from "react-router-dom"
+import NumberFlow, { NumberFlowGroup } from "@number-flow/react"
 import { BannerNoteButton, BannerNoteEditor } from "./BannerNote"
 import { RowOptionsPanel } from "./RowOptionsPanel"
 import type { PullShortcut, RowOptionsChange } from "./RowOptionsPanel"
@@ -92,6 +93,15 @@ const copyChips = buildCopyChips()
 // 2026-10-16). The maths and the panel's rendering stay in place, so turning
 // them back on is this one line.
 const SHOW_PULL_SHORTCUTS = false
+
+// Pull and step counts were printed with String(), so no thousands separator;
+// NumberFlow's default would add one. Module scope so the object keeps one
+// identity across renders.
+const NO_GROUPING = { useGrouping: false }
+
+// A Max Pulls / Max Steps value: a count that rolls, or "Passed" as text.
+const ceilingValue = (value: number | "Passed") =>
+	typeof value === "number" ? <NumberFlow value={value} format={NO_GROUPING} /> : value
 
 interface BannerRowProps {
 	plannedBanner: UserPlannedBanner
@@ -731,9 +741,13 @@ export const BannerRow = ({
 	// the table, but this strip is per row, so the relabel lands exactly where
 	// the meaning changes. Same four boxes, same widths —
 	// --container-banner-table does not move. See frontend/docs/ui-conventions.md.
+	//
+	// The numbers are NumberFlow, so they roll to a new value instead of
+	// snapping; each one keeps the formatting it had as a string (see
+	// NO_GROUPING). "Passed" and the step label stay plain text.
 	const derivedStats: {
 		label: string
-		value: string
+		value: React.ReactNode
 		title: string
 		valueClass?: string
 	}[] = [
@@ -749,30 +763,42 @@ export const BannerRow = ({
 					// Unspaced slashes, matching formatDate's a/b/c. No thousands separators
 					// here — these are small counts and commas would collide with the slashes.
 					label: "Free/Tickets/Paid",
-					value: `${freePulls || 0}/${ticketPulls}/${paidPulls}`,
+					// Three numbers on one line, so one gaining a digit pushes the
+					// next along. The group measures all three together, which is
+					// what lets the pushed ones slide instead of jumping.
+					value: (
+						<NumberFlowGroup>
+							{/* An empty row's free pulls are "", shown as 0 as before. */}
+							<NumberFlow value={typeof freePulls === "number" ? freePulls : 0} format={NO_GROUPING} />/
+							<NumberFlow value={ticketPulls} format={NO_GROUPING} />/
+							<NumberFlow value={paidPulls} format={NO_GROUPING} />
+						</NumberFlowGroup>
+					),
 					title: "Pulls you don't pay free carats for: the banner's free pulls, matching tickets, and pulls funded by paid carats",
 			  },
 		{
 			label: "Carat Est.",
-			value: displayFreeCarats.toLocaleString(),
+			// No `format`: the browser's default Intl.NumberFormat is what
+			// toLocaleString() printed, so the separators are unchanged.
+			value: <NumberFlow value={displayFreeCarats} />,
 			title: "Estimated free (earned) carats available for this banner",
 			valueClass: "text-brand",
 		},
 		{
 			label: "Paid Carat Est.",
-			value: displayPaidCarats.toLocaleString(),
+			value: <NumberFlow value={displayPaidCarats} />,
 			title: "Estimated paid (purchased) carats available for this banner",
 			valueClass: "text-brand",
 		},
 		isStepUp
 			? {
 					label: "Max Steps",
-					value: String(maxPossibleSteps),
+					value: ceilingValue(maxPossibleSteps),
 					title: "The most steps you could climb here before your paid carats or the campaign's banners run out",
 			  }
 			: {
 					label: "Max Pulls",
-					value: String(maxPossiblePulls),
+					value: ceilingValue(maxPossiblePulls),
 					title: "The most pulls this banner could support if every available resource went into it",
 			  },
 	]
@@ -880,12 +906,12 @@ export const BannerRow = ({
 		? countStatus === "over"
 			? `More steps than you can afford here (max ${stepUpperBound})`
 			: countStatus === "ok"
-			? "A completed ladder: every carat bought a full banner, guarantee included"
-			: `Stops part-way up a ladder (${STEPS_PER_ROUND} steps complete one)`
+			? `A completed round (${STEPS_PER_ROUND} steps)`
+			: `Stops partway through a round (${STEPS_PER_ROUND} steps)`
 		: countStatus === "over"
 		? `More pulls than you can afford here (max ${pullUpperBound})`
 		: countStatus === "ok"
-		? "On a pity threshold, with no carats left in a partial counter"
+		? `On a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 		: `Not on a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"

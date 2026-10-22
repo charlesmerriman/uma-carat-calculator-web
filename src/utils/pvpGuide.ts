@@ -20,6 +20,7 @@ import type {
 	PvpSkillRecommendation,
 	PvpSkillRef,
 	PvpStyle,
+	PvpStyleTab,
 	PvpSupportCardRef,
 	PvpUmaRecommendation,
 	PvpSkillVersion,
@@ -128,7 +129,7 @@ export function newCardsBetween(
 }
 
 /** The styles a guide says something about, in display order. */
-export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
+export function stylesWithContent(guide: PvpGuide): Array<Exclude<PvpStyle, "everyone">> {
 	const used = new Set<PvpStyle>()
 	for (const row of guide.uma_recommendations) used.add(row.style)
 	for (const row of guide.style_notes) used.add(row.style)
@@ -136,28 +137,42 @@ export function stylesWithContent(guide: PvpGuide): PvpStyle[] {
 	for (const row of guide.skill_recommendations) used.add(row.style)
 	// "Everyone" rows show in the side column, never as a tab of their own.
 	used.delete("everyone")
-	return STYLE_ORDER.filter((style) => used.has(style))
+	return STYLE_ORDER.filter((style): style is Exclude<PvpStyle, "everyone"> => style !== "everyone" && used.has(style))
 }
 
 /** The query parameter the PvP page reads its running style from: `?style=pace`. */
 export const PVP_STYLE_PARAM = "style"
 
+/** The "All" tab's value in `?style=` and its label. */
+export const ALL_STYLES_TAB = "all"
+export const ALL_STYLES_LABEL = "All"
+
 /**
- * "pace" -> "pace"; anything that is not a style tab -> null. "everyone" is a
- * style in the data but never a tab, so it is refused here too.
+ * "pace" -> "pace", "all" -> "all"; anything that is not a style tab -> null.
+ * "everyone" is a style in the data but never a tab, so it is refused here too.
  */
-export function parsePvpStyle(value: string | null | undefined): PvpStyle | null {
+export function parsePvpStyle(value: string | null | undefined): PvpStyleTab | null {
+	if (value === ALL_STYLES_TAB) return ALL_STYLES_TAB
 	const style = STYLE_ORDER.find((candidate) => candidate === value)
 	return style && style !== "everyone" ? style : null
+}
+
+/**
+ * The tabs a guide offers: "All" first, then its styles. No "All" for a guide
+ * with one style, where it would show the same pane twice.
+ */
+export function styleTabs(styles: PvpStyleTab[]): PvpStyleTab[] {
+	return styles.length > 1 ? [ALL_STYLES_TAB, ...styles] : styles
 }
 
 /**
  * The style tab a guide shows: the one asked for when the guide has it, else
  * its first. A guide with nothing for the asked-for style falls back WITHOUT
  * forgetting it, so the reader's pick comes back on the next event that has it.
+ * "All" is kept wherever the guide has more than one style.
  */
-export function pickStyle(styles: PvpStyle[], wanted: PvpStyle | null): PvpStyle | null {
-	return wanted && styles.includes(wanted) ? wanted : (styles[0] ?? null)
+export function pickStyle(styles: PvpStyleTab[], wanted: PvpStyleTab | null): PvpStyleTab | null {
+	return wanted && styleTabs(styles).includes(wanted) ? wanted : (styles[0] ?? null)
 }
 
 // How a guide's skills are grouped, everywhere they show. "other" is what a
@@ -248,6 +263,20 @@ export function skillFamilyIds(skill: PvpSkillRef): number[] {
  */
 export const WHITE_SKILL_RARITY = 1
 export const GOLD_SKILL_RARITY = 2
+
+/**
+ * A skill version's colour as a reader says it: "white", "gold", "unique" or
+ * "evolved". The guide's hover card shows this rather than the API's
+ * `version` ("○ white", "◎ gold"): the circles read as noise there (Daptrius,
+ * 2026-10-17), and a ○/◎ white already carries its circle in its name. The
+ * team builder keeps `version`, where "as ○ white" vs "as ◎ white" matters.
+ */
+export function skillColour(skill: { rarity: number; is_evolved: boolean }): string {
+	if (skill.is_evolved) return "evolved"
+	if (skill.rarity === GOLD_SKILL_RARITY) return "gold"
+	if (skill.rarity === WHITE_SKILL_RARITY) return "white"
+	return "unique"
+}
 
 /**
  * Does a source teaching `version` give a team the pick `skill`?

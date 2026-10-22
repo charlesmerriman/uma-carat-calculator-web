@@ -11,7 +11,7 @@ import type { RaceEvent } from "../types"
 // as a sentinel rather than an absent value: text fields are seeded with "TBD".
 // Keep each slot visible and translate the sentinel into a useful, consistent
 // pending state.
-export function isTrackDetailAvailable(value: string | null | undefined): boolean {
+function isTrackDetailAvailable(value: string | null | undefined): boolean {
 	if (value == null) return false
 	const trimmed = value.trim()
 	return trimmed !== "" && trimmed.toUpperCase() !== "TBD"

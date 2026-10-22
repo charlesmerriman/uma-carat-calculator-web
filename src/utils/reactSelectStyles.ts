@@ -14,14 +14,6 @@ import type { CSSObjectWithLabel, StylesConfig } from "react-select"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyOptionStyles = StylesConfig<any, false>
 
-/** Standard dark text override for react-select options */
-export const darkTextStyles: AnyOptionStyles = {
-	option: (provided: CSSObjectWithLabel) => ({
-		...provided,
-		color: "#000"
-	})
-}
-
 /**
  * Compact react-select styles for use in the banner row.
  * Reduces height, font size, and padding to fit the narrow layout.

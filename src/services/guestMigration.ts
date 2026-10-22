@@ -40,6 +40,7 @@ export const DEFAULT_GUEST_STATS: UserStats = {
 	// On by default to mirror the source sheet (and the backend model default),
 	// so guest estimates match the sheet out of the box.
 	misc_earnings: true,
+	custom_misc_earnings_monthly: null,
 	// All four projection toggles ship on, matching the backend model defaults.
 	monthly_shop_tickets: true,
 	// null = the default purchase, the same as the backend's NULL default.

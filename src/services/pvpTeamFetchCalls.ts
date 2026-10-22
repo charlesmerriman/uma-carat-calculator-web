@@ -40,11 +40,6 @@ export function loadPvpCatalogue(): Promise<PvpCatalogue> {
 	return cataloguePromise
 }
 
-/** Test hook: forget the cached catalogue. */
-export function clearPvpCatalogueCache(): void {
-	cataloguePromise = null
-}
-
 export function pvpTeamsFetch(): Promise<Response> {
 	return fetch(`${API_URL}/pvp-teams`, { method: "GET", headers: jsonHeaders() })
 }

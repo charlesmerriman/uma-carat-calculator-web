@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
+import NumberFlow from "@number-flow/react"
 import Select from "react-select"
 import type { SingleValue, CSSObjectWithLabel, StylesConfig } from "react-select"
 import { Trophy, Gift, Diamond, TrendingUp, Sword, Crown, Carrot, Dumbbell, Ticket, Star, Sparkles, ChevronDown } from "lucide-react"
@@ -853,6 +854,16 @@ export const IncomeForm = () => {
 							    @income-wide): five tiles across a half-width column would be
 							    about 100px each. The old 2-column step keyed to 640 to 1280px
 							    of VIEWPORT is gone; the middle layout is keyed to the panel. */}
+							{/* The figures roll to their new value when an input changes
+							    (NumberFlow). No `locales` / `format`, on purpose: NumberFlow
+							    then formats with the browser's default Intl.NumberFormat,
+							    which is what `toLocaleString()` printed here before, so
+							    separators are unchanged. It honours "reduce motion" by
+							    default (respectMotionPreference) and snaps instead, and it
+							    never animates on first paint, only on a change. No
+							    NumberFlowGroup: each figure sits in its own grid cell, so one
+							    growing a digit never moves another, which is the only thing
+							    a group coordinates. */}
 							<div className="mx-auto w-full max-w-[34rem] flex-1 grid grid-cols-1 overflow-hidden rounded-lg border border-gray-700 @income-wide:max-w-none @income-wide:grid-cols-5">
 								{monthlyItems.map((item) => (
 									<div
@@ -862,7 +873,7 @@ export const IncomeForm = () => {
 										<span className="min-w-0 text-xs text-gray-400 leading-tight @income-wide:text-center">{item.label}</span>
 										<div className="flex shrink-0 items-center gap-1.5 @income-wide:w-full @income-wide:justify-center">
 											<span className="text-brand">{item.icon}</span>
-											<span className="text-lg font-bold text-gray-100 @income-wide:text-2xl">{item.value.toLocaleString()}</span>
+											<NumberFlow value={item.value} className="text-lg font-bold text-gray-100 @income-wide:text-2xl" />
 										</div>
 									</div>
 								))}

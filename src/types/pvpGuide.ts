@@ -13,6 +13,13 @@
 /** A running style as a guide uses it. "everyone" is the whole team. */
 export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end"
 
+/**
+ * A tab of the guide's running-style strip: one style, or "all" of them on
+ * one screen, the way the source sheet lays a guide out (Henry, 2026-10-21).
+ * Only the guide's tabs take "all"; a team's member is always one PvpStyle.
+ */
+export type PvpStyleTab = Exclude<PvpStyle, "everyone"> | "all"
+
 export type PvpSkillCategory = "acceleration" | "speed" | "green" | "recovery" | "debuff" | "other"
 
 /** Small embedded catalogue objects. Ids are the site's, not the game's. */
@@ -129,6 +136,8 @@ export interface PvpDeck {
 	style: PvpStyle
 	label: string
 	note: string
+	/** Drawn in a gold box, to set it apart (the sheet's Honorable Mentions row). */
+	is_highlighted: boolean
 	/** Sorted by slot, then order. */
 	slots: PvpDeckSlot[]
 }
@@ -163,4 +172,9 @@ export interface PvpGuide {
 	 * plain name. Optional: an older API omits it.
 	 */
 	skill_mentions?: Record<string, PvpSkillRef>
+	/**
+	 * Visible comments per section: "" for the whole guide, else a running
+	 * style. A section with none is absent. Optional: an older API omits it.
+	 */
+	comment_counts?: Record<string, number>
 }

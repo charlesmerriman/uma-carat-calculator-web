@@ -160,7 +160,7 @@ Each is a closed form from `today` to the banner's end date `E`.
 | Daily Carat Pack | Daily drip (free) + a lump per cycle (paid) | `AR42`/`AZ42` |
 | Champions Meeting / LoH | Count of ledger rows × the user's rank payout | `AS42`/`AT42` |
 | 50-day login + Valentine's + White Day | Completed cycles, plus each gift the window reaches | `AU42` |
-| Misc earnings | Daily drip after a ramp-in; **monthly** figure ÷ 30 | `AV42` |
+| Misc earnings | Daily drip after a ramp-in; **monthly** figure ÷ 30 (the player's own `custom_misc_earnings_monthly` when set, else the constant; `miscEarningsMonthly`) | `AV42` |
 | Event lump rewards | Ledger rows with `now ≤ date ≤ E` | `AL42` |
 | Throughout carats | Decay curve, evaluated once from today | `AL43` |
 | Campaign purchases | Paid carats (plus free carats for the webstore bonus), credited at the campaign's resolved **main part** start | `AM42`/`AY42` |
@@ -208,6 +208,13 @@ A flat, date-sorted row per reward instant, built server-side from `GameEvent`,
   badge shows the range over the events still ahead (`upcomingRaceRewardRange`).
   This replaced `RACE_RANK_CAPS` (2026-10-21). → backend
   `docs/income-calculation.md` ("Rewards that change with the event number")
+- **A race event pays day by day** (2026-10-22). Each race row carries `payouts` (5 instants
+  for a CM, 8 for an LoH, the last equal to `date`), and `raceDayAmounts` splits the event's
+  carats across them: the era row's `day_amounts`, else the rank's split scaled to the era's
+  total (rounded to tens, the remainder on the last day), else everything on the last day.
+  `cumulativeRaceRewards` sums the days inside the window, so a banner ending mid-LoH gets the
+  days already paid; tickets and shards still come with the last day. → backend
+  `docs/income-calculation.md` ("Rewards paid day by day")
 - **A skipped race event is removed from the ledger, once, upstream of every
   consumer.** The player turns "Taking part" off on the Timeline card; that writes
   `skipped_race_events` on the stats block (`{champions_meeting: [ids],

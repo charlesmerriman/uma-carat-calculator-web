@@ -23,5 +23,3 @@ export function BannerArtPlaceholder({ className = "" }: { className?: string })
 		</div>
 	)
 }
-
-export default BannerArtPlaceholder

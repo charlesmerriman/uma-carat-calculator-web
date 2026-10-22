@@ -53,6 +53,11 @@ export type TeamTrailsRank = TeamTrialsRank
 export interface RaceRankReward {
 	from_event_number: number
 	income_amount: number
+	/**
+	 * Carats per payout day, adding up to `income_amount`. Empty: the rank's
+	 * own split, scaled (`raceDayAmounts`). Absent from an older API.
+	 */
+	day_amounts?: number[]
 }
 
 export interface ChampionsMeetingRank {
@@ -64,6 +69,11 @@ export interface ChampionsMeetingRank {
 	support_ticket_amount: number
 	ssr_shard_amount: number
 	sr_shard_amount: number
+	/**
+	 * Carats per payout day, adding up to `income_amount` (`raceDayAmounts`).
+	 * Empty: everything on the last day. Absent from an older API.
+	 */
+	day_amounts?: number[]
 	/** Ascending. Absent from an API older than the field. */
 	rewards?: RaceRankReward[]
 }
@@ -77,6 +87,11 @@ export interface LeagueOfHeroesRank {
 	support_ticket_amount: number
 	ssr_shard_amount: number
 	sr_shard_amount: number
+	/**
+	 * Carats per payout day, adding up to `income_amount` (`raceDayAmounts`).
+	 * Empty: everything on the last day. Absent from an older API.
+	 */
+	day_amounts?: number[]
 	/** Ascending. Absent from an API older than the field. */
 	rewards?: RaceRankReward[]
 }

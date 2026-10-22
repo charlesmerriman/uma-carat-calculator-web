@@ -153,6 +153,13 @@ describe("hydrateGuide", () => {
 		expect(guide.uma_recommendations.some((row) => row.uma.id === 999)).toBe(false)
 		expect(guide.decks.map((deck) => deck.id)).toEqual([90, -2])
 	})
+
+	it("reads a deck's gold box, unboxed when the document predates it", () => {
+		const doc = document()
+		doc.decks.push({ id: null, style: "pace", label: "Honorable Mentions", note: "", is_highlighted: true, slots: [] })
+		const guide = hydrateGuide(doc, INDEX, SCENARIOS, null)
+		expect(guide.decks.map((deck) => deck.is_highlighted)).toEqual([false, true])
+	})
 })
 
 describe("validateDocument", () => {

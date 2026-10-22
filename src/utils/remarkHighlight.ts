@@ -18,6 +18,9 @@
  * A lone `=` and `a == b` with spaces are left alone: a highlight needs at
  * least one character that is not `=` or a newline between the pairs. A
  * mention inside a highlight (`==Take [[Groundwork]]==`) is still a mention.
+ *
+ * One more reading on top: a mention followed by "& Scenario Link" is flagged
+ * `scenarioLink` (see SCENARIO_LINK_AFTER), so it can be marked out.
  */
 
 const TOKEN = /==([^=\n]+)==|\[\[([^[\]\n]+)\]\]/g
@@ -26,7 +29,9 @@ const MENTION = /\[\[([^[\]\n]+)\]\]/g
 export type NotePiece =
 	| { kind: "text"; text: string }
 	| { kind: "highlight"; pieces: NotePiece[] }
-	| { kind: "skill"; name: string }
+	// `scenarioLink` is set (true) only on a flagged mention, so pieces
+	// compare equal to a plain `{ kind, name }` everywhere else.
+	| { kind: "skill"; name: string; scenarioLink?: true }
 
 function splitMentions(text: string): NotePiece[] {
 	const pieces: NotePiece[] = []
@@ -41,8 +46,49 @@ function splitMentions(text: string): NotePiece[] {
 	return pieces
 }
 
+/**
+ * What follows a skill that the guide means as "this skill, from the Scenario
+ * Link" (Daptrius, 2026-10-17): a chain of "& ..." clauses that includes
+ * "Scenario Link". The live guides write it three ways, all matched:
+ *   ==[[See Ya Later!]] & Scenario Link==
+ *   [[See Ya Later!]] ==& Scenario Link==
+ *   ==[[Unstoppable]] & 2SP & Scenario Link==
+ * and `[[Sharp Streak]] ==& 1SP==` (no Scenario Link) stays a plain mention.
+ */
+const SCENARIO_LINK_AFTER = /^\s*(?:&[^&]*?)*&\s*scenario link\b/i
+
+/**
+ * Flags each mention whose following text, up to the next mention and read
+ * across highlight edges, matches SCENARIO_LINK_AFTER. Mutates the pieces.
+ */
+function flagScenarioLinks(pieces: NotePiece[]): NotePiece[] {
+	// The note in reading order, highlights flattened: mentions and text.
+	const leaves: NotePiece[] = []
+	const walk = (list: NotePiece[]) => {
+		for (const piece of list) {
+			if (piece.kind === "highlight") walk(piece.pieces)
+			else leaves.push(piece)
+		}
+	}
+	walk(pieces)
+	leaves.forEach((leaf, index) => {
+		if (leaf.kind !== "skill") return
+		let after = ""
+		for (const next of leaves.slice(index + 1)) {
+			if (next.kind !== "text") break
+			after += next.text
+		}
+		if (SCENARIO_LINK_AFTER.test(after)) leaf.scenarioLink = true
+	})
+	return pieces
+}
+
 /** "Take ==[[Groundwork]] first==" -> text, then a highlight holding a skill and text. */
 export function splitNoteText(text: string): NotePiece[] {
+	return flagScenarioLinks(splitTokens(text))
+}
+
+function splitTokens(text: string): NotePiece[] {
 	const pieces: NotePiece[] = []
 	let last = 0
 	for (const match of text.matchAll(TOKEN)) {
@@ -90,7 +136,10 @@ function toNodes(pieces: NotePiece[]): MdNode[] {
 		if (piece.kind === "skill") {
 			return {
 				type: "skillMention",
-				data: { hName: "span", hProperties: { dataSkill: piece.name } },
+				data: {
+					hName: "span",
+					hProperties: piece.scenarioLink ? { dataSkill: piece.name, dataScenarioLink: "" } : { dataSkill: piece.name },
+				},
 				children: [{ type: "text", value: piece.name }],
 			}
 		}

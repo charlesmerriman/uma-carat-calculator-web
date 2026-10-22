@@ -133,8 +133,10 @@ export const Navbar = () => {
 	// scroller, which left the document-scrolled pages with a bar that scrolled
 	// away. html's `scroll-padding-top` (index.css) carries this bar's height so
 	// jump links and deep links land below it rather than under it.
+	// `data-sticky-navbar` is how the PvP page measures it, to pin its own
+	// tabs under it (hooks/usePvpStickyOffsets.ts).
 	return (
-		<div className="sticky top-0 z-50 shrink-0">
+		<div className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
 			{/* Mobile nav */}
 			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
 				<div className="flex h-14 items-center justify-between gap-3 px-3">

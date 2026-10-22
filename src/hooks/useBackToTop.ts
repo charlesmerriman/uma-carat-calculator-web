@@ -31,7 +31,7 @@ import type { RefObject } from "react"
  * undo a flick of the wheel, close enough that it's already there by the time
  * the header is out of sight.
  */
-export const BACK_TO_TOP_THRESHOLD_PX = 400
+const BACK_TO_TOP_THRESHOLD_PX = 400
 
 export type BackToTop = {
 	/** Park this on an empty node at the very top of the page's content. */

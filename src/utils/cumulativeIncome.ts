@@ -132,15 +132,36 @@ export function cumulativeClubRankCarats(
  *
  * Note the daily figure is derived from a MONTHLY constant, floored — matching
  * the sheet, which stores the monthly total and divides.
+ *
+ * `custom` is the player's own monthly figure (custom_misc_earnings_monthly).
+ * Optional, and absent or null means the site's estimate, the same shape as the
+ * shop ticket counts. It replaces only the amount: the ramp-in still applies,
+ * because the player's typed balance already holds what they earned lately.
  */
 export function cumulativeMiscEarningsCarats(
 	today: Date,
 	end: Date,
-	k: CalculationConstants
+	k: CalculationConstants,
+	custom?: number | null
 ): number {
 	const days = utcDaysBetween(addUtcDays(today, k.misc_earnings_delay_days), end)
 	if (days <= 0) return 0
-	return days * Math.floor(k.misc_earnings_monthly / 30)
+	return days * Math.floor(miscEarningsMonthly(custom, k) / 30)
+}
+
+/**
+ * The monthly misc earnings figure the projection uses: the player's own when
+ * they set one, otherwise the admin-editable estimate. Everything that shows or
+ * spends this number reads it here, so the settings blurb and the projection
+ * can't disagree. Floored at 0 for a negative that slipped past the server.
+ */
+export function miscEarningsMonthly(
+	custom: number | null | undefined,
+	k: CalculationConstants
+): number {
+	return custom === null || custom === undefined
+		? k.misc_earnings_monthly
+		: Math.max(0, custom)
 }
 
 /**

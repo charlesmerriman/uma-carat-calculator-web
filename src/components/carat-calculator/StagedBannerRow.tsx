@@ -166,10 +166,10 @@ export const StagedBannerRow = ({
 		: getPullCountStatus(stagedBanner.number_of_pulls, Infinity)
 	const countStatusHint = isStepUp
 		? countStatus === "ok"
-			? "A completed ladder: every carat bought a full banner, guarantee included"
-			: `Stops part-way up a ladder (${STEPS_PER_ROUND} steps complete one)`
+			? `A completed round (${STEPS_PER_ROUND} steps)`
+			: `Stops partway through a round (${STEPS_PER_ROUND} steps)`
 		: countStatus === "ok"
-		? "On a pity threshold, with no carats left in a partial counter"
+		? `On a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 		: `Not on a pity threshold (a multiple of ${PULLS_PER_PITY_COPY} pulls)`
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"
 

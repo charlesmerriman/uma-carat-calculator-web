@@ -14,17 +14,23 @@
  * the superset of the sheet's two formats, and most guides fill only one.
  */
 
+import { useEffect, useRef } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
-import { InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
+import { GuideComments } from "./GuideComments"
+import { guideCommentCount } from "../../services/guideComments"
+import { AlternateCard, InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
 import {
+	ALL_STYLES_LABEL,
+	ALL_STYLES_TAB,
 	SKILL_CATEGORY_LABELS,
 	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
 	groupSkillsByTier,
 	pickStyle,
 	skillsForPosition,
+	styleTabs,
 	stylesWithContent,
 } from "../../utils/pvpGuide"
 import type {
@@ -35,6 +41,7 @@ import type {
 	PvpSkillRecommendation,
 	PvpStatConfig,
 	PvpStyle,
+	PvpStyleTab,
 } from "../../types/pvpGuide"
 
 const SECTION = "rounded-xl border border-edge bg-gray-800/60 p-3"
@@ -43,7 +50,9 @@ const SUBHEADING = "text-sm font-semibold text-brand"
 const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
 
 // Module scope, so MarkdownContent's memoised components keep one identity.
-const renderSkill = (name: string) => <SkillMention name={name} />
+const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
+	<SkillMention name={name} scenarioLink={scenarioLink} />
+)
 
 // The category labels and order are shared with the team builder's skills
 // panel: utils/pvpGuide.ts SKILL_CATEGORY_LABELS / SKILL_CATEGORY_ORDER.
@@ -201,12 +210,17 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	)
 }
 
-/** A deck's six slots. Alternatives stack under their slot as an "or". */
+/**
+ * A deck's six slots. Alternatives stack under their slot as an "or". A deck
+ * the editor gave the gold box is drawn inside one, to set it apart (Henry,
+ * 2026-10-22, for the Honorable Mentions row): the recommended gold, a theme
+ * token, so it reads on light themes too.
+ */
 function DeckGrid({ deck }: { deck: PvpDeck }) {
 	const slots = new Map<number, PvpDeckSlot[]>()
 	for (const row of deck.slots) slots.set(row.slot, [...(slots.get(row.slot) ?? []), row])
 	return (
-		<div>
+		<div className={deck.is_highlighted ? "rounded-xl border-2 border-recommended p-2 sm:p-3" : undefined}>
 			<div className="flex flex-wrap items-baseline gap-2">
 				<span className="rounded-full border border-brand/50 bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
 					{deck.label}
@@ -228,12 +242,7 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 								<div className="aspect-square w-full rounded-lg border border-dashed border-gray-700" aria-hidden="true" />
 							)}
 							{alternates.map((alt, index) => (
-								<div key={index} className="text-center text-[11px] leading-tight text-gray-400">
-									{alt.support_card ? (
-										<>or <span className="text-gray-200">{alt.support_card.name}</span> </>
-									) : null}
-									<InlineNote text={alt.note} />
-								</div>
+								<AlternateCard key={index} card={alt.support_card} note={alt.note} />
 							))}
 						</div>
 					)
@@ -279,10 +288,14 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 	)
 }
 
+function tabLabel(tab: PvpStyleTab): string {
+	return tab === ALL_STYLES_TAB ? ALL_STYLES_LABEL : STYLE_LABELS[tab]
+}
+
 function StyleTabs({ styles, active, onChange, label }: {
-	styles: PvpStyle[]
-	active: PvpStyle
-	onChange: (style: PvpStyle) => void
+	styles: PvpStyleTab[]
+	active: PvpStyleTab
+	onChange: (style: PvpStyleTab) => void
 	label: string
 }) {
 	return (
@@ -300,7 +313,7 @@ function StyleTabs({ styles, active, onChange, label }: {
 							: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 					}`}
 				>
-					{STYLE_LABELS[style]}
+					{tabLabel(style)}
 				</button>
 			))}
 		</div>
@@ -309,19 +322,57 @@ function StyleTabs({ styles, active, onChange, label }: {
 
 function StyleColumn({ guide, styles, style, onStyleChange }: {
 	guide: PvpGuide
-	styles: PvpStyle[]
-	style: PvpStyle | null
-	onStyleChange: (style: PvpStyle) => void
+	styles: Array<Exclude<PvpStyle, "everyone">>
+	style: PvpStyleTab | null
+	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
 	// it). A guide without that style shows its first, and the pick is kept.
 	const shown = pickStyle(styles, style) ?? styles[0]
 	return (
 		<div className="flex min-w-0 flex-col gap-3">
-			<StyleTabs styles={styles} active={shown} onChange={onStyleChange} label="Running style" />
-			<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
-				<StylePane guide={guide} style={shown} />
+			{/* Pinned under the View tabs while this style's column scrolls by
+			    (Daptrius, 2026-10-22). The opaque strip behind the tabs' own
+			    see-through box keeps the page from showing through it. */}
+			<div className="sticky top-(--pvp-below-tabs,0px) z-10 -mt-1 bg-gray-900 pt-1">
+				<StyleTabs styles={styleTabs(styles)} active={shown} onChange={onStyleChange} label="Running style" />
 			</div>
+			{shown === ALL_STYLES_TAB ? (
+				// Every style on one screen, the way the source sheet lays a guide
+				// out (Henry, 2026-10-21): a box per style, two abreast from lg.
+				// Two, not four: four columns left a deck's six cards about 50px
+				// wide, too small to tell apart.
+				<div role="tabpanel" aria-label={ALL_STYLES_LABEL} className="grid items-start gap-3 lg:grid-cols-2">
+					{styles.map((each) => (
+						<section key={each} className={SECTION} aria-label={STYLE_LABELS[each]}>
+							<h3 className={`mb-2 ${HEADING}`}>{STYLE_LABELS[each]}</h3>
+							<StylePane guide={guide} style={each} />
+							{/* The thread lives on the style's own tab; here, its count
+							    and the way there. */}
+							<button
+								type="button"
+								onClick={() => onStyleChange(each)}
+								className="mt-4 w-full border-t border-gray-700/70 pt-3 text-left text-sm font-semibold text-gray-300 transition hover:text-gray-100"
+							>
+								Comments ({guideCommentCount(guide, each)}) on the {STYLE_LABELS[each]} tab
+							</button>
+						</section>
+					))}
+				</div>
+			) : (
+				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
+					<StylePane guide={guide} style={shown} />
+					{/* Its own thread per style (Henry, 2026-10-21); keyed so a new
+					    tab opens folded. */}
+					<GuideComments
+						key={shown}
+						guide={guide}
+						section={shown}
+						placeholder={`Ask a question about ${STYLE_LABELS[shown]}, or share what worked`}
+						className="mt-4 border-t border-gray-700/70 pt-3"
+					/>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -332,8 +383,8 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
  */
 export function PvpGuideView({ guide, style, onStyleChange }: {
 	guide: PvpGuide
-	style: PvpStyle | null
-	onStyleChange: (style: PvpStyle) => void
+	style: PvpStyleTab | null
+	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	const styles = stylesWithContent(guide)
 	// General skills (style "everyone") are team-wide, like the stats, so
@@ -343,6 +394,18 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
 	const hasSide =
 		hasOverview || generalSkills.length > 0 || guide.team_comps.length > 0 || guide.stat_configs.length > 0
+
+	// The side column's height, for .pvp-side-sticky (App.css): pinned when it
+	// fits on screen, scrolled with the page to its end when it doesn't.
+	const sideRef = useRef<HTMLElement>(null)
+	useEffect(() => {
+		const side = sideRef.current
+		// No ResizeObserver in jsdom; every browser the site supports has one.
+		if (!side || typeof ResizeObserver === "undefined") return
+		const observer = new ResizeObserver(() => side.style.setProperty("--pvp-side-h", `${side.offsetHeight}px`))
+		observer.observe(side)
+		return () => observer.disconnect()
+	}, [hasSide])
 
 	return (
 		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
@@ -362,7 +425,7 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 				}
 			>
 				{hasSide && (
-					<aside className="flex min-w-0 flex-col gap-4" aria-label="For the whole team">
+					<aside ref={sideRef} className="pvp-side-sticky flex min-w-0 flex-col gap-4" aria-label="For the whole team">
 						{hasOverview && (
 							<section className={SECTION} aria-labelledby="pvp-overview">
 								<h3 id="pvp-overview" className={HEADING}>Overview</h3>
@@ -418,6 +481,9 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 
 						{guide.stat_configs.length > 0 && <StatConfigTable rows={guide.stat_configs} />}
 
+						<div className={SECTION}>
+							<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
+						</div>
 					</aside>
 				)}
 
@@ -425,9 +491,18 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} />
 				)}
 			</div>
+			{/* A guide with no side column still has a thread for the whole guide. */}
+			{!hasSide && (
+				<div className={SECTION}>
+					<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
+				</div>
+			)}
 		</div>
 		</SkillMentionsContext.Provider>
 	)
 }
 
 const EMPTY_MENTIONS = {}
+
+// The whole guide's thread (section ""), in the side column.
+const WHOLE_GUIDE_PROMPT = "Ask about this guide, or share what worked"

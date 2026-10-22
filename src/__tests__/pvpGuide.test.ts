@@ -13,6 +13,10 @@ import {
 	stylesWithContent,
 	familySources,
 	skillFamilyIds,
+	skillColour,
+	parsePvpStyle,
+	pickStyle,
+	styleTabs,
 } from "../utils/pvpGuide"
 import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
@@ -135,6 +139,22 @@ describe("splitNoteText", () => {
 			{ kind: "text", text: ", " },
 			{ kind: "highlight", pieces: [{ kind: "text", text: "then " }, { kind: "skill", name: "Final Push" }] },
 		])
+	})
+	const flagged = (note: string) =>
+		splitNoteText(note).flatMap((piece) => (piece.kind === "highlight" ? piece.pieces : [piece]))
+			.filter((piece) => piece.kind === "skill" && piece.scenarioLink)
+			.map((piece) => (piece.kind === "skill" ? piece.name : ""))
+
+	it("flags a skill followed by '& Scenario Link', in each way the guides write it", () => {
+		expect(flagged("==[[See Ya Later!]] & Scenario Link==")).toEqual(["See Ya Later!"])
+		expect(flagged("[[See Ya Later!]] ==& Scenario Link==")).toEqual(["See Ya Later!"])
+		expect(flagged("==[[Unstoppable]] & 2SP & Scenario Link==")).toEqual(["Unstoppable"])
+	})
+
+	it("leaves other '&' notes and other skills alone", () => {
+		expect(flagged("[[Sharp Streak]] ==& 1SP==")).toEqual([])
+		expect(flagged("==Scenario Link==")).toEqual([])
+		expect(flagged("[[Groundwork]] then [[See Ya Later!]] & Scenario Link")).toEqual(["See Ya Later!"])
 	})
 })
 
@@ -276,5 +296,33 @@ describe("guideSkillsByCategory", () => {
 
 	it("lists the positions with skills, without everyone", () => {
 		expect(skillPositions(guide)).toEqual(["front", "pace", "late", "end"])
+	})
+})
+
+describe("skillColour", () => {
+	it("names the colour from rarity, never from the circles in the label", () => {
+		expect(skillColour({ rarity: 1, is_evolved: false })).toBe("white")
+		expect(skillColour({ rarity: 2, is_evolved: false })).toBe("gold")
+		expect(skillColour({ rarity: 5, is_evolved: false })).toBe("unique")
+		expect(skillColour({ rarity: 2, is_evolved: true })).toBe("evolved")
+	})
+})
+
+describe("the All style tab", () => {
+	it("reads ?style=all, and still refuses everyone and junk", () => {
+		expect(parsePvpStyle("all")).toBe("all")
+		expect(parsePvpStyle("pace")).toBe("pace")
+		expect(parsePvpStyle("everyone")).toBeNull()
+		expect(parsePvpStyle("nope")).toBeNull()
+	})
+
+	it("is offered only beside two or more styles", () => {
+		expect(styleTabs(["front", "end"])).toEqual(["all", "front", "end"])
+		expect(styleTabs(["pace"])).toEqual(["pace"])
+	})
+
+	it("keeps All where it is offered, and falls back to the first style where it isn't", () => {
+		expect(pickStyle(["front", "end"], "all")).toBe("all")
+		expect(pickStyle(["pace"], "all")).toBe("pace")
 	})
 })
