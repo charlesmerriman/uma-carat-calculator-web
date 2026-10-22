@@ -23,7 +23,7 @@ import type { CatalogueUma, MemberStyle, PvpTeamMember } from "../../../types/pv
  * The tier chip: the tier's NAME on the look's colours. The name is the
  * signal, so it never rests on colour alone. Nothing at all without a tier.
  */
-export function TierChip({ poster }: { poster: GalleryPoster }) {
+function TierChip({ poster }: { poster: GalleryPoster }) {
 	if (!poster.tier_name || !poster.gallery_style) return null
 	return (
 		<span className="gallery-chip" data-gallery-style={poster.gallery_style}>

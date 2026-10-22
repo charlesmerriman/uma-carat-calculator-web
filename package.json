@@ -37,7 +37,6 @@
     "lucide-react": "^1.14.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-hook-form": "^7.68.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.11.0",
     "react-select": "^5.10.2",

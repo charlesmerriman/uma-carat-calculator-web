@@ -37,7 +37,7 @@ export const PVP_TEAM_CAP_PER_EVENT = 5
 export const MEMBER_STYLES: MemberStyle[] = ["runaway", "front", "pace", "late", "end"]
 
 /** Uma.running_style (1 front, 2 pace, 3 late, 4 end) -> the style a new member starts on. */
-export function defaultStyleFor(uma: Pick<CatalogueUma, "running_style">): MemberStyle {
+function defaultStyleFor(uma: Pick<CatalogueUma, "running_style">): MemberStyle {
 	switch (uma.running_style) {
 		case 2:
 			return "pace"

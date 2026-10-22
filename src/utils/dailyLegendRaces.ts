@@ -169,7 +169,7 @@ export function releaseByUmaId<T extends DailyLegendRaceRelease>(releases: T[]):
 }
 
 /** The Legend Races route. */
-export const LEGEND_RACES_PATH = "/app/legend-races"
+const LEGEND_RACES_PATH = "/app/legend-races"
 
 /**
  * The query parameter naming one release card, for the Timeline note's

@@ -100,9 +100,9 @@ export interface CaratForecast {
 }
 
 /** How far past the last banner the line keeps going, in days. */
-export const FORECAST_TAIL_DAYS = 30
+const FORECAST_TAIL_DAYS = 30
 /** The shortest span the chart ever draws, in days, so one near banner isn't a stub. */
-export const FORECAST_MIN_DAYS = 60
+const FORECAST_MIN_DAYS = 60
 /**
  * The most daily samples the line takes. Past this the step widens (two
  * days, three days...), so a plan reaching years out still costs a few hundred

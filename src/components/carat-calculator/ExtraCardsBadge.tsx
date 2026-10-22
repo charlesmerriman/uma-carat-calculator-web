@@ -28,5 +28,3 @@ export function ExtraCardsBadge({ hidden }: { hidden: number }) {
 		</span>
 	)
 }
-
-export default ExtraCardsBadge

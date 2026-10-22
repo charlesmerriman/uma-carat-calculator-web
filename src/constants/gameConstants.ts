@@ -18,19 +18,19 @@ import type { CalculationConstants } from "../types/constants"
 // ── Daily income ──────────────────────────────────────────────────────────────
 
 /** Base carats awarded every day just for logging in. */
-export const DAILY_BASE_CARATS = 75
+const DAILY_BASE_CARATS = 75
 
 /**
  * Extra carats awarded on certain weekday offsets from the reference date.
  * Applies on days where (daysSinceReference % 7) is 0, 3, or 5.
  */
-export const WEEKDAY_BONUS_CARATS = 25
+const WEEKDAY_BONUS_CARATS = 25
 
 /**
  * Additional bonus on the "weekend" offset day (daysSinceReference % 7 === 6).
  * Stacks with DAILY_BASE_CARATS for a total of 150 on that day.
  */
-export const WEEKEND_BONUS_CARATS = 75
+const WEEKEND_BONUS_CARATS = 75
 
 /** Daily carats from the paid Daily Carat Pack, awarded per day when active. */
 export const DAILY_CARAT_PACK_PER_DAY = 50
@@ -51,7 +51,7 @@ export const DAILY_CARAT_PACK_PAID_CARATS = 500
  * reflected in their current paid-carat balance, so the first *modeled* payout
  * is the repurchase 30 days out, then one every 30 days after.
  */
-export const DAILY_CARAT_PACK_CYCLE_DAYS = 30
+const DAILY_CARAT_PACK_CYCLE_DAYS = 30
 
 // ── Monthly approximations ────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ export const MISC_EARNINGS_DELAY_DAYS = 30
 export const FIFTY_DAY_LOGIN_PER_CYCLE = 150
 
 /** Length of one 50-day login campaign, in days. */
-export const FIFTY_DAY_LOGIN_CYCLE_DAYS = 50
+const FIFTY_DAY_LOGIN_CYCLE_DAYS = 50
 
 // ── Annual events ─────────────────────────────────────────────────────────────
 
@@ -108,8 +108,8 @@ export const FIFTY_DAY_LOGIN_CYCLE_DAYS = 50
  * calculateAnnualDateOccurrences compares against — 1 is February, not January.
  */
 export const VALENTINES_CARATS = 500
-export const VALENTINES_MONTH = 1
-export const VALENTINES_DAY = 14
+const VALENTINES_MONTH = 1
+const VALENTINES_DAY = 14
 
 /**
  * Carats gifted on White Day (March 14) — the reciprocal gift the game pairs
@@ -127,8 +127,8 @@ export const VALENTINES_DAY = 14
  * Month is 0-indexed like VALENTINES_MONTH above — 2 is March.
  */
 export const WHITE_DAY_CARATS = 500
-export const WHITE_DAY_MONTH = 2
-export const WHITE_DAY_DAY = 14
+const WHITE_DAY_MONTH = 2
+const WHITE_DAY_DAY = 14
 
 // ── Game event "throughout" carats ────────────────────────────────────────────
 //
@@ -149,7 +149,7 @@ export const WHITE_DAY_DAY = 14
  *
  * Delete this with `useBannerResources`.
  */
-export const GAME_EVENT_END_DATE_BUFFER_DAYS = 4
+const GAME_EVENT_END_DATE_BUFFER_DAYS = 4
 
 /**
  * Extra days trimmed off the banner's end before the decay curve is measured,
@@ -159,7 +159,7 @@ export const GAME_EVENT_END_DATE_BUFFER_DAYS = 4
  * Mirrors the source sheet's `end_date - ('Carat Calculator'!$G$25 + 1)`, where
  * G25 is its "Filter End Date / Days" setting (3, so the offset is 4).
  */
-export const THROUGHOUT_END_OFFSET_DAYS = 4
+const THROUGHOUT_END_OFFSET_DAYS = 4
 
 /**
  * Grace period on the crediting filter: a banner's throughout carats count
@@ -200,15 +200,15 @@ export const DISCOUNTED_PULL_COST_CARATS = 50
  * these are credited each month at no carat cost.
  */
 export const MONTHLY_SHOP_UMA_TICKETS = 4
-export const MONTHLY_SHOP_SUPPORT_TICKETS = 4
+const MONTHLY_SHOP_SUPPORT_TICKETS = 4
 
 /**
  * The most the shop sells in a month. The two above are what the projection
  * ASSUMES a player buys (the sheet's figure); these only cap a count the
  * player sets themselves.
  */
-export const MONTHLY_SHOP_UMA_TICKETS_MAX = 9
-export const MONTHLY_SHOP_SUPPORT_TICKETS_MAX = 9
+const MONTHLY_SHOP_UMA_TICKETS_MAX = 9
+const MONTHLY_SHOP_SUPPORT_TICKETS_MAX = 9
 
 /**
  * Day of the month the shop stocks the bundle. Deliberately NOT the 1st: these
@@ -216,7 +216,7 @@ export const MONTHLY_SHOP_SUPPORT_TICKETS_MAX = 9
  * which credited them a day early and could hand a banner ending on the 1st a
  * bundle it can't actually buy yet.
  */
-export const MONTHLY_SHOP_TICKET_DAY = 2
+const MONTHLY_SHOP_TICKET_DAY = 2
 
 // ── Training Pass monthly reward ──────────────────────────────────────────────
 
@@ -224,7 +224,7 @@ export const MONTHLY_SHOP_TICKET_DAY = 2
  * The Training Pass feature (both paid and free tiers) does not exist until
  * this date. No training pass income should be calculated before it.
  */
-export const TRAINING_PASS_START_DATE = new Date(2027, 7, 15) // August 15, 2027
+const TRAINING_PASS_START_DATE = new Date(2027, 7, 15) // August 15, 2027
 
 /**
  * The paid Training Pass's monthly carats, split across the two balances the
@@ -236,18 +236,6 @@ export const TRAINING_PASS_MONTHLY_PAID_CARATS = 350
 export const TRAINING_PASS_MONTHLY_FREE_CARATS = 1850
 
 /**
- * Total carats awarded on the 24th of each month when the Training Pass is
- * active — the headline "+2,200/mo" figure. DERIVED from the two halves above
- * so a balance change to either one can never leave the displayed total
- * disagreeing with what the projection actually credits.
- */
-export const TRAINING_PASS_MONTHLY_REWARD =
-	TRAINING_PASS_MONTHLY_FREE_CARATS + TRAINING_PASS_MONTHLY_PAID_CARATS
-
-/** Day of the month the Training Pass reward is delivered. */
-export const TRAINING_PASS_REWARD_DAY = 24
-
-/**
  * Monthly carat reward for the free tier of the Training Pass.
  * Awarded once per calendar month, but only after TRAINING_PASS_START_DATE.
  * Free carats only — the paid split above is a paid-tier perk.
@@ -255,7 +243,7 @@ export const TRAINING_PASS_REWARD_DAY = 24
 export const MONTHLY_BASE_REWARD = 500
 
 /**
- * Gacha tickets from the Training Pass, delivered on TRAINING_PASS_REWARD_DAY.
+ * Gacha tickets from the Training Pass, delivered on the 24th of the month.
  *
  * Unlike the carat reward (paid tier REPLACES the free tier's 500), the tickets
  * are additive: every account gets the FREE amount once the feature launches,
@@ -263,10 +251,10 @@ export const MONTHLY_BASE_REWARD = 500
  * per month. Kept as separate free/bonus constants rather than one "paid total"
  * so a future balance change to either tier is a single-number edit.
  */
-export const TRAINING_PASS_FREE_UMA_TICKETS = 2
-export const TRAINING_PASS_FREE_SUPPORT_TICKETS = 2
-export const TRAINING_PASS_PAID_BONUS_UMA_TICKETS = 2
-export const TRAINING_PASS_PAID_BONUS_SUPPORT_TICKETS = 2
+const TRAINING_PASS_FREE_UMA_TICKETS = 2
+const TRAINING_PASS_FREE_SUPPORT_TICKETS = 2
+const TRAINING_PASS_PAID_BONUS_UMA_TICKETS = 2
+const TRAINING_PASS_PAID_BONUS_SUPPORT_TICKETS = 2
 
 /**
  * SSR uncap shards from an ACTIVE paid Training Pass, on the same monthly clock

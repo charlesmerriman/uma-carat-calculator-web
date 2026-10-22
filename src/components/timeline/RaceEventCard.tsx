@@ -161,5 +161,3 @@ export function RaceEventCard({
 		</div>
 	)
 }
-
-export default RaceEventCard

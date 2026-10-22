@@ -62,7 +62,7 @@ export type PlannerBandVisibility = Record<PlannerMarker["kind"], boolean>
  * This module stays a pure builder: told nothing, it builds everything. WHICH
  * kinds ship is a product decision, and the call site states it.
  */
-export const ALL_BANDS_VISIBLE: PlannerBandVisibility = {
+const ALL_BANDS_VISIBLE: PlannerBandVisibility = {
 	scenario: true,
 	anniversary: true,
 }

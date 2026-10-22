@@ -35,7 +35,7 @@
 export const VERSION_PATH = "/version.json"
 
 /** Ten minutes. Each tick is one tiny request to origin per open tab. */
-export const DEFAULT_INTERVAL_MS = 10 * 60 * 1000
+const DEFAULT_INTERVAL_MS = 10 * 60 * 1000
 
 export interface UpdateWatchOptions {
 	/** The id this bundle was built with. Defaults to `__BUILD_ID__`. */
