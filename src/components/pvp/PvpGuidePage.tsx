@@ -95,7 +95,7 @@ import { PvpEarlyAccess } from "./PvpEarlyAccess"
 import { usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
-import { GalleryView } from "./gallery/GalleryView"
+import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
 import type { PvpStyleTab } from "../../types/pvpGuide"
@@ -127,6 +127,8 @@ function parseView(value: string | null, isEditor: boolean): PvpView {
 // The editor and dnd-kit are a chunk of their own, fetched the first time
 // an editor opens the tab (components/pvp/editor/loadGuideEditor.ts).
 const GuideEditor = lazy(loadGuideEditor)
+// The gallery is a chunk of its own too (gallery/loadGallery.ts).
+const GalleryView = lazy(() => loadGalleryView().then((module) => ({ default: module.GalleryView })))
 
 /** The page's own parameters, in the order an address names them. "Copy link" builds the same order. */
 const PARAM_ORDER = [PVP_EVENT_PARAM, VIEW_PARAM, PVP_STYLE_PARAM]
@@ -373,7 +375,16 @@ const PvpGuide = () => {
 							)}
 							{view === "team" && <TeamBuilder event={event} />}
 							{view === "gallery" && (
-								<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
+								<Suspense
+									fallback={
+										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading the gallery…
+										</div>
+									}
+								>
+									<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
+								</Suspense>
 							)}
 							{view === "editor" && (
 								<Suspense
@@ -394,6 +405,10 @@ const PvpGuide = () => {
 			</div>
 		</div>
 	)
+}
+
+function prefetchGallery() {
+	void loadGalleryView().catch(() => {})
 }
 
 function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boolean; onChange: (view: PvpView) => void }) {
@@ -418,6 +433,11 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 						role="tab"
 						aria-selected={active}
 						onClick={() => onChange(entry.id)}
+						// Start the gallery's chunk on the way to a click, so the
+						// tab rarely shows its loading line. A failed start just
+						// means the lazy() fetches it on render instead.
+						onPointerEnter={entry.id === "gallery" ? prefetchGallery : undefined}
+						onFocus={entry.id === "gallery" ? prefetchGallery : undefined}
 						className={`-mb-px flex min-w-0 items-center justify-center gap-1.5 border-b-2 px-2 py-2 text-sm font-semibold transition sm:px-3 ${
 							active
 								? "border-brand text-brand"

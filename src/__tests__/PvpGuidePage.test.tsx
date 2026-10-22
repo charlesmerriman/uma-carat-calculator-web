@@ -348,7 +348,8 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.getByTestId("team-builder").textContent).toBe("cm-10")
 		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=gallery")
-		expect(screen.getByTestId("gallery-view").textContent).toBe("cm-10")
+		// A chunk of its own now (gallery/loadGallery.ts), so it arrives a tick later.
+		expect((await screen.findByTestId("gallery-view")).textContent).toBe("cm-10")
 		fireEvent.click(views.getByRole("tab", { name: "Recommendations" }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10")
 	})

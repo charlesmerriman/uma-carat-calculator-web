@@ -11,13 +11,17 @@
  * the commenter is public (their display name and picture, beside it).
  */
 
-import { useState } from "react"
-import { ChevronDown, MessageSquare } from "lucide-react"
-import { GalleryComments } from "./gallery/GalleryComments"
+import { Suspense, lazy, useState } from "react"
+import { ChevronDown, Loader2, MessageSquare } from "lucide-react"
+import { loadGalleryComments } from "./gallery/loadGallery"
 import { guideCommentCount, guideRef, guideThread } from "../../services/guideComments"
 import type { PvpGuide } from "../../types/pvpGuide"
 
 /** `className` sets the frame: a rule above it by default, under a style's pane. */
+// The thread is a chunk of its own (gallery/loadGallery.ts), fetched the
+// first time a section is opened.
+const GalleryComments = lazy(() => loadGalleryComments().then((module) => ({ default: module.GalleryComments })))
+
 export function GuideComments({ guide, section, placeholder, className = "border-t border-gray-700/70 pt-3" }: {
 	guide: PvpGuide
 	section: string
@@ -40,7 +44,16 @@ export function GuideComments({ guide, section, placeholder, className = "border
 			</button>
 			{open && (
 				<div className="mt-3">
-					<GalleryComments source={guideThread(guideRef(guide), section)} heading={false} placeholder={placeholder} />
+					<Suspense
+						fallback={
+							<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
+								<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+								Loading comments…
+							</p>
+						}
+					>
+						<GalleryComments source={guideThread(guideRef(guide), section)} heading={false} placeholder={placeholder} />
+					</Suspense>
 				</div>
 			)}
 		</section>
