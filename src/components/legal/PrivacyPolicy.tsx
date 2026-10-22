@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 20, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 22, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -109,7 +109,7 @@ export const PrivacyPolicy: React.FC = () => {
 						<li>
 							A display name, if you choose one on your account page. It is shown to you,
 							and to everyone else only next to a team or comment you post in the PvP
-							gallery (see below). You can change it whenever you like, and clear it once
+							gallery, or a comment you leave on a PvP guide (see below). You can change it whenever you like, and clear it once
 							you have no team posted.
 						</li>
 						<li>
@@ -146,7 +146,9 @@ export const PrivacyPolicy: React.FC = () => {
 						Posting a team to the gallery is your choice, and the post dialog asks you to
 						agree first. Once you post, everyone can see the team, your caption and strategy, your
 						display name, your favorite character picture and, if you support us on Patreon and
-						leave it switched on, your tier. The same shows next to any comment you write.
+						leave it switched on, your tier. The same shows next to any comment you write, on a
+						team or on a PvP guide. A thumbs-up you give a comment only adds to its count: nobody
+						can see who gave it.
 					</p>
 					<ul className={list}>
 						<li>
@@ -175,7 +177,7 @@ export const PrivacyPolicy: React.FC = () => {
 					</ul>
 					<p className={paragraph}>
 						Taking a post down deletes it with its upvotes and comments. Deleting your account
-						deletes your posts, your upvotes and your comments, except that a comment someone
+						deletes your posts, your upvotes and thumbs-ups, and your comments, except that a comment someone
 						has replied to stays in its thread as &quot;[deleted]&quot;, with no text and no
 						name.
 					</p>

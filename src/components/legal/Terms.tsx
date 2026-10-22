@@ -34,7 +34,7 @@ export const Terms: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Terms of Service</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 14, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 22, 2026</p>
 
 					<p className={paragraph}>
 						These terms govern your use of the Uma Musume Carat Calculator (&quot;the
@@ -115,8 +115,8 @@ export const Terms: React.FC = () => {
 
 					<h2 className={heading}>Posting in the Gallery</h2>
 					<p className={paragraph}>
-						If you post a team or a comment in the PvP gallery, it is public, with your display
-						name and picture next to it. You agree not to post:
+						If you post a team or a comment in the PvP gallery, or a comment on a PvP guide, it
+						is public, with your display name and picture next to it. You agree not to post:
 					</p>
 					<ul className={list}>
 						<li>harassment, hate, or attacks on other players</li>
