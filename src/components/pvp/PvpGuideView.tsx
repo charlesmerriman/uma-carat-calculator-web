@@ -44,7 +44,9 @@ const SUBHEADING = "text-sm font-semibold text-brand"
 const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
 
 // Module scope, so MarkdownContent's memoised components keep one identity.
-const renderSkill = (name: string) => <SkillMention name={name} />
+const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
+	<SkillMention name={name} scenarioLink={scenarioLink} />
+)
 
 // The category labels and order are shared with the team builder's skills
 // panel: utils/pvpGuide.ts SKILL_CATEGORY_LABELS / SKILL_CATEGORY_ORDER.

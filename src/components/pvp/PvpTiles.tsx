@@ -24,7 +24,7 @@ function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 				piece.kind === "text" ? (
 					<span key={index}>{piece.text}</span>
 				) : piece.kind === "skill" ? (
-					<SkillMention key={index} name={piece.name} />
+					<SkillMention key={index} name={piece.name} scenarioLink={piece.scenarioLink} />
 				) : (
 					<mark key={index} className="bg-transparent font-semibold text-highlight">
 						<NotePieces pieces={piece.pieces} />
@@ -58,13 +58,19 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
  * note's line and crowded the card name above it. It may wrap (`max-w-full`,
  * no `nowrap`): a long name such as "Professor of Curvature" is wider than a
  * deck column, and unbreakable it ran into the next slot's note.
+ *
+ * `scenarioLink`: the guide wrote "& Scenario Link" after it (the parser
+ * decides, utils/remarkHighlight.ts), so it gets a red ring to stand out
+ * (Daptrius, 2026-10-17). A ring, not a border colour: a gold skill's
+ * .skill-gold border would win over a border utility.
  */
-export function SkillMention({ name }: { name: string }) {
+export function SkillMention({ name, scenarioLink = false }: { name: string; scenarioLink?: boolean }) {
 	const skill = useSkillMentions()[name.toLowerCase()]
 	const detailId = useId()
 	const [tapped, setTapped] = useState(false)
 	if (!skill) return <>{name}</>
 	const surface = skill.rarity === GOLD_SKILL_RARITY ? "skill-gold" : "border-gray-600 bg-gray-800 text-gray-100"
+	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
 	return (
 		<span
 			role="group"
@@ -75,7 +81,7 @@ export function SkillMention({ name }: { name: string }) {
 				if (event.pointerType === "touch") setTapped((open) => !open)
 			}}
 			onBlur={() => setTapped(false)}
-			className={`group relative inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none outline-none focus-visible:ring-2 focus-visible:ring-brand ${surface}`}
+			className={`group relative inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none outline-none focus-visible:ring-2 focus-visible:ring-brand ${surface} ${ring}`}
 		>
 			{skill.image ? (
 				<img src={skill.image} alt="" className="h-[1.1em] w-[1.1em] shrink-0" loading="lazy" decoding="async" />

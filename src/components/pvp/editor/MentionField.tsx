@@ -20,7 +20,9 @@ import { FIELD_ERROR, ICON_BUTTON, INPUT } from "./editorStyles"
 const MAX_SUGGESTIONS = 8
 
 // Module scope, so MarkdownContent's memoised components keep one identity.
-const renderSkill = (name: string) => <SkillMention name={name} />
+const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
+	<SkillMention name={name} scenarioLink={scenarioLink} />
+)
 
 /** The `[[fragment` the caret sits in, or null. */
 function openMention(value: string, caret: number): { start: number; query: string } | null {
