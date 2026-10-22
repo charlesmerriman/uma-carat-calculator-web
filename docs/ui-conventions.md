@@ -1158,6 +1158,11 @@ rows' card art both link through it, and so does the PvP page's "View on Timelin
 (`cm-<id>` / `loh-<id>`, the same form as its own `?event=`, so a `PvpEventRef` is a
 `TimelineFocus`); the Timeline resolves the target.
 
+Every Timeline card also carries a **Copy link** pill (`CopyTimelineLink`) that copies the
+same URL for itself: a banner window by its first banner, a race by its `cm`/`loh` ref, a
+marker by `kind` + `sourceId` (each half of a pair links to itself; both land on the pair).
+The URL is built in the click handler from `window.location.origin`, never at render time.
+
 - **Why not a `#hash`.** The Timeline windows its list (ten cards a page, or a growing
   prefix under infinite scroll) and hides past events by default, so the element a browser
   would scroll to is usually not in the DOM. The link therefore *names* a target and the

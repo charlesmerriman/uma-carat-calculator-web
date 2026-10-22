@@ -19,6 +19,7 @@ import { formatDate } from "../../utils/dateFormat"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { AnniversaryEventStrip } from "./AnniversaryEventStrip"
 import { LegendRaceNote } from "./LegendRaceNote"
+import { CopyTimelineLink } from "./CopyTimelineLink"
 import type { DatedRelease } from "../../utils/dailyLegendRaces"
 import {
 	CATEGORY_LABELS,
@@ -1105,6 +1106,12 @@ export function BannerWindowCard({
 								<span>{text}</span>
 							</div>
 						))}
+						{/* By the first banner: a window is found by ANY of its banners
+						    (rowMatchesFocus), so any one of them names the card. */}
+						<CopyTimelineLink
+							focus={{ kind: "banner", id: group.banners[0].id }}
+							name={title || `the banners from ${formatDate(group.start_date)}`}
+						/>
 						<div className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
 							<span>{countdownLabel}</span>
 							<Clock3 className="h-4 w-4 text-brand" />
