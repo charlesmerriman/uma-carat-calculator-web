@@ -1,6 +1,6 @@
 // @vitest-environment node
 // Pure date helpers — no DOM needed.
-import { formatDate, parseApiDate } from '../utils/dateFormat'
+import { formatDate, formatUtcDay, parseApiDate } from '../utils/dateFormat'
 
 describe('formatDate', () => {
   it('formats a date-only string as YYYY/M/D with no zero padding', () => {
@@ -54,5 +54,28 @@ describe('parseApiDate', () => {
   it('returns null for unparseable input', () => {
     expect(parseApiDate('garbage')).toBeNull()
     expect(parseApiDate('')).toBeNull()
+  })
+})
+
+describe('formatUtcDay', () => {
+  // Node re-reads TZ when it changes, so one test can stand in a zone behind
+  // UTC and one ahead of it. Unstubbed after each test so no other file sees it.
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  // The forecast chart's hover bug: a daily sample is a UTC midnight holding
+  // that day's rewards, and a local reading labelled it the day before.
+  const sample = new Date(Date.UTC(2029, 10, 2))
+
+  it('names the UTC day west of Greenwich, where a local reading is a day early', () => {
+    vi.stubEnv('TZ', 'America/New_York')
+    expect(formatDate(sample.toISOString())).toBe('2029/11/1')
+    expect(formatUtcDay(sample)).toBe('2029/11/2')
+  })
+
+  it('names the same UTC day east of Greenwich', () => {
+    vi.stubEnv('TZ', 'Asia/Tokyo')
+    expect(formatUtcDay(sample)).toBe('2029/11/2')
   })
 })

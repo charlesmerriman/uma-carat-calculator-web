@@ -64,3 +64,16 @@ export function formatDate(dateStr: string | null | undefined): string {
 export function formatMonth(date: Date): string {
 	return `${date.getUTCFullYear()}/${date.getUTCMonth() + 1}`
 }
+
+/**
+ * Format a UTC calendar day as `YYYY/M/D`, the day-level sibling of
+ * `formatMonth`.
+ *
+ * For instants that ARE a UTC day rather than a moment in one: the forecast
+ * chart's daily samples (UTC midnights, each holding that UTC day's income).
+ * `formatDate` would read 2029-11-02T00:00Z as Nov 1 anywhere west of
+ * Greenwich. A real event or banner instant still goes through `formatDate`.
+ */
+export function formatUtcDay(date: Date): string {
+	return `${date.getUTCFullYear()}/${date.getUTCMonth() + 1}/${date.getUTCDate()}`
+}
