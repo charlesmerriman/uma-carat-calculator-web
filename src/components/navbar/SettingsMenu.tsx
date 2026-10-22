@@ -3,6 +3,8 @@ import { Settings } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { useAccount } from "../../services/AuthContext"
 import { ToggleSwitch } from "../ToggleSwitch"
+import { NumberField } from "../NumberField"
+import { miscEarningsMonthly } from "../../utils/cumulativeIncome"
 import { DEFAULT_CONSTANTS } from "../../constants/gameConstants"
 import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 import type { CalculationConstants, UserStats } from "../../types"
@@ -35,7 +37,7 @@ type BooleanStatKey = {
 const SETTINGS: {
 	key: BooleanStatKey
 	label: string
-	description: string | ((constants: CalculationConstants) => string)
+	description: string | ((constants: CalculationConstants, stats: UserStats) => string)
 	defaultOn?: boolean
 }[] = [
 	{
@@ -47,10 +49,10 @@ const SETTINGS: {
 		key: "misc_earnings",
 		label: "Misc Earnings",
 		// floor(monthly / 30) is how cumulativeMiscEarningsCarats derives the
-		// daily drip — same expression here so the blurb can't quote a rate the
-		// projection doesn't actually pay.
-		description: (k) =>
-			`Roughly ${Math.floor(k.misc_earnings_monthly / 30)} carats a day from gifts, team trials, and careers, starting ${k.misc_earnings_delay_days} days out.`,
+		// daily drip, from the same resolved monthly figure, so the blurb can't
+		// quote a rate the projection doesn't actually pay.
+		description: (k, stats) =>
+			`Roughly ${Math.floor(miscEarningsMonthly(stats.custom_misc_earnings_monthly, k) / 30)} carats a day from gifts, team trials, and careers, starting ${k.misc_earnings_delay_days} days out.`,
 	},
 	{
 		key: "discounted_paid_pulls",
@@ -80,6 +82,56 @@ const SETTINGS: {
 		defaultOn: false,
 	},
 ]
+
+/** The server refuses more than this (GameStats); the box stops there too. */
+const MAX_MISC_EARNINGS_MONTHLY = 100_000
+
+/**
+ * The "your own amount" box under the Misc Earnings switch, shown while it's on.
+ *
+ * It shows the figure the projection is using, through the same resolver, and
+ * stores the site's estimate as null: an untouched or reset box keeps following
+ * the estimate when an editor changes it (the shop ticket counts work the same
+ * way). The reset link only appears once the player has set their own number.
+ */
+const MiscEarningsAmount = ({
+	custom,
+	constants,
+	onChange,
+}: {
+	custom: number | null | undefined
+	constants: CalculationConstants
+	onChange: (next: number | null) => void
+}) => {
+	const siteEstimate = constants.misc_earnings_monthly
+	const isCustom = custom !== null && custom !== undefined
+	return (
+		// w-full makes this its own line under the label and switch, which wrap.
+		<div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-300">
+			<label className="flex items-center gap-1.5">
+				Carats per month
+				<NumberField
+					value={miscEarningsMonthly(custom, constants)}
+					onChange={(next) => {
+						const capped = Math.min(next, MAX_MISC_EARNINGS_MONTHLY)
+						onChange(capped === siteEstimate ? null : capped)
+					}}
+					mediumStep={100}
+					ariaLabel="Misc earnings carats per month"
+					className="w-16 rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-center text-sm text-gray-100"
+				/>
+			</label>
+			{isCustom && (
+				<button
+					onClick={() => onChange(null)}
+					className="text-gray-400 underline-offset-2 transition hover:text-gray-100 hover:underline"
+				>
+					Use our estimate ({siteEstimate})
+				</button>
+			)}
+		</div>
+	)
+}
 
 export const SettingsMenu = () => {
 	const calculatorData = useCalculatorDataSafe()
@@ -152,7 +204,7 @@ export const SettingsMenu = () => {
 								<div className="min-w-0 flex-1">
 									<div className="text-sm text-gray-100">{label}</div>
 									<div className="text-xs leading-tight text-gray-400">
-										{typeof description === "function" ? description(constants) : description}
+										{typeof description === "function" ? description(constants, userStatsData) : description}
 									</div>
 								</div>
 								<div className="shrink-0 pt-0.5">
@@ -167,6 +219,15 @@ export const SettingsMenu = () => {
 										ariaLabel={label}
 									/>
 								</div>
+								{key === "misc_earnings" && userStatsData.misc_earnings !== false && (
+									<MiscEarningsAmount
+										custom={userStatsData.custom_misc_earnings_monthly}
+										constants={constants}
+										onChange={(next) =>
+											setUserStatsData({ ...userStatsData, custom_misc_earnings_monthly: next })
+										}
+									/>
+								)}
 							</div>
 						))}
 					</div>

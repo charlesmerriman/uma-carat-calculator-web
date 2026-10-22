@@ -224,7 +224,9 @@ export function createIncomeProjection({
 			cumulativeClubRankCarats(today, end, clubRank?.income_amount ?? 0) +
 			cumulativeLoginAndGiftCarats(today, end, constants) +
 			(userStatsData.misc_earnings
-				? cumulativeMiscEarningsCarats(today, end, constants)
+				? cumulativeMiscEarningsCarats(
+						today, end, constants, userStatsData.custom_misc_earnings_monthly
+				  )
 				: 0) +
 			pack.freeCarats +
 			pass.freeCarats +
