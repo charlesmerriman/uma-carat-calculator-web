@@ -160,7 +160,7 @@ Each is a closed form from `today` to the banner's end date `E`.
 | Daily Carat Pack | Daily drip (free) + a lump per cycle (paid) | `AR42`/`AZ42` |
 | Champions Meeting / LoH | Count of ledger rows × the user's rank payout | `AS42`/`AT42` |
 | 50-day login + Valentine's + White Day | Completed cycles, plus each gift the window reaches | `AU42` |
-| Misc earnings | Daily drip after a ramp-in; **monthly** figure ÷ 30 | `AV42` |
+| Misc earnings | Daily drip after a ramp-in; **monthly** figure ÷ 30 (the player's own `custom_misc_earnings_monthly` when set, else the constant; `miscEarningsMonthly`) | `AV42` |
 | Event lump rewards | Ledger rows with `now ≤ date ≤ E` | `AL42` |
 | Throughout carats | Decay curve, evaluated once from today | `AL43` |
 | Campaign purchases | Paid carats (plus free carats for the webstore bonus), credited at the campaign's resolved **main part** start | `AM42`/`AY42` |

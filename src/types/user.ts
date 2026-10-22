@@ -40,6 +40,12 @@ export interface UserStats {
 	daily_carat: boolean
 	training_pass: boolean
 	misc_earnings: boolean
+	/**
+	 * The player's own misc earnings per month. null (or absent, from an API
+	 * older than the field) means the site's estimate. Read it through
+	 * miscEarningsMonthly (utils/cumulativeIncome), never directly.
+	 */
+	custom_misc_earnings_monthly?: number | null
 	monthly_shop_tickets: boolean
 	/**
 	 * How many of each the player buys from the shop each month. null (or

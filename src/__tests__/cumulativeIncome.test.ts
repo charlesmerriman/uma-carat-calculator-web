@@ -8,6 +8,7 @@ import {
   cumulativeMonthlyShopTickets,
   cumulativeTeamTrialsCarats,
   cumulativeTrainingPassIncome,
+  miscEarningsMonthly,
 } from '../utils/cumulativeIncome'
 import {
   DAILY_CARAT_PACK_PER_DAY,
@@ -81,6 +82,40 @@ describe('cumulativeMiscEarningsCarats', () => {
     expect(cumulativeMiscEarningsCarats(TODAY, addUtcDays(rampEnd, 10), K)).toBe(
       10 * MISC_EARNINGS_PER_DAY
     )
+  })
+
+  // The worked example from the plan: a banner ending 60 days out earns 30
+  // days of misc earnings once the 30-day ramp-in is over.
+  it("pays the player's own monthly figure, after the same ramp-in", () => {
+    const end = addUtcDays(TODAY, MISC_EARNINGS_DELAY_DAYS + 30)
+    expect(cumulativeMiscEarningsCarats(TODAY, end, K, 1500)).toBe(30 * 50)
+    expect(cumulativeMiscEarningsCarats(TODAY, end, K, 4500)).toBe(30 * 150)
+    // Still nothing inside the ramp-in, whatever the amount.
+    expect(
+      cumulativeMiscEarningsCarats(TODAY, addUtcDays(TODAY, MISC_EARNINGS_DELAY_DAYS), K, 4500)
+    ).toBe(0)
+  })
+
+  it('follows the site estimate when no figure is set', () => {
+    const end = addUtcDays(TODAY, MISC_EARNINGS_DELAY_DAYS + 30)
+    const estimate = cumulativeMiscEarningsCarats(TODAY, end, K)
+    expect(cumulativeMiscEarningsCarats(TODAY, end, K, null)).toBe(estimate)
+    expect(cumulativeMiscEarningsCarats(TODAY, end, K, undefined)).toBe(estimate)
+  })
+
+  it('treats 0 as a real answer, distinct from not set', () => {
+    const end = addUtcDays(TODAY, MISC_EARNINGS_DELAY_DAYS + 30)
+    expect(cumulativeMiscEarningsCarats(TODAY, end, K, 0)).toBe(0)
+  })
+})
+
+describe('miscEarningsMonthly', () => {
+  it('resolves null to the admin estimate and floors a negative at 0', () => {
+    const k = { ...K, misc_earnings_monthly: 2700 }
+    expect(miscEarningsMonthly(null, k)).toBe(2700)
+    expect(miscEarningsMonthly(undefined, k)).toBe(2700)
+    expect(miscEarningsMonthly(1200, k)).toBe(1200)
+    expect(miscEarningsMonthly(-5, k)).toBe(0)
   })
 })
 
