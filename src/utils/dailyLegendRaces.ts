@@ -129,20 +129,6 @@ export function arrivalCountdown(start: Date, now: Date): string {
 }
 
 /**
- * Split an alternate outfit off an uma's name, so a tile can give each half
- * its own line: "Mejiro McQueen (Anime)" -> base "Mejiro McQueen", outfit
- * "Anime". A name with no trailing parentheses comes back whole, with a null
- * outfit ("Special Week", "Ines Fujin ♡").
- *
- * Only a bracket at the very END counts, which is where every outfit sits.
- * The search still matches on the full name; this is for display only.
- */
-export function splitOutfit(name: string): { base: string; outfit: string | null } {
-	const match = /^(.*\S)\s*\(([^()]+)\)$/.exec(name.trim())
-	return match ? { base: match[1], outfit: match[2] } : { base: name, outfit: null }
-}
-
-/**
  * Dated releases by the banner they arrive with, for the Timeline, which
  * shows each one as a note on that banner's card. A release with no banner
  * is undated anyway, so `datedReleases` has already dropped it.

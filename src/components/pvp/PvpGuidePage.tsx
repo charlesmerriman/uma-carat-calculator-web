@@ -17,8 +17,9 @@
  * (`defaultPvpEvent`).
  *
  * The tab remembers where it left the page (services/pvpPageMemory.ts): a bare
- * /app/pvp (the navbar link) goes back to that address, and an address with no
- * style opens on the last style shown.
+ * /app/pvp (the navbar link) goes back to that address. An address with no
+ * style opens on the last style shown for THAT event, else on the guide's
+ * top-ranked style (owner, 2026-10-23), and a new event drops `?style=`.
  *
  * The header reads the calculator payload, so it renders even for an event
  * with no guide; only the guide is fetched (hooks/usePvpGuide.ts).
@@ -93,6 +94,7 @@ import {
 	milestones,
 	newCardsBetween,
 	parsePvpStyle,
+	parseStyleRanking,
 	pickStyle,
 	previousPvpEvent,
 	raceEventsInOrder,
@@ -231,17 +233,19 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const index = event ? choices.indexOf(event) : -1
 
 	// The running style asked for: the URL's, else the last one this tab was
-	// on, since a Timeline card's link names only the event. Read at render
-	// (behind the loading gate, like the clock above); the store changes only
-	// in the effect below, after the URL already has.
+	// on FOR THIS EVENT (a Timeline card's link names only the event). Neither:
+	// null, and the guide opens on its top-ranked style (pickStyle). Read at
+	// render (behind the loading gate, like the clock above); the store changes
+	// only in the effect below, after the URL already has.
+	const eventKey = event ? formatPvpEvent(refForRaceEvent(event)) : null
 	const urlStyle = parsePvpStyle(searchParams.get(PVP_STYLE_PARAM))
-	const wantedStyle = urlStyle ?? recalledPvpStyle()
+	const wantedStyle = urlStyle ?? (eventKey ? recalledPvpStyle(eventKey) : null)
 
 	// Where the tab left the page, for the next visit (services/pvpPageMemory.ts).
 	useEffect(() => rememberPvpPage(search), [search])
 	useEffect(() => {
-		if (urlStyle) rememberPvpStyle(urlStyle)
-	}, [urlStyle])
+		if (urlStyle && eventKey) rememberPvpStyle(urlStyle, eventKey)
+	}, [urlStyle, eventKey])
 
 	/**
 	 * Every address the page writes names its event, the one on screen when the
@@ -259,9 +263,15 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 			if (event && !params.has(PVP_EVENT_PARAM)) params.set(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(event)))
 			return inPageOrder(params)
 		}, options)
-	// Changing the event keeps `?style=`, so Next stays on the reader's style.
+	// Changing the event drops `?style=`: the next event opens on ITS guide's
+	// top-ranked style (owner, 2026-10-23), not the one this guide ranked.
 	const select = (next: RaceEvent | undefined) => {
-		if (next) setParam(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(next)))
+		if (!next) return
+		setSearchParams((params) => {
+			params.set(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(next)))
+			params.delete(PVP_STYLE_PARAM)
+			return inPageOrder(params)
+		})
 	}
 	// A style is a tab inside the guide: `replace`, so Back leaves the page
 	// (or the event) instead of stepping back through every tab clicked.
@@ -282,7 +292,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	}, [guideState.status])
 	// The tab the guide shows, the same pick PvpGuideView makes, for the link.
 	const shownStyle =
-		guideState.status === "ready" ? pickStyle(stylesWithContent(guideState.guide), wantedStyle) : null
+		guideState.status === "ready"
+			? pickStyle(stylesWithContent(guideState.guide), wantedStyle, parseStyleRanking(guideState.guide.style_ranking))
+			: null
 
 	// The pinned rows' offsets, as CSS variables on the page root.
 	const rootRef = useRef<HTMLDivElement>(null)

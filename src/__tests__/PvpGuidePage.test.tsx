@@ -286,7 +286,8 @@ describe("PvpGuidePage", () => {
 		renderPage()
 		await screen.findByText("Recommended stats")
 		const tabs = within(screen.getAllByRole("tablist", { name: "Running style" })[0])
-		expect(tabs.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front", "End"])
+		// Each ranked style shows its place in "Front >> End"; the name stays the style's.
+		expect(tabs.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front#1", "End#2"])
 		fireEvent.click(tabs.getByRole("tab", { name: "End" }))
 		expect(screen.getAllByText("Gold Ship").length).toBeGreaterThan(0)
 	})
@@ -484,7 +485,44 @@ describe("PvpGuidePage skill mentions", () => {
 	})
 })
 
+describe("PvpGuidePage umas", () => {
+	it("groups a style's umas under their stars, most first, with no stars on the tiles", async () => {
+		respond(200, {
+			...GUIDE,
+			uma_recommendations: [
+				{ style: "front", stars: 2, role: "", note: "", uma: { id: 43, name: "Seiun Sky (Reeling)", image: null } },
+				{ style: "front", stars: 3, role: "", note: "", uma: { id: 41, name: "Maruzensky", image: null } },
+				{ style: "front", stars: 3, role: "", note: "", uma: { id: 44, name: "Mihono Bourbon", image: null } },
+			],
+		})
+		renderPage()
+		await screen.findByText("Recommended stats")
+		const pane = within(screen.getByRole("tabpanel", { name: "Front" }))
+		// One stars header per group, and none on a tile.
+		expect(pane.getAllByLabelText("3 of 5 stars")).toHaveLength(1)
+		expect(pane.getAllByLabelText("2 of 5 stars")).toHaveLength(1)
+		// The outfit gets a line of its own under the name.
+		expect(pane.getByText("Seiun Sky")).toBeInTheDocument()
+		expect(pane.getByText("Reeling")).toBeInTheDocument()
+	})
+})
+
 describe("PvpGuidePage recommended skills", () => {
+	it("folds the general skills on a narrow screen, with their count", async () => {
+		const original = window.matchMedia
+		window.matchMedia = ((query: string) => ({ ...original(query), matches: query.includes("max-width") })) as typeof window.matchMedia
+		try {
+			respond(200, GUIDE)
+			renderPage()
+			await screen.findByText("Recommended stats")
+			const details = screen.getByRole("region", { name: "General skills" }).querySelector("details")
+			expect(details).not.toHaveAttribute("open")
+			expect(within(details as HTMLElement).getByText(/^1 skill ·/)).toBeInTheDocument()
+		} finally {
+			window.matchMedia = original
+		}
+	})
+
 	it("shows the general skills once, under the Overview, and each position's tab only its own", async () => {
 		respond(200, GUIDE)
 		renderPage()
@@ -533,16 +571,33 @@ describe("PvpGuidePage style links and memory", () => {
 	const styleTabs = () => within(screen.getAllByRole("tablist", { name: "Running style" })[0])
 	const location = () => screen.getByTestId("location").textContent
 
-	it("keeps the style in the URL, and keeps it when the event changes", async () => {
+	it("keeps the style in the URL, and drops it when the event changes", async () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		await screen.findByText("Recommended stats")
 		fireEvent.click(styleTabs().getByRole("tab", { name: "End" }))
 		expect(location()).toBe("/app/pvp?event=cm-10&style=end")
 		fireEvent.click(screen.getByRole("button", { name: /Next/ }))
-		expect(location()).toBe("/app/pvp?event=cm-11&style=end")
+		// The next event opens on ITS guide's top-ranked style, not this one's pick.
+		expect(location()).toBe("/app/pvp?event=cm-11")
+		await screen.findByText("Recommended stats")
+		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
+	})
+
+	it("opens on the guide's top-ranked style when nothing names one", async () => {
+		respond(200, { ...GUIDE, style_ranking: "End>>Front" })
+		renderPage("/app/pvp?event=cm-10")
 		await screen.findByText("Recommended stats")
 		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+		expect(styleTabs().getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front#2", "End#1"])
+	})
+
+	it("opens on the first style when the guide ranks none it has", async () => {
+		respond(200, { ...GUIDE, style_ranking: "" })
+		renderPage("/app/pvp?event=cm-10")
+		await screen.findByText("Recommended stats")
+		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
+		expect(styleTabs().getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front", "End"])
 	})
 
 	it("opens on the style a link names", async () => {
@@ -584,16 +639,21 @@ describe("PvpGuidePage style links and memory", () => {
 		expect(await screen.findByText("Recommended stats")).toBeInTheDocument()
 	})
 
-	it("goes where a link to an event says, on the last style shown", async () => {
+	it("goes where a link to an event says, on the last style shown for that event only", async () => {
 		respond(200, GUIDE)
-		const first = renderPage("/app/pvp?event=cm-11&style=end")
+		const first = renderPage("/app/pvp?event=cm-10&style=end")
 		await screen.findByText("Recommended stats")
 		first.unmount()
-		// A Timeline card's link: the event only.
-		renderPage("/app/pvp?event=cm-10")
+		// A Timeline card's link to the same event: the event only.
+		const second = renderPage("/app/pvp?event=cm-10")
 		await screen.findByText("Recommended stats")
 		expect(location()).toBe("/app/pvp?event=cm-10")
 		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+		second.unmount()
+		// Another event's link: that guide's top-ranked style, not this one's pick.
+		renderPage("/app/pvp?event=cm-11")
+		await screen.findByText("Recommended stats")
+		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
 	})
 
 	it("copies a link to the event and the style on screen, and never My team", async () => {

@@ -83,6 +83,17 @@ function flagScenarioLinks(pieces: NotePiece[]): NotePiece[] {
 	return pieces
 }
 
+/**
+ * A note as plain words: highlights unmarked, mentions as their names
+ * ("with ==[[564 Escapades]]==" -> "with 564 Escapades"). For a one-line
+ * caption where a chip or red would not fit; the full note stays on hover.
+ */
+export function plainNoteText(text: string): string {
+	return text.replace(TOKEN, (_, highlight: string | undefined, skill: string | undefined) =>
+		highlight !== undefined ? highlight.replace(MENTION, (__, name: string) => name.trim()) : (skill ?? "").trim()
+	)
+}
+
 /** "Take ==[[Groundwork]] first==" -> text, then a highlight holding a skill and text. */
 export function splitNoteText(text: string): NotePiece[] {
 	return flagScenarioLinks(splitTokens(text))
