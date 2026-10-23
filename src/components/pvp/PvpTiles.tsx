@@ -232,10 +232,11 @@ export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCa
 		<div className="min-w-0">
 			{/* A card's art bakes in its own border, so no box of ours round it:
 			    only a slot with no art yet gets the grey square. */}
-			<div className={`relative overflow-hidden ${card.image ? "" : "rounded-lg border border-gray-600 bg-gray-700"}`}>
-				<TileArt src={card.image} alt={card.name} />
-				{borrow && <BorrowRibbon />}
-			</div>
+			<BorrowTab borrow={borrow}>
+				<div className={`relative overflow-hidden ${card.image ? "" : "rounded-lg border border-gray-600 bg-gray-700"}`}>
+					<TileArt src={card.image} alt={card.name} />
+				</div>
+			</BorrowTab>
 			<div className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={card.name}>
 				{card.name}
 			</div>
@@ -291,18 +292,35 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 /** A slot with no card, only advice ("Any Wit", "or any speed"). */
 export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: boolean }) {
 	return (
-		<div className="relative flex aspect-square w-full items-center justify-center rounded-lg border border-dashed border-gray-600 bg-gray-800 p-1 text-center text-xs text-gray-300">
-			<InlineNote text={note} />
-			{borrow && <BorrowRibbon />}
-		</div>
+		<BorrowTab borrow={borrow}>
+			<div className="flex aspect-square w-full items-center justify-center rounded-lg border border-dashed border-gray-600 bg-gray-800 p-1 text-center text-xs text-gray-300">
+				<InlineNote text={note} />
+			</div>
+		</BorrowTab>
 	)
 }
 
-function BorrowRibbon() {
+/**
+ * The borrowed card's marker: a grey tab tucked behind the card, peeking out
+ * above its top edge like the game's "Friend" tag (Daptrius, 2026-10-16). The
+ * bottom edge stays free for the limit-break diamonds.
+ *
+ * The tab can't live inside the tile: the art box clips its overflow, and the
+ * note tile's own background would paint over a tab put behind it. So it wraps
+ * the tile from outside. `isolate` opens a stacking context, which keeps the
+ * tab's -z-10 behind the tile but in front of the page and panel underneath.
+ * Its bottom runs a few pixels under the card, so only the label shows.
+ * Grey tokens, not the brand gold, so it stays neutral on every theme.
+ */
+function BorrowTab({ borrow, children }: { borrow: boolean; children: ReactNode }) {
+	if (!borrow) return <>{children}</>
 	return (
-		<span className="absolute inset-x-0 bottom-0 bg-brand/90 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-black">
-			Borrow
-		</span>
+		<div className="relative isolate">
+			<span className="absolute -top-3.5 left-1.5 -z-10 rounded-t-md border border-b-0 border-gray-500 bg-gray-600 px-1.5 pb-2 pt-px text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-100">
+				Borrow
+			</span>
+			{children}
+		</div>
 	)
 }
 

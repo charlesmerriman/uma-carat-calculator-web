@@ -143,7 +143,8 @@ function DeckEditor({ deck, index: i }: { deck: GuideDeckRow; index: number }) {
 						</div>
 					</div>
 
-					<div className="mt-3 grid max-w-3xl grid-cols-3 gap-2 sm:grid-cols-6">
+					{/* Row gap and top margin leave room for the borrow tab above its card. */}
+					<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-6">
 						{SLOT_NUMBERS.map((slot) => (
 							<SlotEditor
 								key={slot}
