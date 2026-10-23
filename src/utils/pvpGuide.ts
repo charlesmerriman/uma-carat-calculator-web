@@ -165,14 +165,95 @@ export function styleTabs(styles: PvpStyleTab[]): PvpStyleTab[] {
 	return styles.length > 1 ? [ALL_STYLES_TAB, ...styles] : styles
 }
 
+/** The mark between two steps of a style ranking: ahead, a clear gap, or level. */
+export type RankingGap = ">" | ">>" | ">=" | "="
+
+export interface RankingStep {
+	/** The running style the word names, or null for a word that isn't one (CM 20's "Blaze"). */
+	style: Exclude<PvpStyle, "everyone"> | null
+	/** The word as the guide wrote it. */
+	label: string
+	/** The mark before this step; null on the first. */
+	gap: RankingGap | null
+}
+
+// What a ranking word may say for each style: the site's label, and the
+// game's own English names, which some authors write out in full.
+const RANKING_WORDS: Record<string, Exclude<PvpStyle, "everyone">> = {
+	runaway: "runaway",
+	front: "front",
+	"front runner": "front",
+	pace: "pace",
+	"pace chaser": "pace",
+	late: "late",
+	"late surger": "late",
+	end: "end",
+	"end closer": "end",
+}
+
+/**
+ * A guide's `style_ranking` as steps: "Pace>>End>Late>Front" -> Pace, then End
+ * after a clear gap, then Late, then Front. Spaces around the marks are
+ * optional. A word that names no style stays a step with `style: null`, so a
+ * ranking that mentions a strategy ("Front>>Blaze>=End") keeps its order. An
+ * empty ranking is no steps.
+ */
+export function parseStyleRanking(text: string): RankingStep[] {
+	const steps: RankingStep[] = []
+	let gap: RankingGap | null = null
+	for (const part of text.split(/(>>|>=|>|=)/)) {
+		const word = part.trim()
+		if (word === ">>" || word === ">=" || word === ">" || word === "=") {
+			gap = word
+			continue
+		}
+		if (!word) continue
+		steps.push({ style: RANKING_WORDS[word.toLowerCase()] ?? null, label: word, gap: steps.length > 0 ? gap : null })
+		gap = null
+	}
+	return steps
+}
+
+/**
+ * Each ranked style's place, 1 first: the step's position in the ranking, so a
+ * non-style word ahead of it still counts ("Front>>Blaze>=End": End is 3rd).
+ * A style named twice keeps its first place.
+ */
+export function styleRanks(ranking: RankingStep[]): Map<PvpStyle, number> {
+	const ranks = new Map<PvpStyle, number>()
+	ranking.forEach((step, index) => {
+		if (step.style && !ranks.has(step.style)) ranks.set(step.style, index + 1)
+	})
+	return ranks
+}
+
 /**
  * The style tab a guide shows: the one asked for when the guide has it, else
- * its first. A guide with nothing for the asked-for style falls back WITHOUT
- * forgetting it, so the reader's pick comes back on the next event that has it.
- * "All" is kept wherever the guide has more than one style.
+ * the guide's top-ranked style it has (owner, 2026-10-23: a reader lands on
+ * the style the guide says to run), else its first. A guide with nothing for
+ * the asked-for style falls back WITHOUT forgetting it, so a link's pick comes
+ * back on the next event that has it. "All" is kept wherever the guide has
+ * more than one style.
  */
-export function pickStyle(styles: PvpStyleTab[], wanted: PvpStyleTab | null): PvpStyleTab | null {
-	return wanted && styleTabs(styles).includes(wanted) ? wanted : (styles[0] ?? null)
+export function pickStyle(
+	styles: PvpStyleTab[],
+	wanted: PvpStyleTab | null,
+	ranking: RankingStep[] = []
+): PvpStyleTab | null {
+	if (wanted && styleTabs(styles).includes(wanted)) return wanted
+	const top = ranking.find((step) => step.style !== null && styles.includes(step.style))
+	return top?.style ?? styles[0] ?? null
+}
+
+/**
+ * How a skill tier is labelled on the guide. The words are Henry's to choose
+ * (guide-visuals-plan.md, open question 1); until then the tiers keep their
+ * numbers. One place, so the words drop in here.
+ */
+export const TIER_LABELS = ["T0", "T1", "T2", "T3", "T4"]
+
+export function tierLabel(tier: number): string {
+	return TIER_LABELS[tier] ?? `T${tier}`
 }
 
 // How a guide's skills are grouped, everywhere they show. "other" is what a
@@ -389,6 +470,17 @@ export function skillsForPosition(rows: PvpSkillRecommendation[], style: PvpStyl
 		.filter(({ row }) => row.style === style)
 		.sort((a, b) => tierRank(a.row) - tierRank(b.row) || a.row.order - b.row.order || a.index - b.index)
 		.map(({ row }) => row)
+}
+
+/**
+ * One style's umas under their stars, most stars first; within a group the
+ * guide's order. The guide draws a stars header per group and every tile at
+ * one size beneath it.
+ */
+export function umasByStars(rows: PvpUmaRecommendation[]): Array<{ stars: number; rows: PvpUmaRecommendation[] }> {
+	const groups = new Map<number, PvpUmaRecommendation[]>()
+	for (const row of rows) groups.set(row.stars, [...(groups.get(row.stars) ?? []), row])
+	return [...groups.entries()].sort(([a], [b]) => b - a).map(([stars, list]) => ({ stars, rows: list }))
 }
 
 export interface SkillTierGroup {

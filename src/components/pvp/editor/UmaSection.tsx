@@ -93,10 +93,10 @@ function UmaItem({ row, index: i, onEdit }: { row: GuideUmaRow; index: number; o
 		: { id: row.uma, name: `Uma ${row.uma}`, image: null, portrait: null }
 	const setStars = (stars: number) => update((doc) => updateUma(doc, i, { stars: Math.min(5, Math.max(1, stars)) }))
 	return (
-		<SortableItem id={i} label={`Move ${ref.name}`} className="flex w-24 flex-col gap-1 sm:w-28">
+		<SortableItem id={i} label={`Move ${ref.name}`} className="flex w-[7.5rem] flex-col gap-1">
 			{(handle) => (
 				<>
-					<UmaTile uma={ref} stars={row.stars} role={row.role} note={row.note} />
+					<UmaTile uma={ref} stars={row.stars} role={row.role} note={row.note} className="w-full" />
 					<div className="flex items-center justify-between">
 						{handle}
 						<span className="flex items-center" role="group" aria-label={`Stars for ${ref.name}`}>

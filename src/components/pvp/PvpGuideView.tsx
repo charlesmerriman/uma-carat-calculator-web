@@ -16,12 +16,12 @@
 
 import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
 import { guideCommentCount } from "../../services/guideComments"
-import { AlternateCard, InlineNote, NoteOnlyTile, SkillChip, SkillMention, SupportTile, UmaTile } from "./PvpTiles"
+import { AlternateCard, InlineNote, NoteOnlyTile, SkillCell, SkillMention, Stars, SupportTile, UmaTile } from "./PvpTiles"
 import { SkillMentionsContext } from "./skillMentionsContext"
 import {
 	ALL_STYLES_LABEL,
@@ -30,10 +30,14 @@ import {
 	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
 	groupSkillsByTier,
+	parseStyleRanking,
 	pickStyle,
 	skillsForPosition,
+	styleRanks,
 	styleTabs,
 	stylesWithContent,
+	tierLabel,
+	umasByStars,
 } from "../../utils/pvpGuide"
 import type {
 	PvpDeck,
@@ -69,27 +73,47 @@ function byCategory(rows: PvpSkillRecommendation[]): Array<[PvpSkillCategory, Pv
 	]).filter(([, list]) => list.length > 0)
 }
 
+// A tier badge's weight: the first tier in brand, fading to grey by the last.
+function tierBadgeClass(tier: number): string {
+	if (tier === 0) return "border-brand/50 text-brand"
+	if (tier <= 2) return "border-gray-600 text-gray-300"
+	return "border-gray-700 text-gray-500"
+}
+
 /**
- * Skill rows split into subcategories, each by tier: the body of a
- * position's "Recommended skills" and of the side column's "General skills".
+ * Skill rows split by type, as the guide has always shown them (Henry,
+ * 2026-10-23: "I don't want them to be combined"), each type's tiers a row:
+ * the tier badge in a column of its own, then the skills as same-size cells
+ * in a grid (SkillCell). A long tier wraps under its own badge; before, the
+ * wrapped chips sat on a line with no badge and read as untiered. Untiered
+ * skills (greens, every sheet-era guide) are the grid with no badge column.
+ *
+ * Cells are at least 9.5rem wide, 13rem once the list has 32rem to itself:
+ * two columns in the side column and on a phone, three or four in a style
+ * pane. A container query, because the side column is narrow at every
+ * viewport width that shows it beside the style.
  */
 function SkillCategories({ rows }: { rows: PvpSkillRecommendation[] }) {
 	return (
-		<div className="mt-2 flex flex-col gap-3 border-l-2 border-gray-700 pl-3">
+		<div className="@container mt-2 flex flex-col gap-3">
 			{byCategory(rows).map(([category, list]) => (
 				<div key={category}>
 					<h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400">{CATEGORY_LABELS[category]}</h5>
 					<div className="mt-1.5 flex flex-col gap-1.5">
 						{groupSkillsByTier(list).map((group, index) => (
-							<div key={index} className="flex flex-wrap items-center gap-1.5">
+							<div key={index} className={group.tier === null ? "" : "grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-1.5"}>
 								{group.tier !== null && (
-									<span className="rounded border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-xs font-bold text-gray-300">
-										T{group.tier}
-									</span>
+									<div className="flex h-10 items-center">
+										<span className={`rounded border bg-gray-900 px-1.5 py-0.5 text-xs font-bold ${tierBadgeClass(group.tier)}`}>
+											{tierLabel(group.tier)}
+										</span>
+									</div>
 								)}
-								{group.skills.map((row) => (
-									<SkillChip key={`${row.style}-${row.skill.id}-${row.order}`} skill={row.skill} note={row.note} />
-								))}
+								<div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-1.5 @lg:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
+									{group.skills.map((row) => (
+										<SkillCell key={`${row.style}-${row.skill.id}-${row.order}`} skill={row.skill} note={row.note} />
+									))}
+								</div>
 							</div>
 						))}
 					</div>
@@ -230,8 +254,11 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 				{deck.note && <InlineNote text={deck.note} className="text-xs text-gray-400" />}
 			</div>
 			{/* Rows sit 1rem apart, and the grid 1rem below the label: room for the
-			    borrow tab, which peeks out above its card. */}
-			<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-6">
+			    borrow tab, which peeks out above its card. Six a row only when the
+			    pane has room (a container query on StylePane): a style's box on the
+			    All tab is half the width, where six cards were about 55px and their
+			    notes ran into each other (2026-10-23). */}
+			<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 @2xl:grid-cols-6">
 				{[1, 2, 3, 4, 5, 6].map((number) => {
 					const [main, ...alternates] = slots.get(number) ?? []
 					return (
@@ -262,14 +289,44 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 	// The position's own picks; the general ones are in the side column.
 	const skills = skillsForPosition(guide.skill_recommendations, style)
 	const decks = guide.decks.filter((row) => row.style === style)
+	// Every tile keeps a row for its note only when one of this style's umas
+	// has a note: the tiles stay one size, without an empty band under each.
+	const hasUmaNotes = umas.some((row) => row.note)
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="@container flex flex-col gap-4">
 			{umas.length > 0 && (
 				<div>
 					<h4 className={SUBHEADING}>Recommended umas</h4>
-					<div className="mt-2 flex flex-wrap gap-2">
-						{umas.map((row) => (
-							<UmaTile key={row.uma.id} uma={row.uma} stars={row.stars} role={row.role} note={row.note} />
+					{/* Grouped under their stars, so each tile can be the same size
+					    without a stars row of its own. */}
+					<div className="mt-2 flex flex-col gap-3">
+						{umasByStars(umas).map((group) => (
+							<div key={group.stars}>
+								{group.stars > 0 && (
+									<div className="mb-1.5 w-fit">
+										<Stars count={group.stars} />
+									</div>
+								)}
+								{/* At least 6.5rem a tile, sharing the row: three abreast on a
+								    phone, where a fixed 7.5rem fitted only two. auto-fill, not
+								    auto-fit, so a short row keeps its empty tracks and three tiles
+								    in a wide pane stay tile-sized. (A definite max such as 7.5rem
+								    would make auto-fill count columns by the max.) */}
+								<div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2">
+									{group.rows.map((row) => (
+										<UmaTile
+											key={row.uma.id}
+											uma={row.uma}
+											stars={row.stars}
+											role={row.role}
+											note={row.note}
+											showStars={false}
+											noteSlot={hasUmaNotes}
+											className="w-full"
+										/>
+									))}
+								</div>
+							</div>
 						))}
 					</div>
 				</div>
@@ -296,14 +353,22 @@ function tabLabel(tab: PvpStyleTab): string {
 	return tab === ALL_STYLES_TAB ? ALL_STYLES_LABEL : STYLE_LABELS[tab]
 }
 
-function StyleTabs({ styles, active, onChange, label }: {
+/**
+ * The running-style tabs, each with its place in the guide's ranking ("#1")
+ * where the guide ranks it. The rank is `aria-hidden`: the tab's name stays
+ * the style's, and the ranking itself is read out in the Overview.
+ */
+function StyleTabs({ styles, active, onChange, label, ranks }: {
 	styles: PvpStyleTab[]
 	active: PvpStyleTab
 	onChange: (style: PvpStyleTab) => void
 	label: string
+	ranks: Map<PvpStyle, number>
 }) {
 	return (
-		<div role="tablist" aria-label={label} className="flex flex-wrap gap-1 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
+		// Equal columns on a phone, so All and four ranked styles fit one line;
+		// a wrapping row from sm.
+		<div role="tablist" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl border border-gray-700 bg-gray-800/60 p-1 sm:flex sm:flex-wrap">
 			{styles.map((style) => (
 				<button
 					key={style}
@@ -311,13 +376,18 @@ function StyleTabs({ styles, active, onChange, label }: {
 					role="tab"
 					aria-selected={style === active}
 					onClick={() => onChange(style)}
-					className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+					className={`whitespace-nowrap rounded-lg border px-1 py-1.5 text-[13px] font-medium transition sm:px-3 sm:text-sm ${
 						style === active
 							? "border-brand/50 bg-brand/10 text-brand"
 							: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 					}`}
 				>
 					{tabLabel(style)}
+					{style !== ALL_STYLES_TAB && ranks.has(style) && (
+						<span aria-hidden="true" className={`ml-1 text-[10px] tabular-nums sm:ml-1.5 sm:text-[11px] ${style === active ? "text-brand/80" : "text-gray-500"}`}>
+							#{ranks.get(style)}
+						</span>
+					)}
 				</button>
 			))}
 		</div>
@@ -331,15 +401,17 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
 	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
-	// it). A guide without that style shows its first, and the pick is kept.
-	const shown = pickStyle(styles, style) ?? styles[0]
+	// it). With none, or one the guide lacks (the pick is kept), the guide's
+	// top-ranked style shows, else its first.
+	const ranking = parseStyleRanking(guide.style_ranking)
+	const shown = pickStyle(styles, style, ranking) ?? styles[0]
 	return (
 		<div className="flex min-w-0 flex-col gap-3">
 			{/* Pinned under the View tabs while this style's column scrolls by
 			    (Daptrius, 2026-10-22). The opaque strip behind the tabs' own
 			    see-through box keeps the page from showing through it. */}
 			<div className="sticky top-(--pvp-below-tabs,0px) z-10 -mt-1 bg-gray-900 pt-1">
-				<StyleTabs styles={styleTabs(styles)} active={shown} onChange={onStyleChange} label="Running style" />
+				<StyleTabs styles={styleTabs(styles)} active={shown} onChange={onStyleChange} label="Running style" ranks={styleRanks(ranking)} />
 			</div>
 			{shown === ALL_STYLES_TAB ? (
 				// Every style on one screen, the way the source sheet lays a guide
@@ -396,6 +468,14 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	// a copy inside every position's tab, where they read as its own picks.
 	const generalSkills = skillsForPosition(guide.skill_recommendations, "everyone")
 	const skillsPreview = useSkillsPreview()
+	// Below xl the side column stacks above the style, and a guide's general
+	// skills (21 in CM 21) were 866px of phone before the first uma
+	// (2026-10-23), so there they start folded. Read once: the page renders
+	// only behind the /app gate. "Narrow?" rather than "wide?", so a test's
+	// no-match stub sees the desktop default.
+	const [generalOpen] = useState(
+		() => typeof window === "undefined" || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width: 79.98rem)").matches
+	)
 	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
 	const hasSide =
 		hasOverview || generalSkills.length > 0 || guide.team_comps.length > 0 || guide.stat_configs.length > 0
@@ -456,18 +536,26 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 
 						{generalSkills.length > 0 && (
 							<section className={SECTION} aria-labelledby="pvp-general-skills">
-								<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
-								<p className="mt-1 text-xs text-gray-400">
-									Recommended for every position.
-									{/* The Skills page is shelved to guide editors (useSkillsPreview). */}
-									{skillsPreview && (
-										<>
-											{" "}Look any skill up on the{" "}
-											<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
-										</>
-									)}
-								</p>
-								<SkillCategories rows={generalSkills} />
+								<details open={generalOpen} className="group/general">
+									<summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+										<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
+										<span className="ml-auto text-xs text-gray-400 xl:hidden">
+											{generalSkills.length} {generalSkills.length === 1 ? "skill" : "skills"} · <span className="group-open/general:hidden">Show</span>
+											<span className="hidden group-open/general:inline">Hide</span>
+										</span>
+									</summary>
+									<p className="mt-1 text-xs text-gray-400">
+										Recommended for every position.
+										{/* The Skills page is shelved to guide editors (useSkillsPreview). */}
+										{skillsPreview && (
+											<>
+												{" "}Look any skill up on the{" "}
+												<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
+											</>
+										)}
+									</p>
+									<SkillCategories rows={generalSkills} />
+								</details>
 							</section>
 						)}
 

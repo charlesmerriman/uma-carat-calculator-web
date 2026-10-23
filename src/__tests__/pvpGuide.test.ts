@@ -15,10 +15,14 @@ import {
 	skillFamilyIds,
 	skillColour,
 	parsePvpStyle,
+	parseStyleRanking,
 	pickStyle,
+	styleRanks,
 	styleTabs,
+	tierLabel,
+	umasByStars,
 } from "../utils/pvpGuide"
-import { splitHighlights, splitNoteText } from "../utils/remarkHighlight"
+import { plainNoteText, splitHighlights, splitNoteText } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import type { BannerSupport, BannerUma, RaceEvent } from "../types"
 import type { PvpGuide, PvpSkillRecommendation } from "../types/pvpGuide"
@@ -324,5 +328,76 @@ describe("the All style tab", () => {
 	it("keeps All where it is offered, and falls back to the first style where it isn't", () => {
 		expect(pickStyle(["front", "end"], "all")).toBe("all")
 		expect(pickStyle(["pace"], "all")).toBe("pace")
+	})
+})
+
+describe("the style ranking", () => {
+	it("reads Henry's ranking as steps, with the gap before each", () => {
+		expect(parseStyleRanking("Pace>>End>Late>Front")).toEqual([
+			{ style: "pace", label: "Pace", gap: null },
+			{ style: "end", label: "End", gap: ">>" },
+			{ style: "late", label: "Late", gap: ">" },
+			{ style: "front", label: "Front", gap: ">" },
+		])
+	})
+
+	it("keeps a word that names no style, and reads spaces, = and >=", () => {
+		expect(parseStyleRanking("Front >> Blaze >= End = Late")).toEqual([
+			{ style: "front", label: "Front", gap: null },
+			{ style: null, label: "Blaze", gap: ">>" },
+			{ style: "end", label: "End", gap: ">=" },
+			{ style: "late", label: "Late", gap: "=" },
+		])
+	})
+
+	it("reads the game's full names too, and nothing from an empty ranking", () => {
+		expect(parseStyleRanking("Pace Chaser > End Closer").map((step) => step.style)).toEqual(["pace", "end"])
+		expect(parseStyleRanking("")).toEqual([])
+		expect(parseStyleRanking("  ")).toEqual([])
+	})
+
+	it("ranks each style by its place, a non-style word ahead of it included", () => {
+		const ranks = styleRanks(parseStyleRanking("Front>>Blaze>=End>Late>Pace"))
+		expect(ranks.get("front")).toBe(1)
+		expect(ranks.get("end")).toBe(3)
+		expect(ranks.get("pace")).toBe(5)
+		expect(ranks.has("runaway")).toBe(false)
+	})
+
+	it("opens on the top-ranked style the guide has, unless one is asked for", () => {
+		const ranking = parseStyleRanking("Runaway>Pace>>End>Front")
+		// The guide has no Runaway pane, so its best style with one is Pace.
+		expect(pickStyle(["front", "pace", "end"], null, ranking)).toBe("pace")
+		expect(pickStyle(["front", "pace", "end"], "end", ranking)).toBe("end")
+		// Asked for a style the guide lacks: the ranking still decides.
+		expect(pickStyle(["front", "pace", "end"], "late", ranking)).toBe("pace")
+		// No ranking, or none of its styles: the first style, as before.
+		expect(pickStyle(["front", "end"], null, [])).toBe("front")
+		expect(pickStyle(["front", "end"], null, parseStyleRanking("Blaze"))).toBe("front")
+	})
+})
+
+describe("uma star groups", () => {
+	it("groups by stars, most first, keeping the guide's order inside a group", () => {
+		const row = (id: number, stars: number) => ({ style: "pace" as const, stars, role: "", note: "", uma: { id, name: `Uma ${id}`, image: null } })
+		const groups = umasByStars([row(1, 2), row(2, 3), row(3, 2), row(4, 3)])
+		expect(groups.map((group) => [group.stars, group.rows.map((r) => r.uma.id)])).toEqual([
+			[3, [2, 4]],
+			[2, [1, 3]],
+		])
+	})
+})
+
+describe("tier labels and plain notes", () => {
+	it("labels tiers from one list, past it by number", () => {
+		expect(tierLabel(0)).toBe("T0")
+		expect(tierLabel(4)).toBe("T4")
+		expect(tierLabel(7)).toBe("T7")
+	})
+
+	it("reads a note as plain words for a one-line caption", () => {
+		expect(plainNoteText("with [[564 Escapades]]")).toBe("with 564 Escapades")
+		expect(plainNoteText("==[[Top Runner]] & Hints==")).toBe("Top Runner & Hints")
+		expect(plainNoteText("Cope")).toBe("Cope")
 	})
 })

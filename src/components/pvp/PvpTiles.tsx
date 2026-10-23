@@ -1,6 +1,7 @@
 /**
  * The small building blocks of a PvP guide: a tile for an uma or a support
- * card, a skill chip, and a one-line note that understands ==highlights==.
+ * card, a skill cell (and the editor's chip), and a one-line note that
+ * understands ==highlights==.
  *
  * Hover detail (an uma's note, a skill's description) uses the same three
  * triggers as the Timeline's FeaturedTileArt: hover, keyboard focus, and a tap
@@ -10,7 +11,7 @@
 
 import { useId, useState, type ReactNode } from "react"
 import { Star } from "lucide-react"
-import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
+import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
@@ -18,6 +19,7 @@ import { JpOnlyTag, SkillDetail } from "./SkillDetail"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { splitOutfit } from "../../utils/umaName"
 
 function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 	return (
@@ -157,10 +159,12 @@ function TileArt({ src, alt }: { src: string | null; alt: string }) {
 	)
 }
 
-function Stars({ count }: { count: number }) {
+// Gold, the recommended token: red is the site's warning colour, and a star
+// rating is no warning (guide-visuals-plan.md, 2026-10-23).
+export function Stars({ count }: { count: number }) {
 	if (count <= 0) return null
 	return (
-		<span className="flex items-center justify-center gap-px text-highlight" aria-label={`${count} of 5 stars`}>
+		<span className="flex items-center justify-center gap-px text-recommended" aria-label={`${count} of 5 stars`}>
 			{Array.from({ length: count }, (_, index) => (
 				<Star key={index} className="h-3 w-3 fill-current" aria-hidden="true" />
 			))}
@@ -168,26 +172,68 @@ function Stars({ count }: { count: number }) {
 	)
 }
 
-/** A recommended uma: art, name, stars, an optional role tag, the note on hover. */
-export function UmaTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: number; role: string; note: string }) {
+// The first [[skill]] a note names, if any.
+const FIRST_MENTION = /\[\[([^[\]\n]+)\]\]/
+
+/**
+ * A recommended uma, every tile the same size and shape (Henry, 2026-10-23:
+ * the tiles changed height with what each uma had). Fixed rows, top to bottom:
+ * the framed portrait (a role tag, if any, on its corner), the stars if the
+ * caller shows them, the name on up to two lines, the outfit on its own line
+ * (left blank when there is none), then the note's slot: its first [[skill]]
+ * as a small skill face, else the note's words on up to two lines, else
+ * nothing. The whole note is on hover, focus or tap.
+ *
+ * The guide groups its tiles under a stars header, so it passes
+ * `showStars={false}`; the editor and the New-cards list keep the stars on
+ * the tile. The width is the caller's (`className`); the rows are fixed.
+ */
+export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = true, className = "w-[7.5rem] shrink-0" }: {
+	uma: PvpUmaRef
+	stars: number
+	role: string
+	note: string
+	showStars?: boolean
+	/** False when no tile beside this one has a note: the row is left out on all of them. */
+	noteSlot?: boolean
+	className?: string
+}) {
 	const oshiIds = useOshiIds()
+	const mentions = useSkillMentions()
+	const { base, outfit } = splitOutfit(uma.name)
+	const mentioned = FIRST_MENTION.exec(note)?.[1]
+	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
 	return (
-		<WithDetail label={uma.name} detail={note ? <InlineNote text={note} /> : null} className="w-24 shrink-0 sm:w-28">
-			<div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
-				<div className="relative p-1.5">
+		<WithDetail label={uma.name} detail={note ? <InlineNote text={note} /> : null} className={className}>
+			<div className="flex flex-col gap-0.5 overflow-hidden rounded-lg border border-gray-600 bg-gray-700 p-1.5 text-center">
+				<div className="relative">
 					<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 					{role && (
-						<span className="absolute left-1 top-1 rounded border border-gray-600 bg-gray-800/95 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
+						<span className="absolute left-0.5 top-0.5 max-w-[calc(100%-0.25rem)] truncate rounded border border-gray-600 bg-gray-800/95 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
 							{role}
 						</span>
 					)}
 				</div>
-				<div className="px-1 py-1 text-center">
-					<Stars count={stars} />
-					<div className="mt-0.5 truncate text-xs font-medium text-gray-100" title={uma.name}>
-						{uma.name}
+				{showStars && stars > 0 && (
+					<div className="mt-0.5">
+						<Stars count={stars} />
 					</div>
+				)}
+				<div className="flex h-[1.875rem] items-center justify-center">
+					<span className="line-clamp-2 text-xs font-semibold leading-[0.9375rem] text-gray-100" title={uma.name}>
+						{base}
+					</span>
 				</div>
+				<div className="h-[0.9375rem] truncate text-[11px] leading-[0.9375rem] text-gray-400">{outfit ?? "\u00a0"}</div>
+				{noteSlot && (
+					<div className="flex h-[2.125rem] items-center justify-center">
+						{skill ? (
+							<SkillFace skill={skill} size="small" />
+						) : note ? (
+							<span className="line-clamp-2 text-[11px] leading-tight text-gray-300">{plainNoteText(note)}</span>
+						) : null}
+					</div>
+				)}
 			</div>
 		</WithDetail>
 	)
@@ -319,6 +365,52 @@ function skillSurfaceClass(rarity: number): string {
 	if (rarity === GOLD_SKILL_RARITY) return "skill-gold"
 	if (rarity >= 3) return "border-step-up-border/70 bg-gray-800"
 	return "border-gray-600 bg-gray-800"
+}
+
+/**
+ * One skill at one size (Henry, 2026-10-23, after Hakuraku's skill list): the
+ * icon and the name, the name on up to two lines, or one line and a small
+ * caption under it (the unique's owner, else the guide's note as plain words).
+ * Every skill in a guide's lists is this cell, so a grid of them lines up
+ * whatever the names' lengths. The gold, unique and evolved surfaces stay
+ * (web #158).
+ *
+ * `SkillCell` is the cell with its hover detail; `SkillFace` is the face
+ * alone, for inside something that already has a hover of its own (an uma
+ * tile), where two popups would fight.
+ */
+export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSkillRef; sub?: string; size?: "regular" | "small" }) {
+	const preview = useSkillsPreview()
+	const gold = skill.rarity === GOLD_SKILL_RARITY
+	const small = size === "small"
+	return (
+		<div
+			className={`flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill.rarity))} ${
+				small ? "h-[2.125rem] gap-1 rounded py-0.5 pl-0.5 pr-1 text-[11px]" : "h-10 gap-2 rounded-md pl-1 pr-2 text-[13px]"
+			}`}
+		>
+			{skill.image ? (
+				<img src={skill.image} alt="" className={`shrink-0 ${small ? "h-4 w-4" : "h-6 w-6"}`} loading="lazy" decoding="async" />
+			) : (
+				<span className={`shrink-0 rounded-full bg-gray-700 ${small ? "h-4 w-4" : "h-6 w-6"}`} aria-hidden="true" />
+			)}
+			<span className="flex min-w-0 flex-1 flex-col">
+				<span className={`${sub ? "line-clamp-1" : "line-clamp-2"} break-words ${gold ? "font-medium" : "text-gray-100"}`}>{skill.name}</span>
+				{sub && <span className={`truncate text-[11px] ${gold ? "opacity-80" : "text-gray-400"}`}>{sub}</span>}
+			</span>
+			{preview && skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
+		</div>
+	)
+}
+
+export function SkillCell({ skill, note }: { skill: PvpSkillRef; note: string }) {
+	const detail = <SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
+	const sub = skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
+	return (
+		<WithDetail label={skill.name} detail={detail} className="min-w-0" detailClassName="w-72">
+			<SkillFace skill={skill} sub={sub} />
+		</WithDetail>
+	)
 }
 
 /** A recommended skill: icon, name, whose unique it is, the full detail on hover. */

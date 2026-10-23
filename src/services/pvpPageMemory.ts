@@ -7,9 +7,10 @@
  *              It comes back only on a bare `/app/pvp`, which is what the navbar
  *              link opens. A link that names an event (a Timeline card, the
  *              team window) goes where it says.
- *   the style  the running style last on screen. It comes back on ANY address
- *              that names no style, so a Timeline card's link (which names only
- *              the event) still opens on the reader's style.
+ *   the style  the running style last on screen, with its event. It comes back
+ *              on an address for THAT event that names no style, so a Timeline
+ *              card's link to the same event still opens on the reader's
+ *              style. Any other event opens on its guide's top-ranked style.
  *
  * One key could not do both: the page is rewritten on every visit, so landing
  * from a Timeline link (no `style`) would wipe the style before the next visit
@@ -54,17 +55,27 @@ export function recalledPvpPage(): string {
 	}
 }
 
-export function rememberPvpStyle(style: PvpStyleTab): void {
+/**
+ * The style is remembered WITH its event ("cm-21"), and comes back only for
+ * that event: another event opens on its own guide's top-ranked style
+ * (owner, 2026-10-23), since a reader's Pace on one course says nothing about
+ * the next. Within the event it still covers a link that names no style.
+ */
+export function rememberPvpStyle(style: PvpStyleTab, event: string): void {
 	try {
-		sessionStorage.setItem(STYLE_KEY, style)
+		sessionStorage.setItem(STYLE_KEY, JSON.stringify({ event, style }))
 	} catch {
-		// Storage refused: the next guide opens on its first style.
+		// Storage refused: the guide opens on its top-ranked style.
 	}
 }
 
-export function recalledPvpStyle(): PvpStyleTab | null {
+export function recalledPvpStyle(event: string): PvpStyleTab | null {
 	try {
-		return parsePvpStyle(sessionStorage.getItem(STYLE_KEY))
+		const saved: unknown = JSON.parse(sessionStorage.getItem(STYLE_KEY) ?? "null")
+		// Anything else (nothing, a bare style from before the event was kept
+		// with it, or junk) counts as nothing remembered.
+		if (!saved || typeof saved !== "object" || !("event" in saved) || !("style" in saved)) return null
+		return saved.event === event && typeof saved.style === "string" ? parsePvpStyle(saved.style) : null
 	} catch {
 		return null
 	}

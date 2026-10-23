@@ -6,9 +6,9 @@ import {
   rarityGroups,
   releaseByUmaId,
   splitByToday,
-  splitOutfit,
   tentativeReleases,
 } from '../utils/dailyLegendRaces'
+import { splitOutfit } from '../utils/umaName'
 import type { DailyLegendRaceRelease, DailyLegendRaceUma } from '../types'
 
 /**

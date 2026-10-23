@@ -1446,9 +1446,15 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   a guide has two or more styles (`styleTabs`). Its type is `PvpStyleTab`, which only the
   guide's tabs and the page memory take; a team member's style stays a `PvpStyle`. The page owns it and
   `PvpGuideView`'s tabs are controlled; a tab click `replace`s, so Back never steps through
-  tabs. Changing the event keeps it. A guide with nothing for the asked-for style shows its
-  first (`pickStyle`) and leaves the parameter alone, so the pick returns on the next event
-  that has it.
+  tabs. **With no style asked for, the guide opens on its top-ranked style** (owner,
+  2026-10-23): `parseStyleRanking` reads `style_ranking` ("Pace>>End>Late>Front"; `>>` a
+  clear gap, `=` / `>=` level; a word that names no style, CM 20's "Blaze", stays a step
+  with `style: null`), and `pickStyle(styles, wanted, ranking)` takes the first ranked style
+  the guide has, else its first. Each ranked tab shows its place ("Pace #1", `styleRanks`),
+  `aria-hidden` so the tab's name stays the style's. **Changing the event DROPS `?style=`**,
+  so the next event opens on its own rank 1. A guide with nothing for the asked-for style
+  falls back the same way and leaves the parameter alone. On a phone the five tabs are
+  equal columns on one line.
 - **Comments on a guide** (Henry, 2026-10-21; `guide-comments-plan.md`): one thread per section,
   `""` for the whole guide (the side column's last box) and one per running style (under the
   style's pane). `GuideComments` folds each until opened, showing the guide's `comment_counts`,
@@ -1468,9 +1474,11 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   stops engaging there.
 - **The tab remembers where it left the page** (`services/pvpPageMemory.ts`, sessionStorage,
   so a new tab opens on the current event). A bare `/app/pvp`, the navbar link, `<Navigate
-  replace>`s to the last address; an address that names no style (a Timeline card's link)
-  opens on the last style shown. Two keys on purpose: the page key is rewritten on every
-  visit and would drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
+  replace>`s to the last address. The style is remembered WITH its event
+  (`rememberPvpStyle(style, "cm-21")`): an address that names no style (a Timeline card's
+  link) opens on the last style shown only for that same event; another event opens on its
+  guide's rank 1. Two keys on purpose: the page key is rewritten on every visit and would
+  drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
   **Every address the page writes names its event** (`setParam` pins the one on screen,
   then writes event, view, style in that order, the same as "Copy link"). Without it,
   Recommendations (which deletes `?view=`) turned a page opened from the navbar back into
@@ -1505,6 +1513,30 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   Debuffs). **The My team skills panel still merges them** (`guideSkillsByCategory(guide,
   position)`): it is a checklist for one position's team, and says it includes the general
   skills. Style tabs list only styles with content (`stylesWithContent`).
+  **Below `xl` General skills start folded** (a `<details>` with "21 skills · Show"; the
+  side column stacks above the style there, and CM 21's were 866px of phone before the first
+  uma). Read once with `matchMedia("(max-width: 79.98rem)")`, "narrow?" so the test stub's
+  no-match is the desktop default.
+- **Skills keep their type groups; each tier is a row of same-size cells** (Henry,
+  2026-10-23: "I don't want them to be combined", and "having different size box depending
+  on letter count look ugly", after Hakuraku's list). Inside a type, a tier row is the badge
+  in its own column (`tierLabel`, one list `TIER_LABELS` waiting for Henry's words; T0 in
+  brand, fading by T3/T4) beside a grid of `SkillCell`s, so a long tier wraps under its own
+  badge. A cell is the icon and the name at one font size, two lines at most, or one line
+  and a caption (the unique's owner, else the note as plain words, `plainNoteText`), with
+  `SkillDetail` on hover; the gold, unique and evolved surfaces stay. Cells are 9.5rem at
+  least, 13rem once the list has 32rem (a container query: the side column is narrow at
+  every width that shows it). `SkillChip` is the editor's.
+- **Uma tiles are one size and shape** (Henry, 2026-10-23: "uma part looks ugly"). A
+  style's umas group under a stars header (gold, `text-recommended`; red was the warning
+  colour), and every `UmaTile` has fixed rows: portrait (a role tag on its corner), the name
+  on up to two lines, the outfit on its own line (`splitOutfit`, `utils/umaName.ts`; blank
+  when none), and the note's slot (its first `[[skill]]` as a small `SkillFace`, else its
+  words) when any uma in the style has a note. Tiles share the row, 6.5rem at least, so a
+  phone fits three. The editor shows the same tile, stars on it.
+- **A deck shows six cards a row only when its pane is 42rem wide** (`@2xl`, the pane is
+  a container): on the All tab a style's box is half the width, where six cards were about
+  55px and their notes ran into each other.
   Never add a second "compare" pane: it was tried and read as every card listed twice.
   "New since <previous event>" is collapsed by default for the same reason.
 - **`==words==` is red and `[[Skill name]]` is a skill** in any guide text:
