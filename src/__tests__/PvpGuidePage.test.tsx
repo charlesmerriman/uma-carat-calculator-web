@@ -274,7 +274,8 @@ describe("PvpGuidePage", () => {
 		// The front pane is first: uma, deck, alternate, note-only slot, borrow.
 		expect(screen.getByText("Maruzensky")).toBeInTheDocument()
 		expect(screen.getByText("Kitasan Black")).toBeInTheDocument()
-		expect(screen.getByText("or any speed")).toBeInTheDocument()
+		// A note-only "or any speed" alternative is one line with the stat icon.
+		expect(screen.getByText(/Speed card/).textContent).toBe("or any  Speed card")
 		expect(screen.getByText("Any Wit")).toBeInTheDocument()
 		expect(screen.getAllByText("Borrow").length).toBe(1)
 		// Sections the guide leaves empty step aside.
@@ -482,6 +483,87 @@ describe("PvpGuidePage skill mentions", () => {
 		await screen.findByText("Recommended stats")
 		expect(screen.getByText(/Take Gone Skill\./)).toBeInTheDocument()
 		expect(screen.queryByRole("group", { name: "Gone Skill" })).not.toBeInTheDocument()
+	})
+})
+
+describe("PvpGuidePage decks", () => {
+	const deck = (id: number, label: string, cards: Array<[number, string, string?]>, extra: Partial<PvpGuide["decks"][number]> = {}) => ({
+		id,
+		style: "front" as const,
+		label,
+		note: "",
+		is_highlighted: false,
+		slots: cards.map(([cardId, name, note = ""], index) => ({
+			slot: index + 1, order: 0, is_borrow: index === 5, note, support_card: card(cardId, name),
+		})),
+		...extra,
+	})
+	const LADDER = [
+		deck(1, "Beginner", [[1, "Agnes Tachyon", "==2SP & Scenario Link=="], [2, "Mejiro Ardan"], [3, "Light Hello", "==[[Groundwork]] & Hints=="]]),
+		deck(2, "Standard", [[1, "Agnes Tachyon"], [4, "Kitasan Black"], [3, "Light Hello"]]),
+		deck(3, "Whale", [[1, "Agnes Tachyon"], [5, "Sweep Tosho"], [3, "Light Hello"]]),
+		deck(4, "Honorable Mentions", [[6, "Sakura Bakushin O", "[[Turbo Sprint]]"], [7, "Mr. C.B.", "Stats"]], {
+			is_highlighted: true, note: "Replacement cards that you can slot into the deck instead.",
+		}),
+	]
+
+	beforeEach(() => localStorage.removeItem("uma-planner-pvp-deck-budget"))
+
+	it("shows one deck at a time, picked by budget, with what every deck shares", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		const budget = within(screen.getByRole("group", { name: "Deck budget" }))
+		expect(budget.getAllByRole("button").map((button) => button.textContent)).toEqual(["Beginner", "Standard", "Whale", "All"])
+		expect(budget.getByRole("button", { name: "Beginner" })).toHaveAttribute("aria-pressed", "true")
+		expect(screen.getByText("In every Front deck:").parentElement?.textContent).toBe("In every Front deck: Agnes Tachyon and Light Hello.")
+		expect(screen.getByText("Mejiro Ardan")).toBeInTheDocument()
+		expect(screen.queryByText("Kitasan Black")).not.toBeInTheDocument()
+
+		fireEvent.click(budget.getByRole("button", { name: "Standard" }))
+		expect(await screen.findByText("Kitasan Black")).toBeInTheDocument()
+		await waitFor(() => expect(screen.queryByText("Mejiro Ardan")).not.toBeInTheDocument())
+		expect(screen.getByText("Compared with Beginner: swaps in Kitasan Black for Mejiro Ardan.")).toBeInTheDocument()
+	})
+
+	it("opens every deck on All, and remembers the pick for the next guide", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		const first = renderPage()
+		await screen.findByText("Recommended stats")
+		fireEvent.click(within(screen.getByRole("group", { name: "Deck budget" })).getByRole("button", { name: "All" }))
+		expect(await screen.findByText("Kitasan Black")).toBeInTheDocument()
+		expect(screen.getByText("Sweep Tosho")).toBeInTheDocument()
+		expect(screen.getByText("Mejiro Ardan")).toBeInTheDocument()
+		expect(localStorage.getItem("uma-planner-pvp-deck-budget")).toBe("All")
+		first.unmount()
+
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(within(screen.getByRole("group", { name: "Deck budget" })).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
+	})
+
+	it("draws a swap-in deck as its own row, with no borrow tab", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		const row = within(screen.getByRole("region", { name: "Honorable Mentions" }))
+		expect(row.getByText("Sakura Bakushin O")).toBeInTheDocument()
+		expect(row.getByText("Stats")).toBeInTheDocument()
+		expect(row.queryByText("Borrow")).not.toBeInTheDocument()
+		// Not a budget: the control names only the ladder.
+		expect(within(screen.getByRole("group", { name: "Deck budget" })).queryByRole("button", { name: "Honorable Mentions" })).not.toBeInTheDocument()
+	})
+
+	it("marks a linked card with the scenario's name, and draws no red on a card", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.getByLabelText("Linked to Trackblazer")).toBeInTheDocument()
+		// "==2SP & Scenario Link==" is a tag and the badge; "==[[Groundwork]] & Hints==" a skill and a tag.
+		expect(screen.getByText("2SP")).toBeInTheDocument()
+		expect(screen.getByText("Hints")).toBeInTheDocument()
+		expect(screen.getByText("Groundwork")).toBeInTheDocument()
+		expect(screen.getByRole("tabpanel", { name: "Front" }).querySelector("mark")).toBeNull()
 	})
 })
 

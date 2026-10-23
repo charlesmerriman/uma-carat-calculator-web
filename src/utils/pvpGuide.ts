@@ -15,6 +15,7 @@ import type {
 	Uma,
 } from "../types"
 import type {
+	PvpDeck,
 	PvpGuide,
 	PvpSkillCategory,
 	PvpSkillRecommendation,
@@ -481,6 +482,60 @@ export function umasByStars(rows: PvpUmaRecommendation[]): Array<{ stars: number
 	const groups = new Map<number, PvpUmaRecommendation[]>()
 	for (const row of rows) groups.set(row.stars, [...(groups.get(row.stars) ?? []), row])
 	return [...groups.entries()].sort(([a], [b]) => b - a).map(([stars, list]) => ({ stars, rows: list }))
+}
+
+/** A deck's own cards, main rows only, in slot order, each once. */
+function deckCards(deck: PvpDeck): PvpSupportCardRef[] {
+	const cards = new Map<number, PvpSupportCardRef>()
+	for (const row of [...deck.slots].sort((a, b) => a.slot - b.slot || a.order - b.order)) {
+		if (row.order === 0 && row.support_card && !cards.has(row.support_card.id)) cards.set(row.support_card.id, row.support_card)
+	}
+	return [...cards.values()]
+}
+
+/**
+ * The cards in every deck of a style's ladder (Beginner, Standard, Whale), in
+ * the first deck's order: the line over the decks that says what never
+ * changes. Empty with fewer than two decks.
+ */
+export function cardsInEveryDeck(ladder: PvpDeck[]): PvpSupportCardRef[] {
+	if (ladder.length < 2) return []
+	const others = ladder.slice(1).map((deck) => new Set(deckCards(deck).map((card) => card.id)))
+	return deckCards(ladder[0]).filter((card) => others.every((ids) => ids.has(card.id)))
+}
+
+export interface DeckChange {
+	/** The deck it is compared with: the one before it in the ladder. */
+	previous: string
+	added: PvpSupportCardRef[]
+	removed: PvpSupportCardRef[]
+}
+
+/**
+ * What each deck after the first changes from the one before it, by card,
+ * keyed by deck id. Main rows only: an alternative is not the deck's card.
+ */
+export function deckChanges(ladder: PvpDeck[]): Map<number, DeckChange> {
+	const changes = new Map<number, DeckChange>()
+	ladder.forEach((deck, index) => {
+		if (index === 0) return
+		const before = deckCards(ladder[index - 1])
+		const now = deckCards(deck)
+		const beforeIds = new Set(before.map((card) => card.id))
+		const nowIds = new Set(now.map((card) => card.id))
+		changes.set(deck.id, {
+			previous: ladder[index - 1].label,
+			added: now.filter((card) => !beforeIds.has(card.id)),
+			removed: before.filter((card) => !nowIds.has(card.id)),
+		})
+	})
+	return changes
+}
+
+/** "A", "A and B", "A, B and C". */
+export function listWords(words: string[]): string {
+	if (words.length <= 1) return words.join("")
+	return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`
 }
 
 export interface SkillTierGroup {

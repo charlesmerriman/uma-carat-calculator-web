@@ -20,6 +20,7 @@ import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { splitOutfit } from "../../utils/umaName"
+import { parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 
 function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 	return (
@@ -239,35 +240,151 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	)
 }
 
-/** A support card in a deck slot: art, name, the reason under it. */
-export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCardRef; note: string; borrow?: boolean }) {
+/** The game's stat icons (public/0N_CM*.png), for the stats table and an "or any Wit card" line. */
+const STAT_ICONS: Record<DeckStatType, { label: string; icon: string }> = {
+	speed: { label: "Speed", icon: "/00_CMSPEED1.png" },
+	stamina: { label: "Stamina", icon: "/01_CMStamina1.png" },
+	power: { label: "Power", icon: "/02_CMPOWER1.png" },
+	guts: { label: "Guts", icon: "/03_CMGUTS1.png" },
+	wit: { label: "Wit", icon: "/04_CMWits1.png" },
+}
+
+/**
+ * The scenario link mark: a small gold "Link" tag in the top-left corner of
+ * the card's art (owner's pick from the mock, placed where Henry asked,
+ * 2026-10-23), replacing the red ring on the skill (web #160). It names the
+ * scenario on hover and to a screen reader, since the band that explains it
+ * may not be on screen. The brand fill with black ink is the site's primary
+ * pairing, which the light themes already remap.
+ */
+function LinkBadge({ scenarioName }: { scenarioName: string | null }) {
+	const words = scenarioName ? `Linked to ${scenarioName}` : "Linked to the scenario"
 	return (
-		<div className="min-w-0">
+		<span
+			title={words}
+			aria-label={words}
+			className="absolute left-1 top-1 rounded bg-brand px-1 py-0.5 text-[9.5px] font-bold uppercase leading-none tracking-wide text-black shadow-md"
+		>
+			Link
+		</span>
+	)
+}
+
+/**
+ * What a slot's note says, drawn (utils/deckNotes.ts): each skill as a small
+ * same-size cell with its detail on hover, the fixed tags ("2SP", "Stats",
+ * "Hints", "Initial Friendship") as pills, then any other words the guide
+ * wrote. Nothing is red or bold (Henry, 2026-10-23). "Scenario Link" is the
+ * card's Link badge and "or any Wit" a line of its own, so neither shows here.
+ */
+export function SlotReasons({ note }: { note: string }) {
+	const mentions = useSkillMentions()
+	const { skills, tags, rest } = parseSlotNote(note)
+	if (skills.length === 0 && tags.length === 0 && !rest) return null
+	return (
+		<div className="flex w-full flex-col items-center gap-0.5">
+			{skills.map((name, index) => {
+				const skill = mentions[name.toLowerCase()]
+				return skill ? (
+					<SkillCell key={index} skill={skill} note="" size="small" />
+				) : (
+					<div key={index} className="flex h-[2.125rem] w-full items-center justify-center rounded border border-gray-600 bg-gray-800 px-1 text-[11px] leading-tight text-gray-100">
+						<span className="line-clamp-2">{name}</span>
+					</div>
+				)
+			})}
+			{tags.length > 0 && (
+				<div className="flex flex-wrap justify-center gap-0.5">
+					{tags.map((tag) => (
+						<span key={tag} className="rounded-full bg-gray-700 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-gray-200">
+							{tag}
+						</span>
+					))}
+				</div>
+			)}
+			{rest && (
+				<div className="text-center text-[11px] leading-tight text-gray-400">
+					<InlineNote text={rest} />
+				</div>
+			)}
+		</div>
+	)
+}
+
+/** "or any [Wit icon] Wit card": any card of the type will do instead. */
+export function AnyTypeLine({ type }: { type: DeckStatType }) {
+	const { label, icon } = STAT_ICONS[type]
+	return (
+		<div className="flex items-center justify-center gap-1 text-[11px] leading-tight text-gray-400">
+			or any <img src={icon} alt="" className="h-3.5 w-3.5" /> {label} card
+		</div>
+	)
+}
+
+/**
+ * A support card in a deck slot: art (with the Link badge when the note says
+ * "Scenario Link"), name, then the note's reasons (SlotReasons). `scenarioName`
+ * is the guide's scenario, for the badge's words.
+ */
+export function SupportTile({ card, note, borrow = false, scenarioName = null }: {
+	card: PvpSupportCardRef
+	note: string
+	borrow?: boolean
+	scenarioName?: string | null
+}) {
+	const linked = parseSlotNote(note).scenarioLink
+	return (
+		<div className="flex min-w-0 flex-col items-center gap-1">
 			{/* A card's art bakes in its own border, so no box of ours round it:
 			    only a slot with no art yet gets the grey square. The art (3:4) is
 			    drawn full height in a square, centred, and the borrow tab wraps the
 			    image itself, not the square, so it is as wide as the card. */}
 			{card.image ? (
-				<div className="flex aspect-square justify-center">
+				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
-						<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-full w-auto" />
+						<span className="relative block h-full">
+							<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-full w-auto" />
+							{linked && <LinkBadge scenarioName={scenarioName} />}
+						</span>
 					</BorrowTab>
 				</div>
 			) : (
-				<BorrowTab borrow={borrow}>
-					<div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
+				<BorrowTab borrow={borrow} className="w-full">
+					<div className="relative overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
 						<TileArt src={null} alt={card.name} />
+						{linked && <LinkBadge scenarioName={scenarioName} />}
 					</div>
 				</BorrowTab>
 			)}
-			<div className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={card.name}>
+			<div className="w-full truncate text-center text-xs font-medium text-gray-100" title={card.name}>
 				{card.name}
+				{rarityLabel(card.rarity) && <span className="ml-1 text-gray-400">{rarityLabel(card.rarity)}</span>}
 			</div>
-			{note && (
-				<div className="text-center text-[11px] leading-tight text-gray-400">
-					<InlineNote text={note} />
-				</div>
-			)}
+			<SlotReasons note={note} />
+		</div>
+	)
+}
+
+/**
+ * One card of a swap-in row (a deck the editor marks "Swap-ins", the guide's
+ * Honorable Mentions): smaller art, the name, the reasons. No slot, no borrow.
+ */
+export function SwapInCard({ card, note, scenarioName }: { card: PvpSupportCardRef; note: string; scenarioName: string | null }) {
+	const linked = parseSlotNote(note).scenarioLink
+	return (
+		<div className="flex w-[6.5rem] flex-col items-center gap-1 text-center">
+			<span className="relative block w-16">
+				{card.image ? (
+					<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-auto w-full" />
+				) : (
+					<span className="block aspect-[3/4] w-full rounded-lg border border-gray-600 bg-gray-700" aria-hidden="true" />
+				)}
+				{linked && <LinkBadge scenarioName={scenarioName} />}
+			</span>
+			<span className="line-clamp-2 text-[11px] font-semibold leading-tight text-gray-100" title={card.name}>
+				{card.name}
+			</span>
+			<SlotReasons note={note} />
 		</div>
 	)
 }
@@ -301,23 +418,20 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 					>
 						<span className="text-gray-200 underline decoration-gray-500 decoration-dotted underline-offset-2">{card.name}</span>
 					</WithDetail>
+					{rarityLabel(card.rarity) && <span className="text-gray-300"> {rarityLabel(card.rarity)}</span>}
 				</div>
 			)}
-			{note && (
-				<div>
-					<InlineNote text={note} />
-				</div>
-			)}
+			{note && <SlotReasons note={note} />}
 		</div>
 	)
 }
 
-/** A slot with no card, only advice ("Any Wit", "or any speed"). */
+/** A slot with no card, only advice ("Any Wit"). Drawn plain: nothing on a card is red. */
 export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: boolean }) {
 	return (
 		<BorrowTab borrow={borrow}>
 			<div className="flex aspect-square w-full items-center justify-center rounded-lg border border-dashed border-gray-600 bg-gray-800 p-1 text-center text-xs text-gray-300">
-				<InlineNote text={note} />
+				<InlineNote text={note.replace(/==/g, "")} />
 			</div>
 		</BorrowTab>
 	)
@@ -403,12 +517,13 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 	)
 }
 
-export function SkillCell({ skill, note }: { skill: PvpSkillRef; note: string }) {
+export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRef; note: string; size?: "regular" | "small" }) {
 	const detail = <SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
-	const sub = skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
+	// A small cell (under a deck card) has no room for a caption.
+	const sub = size === "small" ? "" : skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
 	return (
-		<WithDetail label={skill.name} detail={detail} className="min-w-0" detailClassName="w-72">
-			<SkillFace skill={skill} sub={sub} />
+		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-72">
+			<SkillFace skill={skill} sub={sub} size={size} />
 		</WithDetail>
 	)
 }

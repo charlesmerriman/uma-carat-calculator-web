@@ -18,10 +18,13 @@ import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { useEffect, useRef, useState } from "react"
 import { Eye, Users } from "lucide-react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
 import { guideCommentCount } from "../../services/guideComments"
-import { AlternateCard, InlineNote, NoteOnlyTile, SkillCell, SkillMention, Stars, SupportTile, UmaTile } from "./PvpTiles"
+import { AlternateCard, AnyTypeLine, InlineNote, NoteOnlyTile, SkillCell, SkillMention, Stars, SupportTile, SwapInCard, UmaTile } from "./PvpTiles"
+import { recalledDeckBudget, rememberDeckBudget } from "../../services/pvpPageMemory"
+import { parseSlotNote, type DeckStatType } from "../../utils/deckNotes"
 import { SkillMentionsContext } from "./skillMentionsContext"
 import {
 	ALL_STYLES_LABEL,
@@ -29,7 +32,10 @@ import {
 	SKILL_CATEGORY_LABELS,
 	SKILL_CATEGORY_ORDER,
 	STYLE_LABELS,
+	cardsInEveryDeck,
+	deckChanges,
 	groupSkillsByTier,
+	listWords,
 	parseStyleRanking,
 	pickStyle,
 	skillsForPosition,
@@ -38,6 +44,9 @@ import {
 	stylesWithContent,
 	tierLabel,
 	umasByStars,
+} from "../../utils/pvpGuide"
+import type {
+	DeckChange,
 } from "../../utils/pvpGuide"
 import type {
 	PvpDeck,
@@ -236,23 +245,42 @@ function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
 	)
 }
 
+/** "Compared with Beginner: swaps in A and B for C." */
+function changeLine(change: DeckChange): string {
+	const added = listWords(change.added.map((card) => card.name))
+	const removed = listWords(change.removed.map((card) => card.name))
+	const what = added && removed ? `swaps in ${added} for ${removed}` : added ? `adds ${added}` : removed ? `drops ${removed}` : "the same cards"
+	return `Compared with ${change.previous}: ${what}.`
+}
+
 /**
- * A deck's six slots. Alternatives stack under their slot as an "or". A deck
- * the editor gave the gold box is drawn inside one, to set it apart (Henry,
- * 2026-10-22, for the Honorable Mentions row): the recommended gold, a theme
- * token, so it reads on light themes too.
+ * A deck's six slots. Alternatives stack under their slot as an "or"; an
+ * "or any Wit" (on the card's own note or a note-only alternative) is one line
+ * with the stat icon. `showLabel`: the deck's label pill, left out when the
+ * budget control above already names the one deck on screen. `change`: what it
+ * changes from the deck before it in the ladder.
  */
-function DeckGrid({ deck }: { deck: PvpDeck }) {
+function DeckGrid({ deck, showLabel, change, scenarioName }: {
+	deck: PvpDeck
+	showLabel: boolean
+	change: DeckChange | undefined
+	scenarioName: string | null
+}) {
 	const slots = new Map<number, PvpDeckSlot[]>()
 	for (const row of deck.slots) slots.set(row.slot, [...(slots.get(row.slot) ?? []), row])
 	return (
-		<div className={deck.is_highlighted ? "rounded-xl border-2 border-recommended p-2 sm:p-3" : undefined}>
-			<div className="flex flex-wrap items-baseline gap-2">
-				<span className="rounded-full border border-brand/50 bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
-					{deck.label}
-				</span>
-				{deck.note && <InlineNote text={deck.note} className="text-xs text-gray-400" />}
-			</div>
+		<div className="pt-3">
+			{(showLabel || deck.note) && (
+				<div className="flex flex-wrap items-baseline gap-2">
+					{showLabel && (
+						<span className="rounded-full border border-brand/50 bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
+							{deck.label}
+						</span>
+					)}
+					{deck.note && <InlineNote text={deck.note.replace(/==/g, "")} className="text-xs text-gray-400" />}
+				</div>
+			)}
+			{change && <p className="mt-1.5 text-[13px] leading-snug text-gray-400">{changeLine(change)}</p>}
 			{/* Rows sit 1rem apart, and the grid 1rem below the label: room for the
 			    borrow tab, which peeks out above its card. Six a row only when the
 			    pane has room (a container query on StylePane): a style's box on the
@@ -261,19 +289,30 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 			<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 @2xl:grid-cols-6">
 				{[1, 2, 3, 4, 5, 6].map((number) => {
 					const [main, ...alternates] = slots.get(number) ?? []
+					// Every "or any <type>" in the slot, once: the card's own note may
+					// say it, and so may a note-only alternative.
+					const anyTypes = new Set<DeckStatType>()
+					for (const row of [main, ...alternates]) {
+						const type = row && (row === main || !row.support_card) ? parseSlotNote(row.note).anyType : null
+						if (type) anyTypes.add(type)
+					}
+					const shownAlternates = alternates.filter((alt) => alt.support_card || !parseSlotNote(alt.note).anyType)
 					return (
 						<div key={number} className="flex min-w-0 flex-col gap-1">
 							{main ? (
 								main.support_card ? (
-									<SupportTile card={main.support_card} note={main.note} borrow={main.is_borrow} />
+									<SupportTile card={main.support_card} note={main.note} borrow={main.is_borrow} scenarioName={scenarioName} />
 								) : (
 									<NoteOnlyTile note={main.note} borrow={main.is_borrow} />
 								)
 							) : (
 								<div className="aspect-square w-full rounded-lg border border-dashed border-gray-700" aria-hidden="true" />
 							)}
-							{alternates.map((alt, index) => (
+							{shownAlternates.map((alt, index) => (
 								<AlternateCard key={index} card={alt.support_card} note={alt.note} />
+							))}
+							{[...anyTypes].map((type) => (
+								<AnyTypeLine key={type} type={type} />
 							))}
 						</div>
 					)
@@ -283,7 +322,133 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 	)
 }
 
-function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
+/**
+ * A deck the editor marks "Swap-ins" (`is_highlighted`; the guide's Honorable
+ * Mentions): cards that can replace one in the decks above, each with its
+ * reason. A row of smaller cards in a recessed panel, so it stands apart a
+ * little without reading as the top pick (Henry, 2026-10-23: the gold box made
+ * it look most recommended). `bg-gray-900` is a well on both theme families:
+ * below the pane on the dark themes, the grey canvas under white cards on the
+ * light ones.
+ */
+function SwapInRow({ deck, scenarioName }: { deck: PvpDeck; scenarioName: string | null }) {
+	const rows = [...deck.slots].sort((a, b) => a.slot - b.slot || a.order - b.order)
+	return (
+		<section aria-label={deck.label || "Swap-ins"} className="mt-4 rounded-xl border border-gray-700 bg-gray-900 p-3">
+			<div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+				{deck.label && <h5 className="text-sm font-semibold text-gray-200">{deck.label}</h5>}
+				{deck.note && <InlineNote text={deck.note.replace(/==/g, "")} className="text-xs text-gray-400" />}
+			</div>
+			<div className="mt-3 flex flex-wrap gap-x-2.5 gap-y-3">
+				{rows.map((row, index) =>
+					row.support_card ? (
+						<SwapInCard key={index} card={row.support_card} note={row.note} scenarioName={scenarioName} />
+					) : (
+						<div key={index} className="flex w-[6.5rem] items-center justify-center rounded-lg border border-dashed border-gray-600 p-1 text-center text-[11px] text-gray-300">
+							<InlineNote text={row.note.replace(/==/g, "")} />
+						</div>
+					)
+				)}
+			</div>
+		</section>
+	)
+}
+
+/** The budget control's "every deck" choice. */
+const ALL_DECKS = "All"
+
+/**
+ * A style's decks (owner, 2026-10-23): one at a time, picked by budget
+ * (Beginner / Standard / Whale, whatever the guide calls them), or All, which
+ * opens every deck; both ways animate the height. One pick for the whole page,
+ * remembered per device (PvpGuideView owns it). Above the decks: the cards in
+ * every one; in each deck after the first: what it changes from the one
+ * before. Swap-in decks follow as their own rows. A style with one deck draws
+ * it as before, no control.
+ *
+ * The height animates with Framer Motion; MotionConfig's reducedMotion="user"
+ * stops transforms only, so a reader who asks for less motion gets no height
+ * animation through useReducedMotion. Overflow is hidden only while a deck
+ * moves, so the skills' hover details are not clipped once it has settled.
+ */
+function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
+	decks: PvpDeck[]
+	style: PvpStyle
+	budget: string | null
+	onBudget: (label: string) => void
+	scenarioName: string | null
+}) {
+	const reduceMotion = useReducedMotion()
+	const ladder = decks.filter((deck) => !deck.is_highlighted)
+	const swapIns = decks.filter((deck) => deck.is_highlighted)
+	const showAll = budget === ALL_DECKS && ladder.length > 1
+	const picked = ladder.find((deck) => deck.label === budget) ?? ladder[0]
+	const shown = showAll ? ladder : picked ? [picked] : []
+	const changes = deckChanges(ladder)
+	const everyDeck = cardsInEveryDeck(ladder)
+	const transition = { duration: reduceMotion ? 0 : 0.28, ease: "easeOut" as const }
+	return (
+		<div>
+			<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+				<h4 className={SUBHEADING}>Example decks</h4>
+				{ladder.length > 1 && (
+					<div role="group" aria-label="Deck budget" className="inline-flex flex-wrap gap-0.5 rounded-lg border border-gray-700 bg-gray-900 p-0.5">
+						{[...ladder.map((deck) => deck.label), ALL_DECKS].map((label, index) => {
+							const pressed = label === ALL_DECKS ? showAll : !showAll && (label === picked?.label) && index === ladder.indexOf(picked)
+							return (
+								<button
+									key={`${label}-${index}`}
+									type="button"
+									aria-pressed={pressed}
+									onClick={() => onBudget(label)}
+									className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+										pressed ? "bg-gray-700 text-brand" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+									}`}
+								>
+									{label || "Untitled"}
+								</button>
+							)
+						})}
+					</div>
+				)}
+			</div>
+			{everyDeck.length > 0 && (
+				<p className="mt-2 text-[13px] leading-snug text-gray-400">
+					<span className="font-semibold text-gray-200">In every {STYLE_LABELS[style]} deck:</span>{" "}
+					{listWords(everyDeck.map((card) => card.name))}.
+				</p>
+			)}
+			<AnimatePresence initial={false}>
+				{shown.map((deck) => (
+					<motion.div
+						key={deck.id}
+						initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+						animate={{ height: "auto", opacity: 1, transitionEnd: { overflow: "visible" } }}
+						exit={{ height: 0, opacity: 0, overflow: "hidden" }}
+						transition={transition}
+					>
+						<DeckGrid
+							deck={deck}
+							showLabel={showAll || ladder.length === 1}
+							change={showAll || deck !== ladder[0] ? changes.get(deck.id) : undefined}
+							scenarioName={scenarioName}
+						/>
+					</motion.div>
+				))}
+			</AnimatePresence>
+			{swapIns.map((deck) => (
+				<SwapInRow key={deck.id} deck={deck} scenarioName={scenarioName} />
+			))}
+		</div>
+	)
+}
+
+function StylePane({ guide, style, budget, onBudget }: {
+	guide: PvpGuide
+	style: PvpStyle
+	budget: string | null
+	onBudget: (label: string) => void
+}) {
 	const umas = guide.uma_recommendations.filter((row) => row.style === style)
 	const note = guide.style_notes.find((row) => row.style === style)
 	// The position's own picks; the general ones are in the side column.
@@ -338,12 +503,7 @@ function StylePane({ guide, style }: { guide: PvpGuide; style: PvpStyle }) {
 			)}
 			{skills.length > 0 && <RecommendedSkills rows={skills} />}
 			{decks.length > 0 && (
-				<div className="flex flex-col gap-4">
-					<h4 className={SUBHEADING}>Example decks</h4>
-					{decks.map((deck) => (
-						<DeckGrid key={deck.id} deck={deck} />
-					))}
-				</div>
+				<DeckLadder decks={decks} style={style} budget={budget} onBudget={onBudget} scenarioName={guide.scenario?.name ?? null} />
 			)}
 		</div>
 	)
@@ -394,11 +554,13 @@ function StyleTabs({ styles, active, onChange, label, ranks }: {
 	)
 }
 
-function StyleColumn({ guide, styles, style, onStyleChange }: {
+function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget }: {
 	guide: PvpGuide
 	styles: Array<Exclude<PvpStyle, "everyone">>
 	style: PvpStyleTab | null
 	onStyleChange: (style: PvpStyleTab) => void
+	budget: string | null
+	onBudget: (label: string) => void
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
 	// it). With none, or one the guide lacks (the pick is kept), the guide's
@@ -422,7 +584,7 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
 					{styles.map((each) => (
 						<section key={each} className={SECTION} aria-label={STYLE_LABELS[each]}>
 							<h3 className={`mb-2 ${HEADING}`}>{STYLE_LABELS[each]}</h3>
-							<StylePane guide={guide} style={each} />
+							<StylePane guide={guide} style={each} budget={budget} onBudget={onBudget} />
 							{/* The thread lives on the style's own tab; here, its count
 							    and the way there. */}
 							<button
@@ -437,7 +599,7 @@ function StyleColumn({ guide, styles, style, onStyleChange }: {
 				</div>
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
-					<StylePane guide={guide} style={shown} />
+					<StylePane guide={guide} style={shown} budget={budget} onBudget={onBudget} />
 					{/* Its own thread per style (Henry, 2026-10-21); keyed so a new
 					    tab opens folded. */}
 					<GuideComments
@@ -468,6 +630,13 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	// a copy inside every position's tab, where they read as its own picks.
 	const generalSkills = skillsForPosition(guide.skill_recommendations, "everyone")
 	const skillsPreview = useSkillsPreview()
+	// One deck budget for the whole page (every style, the All tab), per
+	// device. Read once at mount: the page renders only behind the /app gate.
+	const [budget, setBudget] = useState<string | null>(recalledDeckBudget)
+	const chooseBudget = (label: string) => {
+		setBudget(label)
+		rememberDeckBudget(label)
+	}
 	// Below xl the side column stacks above the style, and a guide's general
 	// skills (21 in CM 21) were 866px of phone before the first uma
 	// (2026-10-23), so there they start folded. Read once: the page renders
@@ -590,7 +759,7 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 				)}
 
 				{styles.length > 0 && (
-					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} />
+					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} />
 				)}
 			</div>
 			{/* A guide with no side column still has a thread for the whole guide. */}
