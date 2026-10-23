@@ -346,8 +346,9 @@ export function SlotReasons({ note }: { note: string }) {
 export function AnyTypeLine({ type }: { type: DeckStatType }) {
 	const { label, icon } = STAT_ICONS[type]
 	return (
-		<div className="flex items-center justify-center gap-1 text-[11px] leading-tight text-gray-400">
-			or any <img src={icon} alt="" className="h-3.5 w-3.5" /> {label} card
+		// Inline, not flex, so in a narrow phone column it wraps as one sentence.
+		<div className="text-center text-[11px] leading-tight text-gray-400">
+			or any <img src={icon} alt="" className="inline-block h-3.5 w-3.5 align-[-0.2em]" /> {label} card
 		</div>
 	)
 }
@@ -387,9 +388,10 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null }:
 					</div>
 				</BorrowTab>
 			)}
-			<div className="w-full truncate text-center text-xs font-medium text-gray-100" title={card.name}>
-				{card.name}
-				{rarityLabel(card.rarity) && <span className="ml-1 text-gray-400">{rarityLabel(card.rarity)}</span>}
+			{/* The name truncates; its rarity ("SR") never does. */}
+			<div className="flex w-full justify-center gap-1 text-xs font-medium" title={card.name}>
+				<span className="truncate text-gray-100">{card.name}</span>
+				{rarityLabel(card.rarity) && <span className="shrink-0 text-gray-400">{rarityLabel(card.rarity)}</span>}
 			</div>
 			<SlotReasons note={note} />
 		</div>
@@ -403,7 +405,7 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null }:
 export function SwapInCard({ card, note, scenarioName }: { card: PvpSupportCardRef; note: string; scenarioName: string | null }) {
 	const linked = parseSlotNote(note).scenarioLink
 	return (
-		<div className="flex w-[6.5rem] flex-col items-center gap-1 text-center">
+		<div className="flex min-w-0 flex-col items-center gap-1 text-center">
 			<span className="relative block w-16">
 				{card.image ? (
 					<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-auto w-full" />
@@ -529,8 +531,10 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 	const gold = skill.rarity === GOLD_SKILL_RARITY
 	const small = size === "small"
 	return (
+		// A container, so a narrow cell (the side column's, about 10.5rem) can
+		// give its name two lines and leave the caption to the hover detail.
 		<div
-			className={`flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill.rarity))} ${
+			className={`@container flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill.rarity))} ${
 				small ? "h-[2.125rem] gap-1 rounded py-0.5 pl-0.5 pr-1 text-[11px]" : "h-10 gap-2 rounded-md pl-1 pr-2 text-[13px]"
 			}`}
 		>
@@ -539,9 +543,13 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 			) : (
 				<span className={`shrink-0 rounded-full bg-gray-700 ${small ? "h-4 w-4" : "h-6 w-6"}`} aria-hidden="true" />
 			)}
+			{/* hyphens-auto (the page is lang="en"): a long word breaks as
+			    "Concen-tration", never "Concentratio / n". */}
 			<span className="flex min-w-0 flex-1 flex-col">
-				<span className={`${sub ? "line-clamp-1" : "line-clamp-2"} break-words ${gold ? "font-medium" : "text-gray-100"}`}>{skill.name}</span>
-				{sub && <span className={`truncate text-[11px] ${gold ? "opacity-80" : "text-gray-400"}`}>{sub}</span>}
+				<span className={`${sub ? "line-clamp-2 @min-[11rem]:line-clamp-1" : "line-clamp-2"} hyphens-auto break-words ${gold ? "font-medium" : "text-gray-100"}`}>
+					{skill.name}
+				</span>
+				{sub && <span className={`hidden truncate text-[11px] @min-[11rem]:block ${gold ? "opacity-80" : "text-gray-400"}`}>{sub}</span>}
 			</span>
 			{preview && skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
 		</div>
