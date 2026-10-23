@@ -291,7 +291,10 @@ const STAT_ICONS: Record<DeckStatType, { label: string; icon: string }> = {
 function LinkBadge({ scenarioName }: { scenarioName: string | null }) {
 	const words = scenarioName ? `Linked to ${scenarioName}` : "Linked to the scenario"
 	return (
+		// role="img" so a screen reader reads the label rather than skipping a
+		// labelled span.
 		<span
+			role="img"
 			title={words}
 			aria-label={words}
 			className="absolute left-1 top-1 rounded bg-brand px-1 py-0.5 text-[9.5px] font-bold uppercase leading-none tracking-wide text-black shadow-md"

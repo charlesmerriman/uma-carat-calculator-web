@@ -161,9 +161,18 @@ function GuideText({ guide }: { guide: PvpGuide }) {
 	const boxRef = useRef<HTMLDivElement>(null)
 	const [long, setLong] = useState(false)
 	const [open, setOpen] = useState(false)
+	// Measured again whenever the box changes size: a window opened wide (no
+	// clamp, nothing to measure) and then narrowed must still get its "Read more".
 	useEffect(() => {
 		const box = boxRef.current
-		if (box) setLong(box.scrollHeight > box.clientHeight + 1)
+		if (!box) return
+		const measure = () => setLong(box.scrollHeight > box.clientHeight + 1)
+		measure()
+		// No ResizeObserver in jsdom; every browser the site supports has one.
+		if (typeof ResizeObserver === "undefined") return
+		const observer = new ResizeObserver(measure)
+		observer.observe(box)
+		return () => observer.disconnect()
 	}, [guide.short_description, guide.meta_analysis])
 	if (!guide.short_description && !guide.meta_analysis) return null
 	return (
