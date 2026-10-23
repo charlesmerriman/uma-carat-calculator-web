@@ -231,11 +231,22 @@ export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCa
 	return (
 		<div className="min-w-0">
 			{/* A card's art bakes in its own border, so no box of ours round it:
-			    only a slot with no art yet gets the grey square. */}
-			<div className={`relative overflow-hidden ${card.image ? "" : "rounded-lg border border-gray-600 bg-gray-700"}`}>
-				<TileArt src={card.image} alt={card.name} />
-				{borrow && <BorrowRibbon />}
-			</div>
+			    only a slot with no art yet gets the grey square. The art (3:4) is
+			    drawn full height in a square, centred, and the borrow tab wraps the
+			    image itself, not the square, so it is as wide as the card. */}
+			{card.image ? (
+				<div className="flex aspect-square justify-center">
+					<BorrowTab borrow={borrow} className="h-full">
+						<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-full w-auto" />
+					</BorrowTab>
+				</div>
+			) : (
+				<BorrowTab borrow={borrow}>
+					<div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
+						<TileArt src={null} alt={card.name} />
+					</div>
+				</BorrowTab>
+			)}
 			<div className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={card.name}>
 				{card.name}
 			</div>
@@ -291,18 +302,39 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 /** A slot with no card, only advice ("Any Wit", "or any speed"). */
 export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: boolean }) {
 	return (
-		<div className="relative flex aspect-square w-full items-center justify-center rounded-lg border border-dashed border-gray-600 bg-gray-800 p-1 text-center text-xs text-gray-300">
-			<InlineNote text={note} />
-			{borrow && <BorrowRibbon />}
-		</div>
+		<BorrowTab borrow={borrow}>
+			<div className="flex aspect-square w-full items-center justify-center rounded-lg border border-dashed border-gray-600 bg-gray-800 p-1 text-center text-xs text-gray-300">
+				<InlineNote text={note} />
+			</div>
+		</BorrowTab>
 	)
 }
 
-function BorrowRibbon() {
+/**
+ * The borrowed card's marker: a grey tab behind the card, peeking out above
+ * its top edge, like the game's "Friend" tag (Daptrius,
+ * 2026-10-16). The card's own bottom edge stays free for the limit-break
+ * diamonds.
+ *
+ * The tab can't live inside the tile: the art box clips its overflow, and the
+ * note tile's own background would paint over a tab put behind it. So it wraps
+ * the tile from outside. `isolate` opens a stacking context, which keeps the
+ * tab's -z-10 behind the tile but in front of the page and panel underneath.
+ * Grey tokens, not the brand gold, so it stays neutral on every theme.
+ */
+function BorrowTab({ borrow, className = "", children }: { borrow: boolean; className?: string; children: ReactNode }) {
+	if (!borrow) return <>{children}</>
 	return (
-		<span className="absolute inset-x-0 bottom-0 bg-brand/90 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-black">
-			Borrow
-		</span>
+		<div className={`relative isolate ${className}`}>
+			{/* As wide as the card (owner, 2026-10-23), showing 14px above it.
+			    The rest (pb-2.5) runs behind the card, deeper than the card's
+			    rounded corners, so the grey fills in behind those corners and
+			    no square tab corner shows where the two meet. */}
+			<span className="absolute inset-x-0 -top-3.5 -z-10 rounded-t-lg bg-gray-600 pb-2.5 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
+				Borrow
+			</span>
+			{children}
+		</div>
 	)
 }
 

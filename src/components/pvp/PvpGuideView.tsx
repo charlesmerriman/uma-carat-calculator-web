@@ -227,7 +227,9 @@ function DeckGrid({ deck }: { deck: PvpDeck }) {
 				</span>
 				{deck.note && <InlineNote text={deck.note} className="text-xs text-gray-400" />}
 			</div>
-			<div className="mt-2 grid max-w-3xl grid-cols-3 gap-2 sm:grid-cols-6">
+			{/* Rows sit 1rem apart, and the grid 1rem below the label: room for the
+			    borrow tab, which peeks out above its card. */}
+			<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-6">
 				{[1, 2, 3, 4, 5, 6].map((number) => {
 					const [main, ...alternates] = slots.get(number) ?? []
 					return (
