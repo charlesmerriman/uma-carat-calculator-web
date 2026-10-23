@@ -31,6 +31,7 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	// The title is the admin page row's (snapshot.json carries the seed's).
 	"/app/legend-races": { title: `Daily Legend Races | ${SITE_NAME}`, phrase: "Loading your plan" },
 	"/app/pvp": { title: `PvP Guides | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/skills": { title: `Skills | ${SITE_NAME}`, phrase: "Loading your plan" },
 }
 
 describe("entry-server render()", () => {
