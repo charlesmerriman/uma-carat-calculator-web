@@ -135,10 +135,12 @@ export function SourcesText({ sources }: { sources: PvpSkillSources }) {
 	)
 }
 
-/** A small "JP only" tag: the skill isn't in the global game yet. */
+/** A small "JP only" tag: the skill isn't in the global game yet. In the
+ * colour of whatever it sits on (border-current), so it reads on a plain
+ * row, the gold and the pink alike. */
 export function JpOnlyTag({ className = "" }: { className?: string }) {
 	return (
-		<span className={`rounded border border-gray-500 px-1 text-[0.85em] font-medium uppercase tracking-wide text-gray-300 ${className}`}>
+		<span className={`rounded border border-current px-1 text-[0.85em] font-medium uppercase tracking-wide opacity-75 ${className}`}>
 			JP only
 		</span>
 	)
