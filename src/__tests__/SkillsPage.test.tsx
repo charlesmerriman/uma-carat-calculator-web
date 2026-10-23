@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SkillsPage } from "../components/skills/SkillsPage"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
 import type { SkillDetailData, SkillListRow } from "../types/skills"
-import { filterSkills, parseSkillParam } from "../utils/skillSearch"
+import { filterSkills, parseSkillParam, skillKind } from "../utils/skillSearch"
 
 /** The Skills page (/app/skills): the list, search and filters, and one skill opened in full. */
 
@@ -79,6 +79,12 @@ describe("filterSkills", () => {
 		expect(filterSkills(ROWS, "", "gold", "all").map((r) => r.name)).toEqual(["Gourmand"])
 		expect(filterSkills(ROWS, "", "evolved", "all").map((r) => r.name)).toEqual(["Gluttonous Ruler"])
 		expect(filterSkills(ROWS, "", "all", "jp").map((r) => r.name)).toEqual(["Fan Skill"])
+	})
+
+	it("labels a unique's inherited copy, which shares its name", () => {
+		expect(skillKind({ game_id: 900661, rarity: 1, is_evolved: false })).toBe("inherited")
+		expect(skillKind({ game_id: 200012, rarity: 1, is_evolved: false })).toBe("white")
+		expect(skillKind({ game_id: 100661, rarity: 5, is_evolved: false })).toBe("unique")
 	})
 
 	it("reads only a game id from the link", () => {
