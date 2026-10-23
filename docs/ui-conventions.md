@@ -1546,7 +1546,36 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   one-line notes. Mentions resolve through the guide's `skill_mentions`, provided by
   `SkillMentionsContext` in `PvpGuideView`; an unresolved one is its plain name.
   `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
-  otherwise a markdown link. Token `--color-highlight`.
+  otherwise a markdown link. Token `--color-highlight`. **Except on a card**: a deck slot's note is
+  drawn with no red and no bold (Henry, 2026-10-23), whatever it holds.
+- **A deck slot's note is read as parts** (`utils/deckNotes.ts`, `parseSlotNote`; release 2
+  of `guide-visuals-plan.md`): `[[skills]]` become small same-size `SkillCell`s the card's
+  width, the fixed tags ("1SP"/"2SP", "Stats", "Hints", "Initial Friendship", in the
+  guide's words) pills, "or any Wit" one line with the stat icon (`AnyTypeLine`), and
+  "Scenario Link" (or the sheet-era bare "Link") a gold **Link badge** in the top-left
+  corner of the card's art, with "Linked to <scenario>" on hover and for screen readers
+  (owner's pick, 2026-10-23; it replaced web #160's red ring on the mention, which stays
+  only in prose). Parts are split on "&", "+", "," and "and/or", with mentions masked
+  first so "Fast & Furious" stays whole. Anything unread is kept as the author's words;
+  a note with nothing read comes back whole. A non-SSR card or alternative shows its
+  rarity ("Light Hello R").
+- **Decks: one at a time, by budget** (owner, 2026-10-23). A style's decks that are not
+  swap-ins form a ladder; with two or more, a "Deck budget" control (their labels, then
+  "All") picks one, or All opens every one. ONE pick for the page (every style, the All
+  tab), remembered per device (`rememberDeckBudget`, localStorage); a label a style lacks
+  shows its first deck. Above the decks, "In every Pace deck: …" (`cardsInEveryDeck`); in
+  each deck after the first, "Compared with Beginner: swaps in … for …" (`deckChanges`,
+  main rows by card id). No mark on the cards themselves (Henry: "New" marks were
+  distracting). The height animates both ways (Framer Motion `AnimatePresence`, about
+  280ms); `MotionConfig reducedMotion="user"` stops transforms only, so the duration is 0
+  under `useReducedMotion()`. Overflow is hidden only while a deck moves, so hover
+  details are not clipped once it settles.
+- **A swap-in deck is a row, not a deck** (`is_highlighted`, the editor's "Swap-ins"
+  switch, formerly "Gold box"; the guide's Honorable Mentions): smaller cards with their
+  reasons, no slots, no borrow tab, in a recessed `bg-gray-900` panel (a well on both
+  theme families: below the pane on dark, the grey canvas under white cards on light).
+  Not gold: Henry found the gold box read as the top pick. The editor draws the same
+  panel.
 - **A skill's other versions ride along.** The API sends each embedded skill with its own
   `version` label (`○ white`, `◎ white`, `◎ gold`, `evolved`) and `versions`, its other
   forms, derived server side from the game data (same group plus the evolution link), never

@@ -155,10 +155,10 @@ describe("GuideEditor", () => {
 		expect((puts()[1].body as GuideDocument).version).toBe(4)
 	})
 
-	it("gives a deck the gold box and saves it", async () => {
+	it("marks a deck as swap-ins and saves it", async () => {
 		renderEditor()
 		fireEvent.click(await screen.findByRole("tab", { name: /Front/ }))
-		const toggle = screen.getByRole("button", { name: "Gold box" })
+		const toggle = screen.getByRole("button", { name: "Swap-ins" })
 		expect(toggle).toHaveAttribute("aria-pressed", "false")
 		fireEvent.click(toggle)
 		expect(toggle).toHaveAttribute("aria-pressed", "true")

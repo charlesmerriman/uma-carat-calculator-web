@@ -106,3 +106,27 @@ export function markPvpIntroSeen(): void {
 		// Storage refused: the intro keeps showing in full.
 	}
 }
+
+/**
+ * The deck budget the reader last picked on a guide ("Beginner", "Whale", or
+ * "All"), for every style and every event (guide-visuals-plan.md, release 2).
+ * localStorage, like the intro flag: a budget is a fact about the player, not
+ * about where this tab was.
+ */
+const BUDGET_KEY = "uma-planner-pvp-deck-budget"
+
+export function rememberDeckBudget(label: string): void {
+	try {
+		localStorage.setItem(BUDGET_KEY, label)
+	} catch {
+		// Storage refused: each guide opens on its first deck.
+	}
+}
+
+export function recalledDeckBudget(): string | null {
+	try {
+		return localStorage.getItem(BUDGET_KEY) || null
+	} catch {
+		return null
+	}
+}

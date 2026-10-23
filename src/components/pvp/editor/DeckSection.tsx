@@ -34,9 +34,11 @@ import type { GuideDeckRow, GuideSlotRow } from "../../../types/guideDocument"
 import type { MemberStyle } from "../../../types/pvpTeam"
 
 const EMPTY_SET = new Set<number>()
-// The reader's gold box colour (PvpGuideView's DeckGrid): the recommended
-// gold, a theme token, so it reads on light themes too.
-const GOLD_BOX = "border-recommended"
+// A swap-in deck's panel, as the guide draws it (PvpGuideView's SwapInRow): a
+// recessed well, not gold, so it stands apart without reading as the top pick
+// (Henry, 2026-10-23). A normal deck keeps the lighter box.
+const SWAP_IN_BOX = "border-gray-600 bg-gray-900"
+const DECK_BOX = "border-gray-700 bg-gray-900/30"
 const SLOT_NUMBERS = Array.from({ length: DECK_SLOTS }, (_, i) => i + 1)
 
 /** Which slot row a picker is for: the main card, or a new or existing alternative. */
@@ -80,12 +82,12 @@ function DeckEditor({ deck, index: i }: { deck: GuideDeckRow; index: number }) {
 		: null
 
 	return (
-		// The gold box shows here as it will on the guide, so an editor sees
-		// which decks carry it.
+		// The swap-in panel shows here as it will on the guide, so an editor
+		// sees which decks are drawn as a row of swap-ins.
 		<SortableItem
 			id={i}
 			label={`Move deck ${deck.label || i + 1}`}
-			className={`rounded-xl border bg-gray-900/30 p-3 ${deck.is_highlighted ? GOLD_BOX : "border-gray-700"}`}
+			className={`rounded-xl border p-3 ${deck.is_highlighted ? SWAP_IN_BOX : DECK_BOX}`}
 		>
 			{(handle) => (
 				<>
@@ -129,10 +131,10 @@ function DeckEditor({ deck, index: i }: { deck: GuideDeckRow; index: number }) {
 								type="button"
 								className={`${SMALL_BUTTON} whitespace-nowrap ${deck.is_highlighted ? "text-brand" : ""}`}
 								aria-pressed={Boolean(deck.is_highlighted)}
-								title="Draw this deck in a gold box, to set it apart from the others"
+								title="Draw this deck as a row of swap-ins, in a darker panel: cards that can replace one in the decks above"
 								onClick={() => update((doc) => updateDeck(doc, i, { is_highlighted: !deck.is_highlighted }))}
 							>
-								Gold box
+								Swap-ins
 							</button>
 							<button type="button" className={ICON_BUTTON} aria-label="Duplicate deck" title="Duplicate" onClick={() => update((doc) => duplicateDeck(doc, i))}>
 								<Copy className="h-4 w-4" />
