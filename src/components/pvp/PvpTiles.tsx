@@ -301,25 +301,25 @@ export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: 
 }
 
 /**
- * The borrowed card's marker: a grey strip tucked behind the card, peeking out
- * above its top edge like the game's "Friend" tag (Daptrius, 2026-10-16). The
- * bottom edge stays free for the limit-break diamonds.
+ * The borrowed card's marker: a grey backing behind the card, peeking out
+ * above its top edge with the label, like the game's "Friend" tag (Daptrius,
+ * 2026-10-16). The card's own bottom edge stays free for the limit-break
+ * diamonds.
  *
  * The tab can't live inside the tile: the art box clips its overflow, and the
  * note tile's own background would paint over a tab put behind it. So it wraps
  * the tile from outside. `isolate` opens a stacking context, which keeps the
  * tab's -z-10 behind the tile but in front of the page and panel underneath.
- * Its bottom runs a few pixels under the card, so only the label shows.
  * Grey tokens, not the brand gold, so it stays neutral on every theme.
  */
 function BorrowTab({ borrow, children }: { borrow: boolean; children: ReactNode }) {
 	if (!borrow) return <>{children}</>
 	return (
 		<div className="relative isolate">
-			{/* Spans the card's top, inset to clear its rounded corners, so the
-			    card reads as sitting in a holder. No outline: one made it look
-			    stuck on top. */}
-			<span className="absolute inset-x-1.5 -top-3.5 -z-10 rounded-t-md bg-gray-600 pb-2 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
+			{/* A backing card, rounded all round, 3px proud of the card on the
+			    sides and bottom and 14px on top, where the label sits. A tab that
+			    stopped under the card's edge looked clipped (owner, 2026-10-23). */}
+			<span className="absolute -inset-x-0.75 -bottom-0.75 -top-3.5 -z-10 rounded-lg bg-gray-600 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
 				Borrow
 			</span>
 			{children}
