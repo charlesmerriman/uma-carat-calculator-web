@@ -17,6 +17,8 @@ import {
 	parsePvpStyle,
 	parseStyleRanking,
 	parseTeamComp,
+	guideUmaAptitudes,
+	isAptitudeOnlyRole,
 	pickStyle,
 	styleColor,
 	styleForWord,
@@ -424,5 +426,38 @@ describe("team comps and style colours", () => {
 		expect(styleForWord(" Late Surger ")).toBe("late")
 		expect(styleForWord("Blaze")).toBeNull()
 		expect(styleColor("pace")).toBe("var(--color-style-pace)")
+	})
+})
+
+describe("aptitude letters on a guide's umas", () => {
+	const sprintTurf = { surface_type: "Turf", distance: "Sprint", length: "1200" }
+	const apt = { turf: 7, dirt: 1, short: 2, mile: 7, medium: 7, long: 6, front: 3, pace: 7, late: 7, end: 5 }
+
+	it("gives the course's distance and the row's style, the surface only when it is below A", () => {
+		expect(guideUmaAptitudes(apt, sprintTurf, "front")).toEqual([
+			{ label: "Sprint", letter: "F", value: 2 },
+			{ label: "Front", letter: "E", value: 3 },
+		])
+		expect(guideUmaAptitudes(apt, { ...sprintTurf, surface_type: "Dirt" }, "pace")).toEqual([
+			{ label: "Dirt", letter: "G", value: 1 },
+			{ label: "Sprint", letter: "F", value: 2 },
+			{ label: "Pace", letter: "A", value: 7 },
+		])
+	})
+
+	it("reads a runaway as a front runner, and gives nothing it cannot know", () => {
+		expect(guideUmaAptitudes(apt, sprintTurf, "runaway")?.map((a) => a.label)).toEqual(["Sprint", "Front"])
+		expect(guideUmaAptitudes(null, sprintTurf, "pace")).toBeNull()
+		expect(guideUmaAptitudes(apt, null, "pace")).toBeNull()
+		expect(guideUmaAptitudes({ short: null, pace: null }, sprintTurf, "pace")).toEqual([])
+	})
+
+	it("knows a role that only restates aptitudes", () => {
+		expect(isAptitudeOnlyRole("Sprint F Front E")).toBe(true)
+		expect(isAptitudeOnlyRole("Sprint E End D")).toBe(true)
+		expect(isAptitudeOnlyRole("sprint f")).toBe(true)
+		expect(isAptitudeOnlyRole("Normal Front")).toBe(false)
+		expect(isAptitudeOnlyRole("RA")).toBe(false)
+		expect(isAptitudeOnlyRole("")).toBe(false)
 	})
 })

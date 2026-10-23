@@ -17,7 +17,7 @@ import { SortableGroup, SortableItem } from "./Sortable"
 import { ADD_BUTTON, DANGER_BUTTON, FIELD_ERROR, ICON_BUTTON, SECONDARY_BUTTON, SECTION_HEADING, SUBTLE } from "./editorStyles"
 import { addUma, moveUma, removeUma, updateUma } from "../../../utils/guideDocumentEdits"
 import { MAX_LENGTH } from "../../../utils/guideDocument"
-import { STYLE_LABELS } from "../../../utils/pvpGuide"
+import { STYLE_LABELS, guideUmaAptitudes, isAptitudeOnlyRole } from "../../../utils/pvpGuide"
 import { releaseNote } from "../../../utils/cardRelease"
 import type { MemberStyle } from "../../../types/pvpTeam"
 import type { GuideUmaRow } from "../../../types/guideDocument"
@@ -85,18 +85,27 @@ export function UmaSection({ style }: { style: MemberStyle }) {
 }
 
 function UmaItem({ row, index: i, onEdit }: { row: GuideUmaRow; index: number; onEdit: () => void }) {
-	const { update, index } = useGuideEditor()
+	const { update, index, event } = useGuideEditor()
 	const errors = [...useFieldErrors(`uma_recommendations[${i}].uma`), ...useFieldErrors(`uma_recommendations[${i}].stars`)]
 	const uma = index.umasById.get(row.uma)
 	const ref = uma
-		? { id: uma.id, name: uma.name, image: uma.image, portrait: uma.portrait }
+		? { id: uma.id, name: uma.name, image: uma.image, portrait: uma.portrait, apt: uma.apt }
 		: { id: row.uma, name: `Uma ${row.uma}`, image: null, portrait: null }
+	const letters = guideUmaAptitudes(uma?.apt, event, row.style)
 	const setStars = (stars: number) => update((doc) => updateUma(doc, i, { stars: Math.min(5, Math.max(1, stars)) }))
 	return (
 		<SortableItem id={i} label={`Move ${ref.name}`} className="flex w-[7.5rem] flex-col gap-1">
 			{(handle) => (
 				<>
-					<UmaTile uma={ref} stars={row.stars} role={row.role} note={row.note} className="w-full" />
+					{/* As a visitor sees it: the letters drawn, an aptitude-only role hidden. */}
+					<UmaTile
+						uma={ref}
+						stars={row.stars}
+						role={letters?.length && isAptitudeOnlyRole(row.role) ? "" : row.role}
+						note={row.note}
+						aptitudes={letters}
+						className="w-full"
+					/>
 					<div className="flex items-center justify-between">
 						{handle}
 						<span className="flex items-center" role="group" aria-label={`Stars for ${ref.name}`}>
@@ -160,7 +169,7 @@ function UmaDialog({ index: i, onClose }: { index: number; onClose: () => void }
 					label="Role"
 					value={row.role}
 					maxLength={MAX_LENGTH.uma_role}
-					placeholder="A short tag on the picture, like Runaway blocker"
+					placeholder="A short tag on the picture, like Normal Front. Aptitude letters show by themselves."
 					errors={roleErrors}
 					onChange={(role) => update((doc) => updateUma(doc, i, { role }))}
 				/>

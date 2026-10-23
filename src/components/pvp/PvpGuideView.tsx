@@ -38,6 +38,8 @@ import {
 	cardsInEveryDeck,
 	deckChanges,
 	groupSkillsByTier,
+	guideUmaAptitudes,
+	isAptitudeOnlyRole,
 	listWords,
 	parseStyleRanking,
 	pickStyle,
@@ -52,6 +54,7 @@ import {
 import type {
 	DeckChange,
 } from "../../utils/pvpGuide"
+import type { RaceEvent } from "../../types"
 import type {
 	PvpDeck,
 	PvpDeckSlot,
@@ -339,11 +342,13 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
 	)
 }
 
-function StylePane({ guide, style, budget, onBudget }: {
+function StylePane({ guide, style, budget, onBudget, event }: {
 	guide: PvpGuide
 	style: PvpStyle
 	budget: string | null
 	onBudget: (label: string) => void
+	/** The event, for each uma's aptitude letters on its course. */
+	event: RaceEvent | null
 }) {
 	const umas = guide.uma_recommendations.filter((row) => row.style === style)
 	const note = guide.style_notes.find((row) => row.style === style)
@@ -353,6 +358,10 @@ function StylePane({ guide, style, budget, onBudget }: {
 	// Every tile keeps a row for its note only when one of this style's umas
 	// has a note: the tiles stay one size, without an empty band under each.
 	const hasUmaNotes = umas.some((row) => row.note)
+	// Each uma's letters for this course and style (null without aptitudes);
+	// the row shows on every tile once any of them has letters.
+	const letters = new Map(umas.map((row) => [row.uma.id, guideUmaAptitudes(row.uma.apt, event, style)]))
+	const hasLetters = [...letters.values()].some((list) => list !== null && list.length > 0)
 	return (
 		<div className="@container flex flex-col gap-4">
 			{umas.length > 0 && (
@@ -379,10 +388,13 @@ function StylePane({ guide, style, budget, onBudget }: {
 											key={row.uma.id}
 											uma={row.uma}
 											stars={row.stars}
-											role={row.role}
+											// A role that only restates aptitudes ("Sprint F Front E")
+											// steps aside once the letters say it.
+											role={letters.get(row.uma.id)?.length && isAptitudeOnlyRole(row.role) ? "" : row.role}
 											note={row.note}
 											showStars={false}
 											noteSlot={hasUmaNotes}
+											aptitudes={hasLetters ? (letters.get(row.uma.id) ?? []) : null}
 											className="w-full"
 										/>
 									))}
@@ -453,13 +465,14 @@ function StyleTabs({ styles, active, onChange, label, ranks }: {
 	)
 }
 
-function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget }: {
+function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event }: {
 	guide: PvpGuide
 	styles: Array<Exclude<PvpStyle, "everyone">>
 	style: PvpStyleTab | null
 	onStyleChange: (style: PvpStyleTab) => void
 	budget: string | null
 	onBudget: (label: string) => void
+	event: RaceEvent | null
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
 	// it). With none, or one the guide lacks (the pick is kept), the guide's
@@ -486,7 +499,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget }: 
 							<h3 className="style-ink mb-2 text-sm font-semibold uppercase tracking-wide" style={{ "--style-color": styleColor(each) } as CSSProperties}>
 								{STYLE_LABELS[each]}
 							</h3>
-							<StylePane guide={guide} style={each} budget={budget} onBudget={onBudget} />
+							<StylePane guide={guide} style={each} budget={budget} onBudget={onBudget} event={event} />
 							{/* The thread lives on the style's own tab; here, its count
 							    and the way there. */}
 							<button
@@ -501,7 +514,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget }: 
 				</div>
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
-					<StylePane guide={guide} style={shown} budget={budget} onBudget={onBudget} />
+					<StylePane guide={guide} style={shown} budget={budget} onBudget={onBudget} event={event} />
 					{/* Its own thread per style (Henry, 2026-10-21); keyed so a new
 					    tab opens folded. */}
 					<GuideComments
@@ -521,10 +534,12 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget }: 
  * `style` is the running style asked for (the URL's, or the reader's last),
  * not necessarily one this guide has; `pickStyle` settles which tab shows.
  */
-export function PvpGuideView({ guide, style, onStyleChange }: {
+export function PvpGuideView({ guide, style, onStyleChange, event = null }: {
 	guide: PvpGuide
 	style: PvpStyleTab | null
 	onStyleChange: (style: PvpStyleTab) => void
+	/** The guide's event, for the umas' aptitude letters on its course; none without it. */
+	event?: RaceEvent | null
 }) {
 	const styles = stylesWithContent(guide)
 	// General skills (style "everyone") are team-wide, like the stats, so
@@ -620,7 +635,7 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 				)}
 
 				{styles.length > 0 && (
-					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} />
+					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} />
 				)}
 			</div>
 			{/* A guide with no side column still has a thread for the whole guide. */}
