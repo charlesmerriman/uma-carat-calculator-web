@@ -301,7 +301,7 @@ export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: 
 }
 
 /**
- * The borrowed card's marker: a grey tab tucked behind the card, peeking out
+ * The borrowed card's marker: a grey strip tucked behind the card, peeking out
  * above its top edge like the game's "Friend" tag (Daptrius, 2026-10-16). The
  * bottom edge stays free for the limit-break diamonds.
  *
@@ -316,7 +316,10 @@ function BorrowTab({ borrow, children }: { borrow: boolean; children: ReactNode 
 	if (!borrow) return <>{children}</>
 	return (
 		<div className="relative isolate">
-			<span className="absolute -top-3.5 left-1.5 -z-10 rounded-t-md border border-b-0 border-gray-500 bg-gray-600 px-1.5 pb-2 pt-px text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-100">
+			{/* Spans the card's top, inset to clear its rounded corners, so the
+			    card reads as sitting in a holder. No outline: one made it look
+			    stuck on top. */}
+			<span className="absolute inset-x-1.5 -top-3.5 -z-10 rounded-t-md bg-gray-600 pb-2 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
 				Borrow
 			</span>
 			{children}
