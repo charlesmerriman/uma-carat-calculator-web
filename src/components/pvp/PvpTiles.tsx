@@ -316,17 +316,12 @@ function BorrowTab({ borrow, children }: { borrow: boolean; children: ReactNode 
 	if (!borrow) return <>{children}</>
 	return (
 		<div className="relative isolate">
-			{/* A tab as wide as its label, centred over the card. It runs 2px
-			    under the card so no seam shows where they meet. A tab whose
-			    corners just stopped at the card's edge looked clipped (owner,
-			    2026-10-23), so its foot flares out into the card's top edge like a
-			    browser tab. Each flare is a 6px square whose quarter-circle
-			    gradient leaves only a concave fillet between tab side and card.
-			    They are children of the tab, so they share its -z-10. */}
-			<span className="absolute bottom-[calc(100%-2px)] left-1/2 -z-10 -translate-x-1/2 whitespace-nowrap rounded-t-md bg-gray-600 px-2 pb-0.5 pt-px text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
+			{/* As wide as the card (owner, 2026-10-23), showing 14px above it.
+			    The rest (pb-2.5) runs behind the card, deeper than the card's
+			    rounded corners, so the grey fills in behind those corners and
+			    no square tab corner shows where the two meet. */}
+			<span className="absolute inset-x-0 -top-3.5 -z-10 rounded-t-lg bg-gray-600 pb-2.5 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
 				Borrow
-				<span aria-hidden="true" className="absolute bottom-0.5 right-full size-1.5 bg-[radial-gradient(circle_at_0_0,transparent_6px,var(--color-gray-600)_6.5px)]" />
-				<span aria-hidden="true" className="absolute bottom-0.5 left-full size-1.5 bg-[radial-gradient(circle_at_100%_0,transparent_6px,var(--color-gray-600)_6.5px)]" />
 			</span>
 			{children}
 		</div>
