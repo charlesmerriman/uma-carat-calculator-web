@@ -15,6 +15,7 @@ import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
@@ -322,6 +323,7 @@ function skillSurfaceClass(rarity: number): string {
 
 /** A recommended skill: icon, name, whose unique it is, the full detail on hover. */
 export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string }) {
+	const preview = useSkillsPreview()
 	const detail = <SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
 	// On the gold the text is the gradient's own dark brown (.skill-gold), so
 	// the grey text classes step aside and the note dims with opacity instead.
@@ -344,7 +346,7 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 				{/* No ◎ badge for "has a gold version": the game prints ○/◎ in the
 				    name itself, so a badge in the same glyph read as a version that
 				    doesn't exist. The hover detail lists the other versions. */}
-				{skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
+				{preview && skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
 				{note && <InlineNote text={note} className={`hidden truncate text-xs sm:inline ${gold ? "opacity-80" : "text-gray-400"}`} />}
 			</div>
 		</WithDetail>
