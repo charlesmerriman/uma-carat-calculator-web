@@ -407,7 +407,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 										</p>
 									)}
 									{guideState.status === "ready" && (
-										<PvpGuideView guide={guideState.guide} style={wantedStyle} onStyleChange={selectStyle} />
+										<PvpGuideView guide={guideState.guide} style={wantedStyle} onStyleChange={selectStyle} event={event} />
 									)}
 
 									<NewCardsSection

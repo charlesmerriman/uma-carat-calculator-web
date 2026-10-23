@@ -14,7 +14,7 @@ import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
-import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
+import { GOLD_SKILL_RARITY, type UmaAptitude } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
@@ -173,6 +173,31 @@ export function Stars({ count }: { count: number }) {
 	)
 }
 
+// A weak letter in the warning colours: C amber, D and below red.
+function aptitudeClass(value: number): string {
+	if (value >= 7) return "text-gray-100"
+	if (value === 6) return "text-gray-300"
+	if (value === 5) return "text-staging"
+	return "text-highlight"
+}
+
+/** "Sprint A · Pace A" on one line, the letters bold and coloured by how good they are. */
+function AptitudeLine({ aptitudes }: { aptitudes: UmaAptitude[] }) {
+	const words = aptitudes.map((aptitude) => `${aptitude.label} ${aptitude.letter}`).join(", ")
+	return (
+		<div className="h-4 truncate text-[11px] leading-4 text-gray-400" title={words || undefined}>
+			{aptitudes.length === 0
+				? "\u00a0"
+				: aptitudes.map((aptitude, index) => (
+						<span key={aptitude.label}>
+							{index > 0 && " · "}
+							{aptitude.label} <b className={`font-display font-semibold ${aptitudeClass(aptitude.value)}`}>{aptitude.letter}</b>
+						</span>
+					))}
+		</div>
+	)
+}
+
 // The first [[skill]] a note names, if any.
 const FIRST_MENTION = /\[\[([^[\]\n]+)\]\]/
 
@@ -189,7 +214,7 @@ const FIRST_MENTION = /\[\[([^[\]\n]+)\]\]/
  * `showStars={false}`; the editor and the New-cards list keep the stars on
  * the tile. The width is the caller's (`className`); the rows are fixed.
  */
-export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = true, className = "w-[7.5rem] shrink-0" }: {
+export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = true, aptitudes = null, className = "w-[7.5rem] shrink-0" }: {
 	uma: PvpUmaRef
 	stars: number
 	role: string
@@ -197,6 +222,11 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	showStars?: boolean
 	/** False when no tile beside this one has a note: the row is left out on all of them. */
 	noteSlot?: boolean
+	/**
+	 * This course's aptitude letters (guideUmaAptitudes). Null leaves the row
+	 * out; an empty list keeps an empty row, so the tiles beside stay level.
+	 */
+	aptitudes?: UmaAptitude[] | null
 	className?: string
 }) {
 	const oshiIds = useOshiIds()
@@ -226,6 +256,7 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 					</span>
 				</div>
 				<div className="h-[0.9375rem] truncate text-[11px] leading-[0.9375rem] text-gray-400">{outfit ?? "\u00a0"}</div>
+				{aptitudes && <AptitudeLine aptitudes={aptitudes} />}
 				{noteSlot && (
 					<div className="flex h-[2.125rem] items-center justify-center">
 						{skill ? (

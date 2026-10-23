@@ -10,6 +10,8 @@
  * (utils/remarkHighlight.ts for markdown, splitHighlights for one-line notes).
  */
 
+import type { AptitudeKey } from "./pvpTeam"
+
 /** A running style as a guide uses it. "everyone" is the whole team. */
 export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end"
 
@@ -29,6 +31,12 @@ export interface PvpUmaRef {
 	image: string | null
 	/** The borderless art, drawn in the site's frame (FramedUma). Optional for older fixtures. */
 	portrait?: string | null
+	/**
+	 * Its ten aptitudes, 1..8 (G..S) or null, as /pvp-catalogue sends them: the
+	 * guide prints this course's distance and the row's style as letters.
+	 * Optional: an older API answer and older fixtures have none.
+	 */
+	apt?: Partial<Record<AptitudeKey, number | null>> | null
 }
 
 export interface PvpSupportCardRef {

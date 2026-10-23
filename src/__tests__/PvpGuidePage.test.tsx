@@ -612,6 +612,31 @@ describe("PvpGuidePage decks", () => {
 })
 
 describe("PvpGuidePage umas", () => {
+	it("prints each uma's aptitude letters for the course, and drops a role that only restates them", async () => {
+		const apt = { turf: 7, dirt: 1, short: 3, mile: 4, medium: 7, long: 6, front: 8, pace: 7, late: 2, end: 1 }
+		respond(200, {
+			...GUIDE,
+			uma_recommendations: [
+				{ style: "front", stars: 3, role: "Mile D", note: "", uma: { id: 41, name: "Maruzensky", image: null, apt } },
+				{ style: "front", stars: 2, role: "Normal Front", note: "", uma: { id: 45, name: "Silence Suzuka", image: null, apt } },
+			],
+		})
+		renderPage("/app/pvp?event=cm-10&style=front")
+		await screen.findByText("Recommended stats")
+		const pane = within(screen.getByRole("tabpanel", { name: "Front" }))
+		// The event is a turf mile: the mile and the style, no turf (it is an A).
+		expect(pane.getAllByTitle("Mile D, Front S")).toHaveLength(2)
+		expect(pane.queryByText("Mile D")).not.toBeInTheDocument()
+		expect(pane.getByText("Normal Front")).toBeInTheDocument()
+	})
+
+	it("keeps the roles as written when the guide's umas carry no aptitudes", async () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10&style=front")
+		await screen.findByText("Recommended stats")
+		expect(within(screen.getByRole("tabpanel", { name: "Front" })).getByText("RA")).toBeInTheDocument()
+	})
+
 	it("groups a style's umas under their stars, most first, with no stars on the tiles", async () => {
 		respond(200, {
 			...GUIDE,

@@ -27,6 +27,8 @@ import type {
 	PvpSkillVersion,
 } from "../types/pvpGuide"
 import { parseApiDate } from "./dateFormat"
+import { aptitudeKeysForEvent, aptitudeLetter } from "./courseAptitude"
+import type { AptitudeKey } from "../types/pvpTeam"
 import { refForRaceEvent, sameEvent, type PvpEventRef } from "./pvpEvent"
 
 /** Display order, the same order the API sorts by. */
@@ -500,6 +502,51 @@ export function skillsForPosition(rows: PvpSkillRecommendation[], style: PvpStyl
 		.filter(({ row }) => row.style === style)
 		.sort((a, b) => tierRank(a.row) - tierRank(b.row) || a.row.order - b.row.order || a.index - b.index)
 		.map(({ row }) => row)
+}
+
+export interface UmaAptitude {
+	/** "Sprint", "Pace", "Dirt": the aptitude's name as the game prints it. */
+	label: string
+	/** "A", "F". */
+	letter: string
+	/** 1..8 (G..S), for its colour. */
+	value: number
+}
+
+/**
+ * The aptitude letters a guide's uma tile shows (release 4 of
+ * guide-visuals-plan.md): this event's distance and the row's style, plus its
+ * surface only when that is below A (nearly every uma is A on its surface, and
+ * a letter that never changes is noise). The keys come from the card picker's
+ * own reading of the course (aptitudeKeysForEvent). Null when the uma carries
+ * no aptitudes at all (an older API answer), so the tile leaves the row out.
+ */
+export function guideUmaAptitudes(
+	apt: Partial<Record<AptitudeKey, number | null>> | null | undefined,
+	event: Pick<RaceEvent, "surface_type" | "distance" | "length"> | null | undefined,
+	style: PvpStyle
+): UmaAptitude[] | null {
+	if (!apt || !event || style === "everyone") return null
+	const letters: UmaAptitude[] = []
+	for (const { key, label } of aptitudeKeysForEvent(event, style)) {
+		const value = apt[key]
+		const letter = aptitudeLetter(value)
+		if (letter === null || value == null) continue
+		if ((key === "turf" || key === "dirt") && value >= 7) continue
+		letters.push({ label, letter, value })
+	}
+	return letters
+}
+
+const APTITUDE_ROLE = /^(?:(?:sprint|short|mile|medium|middle|long|turf|dirt|runaway|front|pace|late|end)\s+[SABCDEFG]\b[\s,/]*)+$/i
+
+/**
+ * A role that only restates aptitudes ("Sprint F Front E", "Sprint E End D"),
+ * which the guide used to type by hand: hidden once the letters are drawn.
+ * A real role ("Normal Front", "RA", "Runaway blocker") is not one.
+ */
+export function isAptitudeOnlyRole(role: string): boolean {
+	return APTITUDE_ROLE.test(role.trim())
 }
 
 /**

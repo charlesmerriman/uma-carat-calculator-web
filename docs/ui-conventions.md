@@ -1554,6 +1554,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   when none), and the note's slot (its first `[[skill]]` as a small `SkillFace`, else its
   words) when any uma in the style has a note. Tiles share the row, 6.5rem at least, so a
   phone fits three. The editor shows the same tile, stars on it.
+  **Aptitude letters** (release 4, 2026-10-23): each guide uma carries `apt` (the API's ten
+  columns), and `guideUmaAptitudes(apt, event, style)` picks this course's distance and the
+  row's style, plus the surface only below A (the picker's `aptitudeKeysForEvent`). They
+  print as one line under the outfit, C amber and D or worse red, on every tile of the
+  style once any has letters; a role that only restates them ("Sprint F Front E",
+  `isAptitudeOnlyRole`) steps aside, a real role ("Normal Front") stays. A guide answer
+  without `apt` (an older API) keeps its roles and draws no row. The editor shows the same.
 - **A deck shows six cards a row only when its pane is 42rem wide** (`@2xl`, the pane is
   a container): on the All tab a style's box is half the width, where six cards were about
   55px and their notes ran into each other.
