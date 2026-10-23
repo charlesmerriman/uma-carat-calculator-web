@@ -13,7 +13,9 @@ import { Star } from "lucide-react"
 import { splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
-import { GOLD_SKILL_RARITY, skillColour } from "../../utils/pvpGuide"
+import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
+import { JpOnlyTag, SkillDetail } from "./SkillDetail"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
@@ -69,7 +71,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 	const detailId = useId()
 	const [tapped, setTapped] = useState(false)
 	if (!skill) return <>{name}</>
-	const surface = skill.rarity === GOLD_SKILL_RARITY ? "skill-gold" : "border-gray-600 bg-gray-800 text-gray-100"
+	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
 	return (
 		<span
@@ -92,47 +94,12 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 			<span
 				id={detailId}
 				role="tooltip"
-				className={`pointer-events-none absolute left-0 top-full z-40 mt-1 w-64 max-w-[80vw] whitespace-normal rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs font-normal leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+				className={`pointer-events-none absolute left-0 top-full z-40 mt-1 w-72 max-w-[80vw] whitespace-normal rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs font-normal leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
 					tapped ? "opacity-100" : "opacity-0"
 				}`}
 			>
-				<span className="block font-semibold text-gray-100">
-					{skill.name}
-					{skill.unique_of && <span className="font-normal text-gray-400"> ({skill.unique_of})</span>}
-				</span>
-				{skill.description}
-				<SkillVersions skill={skill} />
+				<SkillDetail skill={skill} />
 			</span>
-		</span>
-	)
-}
-
-/**
- * The other versions of a skill (white, gold, evolved) under its hover
- * detail: a guide names one version, and the rest are worth knowing about
- * because a card may teach the other one. Nothing when it has none.
- *
- * No heading: an "Also as" heading read as unclear (Daptrius, 2026-10-17).
- * The rule above the list and each line's colour word say what they are.
- */
-function SkillVersions({ skill }: { skill: PvpSkillRef }) {
-	if (skill.versions.length === 0) return null
-	return (
-		<span className="mt-1 block border-t border-gray-700/70 pt-1 text-gray-300">
-			{skill.versions.map((version) => (
-				<span key={version.id} className="mt-0.5 flex items-start gap-1">
-					{version.image ? (
-						<img src={version.image} alt="" className="mt-px h-3.5 w-3.5 shrink-0" loading="lazy" decoding="async" />
-					) : (
-						<span className="mt-px h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-					)}
-					<span>
-						<span className="font-medium text-gray-100">{version.name}</span>
-						<span className="text-gray-400"> {skillColour(version)}</span>
-						{version.description && <span className="block text-gray-400">{version.description}</span>}
-					</span>
-				</span>
-			))}
 		</span>
 	)
 }
@@ -310,35 +277,31 @@ function BorrowRibbon() {
 // skill is drawn the way the game draws it, on the gold gradient (.skill-gold
 // in App.css). The rest take theme tokens, not stock palette classes, so the
 // frame reads on light themes too: the step-up violet for uniques.
+/** An evolved skill is drawn on the pink (.skill-evolved), whatever its rarity
+ * says; otherwise `fallback`, the chip's or mention's own surface. */
+function skillSurface(skill: { is_evolved: boolean }, fallback: string): string {
+	return skill.is_evolved ? "skill-evolved" : fallback
+}
+
 function skillSurfaceClass(rarity: number): string {
 	if (rarity === GOLD_SKILL_RARITY) return "skill-gold"
 	if (rarity >= 3) return "border-step-up-border/70 bg-gray-800"
 	return "border-gray-600 bg-gray-800"
 }
 
-/** A recommended skill: icon, name, whose unique it is, the description on hover. */
+/** A recommended skill: icon, name, whose unique it is, the full detail on hover. */
 export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string }) {
-	const detail = (
-		<>
-			<span className="block font-semibold text-gray-100">{skill.name}</span>
-			{skill.description}
-			{note && (
-				<span className="mt-1 block text-gray-300">
-					<InlineNote text={note} />
-				</span>
-			)}
-			<SkillVersions skill={skill} />
-		</>
-	)
+	const preview = useSkillsPreview()
+	const detail = <SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
 	// On the gold the text is the gradient's own dark brown (.skill-gold), so
 	// the grey text classes step aside and the note dims with opacity instead.
 	const gold = skill.rarity === GOLD_SKILL_RARITY
 	return (
-		<WithDetail label={skill.name} detail={detail}>
+		<WithDetail label={skill.name} detail={detail} detailClassName="w-72">
 			{/* rounded-lg, not a capsule: the square icon's corners stuck out
 			    through a capsule's round ends. The skills panel's rows and the
 			    mention pill are rounded rectangles too. */}
-			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border py-0.5 pl-0.5 pr-2.5 ${skillSurfaceClass(skill.rarity)}`}>
+			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border py-0.5 pl-0.5 pr-2.5 ${skillSurface(skill, skillSurfaceClass(skill.rarity))}`}>
 				{skill.image ? (
 					<img src={skill.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
 				) : (
@@ -351,6 +314,7 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 				{/* No ◎ badge for "has a gold version": the game prints ○/◎ in the
 				    name itself, so a badge in the same glyph read as a version that
 				    doesn't exist. The hover detail lists the other versions. */}
+				{preview && skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
 				{note && <InlineNote text={note} className={`hidden truncate text-xs sm:inline ${gold ? "opacity-80" : "text-gray-400"}`} />}
 			</div>
 		</WithDetail>

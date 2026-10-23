@@ -178,7 +178,7 @@ describe("validateDocument", () => {
 		expect(paths).toContainEqual(["style_notes[1].style", "Front already has an advice box."])
 		expect(paths).toContainEqual(["decks[0].slots[3]", 'Pick a card, or write a note like "or any speed".'])
 		expect(paths).toContainEqual(["decks[0]", "Only one slot can be the borrowed card."])
-		expect(paths).toContainEqual(["short_description", "No skill on global has this name: [[Groundwrk]]"])
+		expect(paths).toContainEqual(["short_description", "No skill has this name: [[Groundwrk]]"])
 		expect(paths).toContainEqual(["team_comps[1].text", "Write the team comp, like 2 Front + 1 Pace."])
 	})
 

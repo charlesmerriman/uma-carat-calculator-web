@@ -19,6 +19,8 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useCalculatorData } from "../../../services/CalculatorContext"
 import { usePvpCatalogue } from "../../../hooks/usePvpCatalogue"
+import { useSkillList } from "../../../hooks/useSkillList"
+import { withShownSkills } from "../../../utils/skillList"
 import { useCardReleases } from "../../../hooks/useCardReleases"
 import { useGuideDocument } from "../../../hooks/useGuideDocument"
 import { SkillMentionsContext } from "../skillMentionsContext"
@@ -46,6 +48,15 @@ export function GuideEditor({ event, onViewAsVisitor, autosaveMs }: {
 }) {
 	const editor = useGuideDocument(event, { autosaveMs })
 	const catalogue = usePvpCatalogue()
+	// Every skill with an English name, JP-only ones too, for the picker and
+	// [[mentions]]. If it fails the editor still works with global's skills.
+	const skillList = useSkillList()
+	// Rebuilt only when either changes, so the editor's memos (hydration,
+	// validation) don't rerun on every render.
+	const index = useMemo(
+		() => (catalogue.status === "ready" ? { ...withShownSkills(catalogue, skillList), status: "ready" as const } : null),
+		[catalogue, skillList]
+	)
 	const { scenarioData } = useCalculatorData()
 	const [tab, setTab] = useState<EditorTab>("guide")
 	const [dialog, setDialog] = useState<EditorDialog | null>(null)
@@ -67,7 +78,7 @@ export function GuideEditor({ event, onViewAsVisitor, autosaveMs }: {
 
 	if (editor.state.status === "error") return <Notice>{editor.state.message}</Notice>
 	if (catalogue.status === "error") return <Notice>The uma and card list didn't load. Reload the page to try again.</Notice>
-	if (editor.state.status === "loading" || catalogue.status !== "ready") {
+	if (editor.state.status === "loading" || index === null) {
 		return (
 			<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
 				<Loader2 className="h-4 w-4 animate-spin" />
@@ -83,7 +94,7 @@ export function GuideEditor({ event, onViewAsVisitor, autosaveMs }: {
 		<ReadyEditor
 			event={event}
 			editor={editor}
-			index={catalogue}
+			index={index}
 			scenarios={scenarioData}
 			tab={tab}
 			onTab={setTab}
@@ -212,3 +223,4 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 }
 
 export default GuideEditor
+

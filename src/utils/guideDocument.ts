@@ -9,6 +9,7 @@
  * utils/guideDocumentEdits.ts.
  */
 
+import { skillNames } from "./skillList"
 import type {
 	EditorError,
 	GuideDeckRow,
@@ -153,8 +154,14 @@ function skillRef(
 		unique_of: previous?.unique_of ?? owners.get(skill.id) ?? null,
 		version: previous?.version ?? skill.version ?? "",
 		tier: previous?.tier ?? skill.tier ?? 1,
-		is_evolved: previous?.is_evolved ?? false,
+		is_evolved: previous?.is_evolved ?? skill.version === "evolved",
 		versions: previous?.versions ?? [],
+		// What the server said last; a newly picked JP skill is tagged from
+		// the list row until the next autosave brings the rest.
+		availability: previous?.availability ?? skill.availability,
+		uses_translation: previous?.uses_translation,
+		readable: previous?.readable,
+		sources: previous?.sources,
 	}
 }
 
@@ -230,11 +237,15 @@ export function hydrateGuide(
 				})),
 		}))
 
-	// [[mentions]]: the catalogue's names, matched ignoring case like the server.
+	// [[mentions]]: every name a catalogue skill answers to (its own first,
+	// then its other names), matched ignoring case like the server.
 	const byLowerName = new Map<string, CatalogueSkill>()
 	for (const skill of index.catalogue.skills) {
 		const key = skill.name.toLowerCase()
 		if (!byLowerName.has(key)) byLowerName.set(key, skill)
+	}
+	for (const skill of index.catalogue.skills) {
+		for (const key of skillNames(skill)) if (!byLowerName.has(key)) byLowerName.set(key, skill)
 	}
 	const mentions: Record<string, PvpSkillRef> = {}
 	for (const [, text] of texts(document)) {
@@ -342,11 +353,11 @@ export function validateDocument(document: GuideDocument, index: PvpCatalogueInd
 
 	document.decks.forEach((deck, i) => deckErrors(deck, i, index, add))
 
-	// [[mentions]] name a skill the catalogue (skills on global) has.
-	const names = new Set(index.catalogue.skills.map((skill) => skill.name.toLowerCase()))
+	// [[mentions]] name a skill the editor knows, by any of its names.
+	const names = new Set(index.catalogue.skills.flatMap(skillNames))
 	for (const [path, text] of texts(document)) {
 		const unknown = [...new Set(mentionsIn(text).filter((name) => !names.has(name.toLowerCase())))]
-		if (unknown.length > 0) add(path, `No skill on global has this name: ${unknown.map((name) => `[[${name}]]`).join("; ")}`)
+		if (unknown.length > 0) add(path, `No skill has this name: ${unknown.map((name) => `[[${name}]]`).join("; ")}`)
 	}
 
 	return found
