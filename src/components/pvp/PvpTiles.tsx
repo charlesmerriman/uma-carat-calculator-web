@@ -231,12 +231,22 @@ export function SupportTile({ card, note, borrow = false }: { card: PvpSupportCa
 	return (
 		<div className="min-w-0">
 			{/* A card's art bakes in its own border, so no box of ours round it:
-			    only a slot with no art yet gets the grey square. */}
-			<BorrowTab borrow={borrow}>
-				<div className={`relative overflow-hidden ${card.image ? "" : "rounded-lg border border-gray-600 bg-gray-700"}`}>
-					<TileArt src={card.image} alt={card.name} />
+			    only a slot with no art yet gets the grey square. The art (3:4) is
+			    drawn full height in a square, centred, and the borrow tab wraps the
+			    image itself, not the square, so it is as wide as the card. */}
+			{card.image ? (
+				<div className="flex aspect-square justify-center">
+					<BorrowTab borrow={borrow} className="h-full">
+						<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-full w-auto" />
+					</BorrowTab>
 				</div>
-			</BorrowTab>
+			) : (
+				<BorrowTab borrow={borrow}>
+					<div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-700">
+						<TileArt src={null} alt={card.name} />
+					</div>
+				</BorrowTab>
+			)}
 			<div className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={card.name}>
 				{card.name}
 			</div>
@@ -312,10 +322,10 @@ export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: 
  * tab's -z-10 behind the tile but in front of the page and panel underneath.
  * Grey tokens, not the brand gold, so it stays neutral on every theme.
  */
-function BorrowTab({ borrow, children }: { borrow: boolean; children: ReactNode }) {
+function BorrowTab({ borrow, className = "", children }: { borrow: boolean; className?: string; children: ReactNode }) {
 	if (!borrow) return <>{children}</>
 	return (
-		<div className="relative isolate">
+		<div className={`relative isolate ${className}`}>
 			{/* As wide as the card (owner, 2026-10-23), showing 14px above it.
 			    The rest (pb-2.5) runs behind the card, deeper than the card's
 			    rounded corners, so the grey fills in behind those corners and
