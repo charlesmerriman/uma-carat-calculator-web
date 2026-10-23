@@ -16,7 +16,10 @@ import {
 	skillColour,
 	parsePvpStyle,
 	parseStyleRanking,
+	parseTeamComp,
 	pickStyle,
+	styleColor,
+	styleForWord,
 	styleRanks,
 	styleTabs,
 	tierLabel,
@@ -399,5 +402,27 @@ describe("tier labels and plain notes", () => {
 		expect(plainNoteText("with [[564 Escapades]]")).toBe("with 564 Escapades")
 		expect(plainNoteText("==[[Top Runner]] & Hints==")).toBe("Top Runner & Hints")
 		expect(plainNoteText("Cope")).toBe("Cope")
+	})
+})
+
+
+describe("team comps and style colours", () => {
+	it("reads a comp as its places, a shared place as both styles", () => {
+		expect(parseTeamComp("3 Pace")).toEqual([["pace"], ["pace"], ["pace"]])
+		expect(parseTeamComp("2 Pace + 1 End/Late")).toEqual([["pace"], ["pace"], ["end", "late"]])
+		expect(parseTeamComp("1 Front Runner + 2 Pace Chaser")).toEqual([["front"], ["pace"], ["pace"]])
+	})
+
+	it("leaves a comp it cannot count as words alone", () => {
+		expect(parseTeamComp("Henry's Team")).toBeNull()
+		expect(parseTeamComp("2 Front + 2 Pace")).toBeNull()
+		expect(parseTeamComp("1 Blaze + 2 Pace")).toBeNull()
+		expect(parseTeamComp("")).toBeNull()
+	})
+
+	it("names a style from a word, and colours it from its token", () => {
+		expect(styleForWord(" Late Surger ")).toBe("late")
+		expect(styleForWord("Blaze")).toBeNull()
+		expect(styleColor("pace")).toBe("var(--color-style-pace)")
 	})
 })

@@ -1,10 +1,11 @@
 /**
  * One event's guide, the "Recommendations" view of the PvP page.
  *
- * Two columns from xl up: a narrow side column with what applies to the whole
- * team (overview, general skills, team comps, stats) and a main column with
- * one running style at a time (umas, notes, that style's skills, decks).
- * Below xl the side column stacks on top.
+ * On top, the band (GuideBand): the style ranking, the meta analysis, the
+ * stats, the scenario and the team comps. Under it, two columns from xl up: a
+ * narrow side column with the general skills and the whole guide's thread,
+ * and a main column with one running style at a time (umas, notes, that
+ * style's skills, decks). Below xl the side column follows the style.
  *
  * ONE style pane, never two. A second "compare" pane beside the first was
  * tried (2026-10-13) and read as every uma and card listed twice; removed at
@@ -16,11 +17,13 @@
 
 import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { useEffect, useRef, useState } from "react"
-import { Eye, Users } from "lucide-react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { Eye } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
+import { GuideBand } from "./GuideBand"
+import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
 import { guideCommentCount } from "../../services/guideComments"
 import { AlternateCard, AnyTypeLine, InlineNote, NoteOnlyTile, SkillCell, SkillMention, Stars, SupportTile, SwapInCard, UmaTile } from "./PvpTiles"
 import { recalledDeckBudget, rememberDeckBudget } from "../../services/pvpPageMemory"
@@ -39,6 +42,7 @@ import {
 	parseStyleRanking,
 	pickStyle,
 	skillsForPosition,
+	styleColor,
 	styleRanks,
 	styleTabs,
 	stylesWithContent,
@@ -54,15 +58,10 @@ import type {
 	PvpGuide,
 	PvpSkillCategory,
 	PvpSkillRecommendation,
-	PvpStatConfig,
 	PvpStyle,
 	PvpStyleTab,
 } from "../../types/pvpGuide"
 
-const SECTION = "rounded-xl border border-edge bg-gray-800/60 p-3"
-const HEADING = "text-sm font-semibold uppercase tracking-wide text-gray-400"
-const SUBHEADING = "text-sm font-semibold text-brand"
-const PARAGRAPH = "mt-2 leading-relaxed text-gray-300"
 
 // Module scope, so MarkdownContent's memoised components keep one identity.
 const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
@@ -138,109 +137,6 @@ function RecommendedSkills({ rows }: { rows: PvpSkillRecommendation[] }) {
 		<section aria-label="Recommended skills">
 			<h4 className={SUBHEADING}>Recommended skills</h4>
 			<SkillCategories rows={rows} />
-		</section>
-	)
-}
-
-// The five stats in game order, headed by the game's own stat icons
-// (public/0N_CM*.png, 84px squares shown at 32px).
-const STAT_COLUMNS: Array<{ key: keyof PvpStatConfig; label: string; icon: string }> = [
-	{ key: "speed", label: "Speed", icon: "/00_CMSPEED1.png" },
-	{ key: "stamina", label: "Stamina", icon: "/01_CMStamina1.png" },
-	{ key: "power", label: "Power", icon: "/02_CMPOWER1.png" },
-	{ key: "guts", label: "Guts", icon: "/03_CMGUTS1.png" },
-	{ key: "wit", label: "Wit", icon: "/04_CMWits1.png" },
-]
-
-/**
- * "1100+" -> 1100, marks "+"; "901*+1 Gold" -> 901, marks "*", extra
- * "+1 Gold". Marks (+ and *) sit beside the number as a superscript; anything
- * longer drops to a second line. Every number therefore lands on the same
- * line across a row, whatever the cells carry besides it.
- */
-function splitStat(value: string): { number: string; marks: string; extra: string } {
-	// A "+" right before a digit starts the extra ("901*+1 Gold"), not a mark.
-	const match = /^(\d[\d,]*)((?:[+*](?!\d))*)(.*)$/.exec(value.trim())
-	return match
-		? { number: match[1], marks: match[2], extra: match[3].trim() }
-		: { number: "", marks: "", extra: value.trim() }
-}
-
-function StatValue({ value, label }: { value: string; label: string }) {
-	// An en dash for a stat the guide says nothing about.
-	if (!value) return <span className="text-gray-600">–</span>
-	const { number, marks, extra } = splitStat(value)
-	return (
-		<span title={`${label}: ${value}`}>
-			{number && (
-				<span className="text-[13px] font-semibold tabular-nums text-gray-100 sm:text-sm">
-					{number}
-					{marks && <sup className="ml-px text-[10px] font-medium text-gray-400">{marks}</sup>}
-				</span>
-			)}
-			{extra && (
-				<span className={number ? "block text-[10px] leading-tight text-gray-400" : "text-sm text-gray-100"}>
-					{extra}
-				</span>
-			)}
-		</span>
-	)
-}
-
-function StatConfigTable({ rows }: { rows: PvpStatConfig[] }) {
-	// One line each under the table, in order of first appearance.
-	const footnotes = [...new Set(rows.map((row) => row.footnote).filter(Boolean))]
-	return (
-		<section className={SECTION} aria-labelledby="pvp-stats">
-			<h3 id="pvp-stats" className={HEADING}>Recommended stats</h3>
-			{/* Squeezed to a phone's width the five stat columns were about 50px
-			    beside a 5.5rem style column, and "1100++ 900++ 1100++" ran
-			    together (design polish item 26). Below sm the style column is
-			    4.75rem and the numbers 13px, which at 390px leaves about 11px
-			    between "1100++" and its neighbour and keeps "Everyone" clear of
-			    the first stat. Under 20rem of width (the smallest
-			    phones) the table scrolls sideways inside the section rather than
-			    squeezing the numbers back together. */}
-			<div className="mt-2 overflow-x-auto">
-				<table className="w-full min-w-[20rem] table-fixed border-collapse text-left">
-					<thead>
-						<tr className="border-b border-gray-600">
-							<th className="w-[4.75rem] pb-2 align-middle text-xs font-bold uppercase tracking-wider text-gray-300 sm:w-[5.5rem]">Style</th>
-							{STAT_COLUMNS.map((column) => (
-								<th key={column.key} className="pb-2 text-center" title={column.label}>
-									<img src={column.icon} alt={column.label} width={32} height={32} className="mx-auto h-8 w-8" />
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((row, index) => (
-							<tr key={index} className="border-b border-gray-700/80 last:border-b-0">
-								{/* align-top on every cell: the numbers share one line
-								    even when a cell or the label wraps below it. */}
-								<th scope="row" className="py-2 pr-1 align-top font-normal">
-									<span className="block text-sm font-semibold leading-5 text-gray-100">{STYLE_LABELS[row.style]}</span>
-									{row.label && <span className="block text-[11px] leading-tight text-gray-400">{row.label}</span>}
-								</th>
-								{STAT_COLUMNS.map((column) => (
-									<td key={column.key} className="py-2 text-center align-top leading-5">
-										<StatValue value={row[column.key] as string} label={column.label} />
-									</td>
-								))}
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-			{footnotes.length > 0 && (
-				<ul className="mt-2 space-y-0.5 border-t border-gray-700/70 pt-2 text-xs text-gray-400">
-					{footnotes.map((footnote) => (
-						<li key={footnote}>
-							<InlineNote text={footnote} />
-						</li>
-					))}
-				</ul>
-			)}
 		</section>
 	)
 }
@@ -542,6 +438,9 @@ function StyleTabs({ styles, active, onChange, label, ranks }: {
 							: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 					}`}
 				>
+					{style !== ALL_STYLES_TAB && (
+						<span aria-hidden="true" className="mr-1.5 hidden h-2 w-2 rounded-full align-middle sm:inline-block" style={{ background: styleColor(style) }} />
+					)}
 					{tabLabel(style)}
 					{style !== ALL_STYLES_TAB && ranks.has(style) && (
 						<span aria-hidden="true" className={`ml-1 text-[10px] tabular-nums sm:ml-1.5 sm:text-[11px] ${style === active ? "text-brand/80" : "text-gray-500"}`}>
@@ -583,7 +482,10 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget }: 
 				<div role="tabpanel" aria-label={ALL_STYLES_LABEL} className="grid items-start gap-3 lg:grid-cols-2">
 					{styles.map((each) => (
 						<section key={each} className={SECTION} aria-label={STYLE_LABELS[each]}>
-							<h3 className={`mb-2 ${HEADING}`}>{STYLE_LABELS[each]}</h3>
+							{/* The style's name in its colour on the dark themes (.style-ink). */}
+							<h3 className="style-ink mb-2 text-sm font-semibold uppercase tracking-wide" style={{ "--style-color": styleColor(each) } as CSSProperties}>
+								{STYLE_LABELS[each]}
+							</h3>
 							<StylePane guide={guide} style={each} budget={budget} onBudget={onBudget} />
 							{/* The thread lives on the style's own tab; here, its count
 							    and the way there. */}
@@ -626,8 +528,8 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 }) {
 	const styles = stylesWithContent(guide)
 	// General skills (style "everyone") are team-wide, like the stats, so
-	// they get one section in the side column, under the Overview, instead of
-	// a copy inside every position's tab, where they read as its own picks.
+	// they get one section in the side column instead of a copy inside every
+	// position's tab, where they read as its own picks.
 	const generalSkills = skillsForPosition(guide.skill_recommendations, "everyone")
 	const skillsPreview = useSkillsPreview()
 	// One deck budget for the whole page (every style, the All tab), per
@@ -645,9 +547,11 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	const [generalOpen] = useState(
 		() => typeof window === "undefined" || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width: 79.98rem)").matches
 	)
-	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
-	const hasSide =
-		hasOverview || generalSkills.length > 0 || guide.team_comps.length > 0 || guide.stat_configs.length > 0
+	// The general skills (and the whole guide's thread) stand beside the style
+	// from xl; the band above holds the rest of what is team-wide.
+	const hasSide = generalSkills.length > 0
+	// The tab on screen, the same pick StyleColumn makes, for the band's ladder.
+	const shownStyle = pickStyle(styles, style, parseStyleRanking(guide.style_ranking))
 
 	// The side column's height, for .pvp-side-sticky (App.css): pinned when it
 	// fits on screen, scrolled with the page to its end when it doesn't.
@@ -671,6 +575,8 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 				</div>
 			)}
 
+			<GuideBand guide={guide} active={shownStyle} onStyleChange={onStyleChange} />
+
 			<div
 				className={
 					hasSide && styles.length > 0
@@ -679,30 +585,9 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 				}
 			>
 				{hasSide && (
-					<aside ref={sideRef} className="pvp-side-sticky flex min-w-0 flex-col gap-4" aria-label="For the whole team">
-						{hasOverview && (
-							<section className={SECTION} aria-labelledby="pvp-overview">
-								<h3 id="pvp-overview" className={HEADING}>Overview</h3>
-								{guide.style_ranking && (
-									<p className="mt-2 text-sm text-gray-300">
-										<span className="font-semibold text-gray-100">Style ranking: </span>
-										{guide.style_ranking}
-									</p>
-								)}
-								{guide.short_description && (
-									<div className="text-sm">
-										<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
-									</div>
-								)}
-								{guide.meta_analysis && (
-									<div className="mt-3 text-sm">
-										<h4 className={SUBHEADING}>Meta analysis</h4>
-										<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
-									</div>
-								)}
-							</section>
-						)}
-
+					// Below xl the column follows the style: on a phone the general
+					// skills (folded) and the whole guide's thread come after it.
+					<aside ref={sideRef} className="pvp-side-sticky order-last flex min-w-0 flex-col gap-4 xl:order-none" aria-label="For every position">
 						{generalSkills.length > 0 && (
 							<section className={SECTION} aria-labelledby="pvp-general-skills">
 								<details open={generalOpen} className="group/general">
@@ -727,30 +612,6 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 								</details>
 							</section>
 						)}
-
-						{guide.team_comps.length > 0 && (
-							<section className={SECTION} aria-labelledby="pvp-team-comps">
-								<h3 id="pvp-team-comps" className={`flex items-center gap-1.5 ${HEADING}`}>
-									<Users className="h-4 w-4" />
-									Team comps
-								</h3>
-								<ul className="mt-2 space-y-1 text-sm text-gray-300">
-									{guide.team_comps.map((comp, index) => (
-										<li key={index}>
-											<span className="font-medium text-gray-100">{comp.text}</span>
-											{comp.note && (
-												<>
-													<span className="text-gray-500"> · </span>
-													<InlineNote text={comp.note} />
-												</>
-											)}
-										</li>
-									))}
-								</ul>
-							</section>
-						)}
-
-						{guide.stat_configs.length > 0 && <StatConfigTable rows={guide.stat_configs} />}
 
 						<div className={SECTION}>
 							<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
