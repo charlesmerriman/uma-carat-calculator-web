@@ -1534,6 +1534,19 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   above them stays a separate skill to search. A guide may
   list the white and the gold as two rows when their usefulness differs (owner,
   2026-10-14); they show as two chips.
+- **A skill's hover detail is `SkillDetail`** (`components/pvp/SkillDetail.tsx`, 2026-10-23),
+  shared by `SkillChip` and `SkillMention`: name (unique owner, a "JP only" tag when
+  `availability === "jp"`), description, the readable text the API builds from the game
+  data (`readable`: Only after / When / Does, with timing and the wit check; a `raw`
+  phrase is the game's own code in a `<code>` box, never reworded on the client), where a
+  player gets it (`sources`: a few outfits and cards, on-global first, "+N more"), the other
+  versions, and "English text: UmaTL fan translation." when `uses_translation`. A chip of
+  a JP-only skill carries the tag too; an evolved skill is drawn on `.skill-evolved` (a
+  stand-in pink until the game's own hexes are known). Absent fields (an editor preview, an
+  older API) read as a plain global skill. **The guide editor widens the catalogue** with
+  `GET /skills` (`withShownSkills`, `utils/skillList.ts`) so a writer can pick and
+  `[[mention]]` a JP-only skill by any of its names; the builder's own catalogue stays
+  global-only.
 - **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the
   game's stat icons (`public/0N_CM*.png`). `splitStat` puts `+` / `*` beside the number as a
   superscript and anything longer ("+1 Gold") on a second line, and every cell is top-aligned,

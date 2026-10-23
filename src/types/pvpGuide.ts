@@ -61,6 +61,53 @@ export interface PvpSkillVersion {
 	is_evolved: boolean
 }
 
+/** Where the game has a skill (the API's Skill.availability). "jp" is tagged "JP only". */
+export type SkillAvailability = "global" | "announced" | "jp"
+
+/**
+ * One phrase of a skill's readable text. `raw` is the game's own code for a
+ * clause or effect nobody has confirmed the meaning of yet: shown as code.
+ */
+export interface SkillPhrase {
+	text: string
+	raw: boolean
+}
+
+/** A condition: every phrase in `all`, and one of the `any` lists (none when empty). */
+export interface SkillCondition {
+	all: SkillPhrase[]
+	any: SkillPhrase[][]
+}
+
+/** One effect slot of a skill: a skill has one or two. */
+export interface SkillSlot {
+	/** The precondition: must have held earlier in the race. */
+	after: SkillCondition
+	when: SkillCondition
+	effects: SkillPhrase[]
+	/** "2.4 s", "Whole race", or null for an instant effect. */
+	duration: string | null
+	/** "Once per race", "30 s", or null. */
+	cooldown: string | null
+}
+
+/** When a skill fires and what it does, from the game data (skill_text.describe). */
+export interface SkillReadable {
+	/** Rolls against Wit before it fires; null when the game data doesn't say. */
+	wit_check: boolean | null
+	/** False when any phrase is raw. */
+	complete: boolean
+	slots: SkillSlot[]
+}
+
+/** Where a player gets a skill, in short: a few of each, with the totals. */
+export interface PvpSkillSources {
+	umas: { name: string; source: string; level: number | null; on_global: boolean }[]
+	uma_count: number
+	cards: { name: string; source: string; on_global: boolean }[]
+	card_count: number
+}
+
 export interface PvpSkillRef {
 	id: number
 	name: string
@@ -78,6 +125,16 @@ export interface PvpSkillRef {
 	is_evolved: boolean
 	/** Its other versions, white then gold then evolved; empty when it has none. */
 	versions: PvpSkillVersion[]
+	/**
+	 * Absent on a ref the guide editor builds from the catalogue, and from an
+	 * API older than 2026-10-23: every reader treats absent as "on global,
+	 * global's own text, nothing more to show".
+	 */
+	availability?: SkillAvailability
+	/** The name or description shown is UmaTL's translation: credit UmaTL. */
+	uses_translation?: boolean
+	readable?: SkillReadable
+	sources?: PvpSkillSources
 }
 
 export interface PvpStatConfig {
