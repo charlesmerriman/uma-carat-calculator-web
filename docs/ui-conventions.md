@@ -1547,6 +1547,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `GET /skills` (`withShownSkills`, `utils/skillList.ts`) so a writer can pick and
   `[[mention]]` a JP-only skill by any of its names; the builder's own catalogue stays
   global-only.
+- **SHELVED (owner, 2026-10-23): everything about skills below is guide-editor only.**
+  `useSkillsPreview()` (`hooks/useSkillsPreview.ts`) and the API's
+  `pvp_guide_editing.sees_skills_preview` decide it: the Skills page says "not here" to
+  everyone else and is neither prerendered nor in the sitemap (and `noindex`), and the hover
+  card's readable text, sources, "JP only" tag and UmaTL credit show to editors only. Players
+  see guides as before the work. Un-shelving is both functions; the rest is in
+  workspace-root `skills-plan-4.md`.
 - **The Skills page is `/app/skills`** (`components/skills/SkillsPage.tsx`, 2026-10-23):
   every `GET /skills` row, searched by any name a skill answers to (`filterSkills`,
   `utils/skillSearch.ts`) and filtered by colour and by where it is, 60 rows at a time.

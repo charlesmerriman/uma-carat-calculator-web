@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
+import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { SkillsPage } from "../components/skills/SkillsPage"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
 import type { SkillDetailData, SkillListRow } from "../types/skills"
@@ -44,6 +46,12 @@ const DETAIL: SkillDetailData = {
 	versions: [],
 }
 
+/** The shelved skills work shows to guide editors only (useSkillsPreview). */
+function asEditor(node: ReactNode, editor = true) {
+	const value = { isLoggedIn: true, status: "ready", account: { guide_editor: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
+	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
+}
+
 const fetchMock = vi.fn()
 
 function serve() {
@@ -53,11 +61,14 @@ function serve() {
 	})
 }
 
-function renderPage(url = "/app/skills") {
+function renderPage(url = "/app/skills", editor = true) {
 	return render(
-		<MemoryRouter initialEntries={[url]}>
-			<SkillsPage />
-		</MemoryRouter>
+		asEditor(
+			<MemoryRouter initialEntries={[url]}>
+				<SkillsPage />
+			</MemoryRouter>,
+			editor
+		)
 	)
 }
 
@@ -129,5 +140,11 @@ describe("SkillsPage", () => {
 		vi.spyOn(console, "error").mockImplementation(() => {})
 		renderPage()
 		await waitFor(() => expect(screen.getByText(/The skill list didn't load/)).toBeInTheDocument())
+	})
+
+	it("isn't there for anyone but a guide editor while it's shelved", () => {
+		renderPage("/app/skills", false)
+		expect(screen.getByText(/This page isn't here/)).toBeInTheDocument()
+		expect(fetchMock).not.toHaveBeenCalled()
 	})
 })

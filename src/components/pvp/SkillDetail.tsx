@@ -14,6 +14,7 @@
 import type { ReactNode } from "react"
 import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable, SkillSlot } from "../../types/pvpGuide"
 import { skillColour } from "../../utils/pvpGuide"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 
 /** The game's own code for a clause, in a quiet code box. */
 function Phrase({ phrase }: { phrase: SkillPhrase }) {
@@ -174,27 +175,30 @@ function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 
 /** The whole hover detail of one skill. `note` is a guide row's note, if any. */
 export function SkillDetail({ skill, note }: { skill: PvpSkillRef; note?: ReactNode }) {
+	// The shelved skills work shows to guide editors only (useSkillsPreview);
+	// everyone else gets the hover card as it was: name, text, versions.
+	const preview = useSkillsPreview()
 	return (
 		<>
 			<span className="block font-semibold text-gray-100">
 				{skill.name}
 				{skill.unique_of && <span className="font-normal text-gray-400"> ({skill.unique_of})</span>}
-				{skill.availability === "jp" && <JpOnlyTag className="ml-1.5 align-middle" />}
+				{preview && skill.availability === "jp" && <JpOnlyTag className="ml-1.5 align-middle" />}
 			</span>
 			{skill.description}
 			{note && <span className="mt-1 block text-gray-300">{note}</span>}
-			{skill.readable && (
+			{preview && skill.readable && (
 				<span className="mt-1 block border-t border-gray-700/70 pt-1">
 					<ReadableText readable={skill.readable} />
 				</span>
 			)}
-			{skill.sources && (
+			{preview && skill.sources && (
 				<span className="mt-1 block">
 					<SourcesText sources={skill.sources} />
 				</span>
 			)}
 			<SkillVersions skill={skill} />
-			{skill.uses_translation && <span className="mt-1 block text-[0.9em] text-gray-500">English text: UmaTL fan translation.</span>}
+			{preview && skill.uses_translation && <span className="mt-1 block text-[0.9em] text-gray-500">English text: UmaTL fan translation.</span>}
 		</>
 	)
 }

@@ -115,6 +115,8 @@ export const AppRouteMeta = () => {
 			? SHARED_PLAN_META
 			: META[path]
 
-	useDocumentMeta(meta.title, meta.description, path === "shared")
+	// The Skills page is shelved to guide editors (useSkillsPreview): noindex,
+	// like a shared plan, and not prerendered, until it is picked up again.
+	useDocumentMeta(meta.title, meta.description, path === "shared" || path === "/app/skills")
 	return null
 }
