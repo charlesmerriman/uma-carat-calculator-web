@@ -1547,6 +1547,15 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `GET /skills` (`withShownSkills`, `utils/skillList.ts`) so a writer can pick and
   `[[mention]]` a JP-only skill by any of its names; the builder's own catalogue stays
   global-only.
+- **The Skills page is `/app/skills`** (`components/skills/SkillsPage.tsx`, 2026-10-23):
+  every `GET /skills` row, searched by any name a skill answers to (`filterSkills`,
+  `utils/skillSearch.ts`) and filtered by colour and by where it is, 60 rows at a time.
+  The open skill is `?skill=<game id>` (`skillHref`), drawn by `SkillDetailCard` from
+  `GET /skills/<game_id>`: readable text (the hover card's `ReadableText`), every uma
+  (`FramedUma`, rainbow for covered favorites) and card that gives it, evolution and its
+  unlock conditions, versions, and the UmaTL credit with its link. It is linked from a
+  guide's "General skills" note; it has no navbar tab yet (the phone bar is a fixed five
+  columns, owner's call).
 - **Stats are text** (`"1100+"`, `"578*"`), shown as written in a plain table headed by the
   game's stat icons (`public/0N_CM*.png`). `splitStat` puts `+` / `*` beside the number as a
   superscript and anything longer ("+1 Gold") on a second line, and every cell is top-aligned,

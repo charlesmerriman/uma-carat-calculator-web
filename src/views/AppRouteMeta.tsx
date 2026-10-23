@@ -28,7 +28,7 @@ interface RouteMeta {
 	description: string
 }
 
-type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp"
+type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -59,6 +59,11 @@ const META: Record<AppPath, RouteMeta> = {
 		title: "PvP Guides",
 		description:
 			"What to build for each Uma Musume Champions Meeting and League of Heroes on global: recommended stats, umas, skills and support decks.",
+	},
+	"/app/skills": {
+		title: "Skills",
+		description:
+			"Every Uma Musume skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
 	},
 }
 
