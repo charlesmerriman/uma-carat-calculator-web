@@ -14,6 +14,7 @@
  * the superset of the sheet's two formats, and most guides fill only one.
  */
 
+import { Link } from "react-router-dom"
 import { useEffect, useRef } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
@@ -452,7 +453,10 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 						{generalSkills.length > 0 && (
 							<section className={SECTION} aria-labelledby="pvp-general-skills">
 								<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
-								<p className="mt-1 text-xs text-gray-400">Recommended for every position.</p>
+								<p className="mt-1 text-xs text-gray-400">
+									Recommended for every position. Look any skill up on the{" "}
+									<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
+								</p>
 								<SkillCategories rows={generalSkills} />
 							</section>
 						)}

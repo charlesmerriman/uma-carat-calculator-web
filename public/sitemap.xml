@@ -42,6 +42,11 @@
 		<loc>https://umacaratcalculator.com/app/pvp</loc>
 		<priority>0.7</priority>
 	</url>
+	<!-- Every skill, global and JP: when it fires, what it does, where to get it. -->
+	<url>
+		<loc>https://umacaratcalculator.com/app/skills</loc>
+		<priority>0.7</priority>
+	</url>
 	<!-- 16 questions across 4 groups. -->
 	<url>
 		<loc>https://umacaratcalculator.com/faq</loc>
