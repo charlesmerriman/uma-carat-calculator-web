@@ -939,6 +939,16 @@
 	background-image: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
 }
 
+/* An evolved skill (one outfit's own evolution of a gold skill), pink as the
+   game draws it. Fixed hexes for the same reason as .skill-gold. These two
+   ends are a stand-in until someone gives the game's own (2026-10-23); swap
+   them here, nothing else reads them. */
+.skill-evolved {
+	color: #4a1030;
+	border-color: #d9649c;
+	background-image: linear-gradient(135deg, #ffe6f2 0%, #f28cbc 100%);
+}
+
 /* The PvP guide's side column (overview, general skills, comps, stats), from
    xl, where it stands beside the running-style column (PvpGuideView.tsx).
    Daptrius, 2026-10-22: shorter than the window, it should stay put; longer,

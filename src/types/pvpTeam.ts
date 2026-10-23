@@ -6,6 +6,7 @@
  * shapes and refusals in backend/docs/api-reference.md ("/pvp-teams").
  */
 
+import type { SkillAvailability } from "./pvpGuide"
 import type { PvpEventKind } from "../utils/pvpEvent"
 import type { PvpStyle } from "./pvpGuide"
 
@@ -75,6 +76,13 @@ export interface CatalogueSkill {
 	game_id?: number | null
 	/** "○ white", "◎ white", "◎ gold" or "evolved": the tag the guide editor's picker shows. */
 	version?: string
+	/**
+	 * Only on the rows the guide editor adds from GET /skills (withShownSkills):
+	 * where the game has it, and every other name a [[mention]] may use.
+	 * The builder's own catalogue rows have neither: they are all on global.
+	 */
+	availability?: SkillAvailability
+	other_names?: string[]
 }
 
 export interface PvpCatalogue {
