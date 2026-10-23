@@ -486,6 +486,50 @@ describe("PvpGuidePage skill mentions", () => {
 	})
 })
 
+describe("PvpGuidePage band", () => {
+	it("draws the ranking as a ladder whose steps open their style", async () => {
+		respond(200, GUIDE)
+		renderPage("/app/pvp?event=cm-10")
+		await screen.findByText("Recommended stats")
+		const ladder = within(screen.getByRole("list", { name: "Style ranking" }))
+		expect(ladder.getByRole("button", { name: "Front, rank 1" })).toHaveAttribute("aria-pressed", "true")
+		// ">>" reads as words to a screen reader.
+		expect(ladder.getByText("A clear gap, then")).toBeInTheDocument()
+		fireEvent.click(ladder.getByRole("button", { name: "End, rank 2" }))
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&style=end")
+		expect(within(screen.getAllByRole("tablist", { name: "Running style" })[0]).getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+	})
+
+	it("puts the team-wide parts in the band, with the scenario, and no Overview box", async () => {
+		respond(200, GUIDE)
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.queryByRole("region", { name: "Overview" })).not.toBeInTheDocument()
+		const team = within(screen.getByRole("region", { name: "For the whole team" }))
+		expect(team.getByText("Recommended stats")).toBeInTheDocument()
+		expect(team.getByText("Trackblazer")).toBeInTheDocument()
+		expect(team.getByText("2 Front + 1 Late")).toBeInTheDocument()
+	})
+
+	it("draws one plain stats row as five tiles, and more rows as the table", async () => {
+		const plain = { style: "everyone" as const, label: "", speed: "1600", stamina: "350", power: "1200+", guts: "700+", wit: "1100+", footnote: "" }
+		respond(200, { ...GUIDE, stat_configs: [plain] })
+		const first = renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.getByTitle("Power: 1200+").querySelector("sup")?.textContent).toBe("+")
+		expect(screen.queryByRole("table")).not.toBeInTheDocument()
+		first.unmount()
+
+		clearPvpGuideCache()
+		respond(200, { ...GUIDE, stat_configs: [plain, { ...plain, label: "Monster", footnote: "For Monster Trainer." }] })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.getByRole("table")).toBeInTheDocument()
+		expect(screen.getByText("Monster")).toBeInTheDocument()
+		expect(screen.getByText("For Monster Trainer.")).toBeInTheDocument()
+	})
+})
+
 describe("PvpGuidePage decks", () => {
 	const deck = (id: number, label: string, cards: Array<[number, string, string?]>, extra: Partial<PvpGuide["decks"][number]> = {}) => ({
 		id,
@@ -605,7 +649,7 @@ describe("PvpGuidePage recommended skills", () => {
 		}
 	})
 
-	it("shows the general skills once, under the Overview, and each position's tab only its own", async () => {
+	it("shows the general skills once, beside the style, and each position's tab only its own", async () => {
 		respond(200, GUIDE)
 		renderPage()
 		await screen.findByText("Recommended stats")

@@ -949,7 +949,29 @@
 	background-image: linear-gradient(135deg, #ffe6f2 0%, #f28cbc 100%);
 }
 
-/* The PvP guide's side column (overview, general skills, comps, stats), from
+/* A running style's name in its colour (--style-color, set on the element from
+   the --color-style-* tokens, index.css), on the dark themes only: Hakuraku's
+   yellow and lime are unreadable as text on white, so a light theme keeps the
+   text colour and the style's colour stays on its dot, pip or edge. */
+.style-ink {
+	color: var(--style-color);
+}
+
+[data-theme-mode="light"] .style-ink {
+	color: inherit;
+}
+
+/* The style's colour on a dot beside its name, on the light themes only, where
+   the name stays the text colour; on the dark themes the name carries it. */
+.style-dot {
+	display: none;
+}
+
+[data-theme-mode="light"] .style-dot {
+	display: inline-block;
+}
+
+/* The PvP guide's side column (general skills, the whole guide's thread), from
    xl, where it stands beside the running-style column (PvpGuideView.tsx).
    Daptrius, 2026-10-22: shorter than the window, it should stay put; longer,
    it should scroll with the page.

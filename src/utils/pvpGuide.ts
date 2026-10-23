@@ -215,6 +215,35 @@ export function parseStyleRanking(text: string): RankingStep[] {
 	return steps
 }
 
+/** The style a word names ("Pace", "pace chaser"), or null. */
+export function styleForWord(word: string): Exclude<PvpStyle, "everyone"> | null {
+	return RANKING_WORDS[word.trim().toLowerCase()] ?? null
+}
+
+/** A running style's colour, as a CSS value: Hakuraku's (the --color-style-* tokens, index.css). */
+export function styleColor(style: Exclude<PvpStyle, "everyone">): string {
+	return `var(--color-style-${style})`
+}
+
+/**
+ * A team comp as its three places: "2 Pace + 1 End/Late" -> [pace], [pace],
+ * [end, late]. Each place is the style or styles it may run. Null when the
+ * text is not a count of styles adding up to one to three places, so the comp
+ * shows as its words alone.
+ */
+export function parseTeamComp(text: string): Array<Array<Exclude<PvpStyle, "everyone">>> | null {
+	const places: Array<Array<Exclude<PvpStyle, "everyone">>> = []
+	const parts = text.split("+").map((part) => part.trim()).filter(Boolean)
+	for (const part of parts) {
+		const match = /^(\d)\s*(.+)$/.exec(part)
+		if (!match) return null
+		const styles = match[2].split("/").map(styleForWord)
+		if (styles.some((style) => style === null)) return null
+		for (let i = 0; i < Number(match[1]); i += 1) places.push(styles as Array<Exclude<PvpStyle, "everyone">>)
+	}
+	return places.length >= 1 && places.length <= 3 ? places : null
+}
+
 /**
  * Each ranked style's place, 1 first: the step's position in the ranking, so a
  * non-style word ahead of it still counts ("Front>>Blaze>=End": End is 3rd).

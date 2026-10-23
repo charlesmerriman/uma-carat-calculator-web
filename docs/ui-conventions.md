@@ -1501,9 +1501,29 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar.
-- **Every guide section is optional** and steps aside when empty. From `xl` the guide is two
-  columns: a side column for the whole team (overview, general skills, team comps, stats)
-  and ONE style pane.
+- **Every guide section is optional** and steps aside when empty. On top, the band
+  (`GuideBand`); under it, from `xl`, two columns: a side column (general skills, the whole
+  guide's thread) and ONE style pane. Below `xl` the side column FOLLOWS the style
+  (`order-last`), so a phone reads band, tabs, the style, then the folded general skills.
+- **The band** (release 3 of `guide-visuals-plan.md`, 2026-10-23). Left: the style ranking
+  as a ladder (Henry: "looks great"), a row of steps once it has 36rem and a list on a
+  phone (a container query on a WRAPPER: a query reads an ancestor, so `@xl:` on the list's
+  own classes never fired), each step the rank, the name in its colour and three top-star
+  faces, a button to the tab ("Pace, rank 1"); `>>` is "≫ gap", `=`/`>=` "level", with
+  words for screen readers; a non-style word is a plain step. Then the short description
+  and the meta analysis (on a phone about three lines, faded, "Read more" when longer).
+  Right, one panel: Recommended stats (one plain row as five tiles, otherwise the table
+  with every row's label and footnote: Henry asked for several rows with notes), the
+  scenario ("Cards marked Link are linked to it."), the team comps with three places in
+  the styles' colours (`parseTeamComp`; a comp it can't count stays words only).
+- **Running-style colours are Hakuraku's** (Henry, 2026-10-23), the `--color-style-*`
+  variables in `index.css`'s `:root` (NOT `@theme`: Tailwind emits a `@theme` variable only
+  when a utility uses it, and these are read through inline `var()`, so all but one went
+  missing), with Hakuraku's colorblind set under `[data-colorblind-mode="true"]`. A name
+  takes its colour through `.style-ink` (App.css), which the light themes undo (yellow on
+  white is about 1.3:1); there a `.style-dot` beside the name carries it instead. Used on
+  the ladder, the style tabs' dots, the comp places and the All tab's style titles; always
+  beside the word.
 - **General skills (`style: "everyone"`) are a side-column section, "General skills",
   directly under the Overview** (owner, 2026-10-17). They are team-wide, like the stats;
   merged into every position's tab (as the page first shipped) they read as that

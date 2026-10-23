@@ -250,6 +250,7 @@ html {
 	--color-type-step-up: oklch(38.1% 0.176 304.987);
 	--color-type-step-up-ink: #ffffff;
 
+
 	/* SERIES COLOURS: the carat forecast's two pulls lines (uma and support).
 	   Not the type tiles above: those are dark fills here and pastel fills on
 	   the light themes, and a 2px line in either vanishes. Blue and teal echo
@@ -372,6 +373,25 @@ html {
 	   bg-gray-800 now reads a shade darker than a card, which is right for an
 	   inset and wrong for a card. */
 	--card-fill: color-mix(in oklab, var(--color-gray-800) 60%, var(--color-gray-700));
+
+	/* RUNNING STYLE COLOURS: the PvP guide's styles, in Hakuraku's colours
+	   (Henry, 2026-10-23: "use the same color coding as hakuraku for style"),
+	   copied from the global fork (ayaliz/hakuraku, MIT,
+	   src/pages/MultiRacePage/components/WinDistributionCharts/constants.ts,
+	   STRATEGY_COLORS). Kept as they are on every theme, so they stay the
+	   colours players know; on the light themes they colour fills only, never
+	   text (.style-ink in App.css: yellow on white is about 1.3:1). Always
+	   beside the style's word, never on their own. Colorblind mode swaps in
+	   Hakuraku's colorblind set further down.
+
+	   Here in :root, not @theme: Tailwind emits a @theme variable only when a
+	   utility uses it, and these are read through inline var() (a dot's fill,
+	   .style-ink), so under @theme all but one went missing (2026-10-23). */
+	--color-style-runaway: #b266ff;
+	--color-style-front: #5e98e7;
+	--color-style-pace: #a4db22;
+	--color-style-late: #fdde34;
+	--color-style-end: #ffb231;
 }
 
 /* ===== THEME OVERRIDES =====
@@ -712,6 +732,15 @@ html {
 	--color-type-step-up: #991b1b;
 	--color-step-up: #fca5a5;
 	--color-step-up-border: #f87171;
+
+	/* The running styles: Hakuraku's colorblind set (COLORBLIND_STRATEGY_COLORS,
+	   IBM's colour-blind-safe palette). The same on light themes, where they are
+	   fills only, so the light block below need not restate them. */
+	--color-style-runaway: #785ef0;
+	--color-style-front: #648fff;
+	--color-style-pace: #dc267f;
+	--color-style-late: #fe6100;
+	--color-style-end: #ffb000;
 }
 
 /* Every token the block above sets must be restated here: it comes later than
