@@ -238,12 +238,14 @@ function SwapInRow({ deck, scenarioName }: { deck: PvpDeck; scenarioName: string
 				{deck.label && <h5 className="text-sm font-semibold text-gray-200">{deck.label}</h5>}
 				{deck.note && <InlineNote text={deck.note.replace(/==/g, "")} className="text-xs text-gray-400" />}
 			</div>
-			<div className="mt-3 flex flex-wrap gap-x-2.5 gap-y-3">
+			{/* A grid of at least 6.25rem a card: three abreast on a phone, where
+			    a fixed width fitted two. */}
+			<div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-x-2.5 gap-y-3">
 				{rows.map((row, index) =>
 					row.support_card ? (
 						<SwapInCard key={index} card={row.support_card} note={row.note} scenarioName={scenarioName} />
 					) : (
-						<div key={index} className="flex w-[6.5rem] items-center justify-center rounded-lg border border-dashed border-gray-600 p-1 text-center text-[11px] text-gray-300">
+						<div key={index} className="flex items-center justify-center rounded-lg border border-dashed border-gray-600 p-1 text-center text-[11px] text-gray-300">
 							<InlineNote text={row.note.replace(/==/g, "")} />
 						</div>
 					)
