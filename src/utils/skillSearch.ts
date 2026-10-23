@@ -5,7 +5,7 @@
 
 import type { SkillAvailability } from "../types/pvpGuide"
 import type { SkillListRow } from "../types/skills"
-import { skillColour } from "./pvpGuide"
+import { WHITE_SKILL_RARITY, skillColour } from "./pvpGuide"
 
 export type ColourFilter = "all" | "white" | "gold" | "unique" | "evolved"
 export type WhereFilter = "all" | SkillAvailability
@@ -62,3 +62,15 @@ export function skillHref(gameId: number): string {
 
 /** UmaTL's translation, credited wherever its text shows. */
 export const UMATL_URL = "https://github.com/UmaTL/hachimi-tl-en"
+
+/**
+ * A skill's kind as the Skills page labels it: skillColour's word, except a
+ * unique's inherited copy, which reads "inherited". It shares the unique's
+ * name, so "white" beside it looked like a second skill of that name. The
+ * game marks one by its id: 9 then five digits (true of every global skill,
+ * import_game_data.guessed_structure).
+ */
+export function skillKind(skill: { game_id: number; rarity: number; is_evolved: boolean }): string {
+	if (skill.rarity === WHITE_SKILL_RARITY && /^9\d{5}$/.test(String(skill.game_id))) return "inherited"
+	return skillColour(skill)
+}

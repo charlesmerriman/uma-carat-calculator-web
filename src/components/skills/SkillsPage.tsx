@@ -14,9 +14,9 @@ import { Link, useSearchParams } from "react-router-dom"
 import { Loader2, Search, Zap } from "lucide-react"
 import { useSkillListState } from "../../hooks/useSkillList"
 import type { SkillListRow } from "../../types/skills"
-import { skillColour } from "../../utils/pvpGuide"
+import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
 import {
-	COLOUR_FILTERS, SKILL_PARAM, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
+	COLOUR_FILTERS, SKILL_PARAM, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref, skillKind,
 	type ColourFilter, type WhereFilter,
 } from "../../utils/skillSearch"
 import { JpOnlyTag } from "../pvp/SkillDetail"
@@ -51,15 +51,23 @@ function FilterChips<T extends string>({ label, options, value, onChange }: {
 	)
 }
 
+/** A row's surface: the game's gold or pink, else a card's fill and edge with
+ * light text (a bare bg-gray-800 is the page's own colour on some themes). */
+function rowSurface(row: SkillListRow): string {
+	if (row.is_evolved) return "skill-evolved"
+	if (row.rarity === GOLD_SKILL_RARITY) return "skill-gold"
+	return "border-edge bg-(--card-fill) text-gray-100 hover:border-gray-500"
+}
+
 function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
 	return (
 		<li>
 			<Link
 				to={skillHref(row.game_id)}
 				aria-current={open ? "true" : undefined}
-				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${
-					open ? "border-brand bg-brand/10" : "border-gray-700 bg-gray-800 hover:border-gray-500"
-				} ${row.is_evolved ? "skill-evolved" : row.rarity === 2 ? "skill-gold" : ""}`}
+				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${rowSurface(row)} ${
+					open ? "ring-2 ring-brand" : ""
+				}`}
 			>
 				{row.image ? (
 					<img src={row.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
@@ -68,7 +76,7 @@ function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
 				)}
 				<span className="min-w-0 flex-1 truncate">{row.name}</span>
 				{row.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
-				<span className="shrink-0 text-xs opacity-70">{skillColour(row)}</span>
+				<span className="shrink-0 text-xs opacity-70">{skillKind(row)}</span>
 			</Link>
 		</li>
 	)

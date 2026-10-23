@@ -9,8 +9,7 @@ import { Link } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { fetchSkillDetail } from "../../services/skillsFetchCalls"
 import type { SkillDetailData, SkillListRow, SkillSourceCard, SkillSourceUma } from "../../types/skills"
-import { skillColour } from "../../utils/pvpGuide"
-import { UMATL_URL, skillHref } from "../../utils/skillSearch"
+import { UMATL_URL, skillHref, skillKind } from "../../utils/skillSearch"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { JpOnlyTag, ReadableText } from "../pvp/SkillDetail"
@@ -35,7 +34,7 @@ function SkillLink({ skill }: { skill: Omit<SkillListRow, "other_names"> }) {
 		<Link to={skillHref(skill.game_id)} className="inline-flex items-center gap-1 text-brand transition hover:text-brand/75">
 			<SkillIcon image={skill.image} className="h-4 w-4" />
 			{skill.name}
-			<span className="text-gray-400">({skillColour(skill)})</span>
+			<span className="text-gray-400">({skillKind(skill)})</span>
 		</Link>
 	)
 }
@@ -172,7 +171,7 @@ export function SkillDetailCard({ gameId, onClose }: { gameId: number; onClose: 
 
 	if (state.status !== "ready") {
 		return (
-			<div className="flex items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-400" role="status">
+			<div className="flex items-center justify-between gap-3 card-panel px-4 py-3 text-sm text-gray-400" role="status">
 				{state.status === "loading" ? (
 					<span className="flex items-center gap-2">
 						<Loader2 className="h-4 w-4 animate-spin" /> Loading the skill...
@@ -190,7 +189,7 @@ export function SkillDetailCard({ gameId, onClose }: { gameId: number; onClose: 
 	const { skill } = state
 	const credit = skill.uses_translation || skill.evolution.conditions.some((condition) => condition.uses_translation)
 	return (
-		<article aria-labelledby="skill-detail-name" className="space-y-3 rounded-lg border border-gray-700 bg-gray-800 px-4 py-3">
+		<article aria-labelledby="skill-detail-name" className="space-y-3 card-panel px-4 py-3">
 			<header className="flex items-start gap-3">
 				<SkillIcon image={skill.image} className="h-10 w-10" />
 				<div className="min-w-0 flex-1">
@@ -201,7 +200,7 @@ export function SkillDetailCard({ gameId, onClose }: { gameId: number; onClose: 
 							<span className="rounded border border-gray-500 px-1 text-xs font-medium text-gray-300">Coming to global</span>
 						)}
 					</h2>
-					<p className="text-xs text-gray-400">{skillColour(skill)}</p>
+					<p className="text-xs text-gray-400">{skillKind(skill)}</p>
 				</div>
 				{close}
 			</header>
