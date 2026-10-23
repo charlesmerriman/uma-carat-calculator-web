@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { SkillsPage } from "../components/skills/SkillsPage"
+import { clearAuthToken, setAuthToken } from "../services/authToken"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
 import type { SkillDetailData, SkillListRow } from "../types/skills"
 import { filterSkills, parseSkillParam, skillKind } from "../utils/skillSearch"
@@ -146,5 +147,18 @@ describe("SkillsPage", () => {
 		renderPage("/app/skills", false)
 		expect(screen.getByText(/This page isn't here/)).toBeInTheDocument()
 		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("sends the editor's token: the API answers guide editors only while it's shelved", async () => {
+		setAuthToken("editor-token")
+		try {
+			renderPage("/app/skills?skill=100101111")
+			expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
+			const sent = fetchMock.mock.calls.map(([url, init]) => [String(url).replace(/^.*(\/skills.*)$/, "$1"), init?.headers])
+			expect(sent).toContainEqual(["/skills", { Authorization: "Token editor-token" }])
+			expect(sent).toContainEqual(["/skills/100101111", { Authorization: "Token editor-token" }])
+		} finally {
+			clearAuthToken()
+		}
 	})
 })

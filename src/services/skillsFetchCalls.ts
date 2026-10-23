@@ -8,6 +8,7 @@
  */
 
 import type { SkillDetailData, SkillListRow } from "../types/skills"
+import { authHeaders } from "./authToken"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -15,7 +16,10 @@ let listPromise: Promise<SkillListRow[]> | null = null
 
 export function loadSkillList(): Promise<SkillListRow[]> {
 	if (!listPromise) {
-		listPromise = fetch(`${API_URL}/skills`, { method: "GET" })
+		// The token, when there is one: while the work is shelved the API
+		// answers guide editors only (pvp_guide_editing.sees_skills_preview),
+		// and a guest's request with no header is a plain 404.
+		listPromise = fetch(`${API_URL}/skills`, { method: "GET", headers: authHeaders() })
 			.then(async (response) => {
 				if (!response.ok) throw new Error(`GET /skills failed: ${response.status}`)
 				return (await response.json()) as SkillListRow[]
@@ -30,7 +34,7 @@ export function loadSkillList(): Promise<SkillListRow[]> {
 
 /** One skill in full; null when the API has no shown skill of that id (404). */
 export async function fetchSkillDetail(gameId: number): Promise<SkillDetailData | null> {
-	const response = await fetch(`${API_URL}/skills/${gameId}`, { method: "GET" })
+	const response = await fetch(`${API_URL}/skills/${gameId}`, { method: "GET", headers: authHeaders() })
 	if (response.status === 404) return null
 	if (!response.ok) throw new Error(`GET /skills/${gameId} failed: ${response.status}`)
 	return (await response.json()) as SkillDetailData
