@@ -15,6 +15,7 @@
  */
 
 import { Link } from "react-router-dom"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { useEffect, useRef } from "react"
 import { Eye, Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
@@ -392,6 +393,7 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 	// they get one section in the side column, under the Overview, instead of
 	// a copy inside every position's tab, where they read as its own picks.
 	const generalSkills = skillsForPosition(guide.skill_recommendations, "everyone")
+	const skillsPreview = useSkillsPreview()
 	const hasOverview = guide.style_ranking || guide.short_description || guide.meta_analysis
 	const hasSide =
 		hasOverview || generalSkills.length > 0 || guide.team_comps.length > 0 || guide.stat_configs.length > 0
@@ -454,8 +456,14 @@ export function PvpGuideView({ guide, style, onStyleChange }: {
 							<section className={SECTION} aria-labelledby="pvp-general-skills">
 								<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
 								<p className="mt-1 text-xs text-gray-400">
-									Recommended for every position. Look any skill up on the{" "}
-									<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
+									Recommended for every position.
+									{/* The Skills page is shelved to guide editors (useSkillsPreview). */}
+									{skillsPreview && (
+										<>
+											{" "}Look any skill up on the{" "}
+											<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
+										</>
+									)}
 								</p>
 								<SkillCategories rows={generalSkills} />
 							</section>

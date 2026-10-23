@@ -9,10 +9,12 @@
  * rather than drawing them all.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Loader2, Search, Zap } from "lucide-react"
 import { useSkillListState } from "../../hooks/useSkillList"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
+import { AuthContext } from "../../services/AuthContext"
 import type { SkillListRow } from "../../types/skills"
 import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
 import {
@@ -82,7 +84,32 @@ function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
 	)
 }
 
+/**
+ * SHELVED to the guide editors (useSkillsPreview, owner 2026-10-23): anyone
+ * else gets a plain "not here", and the route is neither prerendered nor in
+ * the sitemap until the work is picked up again. Waits for the account while
+ * it loads, so an editor's page doesn't flash "not here" first.
+ */
 export const SkillsPage = () => {
+	const preview = useSkillsPreview()
+	const auth = useContext(AuthContext)
+	if (!preview) {
+		const waiting = Boolean(auth?.isLoggedIn) && auth?.status === "loading"
+		return (
+			<p className="mx-auto my-6 w-[calc(100%-1rem)] max-w-6xl text-sm text-gray-400" role="status">
+				{waiting ? "Loading..." : (
+					<>
+						This page isn't here.{" "}
+						<Link to="/app" className="text-brand transition hover:text-brand/75">Back to the calculator</Link>
+					</>
+				)}
+			</p>
+		)
+	}
+	return <SkillsPageBody />
+}
+
+const SkillsPageBody = () => {
 	const list = useSkillListState()
 	const [searchParams, setSearchParams] = useSearchParams()
 	const openId = parseSkillParam(searchParams.get(SKILL_PARAM))
