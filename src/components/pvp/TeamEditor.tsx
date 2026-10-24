@@ -32,20 +32,22 @@ import {
 } from "../../utils/pvpTeams"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { CompactTeamGrid } from "./CompactTeamGrid"
-import { TeamGrid } from "./TeamGrid"
+import { TeamGrid, type DeckDeal } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 
 type PlaceTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
-export function TeamEditor({ event, members, index, guide, layout = "full", onChange }: {
+export function TeamEditor({ event, members, index, guide, layout = "full", deal, onChange }: {
 	event: RaceEvent
 	members: PvpTeamMember[]
 	index: PvpCatalogueIndex
 	guide: PvpGuide | null
 	/** "compact": the team window's umas-on-top layout. */
 	layout?: "full" | "compact"
+	/** A guide deck being dealt onto a spot ("Use this deck", My team only). */
+	deal?: DeckDeal
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
@@ -95,6 +97,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", onCh
 				onStyleChange={(position, style) => onChange(setMemberStyle(members, position, style))}
 				onClearUma={(position) => onChange(clearMember(members, position))}
 				onClearCard={(position, slot) => onChange(clearCard(members, position, slot))}
+				deal={deal}
 			/>
 
 			{picker?.pool === "uma" && (
