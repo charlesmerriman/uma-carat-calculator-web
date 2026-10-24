@@ -560,6 +560,92 @@ export function umasByStars(rows: PvpUmaRecommendation[]): Array<{ stars: number
 	return [...groups.entries()].sort(([a], [b]) => b - a).map(([stars, list]) => ({ stars, rows: list }))
 }
 
+/** One star group's run of tiles on one row: `count` of its tiles from its `from`th. */
+export interface StarRowPart {
+	group: number
+	from: number
+	count: number
+}
+
+/** A row's measures, in px: its width, a tile's, and the gaps between tiles and between groups. */
+export interface StarRowMeasures {
+	width: number
+	tile: number
+	gap: number
+	/** The least room between two groups on a row; a row shares out what it has left. */
+	groupGap: number
+}
+
+/**
+ * A style's star groups packed into rows (owner, 2026-10-24: a row per group
+ * left much of a wide pane empty). A group continues the row the group before
+ * it ended on IF AND ONLY IF all of it fits in what is left of that row, the
+ * least group gap included; otherwise it starts a new row, and wraps across
+ * rows when it is longer than one. So one 3-star, one 2-star and one 1-star
+ * share a row, but five 2-stars after five 3-stars start their own row even
+ * where a few would have fitted. A group that wrapped leaves its last row open
+ * to the next group by the same rule. `sizes` are the groups' tile counts,
+ * most stars first (umasByStars).
+ */
+export function packStarRows(sizes: number[], { width, tile, gap, groupGap }: StarRowMeasures): StarRowPart[][] {
+	// Tiles a row holds; a hair of slack so float sums that land on the edge still fit.
+	const slack = 0.5
+	const perRow = Math.max(1, Math.floor((width + gap + slack) / (tile + gap)))
+	const span = (count: number) => count * tile + (count - 1) * gap
+	const rows: StarRowPart[][] = []
+	let row: StarRowPart[] = []
+	let used = 0
+	const newRow = () => {
+		if (row.length > 0) rows.push(row)
+		row = []
+		used = 0
+	}
+	sizes.forEach((size, group) => {
+		if (size <= 0) return
+		if (row.length > 0) {
+			if (used + groupGap + span(size) <= width + slack) {
+				row.push({ group, from: 0, count: size })
+				used += groupGap + span(size)
+				return
+			}
+			newRow()
+		}
+		for (let from = 0; from < size; from += perRow) {
+			if (from > 0) newRow()
+			const count = Math.min(size - from, perRow)
+			row.push({ group, from, count })
+			used = span(count)
+		}
+	})
+	newRow()
+	return rows
+}
+
+/**
+ * The star rows as drawn (owner, 2026-10-24): packed (packStarRows), with ONE
+ * margin every row keeps at its left and right. It is the FIRST row's: the
+ * room that row has over is shared out evenly, as much at each edge as goes
+ * into each gap between its groups, and the rows after it keep those edges.
+ *
+ * Except where a later row needs more room than the first row's edges leave:
+ * then the edges move out only as far as that row needs. Packing the later
+ * rows into the first row's span instead made a short first row (a lone
+ * 3-star on a phone) a column one tile wide for every row after it. A first
+ * row filled edge to edge (a group that wrapped) makes the margin 0.
+ */
+export function layoutStarRows(sizes: number[], measures: StarRowMeasures): { rows: StarRowPart[][]; inset: number } {
+	const rows = packStarRows(sizes, measures)
+	if (rows.length === 0 || measures.width <= 0) return { rows, inset: 0 }
+	const { tile, gap, groupGap, width } = measures
+	const used = (parts: StarRowPart[]) =>
+		parts.reduce((sum, part) => sum + part.count * tile + (part.count - 1) * gap, 0) + (parts.length - 1) * groupGap
+	const [first, ...rest] = rows
+	const share = (width - used(first)) / (first.length + 1)
+	// The most margin each later row leaves room for.
+	const room = rest.map((parts) => (width - used(parts)) / 2)
+	return { rows, inset: Math.max(0, Math.floor(Math.min(share, ...room))) }
+}
+
 /**
  * The All tab's face line (owner, 2026-10-24): a style's umas most stars
  * first, the guide's order within a star group, the first `count`, and how

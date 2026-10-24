@@ -1563,7 +1563,16 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   on up to two lines, the outfit on its own line (`splitOutfit`, `utils/umaName.ts`; blank
   when none), and the note's slot (its first `[[skill]]` as a small `SkillFace`, else its
   words) when any uma in the style has a note. Tiles share the row, 6.5rem at least, so a
-  phone fits three. The editor shows the same tile, stars on it.
+  phone fits three. The editor shows the same tile, stars on it. **Star groups share rows**
+  (owner, 2026-10-24; `packStarRows`, drawn by `UmaStarRows`): a group follows the one
+  before it on the same row only if ALL of it fits in what is left; otherwise it starts a
+  new row (and wraps, its later rows unheaded), and the next group may join its last row by
+  the same rule, the least gap between groups (20px) counted. The FIRST row's room over is
+  shared out evenly (as much at each edge as in each gap) and its edges hold for every row
+  (`layoutStarRows`): a later row starts at the same left and, with several groups, spreads
+  to the same right; the edges move out only where a later row needs more room (packing
+  later rows inside a short first row's span made phones one tile wide). Tiles keep the
+  1fr-column size. The pane is measured (ResizeObserver, before paint).
   **Aptitude letters** (release 4, 2026-10-23): each guide uma carries `apt` (the API's ten
   columns), and `guideUmaAptitudes(apt, event, style)` picks this course's distance and the
   row's style, plus the surface only below A (the picker's `aptitudeKeysForEvent`). They
