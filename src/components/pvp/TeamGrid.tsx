@@ -13,6 +13,7 @@
  */
 
 import type { ReactNode } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { ChevronDown, Handshake, Heart, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
@@ -22,6 +23,20 @@ import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
+
+/**
+ * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
+ * 2026-10-24), the only thing in the grid that animates. `counts`: how many
+ * decks each spot has been dealt; a new count re-keys that spot's six card
+ * slots, so each old card rises out and the deck's card rises in from below,
+ * left to right. `now`: the spot being dealt this moment, whose cards also deal
+ * in when its panel first appears (an empty spot that just got its uma).
+ * Every other edit (a pick, a removal, Undo) keeps the keys and is instant.
+ */
+export interface DeckDeal {
+	counts: Partial<Record<number, number>>
+	now: number | null
+}
 
 export interface TeamGridProps {
 	members: PvpTeamMember[]
@@ -40,10 +55,16 @@ export interface TeamGridProps {
 	onStyleChange: (position: number, style: MemberStyle) => void
 	onClearUma: (position: number) => void
 	onClearCard: (position: number, slot: number) => void
+	/** A guide deck being dealt (TeamBuilder's "Use this deck"); none elsewhere. */
+	deal?: DeckDeal
 }
 
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
+// One card after another, left to right: the next slot starts this much later.
+const DEAL_STEP = 0.12
+// How far a card rises as it goes, and from how far below the new one comes.
+const DEAL_RISE = 28
 
 /**
  * Two layouts, as Tailwind classes so a breakpoint can switch them.
@@ -86,8 +107,13 @@ function MemberPanel({
 	onStyleChange,
 	onClearUma,
 	onClearCard,
+	deal,
 }: TeamGridProps & { position: number }) {
 	const member = memberAt(members, position)
+	const reduceMotion = useReducedMotion()
+	const seconds = (value: number) => (reduceMotion ? 0 : value)
+	const dealCount = deal?.counts[position] ?? 0
+	const dealtNow = deal?.now === position
 	const uma = member ? umasById.get(member.uma) : undefined
 	const umaLabel = uma?.name ?? `uma ${position + 1}`
 	const starred = (pool: "uma" | "support", id: number) =>
@@ -98,9 +124,10 @@ function MemberPanel({
 		const card = entry ? cardsById.get(entry.support_card) : undefined
 		const borrow = slot === PVP_BORROW_SLOT
 		const slotName = borrow ? "Borrow" : `Card ${slot}`
-		return (
+		// Left to right, the borrowed card (slot six) last.
+		const order = slot - 1
+		const tile = (
 			<Tile
-				key={slot}
 				art={entry ? (card?.image ?? null) : undefined}
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
 				disabled={!member}
@@ -119,6 +146,25 @@ function MemberPanel({
 				clearLabel={`Remove ${card?.name ?? "this card"}`}
 				empty={<Plus className="h-4 w-4" />}
 			/>
+		)
+		// The slot's key changes only when a deck is dealt here (DeckDeal):
+		// then the old card rises and fades out while the deck's rises in from
+		// below, a beat after it. popLayout lifts the leaving card out of the
+		// cell (absolute, against this relative box) so the two share its place.
+		// initial: on a panel that appears mid-deal, the cards deal in too.
+		return (
+			<div key={slot} className="relative min-w-0">
+				<AnimatePresence mode="popLayout" initial={dealtNow}>
+					<motion.div
+						key={`${dealCount}-${slot}`}
+						initial={{ opacity: 0, y: DEAL_RISE }}
+						animate={{ opacity: 1, y: 0, transition: { duration: seconds(0.26), delay: seconds(order * DEAL_STEP + 0.14), ease: "easeOut" } }}
+						exit={{ opacity: 0, y: -DEAL_RISE, transition: { duration: seconds(0.2), delay: seconds(order * DEAL_STEP), ease: "easeIn" } }}
+					>
+						{tile}
+					</motion.div>
+				</AnimatePresence>
+			</div>
 		)
 	}
 

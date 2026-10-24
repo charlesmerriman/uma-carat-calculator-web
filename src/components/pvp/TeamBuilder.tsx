@@ -50,10 +50,14 @@ import { GuideSkillsBody } from "./GuideSkillsPanel"
 import { DockedPanel, SideDrawer } from "./SidePanel"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamEditor } from "./TeamEditor"
+import type { DeckDeal } from "./TeamGrid"
 import { TeamNotes } from "./TeamNotes"
 import type { RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
+
+// Long enough for the six cards to deal in (TeamGrid: about 0.12s apart, 0.4s each).
+const DEAL_SETTLE_MS = 1500
 
 /** One shared empty team, so "no team yet" is the same array on every render. */
 const NO_MEMBERS: PvpTeamMember[] = []
@@ -213,6 +217,15 @@ function ReadyBuilder({ event, teamsState, index }: {
 	const deck = deckId !== null ? (guide?.decks.find((candidate) => candidate.id === deckId) ?? null) : null
 	// The spot an uma is being picked for, to take the deck.
 	const [deckUmaSpot, setDeckUmaSpot] = useState<number | null>(null)
+	// The dealing animation (TeamGrid's DeckDeal): a count per spot, bumped by
+	// each deck put on it, and the spot being dealt right now, cleared once
+	// the six cards are in.
+	const [deal, setDeal] = useState<DeckDeal>({ counts: {}, now: null })
+	useEffect(() => {
+		if (deal.now === null) return
+		const done = window.setTimeout(() => setDeal((current) => ({ ...current, now: null })), DEAL_SETTLE_MS)
+		return () => window.clearTimeout(done)
+	}, [deal])
 	const deckStyle = deck ? memberStyleFrom([deck.style]) : undefined
 	const deckName = deck ? `${deck.style === "everyone" ? "" : `${STYLE_LABELS[deck.style]} `}${deck.label ? `${deck.label} ` : ""}deck` : ""
 	const deckSpots: DeckSpot[] = [0, 1, 2].map((position) => {
@@ -232,6 +245,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 		const before = members
 		const key = applyMembers(base.map((each) => (each.position === position ? { ...each, style: deckStyle ?? each.style, cards: fill.cards } : each)))
 		setDeckId(null)
+		setDeal((current) => ({ counts: { ...current.counts, [position]: (current.counts[position] ?? 0) + 1 }, now: position }))
 		const notes = [
 			...fill.skipped.map((skip) => `Left out ${skip.name}: ${skip.reason}.`),
 			...fill.open.map((open) => `${open.slot === PVP_BORROW_SLOT ? "The borrowed card" : `Card ${open.slot}`} is left ${openSlotWords(open.note)}.`),
@@ -425,7 +439,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					}}
 				/>
 
-				<TeamEditor event={event} members={members} index={index} guide={guide} onChange={applyMembers} />
+				<TeamEditor event={event} members={members} index={index} guide={guide} deal={deal} onChange={applyMembers} />
 				<TeamNotes
 					// Per team, so an open note never follows a switch to another team.
 					key={team?.key ?? "none"}

@@ -1881,6 +1881,12 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   a words-only slot ("Any Wit") left open; her style becomes the deck's. The toast's Undo
   puts the members back. The banner's key is prefixed (`deck-<team>`): `TeamNotes` beside it
   is keyed by the bare team key, and the clash left a dismissed banner on screen.
+  **The deck deals in** (owner, 2026-10-24; `DeckDeal` in `TeamGrid.tsx`): each card slot is
+  keyed by how many decks its spot has been dealt, so ONLY "Use this deck" re-keys it. Left to
+  right, 0.12s apart, the borrow card last, each old card rises and fades out while the
+  deck's rises in from below (`AnimatePresence mode="popLayout"`); a panel that appears mid
+  deal (an empty spot that just got its uma) deals its cards in too. A pick, a removal, Undo
+  and the team window keep the keys and stay instant; `useReducedMotion()` zeroes it.
 - **Notes** (`TeamNotes.tsx`): ten per team, read-only until the pen, `==red==` and line breaks
   kept, the eraser's Undo in a toast. Colours are the `--color-note-*` tokens.
 
