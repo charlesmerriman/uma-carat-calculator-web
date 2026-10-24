@@ -17,7 +17,7 @@
 
 import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { Eye, Layers } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
@@ -41,6 +41,7 @@ import {
 	guideUmaAptitudes,
 	isAptitudeOnlyRole,
 	listWords,
+	packStarRows,
 	parseStyleRanking,
 	pickStyle,
 	skillsForPosition,
@@ -63,6 +64,7 @@ import type {
 	PvpSkillRecommendation,
 	PvpStyle,
 	PvpStyleTab,
+	PvpUmaRecommendation,
 } from "../../types/pvpGuide"
 
 
@@ -425,6 +427,73 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName, onUseDeck }:
 	)
 }
 
+// A tile is at least 6.5rem: three abreast on a phone, where 7.5rem fitted
+// two. The tiles share each row's width (1fr), as the old auto-fill grid did.
+const UMA_TILE_MIN = 104
+const UMA_TILE_GAP = 8
+
+/**
+ * A style's umas under their stars headers, the groups packed into rows
+ * (packStarRows): a group follows the one before it on the same row only when
+ * all of it fits there (owner, 2026-10-24; a group a row each left most of a
+ * wide pane empty). The header sits over the group's first tile; a group that
+ * wraps carries no header on its later rows.
+ *
+ * The pane is measured, since whether a group fits depends on how many tiles
+ * a row holds. Measured before paint (useLayoutEffect), so the rows never
+ * jump; with no ResizeObserver (jsdom) or no width yet, one tile a row.
+ */
+function UmaStarRows({ groups, renderTile }: {
+	groups: Array<{ stars: number; rows: PvpUmaRecommendation[] }>
+	renderTile: (row: PvpUmaRecommendation) => ReactNode
+}) {
+	const boxRef = useRef<HTMLDivElement>(null)
+	const [width, setWidth] = useState(0)
+	useLayoutEffect(() => {
+		const box = boxRef.current
+		if (!box) return
+		const measure = () => setWidth(box.clientWidth)
+		measure()
+		if (typeof ResizeObserver === "undefined") return
+		const observer = new ResizeObserver(measure)
+		observer.observe(box)
+		return () => observer.disconnect()
+	}, [])
+	const columns = Math.max(1, Math.floor((width + UMA_TILE_GAP) / (UMA_TILE_MIN + UMA_TILE_GAP)))
+	const rows = packStarRows(groups.map((group) => group.rows.length), columns)
+	const tracks = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+	return (
+		<div ref={boxRef} className="mt-2 flex flex-col gap-3">
+			{rows.map((parts, index) => {
+				const headed = parts.some((part) => part.from === 0 && groups[part.group].stars > 0)
+				return (
+					// Grid row 1 the headers, row 2 the tiles: placed by row, so a
+					// short row of headers never lets the tiles flow up into it.
+					<div key={index} className="grid gap-x-2 gap-y-1.5" style={tracks}>
+						{headed &&
+							parts.map((part) => (
+								<div key={`stars-${part.group}-${part.from}`} className="row-start-1" style={{ gridColumn: `span ${part.count}` }}>
+									{part.from === 0 && groups[part.group].stars > 0 && (
+										<div className="w-fit">
+											<Stars count={groups[part.group].stars} />
+										</div>
+									)}
+								</div>
+							))}
+						{parts.flatMap((part) =>
+							groups[part.group].rows.slice(part.from, part.from + part.count).map((row) => (
+								<div key={row.uma.id} className={headed ? "row-start-2" : ""}>
+									{renderTile(row)}
+								</div>
+							))
+						)}
+					</div>
+				)
+			})}
+		</div>
+	)
+}
+
 function StylePane({ guide, style, budget, onBudget, event, onUseDeck }: {
 	guide: PvpGuide
 	style: PvpStyle
@@ -451,41 +520,24 @@ function StylePane({ guide, style, budget, onBudget, event, onUseDeck }: {
 			{umas.length > 0 && (
 				<div>
 					<h4 className={SUBHEADING}>Recommended umas</h4>
-					{/* Grouped under their stars, so each tile can be the same size
-					    without a stars row of its own. */}
-					<div className="mt-2 flex flex-col gap-3">
-						{umasByStars(umas).map((group) => (
-							<div key={group.stars}>
-								{group.stars > 0 && (
-									<div className="mb-1.5 w-fit">
-										<Stars count={group.stars} />
-									</div>
-								)}
-								{/* At least 6.5rem a tile, sharing the row: three abreast on a
-								    phone, where a fixed 7.5rem fitted only two. auto-fill, not
-								    auto-fit, so a short row keeps its empty tracks and three tiles
-								    in a wide pane stay tile-sized. (A definite max such as 7.5rem
-								    would make auto-fill count columns by the max.) */}
-								<div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2">
-									{group.rows.map((row) => (
-										<UmaTile
-											key={row.uma.id}
-											uma={row.uma}
-											stars={row.stars}
-											// A role that only restates aptitudes ("Sprint F Front E")
-											// steps aside once the letters say it.
-											role={letters.get(row.uma.id)?.length && isAptitudeOnlyRole(row.role) ? "" : row.role}
-											note={row.note}
-											showStars={false}
-											noteSlot={hasUmaNotes}
-											aptitudes={hasLetters ? (letters.get(row.uma.id) ?? []) : null}
-											className="w-full"
-										/>
-									))}
-								</div>
-							</div>
-						))}
-					</div>
+					<UmaStarRows
+						groups={umasByStars(umas)}
+						renderTile={(row) => (
+							<UmaTile
+								key={row.uma.id}
+								uma={row.uma}
+								stars={row.stars}
+								// A role that only restates aptitudes ("Sprint F Front E")
+								// steps aside once the letters say it.
+								role={letters.get(row.uma.id)?.length && isAptitudeOnlyRole(row.role) ? "" : row.role}
+								note={row.note}
+								showStars={false}
+								noteSlot={hasUmaNotes}
+								aptitudes={hasLetters ? (letters.get(row.uma.id) ?? []) : null}
+								className="w-full"
+							/>
+						)}
+					/>
 				</div>
 			)}
 			{note && (

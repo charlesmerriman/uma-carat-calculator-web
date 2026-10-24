@@ -560,6 +560,49 @@ export function umasByStars(rows: PvpUmaRecommendation[]): Array<{ stars: number
 	return [...groups.entries()].sort(([a], [b]) => b - a).map(([stars, list]) => ({ stars, rows: list }))
 }
 
+/** One star group's run of tiles on one row: `count` of its tiles from its `from`th. */
+export interface StarRowPart {
+	group: number
+	from: number
+	count: number
+}
+
+/**
+ * A style's star groups packed into rows of `columns` tiles (owner,
+ * 2026-10-24: the rows left much of a wide pane empty). A group continues the
+ * row the group before it ended on IF AND ONLY IF all of it fits in what is
+ * left of that row; otherwise it starts a new row, and wraps across rows when
+ * it is longer than one. So one 3-star, one 2-star and one 1-star share a row,
+ * but five 2-stars after five 3-stars start their own row even where a few
+ * would have fitted. A group that wrapped leaves its last row open to the
+ * next group by the same rule. `sizes` are the groups' tile counts, most stars
+ * first (umasByStars).
+ */
+export function packStarRows(sizes: number[], columns: number): StarRowPart[][] {
+	const width = Math.max(1, Math.floor(columns))
+	const rows: StarRowPart[][] = []
+	let row: StarRowPart[] = []
+	let used = 0
+	const newRow = () => {
+		if (row.length > 0) rows.push(row)
+		row = []
+		used = 0
+	}
+	sizes.forEach((size, group) => {
+		if (size <= 0) return
+		if (used > 0 && size > width - used) newRow()
+		for (let from = 0; from < size; ) {
+			if (used === width) newRow()
+			const count = Math.min(size - from, width - used)
+			row.push({ group, from, count })
+			used += count
+			from += count
+		}
+	})
+	newRow()
+	return rows
+}
+
 /**
  * The All tab's face line (owner, 2026-10-24): a style's umas most stars
  * first, the guide's order within a star group, the first `count`, and how

@@ -26,6 +26,7 @@ import {
 	styleTabs,
 	stylesByRank,
 	tierLabel,
+	packStarRows,
 	topTierSkills,
 	topUmas,
 	umasByStars,
@@ -393,6 +394,35 @@ describe("uma star groups", () => {
 			[3, [2, 4]],
 			[2, [1, 3]],
 		])
+	})
+})
+
+describe("packStarRows", () => {
+	// [group, from, count] per part, a list per row.
+	const rows = (sizes: number[], columns: number) =>
+		packStarRows(sizes, columns).map((row) => row.map((part) => [part.group, part.from, part.count]))
+
+	it("puts groups on one row while each fits whole", () => {
+		// One 3-star, one 2-star and one 1-star share a row.
+		expect(rows([1, 1, 1], 8)).toEqual([[[0, 0, 1], [1, 0, 1], [2, 0, 1]]])
+	})
+
+	it("starts a group on a new row when only part of it would fit", () => {
+		// Five 2-stars after five 3-stars start their own row, though three would fit.
+		expect(rows([5, 5], 8)).toEqual([[[0, 0, 5]], [[1, 0, 5]]])
+		expect(rows([1, 3, 2], 3)).toEqual([[[0, 0, 1]], [[1, 0, 3]], [[2, 0, 2]]])
+	})
+
+	it("wraps a group longer than a row, and lets the next one join its last row if it fits", () => {
+		expect(rows([5, 2], 4)).toEqual([[[0, 0, 4]], [[0, 4, 1], [1, 0, 2]]])
+		expect(rows([5, 4], 4)).toEqual([[[0, 0, 4]], [[0, 4, 1]], [[1, 0, 4]]])
+		// CM 21's Pace on a phone: three 3-stars, then four 2-stars.
+		expect(rows([3, 4], 3)).toEqual([[[0, 0, 3]], [[1, 0, 3]], [[1, 3, 1]]])
+	})
+
+	it("skips empty groups and always has a column", () => {
+		expect(rows([0, 2], 0)).toEqual([[[1, 0, 1]], [[1, 1, 1]]])
+		expect(rows([], 5)).toEqual([])
 	})
 })
 
