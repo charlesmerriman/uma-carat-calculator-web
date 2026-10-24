@@ -79,6 +79,7 @@ import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { availableCourseDetails } from "../../utils/courseDetails"
 import { formatDate } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
+import { guideLinkPath } from "../../utils/appRoutes"
 import {
 	PVP_EVENT_PARAM,
 	formatPvpEvent,
@@ -308,17 +309,21 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 
 	/**
 	 * A link to what is on screen, for someone else: the event, always (a bare
-	 * /app/pvp moves with the calendar), the style on screen, and the Gallery
-	 * view. Never My team: that view is the reader's own, so the link opens the
-	 * guide. Never an open post: a post has its own link, /post/<id>.
-	 * Built at click time from the page the reader is on, so a link copied on a
-	 * dev server points at that server; never during a build.
+	 * /app/pvp moves with the calendar). The guide's is /guide/cm-21 with the
+	 * style on screen (guideLinkPath), which Discord and X unfurl with the
+	 * guide's picture (backend views/guide_share.py). The Gallery view keeps
+	 * its /app/pvp address. Never My team: that view is the reader's own, so
+	 * the link opens the guide. Never an open post: a post has its own link,
+	 * /post/<id>. Built at click time from the page the reader is on, so a link
+	 * copied on a dev server points at that server; never during a build.
 	 */
 	const copyLink = async (shown: RaceEvent) => {
-		const params = new URLSearchParams({ [PVP_EVENT_PARAM]: formatPvpEvent(refForRaceEvent(shown)) })
-		if (view === "gallery") params.set(VIEW_PARAM, view)
-		if (view === "recommendations" && shownStyle) params.set(PVP_STYLE_PARAM, shownStyle)
-		const url = `${window.location.origin}/app/pvp?${params}`
+		const eventKey = formatPvpEvent(refForRaceEvent(shown))
+		const gallery = new URLSearchParams({ [PVP_EVENT_PARAM]: eventKey, [VIEW_PARAM]: "gallery" })
+		const url =
+			view === "gallery"
+				? `${window.location.origin}/app/pvp?${gallery}`
+				: `${window.location.origin}${guideLinkPath(eventKey, view === "recommendations" ? shownStyle : null)}`
 		try {
 			await navigator.clipboard.writeText(url)
 			toast.success("Link copied.")

@@ -62,11 +62,12 @@ function buildVersionPlugin(): Plugin {
 }
 
 /**
- * A shared plan's link is /plan/<id> (src/utils/appRoutes.ts sharedPlanLinkPath).
- * Deployed, an ingress rule sends it to the API, which serves the link-preview
- * page and moves people on to /app/<id>. The dev server has no such rule, so
+ * A shared plan's link is /plan/<id> (src/utils/appRoutes.ts sharedPlanLinkPath),
+ * and a guide's is /guide/cm-21 (guideLinkPath). Deployed, ingress rules send
+ * them to the API, which serves the link-preview page and moves people on to
+ * /app/<id> or /app/pvp?event=cm-21. The dev server has no such rules, so
  * without this a link copied locally would render NotFound. It skips the
- * preview (no crawler can reach localhost anyway) and goes straight to the card.
+ * preview (no crawler can reach localhost anyway) and goes straight there.
  * Dev only: the build has no server to hook.
  */
 function sharedPlanLinkPlugin(): Plugin {
@@ -74,10 +75,16 @@ function sharedPlanLinkPlugin(): Plugin {
     name: 'shared-plan-link',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const match = req.url?.split('?')[0].match(/^\/plan\/([A-Za-z0-9]{8})\/?$/)
-        if (!match) return next()
+        const [path, query = ''] = (req.url ?? '').split('?')
+        const plan = path.match(/^\/plan\/([A-Za-z0-9]{8})\/?$/)
+        const guide = path.match(/^\/guide\/((?:cm|loh)-\d+)\/?$/)
+        if (!plan && !guide) return next()
+        const style = new URLSearchParams(query).get('style')
         res.statusCode = 302
-        res.setHeader('Location', `/app/${match[1]}`)
+        res.setHeader(
+          'Location',
+          plan ? `/app/${plan[1]}` : `/app/pvp?event=${guide![1]}${style ? `&style=${encodeURIComponent(style)}` : ''}`
+        )
         res.end()
       })
     },
