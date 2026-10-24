@@ -41,7 +41,7 @@ import {
 	guideUmaAptitudes,
 	isAptitudeOnlyRole,
 	listWords,
-	packStarRows,
+	layoutStarRows,
 	parseStyleRanking,
 	pickStyle,
 	skillsForPosition,
@@ -428,16 +428,25 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName, onUseDeck }:
 }
 
 // A tile is at least 6.5rem: three abreast on a phone, where 7.5rem fitted
-// two. The tiles share each row's width (1fr), as the old auto-fill grid did.
+// two. The tiles share the pane's width as the old auto-fill grid's 1fr
+// columns did, so they are the size they were. Between two groups on a row,
+// at least UMA_GROUP_GAP (a little more than between tiles, so the groups read
+// apart); a row shares out what it has left between its groups.
 const UMA_TILE_MIN = 104
 const UMA_TILE_GAP = 8
+const UMA_GROUP_GAP = 20
 
 /**
  * A style's umas under their stars headers, the groups packed into rows
  * (packStarRows): a group follows the one before it on the same row only when
- * all of it fits there (owner, 2026-10-24; a group a row each left most of a
- * wide pane empty). The header sits over the group's first tile; a group that
- * wraps carries no header on its later rows.
+ * all of it fits there, the least gap included (owner, 2026-10-24; a group a
+ * row each left most of a wide pane empty). The first row's room over is
+ * shared out evenly, at its edges as between its groups, and its edges hold
+ * for every row (layoutStarRows; moved out only where a later row needs more
+ * room): a later row starts at the same left and, with several groups,
+ * reaches the same right (space-between inside them). A lone group on a later
+ * row sits at the left edge. The header sits over the group's first tile; a
+ * group that wraps carries no header on its later rows.
  *
  * The pane is measured, since whether a group fits depends on how many tiles
  * a row holds. Measured before paint (useLayoutEffect), so the rows never
@@ -460,33 +469,46 @@ function UmaStarRows({ groups, renderTile }: {
 		return () => observer.disconnect()
 	}, [])
 	const columns = Math.max(1, Math.floor((width + UMA_TILE_GAP) / (UMA_TILE_MIN + UMA_TILE_GAP)))
-	const rows = packStarRows(groups.map((group) => group.rows.length), columns)
-	const tracks = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+	// The tile the 1fr columns would make; unmeasured, the least one.
+	const tile = width > 0 ? Math.floor(((width - (columns - 1) * UMA_TILE_GAP) / columns) * 100) / 100 : UMA_TILE_MIN
+	const measures = { width, tile, gap: UMA_TILE_GAP, groupGap: UMA_GROUP_GAP }
+	// The first row's edges, kept by every row (layoutStarRows): its room over
+	// shared out evenly, at the edges as between the groups.
+	const { rows, inset } = layoutStarRows(groups.map((group) => group.rows.length), measures)
 	return (
 		<div ref={boxRef} className="mt-2 flex flex-col gap-3">
 			{rows.map((parts, index) => {
+				// Every part of a row keeps a header's height once any part has
+				// one, so the row's tiles stay level.
 				const headed = parts.some((part) => part.from === 0 && groups[part.group].stars > 0)
 				return (
-					// Grid row 1 the headers, row 2 the tiles: placed by row, so a
-					// short row of headers never lets the tiles flow up into it.
-					<div key={index} className="grid gap-x-2 gap-y-1.5" style={tracks}>
-						{headed &&
-							parts.map((part) => (
-								<div key={`stars-${part.group}-${part.from}`} className="row-start-1" style={{ gridColumn: `span ${part.count}` }}>
-									{part.from === 0 && groups[part.group].stars > 0 && (
-										<div className="w-fit">
-											<Stars count={groups[part.group].stars} />
+					<div
+						key={index}
+						className="flex"
+						style={{ paddingInline: inset, columnGap: UMA_GROUP_GAP, justifyContent: parts.length > 1 ? "space-between" : "flex-start" }}
+					>
+						{parts.map((part) => (
+							<div key={`${part.group}-${part.from}`} className="flex shrink-0 flex-col gap-1.5">
+								{headed && (
+									<div className="h-3">
+										{part.from === 0 && groups[part.group].stars > 0 && (
+											<div className="w-fit">
+												<Stars count={groups[part.group].stars} />
+											</div>
+										)}
+									</div>
+								)}
+								{/* flex-1 and a stretched wrapper per tile: every tile on the row
+								    is as tall as the tallest, so their note slots line up. */}
+								<div className="flex flex-1" style={{ gap: UMA_TILE_GAP }}>
+									{groups[part.group].rows.slice(part.from, part.from + part.count).map((row) => (
+										<div key={row.uma.id} className="flex" style={{ width: tile }}>
+											{renderTile(row)}
 										</div>
-									)}
+									))}
 								</div>
-							))}
-						{parts.flatMap((part) =>
-							groups[part.group].rows.slice(part.from, part.from + part.count).map((row) => (
-								<div key={row.uma.id} className={headed ? "row-start-2" : ""}>
-									{renderTile(row)}
-								</div>
-							))
-						)}
+							</div>
+						))}
 					</div>
 				)
 			})}

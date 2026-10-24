@@ -27,6 +27,7 @@ import {
 	stylesByRank,
 	tierLabel,
 	packStarRows,
+	layoutStarRows,
 	topTierSkills,
 	topUmas,
 	umasByStars,
@@ -398,19 +399,27 @@ describe("uma star groups", () => {
 })
 
 describe("packStarRows", () => {
-	// [group, from, count] per part, a list per row.
+	// Tiles 100px with 8px between, a 24px least gap between groups; a row
+	// `columns` tiles wide. [group, from, count] per part, a list per row.
 	const rows = (sizes: number[], columns: number) =>
-		packStarRows(sizes, columns).map((row) => row.map((part) => [part.group, part.from, part.count]))
+		packStarRows(sizes, { width: columns * 100 + (columns - 1) * 8, tile: 100, gap: 8, groupGap: 24 }).map((row) =>
+			row.map((part) => [part.group, part.from, part.count])
+		)
 
-	it("puts groups on one row while each fits whole", () => {
+	it("puts groups on one row while each fits whole, gap included", () => {
 		// One 3-star, one 2-star and one 1-star share a row.
 		expect(rows([1, 1, 1], 8)).toEqual([[[0, 0, 1], [1, 0, 1], [2, 0, 1]]])
 	})
 
 	it("starts a group on a new row when only part of it would fit", () => {
-		// Five 2-stars after five 3-stars start their own row, though three would fit.
+		// Five 2-stars after five 3-stars start their own row, though some would fit.
 		expect(rows([5, 5], 8)).toEqual([[[0, 0, 5]], [[1, 0, 5]]])
 		expect(rows([1, 3, 2], 3)).toEqual([[[0, 0, 1]], [[1, 0, 3]], [[2, 0, 2]]])
+	})
+
+	it("counts the gap between groups: three tiles in three columns split 1 + 2 no longer fit", () => {
+		expect(rows([1, 2], 3)).toEqual([[[0, 0, 1]], [[1, 0, 2]]])
+		expect(rows([1, 2], 4)).toEqual([[[0, 0, 1], [1, 0, 2]]])
 	})
 
 	it("wraps a group longer than a row, and lets the next one join its last row if it fits", () => {
@@ -420,9 +429,41 @@ describe("packStarRows", () => {
 		expect(rows([3, 4], 3)).toEqual([[[0, 0, 3]], [[1, 0, 3]], [[1, 3, 1]]])
 	})
 
-	it("skips empty groups and always has a column", () => {
-		expect(rows([0, 2], 0)).toEqual([[[1, 0, 1]], [[1, 1, 1]]])
+	it("skips empty groups and always holds a tile a row", () => {
+		expect(packStarRows([0, 2], { width: 0, tile: 100, gap: 8, groupGap: 24 }).length).toBe(2)
 		expect(rows([], 5)).toEqual([])
+	})
+})
+
+describe("layoutStarRows", () => {
+	const measures = (columns: number) => ({ width: columns * 100 + (columns - 1) * 8, tile: 100, gap: 8, groupGap: 24 })
+	const layout = (sizes: number[], columns: number) => {
+		const { rows, inset } = layoutStarRows(sizes, measures(columns))
+		return { inset, rows: rows.map((row) => row.map((part) => [part.group, part.from, part.count])) }
+	}
+
+	it("shares the first row's room evenly, as much at each edge as in each gap", () => {
+		// 856px; three single tiles and two 24px gaps use 348; 508 over, a quarter each.
+		expect(layout([1, 1, 1], 8)).toEqual({ inset: 127, rows: [[[0, 0, 1], [1, 0, 1], [2, 0, 1]]] })
+	})
+
+	it("keeps the first row's edges for the rows after it", () => {
+		// Two and two share the first row (440px of 856, 416 over, a third each);
+		// the five on the second row fit between those edges.
+		expect(layout([2, 2, 5], 8)).toEqual({ inset: 138, rows: [[[0, 0, 2], [1, 0, 2]], [[2, 0, 5]]] })
+		expect(layout([5, 5], 8)).toEqual({ inset: 162, rows: [[[0, 0, 5]], [[1, 0, 5]]] })
+	})
+
+	it("moves the edges out only as far as a wider later row needs", () => {
+		// Four alone would centre at 216; the five below need 532px, so 162.
+		expect(layout([4, 5], 8)).toEqual({ inset: 162, rows: [[[0, 0, 4]], [[1, 0, 5]]] })
+		// A lone 3-star on a phone, then three 2-stars filling a row: edge to edge.
+		expect(layout([1, 3, 2], 3).inset).toBe(0)
+	})
+
+	it("is edge to edge when the first row is full, or nothing is measured", () => {
+		expect(layout([3, 4], 3)).toEqual({ inset: 0, rows: [[[0, 0, 3]], [[1, 0, 3]], [[1, 3, 1]]] })
+		expect(layoutStarRows([2], { width: 0, tile: 100, gap: 8, groupGap: 24 }).inset).toBe(0)
 	})
 })
 

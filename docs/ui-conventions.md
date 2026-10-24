@@ -1567,8 +1567,12 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (owner, 2026-10-24; `packStarRows`, drawn by `UmaStarRows`): a group follows the one
   before it on the same row only if ALL of it fits in what is left; otherwise it starts a
   new row (and wraps, its later rows unheaded), and the next group may join its last row by
-  the same rule. The pane is measured (ResizeObserver, before paint) for how many tiles a
-  row holds.
+  the same rule, the least gap between groups (20px) counted. The FIRST row's room over is
+  shared out evenly (as much at each edge as in each gap) and its edges hold for every row
+  (`layoutStarRows`): a later row starts at the same left and, with several groups, spreads
+  to the same right; the edges move out only where a later row needs more room (packing
+  later rows inside a short first row's span made phones one tile wide). Tiles keep the
+  1fr-column size. The pane is measured (ResizeObserver, before paint).
   **Aptitude letters** (release 4, 2026-10-23): each guide uma carries `apt` (the API's ten
   columns), and `guideUmaAptitudes(apt, event, style)` picks this course's distance and the
   row's style, plus the surface only below A (the picker's `aptitudeKeysForEvent`). They
