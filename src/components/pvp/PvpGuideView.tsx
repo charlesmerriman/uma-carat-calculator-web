@@ -165,8 +165,24 @@ function DeckGrid({ deck, showLabel, change, scenarioName }: {
 	change: DeckChange | undefined
 	scenarioName: string | null
 }) {
+	const reduceMotion = useReducedMotion()
 	const slots = new Map<number, PvpDeckSlot[]>()
 	for (const row of deck.slots) slots.set(row.slot, [...(slots.get(row.slot) ?? []), row])
+	// Each slot's cell is keyed by its CARD, not its slot number, so a budget
+	// switch reads as the swap it is (owner, 2026-10-24: the deck folding up
+	// and down "makes no sense"): a card both decks hold keeps its element and
+	// glides to its new slot (`layout`), a card leaving fades and shrinks out,
+	// and a new one grows in a beat later. A slot with no card is keyed by its
+	// number; a card a guide lists twice gets its slot added, so keys never meet.
+	const seen = new Set<number>()
+	const cellKey = (number: number, main: PvpDeckSlot | undefined) => {
+		const id = main?.support_card?.id
+		if (id === undefined) return `slot-${number}`
+		if (seen.has(id)) return `card-${id}-${number}`
+		seen.add(id)
+		return `card-${id}`
+	}
+	const motionFor = (seconds: number, delay = 0) => ({ duration: reduceMotion ? 0 : seconds, delay: reduceMotion ? 0 : delay, ease: "easeOut" as const })
 	return (
 		<div className="pt-3">
 			{(showLabel || deck.note) && (
@@ -179,13 +195,27 @@ function DeckGrid({ deck, showLabel, change, scenarioName }: {
 					{deck.note && <InlineNote text={deck.note.replace(/==/g, "")} className="text-xs text-gray-400" />}
 				</div>
 			)}
-			{change && <p className="mt-1.5 text-[13px] leading-snug text-gray-400">{changeLine(change)}</p>}
+			{/* Keyed by deck, so the line fades in anew with each budget. */}
+			{change && (
+				<motion.p
+					key={deck.id}
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					transition={motionFor(0.2)}
+					className="mt-1.5 text-[13px] leading-snug text-gray-400"
+				>
+					{changeLine(change)}
+				</motion.p>
+			)}
 			{/* Rows sit 1rem apart, and the grid 1rem below the label: room for the
 			    borrow tab, which peeks out above its card. Six a row only when the
 			    pane has room (a container query on StylePane): a style's box on the
 			    All tab is half the width, where six cards were about 55px and their
 			    notes ran into each other (2026-10-23). */}
-			<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 @2xl:grid-cols-6">
+			{/* relative: popLayout lifts a leaving card out of the grid to its
+			    last spot, measured against this box, while the rest move up. */}
+			<div className="relative mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 @2xl:grid-cols-6">
+				<AnimatePresence initial={false} mode="popLayout">
 				{[1, 2, 3, 4, 5, 6].map((number) => {
 					const [main, ...alternates] = slots.get(number) ?? []
 					// Every "or any <type>" in the slot, once: the card's own note may
@@ -197,7 +227,18 @@ function DeckGrid({ deck, showLabel, change, scenarioName }: {
 					}
 					const shownAlternates = alternates.filter((alt) => alt.support_card || !parseSlotNote(alt.note).anyType)
 					return (
-						<div key={number} className="flex min-w-0 flex-col gap-1">
+						// layout="position": the cell glides to its new slot without
+						// its text stretching on the way, and it is a cell the
+						// same size in either deck.
+						<motion.div
+							key={cellKey(number, main)}
+							layout="position"
+							initial={{ opacity: 0, scale: 0.9 }}
+							animate={{ opacity: 1, scale: 1, transition: motionFor(0.2, 0.12) }}
+							exit={{ opacity: 0, scale: 0.9, transition: motionFor(0.15) }}
+							transition={{ layout: motionFor(0.3) }}
+							className="flex min-w-0 flex-col gap-1"
+						>
 							{main ? (
 								main.support_card ? (
 									<SupportTile card={main.support_card} note={main.note} borrow={main.is_borrow} scenarioName={scenarioName} />
@@ -213,9 +254,10 @@ function DeckGrid({ deck, showLabel, change, scenarioName }: {
 							{[...anyTypes].map((type) => (
 								<AnyTypeLine key={type} type={type} />
 							))}
-						</div>
+						</motion.div>
 					)
 				})}
+				</AnimatePresence>
 			</div>
 		</div>
 	)
@@ -288,6 +330,26 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
 	const changes = deckChanges(ladder)
 	const everyDeck = cardsInEveryDeck(ladder)
 	const transition = { duration: reduceMotion ? 0 : 0.28, ease: "easeOut" as const }
+	// The deck last shown on its own holds one fixed key ("one"), so a budget
+	// switch keeps its box and only the cards inside trade places (DeckGrid);
+	// the box folding away while the next unfolded made the page jump down and
+	// back (owner, 2026-10-24). Only All mounts or folds boxes, around that one:
+	// opening All from Whale unfolds Beginner and Standard above it. Kept in
+	// state, adjusted during render (React's pattern for a value that follows
+	// a prop), since All alone does not say which deck was on screen.
+	// Every deck's card art fetched once the decks are on screen, so a budget
+	// switch has its pictures ready: without it a new card grew in as words and
+	// its art arrived half a second later (2026-10-24). Keyed on the art's
+	// addresses, since `decks` is a fresh array on every render.
+	const artKey = ladder.flatMap((deck) => deck.slots.map((row) => row.support_card?.image ?? "")).join("\n")
+	useEffect(() => {
+		for (const src of new Set(artKey.split("\n"))) {
+			if (src) new Image().src = src
+		}
+	}, [artKey])
+	const [anchorId, setAnchorId] = useState<number | null>(picked?.id ?? null)
+	if (!showAll && picked && picked.id !== anchorId) setAnchorId(picked.id)
+	const anchor = (showAll ? ladder.find((deck) => deck.id === anchorId) : picked) ?? picked
 	return (
 		<div>
 			<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -322,7 +384,7 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
 			<AnimatePresence initial={false}>
 				{shown.map((deck) => (
 					<motion.div
-						key={deck.id}
+						key={deck === anchor ? "one" : deck.id}
 						initial={{ height: 0, opacity: 0, overflow: "hidden" }}
 						animate={{ height: "auto", opacity: 1, transitionEnd: { overflow: "visible" } }}
 						exit={{ height: 0, opacity: 0, overflow: "hidden" }}
@@ -516,7 +578,10 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 				</div>
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
-					<StylePane guide={guide} style={shown} budget={budget} onBudget={onBudget} event={event} />
+					{/* Keyed by style: another style is another pane, drawn at once.
+					    Unkeyed, its decks kept their box and the cards of Pace's deck
+					    "traded places" with Front's. */}
+					<StylePane key={`pane-${shown}`} guide={guide} style={shown} budget={budget} onBudget={onBudget} event={event} />
 					{/* Its own thread per style (Henry, 2026-10-21); keyed so a new
 					    tab opens folded. */}
 					<GuideComments
