@@ -1485,9 +1485,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   Recommendations (which deletes `?view=`) turned a page opened from the navbar back into
   the bare `/app/pvp`, the restore sent it to the remembered `?view=team`, and the tab was
   unreachable until the event changed.
-- **"Copy link" in the header** copies the event (always, even on the default landing),
-  the style on screen, and `view=gallery`. Never `view=team` (the builder is the reader's
-  own, so the link opens the guide) and never `post` (a post's link is `/post/<id>`).
+- **"Copy link" in the header** copies the guide's preview link, `/guide/cm-21?style=pace`
+  (`guideLinkPath`, since 2026-10-24: the API answers it with link-preview tags and a
+  picture, backend `views/guide_share.py`, then forwards to `/app/pvp?event=…`), naming
+  the event always (even on the default landing) and the style on screen. The Gallery
+  view copies `/app/pvp?event=…&view=gallery`. Never `view=team` (the builder is the
+  reader's own, so the link opens the guide) and never `post` (a post's link is
+  `/post/<id>`). The dev server redirects `/guide/…` itself (`vite.config.ts`), as `/plan/…`.
 - **The header renders from the calculator payload**, guide or not, and stays COMPACT
   and LIGHT (owner, 2026-10-13: boxed grids, then pills, both read as congested): art
   thumbnail, "Champions Meeting 20" kicker over the cup name, countdown; then the course

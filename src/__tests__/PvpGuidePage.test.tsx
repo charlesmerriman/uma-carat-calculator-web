@@ -921,7 +921,7 @@ describe("PvpGuidePage style links and memory", () => {
 		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
 	})
 
-	it("copies a link to the event and the style on screen, and never My team", async () => {
+	it("copies the guide's preview link with the style on screen, the gallery's address, and never My team", async () => {
 		const writeText = vi.fn(() => Promise.resolve())
 		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true })
 		respond(200, GUIDE)
@@ -931,7 +931,7 @@ describe("PvpGuidePage style links and memory", () => {
 		fireEvent.click(styleTabs().getByRole("tab", { name: "End" }))
 		const copy = () => fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
 		copy()
-		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/app/pvp?event=cm-10&style=end`))
+		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/guide/cm-10?style=end`))
 
 		const views = within(screen.getByRole("tablist", { name: "View" }))
 		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
@@ -940,7 +940,7 @@ describe("PvpGuidePage style links and memory", () => {
 
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		copy()
-		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/app/pvp?event=cm-10`))
+		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/guide/cm-10`))
 	})
 })
 

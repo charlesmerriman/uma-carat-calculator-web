@@ -33,3 +33,14 @@ export function sharedPlanPath(publicId: string): string {
 export function sharedPlanLinkPath(publicId: string): string {
 	return `/plan/${publicId}`
 }
+
+/**
+ * The path of a guide's link, /guide/cm-21 (?style=pace for the tab it was
+ * copied from): what the PvP page's "Copy link" copies (guide-visuals-plan-2.md
+ * release D). The API serves it the same way (backend views/guide_share.py),
+ * so Discord and X show the guide's picture, then sends people on to
+ * /app/pvp?event=cm-21. The dev server redirects it itself (vite.config.ts).
+ */
+export function guideLinkPath(eventKey: string, style: string | null): string {
+	return `/guide/${eventKey}${style ? `?style=${encodeURIComponent(style)}` : ""}`
+}
