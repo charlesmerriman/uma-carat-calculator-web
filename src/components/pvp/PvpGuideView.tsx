@@ -523,6 +523,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 						key={shown}
 						guide={guide}
 						section={shown}
+						label={`Comments on ${STYLE_LABELS[shown]}`}
 						placeholder={`Ask a question about ${STYLE_LABELS[shown]}, or share what worked`}
 						className="mt-4 border-t border-gray-700/70 pt-3"
 					/>
@@ -631,7 +632,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null }: {
 						)}
 
 						<div className={SECTION}>
-							<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
+							<GuideComments guide={guide} section="" label={WHOLE_GUIDE_LABEL} placeholder={WHOLE_GUIDE_PROMPT} className="" />
 						</div>
 					</aside>
 				)}
@@ -643,7 +644,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null }: {
 			{/* A guide with no side column still has a thread for the whole guide. */}
 			{!hasSide && (
 				<div className={SECTION}>
-					<GuideComments guide={guide} section="" placeholder={WHOLE_GUIDE_PROMPT} className="" />
+					<GuideComments guide={guide} section="" label={WHOLE_GUIDE_LABEL} placeholder={WHOLE_GUIDE_PROMPT} className="" />
 				</div>
 			)}
 		</div>
@@ -654,4 +655,5 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null }: {
 const EMPTY_MENTIONS = {}
 
 // The whole guide's thread (section ""), in the side column.
+const WHOLE_GUIDE_LABEL = "Comments on the whole guide"
 const WHOLE_GUIDE_PROMPT = "Ask about this guide, or share what worked"

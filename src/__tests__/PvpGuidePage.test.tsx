@@ -851,7 +851,7 @@ describe("PvpGuidePage comments", () => {
 
 	it("folds each style's thread under its pane, with the count, and opens it on a click", async () => {
 		renderPage()
-		const toggle = await screen.findByRole("button", { name: "Comments (1)" })
+		const toggle = await screen.findByRole("button", { name: "Comments on Front (1)" })
 		expect(toggle).toHaveAttribute("aria-expanded", "false")
 		expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/comments"))).toBe(false)
 		fireEvent.click(toggle)
@@ -864,7 +864,7 @@ describe("PvpGuidePage comments", () => {
 
 	it("keeps a thread for the whole guide in the side column", async () => {
 		renderPage()
-		expect(await screen.findByRole("button", { name: "Comments (3)" })).toBeInTheDocument()
+		expect(await screen.findByRole("button", { name: "Comments on the whole guide (3)" })).toBeInTheDocument()
 	})
 
 	it("shows each style's count on the All tab, and goes to that tab", async () => {

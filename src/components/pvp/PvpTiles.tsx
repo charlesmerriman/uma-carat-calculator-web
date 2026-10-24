@@ -22,6 +22,15 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { splitOutfit } from "../../utils/umaName"
 import { parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 
+/**
+ * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
+ * by a no-break space, so a wrapped name never leaves the mark alone on the
+ * last line ("Corner Acceleration / ○").
+ */
+function keepMarkWithName(name: string): string {
+	return name.replace(/ (?=[○◎×☆♡]$)/u, "\u00a0")
+}
+
 function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 	return (
 		<>
@@ -93,7 +102,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 			) : (
 				<span className="h-[1.1em] w-[1.1em] shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 			)}
-			{skill.name}
+			{keepMarkWithName(skill.name)}
 			<span
 				id={detailId}
 				role="tooltip"
@@ -181,19 +190,24 @@ function aptitudeClass(value: number): string {
 	return "text-highlight"
 }
 
-/** "Sprint A · Pace A" on one line, the letters bold and coloured by how good they are. */
+/**
+ * "Sprint A  Pace A", the letters bold and coloured by how good they are.
+ * Each pair stays whole and the line wraps between pairs, never cuts: a tile
+ * is about 90px inside on a phone and on the All tab, where "Medium A · Front
+ * A", or a weak surface's third pair ("Turf E"), did not fit one line and lost
+ * its last letter (2026-10-24). A gap, not a dot, between pairs, so a wrapped
+ * line never starts with one. UmaTile keeps its neighbours level when this
+ * wraps (the note slot is pinned to the bottom).
+ */
 function AptitudeLine({ aptitudes }: { aptitudes: UmaAptitude[] }) {
 	const words = aptitudes.map((aptitude) => `${aptitude.label} ${aptitude.letter}`).join(", ")
 	return (
-		<div className="h-4 truncate text-[11px] leading-4 text-gray-400" title={words || undefined}>
-			{aptitudes.length === 0
-				? "\u00a0"
-				: aptitudes.map((aptitude, index) => (
-						<span key={aptitude.label}>
-							{index > 0 && " · "}
-							{aptitude.label} <b className={`font-display font-semibold ${aptitudeClass(aptitude.value)}`}>{aptitude.letter}</b>
-						</span>
-					))}
+		<div className="flex min-h-4 flex-wrap justify-center gap-x-2 text-[11px] leading-4 text-gray-400" title={words || undefined}>
+			{aptitudes.map((aptitude) => (
+				<span key={aptitude.label} className="whitespace-nowrap">
+					{aptitude.label} <b className={`font-display font-semibold ${aptitudeClass(aptitude.value)}`}>{aptitude.letter}</b>
+				</span>
+			))}
 		</div>
 	)
 }
@@ -206,9 +220,10 @@ const FIRST_MENTION = /\[\[([^[\]\n]+)\]\]/
  * the tiles changed height with what each uma had). Fixed rows, top to bottom:
  * the framed portrait (a role tag, if any, on its corner), the stars if the
  * caller shows them, the name on up to two lines, the outfit on its own line
- * (left blank when there is none), then the note's slot: its first [[skill]]
- * as a small skill face, else the note's words on up to two lines, else
- * nothing. The whole note is on hover, focus or tap.
+ * (left blank when there is none), the course's aptitude letters (one line,
+ * two when they do not fit), then the note's slot: its first [[skill]] as a
+ * small skill face, else the note's words on up to two lines, else nothing.
+ * The whole note is on hover, focus or tap.
  *
  * The guide groups its tiles under a stars header, so it passes
  * `showStars={false}`; the editor and the New-cards list keep the stars on
@@ -236,7 +251,10 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
 	return (
 		<WithDetail label={uma.name} detail={note ? <InlineNote text={note} /> : null} className={className}>
-			<div className="flex flex-col gap-0.5 overflow-hidden rounded-lg border border-gray-600 bg-gray-700 p-1.5 text-center">
+			{/* h-full: in a grid the tile fills its row, so when one tile's
+			    letters wrap the others grow with it and every note slot, pinned
+			    to the bottom (mt-auto), stays level. */}
+			<div className="flex h-full flex-col gap-0.5 overflow-hidden rounded-lg border border-gray-600 bg-gray-700 p-1.5 text-center">
 				<div className="relative">
 					<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 					{role && (
@@ -258,7 +276,7 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 				<div className="h-[0.9375rem] truncate text-[11px] leading-[0.9375rem] text-gray-400">{outfit ?? "\u00a0"}</div>
 				{aptitudes && <AptitudeLine aptitudes={aptitudes} />}
 				{noteSlot && (
-					<div className="flex h-[2.125rem] items-center justify-center">
+					<div className="mt-auto flex h-[2.125rem] items-center justify-center">
 						{skill ? (
 							<SkillFace skill={skill} size="small" />
 						) : note ? (
@@ -391,10 +409,16 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null }:
 					</div>
 				</BorrowTab>
 			)}
-			{/* The name truncates; its rarity ("SR") never does. */}
-			<div className="flex w-full justify-center gap-1 text-xs font-medium" title={card.name}>
-				<span className="truncate text-gray-100">{card.name}</span>
-				{rarityLabel(card.rarity) && <span className="shrink-0 text-gray-400">{rarityLabel(card.rarity)}</span>}
+			{/* The name on up to two balanced lines, in a box two lines tall so
+			    every card's reasons start level, like the uma tiles. One line
+			    cut "Marvelous Sun…" on a phone (2026-10-24). The rarity rides
+			    the last word (a no-break space), so it wraps with the name and
+			    is never the part cut. */}
+			<div className="flex h-8 w-full items-center justify-center text-xs font-medium leading-4" title={card.name}>
+				<span className="line-clamp-2 text-balance text-center text-gray-100">
+					{card.name}
+					{rarityLabel(card.rarity) && <span className="text-gray-400">{" "}{rarityLabel(card.rarity)}</span>}
+				</span>
 			</div>
 			<SlotReasons note={note} />
 		</div>
@@ -417,8 +441,12 @@ export function SwapInCard({ card, note, scenarioName }: { card: PvpSupportCardR
 				)}
 				{linked && <LinkBadge scenarioName={scenarioName} />}
 			</span>
-			<span className="line-clamp-2 text-[11px] font-semibold leading-tight text-gray-100" title={card.name}>
-				{card.name}
+			{/* Two lines' room for every name, balanced ("Sakura / Bakushin O",
+			    never "Sakura Bakushin / O"), so the reasons in a row start level. */}
+			<span className="flex h-7 w-full min-w-0 items-center justify-center">
+				<span className="line-clamp-2 text-balance text-[11px] font-semibold leading-tight text-gray-100" title={card.name}>
+					{card.name}
+				</span>
 			</span>
 			<SlotReasons note={note} />
 		</div>
@@ -534,10 +562,8 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 	const gold = skill.rarity === GOLD_SKILL_RARITY
 	const small = size === "small"
 	return (
-		// A container, so a narrow cell (the side column's, about 10.5rem) can
-		// give its name two lines and leave the caption to the hover detail.
 		<div
-			className={`@container flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill.rarity))} ${
+			className={`flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill.rarity))} ${
 				small ? "h-[2.125rem] gap-1 rounded py-0.5 pl-0.5 pr-1 text-[11px]" : "h-10 gap-2 rounded-md pl-1 pr-2 text-[13px]"
 			}`}
 		>
@@ -548,11 +574,19 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 			)}
 			{/* hyphens-auto (the page is lang="en"): a long word breaks as
 			    "Concen-tration", never "Concentratio / n". */}
-			<span className="flex min-w-0 flex-1 flex-col">
-				<span className={`${sub ? "line-clamp-2 @min-[11rem]:line-clamp-1" : "line-clamp-2"} hyphens-auto break-words ${gold ? "font-medium" : "text-gray-100"}`}>
-					{skill.name}
+			{/* The name takes two lines when it needs them, and the caption
+			    shows only while there is room under it: a column that wraps,
+			    in a box the cell's height, so a caption that no longer fits
+			    moves to a second column, outside the box, and is clipped. No
+			    measuring, and no width rule: "Shooting Star of Dioskouroi" cut
+			    to "Shooting Star of…" in a 13rem cell under the old 11rem one,
+			    while a short name in a narrow cell lost its owner (2026-10-24).
+			    The caption stays in the hover detail and for a screen reader. */}
+			<span className="flex min-w-0 flex-1 flex-col flex-wrap content-start justify-center self-stretch overflow-hidden">
+				<span className={`line-clamp-2 w-full hyphens-auto break-words ${gold ? "font-medium" : "text-gray-100"}`}>
+					{keepMarkWithName(skill.name)}
 				</span>
-				{sub && <span className={`hidden truncate text-[11px] @min-[11rem]:block ${gold ? "opacity-80" : "text-gray-400"}`}>{sub}</span>}
+				{sub && <span className={`w-full truncate text-[11px] ${gold ? "opacity-80" : "text-gray-400"}`}>{sub}</span>}
 			</span>
 			{preview && skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
 		</div>
@@ -589,7 +623,7 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 				)}
 				<span className={`truncate text-sm ${gold ? "font-medium" : "text-gray-100"}`}>
-					{skill.name}
+					{keepMarkWithName(skill.name)}
 					{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
 				</span>
 				{/* No ◎ badge for "has a gold version": the game prints ○/◎ in the
