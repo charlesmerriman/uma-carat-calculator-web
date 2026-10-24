@@ -22,16 +22,22 @@ import type { PvpGuide } from "../../types/pvpGuide"
 // first time a section is opened.
 const GalleryComments = lazy(() => loadGalleryComments().then((module) => ({ default: module.GalleryComments })))
 
-export function GuideComments({ guide, section, placeholder, className = "border-t border-gray-700/70 pt-3" }: {
+export function GuideComments({ guide, section, label, placeholder, className = "border-t border-gray-700/70 pt-3" }: {
 	guide: PvpGuide
 	section: string
+	/**
+	 * Which thread, on its button ("Comments on Pace"): on a phone the style's
+	 * thread and the whole guide's sit one after the other, and two bare
+	 * "Comments (0)" and "Comments (7)" did not say which was which (2026-10-24).
+	 */
+	label: string
 	placeholder: string
 	className?: string
 }) {
 	const [open, setOpen] = useState(false)
 	const count = guideCommentCount(guide, section)
 	return (
-		<section aria-label="Comments" className={className}>
+		<section aria-label={label} className={className}>
 			<button
 				type="button"
 				aria-expanded={open}
@@ -39,7 +45,7 @@ export function GuideComments({ guide, section, placeholder, className = "border
 				className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 transition hover:text-gray-100"
 			>
 				<MessageSquare className="h-4 w-4" aria-hidden="true" />
-				Comments ({count})
+				{label} ({count})
 				<ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
 			</button>
 			{open && (

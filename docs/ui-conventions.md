@@ -1457,7 +1457,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   equal columns on one line.
 - **Comments on a guide** (Henry, 2026-10-21; `guide-comments-plan.md`): one thread per section,
   `""` for the whole guide (the side column's last box) and one per running style (under the
-  style's pane). `GuideComments` folds each until opened, showing the guide's `comment_counts`,
+  style's pane). Each button names its thread ("Comments on Pace", "Comments on the whole
+  guide"): on a phone the two sit one after the other. `GuideComments` folds each until opened, showing the guide's `comment_counts`,
   so nothing is fetched for a section nobody opens; the All tab shows each style's count as a
   link to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
@@ -1542,9 +1543,13 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   on letter count look ugly", after Hakuraku's list). Inside a type, a tier row is the badge
   in its own column (`tierLabel`, one list `TIER_LABELS` waiting for Henry's words; T0 in
   brand, fading by T3/T4) beside a grid of `SkillCell`s, so a long tier wraps under its own
-  badge. A cell is the icon and the name at one font size, two lines at most, or one line
-  and a caption (the unique's owner, else the note as plain words, `plainNoteText`), with
-  `SkillDetail` on hover; the gold, unique and evolved surfaces stay. Cells are 9.5rem at
+  badge. A cell is the icon and the name at one font size, two lines at most, and a
+  caption (the unique's owner, else the note as plain words, `plainNoteText`) only while
+  the name fits one line: the text is a column that wraps, so a caption with no room moves
+  to a clipped second column. No width rule (an 11rem one cut "Shooting Star of
+  Dioskouroi" in wide cells and hid short names' owners in narrow ones, 2026-10-24). A
+  trailing ○/◎/☆/♡ is held to its word (`keepMarkWithName`). `SkillDetail` on hover; the
+  gold, unique and evolved surfaces stay. Cells are 9.5rem at
   least, 13rem once the list has 32rem (a container query: the side column is narrow at
   every width that shows it). `SkillChip` is the editor's.
 - **Uma tiles are one size and shape** (Henry, 2026-10-23: "uma part looks ugly"). A
@@ -1557,9 +1562,14 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   **Aptitude letters** (release 4, 2026-10-23): each guide uma carries `apt` (the API's ten
   columns), and `guideUmaAptitudes(apt, event, style)` picks this course's distance and the
   row's style, plus the surface only below A (the picker's `aptitudeKeysForEvent`). They
-  print as one line under the outfit, C amber and D or worse red, on every tile of the
-  style once any has letters; a role that only restates them ("Sprint F Front E",
-  `isAptitudeOnlyRole`) steps aside, a real role ("Normal Front") stays. A guide answer
+  print under the outfit, C amber and D or worse red, on every tile of the style once any
+  has letters. Pairs wrap whole (a gap between them, no dot), never truncate: a tile is
+  about 90px inside on a phone and on the All tab, too narrow for "Medium A · Front A" or a
+  third pair; the tile fills its grid row and pins the note slot to the bottom, so a
+  wrapped tile keeps its neighbours level; a role that only restates them ("Sprint F Front E",
+  `isAptitudeOnlyRole`) steps aside, a real role ("Normal Front") stays.
+  Card names (deck and swap-in) get the same two-line box, balanced, so every card's
+  reasons start level; a deck card's rarity rides its last word ("Marvelous / Sunday SR"). A guide answer
   without `apt` (an older API) keeps its roles and draws no row. The editor shows the same.
 - **A deck shows six cards a row only when its pane is 42rem wide** (`@2xl`, the pane is
   a container): on the All tab a style's box is half the width, where six cards were about
