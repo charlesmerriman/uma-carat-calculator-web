@@ -13,6 +13,10 @@ import type { RaceEvent } from "../types"
  * or an account granted it in the admin; backend benefits.early_access_for);
  * this says WHAT is still early. A client
  * gate: it decides what is drawn, and the PvP API itself stays open.
+ *
+ * The API keeps a COPY of this rule (backend calculatorapi/pvp_gate.py, with
+ * PVP_OPEN_CM_NUMBER below), only to decide what a guide's link preview
+ * (/guide/cm-21) may show. Flip both together.
  */
 export const PVP_EARLY_ACCESS = true
 
