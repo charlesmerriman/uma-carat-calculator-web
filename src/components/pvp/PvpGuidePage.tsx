@@ -37,7 +37,7 @@
  */
 
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react"
-import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
+import { Link, Navigate, useLocation, useSearchParams, type NavigateOptions } from "react-router-dom"
 import { toast } from "sonner"
 import {
 	BookOpen,
@@ -109,6 +109,7 @@ import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
 import type { PvpStyleTab } from "../../types/pvpGuide"
+import type { UseDeckRequest } from "../../utils/pvpTeams"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
 const FALLBACK_TITLE = "PvP Guides"
@@ -215,6 +216,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 		locked &&
 		!(view === "recommendations" && event === freeEvent) &&
 		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
+	// Whether My team would be closed to this reader on this event: then the
+	// guide's "Use this deck" is not offered (it would land on a lock card).
+	const teamLocked = locked && !(event !== null && isOpenPvpEvent(event))
 
 	// The events this reader can open: all of them, or while locked only the
 	// free guide's and the open CM's (lockedPvpEvents), so the list never
@@ -256,7 +260,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	 * changed. Pinned, the bare address only ever comes from outside the page,
 	 * and the memory only ever gets an address this page wrote with its event.
 	 */
-	const setParam = (key: string, value: string | null, options?: { replace?: boolean }) =>
+	const setParam = (key: string, value: string | null, options?: NavigateOptions) =>
 		setSearchParams((params) => {
 			if (value === null) params.delete(key)
 			else params.set(key, value)
@@ -407,7 +411,16 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 										</p>
 									)}
 									{guideState.status === "ready" && (
-										<PvpGuideView guide={guideState.guide} style={wantedStyle} onStyleChange={selectStyle} event={event} />
+										<PvpGuideView
+											guide={guideState.guide}
+											style={wantedStyle}
+											onStyleChange={selectStyle}
+											event={event}
+											// To My team with the deck in the router state (never the
+											// URL), where TeamBuilder offers the spots. Not offered while
+											// My team is closed to this reader.
+											onUseDeck={teamLocked ? undefined : (deck) => setParam(VIEW_PARAM, "team", { state: { useDeck: { deckId: deck.id } } satisfies UseDeckRequest })}
+										/>
 									)}
 
 									<NewCardsSection

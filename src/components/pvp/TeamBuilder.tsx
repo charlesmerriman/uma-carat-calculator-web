@@ -11,7 +11,8 @@
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { Check, LayoutGrid, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Send, Sparkles, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
@@ -33,8 +34,14 @@ import {
 	setCard,
 	setMemberUma,
 	cardBlockReason,
+	deckRequestId,
+	deckToMemberCards,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
+import { STYLE_LABELS } from "../../utils/pvpGuide"
+import { DECK_STAT_LABELS, noteOnlyType } from "../../utils/deckNotes"
+import { plainNoteText } from "../../utils/remarkHighlight"
+import { UseDeckBanner, type DeckSpot } from "./UseDeckBanner"
 import { GuidePicksBody, type GuidePickActions } from "./GuidePicksPanel"
 import { SaveStatus } from "./SaveStatus"
 import { useCardReleases, type ReleaseCheck } from "../../hooks/useCardReleases"
@@ -174,19 +181,66 @@ function ReadyBuilder({ event, teamsState, index }: {
 	const guideState = usePvpGuide(ref)
 	const guide = guideState.status === "ready" ? guideState.guide : null
 
-	/** Apply an edit to the selected team, creating the team on the first one. */
-	const applyMembers = (next: PvpTeamMember[]) => {
+	/** Apply an edit to the selected team, creating the team on the first one. Returns the team's key. */
+	const applyMembers = (next: PvpTeamMember[]): string | null => {
 		if (team) {
 			editTeam(team.key, { members: next })
-			return
+			return team.key
 		}
 		const key = createTeam(ref, { members: next })
 		if (key) setSelectedKey(key)
+		return key
 	}
 
 	// Only what is out by the event's last day can be added, from any of the
 	// view's paths in (utils/cardRelease.ts).
 	const releaseFor = useCardReleases(event, index)
+
+	// "Use this deck" on the guide hands a deck over in the router state, never
+	// the URL (guide-visuals-plan-2.md, release C). Read once, when the builder
+	// mounts: the hand-over always switches from the guide's view to this one,
+	// which mounts it fresh. Then cleared from the history entry, so a reload
+	// or Back never offers it again. (Following the state on every render
+	// instead raced the router's own transition and brought a dismissed deck
+	// back.)
+	const location = useLocation()
+	const navigate = useNavigate()
+	const [deckId, setDeckId] = useState<number | null>(() => deckRequestId(location.state))
+	const handedOver = deckRequestId(location.state) !== null
+	useEffect(() => {
+		if (handedOver) navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null })
+	}, [handedOver, location.pathname, location.search, navigate])
+	const deck = deckId !== null ? (guide?.decks.find((candidate) => candidate.id === deckId) ?? null) : null
+	// The spot an uma is being picked for, to take the deck.
+	const [deckUmaSpot, setDeckUmaSpot] = useState<number | null>(null)
+	const deckStyle = deck ? memberStyleFrom([deck.style]) : undefined
+	const deckName = deck ? `${deck.style === "everyone" ? "" : `${STYLE_LABELS[deck.style]} `}${deck.label ? `${deck.label} ` : ""}deck` : ""
+	const deckSpots: DeckSpot[] = [0, 1, 2].map((position) => {
+		const member = memberAt(members, position)
+		return { position, umaName: member ? (index.umasById.get(member.uma)?.name ?? "an uma") : null, cardCount: member?.cards.length ?? 0 }
+	})
+	/**
+	 * The deck on the member at `position` of `base` (the selected team's
+	 * members, plus the uma just picked for an empty spot): her cards
+	 * replaced, her style the deck's (owner's pick). Anything the rules kept
+	 * out is named in the toast, whose Undo puts the members back.
+	 */
+	const putDeck = (base: PvpTeamMember[], position: number) => {
+		const member = memberAt(base, position)
+		if (!deck || !member) return
+		const fill = deckToMemberCards(deck, member, index, releaseFor)
+		const before = members
+		const key = applyMembers(base.map((each) => (each.position === position ? { ...each, style: deckStyle ?? each.style, cards: fill.cards } : each)))
+		setDeckId(null)
+		const notes = [
+			...fill.skipped.map((skip) => `Left out ${skip.name}: ${skip.reason}.`),
+			...fill.open.map((open) => `${open.slot === PVP_BORROW_SLOT ? "The borrowed card" : `Card ${open.slot}`} is left ${openSlotWords(open.note)}.`),
+		]
+		toast.success(`${capitalise(deckName)} on spot ${position + 1}, ${index.umasById.get(member.uma)?.name ?? "your uma"}.`, {
+			description: notes.length > 0 ? notes.join(" ") : undefined,
+			action: key ? { label: "Undo", onClick: () => editTeam(key, { members: before }) } : undefined,
+		})
+	}
 	const searchMember = skillSearch ? memberAt(members, skillSearch.position) : undefined
 	const searchStyle = searchMember?.style ?? null
 
@@ -303,6 +357,26 @@ function ReadyBuilder({ event, teamsState, index }: {
 			</SideDrawer>
 
 			<div className="flex min-w-0 flex-col gap-3">
+				{deck && (
+					<UseDeckBanner
+						// Per team: a pending "Replace?" never follows a switch to another
+						// team. Prefixed: TeamNotes below is keyed by the bare team key, and
+						// two siblings sharing a key left a dismissed banner on screen.
+						key={`deck-${team?.key ?? "none"}`}
+						deckName={deckName}
+						spots={deckSpots}
+						newTeamBlocked={eventTeams.length >= PVP_TEAM_CAP_PER_EVENT ? `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.` : null}
+						onUse={(position) => putDeck(members, position)}
+						onPickUma={setDeckUmaSpot}
+						onNewTeam={() => {
+							const key = createTeam(ref)
+							if (!key) return
+							setSelectedKey(key)
+							setDeckUmaSpot(0)
+						}}
+						onCancel={() => setDeckId(null)}
+					/>
+				)}
 				<TeamToolbar
 					leading={
 						<>
@@ -402,6 +476,33 @@ function ReadyBuilder({ event, teamsState, index }: {
 				</DockedPanel>
 			)}
 
+			{deck && deckUmaSpot !== null && (
+				<PvpCardPicker
+					title={`An uma for the ${deckName}, spot ${deckUmaSpot + 1}`}
+					skillsById={index.skillsById}
+					event={event}
+					style={deckStyle ?? null}
+					selectedId={null}
+					pool="uma"
+					items={index.catalogue.umas}
+					recommended={recommendedIds(guide, deckStyle ?? "front").umas}
+					noteFor={(id) => releaseNote(releaseFor("uma", id))}
+					blockReason={(id) => {
+						const candidate = index.umasById.get(id)
+						if (!candidate) return null
+						return releaseBlockReason(releaseFor("uma", id)) ?? umaBlockReason(members, deckUmaSpot, candidate, index)
+					}}
+					onPick={(id) => {
+						const uma = index.umasById.get(id)
+						if (!uma) return
+						const position = deckUmaSpot
+						setDeckUmaSpot(null)
+						putDeck(setMemberUma(members, position, uma, deckStyle), position)
+					}}
+					onClose={() => setDeckUmaSpot(null)}
+				/>
+			)}
+
 			{skillSearch && (
 				<SkillSearchPicker
 					target={skillSearch}
@@ -426,6 +527,18 @@ function ReadyBuilder({ event, teamsState, index }: {
 			)}
 		</div>
 	)
+}
+
+/** A slot the guide fills with words, for the toast: "for any Wit card", "for "Gold or better"". */
+function openSlotWords(note: string): string {
+	const type = noteOnlyType(note)
+	if (type) return `for any ${DECK_STAT_LABELS[type]} card`
+	const words = plainNoteText(note).trim()
+	return words ? `for \u201c${words}\u201d` : "open"
+}
+
+function capitalise(words: string): string {
+	return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 /**

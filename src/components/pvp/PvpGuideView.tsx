@@ -18,7 +18,7 @@
 import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { useEffect, useRef, useState } from "react"
-import { Eye } from "lucide-react"
+import { Eye, Layers } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
@@ -159,11 +159,13 @@ function changeLine(change: DeckChange): string {
  * budget control above already names the one deck on screen. `change`: what it
  * changes from the deck before it in the ladder.
  */
-function DeckGrid({ deck, showLabel, change, scenarioName }: {
+function DeckGrid({ deck, showLabel, change, scenarioName, onUse }: {
 	deck: PvpDeck
 	showLabel: boolean
 	change: DeckChange | undefined
 	scenarioName: string | null
+	/** "Use this deck": hands it to My team. None where My team is closed to the reader. */
+	onUse?: () => void
 }) {
 	const reduceMotion = useReducedMotion()
 	const slots = new Map<number, PvpDeckSlot[]>()
@@ -259,6 +261,21 @@ function DeckGrid({ deck, showLabel, change, scenarioName }: {
 				})}
 				</AnimatePresence>
 			</div>
+			{onUse && (
+				<div className="mt-3 flex max-w-3xl justify-end">
+					<button
+						type="button"
+						onClick={onUse}
+						// The visible words first, so a voice command saying them works;
+						// the deck's label tells the buttons apart under All.
+						aria-label={deck.label ? `Use this deck (${deck.label})` : undefined}
+						className="inline-flex items-center gap-1.5 rounded-lg border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/20"
+					>
+						<Layers className="h-3.5 w-3.5" aria-hidden="true" />
+						Use this deck
+					</button>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -314,12 +331,13 @@ const ALL_DECKS = "All"
  * animation through useReducedMotion. Overflow is hidden only while a deck
  * moves, so the skills' hover details are not clipped once it has settled.
  */
-function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
+function DeckLadder({ decks, style, budget, onBudget, scenarioName, onUseDeck }: {
 	decks: PvpDeck[]
 	style: PvpStyle
 	budget: string | null
 	onBudget: (label: string) => void
 	scenarioName: string | null
+	onUseDeck?: (deck: PvpDeck) => void
 }) {
 	const reduceMotion = useReducedMotion()
 	const ladder = decks.filter((deck) => !deck.is_highlighted)
@@ -395,6 +413,7 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
 							showLabel={showAll || ladder.length === 1}
 							change={showAll || deck !== ladder[0] ? changes.get(deck.id) : undefined}
 							scenarioName={scenarioName}
+							onUse={onUseDeck && (() => onUseDeck(deck))}
 						/>
 					</motion.div>
 				))}
@@ -406,13 +425,14 @@ function DeckLadder({ decks, style, budget, onBudget, scenarioName }: {
 	)
 }
 
-function StylePane({ guide, style, budget, onBudget, event }: {
+function StylePane({ guide, style, budget, onBudget, event, onUseDeck }: {
 	guide: PvpGuide
 	style: PvpStyle
 	budget: string | null
 	onBudget: (label: string) => void
 	/** The event, for each uma's aptitude letters on its course. */
 	event: RaceEvent | null
+	onUseDeck?: (deck: PvpDeck) => void
 }) {
 	const umas = guide.uma_recommendations.filter((row) => row.style === style)
 	const note = guide.style_notes.find((row) => row.style === style)
@@ -475,7 +495,7 @@ function StylePane({ guide, style, budget, onBudget, event }: {
 			)}
 			{skills.length > 0 && <RecommendedSkills rows={skills} />}
 			{decks.length > 0 && (
-				<DeckLadder decks={decks} style={style} budget={budget} onBudget={onBudget} scenarioName={guide.scenario?.name ?? null} />
+				<DeckLadder decks={decks} style={style} budget={budget} onBudget={onBudget} scenarioName={guide.scenario?.name ?? null} onUseDeck={onUseDeck} />
 			)}
 		</div>
 	)
@@ -529,7 +549,7 @@ function StyleTabs({ styles, active, onChange, label, ranks }: {
 	)
 }
 
-function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event }: {
+function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event, onUseDeck }: {
 	guide: PvpGuide
 	styles: Array<Exclude<PvpStyle, "everyone">>
 	style: PvpStyleTab | null
@@ -537,6 +557,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 	budget: string | null
 	onBudget: (label: string) => void
 	event: RaceEvent | null
+	onUseDeck?: (deck: PvpDeck) => void
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
 	// it). With none, or one the guide lacks (the pick is kept), the guide's
@@ -560,7 +581,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 					{/* Keyed by style: another style is another pane, drawn at once.
 					    Unkeyed, its decks kept their box and the cards of Pace's deck
 					    "traded places" with Front's. */}
-					<StylePane key={`pane-${shown}`} guide={guide} style={shown} budget={budget} onBudget={onBudget} event={event} />
+					<StylePane key={`pane-${shown}`} guide={guide} style={shown} budget={budget} onBudget={onBudget} event={event} onUseDeck={onUseDeck} />
 					{/* Its own thread per style (Henry, 2026-10-21); keyed so a new
 					    tab opens folded. */}
 					<GuideComments
@@ -581,12 +602,14 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
  * `style` is the running style asked for (the URL's, or the reader's last),
  * not necessarily one this guide has; `pickStyle` settles which tab shows.
  */
-export function PvpGuideView({ guide, style, onStyleChange, event = null }: {
+export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseDeck }: {
 	guide: PvpGuide
 	style: PvpStyleTab | null
 	onStyleChange: (style: PvpStyleTab) => void
 	/** The guide's event, for the umas' aptitude letters on its course; none without it. */
 	event?: RaceEvent | null
+	/** "Use this deck" on a style's tab (never the All tab); absent where My team is closed to the reader. */
+	onUseDeck?: (deck: PvpDeck) => void
 }) {
 	const styles = stylesWithContent(guide)
 	// General skills (style "everyone") are team-wide, like the stats, so
@@ -682,7 +705,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null }: {
 				)}
 
 				{styles.length > 0 && (
-					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} />
+					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} onUseDeck={onUseDeck} />
 				)}
 			</div>
 			{/* A guide with no side column still has a thread for the whole guide. */}

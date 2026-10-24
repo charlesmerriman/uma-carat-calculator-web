@@ -20,7 +20,7 @@ import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { splitOutfit } from "../../utils/umaName"
-import { noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
+import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 
 /**
  * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
@@ -291,11 +291,11 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 
 /** The game's stat icons (public/0N_CM*.png), for the stats table and an "or any Wit card" line. */
 const STAT_ICONS: Record<DeckStatType, { label: string; icon: string }> = {
-	speed: { label: "Speed", icon: "/00_CMSPEED1.png" },
-	stamina: { label: "Stamina", icon: "/01_CMStamina1.png" },
-	power: { label: "Power", icon: "/02_CMPOWER1.png" },
-	guts: { label: "Guts", icon: "/03_CMGUTS1.png" },
-	wit: { label: "Wit", icon: "/04_CMWits1.png" },
+	speed: { label: DECK_STAT_LABELS.speed, icon: "/00_CMSPEED1.png" },
+	stamina: { label: DECK_STAT_LABELS.stamina, icon: "/01_CMStamina1.png" },
+	power: { label: DECK_STAT_LABELS.power, icon: "/02_CMPOWER1.png" },
+	guts: { label: DECK_STAT_LABELS.guts, icon: "/03_CMGUTS1.png" },
+	wit: { label: DECK_STAT_LABELS.wit, icon: "/04_CMWits1.png" },
 }
 
 /**

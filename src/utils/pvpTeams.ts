@@ -13,7 +13,7 @@
  */
 
 import type { RaceEvent } from "../types"
-import type { PvpGuide } from "../types/pvpGuide"
+import type { PvpDeck, PvpDeckSlot, PvpGuide } from "../types/pvpGuide"
 import { hasEnded, isRunning, WHITE_SKILL_RARITY } from "./pvpGuide"
 import { refForRaceEvent, sameEvent } from "./pvpEvent"
 import { releaseBlockReason, type ReleaseStatus } from "./cardRelease"
@@ -221,6 +221,71 @@ export function cardBlockReason(
 		return `${shared} already has a card in this deck`
 	}
 	return null
+}
+
+/** What putting a guide's deck on a member did: the cards placed, and what could not go in. */
+export interface DeckFill {
+	cards: PvpTeamCardSlot[]
+	/** A card the team rules or its release date kept out, and why ("Oguri Cap can't support herself"). */
+	skipped: Array<{ name: string; reason: string }>
+	/** A slot the guide fills with words rather than a card ("Any Wit"), left empty. */
+	open: Array<{ slot: number; note: string }>
+}
+
+/**
+ * A guide's deck as a member's cards ("Use this deck", owner 2026-10-24,
+ * `guide-visuals-plan-2.md` release C). Each guide slot's main card goes in;
+ * its alternatives ("or Light Hello R") do not. The guide's borrow card (else
+ * its slot 6) goes in the borrow slot, the rest fill slots 1 to 5 in the
+ * guide's order. A card the team's own rules refuse (her own card, a second
+ * card of one uma: cardBlockReason) or that is not out by the event's last
+ * day (the withinRelease rule) is skipped and named, never forced in: a deck
+ * is one more path into a team, and every path applies the same rules.
+ *
+ * `member` is the one the deck goes on, with the uma it will have.
+ */
+export function deckToMemberCards(
+	deck: PvpDeck,
+	member: PvpTeamMember,
+	lookups: TeamRuleLookups,
+	releaseFor: (pool: "uma" | "support", id: number) => ReleaseStatus
+): DeckFill {
+	// Each guide slot's main row (its first), in slot order.
+	const mains = new Map<number, PvpDeckSlot>()
+	for (const row of [...deck.slots].sort((a, b) => a.slot - b.slot || a.order - b.order)) {
+		if (!mains.has(row.slot)) mains.set(row.slot, row)
+	}
+	const rows = [...mains.values()]
+	const borrow = rows.find((row) => row.is_borrow) ?? rows.find((row) => row.slot === PVP_BORROW_SLOT) ?? null
+	const owned = rows.filter((row) => row !== borrow).slice(0, PVP_BORROW_SLOT - 1)
+	const fill: DeckFill = { cards: [], skipped: [], open: [] }
+	const place = (row: PvpDeckSlot, slot: number) => {
+		const card = row.support_card
+		if (!card) {
+			fill.open.push({ slot, note: row.note })
+			return
+		}
+		// Checked against the cards placed so far, so the deck's own repeats count.
+		const reason = !lookups.cardsById.has(card.id)
+			? "Not in the card list"
+			: (releaseBlockReason(releaseFor("support", card.id)) ?? cardBlockReason({ ...member, cards: fill.cards }, slot, card.id, lookups))
+		if (reason) fill.skipped.push({ name: card.name, reason })
+		else fill.cards.push({ slot, support_card: card.id })
+	}
+	owned.forEach((row, index) => place(row, index + 1))
+	if (borrow) place(borrow, PVP_BORROW_SLOT)
+	return fill
+}
+
+/** The deck "Use this deck" hands to My team, in the router state (never the URL). */
+export interface UseDeckRequest {
+	useDeck: { deckId: number }
+}
+
+/** The handed-over deck's id from a location's state, or null. */
+export function deckRequestId(state: unknown): number | null {
+	const id = (state as Partial<UseDeckRequest> | null)?.useDeck?.deckId
+	return typeof id === "number" ? id : null
 }
 
 /**

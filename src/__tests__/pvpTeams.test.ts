@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import {
 	cardBlockReason,
 	clearMember,
+	deckRequestId,
+	deckToMemberCards,
 	drawerTeam,
 	firstOpenCardSlot,
 	memberStyleFrom,
@@ -12,7 +14,7 @@ import {
 	umaBlockReason,
 	whiteSkillPairs,
 } from "../utils/pvpTeams"
-import type { PvpGuide } from "../types/pvpGuide"
+import type { PvpDeck, PvpGuide } from "../types/pvpGuide"
 import type { PvpTeam, PvpTeamMember } from "../types/pvpTeam"
 import type { RaceEvent } from "../types"
 
@@ -255,5 +257,90 @@ describe("whiteSkillPairs", () => {
 			skill(7, 1, 1, null),
 		])
 		expect(pairs.size).toBe(0)
+	})
+})
+
+describe("deckToMemberCards", () => {
+	const ref = (id: number, name: string) => ({ id, name, image: null, card_type: "speed", rarity: 3 })
+	const deck = (rows: Array<{ slot: number; order?: number; borrow?: boolean; card?: [number, string]; note?: string }>): PvpDeck => ({
+		id: 1,
+		style: "pace",
+		label: "Standard",
+		note: "",
+		is_highlighted: false,
+		slots: rows.map((row) => ({
+			slot: row.slot,
+			order: row.order ?? 0,
+			is_borrow: row.borrow ?? false,
+			note: row.note ?? "",
+			support_card: row.card ? ref(...row.card) : null,
+		})),
+	})
+	const maru: PvpTeamMember = { position: 0, uma: MARU.id, style: "front", cards: [] }
+	const out = () => ({ kind: "available" as const })
+
+	it("puts the borrow card in slot 6 and the rest in 1 to 5, alternatives left out", () => {
+		const fill = deckToMemberCards(
+			deck([
+				{ slot: 1, card: [304, "Kitasan Black"] },
+				{ slot: 1, order: 1, card: [305, "Special Week"] },
+				{ slot: 2, borrow: true, card: [302, "Agnes Tachyon"] },
+				{ slot: 3, card: [309, "TM Opera O"] },
+			]),
+			maru,
+			LOOKUPS,
+			out
+		)
+		expect(fill.cards).toEqual([
+			{ slot: 1, support_card: 304 },
+			{ slot: 2, support_card: 309 },
+			{ slot: 6, support_card: 302 },
+		])
+		expect(fill.skipped).toEqual([])
+	})
+
+	it("borrows the guide's slot 6 when no card is marked, and leaves a words-only slot open", () => {
+		const fill = deckToMemberCards(
+			deck([
+				{ slot: 1, card: [304, "Kitasan Black"] },
+				{ slot: 2, note: "Any Wit" },
+				{ slot: 6, card: [302, "Agnes Tachyon"] },
+			]),
+			maru,
+			LOOKUPS,
+			out
+		)
+		expect(fill.cards).toEqual([{ slot: 1, support_card: 304 }, { slot: 6, support_card: 302 }])
+		expect(fill.open).toEqual([{ slot: 2, note: "Any Wit" }])
+	})
+
+	it("skips what the team rules or the release date keep out, and says why", () => {
+		const oguri: PvpTeamMember = { position: 1, uma: OGURI.id, style: "late", cards: [] }
+		const fill = deckToMemberCards(
+			deck([
+				{ slot: 1, card: [308, "Oguri Cap"] },
+				{ slot: 2, card: [302, "Agnes Tachyon"] },
+				{ slot: 3, card: [303, "Agnes Tachyon"] },
+				{ slot: 4, card: [304, "Kitasan Black"] },
+				{ slot: 5, card: [999, "Unknown Card"] },
+			]),
+			oguri,
+			LOOKUPS,
+			(_pool, id) => (id === 304 ? { kind: "after", date: "2099/1/1" } : { kind: "available" })
+		)
+		expect(fill.cards).toEqual([{ slot: 2, support_card: 302 }])
+		expect(fill.skipped).toEqual([
+			{ name: "Oguri Cap", reason: "Oguri Cap can't support herself" },
+			{ name: "Agnes Tachyon", reason: "Agnes Tachyon already has a card in this deck" },
+			{ name: "Kitasan Black", reason: "Out 2099/1/1, after this event" },
+			{ name: "Unknown Card", reason: "Not in the card list" },
+		])
+	})
+
+	it("reads the handed-over deck from router state, and nothing else", () => {
+		expect(deckRequestId({ useDeck: { deckId: 7 } })).toBe(7)
+		expect(deckRequestId(null)).toBeNull()
+		expect(deckRequestId({ useDeck: { deckId: "7" } })).toBeNull()
+		expect(deckRequestId("x")).toBeNull()
 	})
 })
