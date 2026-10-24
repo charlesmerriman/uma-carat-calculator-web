@@ -560,6 +560,38 @@ export function umasByStars(rows: PvpUmaRecommendation[]): Array<{ stars: number
 	return [...groups.entries()].sort(([a], [b]) => b - a).map(([stars, list]) => ({ stars, rows: list }))
 }
 
+/**
+ * The All tab's face line (owner, 2026-10-24): a style's umas most stars
+ * first, the guide's order within a star group, the first `count`, and how
+ * many more there are.
+ */
+export function topUmas(rows: PvpUmaRecommendation[], count: number): { shown: PvpUmaRecommendation[]; more: number } {
+	const ordered = umasByStars(rows).flatMap((group) => group.rows)
+	return { shown: ordered.slice(0, count), more: Math.max(0, ordered.length - count) }
+}
+
+/**
+ * The All tab's skill line: a position's own skills in its best tier (T0 when
+ * it has one), in the order the style's tab shows them. A guide with no tiers
+ * (the sheet era) gives all its skills under tier null, for the caller to cut.
+ */
+export function topTierSkills(rows: PvpSkillRecommendation[], style: PvpStyle): { tier: number | null; skills: PvpSkillRecommendation[] } {
+	const own = skillsForPosition(rows, style)
+	if (own.length === 0) return { tier: null, skills: [] }
+	const tier = own[0].tier
+	return { tier, skills: own.filter((row) => row.tier === tier) }
+}
+
+/** Styles in the guide's ranking order, any it doesn't rank after them in their own order. */
+export function stylesByRank<S extends PvpStyle>(styles: S[], ranking: RankingStep[]): S[] {
+	const ranks = styleRanks(ranking)
+	const rank = (style: S) => ranks.get(style) ?? Number.MAX_SAFE_INTEGER
+	return styles
+		.map((style, index) => ({ style, index }))
+		.sort((a, b) => rank(a.style) - rank(b.style) || a.index - b.index)
+		.map(({ style }) => style)
+}
+
 /** A deck's own cards, main rows only, in slot order, each once. */
 function deckCards(deck: PvpDeck): PvpSupportCardRef[] {
 	const cards = new Map<number, PvpSupportCardRef>()

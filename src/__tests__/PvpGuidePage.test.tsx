@@ -530,6 +530,71 @@ describe("PvpGuidePage band", () => {
 	})
 })
 
+describe("PvpGuidePage All tab", () => {
+	const front = (id: number, name: string, stars: number) => ({ style: "front" as const, stars, role: "", note: "", uma: { id, name, image: null } })
+	const slots = (cards: Array<[number, string]>) =>
+		cards.map(([cardId, name], index) => ({ slot: index + 1, order: 0, is_borrow: index === 5, note: "", support_card: card(cardId, name) }))
+	const PREVIEW: PvpGuide = {
+		...GUIDE,
+		// End ranks first here, so the boxes run End, Front.
+		style_ranking: "End > Front",
+		uma_recommendations: [
+			front(41, "Maruzensky", 5),
+			...[51, 52, 53, 54, 55].map((id) => front(id, `Uma ${id}`, 3)),
+			front(56, "Seventh Uma", 1),
+			GUIDE.uma_recommendations[1],
+		],
+		decks: [
+			{ id: 1, style: "front", label: "Beginner", note: "", is_highlighted: false, slots: slots([[1, "Agnes Tachyon"], [2, "Mejiro Ardan"]]) },
+			{ id: 2, style: "front", label: "Whale", note: "", is_highlighted: false, slots: slots([[1, "Agnes Tachyon"], [5, "Sweep Tosho"]]) },
+			{
+				id: 3, style: "front", label: "Honorable Mentions", note: "", is_highlighted: true,
+				slots: slots([[11, "Card 11"], [12, "Card 12"], [13, "Card 13"], [14, "Card 14"], [15, "Card 15"], [16, "Card 16"], [17, "Card 17"], [18, "Card 18"]]),
+			},
+		],
+	}
+	const openAll = async () => {
+		renderPage()
+		await screen.findByText("Recommended stats")
+		fireEvent.click(within(screen.getAllByRole("tablist", { name: "Running style" })[0]).getByRole("tab", { name: "All" }))
+		return within(screen.getByRole("tabpanel", { name: "All" }))
+	}
+
+	beforeEach(() => respond(200, PREVIEW))
+
+	it("puts a box per style in the guide's ranking order", async () => {
+		const panel = await openAll()
+		expect(panel.getAllByRole("region").map((region) => region.getAttribute("aria-label"))).toEqual(["End", "Front"])
+	})
+
+	it("shows six faces, most stars first, and a +N that opens the style", async () => {
+		const box = within((await openAll()).getByRole("region", { name: "Front" }))
+		// Each face is a group named for her, her details in its hover.
+		const line = within(box.getByText("Umas").nextElementSibling as HTMLElement)
+		expect(line.getAllByRole("group").map((face) => face.getAttribute("aria-label"))).toEqual(["Maruzensky", "Uma 51", "Uma 52", "Uma 53", "Uma 54", "Uma 55"])
+		fireEvent.click(box.getByRole("button", { name: "1 more, open Front" }))
+		expect(screen.getByTestId("location").textContent).toContain("style=front")
+	})
+
+	it("draws every deck on its own labelled line, the swap-ins capped at six, and no budget control", async () => {
+		const panel = await openAll()
+		const box = within(panel.getByRole("region", { name: "Front" }))
+		expect(box.getAllByRole("term").map((term) => term.textContent)).toEqual(["Umas", "Skills", "Beginner", "Whale", "Honorable Mentions"])
+		const swapIns = within(box.getByText("Honorable Mentions").nextElementSibling as HTMLElement)
+		expect(swapIns.getAllByRole("group")).toHaveLength(6)
+		expect(swapIns.getByRole("button", { name: "2 more, open Front" })).toBeInTheDocument()
+		expect(panel.queryByRole("group", { name: "Deck budget" })).not.toBeInTheDocument()
+		expect(panel.queryByText(/Compared with/)).not.toBeInTheDocument()
+	})
+
+	it("shows the style's top skills, and opens the style from its header", async () => {
+		const box = within((await openAll()).getByRole("region", { name: "Front" }))
+		expect(box.getByRole("group", { name: "Angling and Scheming" })).toBeInTheDocument()
+		fireEvent.click(box.getByRole("button", { name: "Open Front, 0 comments" }))
+		expect(screen.getByTestId("location").textContent).toContain("style=front")
+	})
+})
+
 describe("PvpGuidePage decks", () => {
 	const deck = (id: number, label: string, cards: Array<[number, string, string?]>, extra: Partial<PvpGuide["decks"][number]> = {}) => ({
 		id,
@@ -884,7 +949,7 @@ describe("PvpGuidePage comments", () => {
 		renderPage()
 		await screen.findByText("Recommended stats")
 		fireEvent.click(within(screen.getAllByRole("tablist", { name: "Running style" })[0]).getByRole("tab", { name: "All" }))
-		fireEvent.click(screen.getByRole("button", { name: "Comments (1) on the Front tab" }))
+		fireEvent.click(screen.getByRole("button", { name: "Open Front, 1 comment" }))
 		expect(screen.getByTestId("location").textContent).toContain("style=front")
 	})
 })

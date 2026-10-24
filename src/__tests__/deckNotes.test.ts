@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseSlotNote, rarityLabel } from "../utils/deckNotes"
+import { noteOnlyType, parseSlotNote, rarityLabel } from "../utils/deckNotes"
 
 /**
  * The deck slot note reader (utils/deckNotes.ts). CM21_NOTES is every distinct
@@ -118,6 +118,17 @@ describe("parseSlotNote", () => {
 			// And nothing red is left.
 			expect(parsed.rest).not.toContain("==")
 		}
+	})
+})
+
+describe("noteOnlyType", () => {
+	it("reads a note that only names a card type, with or without the or", () => {
+		expect(noteOnlyType("Any Wit")).toBe("wit")
+		expect(noteOnlyType("or any Spd")).toBe("speed")
+		expect(noteOnlyType("==Any Power==")).toBe("power")
+		expect(noteOnlyType("Any Wit if you have it")).toBeNull()
+		expect(noteOnlyType("Any friend")).toBeNull()
+		expect(noteOnlyType("")).toBeNull()
 	})
 })
 

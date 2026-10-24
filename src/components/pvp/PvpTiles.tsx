@@ -20,7 +20,7 @@ import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { splitOutfit } from "../../utils/umaName"
-import { parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
+import { noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 
 /**
  * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
@@ -329,7 +329,11 @@ function LinkBadge({ scenarioName }: { scenarioName: string | null }) {
  * wrote. Nothing is red or bold (Henry, 2026-10-23). "Scenario Link" is the
  * card's Link badge and "or any Wit" a line of its own, so neither shows here.
  */
-export function SlotReasons({ note }: { note: string }) {
+export function SlotReasons({ note, faces = false }: {
+	note: string
+	/** Bare skill faces with no hover of their own, for inside another hover (a card's on the All tab). */
+	faces?: boolean
+}) {
 	const mentions = useSkillMentions()
 	const { skills, tags, rest } = parseSlotNote(note)
 	if (skills.length === 0 && tags.length === 0 && !rest) return null
@@ -338,7 +342,7 @@ export function SlotReasons({ note }: { note: string }) {
 			{skills.map((name, index) => {
 				const skill = mentions[name.toLowerCase()]
 				return skill ? (
-					<SkillCell key={index} skill={skill} note="" size="small" />
+					faces ? <SkillFace key={index} skill={skill} size="small" /> : <SkillCell key={index} skill={skill} note="" size="small" />
 				) : (
 					<div key={index} className="flex h-[2.125rem] w-full items-center justify-center rounded border border-gray-600 bg-gray-800 px-1 text-[11px] leading-tight text-gray-100">
 						<span className="line-clamp-2">{name}</span>
@@ -500,6 +504,106 @@ export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: 
 		</BorrowTab>
 	)
 }
+
+/**
+ * The All tab's small pieces (owner, 2026-10-24: the All tab is a quick
+ * preview of every style, `guide-visuals-plan-2.md`). Each is the picture
+ * alone at the line's cell width; everything else a full tile prints (the
+ * name, outfit, stars, role, notes) moves into its hover, focus or tap.
+ */
+
+/** An uma as her framed face, everything else in the hover. */
+export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: number; role: string; note: string }) {
+	const oshiIds = useOshiIds()
+	const { base, outfit } = splitOutfit(uma.name)
+	const detail = (
+		<div className="flex flex-col gap-1">
+			<div>
+				<div className="font-semibold text-gray-100">{base}</div>
+				{outfit && <div className="text-gray-400">{outfit}</div>}
+			</div>
+			{stars > 0 && (
+				<div className="w-fit">
+					<Stars count={stars} />
+				</div>
+			)}
+			{role && <div className="font-semibold text-brand">{role}</div>}
+			{note && <InlineNote text={note} />}
+		</div>
+	)
+	return (
+		<WithDetail label={uma.name} detail={detail} className="w-full" detailClassName="w-48">
+			<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
+		</WithDetail>
+	)
+}
+
+/**
+ * A deck's card as its art alone: the Link badge and the borrow tab stay,
+ * since they say something about the card itself; its name, rarity and the
+ * slot's reasons (and any "or" the slot offers, `extra`) move to the hover.
+ */
+export function MiniCard({ card, note, borrow = false, scenarioName, extra = null }: {
+	card: PvpSupportCardRef
+	note: string
+	borrow?: boolean
+	scenarioName: string | null
+	extra?: ReactNode
+}) {
+	const linked = parseSlotNote(note).scenarioLink
+	const rarity = rarityLabel(card.rarity)
+	const detail = (
+		<div className="flex flex-col items-center gap-1 text-center">
+			<div className="font-semibold text-gray-100">
+				{card.name}
+				{rarity && <span className="font-normal text-gray-400">{"\u00a0"}{rarity}</span>}
+			</div>
+			<SlotReasons note={note} faces />
+			{extra}
+		</div>
+	)
+	return (
+		<WithDetail label={card.name} detail={detail} className="w-full" detailClassName="w-44">
+			<BorrowTab borrow={borrow}>
+				<span className="relative block">
+					{card.image ? (
+						<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-auto w-full" />
+					) : (
+						<span className="block aspect-[3/4] w-full rounded-md border border-gray-600 bg-gray-700" aria-hidden="true" />
+					)}
+					{linked && <LinkBadge scenarioName={scenarioName} />}
+				</span>
+			</BorrowTab>
+		</WithDetail>
+	)
+}
+
+/**
+ * A slot with no card, at a card's size: the stat icon for "Any Wit", else
+ * the note's first words; the whole note in the hover. No note: an empty
+ * dashed slot.
+ */
+export function MiniNoteSlot({ note, borrow = false }: { note: string; borrow?: boolean }) {
+	const anyType = noteOnlyType(note)
+	const box = (
+		<BorrowTab borrow={borrow}>
+			<span className="flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-gray-600 bg-gray-800 p-0.5 text-center text-[10px] leading-tight text-gray-300">
+				{anyType ? (
+					<img src={STAT_ICONS[anyType].icon} alt={`Any ${STAT_ICONS[anyType].label}`} className="h-5 w-5" />
+				) : (
+					<span className="line-clamp-4 break-words">{plainNoteText(note)}</span>
+				)}
+			</span>
+		</BorrowTab>
+	)
+	if (!note) return <span aria-hidden="true">{box}</span>
+	return (
+		<WithDetail label={plainNoteText(note)} detail={<InlineNote text={note.replace(/==/g, "")} />} className="w-full" detailClassName="w-40">
+			{box}
+		</WithDetail>
+	)
+}
+
 
 /**
  * The borrowed card's marker: a grey tab behind the card, peeking out above

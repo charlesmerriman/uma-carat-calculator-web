@@ -17,14 +17,14 @@
 
 import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Eye } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
 import { GuideBand } from "./GuideBand"
+import { AllStylesPreview } from "./AllStylesPreview"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
-import { guideCommentCount } from "../../services/guideComments"
 import { AlternateCard, AnyTypeLine, InlineNote, NoteOnlyTile, SkillCell, SkillMention, Stars, SupportTile, SwapInCard, UmaTile } from "./PvpTiles"
 import { recalledDeckBudget, rememberDeckBudget } from "../../services/pvpPageMemory"
 import { parseSlotNote, type DeckStatType } from "../../utils/deckNotes"
@@ -552,30 +552,9 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 				<StyleTabs styles={styleTabs(styles)} active={shown} onChange={onStyleChange} label="Running style" ranks={styleRanks(ranking)} />
 			</div>
 			{shown === ALL_STYLES_TAB ? (
-				// Every style on one screen, the way the source sheet lays a guide
-				// out (Henry, 2026-10-21): a box per style, two abreast from lg.
-				// Two, not four: four columns left a deck's six cards about 50px
-				// wide, too small to tell apart.
-				<div role="tabpanel" aria-label={ALL_STYLES_LABEL} className="grid items-start gap-3 lg:grid-cols-2">
-					{styles.map((each) => (
-						<section key={each} className={SECTION} aria-label={STYLE_LABELS[each]}>
-							{/* The style's name in its colour on the dark themes (.style-ink). */}
-							<h3 className="style-ink mb-2 text-sm font-semibold uppercase tracking-wide" style={{ "--style-color": styleColor(each) } as CSSProperties}>
-								{STYLE_LABELS[each]}
-							</h3>
-							<StylePane guide={guide} style={each} budget={budget} onBudget={onBudget} event={event} />
-							{/* The thread lives on the style's own tab; here, its count
-							    and the way there. */}
-							<button
-								type="button"
-								onClick={() => onStyleChange(each)}
-								className="mt-4 w-full border-t border-gray-700/70 pt-3 text-left text-sm font-semibold text-gray-300 transition hover:text-gray-100"
-							>
-								Comments ({guideCommentCount(guide, each)}) on the {STYLE_LABELS[each]} tab
-							</button>
-						</section>
-					))}
-				</div>
+				// Every style at a glance (owner, 2026-10-24): a box per style in
+				// rank order, faces, top skills and every deck one line each.
+				<AllStylesPreview guide={guide} styles={styles} onStyleChange={onStyleChange} scenarioName={guide.scenario?.name ?? null} />
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 					{/* Keyed by style: another style is another pane, drawn at once.

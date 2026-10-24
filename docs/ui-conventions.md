@@ -1459,8 +1459,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `""` for the whole guide (the side column's last box) and one per running style (under the
   style's pane). Each button names its thread ("Comments on Pace", "Comments on the whole
   guide"): on a phone the two sit one after the other. `GuideComments` folds each until opened, showing the guide's `comment_counts`,
-  so nothing is fetched for a section nobody opens; the All tab shows each style's count as a
-  link to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
+  so nothing is fetched for a section nobody opens; the All tab's box header shows each
+  style's count beside "Open Pace", the way to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
   `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up (`useCommentWrites().vote`).
 - **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
@@ -1573,8 +1573,20 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   reasons start level; a deck card's rarity rides its last word ("Marvelous / Sunday SR"). A guide answer
   without `apt` (an older API) keeps its roles and draws no row. The editor shows the same.
 - **A deck shows six cards a row only when its pane is 42rem wide** (`@2xl`, the pane is
-  a container): on the All tab a style's box is half the width, where six cards were about
-  55px and their notes ran into each other.
+  a container): narrower, three a row, where six were about 55px and their notes ran into
+  each other.
+- **The All tab is a quick preview** (owner, 2026-10-24; release B of
+  `guide-visuals-plan-2.md`), its own component (`AllStylesPreview.tsx`), not `StylePane`
+  with a compact switch. A box per style, two abreast from `lg`, in the guide's ranking
+  order (`stylesByRank`); a header with the rank, the comment count and "Open Pace →"; then
+  one line apiece, a label beside it (above it on a phone): the top six faces (`topUmas`,
+  `FaceTile`, faces only), the best tier's first two skills (`topTierSkills`; three were
+  85px and cut), every ladder deck's six cards as art (`MiniCard`, Link badge and borrow tab
+  kept; a note-only slot is `MiniNoteSlot`, the stat icon for "Any Wit"), and each swap-in
+  row's first six. A line with more ends in "+N", which opens the style. Every line is the
+  same seven-track grid, so faces and cards line up. Names, stars, roles, notes, rarities
+  and a slot's reasons and "or"s are in the hover; the letters, the budget control and the
+  "In every deck" / "Compared with" lines are on the style's own tab only.
   Never add a second "compare" pane: it was tried and read as every card listed twice.
   "New since <previous event>" is collapsed by default for the same reason.
 - **`==words==` is red and `[[Skill name]]` is a skill** in any guide text:
