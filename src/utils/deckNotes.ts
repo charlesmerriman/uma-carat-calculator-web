@@ -108,6 +108,17 @@ export function parseSlotNote(note: string): SlotNote {
 }
 
 /** A card's rarity as the game prints it, for anything but an SSR (which most guide cards are). */
+/**
+ * A note-only slot that names only a card type, "Any Wit" or "or any Spd",
+ * as that type (the All tab draws it as the stat's icon); anything else null.
+ * The card notes' "or any" reading stays parseSlotNote's: there, "Any Wit"
+ * without the "or" is the slot's own advice and is kept as written.
+ */
+export function noteOnlyType(note: string): DeckStatType | null {
+	const word = /^(?:or )?any (\w+)\.?$/i.exec(note.replace(/==/g, "").trim())?.[1]?.toLowerCase()
+	return word ? (TYPE_WORDS[word] ?? null) : null
+}
+
 export function rarityLabel(rarity: number | null): string {
 	if (rarity === 1) return "R"
 	if (rarity === 2) return "SR"

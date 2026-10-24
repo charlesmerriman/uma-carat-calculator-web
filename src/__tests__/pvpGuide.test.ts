@@ -24,7 +24,10 @@ import {
 	styleForWord,
 	styleRanks,
 	styleTabs,
+	stylesByRank,
 	tierLabel,
+	topTierSkills,
+	topUmas,
 	umasByStars,
 } from "../utils/pvpGuide"
 import { plainNoteText, splitHighlights, splitNoteText } from "../utils/remarkHighlight"
@@ -390,6 +393,34 @@ describe("uma star groups", () => {
 			[3, [2, 4]],
 			[2, [1, 3]],
 		])
+	})
+})
+
+describe("the All tab's lines", () => {
+	const row = (id: number, stars: number) => ({ style: "pace" as const, stars, role: "", note: "", uma: { id, name: `Uma ${id}`, image: null } })
+	const skill = (id: number, style: string, tier: number | null, order = 0): PvpSkillRecommendation =>
+		({ style, tier, category: "other", order, note: "", skill: { id } }) as unknown as PvpSkillRecommendation
+
+	it("takes the top umas by stars, then the guide's order, and counts the rest", () => {
+		const { shown, more } = topUmas([row(1, 2), row(2, 3), row(3, 2), row(4, 3), row(5, 1)], 3)
+		expect(shown.map((r) => r.uma.id)).toEqual([2, 4, 1])
+		expect(more).toBe(2)
+		expect(topUmas([row(1, 2)], 6).more).toBe(0)
+	})
+
+	it("takes a position's best tier, and every skill of a guide with no tiers", () => {
+		const rows = [skill(1, "pace", 1), skill(2, "pace", 0, 1), skill(3, "front", 0), skill(4, "pace", 0, 0), skill(5, "everyone", 0)]
+		const top = topTierSkills(rows, "pace")
+		expect(top.tier).toBe(0)
+		expect(top.skills.map((r) => r.skill.id)).toEqual([4, 2])
+		expect(topTierSkills([skill(6, "pace", null), skill(7, "pace", null)], "pace")).toMatchObject({ tier: null })
+		expect(topTierSkills([skill(6, "pace", null), skill(7, "pace", null)], "pace").skills).toHaveLength(2)
+		expect(topTierSkills(rows, "end")).toEqual({ tier: null, skills: [] })
+	})
+
+	it("orders styles by the ranking, unranked ones after in their own order", () => {
+		expect(stylesByRank(["front", "pace", "late", "end"], parseStyleRanking("Pace >> End > Late"))).toEqual(["pace", "end", "late", "front"])
+		expect(stylesByRank(["front", "end"], [])).toEqual(["front", "end"])
 	})
 })
 
