@@ -1853,7 +1853,21 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 - **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
   starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
   ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
-  `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks.
+  `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks,
+  a guide's deck.
+- **"Use this deck"** (owner, 2026-10-24; release C of `guide-visuals-plan-2.md`): a button
+  under each deck on a style's tab (not the All tab; not offered while My team is locked to
+  the reader) switches to My team with `{ useDeck: { deckId } }` in the ROUTER STATE, never
+  the URL. `TeamBuilder` reads it once at mount (the switch always mounts it fresh) and
+  clears it from the history entry, so a reload or Back never offers it again. `UseDeckBanner`
+  offers the selected team's spots: one with cards asks "Replace Oguri Cap's 6 cards with …?",
+  one with an uma and no cards takes it at once, an empty one (or New team, disabled at the
+  cap) opens the uma picker first. The deck goes on through `deckToMemberCards`
+  (`utils/pvpTeams.ts`): main cards only, the borrow card (else slot 6) in Borrow, the rest
+  in 1 to 5; what the team rules or the release date refuse is skipped and named in the toast,
+  a words-only slot ("Any Wit") left open; her style becomes the deck's. The toast's Undo
+  puts the members back. The banner's key is prefixed (`deck-<team>`): `TeamNotes` beside it
+  is keyed by the bare team key, and the clash left a dismissed banner on screen.
 - **Notes** (`TeamNotes.tsx`): ten per team, read-only until the pen, `==red==` and line breaks
   kept, the eraser's Undo in a toast. Colours are the `--color-note-*` tokens.
 

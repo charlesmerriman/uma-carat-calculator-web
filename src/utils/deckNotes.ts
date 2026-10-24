@@ -16,6 +16,15 @@
 
 export type DeckStatType = "speed" | "stamina" | "power" | "guts" | "wit"
 
+/** A stat type as the game prints it: "or any Wit card". */
+export const DECK_STAT_LABELS: Record<DeckStatType, string> = {
+	speed: "Speed",
+	stamina: "Stamina",
+	power: "Power",
+	guts: "Guts",
+	wit: "Wit",
+}
+
 export interface SlotNote {
 	/** The `[[skill]]` names, in the order written. */
 	skills: string[]

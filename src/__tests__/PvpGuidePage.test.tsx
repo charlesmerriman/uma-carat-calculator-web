@@ -97,9 +97,15 @@ vi.mock("../services/CalculatorContext", () => ({
 
 // The builder has its own tests (usePvpTeams, PvpCardPicker); here it only
 // has to be the thing the My team view shows, for the selected event.
-vi.mock("../components/pvp/TeamBuilder", () => ({
-	TeamBuilder: ({ event: shown }: { event: RaceEvent }) => <div data-testid="team-builder">{`cm-${shown.id}`}</div>,
-}))
+vi.mock("../components/pvp/TeamBuilder", async () => {
+	const { useLocation } = await vi.importActual<typeof import("react-router-dom")>("react-router-dom")
+	return {
+		// The router state it was opened with, for "Use this deck".
+		TeamBuilder: ({ event: shown }: { event: RaceEvent }) => (
+			<div data-testid="team-builder" data-state={JSON.stringify(useLocation().state)}>{`cm-${shown.id}`}</div>
+		),
+	}
+})
 // The page as everyone will have it, unless a test closes it: the early-access
 // rule itself is tested in usePvpAccess.test.tsx.
 const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
@@ -646,6 +652,36 @@ describe("PvpGuidePage decks", () => {
 		expect(await screen.findByText("Kitasan Black")).toBeInTheDocument()
 		expect(screen.getByText("Agnes Tachyon")).toBe(kept)
 		await waitFor(() => expect(screen.queryByText("Mejiro Ardan")).not.toBeInTheDocument())
+	})
+
+	it("hands a deck to My team with Use this deck, through the router state", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		fireEvent.click(screen.getByRole("button", { name: "Use this deck (Beginner)" }))
+		expect(screen.getByTestId("location").textContent).toContain("view=team")
+		expect(screen.getByTestId("location").textContent).not.toContain("deck")
+		expect(screen.getByTestId("team-builder")).toHaveAttribute("data-state", JSON.stringify({ useDeck: { deckId: 1 } }))
+	})
+
+	it("offers Use this deck on a style's tab only, and not where My team is locked", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		const first = renderPage()
+		await screen.findByText("Recommended stats")
+		fireEvent.click(within(screen.getAllByRole("tablist", { name: "Running style" })[0]).getByRole("tab", { name: "All" }))
+		expect(screen.queryByRole("button", { name: /Use this deck/ })).not.toBeInTheDocument()
+		first.unmount()
+
+		// Locked, this reader still has the free guide, but not My team.
+		access.value = "locked"
+		try {
+			renderPage()
+			await screen.findByText("Recommended stats")
+			expect(screen.getByText("Mejiro Ardan")).toBeInTheDocument()
+			expect(screen.queryByRole("button", { name: /Use this deck/ })).not.toBeInTheDocument()
+		} finally {
+			access.value = "open"
+		}
 	})
 
 	it("opens every deck on All, and remembers the pick for the next guide", async () => {
