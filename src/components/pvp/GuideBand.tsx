@@ -358,7 +358,10 @@ export function GuideBand({ guide, active, onStyleChange }: {
 	const hasRight = guide.stat_configs.length > 0 || guide.scenario !== null || guide.team_comps.length > 0
 	if (!hasLeft && !hasRight) return null
 	return (
-		<div className={hasLeft && hasRight ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]" : "flex flex-col gap-4"}>
+		// The two boxes stretch to the taller one (a grid's default), so their
+		// bottoms line up whichever side holds more; the shorter keeps its room at
+		// the bottom (owner, 2026-10-24: the ranking box stopped short of the stats).
+		<div className={hasLeft && hasRight ? "grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]" : "flex flex-col gap-4"}>
 			{hasLeft && (
 				<section className={SECTION} aria-labelledby="pvp-ranking">
 					<h3 id="pvp-ranking" className={HEADING}>{steps.length > 0 ? "Style ranking" : "About this guide"}</h3>

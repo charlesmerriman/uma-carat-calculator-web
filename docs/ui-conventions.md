@@ -1506,7 +1506,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`GuideBand`); under it, from `xl`, two columns: a side column (general skills, the whole
   guide's thread) and ONE style pane. Below `xl` the side column FOLLOWS the style
   (`order-last`), so a phone reads band, tabs, the style, then the folded general skills.
-- **The band** (release 3 of `guide-visuals-plan.md`, 2026-10-23). Left: the style ranking
+- **The band** (release 3 of `guide-visuals-plan.md`, 2026-10-23). Its two boxes stretch to
+  the taller (owner, 2026-10-24), so their bottoms line up. Left: the style ranking
   as a ladder (Henry: "looks great"), a row of steps once it has 36rem and a list on a
   phone (a container query on a WRAPPER: a query reads an ancestor, so `@xl:` on the list's
   own classes never fired), each step the rank, the name in its colour and three top-star
@@ -1603,10 +1604,19 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   shows its first deck. Above the decks, "In every Pace deck: …" (`cardsInEveryDeck`); in
   each deck after the first, "Compared with Beginner: swaps in … for …" (`deckChanges`,
   main rows by card id). No mark on the cards themselves (Henry: "New" marks were
-  distracting). The height animates both ways (Framer Motion `AnimatePresence`, about
-  280ms); `MotionConfig reducedMotion="user"` stops transforms only, so the duration is 0
-  under `useReducedMotion()`. Overflow is hidden only while a deck moves, so hover
-  details are not clipped once it settles.
+  distracting). **A budget switch trades cards** (owner, 2026-10-24; round 2 of the plan,
+  `guide-visuals-plan-2.md`): the deck last shown alone keeps one box (key `"one"`), and
+  `DeckGrid` keys each cell by its CARD under `AnimatePresence mode="popLayout"`, so a card
+  both decks hold keeps its element and glides to its new slot (`layout="position"`), a
+  leaving card fades and shrinks out, a new one grows in a beat later. Keying the box by
+  deck made it fold away while the next unfolded, a vertical jump. Every deck's card art
+  is preloaded once the decks show, or a new card grew in as words and its picture came
+  later. **Only All folds and unfolds boxes** (height, about 280ms), around the box on
+  screen. `MotionConfig reducedMotion="user"` stops transforms only, so every duration is
+  0 under `useReducedMotion()`. Overflow is hidden only while a deck folds, so hover
+  details are not clipped once it settles. A style's pane is keyed `pane-<style>` (another
+  style is another pane, drawn at once; the bare style collided with its comments
+  thread's key).
 - **A swap-in deck is a row, not a deck** (`is_highlighted`, the editor's "Swap-ins"
   switch, formerly "Gold box"; the guide's Honorable Mentions): smaller cards with their
   reasons, no slots, no borrow tab, in a recessed `bg-gray-900` panel (a well on both

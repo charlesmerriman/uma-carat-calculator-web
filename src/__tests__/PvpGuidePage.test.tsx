@@ -570,6 +570,19 @@ describe("PvpGuidePage decks", () => {
 		expect(screen.getByText("Compared with Beginner: swaps in Kitasan Black for Mejiro Ardan.")).toBeInTheDocument()
 	})
 
+	it("trades only the changed cards when the budget changes, keeping the ones both decks hold", async () => {
+		respond(200, { ...GUIDE, decks: LADDER })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		// The same element before and after: neither the deck's box nor the
+		// card's cell is remounted, which is what lets it stay or glide.
+		const kept = screen.getByText("Agnes Tachyon")
+		fireEvent.click(within(screen.getByRole("group", { name: "Deck budget" })).getByRole("button", { name: "Standard" }))
+		expect(await screen.findByText("Kitasan Black")).toBeInTheDocument()
+		expect(screen.getByText("Agnes Tachyon")).toBe(kept)
+		await waitFor(() => expect(screen.queryByText("Mejiro Ardan")).not.toBeInTheDocument())
+	})
+
 	it("opens every deck on All, and remembers the pick for the next guide", async () => {
 		respond(200, { ...GUIDE, decks: LADDER })
 		const first = renderPage()
