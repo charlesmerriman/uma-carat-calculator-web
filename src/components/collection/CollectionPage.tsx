@@ -32,6 +32,7 @@ import { failureText } from "../../services/galleryQueries"
 import { FramedUma } from "../FramedUma"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "../pvp/gallery/galleryStyles"
 import { VeteranForm } from "./VeteranForm"
+import { veteranTag } from "../../utils/veteranGrade"
 import { ImportPanel } from "./ImportPanel"
 import { OwnedCardsGrid, OwnedUmasGrid } from "./RosterGrids"
 import { SaveStatus } from "../pvp/SaveStatus"
@@ -322,6 +323,9 @@ function VeteranRow({ veteran, index, oshi, highlighted, onEdit, onDelete }: {
 				<p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-gray-100">
 					{name}
 					{veteran.label && uma && <span className="text-xs font-normal text-gray-400">{uma.name}</span>}
+					{veteranTag(veteran) && (
+						<span className="rounded bg-brand/15 px-1.5 text-xs font-semibold text-brand">{veteranTag(veteran)}</span>
+					)}
 					<span className="rounded-full border border-gray-600 px-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
 						{veteran.source === "import" ? "From the game" : "By hand"}
 					</span>

@@ -1823,8 +1823,13 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   The Finals card adds the group (A / B) and the placement; a winner fills a blank 1st.
 - **Which veteran ran** (`VeteranPicker`, under each runner; a picker, never a dropdown,
   owner 2026-10-26): the account's veterans of that outfit only, each a card with her
-  portrait, stats, best letters, skills, memo and training date, plus "No veteran"; drawn
-  only when there is one. The win rates split by uma AND veteran (`summarizeRuns`), each
+  portrait, grade and score, stats, best letters, skills, memo and training date, plus "No
+  veteran"; drawn only when there is one. **A veteran is named by `veteranText`**
+  (`utils/veteranGrade.ts`): her label, else her game memo, then the game's grade and score
+  ("Main Oguri · A+ 13,815"); the stat line only when she has none of those, otherwise in
+  the tooltip. On the owner's real file the score alone told every same-uma pair apart. The
+  grade letters come from the API's grade NUMBER (1 G ... 18 SS+, 19 UG, 20 UG1 ... UE9), fitted
+  to the owner's file; past UE9 only the score shows, never a guessed letter. The win rates split by uma AND veteran (`summarizeRuns`), each
   veteran row linking to her on the Collection page. A ticket copied from a team brings the team's
   links (`lineupFromTeam`), and a different veteran makes a different lineup (`sameLineup`).
 - **Every change saves at once through `services/pvpRunQueries.ts`** (TanStack Query). A

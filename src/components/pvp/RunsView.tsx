@@ -27,7 +27,7 @@ import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpRuns, useRunsSaving, useSaveRun, type RunChange } from "../../services/pvpRunQueries"
 import { useTrainedUmas } from "../../services/trainedUmaQueries"
-import { statLine } from "../../utils/trainedUmas"
+import { statsTitle, veteranText } from "../../utils/veteranGrade"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
@@ -594,7 +594,8 @@ function Summary({ runs, umasById, oshiIds, veterans }: {
 }
 
 /**
- * A summary row's veteran: her label (else her stats), linked to her on the
+ * A summary row's veteran: her label or memo and her grade and score
+ * ("A+ 13,815"; utils/veteranGrade.ts), stats in the tooltip, linked to her on the
  * Collection page, which scrolls to and rings her (`?veteran=`). A linked
  * veteran since deleted reads as such; a runner with none shows nothing.
  */
@@ -605,9 +606,9 @@ function VeteranLink({ veteran, linked }: { veteran: TrainedUma | undefined; lin
 		<Link
 			to={`/app/collection?veteran=${veteran.id}`}
 			className="ml-1.5 text-xs font-medium text-brand hover:text-brand/75"
-			title={`Speed ${veteran.speed}, Stamina ${veteran.stamina}, Power ${veteran.power}, Guts ${veteran.guts}, Wit ${veteran.wit}`}
+			title={statsTitle(veteran)}
 		>
-			{veteran.label || statLine(veteran)}
+			{veteranText(veteran)}
 		</Link>
 	)
 }

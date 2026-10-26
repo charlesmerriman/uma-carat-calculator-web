@@ -40,6 +40,7 @@ describe("the veteran draft", () => {
 		expect(draftProblems({ ...filled(), stats: { ...filled().stats, wit: "2001" } })).toEqual({ wit: "0 to 2000." })
 		expect(draftProblems({ ...filled(), stats: { ...filled().stats, guts: "4.5" } })).toEqual({ guts: "0 to 2000." })
 		expect(draftProblems({ ...filled(), label: "x".repeat(41) })).toEqual({ label: "At most 40 characters." })
+		expect(draftProblems({ ...filled(), rankScore: "about 13k" })).toEqual({ rankScore: "A whole number, like 13815." })
 		expect(draftProblems(filled())).toEqual({})
 	})
 
@@ -47,12 +48,13 @@ describe("the veteran draft", () => {
 		const input = draftToInput({ ...filled(), label: "  Ace ", skills: [{ skill: 9, level: 3 }] })
 		expect(input).toEqual({
 			uma: 41, label: "Ace", speed: 1200, stamina: 800, power: 1000, guts: 400, wit: 900,
-			apt: APT, skills: [{ skill: 9, level: 3 }],
+			apt: APT, skills: [{ skill: 9, level: 3 }], rank_score: null,
 		})
+		expect(draftToInput({ ...filled(), rankScore: "13,815" }).rank_score).toBe(13815)
 	})
 
 	it("round-trips a saved veteran", () => {
-		const veteran = { ...draftToInput(filled()), id: 7, rank_score: null, source: "manual", import_key: null,
+		const veteran = { ...draftToInput(filled()), id: 7, rank_score: null, rank_grade: null, source: "manual", import_key: null,
 			missing_from_import: false, created_at: "", updated_at: "" } as TrainedUma
 		expect(draftToInput(draftFromVeteran(veteran))).toEqual(draftToInput(filled()))
 	})

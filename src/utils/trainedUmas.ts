@@ -62,6 +62,8 @@ export interface VeteranDraft {
 	stats: Record<StatKey, string>
 	apt: Record<AptitudeKey, number | null>
 	skills: VeteranSkill[]
+	/** The evaluation score the game shows, as typed; "" when not given. */
+	rankScore: string
 }
 
 function blankAptitudes(): Record<AptitudeKey, number | null> {
@@ -75,6 +77,7 @@ export function emptyDraft(): VeteranDraft {
 		stats: { speed: "", stamina: "", power: "", guts: "", wit: "" },
 		apt: blankAptitudes(),
 		skills: [],
+		rankScore: "",
 	}
 }
 
@@ -96,12 +99,13 @@ export function draftFromVeteran(veteran: TrainedUma): VeteranDraft {
 		stats: Object.fromEntries(STAT_KEYS.map((key) => [key, String(veteran[key])])) as Record<StatKey, string>,
 		apt: { ...blankAptitudes(), ...veteran.apt },
 		skills: veteran.skills.map((entry) => ({ ...entry })),
+		rankScore: veteran.rank_score == null ? "" : String(veteran.rank_score),
 	}
 }
 
 /** One sentence per field that would be refused, by field; empty when the draft can be saved. */
-export function draftProblems(draft: VeteranDraft): Partial<Record<StatKey | "uma" | "label", string>> {
-	const problems: Partial<Record<StatKey | "uma" | "label", string>> = {}
+export function draftProblems(draft: VeteranDraft): Partial<Record<StatKey | "uma" | "label" | "rankScore", string>> {
+	const problems: Partial<Record<StatKey | "uma" | "label" | "rankScore", string>> = {}
 	if (draft.uma === null) problems.uma = "Pick the uma first."
 	for (const key of STAT_KEYS) {
 		const text = draft.stats[key].trim()
@@ -110,6 +114,8 @@ export function draftProblems(draft: VeteranDraft): Partial<Record<StatKey | "um
 		else if (!Number.isInteger(value) || value < 0 || value > STAT_MAX) problems[key] = `0 to ${STAT_MAX}.`
 	}
 	if (draft.label.length > LABEL_MAX_LENGTH) problems.label = `At most ${LABEL_MAX_LENGTH} characters.`
+	const score = draft.rankScore.replace(/,/g, "").trim()
+	if (score && (!Number.isInteger(Number(score)) || Number(score) < 0)) problems.rankScore = "A whole number, like 13815."
 	return problems
 }
 
@@ -121,6 +127,8 @@ export function draftToInput(draft: VeteranDraft): VeteranInput {
 		...(Object.fromEntries(STAT_KEYS.map((key) => [key, Number(draft.stats[key])])) as Record<StatKey, number>),
 		apt: draft.apt,
 		skills: draft.skills,
+		// Commas allowed, as the game prints it ("13,815").
+		rank_score: draft.rankScore.trim() ? Number(draft.rankScore.replace(/,/g, "")) : null,
 	}
 }
 

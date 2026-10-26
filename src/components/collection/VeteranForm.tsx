@@ -115,6 +115,19 @@ export function VeteranForm({ title, initial, fromGame, index, oshiIds, saving, 
 				</label>
 			</div>
 
+			<label className={`${LABEL} w-48`}>
+				Rank score (optional)
+				<input
+					className={INPUT}
+					inputMode="numeric"
+					disabled={locked}
+					value={draft.rankScore}
+					placeholder="The number the game shows"
+					onChange={(change) => setDraft({ ...draft, rankScore: change.target.value })}
+				/>
+				{problems.rankScore && <span className={PROBLEM}>{problems.rankScore}</span>}
+			</label>
+
 			<fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-5" disabled={locked}>
 				<legend className="mb-1 text-xs font-medium text-gray-400">Stats</legend>
 				{STAT_KEYS.map((key) => (
