@@ -7,6 +7,7 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
 import { SkillsPage } from "../components/skills/SkillsPage"
+import { CollectionPage } from "../components/collection/CollectionPage"
 import { PvpGuidePage } from "../components/pvp/PvpGuidePage"
 import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
@@ -201,6 +202,8 @@ export const ApplicationViews = () => (
 			{/* A static path, so it outranks the ":publicId" share route below;
 			    "pvp" is also too short to pass isPublicId. */}
 			<Route path="pvp" element={<PvpGuidePage />}/>
+			{/* Account only, and off the navbar: the profile menu links it. */}
+			<Route path="collection" element={<CollectionPage />}/>
 		</Route>
 		<Route path=":publicId" element={<SharedPlanRoute />} />
 		{/* Unmatched path under /app. A SIBLING of the layout route, not a child:

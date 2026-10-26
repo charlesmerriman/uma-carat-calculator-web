@@ -9,6 +9,7 @@ import { OguriSpinner } from "../OguriSpinner"
 import { Avatar } from "./Avatar"
 import { OshiPicker } from "./OshiPicker"
 import { MyGalleryPosts } from "./MyGalleryPosts"
+import { CollectionSummary } from "../collection/CollectionSummary"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { PROVIDERS } from "../../constants/providers"
 import { useAccount } from "../../services/AuthContext"
@@ -524,6 +525,9 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 
 			{/* The teams they posted to the PvP gallery. */}
 			<MyGalleryPosts className={`${CARD} mt-4`} titleClassName={CARD_TITLE} />
+
+			{/* Their veterans, kept on the Collection page. */}
+			<CollectionSummary className={`${CARD} mt-4`} titleClassName={CARD_TITLE} />
 
 			{/* Sign-in methods */}
 			<section className={`${CARD} mt-4`} aria-labelledby="sign-in-methods">
