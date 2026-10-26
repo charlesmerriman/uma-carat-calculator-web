@@ -31,13 +31,34 @@ each banner ends, before they spend rather than after.
   write in an on-site editor, a team planner, and a community gallery with votes, comments and
   moderation.
 
-| The plan and its carat forecast | The timeline |
-|---|---|
-| ![A year of planned banners grouped by in-game scenario, above the carat forecast chart](docs/images/planner-forecast.webp) | ![Upcoming banners and a Champions Meeting on the timeline](docs/images/timeline.webp) |
-| **A PvP guide** | **The team planner** |
-| ![A Champions Meeting guide: style ranking, meta analysis, recommended stats, skills and umas](docs/images/pvp-guide.webp) | ![Building a team beside the guide's picks and recommended skills](docs/images/pvp-team.webp) |
-
-![The PvP gallery: players' teams with votes, views and a comment thread](docs/images/pvp-gallery.webp)
+<table>
+<tr>
+<td width="50%" align="center" valign="top">
+<b>The plan and its carat forecast</b><br><br>
+<img src="docs/images/planner-forecast.webp" alt="A year of planned banners grouped by in-game scenario, above the carat forecast chart" width="100%">
+</td>
+<td width="50%" align="center" valign="top">
+<b>The timeline</b><br><br>
+<img src="docs/images/timeline.webp" alt="Upcoming banners and a Champions Meeting on the timeline" width="100%">
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
+<b>A PvP guide</b><br><br>
+<img src="docs/images/pvp-guide.webp" alt="A Champions Meeting guide: style ranking, meta analysis, recommended stats, skills and umas" width="100%">
+</td>
+<td width="50%" align="center" valign="top">
+<b>The team planner</b><br><br>
+<img src="docs/images/pvp-team.webp" alt="Building a team beside the guide's picks and recommended skills" width="100%">
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center" valign="top">
+<b>The PvP gallery</b><br><br>
+<img src="docs/images/pvp-gallery.webp" alt="Players' teams with votes, views and a comment thread" width="100%">
+</td>
+</tr>
+</table>
 
 No page needs an account. A guest's plan is kept on their device, and signing in with Google,
 Discord or Patreon moves it to the account.
