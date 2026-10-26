@@ -17,7 +17,7 @@
 
 import { useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { FileUp, Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useAccount } from "../../services/AuthContext"
 import { useCreateVeteran, useDeleteVeteran, useTrainedUmas, useUpdateVeteran } from "../../services/trainedUmaQueries"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
@@ -27,6 +27,7 @@ import { failureText } from "../../services/galleryQueries"
 import { FramedUma } from "../FramedUma"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "../pvp/gallery/galleryStyles"
 import { VeteranForm } from "./VeteranForm"
+import { ImportPanel } from "./ImportPanel"
 import {
 	STAT_KEYS,
 	aptitudeSummary,
@@ -76,8 +77,8 @@ export function CollectionPage() {
 	)
 }
 
-/** What the form panel is doing: nothing, adding, or editing one veteran. */
-type Editing = null | "new" | TrainedUma
+/** What the panel above the list is doing: nothing, adding, editing one veteran, or an import. */
+type Editing = null | "new" | "import" | TrainedUma
 
 function Veterans() {
 	const list = useTrainedUmas(true)
@@ -113,7 +114,7 @@ function Veterans() {
 		const input = draftToInput(draft)
 		if (editing === "new") {
 			create.mutate(input, { onSuccess: close })
-		} else if (editing) {
+		} else if (editing && editing !== "import") {
 			// A veteran from the game takes its label only (the API refuses the rest).
 			const changes = editing.source === "import" ? { label: input.label } : { ...input, uma: undefined }
 			update.mutate({ id: editing.id, changes }, { onSuccess: close })
@@ -127,20 +128,34 @@ function Veterans() {
 					Veterans <span className="text-sm font-normal text-gray-400">{veterans.length} of {VETERAN_CAP}</span>
 				</h2>
 				{editing === null && (
-					<button
-						type="button"
-						className={PRIMARY_BUTTON}
-						disabled={atCap}
-						title={atCap ? `You can keep up to ${VETERAN_CAP} veterans.` : undefined}
-						onClick={() => setEditing("new")}
-					>
-						<Plus className="h-4 w-4" />
-						Add a veteran
-					</button>
+					<div className="flex flex-wrap gap-2">
+						<button type="button" className={ACTION_BUTTON} onClick={() => setEditing("import")}>
+							<FileUp className="h-4 w-4" />
+							Import from the game
+						</button>
+						<button
+							type="button"
+							className={PRIMARY_BUTTON}
+							disabled={atCap}
+							title={atCap ? `You can keep up to ${VETERAN_CAP} veterans.` : undefined}
+							onClick={() => setEditing("new")}
+						>
+							<Plus className="h-4 w-4" />
+							Add a veteran
+						</button>
+					</div>
 				)}
 			</div>
 
-			{editing !== null && (
+			{editing === "import" && (
+				<ImportPanel
+					index={catalogue}
+					// Hand-entered veterans are never replaced by an import, so they take room first.
+					room={VETERAN_CAP - veterans.filter((veteran) => veteran.source === "manual").length}
+					onDone={() => setEditing(null)}
+				/>
+			)}
+			{editing !== null && editing !== "import" && (
 				<VeteranForm
 					// A fresh form per veteran, so switching from one edit to another resets it.
 					key={editing === "new" ? "new" : editing.id}
