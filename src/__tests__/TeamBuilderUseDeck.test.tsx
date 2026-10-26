@@ -205,10 +205,11 @@ describe("a member's veteran", () => {
 
 	it("picks one of the account's veterans of her outfit", async () => {
 		const value = renderBuilder({ ...teamsValue([team("t1")]), mode: "account" }, null)
-		const pick = await screen.findByLabelText("Veteran for Oguri Cap")
+		const pick = await screen.findByRole("button", { name: "Veteran for Oguri Cap: none" })
 		// Maruzensky has no veteran: no pick for her.
-		expect(screen.queryByLabelText("Veteran for Maruzensky")).toBeNull()
-		fireEvent.change(pick, { target: { value: "5" } })
+		expect(screen.queryByRole("button", { name: /Veteran for Maruzensky/ })).toBeNull()
+		fireEvent.click(pick)
+		fireEvent.click(within(screen.getByRole("dialog", { name: "Which Oguri Cap is she?" })).getByRole("button", { name: /Main Oguri/ }))
 		expect(value.editTeam).toHaveBeenCalledWith("t1", { members: [{ ...MEMBERS[0], trained_uma: 5 }, MEMBERS[1]] })
 	})
 

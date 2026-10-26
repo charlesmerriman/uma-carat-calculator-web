@@ -23,7 +23,7 @@ import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
-import { VeteranSelect } from "../collection/VeteranSelect"
+import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 
 /**
@@ -221,11 +221,11 @@ function MemberPanel({
 						/>
 					)}
 					{veterans && onVeteranChange && (
-						<VeteranSelect
-							umaId={member.uma}
+						<VeteranPicker
+							uma={uma}
 							value={member.trained_uma}
 							veterans={veterans}
-							label={`Veteran for ${umaLabel}`}
+							oshi={isFavorite?.(member.uma) ?? false}
 							onChange={(trainedUma) => onVeteranChange(position, trainedUma)}
 						/>
 					)}

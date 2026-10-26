@@ -168,8 +168,3 @@ export function veteransOf(veterans: TrainedUma[], umaId: number): TrainedUma[] 
 export function statLine(veteran: Pick<TrainedUma, StatKey>): string {
 	return STAT_KEYS.map((key) => veteran[key]).join(" / ")
 }
-
-/** A veteran in a dropdown: "Main Oguri · 1200 / 800 / ...", or the stats alone without a label. */
-export function veteranOptionLabel(veteran: TrainedUma): string {
-	return veteran.label ? `${veteran.label} · ${statLine(veteran)}` : statLine(veteran)
-}

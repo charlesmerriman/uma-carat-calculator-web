@@ -27,7 +27,8 @@ import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpRuns, useRunsSaving, useSaveRun, type RunChange } from "../../services/pvpRunQueries"
 import { useTrainedUmas } from "../../services/trainedUmaQueries"
-import { VeteranSelect } from "../collection/VeteranSelect"
+import { statLine } from "../../utils/trainedUmas"
+import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
@@ -195,7 +196,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 				</div>
 			)}
 
-			<Summary runs={runs} umasById={umasById} oshiIds={oshiIds} />
+			<Summary runs={runs} umasById={umasById} oshiIds={oshiIds} veterans={veterans} />
 		</div>
 	)
 }
@@ -479,11 +480,11 @@ function Lineup({ runners, umasById, oshiIds, veterans, onVeteranChange }: {
 							{uma?.name ?? "Unknown uma"}
 						</span>
 						<span className="text-[11px] text-gray-400">{STYLE_LABELS[runner.style]}</span>
-						<VeteranSelect
-							umaId={runner.uma}
+						<VeteranPicker
+							uma={uma}
 							value={runner.trained_uma}
 							veterans={veterans}
-							label={`Veteran for ${uma?.name ?? "this uma"}`}
+							oshi={oshiIds.has(runner.uma)}
 							onChange={(trainedUma) => onVeteranChange(runner.position, trainedUma)}
 						/>
 					</li>
@@ -531,10 +532,11 @@ function RaceRow({ race, label, run, umasById, onChange }: {
 
 // ── The totals ───────────────────────────────────────────────────────────
 
-function Summary({ runs, umasById, oshiIds }: {
+function Summary({ runs, umasById, oshiIds, veterans }: {
 	runs: PvpRun[]
 	umasById: Map<number, CatalogueUma>
 	oshiIds: ReadonlySet<number>
+	veterans: TrainedUma[]
 }) {
 	const { total, umas } = summarizeRuns(runsOf(runs, {}))
 	const final = findRun(runs, { stage: "final" })
@@ -566,14 +568,17 @@ function Summary({ runs, umasById, oshiIds }: {
 					{umas.map((tally) => {
 						const uma = umasById.get(tally.uma)
 						return (
-							<li key={tally.uma} className="flex items-center gap-2 text-sm">
+							<li key={`${tally.uma}:${tally.trained_uma ?? ""}`} className="flex items-center gap-2 text-sm">
 								<FramedUma
 									src={uma?.portrait ?? uma?.image ?? null}
 									oshi={oshiIds.has(tally.uma)}
 									alt=""
 									className="w-8 shrink-0"
 								/>
-								<span className="min-w-0 flex-1 truncate text-gray-200">{uma?.name ?? "Unknown uma"}</span>
+								<span className="min-w-0 flex-1 truncate text-gray-200">
+									{uma?.name ?? "Unknown uma"}
+									<VeteranLink veteran={veterans.find((veteran) => veteran.id === tally.trained_uma)} linked={tally.trained_uma !== null} />
+								</span>
 								<span className="text-gray-400">
 									{tally.wins} of {tally.raced}
 								</span>
@@ -585,6 +590,25 @@ function Summary({ runs, umasById, oshiIds }: {
 			)}
 			<p className="text-xs text-gray-500">Days 1 to 4 only. The finals race is counted on its own.</p>
 		</section>
+	)
+}
+
+/**
+ * A summary row's veteran: her label (else her stats), linked to her on the
+ * Collection page, which scrolls to and rings her (`?veteran=`). A linked
+ * veteran since deleted reads as such; a runner with none shows nothing.
+ */
+function VeteranLink({ veteran, linked }: { veteran: TrainedUma | undefined; linked: boolean }) {
+	if (!linked) return null
+	if (!veteran) return <span className="ml-1.5 text-xs text-gray-500">(a deleted veteran)</span>
+	return (
+		<Link
+			to={`/app/collection?veteran=${veteran.id}`}
+			className="ml-1.5 text-xs font-medium text-brand hover:text-brand/75"
+			title={`Speed ${veteran.speed}, Stamina ${veteran.stamina}, Power ${veteran.power}, Guts ${veteran.guts}, Wit ${veteran.wit}`}
+		>
+			{veteran.label || statLine(veteran)}
+		</Link>
 	)
 }
 

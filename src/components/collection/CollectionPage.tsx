@@ -1,8 +1,12 @@
 /**
  * The Collection page (/app/collection): everything confirmed about the
- * player's own game account, kept on their site account. Today: Veterans,
- * the umas they finished training. The umas and support cards they own join
- * later as tabs of their own (notes/pvp-planner-plan.md, R2, "The Collection").
+ * player's own game account, kept on their site account, in three tabs:
+ * Veterans (the umas they finished training), Umas and Support cards (what
+ * they own; RosterGrids.tsx). notes/pvp-planner-plan.md, R2, "The Collection".
+ *
+ * The tab is `?tab=` (veterans by default), so a link can open one. `?veteran=`
+ * scrolls to that veteran and rings her row: CM Runs' win rates link here.
+ * "Import from the game" sits above the tabs: one import fills all three.
  *
  * Account only (owner, 2026-10-26): a guest gets a sign-in card. Not in the
  * navbar: reached from the profile menu and a card on the Account page, and
@@ -15,8 +19,9 @@
  * Inside the /app loading gate, so it may read the clock during render.
  */
 
-import { useState, type ReactNode } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
 import { FileUp, Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useAccount } from "../../services/AuthContext"
 import { useCreateVeteran, useDeleteVeteran, useTrainedUmas, useUpdateVeteran } from "../../services/trainedUmaQueries"
@@ -28,6 +33,12 @@ import { FramedUma } from "../FramedUma"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "../pvp/gallery/galleryStyles"
 import { VeteranForm } from "./VeteranForm"
 import { ImportPanel } from "./ImportPanel"
+import { OwnedCardsGrid, OwnedUmasGrid } from "./RosterGrids"
+import { SaveStatus } from "../pvp/SaveStatus"
+import { useClearRoster, useEditRoster, useRoster, useRosterSaving } from "../../services/rosterQueries"
+import { useCalculatorData } from "../../services/CalculatorContext"
+import { cardReleases } from "../../utils/cardRelease"
+import type { RosterChanges } from "../../types/roster"
 import {
 	STAT_KEYS,
 	aptitudeSummary,
@@ -61,7 +72,7 @@ export function CollectionPage() {
 				</p>
 			</header>
 			{isLoggedIn ? (
-				<Veterans />
+				<SignedInCollection />
 			) : (
 				<div className="card-panel flex flex-wrap items-center gap-3 p-4 text-sm text-gray-300">
 					<span className="min-w-0 flex-1">Sign in to keep your veterans on your account.</span>
@@ -74,10 +85,115 @@ export function CollectionPage() {
 	)
 }
 
-/** What the panel above the list is doing: nothing, adding, editing one veteran, or an import. */
-type Editing = null | "new" | "import" | TrainedUma
+type CollectionTab = "veterans" | "umas" | "cards"
+const TABS: Array<{ id: CollectionTab; label: string }> = [
+	{ id: "veterans", label: "Veterans" },
+	{ id: "umas", label: "Umas" },
+	{ id: "cards", label: "Support cards" },
+]
 
-function Veterans() {
+function SignedInCollection() {
+	const [params, setParams] = useSearchParams()
+	const tab: CollectionTab = TABS.find((entry) => entry.id === params.get("tab"))?.id ?? "veterans"
+	const catalogue = usePvpCatalogue()
+	const [importing, setImporting] = useState(false)
+	const choose = (next: CollectionTab) =>
+		setParams(next === "veterans" ? {} : { tab: next }, { replace: true })
+
+	return (
+		<>
+			<div className="flex flex-wrap items-center gap-2">
+				<div role="tablist" aria-label="Collection" className="flex flex-1 gap-1 border-b border-gray-700">
+					{TABS.map((entry) => (
+						<button
+							key={entry.id}
+							type="button"
+							role="tab"
+							aria-selected={tab === entry.id}
+							onClick={() => choose(entry.id)}
+							className={`-mb-px border-b-2 px-3 py-2 text-sm font-semibold transition ${
+								tab === entry.id ? "border-brand text-brand" : "border-transparent text-gray-400 hover:text-gray-100"
+							}`}
+						>
+							{entry.label}
+						</button>
+					))}
+				</div>
+				{!importing && (
+					<button type="button" className={ACTION_BUTTON} onClick={() => setImporting(true)}>
+						<FileUp className="h-4 w-4" />
+						Import from the game
+					</button>
+				)}
+			</div>
+			{importing && catalogue.status === "ready" && <ImportPanel index={catalogue} onDone={() => setImporting(false)} />}
+			{tab === "veterans" && <Veterans highlight={Number(params.get("veteran")) || null} />}
+			{tab !== "veterans" && <RosterTab tab={tab} />}
+		</>
+	)
+}
+
+/** The Umas or Support cards grid, with the roster's save line. */
+function RosterTab({ tab }: { tab: "umas" | "cards" }) {
+	const roster = useRoster(true)
+	const catalogue = usePvpCatalogue()
+	const oshiIds = useOshiIds()
+	const saving = useRosterSaving()
+	const [failed, setFailed] = useState(false)
+	const edit = useEditRoster((message) => {
+		setFailed(true)
+		toast.error(message)
+	})
+	const clear = useClearRoster()
+	// First Global banner start per uma and card: the grids' "Release date" sort.
+	const { umaBannerData, supportBannerData } = useCalculatorData()
+	const releases = useMemo(() => cardReleases(umaBannerData ?? [], supportBannerData ?? []), [umaBannerData, supportBannerData])
+	if (roster.isError || catalogue.status === "error") {
+		return <Notice>Your collection didn't load. Reload the page to try again.</Notice>
+	}
+	if (roster.isPending || catalogue.status !== "ready") {
+		return (
+			<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
+				<Loader2 className="h-4 w-4 animate-spin" />
+				Loading your collection…
+			</div>
+		)
+	}
+	const onEdit = (changes: RosterChanges) => {
+		setFailed(false)
+		edit(changes)
+	}
+	return (
+		<div className="flex flex-col gap-2">
+			<div className="flex justify-end">
+				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam />
+			</div>
+			{tab === "umas" ? (
+				<OwnedUmasGrid
+					umas={catalogue.catalogue.umas}
+					owned={roster.data.umas}
+					releases={releases.umas}
+					oshiIds={oshiIds}
+					onEdit={onEdit}
+					onClear={() => clear.mutate("umas", { onError: (error) => toast.error(failureText(error, "That list wasn't cleared.")) })}
+				/>
+			) : (
+				<OwnedCardsGrid
+					cards={catalogue.catalogue.support_cards}
+					owned={roster.data.support_cards}
+					releases={releases.supports}
+					onEdit={onEdit}
+					onClear={() => clear.mutate("support_cards", { onError: (error) => toast.error(failureText(error, "That list wasn't cleared.")) })}
+				/>
+			)}
+		</div>
+	)
+}
+
+/** What the panel above the list is doing: nothing, adding, or editing one veteran. */
+type Editing = null | "new" | TrainedUma
+
+function Veterans({ highlight }: { highlight: number | null }) {
 	const list = useTrainedUmas(true)
 	const catalogue = usePvpCatalogue()
 	const oshiIds = useOshiIds()
@@ -110,7 +226,7 @@ function Veterans() {
 		const input = draftToInput(draft)
 		if (editing === "new") {
 			create.mutate(input, { onSuccess: close })
-		} else if (editing && editing !== "import") {
+		} else if (editing) {
 			// A veteran from the game takes its label only (the API refuses the rest).
 			const changes = editing.source === "import" ? { label: input.label } : { ...input, uma: undefined }
 			update.mutate({ id: editing.id, changes }, { onSuccess: close })
@@ -124,23 +240,14 @@ function Veterans() {
 					Veterans <span className="text-sm font-normal text-gray-400">{veterans.length}</span>
 				</h2>
 				{editing === null && (
-					<div className="flex flex-wrap gap-2">
-						<button type="button" className={ACTION_BUTTON} onClick={() => setEditing("import")}>
-							<FileUp className="h-4 w-4" />
-							Import from the game
-						</button>
-						<button type="button" className={PRIMARY_BUTTON} onClick={() => setEditing("new")}>
-							<Plus className="h-4 w-4" />
-							Add a veteran
-						</button>
-					</div>
+					<button type="button" className={PRIMARY_BUTTON} onClick={() => setEditing("new")}>
+						<Plus className="h-4 w-4" />
+						Add a veteran
+					</button>
 				)}
 			</div>
 
-			{editing === "import" && (
-				<ImportPanel index={catalogue} onDone={() => setEditing(null)} />
-			)}
-			{editing !== null && editing !== "import" && (
+			{editing !== null && (
 				<VeteranForm
 					// A fresh form per veteran, so switching from one edit to another resets it.
 					key={editing === "new" ? "new" : editing.id}
@@ -171,6 +278,7 @@ function Veterans() {
 							veteran={veteran}
 							index={catalogue}
 							oshi={oshiIds.has(veteran.uma)}
+							highlighted={veteran.id === highlight}
 							onEdit={() => setEditing(veteran)}
 							onDelete={() => remove.mutate(veteran.id)}
 						/>
@@ -186,19 +294,29 @@ function veteranName(veteran: TrainedUma, index: PvpCatalogueIndex): string {
 	return veteran.label || index.umasById.get(veteran.uma)?.name || "Unknown uma"
 }
 
-function VeteranRow({ veteran, index, oshi, onEdit, onDelete }: {
+function VeteranRow({ veteran, index, oshi, highlighted, onEdit, onDelete }: {
 	veteran: TrainedUma
 	index: PvpCatalogueIndex
 	oshi: boolean
+	/** Opened by a link to her (`?veteran=`): scrolled to and ringed. */
+	highlighted: boolean
 	onEdit: () => void
 	onDelete: () => void
 }) {
 	const [confirming, setConfirming] = useState(false)
+	const rowRef = useRef<HTMLLIElement>(null)
+	useEffect(() => {
+		if (highlighted) rowRef.current?.scrollIntoView({ block: "center" })
+	}, [highlighted])
 	const uma = index.umasById.get(veteran.uma)
 	const name = veteranName(veteran, index)
 	const strong = aptitudeSummary(veteran.apt)
 	return (
-		<li className="card-panel flex flex-wrap items-center gap-3 p-3">
+		<li
+			ref={rowRef}
+			id={`veteran-${veteran.id}`}
+			className={`card-panel flex flex-wrap items-center gap-3 p-3 ${highlighted ? "border-brand ring-1 ring-brand" : ""}`}
+		>
 			<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={oshi} alt="" className="w-12 shrink-0" />
 			<div className="min-w-0 flex-1">
 				<p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-gray-100">

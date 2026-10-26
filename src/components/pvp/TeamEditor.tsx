@@ -38,10 +38,12 @@ import type { RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import type { TrainedUma } from "../../types/trainedUma"
+import type { Roster } from "../../types/roster"
+import { ownedForPicker } from "../../utils/roster"
 
 type PlaceTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
-export function TeamEditor({ event, members, index, guide, layout = "full", deal, veterans, onChange }: {
+export function TeamEditor({ event, members, index, guide, layout = "full", deal, veterans, roster, onChange }: {
 	event: RaceEvent
 	members: PvpTeamMember[]
 	index: PvpCatalogueIndex
@@ -52,6 +54,8 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 	deal?: DeckDeal
 	/** The account's veterans, for each member's "which veteran" pick (My team, signed in). */
 	veterans?: TrainedUma[]
+	/** What the account owns, for the pickers' Owned filter (My team, signed in). */
+	roster?: Roster
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
@@ -110,6 +114,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 				<PvpCardPicker
 					pool="uma"
 					items={index.catalogue.umas}
+					owned={ownedForPicker(roster, "uma")}
 					title={`Uma ${picker.position + 1}`}
 					skillsById={index.skillsById}
 					event={event}
@@ -137,6 +142,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 				<PvpCardPicker
 					pool="support"
 					items={index.catalogue.support_cards}
+					owned={ownedForPicker(roster, "support")}
 					title={`${picker.slot === PVP_BORROW_SLOT ? "Borrowed card" : `Card ${picker.slot}`} for ${umaName(picker.position)}`}
 					skillsById={index.skillsById}
 					event={event}

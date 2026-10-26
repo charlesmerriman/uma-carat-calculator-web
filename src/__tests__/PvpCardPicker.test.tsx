@@ -214,3 +214,27 @@ describe("PvpCardPicker", () => {
 		expect(screen.getByTitle("Out 2026/12/1, after this event")).toBeDisabled()
 	})
 })
+
+describe("the Owned filter (the player's Collection)", () => {
+	const owned = { ids: new Set([11]), limitBreaks: new Map([[11, 4]]) }
+
+	it("shows only owned cards by default, with their limit break, and everything once switched off", () => {
+		renderSupportPicker({ owned })
+		expect(tileNames()).toEqual(["Kitasan Black"])
+		expect(within(screen.getByRole("dialog")).getByText("MLB")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("checkbox", { name: /Owned only/ }))
+		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "Super Creek"])
+	})
+
+	it("starts switched off when nothing is owned", () => {
+		renderSupportPicker({ owned: { ids: new Set(), limitBreaks: new Map() } })
+		expect(screen.getByRole("checkbox", { name: /Owned only/ })).not.toBeChecked()
+		expect(tileNames()).toHaveLength(3)
+	})
+
+	it("is absent without a collection (a guest)", () => {
+		renderSupportPicker()
+		expect(screen.queryByRole("checkbox", { name: /Owned only/ })).toBeNull()
+	})
+})
+
