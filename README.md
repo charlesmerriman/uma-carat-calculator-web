@@ -1,202 +1,117 @@
 # Uma Carat Calculator (Web)
 
-**Live at [umacaratcalculator.com](https://umacaratcalculator.com).** Tens of thousands of
-visitors since the September 2026 launch, and dozens of Patreon supporters.
+**Live at [umacaratcalculator.com](https://umacaratcalculator.com).** A planning tool for
+Uma Musume Pretty Derby players, with tens of thousands of visitors since its September 2026
+launch and dozens of Patreon supporters.
 
 [![CI](https://github.com/charlesmerriman/uma-carat-calculator-web/actions/workflows/ci.yml/badge.svg)](https://github.com/charlesmerriman/uma-carat-calculator-web/actions/workflows/ci.yml)
 
-The React frontend of a gacha resource planner for Uma Musume Pretty Derby. The API it talks
-to is [uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api).
+<!-- TODO: screenshot of the planner (docs/images/planner.png), then delete this line -->
 
-Players enter what they hold and which income applies to their account. The calculator
-projects carats and tickets forward and shows what they will have on the day each banner they
-plan to pull on ends, before they spend rather than after. It also plans step-up banners,
-tracks which cards a selector ticket can still reach, accounts for campaign purchases, and
-lays the upcoming banner and event schedule out on a timeline.
+This is the React frontend. The Django API behind it is
+[uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api).
+
+## What it does
+
+Uma Musume is a gacha game: players save a premium currency (carats) and tickets, then spend
+them on limited-time banners. This site tells a player what they will be holding on the day
+each banner ends, before they spend rather than after.
+
+- **The planner.** Enter what you hold and which income applies to your account (ranks, passes,
+  events). Pick the banners you want and how many pulls each, and every row shows the carats and
+  tickets left at that banner's end, with the odds of getting the card.
+- **A forecast chart** of carats and pulls over time, with optional layers.
+- **Several plans per account**, each shareable by link. A shared link unfurls in Discord and on X
+  with a server-drawn preview of the plan's totals.
+- **Step-up banners, selector tickets and campaign packs**, each with its own rules.
+- **A timeline** of upcoming banners, events and campaigns, with dates predicted from the
+  Japanese server's schedule.
+- **PvP guides** for Champions Meeting and League of Heroes: a guide per event that staff
+  write in an on-site editor, a team planner, and a community gallery with votes, comments and
+  moderation.
+
+No page needs an account. A guest's plan is kept on their device, and signing in with Google,
+Discord or Patreon moves it to the account.
+
+## Engineering highlights
+
+- **Prerendered, then hydrated.** Every public route is rendered to its own HTML document at build
+  time ([`scripts/prerender.mjs`](scripts/prerender.mjs), [`src/entry-server.ts`](src/entry-server.ts)),
+  so search engines and link previews see real content from a static host. Render-time code is
+  kept free of `window` and `localStorage` so hydration matches.
+- **One projection engine.** The API sends every reward as one dated income ledger; the browser
+  computes the forecast. Income is a pure function of a banner's end date, all date maths runs in
+  UTC ([`utils/utcDates.ts`](src/utils/utcDates.ts)), and the per-banner rows and the summary
+  tiles read the same hook ([`useBannerResources`](src/hooks/useBannerResources.ts)), so two numbers
+  on screen can't disagree. Its results are audited source by source against the community
+  spreadsheet the site grew out of.
+- **Guest-first state.** One provider ([`CalculatorProvider`](src/services/CalculatorProvider.tsx))
+  loads everything in a single request. A tab decides once, at load, whether it saves to the
+  device ([`guestPlanStore`](src/services/guestPlanStore.ts)) or the server, so a sign-in in
+  another tab can never send device data to an account or the other way round.
+- **Heavy features load on demand.** The chart library, the guide editor (with drag and drop)
+  and the gallery are separate chunks a visitor only downloads when they open them.
+- **Tested and checked on every push.** About 1,600 Vitest tests across hooks, maths and
+  components; `npm run check` runs the type check, ESLint, [knip](https://knip.dev) (dead
+  code) and the tests, and CI runs the same on every push to `develop` and `master`.
 
 ## Architecture
 
 One site, two repositories, both deployed by DigitalOcean App Platform on every push to
 `master`:
 
-- **Web** (this repo): a React 19 + TypeScript app, built by Vite and served as a static site. Every public route is prerendered to its own HTML document at build time and hydrated in the browser, so crawlers and link previews see real content.
-- **API** ([uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api)): Django 6 and Django REST Framework, served from the same domain under `/api`.
-- **Data**: managed PostgreSQL, with banner and card images on DigitalOcean Spaces behind its CDN.
-- **Accounts**: sign-in through Google, Discord or Patreon OAuth, exchanged for a DRF token. Player accounts store no email, name or password.
-- **Maths**: every projection runs in the browser. The API assembles and dates the reference data, including a flat income ledger, but never computes a forecast.
-- **Content**: banners, events and rewards are maintained by hand in the Django admin, which doubles as the CMS.
-
-## About this project
-
-- In continuous development since December 2025, live in open beta since September 2026, and actively maintained.
-- The resource model follows [Henry's resource spreadsheet](https://docs.google.com/spreadsheets/d/100t3hnYl5Qm2UR8RtPlH-8Xd9KQbBlxEdXUOIR4d394/), the community reference built by Daptrius that this site grew out of. The application is my own work: the projection engine, authentication, admin and deployment.
+- **Web** (this repo): React 19 + TypeScript, built by Vite and served as a static site.
+- **API** ([uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api)): Django 6 and Django REST Framework, on the same domain under `/api`.
+- **Data**: managed PostgreSQL, with images on DigitalOcean Spaces behind its CDN.
+- **Accounts**: Google, Discord or Patreon OAuth, exchanged for a token. Accounts keep nothing from the provider's profile: no email, name or picture.
+- **Content**: banners, events and rewards are entered by hand in the Django admin, which doubles as the CMS.
 
 ## Tech stack
 
 | Tool | Used for |
 |---|---|
 | React 19 + TypeScript | UI and type safety |
-| Vite 7 | Dev server and production bundle |
+| Vite 7 | Dev server, production bundle and the server build used for prerendering |
 | Tailwind CSS 4 | Styling |
+| TanStack Query | Server state for the PvP gallery (paging, votes, comments) |
+| Recharts | The forecast chart |
+| dnd-kit | Drag and drop in the guide editor and team planner |
 | Framer Motion | Animation |
 | react-router-dom 7 | Routing |
-| react-hook-form, react-select | Forms and searchable pickers |
-| Sonner | Toasts |
-| date-fns | Date helpers |
-| lucide-react | Icons |
-| Vitest + React Testing Library | Unit, hook and component tests (jsdom) |
-| ESLint + typescript-eslint | Linting |
+| react-markdown | Guide and admin-written page content |
+| Vitest + React Testing Library | Tests (jsdom) |
+| ESLint, knip | Linting and dead-code checks |
 
-## How it works
+## Quick start
 
-### One provider, one request
-
-All server state lives in `CalculatorProvider` (`services/CalculatorProvider.tsx`). It fills
-itself with a single `GET /calculator-data` on mount, and components read it through
-`useCalculatorData()` with no fetch logic of their own. The auth token has exactly one owner,
-`services/authToken.ts`, whose setters notify `AuthProvider`, so the navbar never offers
-"Logout" to someone the server no longer recognises.
-
-### The projection engine
-
-The engine is entered through `hooks/useBannerResources.ts` (the per-banner rows) and
-`hooks/useAverageMonthlyIncome.ts` (the income tiles above them). Both read the same engine,
-so two numbers a player sees side by side cannot disagree.
-
-The API serves every reward as one flat, dated income ledger. For each planned banner the
-engine asks that ledger for the total income from today up to the banner's end date, using a
-closed form per income source, then subtracts what the banners resolving before it have
-already spent. Income is a pure function of a banner's end date; the order of the plan only
-decides who spends first.
-
-Date arithmetic runs in UTC through `utils/utcDates.ts`, which reproduces the source
-spreadsheet's `DATEDIF`, `EOMONTH`, `WEEKDAY` and `CEILING` so the two can be checked against
-each other. Step-up banners, selector tickets and campaign purchases each add their own rules;
-[docs/resource-projection-logic.md](docs/resource-projection-logic.md) covers all of it.
-
-### Guest mode and saving
-
-No page needs an account. Guests get the full public payload, start from default stats and
-plan in memory. **Sign in to save** snapshots the guest plan into `sessionStorage`, and after
-the OAuth round trip the provider merges it into the account: the account's existing banners
-stay, the guest's are appended, and the guest's stats are sent only if they were edited.
-Signed-in changes save through a debounced `PATCH /calculator-data`, with an unload guard
-while a save is in flight.
-
-### Types
-
-Planned banners are a discriminated union twice over: saved or local (`isSavedBanner()` /
-`isLocalBanner()`), and uma, support or step-up (`plannedBannerTarget()`). Timeline events
-narrow on the backend's `event_type` tag with `isRaceEvent()` / `isBannerTimeline()`. Nothing
-inspects an object's shape to decide what it is.
-
-## Routes
-
-| Route | Page |
-|---|---|
-| `/` | Home |
-| `/app` | The planner: current resources, pull plan, per-banner forecast |
-| `/app/timeline` | Banner, event and campaign calendar |
-| `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
-| `/faq` | Every income source, explained |
-| `/changelog` | Patch notes |
-| `/feedback` | Bug reports and suggestions |
-| `/about` | Who makes the site and where its numbers come from |
-| `/privacy-policy`, `/terms` | Legal |
-| `/login` | Sign in with Google, Discord or Patreon (`noindex`) |
-| `/account` | Connected sign-in providers, Patreon supporter status, sign out, delete account (`noindex`) |
-| `/auth/callback` | OAuth return (`noindex`) |
-
-Every route above except the two `noindex` ones is prerendered at build time
-(`src/prerenderRoutes.ts`). Any other path is served the empty shell `dist/spa.html` and
-renders `NotFound`, routed at `*` in both `App.tsx` and the nested `/app/*` routes. A static
-host can't answer with a real 404, so the page states it with `noindex` instead.
-
-## Local setup
-
-Requires Node 24, the version `package.json` pins under `engines`. The production build and
-CI both read that field.
+Requires Node 24 (pinned under `engines` in `package.json`).
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:5173 against a local API on :8000
+npm run check      # type check + lint + knip + tests
 ```
 
-`npm run dev` serves http://localhost:5173 against a local API on :8000, set up from the
-[API repo](https://github.com/charlesmerriman/uma-carat-calculator-api#local-setup). The
-committed `.env` holds only that public default; personal overrides go in `.env.local`, which
-git ignores.
-
-### Choosing a backend
-
-```bash
-npm run dev         # local Django on :8000
-npm run dev:live    # the production API: real content and a real sign-in
-```
-
-`dev:live` is `vite --mode live`, which loads [.env.live](.env.live) and points
-`VITE_API_URL` at the live API for that run only. A "LIVE DATA · writes are real" badge sits in
-the bottom-left corner so the two modes are never confused.
-
-Use it for frontend work that needs real content, since a fresh local database starts empty
-([why](https://github.com/charlesmerriman/uma-carat-calculator-api#a-fresh-database-starts-empty)).
-Sign-in works and is a real production sign-in, because the API allowlists
-`http://localhost:5173/auth/callback` as an OAuth redirect. Signed in, saving a plan writes to
-the live database under your own account.
-
-### Why both modes pin port 5173
-
-`http://localhost:5173` is an exact string in more than one place: the production CORS
-allowlist, the OAuth redirect URI registered with the providers, and the redirect allowlist
-that lets `dev:live` sign in. Vite's default is to slide to 5174 when 5173 is busy, which
-looks fine until a request fails preflight or a sign-in returns to whatever else holds the
-port. So both scripts run with `--strictPort`, and `scripts/dev-preflight.mjs` first reclaims
-the port from a stale Vite belonging to this checkout. `npm run dev:stop` frees it by hand.
-A `dev:live` server is the exception: it's usually a window someone is watching, signed in to
-production, so all three scripts refuse to touch it and say why. `DEV_FORCE=1 npm run dev:stop`
-is the deliberate override.
-
-## Commands
-
-```bash
-npx tsc --noEmit -p tsconfig.app.json    # type-check the app
-npx tsc --noEmit -p tsconfig.node.json   # type-check vite.config.ts
-npm run lint
-npx vitest run                           # tests (npm test starts watch mode)
-npm run coverage
-npm run build                            # client build + server build + prerender, all into dist/
-PRERENDER_CONTENT=snapshot npm run build # the same, prerendering from src/content/snapshot.json (no API needed)
-npm run content:pull                     # refresh that snapshot from the live API
-npm run preview                          # serve dist/ on :4173 — curl /about to see a prerendered document
-```
-
-The `-p` matters: `tsconfig.json` is solution-style (`files: []`), so a bare
-`npx tsc --noEmit` checks nothing. `npm run build` doesn't type-check either. CI runs both
-configs, the linter and the tests on every push.
-
-### Site content at build time
-
-The About page and the FAQ are not in this repo. They are rows the
-team edits in the API's admin, served by `GET /site-content`. The prerender fetches that
-endpoint from the API the bundle was built against (`VITE_API_URL`) and bakes the words into
-each document, then embeds the rows a page used in a `<script id="site-content">` block so
-hydration matches. A build that cannot reach the API fails on purpose.
-
-`PRERENDER_CONTENT=snapshot` prerenders from the committed `src/content/snapshot.json`
-instead. CI's build step sets it, and so should a local build with no API running. The
-snapshot also feeds the tests; `npm run content:pull` refreshes it from the live API. Drift is
-harmless, since production never reads it.
+The API's own setup is in [its README](https://github.com/charlesmerriman/uma-carat-calculator-api#quick-start).
+Running against the live API, why the port is pinned, every command, the route list and how
+site content reaches the build are in [docs/development.md](docs/development.md).
 
 ## Documentation
 
-Deeper reference lives in [`docs/`](docs/):
-
-- [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the ledger engine and pull strategy to step-ups, selector tickets and campaign purchases
-- [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, the auth token and the core types
-- [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline, and the planner layout
+- [development.md](docs/development.md): local setup, commands, routes and the build
+- [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the income ledger to step-ups, selector tickets and campaign purchases
+- [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, plans and the core types
+- [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline and the planner layout
 
 The data model, endpoints, auth design and income schedule are documented in the
-[API repo's docs](https://github.com/charlesmerriman/uma-carat-calculator-api/tree/HEAD/docs).
+[API repo](https://github.com/charlesmerriman/uma-carat-calculator-api/tree/HEAD/docs).
+
+## About this project
+
+In continuous development since December 2025 and live since September 2026. The resource
+model follows [Henry's resource spreadsheet](https://docs.google.com/spreadsheets/d/100t3hnYl5Qm2UR8RtPlH-8Xd9KQbBlxEdXUOIR4d394/),
+the community reference built by Daptrius that this site grew out of. The application is my
+own work: the projection engine, authentication, admin and deployment.
 
 ## License
 
