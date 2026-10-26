@@ -8,6 +8,7 @@
  *
  *   Recommendations  the guide (PvpGuideView), live now
  *   My team          the player's own team builder (TeamBuilder)
+ *   CM Runs          the player's logged tickets and win rates (RunsView)
  *   Gallery          teams other players posted for this event (GalleryView)
  *
  * The event, the view and the guide's running style are all URL parameters
@@ -52,6 +53,7 @@ import {
 	Loader2,
 	PenLine,
 	Swords,
+	Trophy,
 	Users,
 	type LucideIcon,
 } from "lucide-react"
@@ -106,6 +108,7 @@ import { PvpEarlyAccess } from "./PvpEarlyAccess"
 import { isOpenPvpEvent, lockedPvpEvents, usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
+import { RunsView } from "./RunsView"
 import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
@@ -116,7 +119,7 @@ import type { UseDeckRequest } from "../../utils/pvpTeams"
 const FALLBACK_TITLE = "PvP Guides"
 
 /** The page's views, in tab order. The id is the `?view=` value. */
-type PvpView = "recommendations" | "team" | "gallery" | "editor"
+type PvpView = "recommendations" | "team" | "runs" | "gallery" | "editor"
 const VIEW_PARAM = "view"
 /**
  * `short`, when set, is the label a phone shows; the full one stays the
@@ -126,7 +129,8 @@ const VIEW_PARAM = "view"
  */
 const VIEWS: Array<{ id: PvpView; label: string; short?: string; icon: LucideIcon; soon: boolean; editors?: boolean }> = [
 	{ id: "recommendations", label: "Recommendations", short: "Guide", icon: BookOpen, soon: false },
-	{ id: "team", label: "My team", icon: Users, soon: false },
+	{ id: "team", label: "My team", short: "Team", icon: Users, soon: false },
+	{ id: "runs", label: "CM Runs", short: "Runs", icon: Trophy, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
 	{ id: "editor", label: "Edit guide", short: "Edit", icon: PenLine, soon: false, editors: true },
 ]
@@ -438,6 +442,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 								</div>
 							)}
 							{view === "team" && !viewLocked && <TeamBuilder event={event} />}
+							{view === "runs" && !viewLocked && (
+								<RunsView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
+							)}
 							{view === "gallery" && !viewLocked && (
 								<Suspense
 									fallback={
@@ -485,8 +492,8 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 		// row dropped "Gallery" alone onto a second line. On a phone a tab with
 		// a `short` label shows that, while its full label stays its name for a
 		// screen reader (and for tests querying by name). An editor gets a
-		// fourth column; both class strings are literal so Tailwind sees them.
-		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
+		// fifth column; both class strings are literal so Tailwind sees them.
+		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
 			{shown.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view

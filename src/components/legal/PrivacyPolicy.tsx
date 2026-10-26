@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 22, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 26, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -138,6 +138,12 @@ export const PrivacyPolicy: React.FC = () => {
 						use the Site as a guest, the same planning data is kept in your browser on
 						your own device and is never sent to us. It stays there until you clear it,
 						your browser removes it, or you sign in, at which point it is added to your
+						account.
+					</p>
+					<p className={paragraph}>
+						If you log your Champions Meeting runs on the PvP page, we store the umas you ran
+						on each ticket and the results you enter. They are kept on your account only (a
+						guest can&apos;t log runs), only you can see them, and they are deleted with your
 						account.
 					</p>
 
