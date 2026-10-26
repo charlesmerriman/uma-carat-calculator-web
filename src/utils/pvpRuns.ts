@@ -30,8 +30,6 @@ export const CM_RUN_TICKETS = 4
 export const RUN_RACES = 5
 /** Round 1 is days 1-2, Round 2 days 3-4. */
 export const CM_DAYS_PER_ROUND = 2
-/** Round 1's best ticket needs this many wins for Group A (GameTora, 2026-10-26). */
-export const GROUP_A_WINS = 3
 
 const DAY_MS = 86_400_000
 
