@@ -1889,6 +1889,17 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 - **Side panels** (`SidePanel.tsx`): Guide picks docks on the left from `xl`, Recommended skills
   on the right from `2xl`; narrower, each is a drawer from its own edge behind a toolbar button.
   Both collapse, remembered per browser.
+- **The readiness strip** (`ReadinessStrip.tsx`, planner R1 item 5) sits over the grid:
+  "Umas 3/3 · Cards 12/18 · Aptitudes 2 to fix · Skills 9 of 14", a finished count in gold
+  with a tick. `utils/pvpReadiness.ts` builds it ONLY from the helpers the grid and the
+  Skills panel use (`aptitudeKeysForEvent` for the letters, `familySources` over
+  `teamSkillSources` for the ticks), so it can never disagree with them. Below A is a gap; an
+  unknown letter is not. The aptitude chip lists the gaps in its tooltip, and each letter
+  below A in the grid says "An A needs inheritance or the right factors." The Skills chip
+  opens the skills column (from `2xl`) or drawer. Stat targets join with veterans (R2).
+- **Duplicate** (R1 item 7a) sits beside Rename and Delete: `createTeam` with the team's
+  members and notes, named "Copy of Team 1" (cut to 40), never the pin or the gallery post;
+  disabled at `PVP_TEAM_CAP_PER_EVENT`.
 - **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
   starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
   ones are greyed out and sorted last. A card on no banner is decided by the catalogue's

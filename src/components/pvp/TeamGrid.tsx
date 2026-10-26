@@ -388,7 +388,11 @@ function AptitudeLetters({ uma, course, style }: {
 				const letter = aptitudeLetter(value) ?? "?"
 				const tone = value == null ? "text-gray-500" : value >= 7 ? "text-brand" : value <= 4 ? "text-highlight" : "text-gray-200"
 				return (
-					<span key={aptitude.key}>
+					<span
+						key={aptitude.key}
+						// Below A, say how it gets there; the readiness strip counts these.
+						title={value != null && value < 7 ? `${aptitude.label} ${letter}. An A needs inheritance or the right factors.` : undefined}
+					>
 						{aptitude.label} <span className={`font-bold ${tone}`}>{letter}</span>
 					</span>
 				)

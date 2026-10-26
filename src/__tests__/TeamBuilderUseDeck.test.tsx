@@ -4,6 +4,9 @@
  * team's spots, asks before replacing cards, opens the uma picker for an
  * empty spot, and puts the deck on with the team rules applied. The mapping
  * itself is unit-tested in pvpTeams.test.ts (deckToMemberCards).
+ *
+ * Also the toolbar's Duplicate and the readiness strip above the grid
+ * (planner R1); the strip's counting rules are pvpReadiness.test.ts.
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
@@ -184,5 +187,30 @@ describe("Use this deck in My team", () => {
 	it("shows no banner when nothing was handed over", () => {
 		renderBuilder(teamsValue([team("t1")]), null)
 		expect(screen.queryByRole("region", { name: "Use a guide deck" })).not.toBeInTheDocument()
+	})
+})
+
+describe("Duplicate and the readiness strip", () => {
+	it("duplicates the selected team's umas, cards and notes under a new name, and selects it", () => {
+		const notes = [{ text: "Pull Kitasan", color: "yellow" as const }]
+		const value = renderBuilder(teamsValue([{ ...team("t1"), notes }]), null)
+		fireEvent.click(screen.getByRole("button", { name: "Duplicate team" }))
+		expect(value.createTeam).toHaveBeenCalledWith({ kind: "cm", id: 10 }, { name: "Copy of Team 1", members: MEMBERS, notes })
+	})
+
+	it("offers no duplicate at the cap", () => {
+		renderBuilder(teamsValue(["a", "b", "c", "d", "e"].map((key) => team(key))), null)
+		expect(screen.getByRole("button", { name: "You can keep up to 5 teams for one event." })).toBeDisabled()
+	})
+
+	it("counts the team over the grid, with the letters to fix in the tooltip", () => {
+		renderBuilder(teamsValue([team("t1")]), null)
+		const strip = within(screen.getByRole("list", { name: "How ready this team is" }))
+		expect(strip.getByText("Umas 2/3")).toBeInTheDocument()
+		expect(strip.getByText("Cards 2/18")).toBeInTheDocument()
+		// A turf mile: Maruzensky runs Front on a C (5).
+		expect(strip.getByText("Aptitudes 1 to fix")).toHaveAttribute("title", "Spot 2: Front C")
+		// This guide recommends no skills, so there is nothing to count.
+		expect(strip.queryByText(/^Skills/)).not.toBeInTheDocument()
 	})
 })

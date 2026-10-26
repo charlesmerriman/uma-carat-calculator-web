@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { Check, LayoutGrid, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Send, Sparkles, Star, Trash2 } from "lucide-react"
+import { Check, Copy, LayoutGrid, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Send, Sparkles, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
@@ -52,6 +52,8 @@ import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamEditor } from "./TeamEditor"
 import type { DeckDeal } from "./TeamGrid"
 import { TeamNotes } from "./TeamNotes"
+import { ReadinessStrip } from "./ReadinessStrip"
+import { pvpReadiness } from "../../utils/pvpReadiness"
 import type { RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
@@ -110,6 +112,9 @@ function gridLayout(left: boolean, right: boolean): string {
 	if (right) return "2xl:max-w-[76rem] 2xl:grid-cols-[minmax(0,1fr)_19rem]"
 	return ""
 }
+
+/** A team's name, at most (views/pvp_team.py `_CreateInput.name`). */
+const TEAM_NAME_MAX_LENGTH = 40
 
 /** "Team 2" when the player hasn't named it. */
 function teamLabel(team: PvpTeam, index: number): string {
@@ -330,6 +335,14 @@ function ReadyBuilder({ event, teamsState, index }: {
 	// Skill id -> where the selected team gets it, for the skills panel's ticks.
 	// A few dozen links, so worked out on every render.
 	const skillSources = teamSkillSources(members, index.umasById, index.cardsById)
+	const readiness = pvpReadiness(members, event, guide, index.umasById, skillSources)
+	// The readiness strip's Skills chip: the docked column from 2xl (opened
+	// again if it was collapsed), the drawer below. Read in a click handler,
+	// never during render, so matchMedia is safe here.
+	const showSkills = () => {
+		if (window.matchMedia("(min-width: 96rem)").matches) dockSkills(true)
+		else setSkillsDrawer(true)
+	}
 
 	const picksBody = <GuidePicksBody guideState={guideState} members={members} actions={pickActions} />
 	const skillSpots = [0, 1, 2].map((position) => {
@@ -432,6 +445,13 @@ function ReadyBuilder({ event, teamsState, index }: {
 						if (key) setSelectedKey(key)
 					}}
 					onRename={(name) => team && renameTeam(team.key, name)}
+					onDuplicate={() => {
+						if (!team) return
+						// The umas, cards and notes; never the pin or the gallery post.
+						const name = `Copy of ${teamLabel(team, eventTeams.indexOf(team))}`.slice(0, TEAM_NAME_MAX_LENGTH)
+						const key = createTeam(ref, { name, members: team.members, notes: team.notes })
+						if (key) setSelectedKey(key)
+					}}
 					onDelete={() => {
 						if (!team) return
 						deleteTeam(team.key)
@@ -439,6 +459,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					}}
 				/>
 
+				{team && <ReadinessStrip readiness={readiness} onShowSkills={showSkills} />}
 				<TeamEditor event={event} members={members} index={index} guide={guide} deal={deal} onChange={applyMembers} />
 				<TeamNotes
 					// Per team, so an open note never follows a switch to another team.
@@ -679,7 +700,7 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 	)
 }
 
-function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
+function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSelect, onCreate, onRename, onDuplicate, onDelete }: {
 	/** Drawn first: the Guide picks button, below xl. */
 	leading?: ReactNode
 	/** Drawn last: the Skills button, below 2xl. */
@@ -691,6 +712,7 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 	onSelect: (key: string) => void
 	onCreate: () => void
 	onRename: (name: string) => void
+	onDuplicate: () => void
 	onDelete: () => void
 }) {
 	const [renaming, setRenaming] = useState(false)
@@ -776,6 +798,13 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 						<>
 							<IconButton label="Rename team" onClick={() => setRenaming(true)}>
 								<Pencil className="h-4 w-4" />
+							</IconButton>
+							<IconButton
+								label={atCap ? `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.` : "Duplicate team"}
+								disabled={atCap}
+								onClick={onDuplicate}
+							>
+								<Copy className="h-4 w-4" />
 							</IconButton>
 							<IconButton label="Delete team" onClick={() => setConfirmingDelete(true)}>
 								<Trash2 className="h-4 w-4" />
@@ -875,10 +904,11 @@ function RenameField({ initial, placeholder, onDone }: {
 	)
 }
 
-function IconButton({ label, onClick, submit = false, children }: {
+function IconButton({ label, onClick, submit = false, disabled = false, children }: {
 	label: string
 	onClick?: () => void
 	submit?: boolean
+	disabled?: boolean
 	children: ReactNode
 }) {
 	return (
@@ -887,7 +917,8 @@ function IconButton({ label, onClick, submit = false, children }: {
 			aria-label={label}
 			title={label}
 			onClick={onClick}
-			className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+			disabled={disabled}
+			className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition enabled:hover:bg-gray-700 enabled:hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
 		>
 			{children}
 		</button>
