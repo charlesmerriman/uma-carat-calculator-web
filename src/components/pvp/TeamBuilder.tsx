@@ -20,6 +20,8 @@ import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { pvpEventHref, refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
 import { useAccount } from "../../services/AuthContext"
 import { useTrainedUmas } from "../../services/trainedUmaQueries"
+import { useRoster } from "../../services/rosterQueries"
+import { ownedForPicker } from "../../utils/roster"
 import { PublishDialog } from "./gallery/PublishDialog"
 import {
 	PVP_BORROW_SLOT,
@@ -154,6 +156,8 @@ function ReadyBuilder({ event, teamsState, index }: {
 	// The account's veterans, for each member's "which veteran" pick. Never a
 	// guest's: veterans live on an account only (the Collection page).
 	const veterans = useTrainedUmas(mode === "account").data
+	// What the account owns, for every picker's Owned filter. Never a guest's.
+	const roster = useRoster(mode === "account").data
 	const [publishing, setPublishing] = useState(false)
 	const ref = refForRaceEvent(event)
 	const eventTeams = teams.filter((team) => sameEvent({ kind: team.kind, id: team.event }, ref))
@@ -450,6 +454,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					guide={guide}
 					deal={deal}
 					veterans={mode === "account" ? veterans : undefined}
+					roster={mode === "account" ? roster : undefined}
 					onChange={applyMembers}
 				/>
 				<TeamNotes
@@ -511,6 +516,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					selectedId={null}
 					pool="uma"
 					items={index.catalogue.umas}
+					owned={ownedForPicker(mode === "account" ? roster : undefined, "uma")}
 					recommended={recommendedIds(guide, deckStyle ?? "front").umas}
 					noteFor={(id) => releaseNote(releaseFor("uma", id))}
 					blockReason={(id) => {

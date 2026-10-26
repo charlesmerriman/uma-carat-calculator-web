@@ -29,7 +29,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { Search, Star, Trash2, X } from "lucide-react"
+import { Check, Search, Star, Trash2, X } from "lucide-react"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
 import type { RaceEvent } from "../../types"
 import type {
@@ -40,6 +40,7 @@ import type {
 	MemberStyle,
 } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
+import { limitBreakLabel, type OwnedForPicker } from "../../utils/roster"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { whiteSkillPairs } from "../../utils/pvpTeams"
 
@@ -100,6 +101,13 @@ type PvpCardPickerProps = {
 	/** What the search box starts with: a skill's name, from the skills panel. */
 	initialSearch?: string
 	/**
+	 * What the player owns in this pool (the Collection), or null/absent for a
+	 * guest. Draws an "Owned only" switch, on by default once anything is owned
+	 * (owner, 2026-10-26), a tick on an owned uma and a card's limit break.
+	 * Never a rule: an unowned card is still pickable with the switch off.
+	 */
+	owned?: OwnedForPicker | null
+	/**
 	 * Drawn under the header: the Umas / Support cards switch of a skill
 	 * search. Switching changes `pool` and `items` on this same mounted
 	 * picker, so the search and the pinned skills carry across.
@@ -136,13 +144,14 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs } = props
+	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(null)
 	const [rarity, setRarity] = useState<RarityFilter>(null)
+	const [ownedOnly, setOwnedOnly] = useState(() => Boolean(owned && owned.ids.size > 0))
 
 	useEffect(() => {
 		const closeOnEscape = (keydown: KeyboardEvent) => {
@@ -183,6 +192,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 			const skillIds = new Set(item.skills.map((link) => link.skill))
 			// A pinned white is met by either half of its pair.
 			if (!pinnedSkills.every((id) => (pairs.get(id) ?? [id]).some((member) => skillIds.has(member)))) return false
+			if (ownedOnly && owned && !owned.ids.has(item.id)) return false
 			// Support-only filters (see the header). A card with no rarity
 			// reads as SSR, the convention on SupportCard.rarity.
 			if (pool === "support") {
@@ -267,8 +277,15 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 
 				{tabs && <div className="border-b border-gray-700 px-4 py-2">{tabs}</div>}
 
-				{(chips.length > 0 || pool === "support") && (
+				{(chips.length > 0 || pool === "support" || owned) && (
 					<div className="flex flex-col gap-2 border-b border-gray-700 bg-gray-900/35 px-4 py-2">
+						{owned && (
+							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
+								<input type="checkbox" checked={ownedOnly} onChange={(change) => setOwnedOnly(change.target.checked)} />
+								Owned only
+								<span className="text-gray-500">({owned.ids.size} in your collection)</span>
+							</label>
+						)}
 						{pool === "support" && (
 							<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
 								{/* Rarity on the left, the type chips pushed to the right
@@ -349,6 +366,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 						<p className="py-12 text-center text-sm text-gray-400">
 							{/* A rarity and a type can empty the grid with nothing typed. */}
 							{query ? "Nothing matches that search." : "Nothing matches these filters."}
+							{ownedOnly && " Turn off Owned only to see everything."}
 						</p>
 					) : (
 						<ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
@@ -378,6 +396,20 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 													<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
 												) : (
 													<span className={`block ${artAspect} w-full rounded bg-gray-700`} aria-hidden="true" />
+												)}
+												{owned?.limitBreaks.has(item.id) ? (
+													<span className="absolute right-0.5 top-0.5 rounded bg-brand px-1 text-[10px] font-bold text-black" title="In your collection">
+														{limitBreakLabel(owned.limitBreaks.get(item.id) ?? 0)}
+													</span>
+												) : (
+													owned?.ids.has(item.id) && (
+														<span
+															className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black"
+															title="In your collection"
+														>
+															<Check className="h-3 w-3" aria-hidden="true" />
+														</span>
+													)
 												)}
 												{isRecommended && (
 													<span

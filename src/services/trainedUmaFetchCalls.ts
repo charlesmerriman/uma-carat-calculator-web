@@ -4,6 +4,7 @@
  * like the other fetch modules; services/trainedUmaQueries.ts reads them.
  */
 import { authHeaders } from "./authToken"
+import { gzipText } from "./gzipBody"
 import type { VeteranInput } from "../types/trainedUma"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -28,21 +29,6 @@ export function trainedUmaPatch(id: number, changes: Partial<VeteranInput>): Pro
 
 export function trainedUmaDelete(id: number): Promise<Response> {
 	return fetch(`${API_URL}/trained-umas/${id}`, { method: "DELETE", headers: jsonHeaders() })
-}
-
-/**
- * `text` gzipped, or null where the browser can't compress (then the caller
- * sends it plain). Through Response streams rather than Blob.stream(), which
- * not every runtime has.
- */
-export async function gzipText(text: string): Promise<ArrayBuffer | null> {
-	if (typeof CompressionStream === "undefined") return null
-	try {
-		const packed = new Response(text).body?.pipeThrough(new CompressionStream("gzip"))
-		return packed ? await new Response(packed).arrayBuffer() : null
-	} catch {
-		return null
-	}
 }
 
 /**

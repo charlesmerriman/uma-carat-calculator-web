@@ -809,9 +809,27 @@ with the server's reason toasted ("Your tier covers 3 favorites.").
 ## Collection page (`components/collection/`)
 
 `/app/collection`: everything confirmed about the player's own game account (owner,
-2026-10-26; `notes/pvp-planner-plan.md`, R2, "The Collection"). Today one section,
-**Veterans** (umas they finished training); owned umas and support cards join later as tabs.
+2026-10-26; `notes/pvp-planner-plan.md`, R2, "The Collection"). Three tabs, `?tab=`
+(`veterans` by default, `umas`, `cards`): **Veterans** (umas they finished training),
+**Umas** and **Support cards** (what they own, `RosterGrids.tsx`). "Import from the game"
+sits above the tabs: one import fills all three. `?veteran=<id>` scrolls to that veteran and
+rings her row (CM Runs' win rates link there).
 
+- **The Umas and Support cards grids** (`RosterGrids.tsx`): every Global uma or card as a
+  tile (JP-only ones are not offered). Tap to mark owned, tap again or **Remove** to unmark,
+  then stars or limit break. Search, Owned only, a type filter on cards, and **Start over**,
+  which empties that list after an inline confirmation. **No "mark everything" button**
+  (owner: too easy to fill a collection with things you don't have). Edits are optimistic and
+  queued in order (`services/rosterQueries.ts`, the CM Runs pattern).
+- **Sorts combine** (`utils/rosterSort.ts`): chips in the order added, each flips direction,
+  "then by" adds one, Reset goes back to **newest released first** (the default; a release is
+  the first Global banner's start, `utils/cardRelease.cardReleases`). A missing value sorts
+  last either way; ties end on the name. Umas: release, acquired, rarity, stars, potential,
+  name. Cards: release, acquired, rarity, limit break, type, name.
+- **My team's pickers** (`PvpCardPicker` `owned`, from `utils/roster.ownedForPicker`): an
+  "Owned only" switch, on by default once anything is owned, a tick on an owned uma and a
+  card's limit break. Never a rule; the skill search picker is left out on purpose (it looks
+  for every source of a skill).
 - **Account only, and off the navbar.** A guest gets a sign-in card. It is reached from the
   profile menu's Collection item and the Account page's Collection card
   (`CollectionSummary`, which shares the cached list). Like `/account` it is NOT
@@ -827,19 +845,17 @@ with the server's reason toasted ("Your tier covers 3 favorites.").
   (rarity 3 to 5) gets a level. The checks under each field are the API's rules
   (`draftProblems`), shown once Save is tried. A veteran from the game (`source: "import"`)
   keeps the game's numbers: its fields are disabled and an edit sends `label` only.
-- **Import from the game** (`ImportPanel`, an inline panel): the player picks umadump's
-  `trained_chara_data.json`; `utils/gameImport/umadumpVeterans.ts` reads it IN THE BROWSER,
-  recognised by shape (a renamed file still works). **Everything about each veteran is sent**
-  as `game_data` (owner, 2026-10-26: sparks, parents, deck, career, the player's own game
-  account id and memo), except OTHER players' account ids and any trainer name, which
-  `stripOtherPlayers` removes first (the API strips them again). Outfits and skills are
-  matched through the catalogue's `game_id`; unknown ones are counted and left out. The
-  preview ticks every veteran, newest first, borrowed ones marked; there is **no limit** on
-  how many an account keeps. Saving replaces the last import (the API keeps any a logged CM
-  run uses), and the panel says so before Save. **The request is gzipped**
-  (`gzipText`, `CompressionStream`; plain JSON where a browser can't): 256 veterans are
-  1.9 MB raw against the API's 2.5 MB limit and 90 KB gzipped. umadump is linked as a
-  community tool the site does not make; the page never tells anyone to run it.
+- **Import from the game** (`ImportPanel`, above the tabs): umadump's three files at once,
+  each recognised by SHAPE (`utils/gameImport/umadumpRoster.detectExportFile`):
+  `trained_chara_data.json` (veterans), `card_data.json` (owned umas),
+  `support_card_data.json` (owned cards). Read IN THE BROWSER; **everything** each file says
+  is sent as `game_data` (owner, 2026-10-26), the player's own game account id and memos
+  included, minus OTHER players' account ids and trainer names (`stripOtherPlayers`; the
+  API strips again). Veterans: the preview ticks each, and saving replaces the last veteran
+  import (the API keeps any a logged CM run uses). **Umas and cards: the file is the truth**:
+  each file REPLACES its list, hand edits included, and what the file lacks is removed; a
+  list with no file is not sent, so it is left alone. The request is gzipped (`gzipBody.ts`).
+  umadump is linked as a community tool the site does not make.
 - Rows show the label (else the uma's name), the five stats, the A and S letters, the skill
   count, "From the game" / "By hand", "Borrowed" for a rental, her game memo, and "Not in
   your latest import" when a re-import kept her only because a logged CM run uses her.
@@ -1805,8 +1821,11 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   of the event's teams, so editing a team never rewrites a logged ticket. Five native
   selects per ticket: one of the three won, Loss, or "–" (not run yet, which is not a loss).
   The Finals card adds the group (A / B) and the placement; a winner fills a blank 1st.
-- **Which veteran ran** (`VeteranSelect`, under each runner): the account's veterans of that
-  outfit only, drawn only when there is one. A ticket copied from a team brings the team's
+- **Which veteran ran** (`VeteranPicker`, under each runner; a picker, never a dropdown,
+  owner 2026-10-26): the account's veterans of that outfit only, each a card with her
+  portrait, stats, best letters, skills, memo and training date, plus "No veteran"; drawn
+  only when there is one. The win rates split by uma AND veteran (`summarizeRuns`), each
+  veteran row linking to her on the Collection page. A ticket copied from a team brings the team's
   links (`lineupFromTeam`), and a different veteran makes a different lineup (`sameLineup`).
 - **Every change saves at once through `services/pvpRunQueries.ts`** (TanStack Query). A
   change is a FUNCTION of the ticket as the cache holds it (`save(slot, current => next)`),
@@ -1932,7 +1951,7 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 - **Side panels** (`SidePanel.tsx`): Guide picks docks on the left from `xl`, Recommended skills
   on the right from `2xl`; narrower, each is a drawer from its own edge behind a toolbar button.
   Both collapse, remembered per browser.
-- **A member's veteran** (signed in only; `VeteranSelect` under her name): one of the
+- **A member's veteran** (signed in only; `VeteranPicker` under her name): one of the
   account's veterans of her outfit, from the Collection. Linked, the member's aptitude letters
   are the VETERAN's, so a D that inheritance fixed reads as fixed. Changing the uma drops the
   link (`setMemberUma`); a guest's team never holds one. The team window does not draw it.

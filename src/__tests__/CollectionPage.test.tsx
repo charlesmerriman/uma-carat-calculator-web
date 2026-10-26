@@ -2,7 +2,8 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueryProvider } from "../test/TestQueryProvider"
-import type { CatalogueSkill, CatalogueUma } from "../types/pvpTeam"
+import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
+import type { Roster } from "../types/roster"
 import type { TrainedUma } from "../types/trainedUma"
 
 /**
@@ -16,7 +17,11 @@ const APT = { turf: 8, dirt: 1, short: 3, mile: 7, medium: 7, long: 6, front: 2,
 const uma = (id: number, name: string, gameId: number): CatalogueUma => ({
 	id, name, game_id: gameId, image: null, portrait: null, rarity: 3, running_style: 2, character_id: id, is_variant: false, apt: APT, skills: [],
 })
-const UMAS = [uma(41, "Oguri Cap", 100601), uma(42, "Maruzensky", 100401)]
+const UMAS = [uma(41, "Oguri Cap", 100601), uma(42, "Maruzensky", 100401), { ...uma(43, "JP Only", 199901), on_global: false }]
+const CARDS = [
+	{ id: 9, name: "Kitasan Black", game_id: 30028, image: null, card_type: "speed", rarity: 3, title: "", skills: [], on_global: true },
+	{ id: 10, name: "Agnes Tachyon", game_id: 30034, image: null, card_type: "wit", rarity: 3, title: "", skills: [], on_global: true },
+] as CatalogueSupportCard[]
 const SKILLS = [
 	{ id: 9, name: "Corner Adept ○", rarity: 1, game_id: 200331 },
 	{ id: 10, name: "Triumphant Pulse", rarity: 5, game_id: 100061 },
@@ -36,10 +41,21 @@ vi.mock("../services/AuthContext", async () => ({
 vi.mock("../hooks/usePvpCatalogue", () => ({
 	usePvpCatalogue: () => ({
 		status: "ready",
-		catalogue: { umas: UMAS, support_cards: [], skills: SKILLS },
+		catalogue: { umas: UMAS, support_cards: CARDS, skills: SKILLS },
 		umasById: new Map(UMAS.map((each) => [each.id, each])),
-		cardsById: new Map(),
+		cardsById: new Map(CARDS.map((each) => [each.id, each])),
 		skillsById: new Map(SKILLS.map((each) => [each.id, each])),
+	}),
+}))
+
+// Release dates come from the banners: Maruzensky's is newer than Oguri's.
+vi.mock("../services/CalculatorContext", () => ({
+	useCalculatorData: () => ({
+		umaBannerData: [
+			{ banner_timeline: { start_date: "2025-07-01T00:00:00Z" }, umas: [{ id: 41 }] },
+			{ banner_timeline: { start_date: "2026-01-01T00:00:00Z" }, umas: [{ id: 42 }] },
+		],
+		supportBannerData: [],
 	}),
 }))
 
@@ -47,6 +63,7 @@ const { CollectionPage } = await import("../components/collection/CollectionPage
 
 const fetchMock = vi.fn()
 let stored: TrainedUma[] = []
+let roster: Roster = { umas: [], support_cards: [] }
 
 /** Every request as the mock received it, bodies parsed (and unzipped). */
 let sent: Array<{ method: string; path: string; body: unknown }> = []
@@ -68,9 +85,9 @@ function calls(method: string) {
 	return sent.filter((call) => call.method === method).map(({ path, body }) => ({ path, body: body as SentBody }))
 }
 
-function show() {
+function show(path = "/app/collection") {
 	return render(
-		<MemoryRouter>
+		<MemoryRouter initialEntries={[path]}>
 			<TestQueryProvider>
 				<CollectionPage />
 			</TestQueryProvider>
@@ -81,12 +98,23 @@ function show() {
 beforeEach(() => {
 	session.signedIn = true
 	stored = []
+	roster = { umas: [], support_cards: [] }
 	sent = []
 	fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET"
 		const path = new URL(String(url), "http://api").pathname
 		const body = await readBody(init)
 		sent.push({ method, path, body })
+		if (path === "/roster" && method === "GET") return new Response(JSON.stringify(roster), { status: 200 })
+		if (path === "/roster" && method === "PATCH") return new Response(JSON.stringify(roster), { status: 200 })
+		if (path.startsWith("/roster/") && method === "DELETE") {
+			roster = path.endsWith("/umas") ? { ...roster, umas: [] } : { ...roster, support_cards: [] }
+			return new Response(JSON.stringify(roster), { status: 200 })
+		}
+		if (path === "/roster/import") {
+			const counts = { added: 1, updated: 0, removed: 0 }
+			return new Response(JSON.stringify({ umas: counts, support_cards: counts, roster }), { status: 200 })
+		}
 		if (method === "GET") return new Response(JSON.stringify(stored), { status: 200 })
 		if (method === "DELETE") return new Response(null, { status: 204 })
 		if (path.endsWith("/trained-umas/import")) {
@@ -216,7 +244,7 @@ describe("importing from the game", () => {
 		expect(panel.getByText("2 veterans in the file.")).toBeInTheDocument()
 		// Newest first: Maruzensky, then Oguri. Untick Maruzensky.
 		fireEvent.click(rows[0])
-		fireEvent.click(panel.getByRole("button", { name: /Save 1/ }))
+		fireEvent.click(panel.getByRole("button", { name: "Save" }))
 
 		await waitFor(() => expect(calls("POST")).toHaveLength(1))
 		const sent = calls("POST")[0]
@@ -237,7 +265,122 @@ describe("importing from the game", () => {
 		const panel = within(screen.getByRole("region", { name: "Import from the game" }))
 		const file = new File([JSON.stringify([{ support_card_id: 30001 }])], "support_card_data.json")
 		fireEvent.change(panel.getByLabelText(/Choose the file/), { target: { files: [file] } })
-		expect(await panel.findByRole("alert")).toHaveTextContent("isn't a veteran list")
+		expect(await panel.findByRole("alert")).toHaveTextContent("isn't one of the files this reads")
+	})
+})
+
+describe("the Umas and Support cards tabs", () => {
+	it("marks an uma owned with a tap, then sets her stars; JP-only umas are not offered", async () => {
+		show("/app/collection?tab=umas")
+		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
+		expect(grid.queryByRole("button", { name: /JP Only/ })).toBeNull()
+		fireEvent.click(grid.getByRole("button", { name: "Maruzensky" }))
+		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
+		expect(calls("PATCH")[0].body).toEqual({ umas: [{ uma: 42, owned: true }] })
+		// On screen at once: she is owned and gets a stars pick.
+		expect(grid.getByRole("button", { name: "Maruzensky, owned" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.change(grid.getByLabelText("Stars for Maruzensky"), { target: { value: "4" } })
+		await waitFor(() => expect(calls("PATCH")).toHaveLength(2))
+		expect(calls("PATCH")[1].body).toEqual({ umas: [{ uma: 42, owned: true, stars: 4 }] })
+	})
+
+	it("unmarks an uma with Remove, and starts over after asking once", async () => {
+		roster = {
+			umas: [41, 42].map((uma) => ({ uma, stars: 3, talent_level: 5, source: "import" as const, obtained_at: null })),
+			support_cards: [],
+		}
+		show("/app/collection?tab=umas")
+		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
+		fireEvent.click(grid.getByRole("button", { name: "Remove Oguri Cap" }))
+		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
+		expect(calls("PATCH")[0].body).toEqual({ umas: [{ uma: 41, owned: false }] })
+
+		fireEvent.click(grid.getByRole("button", { name: "Start over" }))
+		expect(grid.getByText(/Remove all 1 umas\? This can't be undone\./)).toBeInTheDocument()
+		expect(calls("DELETE")).toHaveLength(0)
+		fireEvent.click(grid.getByRole("button", { name: "Remove all" }))
+		await waitFor(() => expect(calls("DELETE").map((call) => call.path)).toEqual(["/roster/umas"]))
+		await waitFor(() => expect(grid.getByText("0 of 2 owned")).toBeInTheDocument())
+	})
+
+	it("has no button that marks everything owned", async () => {
+		show("/app/collection?tab=umas")
+		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
+		expect(grid.queryByRole("button", { name: /Mark all/ })).toBeNull()
+	})
+
+	it("opens on the newest released, and combines sorts", async () => {
+		roster = { umas: [{ uma: 41, stars: 5, talent_level: 5, source: "import", obtained_at: null }], support_cards: [] }
+		show("/app/collection?tab=umas")
+		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
+		const order = () => grid.getAllByRole("button", { pressed: undefined }).filter((button) => button.hasAttribute("aria-pressed")).map((button) => button.getAttribute("aria-label"))
+		expect(order()).toEqual(["Maruzensky", "Oguri Cap, owned"])
+		// Flip to oldest first.
+		fireEvent.click(grid.getByRole("button", { name: /Release date, newest first/ }))
+		expect(order()).toEqual(["Oguri Cap, owned", "Maruzensky"])
+		// Stars first, then release: the owned 5-star Oguri leads, the unowned (no stars) goes last.
+		fireEvent.change(grid.getByLabelText("Add a sort"), { target: { value: "stars" } })
+		fireEvent.click(grid.getByRole("button", { name: "Stop sorting by Release date" }))
+		expect(order()).toEqual(["Oguri Cap, owned", "Maruzensky"])
+	})
+
+	it("sets an owned card's limit break", async () => {
+		roster = { umas: [], support_cards: [{ support_card: 9, limit_break: 2, spare_copies: 0, source: "import", obtained_at: null }] }
+		show("/app/collection?tab=cards")
+		const grid = within(await screen.findByRole("region", { name: "Support cards you own" }))
+		expect(grid.getByTestId("limit-break-badge")).toHaveTextContent("LB2")
+		fireEvent.change(grid.getByLabelText("Limit break for Kitasan Black"), { target: { value: "4" } })
+		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
+		expect(calls("PATCH")[0].body).toEqual({ support_cards: [{ support_card: 9, owned: true, limit_break: 4 }] })
+		expect(grid.getByTestId("limit-break-badge")).toHaveTextContent("MLB")
+	})
+
+	it("imports all three files at once: veterans, umas and cards", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("button", { name: /Import from the game/ }))
+		const panel = within(screen.getByRole("region", { name: "Import from the game" }))
+		const file = (name: string, rows: unknown[]) => new File([JSON.stringify(rows)], name)
+		fireEvent.change(panel.getByLabelText(/Choose the files/), {
+			target: {
+				files: [
+					file("trained_chara_data.json", [{ viewer_id: 7, trained_chara_id: 12, card_id: 100601, speed: 1200, stamina: 800, power: 1000, guts: 400, wiz: 900, skill_array: [] }]),
+					file("card_data.json", [{ card_id: 100401, rarity: 4, talent_level: 5, create_time: "2025-09-01 08:00:00" }]),
+					file("support_card_data.json", [{ viewer_id: 7, support_card_id: 30028, limit_break_count: 4, stock: 1 }]),
+				],
+			},
+		})
+		expect(await panel.findByText("1 uma you own.")).toBeInTheDocument()
+		expect(panel.getByText("1 support card you own, 1 at MLB.")).toBeInTheDocument()
+		fireEvent.click(panel.getByRole("button", { name: "Save" }))
+		await waitFor(() => expect(calls("POST").map((call) => call.path)).toEqual(["/trained-umas/import", "/roster/import"]))
+		expect(calls("POST")[1].body).toMatchObject({
+			umas: [{ uma: 42, stars: 4, talent_level: 5 }],
+			support_cards: [{ support_card: 9, limit_break: 4, spare_copies: 1 }],
+		})
+	})
+})
+
+describe("a link to one veteran", () => {
+	it("rings the veteran a CM Runs link names", async () => {
+		stored = [veteran(1), veteran(2, { uma: 42 })]
+		show("/app/collection?veteran=2")
+		const rows = await screen.findAllByRole("listitem")
+		expect(rows[1]).toHaveClass("border-brand")
+		expect(rows[0]).not.toHaveClass("border-brand")
+	})
+})
+
+describe("an import replaces only the lists it carries", () => {
+	it("sends only the cards when only the cards file is dropped", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("button", { name: /Import from the game/ }))
+		const panel = within(screen.getByRole("region", { name: "Import from the game" }))
+		const file = new File([JSON.stringify([{ viewer_id: 7, support_card_id: 30028, limit_break_count: 2, stock: 0 }])], "support_card_data.json")
+		fireEvent.change(panel.getByLabelText(/Choose the files/), { target: { files: [file] } })
+		expect(await panel.findByText(/Saving replaces your support cards list with/)).toBeInTheDocument()
+		fireEvent.click(panel.getByRole("button", { name: "Save" }))
+		await waitFor(() => expect(calls("POST")).toHaveLength(1))
+		expect(Object.keys(calls("POST")[0].body)).toEqual(["support_cards"])
 	})
 })
 
