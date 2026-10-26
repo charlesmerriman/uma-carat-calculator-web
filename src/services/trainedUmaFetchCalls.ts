@@ -29,3 +29,14 @@ export function trainedUmaPatch(id: number, changes: Partial<VeteranInput>): Pro
 export function trainedUmaDelete(id: number): Promise<Response> {
 	return fetch(`${API_URL}/trained-umas/${id}`, { method: "DELETE", headers: jsonHeaders() })
 }
+
+/**
+ * Write a game export's veterans: update by the game's id, add new ones, and
+ * remove the ones not in `items` unless a logged run links them. The items are
+ * built in the browser from the player's file (utils/gameImport); the file
+ * itself is never sent.
+ */
+export function trainedUmaImport(items: unknown[]): Promise<Response> {
+	return fetch(`${API_URL}/trained-umas/import`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify({ items }) })
+}
+

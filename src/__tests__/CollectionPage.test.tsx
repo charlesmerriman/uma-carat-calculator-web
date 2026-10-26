@@ -13,13 +13,13 @@ import type { TrainedUma } from "../types/trainedUma"
  */
 
 const APT = { turf: 8, dirt: 1, short: 3, mile: 7, medium: 7, long: 6, front: 2, pace: 7, late: 7, end: 4 }
-const uma = (id: number, name: string): CatalogueUma => ({
-	id, name, image: null, portrait: null, rarity: 3, running_style: 2, character_id: id, is_variant: false, apt: APT, skills: [],
+const uma = (id: number, name: string, gameId: number): CatalogueUma => ({
+	id, name, game_id: gameId, image: null, portrait: null, rarity: 3, running_style: 2, character_id: id, is_variant: false, apt: APT, skills: [],
 })
-const UMAS = [uma(41, "Oguri Cap"), uma(42, "Maruzensky")]
+const UMAS = [uma(41, "Oguri Cap", 100601), uma(42, "Maruzensky", 100401)]
 const SKILLS = [
-	{ id: 9, name: "Corner Adept ○", rarity: 1 },
-	{ id: 10, name: "Triumphant Pulse", rarity: 5 },
+	{ id: 9, name: "Corner Adept ○", rarity: 1, game_id: 200331 },
+	{ id: 10, name: "Triumphant Pulse", rarity: 5, game_id: 100061 },
 ] as CatalogueSkill[]
 
 const STATS = { speed: 1200, stamina: 800, power: 1000, guts: 400, wit: 900 }
@@ -75,6 +75,11 @@ beforeEach(() => {
 		const method = init?.method ?? "GET"
 		if (method === "GET") return Promise.resolve(new Response(JSON.stringify(stored), { status: 200 }))
 		if (method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }))
+		if (String(_url).endsWith("/trained-umas/import")) {
+			const { items } = JSON.parse(String(init?.body)) as { items: Array<Partial<TrainedUma>> }
+			const veterans = items.map((item, index) => veteran(100 + index, { ...item, source: "import" }))
+			return Promise.resolve(new Response(JSON.stringify({ created: items.length, updated: 0, removed: 0, kept: 0, veterans }), { status: 200 }))
+		}
 		const body = JSON.parse(String(init?.body)) as Partial<TrainedUma>
 		const saved = method === "POST" ? veteran(99, body) : { ...stored[0], ...body }
 		return Promise.resolve(new Response(JSON.stringify(saved), { status: method === "POST" ? 201 : 200 }))
@@ -173,3 +178,50 @@ describe("editing and deleting", () => {
 		await waitFor(() => expect(screen.queryByRole("listitem")).not.toBeInTheDocument())
 	})
 })
+
+describe("importing from the game", () => {
+	// Two veterans in umadump's shape: the newer Maruzensky, the older Oguri.
+	const FILE = [
+		{ viewer_id: 311943848596, memo: "secret", trained_chara_id: 12, card_id: 100601, speed: 1200, stamina: 800, power: 1000,
+			guts: 400, wiz: 900, rank_score: 15000, proper_ground_turf: 8, skill_array: [{ skill_id: 100061, level: 3 }],
+			create_time: "2025-01-01 00:00:00" },
+		{ viewer_id: 311943848596, memo: "", trained_chara_id: 13, card_id: 100401, speed: 1100, stamina: 700, power: 900,
+			guts: 500, wiz: 800, rank_score: 14000, skill_array: [], create_time: "2026-01-01 00:00:00" },
+	]
+
+	it("previews the file, saves the ticked veterans, and shows them", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("button", { name: /Import from the game/ }))
+		const panel = within(screen.getByRole("region", { name: "Import from the game" }))
+		const file = new File([JSON.stringify(FILE)], "trained_chara_data.json", { type: "application/json" })
+		fireEvent.change(panel.getByLabelText(/Choose the file/), { target: { files: [file] } })
+
+		const rows = await panel.findAllByRole("checkbox")
+		expect(rows).toHaveLength(2)
+		expect(panel.getByText("2 veterans in the file.")).toBeInTheDocument()
+		// Newest first: Maruzensky, then Oguri. Untick Maruzensky.
+		fireEvent.click(rows[0])
+		fireEvent.click(panel.getByRole("button", { name: /Save 1/ }))
+
+		await waitFor(() => expect(calls("POST")).toHaveLength(1))
+		const sent = calls("POST")[0]
+		expect(sent.path).toBe("/trained-umas/import")
+		expect(sent.body.items).toHaveLength(1)
+		expect(sent.body.items[0]).toMatchObject({ import_key: 12, uma: 41, wit: 900, skills: [{ skill: 10, level: 3 }] })
+		expect(JSON.stringify(sent.body)).not.toContain("viewer_id")
+		expect(JSON.stringify(sent.body)).not.toContain("secret")
+
+		await waitFor(() => expect(screen.queryByRole("region", { name: "Import from the game" })).not.toBeInTheDocument())
+		expect(screen.getByText("From the game")).toBeInTheDocument()
+	})
+
+	it("says so when the file is not a veteran list", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("button", { name: /Import from the game/ }))
+		const panel = within(screen.getByRole("region", { name: "Import from the game" }))
+		const file = new File([JSON.stringify([{ support_card_id: 30001 }])], "support_card_data.json")
+		fireEvent.change(panel.getByLabelText(/Choose the file/), { target: { files: [file] } })
+		expect(await panel.findByRole("alert")).toHaveTextContent("isn't a veteran list")
+	})
+})
+
