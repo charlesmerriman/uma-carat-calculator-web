@@ -4,9 +4,8 @@
  * says what never leaves the device).
  *
  * An inline panel on the Collection page, like the add form. The preview ticks
- * every veteran, newest first; past the 200 cap (counting the hand-entered
- * ones already kept) the oldest start unticked and the panel says so. The
- * server checks the cap again and refuses the whole import past it.
+ * every veteran, newest first, borrowed ones marked. There is no limit on how
+ * many an account keeps (owner, 2026-10-26).
  *
  * Saving REPLACES the last import: a veteran imported before and not ticked
  * now is removed, unless a logged CM run uses her (the server keeps her and
@@ -31,12 +30,7 @@ type Read =
 	| { status: "error"; message: string }
 	| { status: "ready"; veterans: ImportedVeteran[]; unknownUmas: number; unknownSkills: number }
 
-export function ImportPanel({ index, room, onDone }: {
-	index: PvpCatalogueIndex
-	/** How many imported veterans fit: the cap minus the hand-entered ones. */
-	room: number
-	onDone: () => void
-}) {
+export function ImportPanel({ index, onDone }: { index: PvpCatalogueIndex; onDone: () => void }) {
 	const save = useImportVeterans()
 	const [read, setRead] = useState<Read>({ status: "empty" })
 	const [ticked, setTicked] = useState<Set<number>>(new Set())
@@ -65,8 +59,7 @@ export function ImportPanel({ index, room, onDone }: {
 			return
 		}
 		setRead({ status: "ready", ...result })
-		// Newest first, so the cap leaves the oldest unticked.
-		setTicked(new Set(result.veterans.slice(0, Math.max(room, 0)).map((veteran) => veteran.import_key)))
+		setTicked(new Set(result.veterans.map((veteran) => veteran.import_key)))
 	}
 
 	const toggle = (key: number) =>
@@ -94,8 +87,6 @@ export function ImportPanel({ index, room, onDone }: {
 		})
 	}
 
-	const over = read.status === "ready" ? read.veterans.length - Math.max(room, 0) : 0
-
 	return (
 		<section className="card-panel flex flex-col gap-3 p-4" aria-label="Import from the game">
 			<h3 className="text-sm font-semibold text-gray-100">Import from the game</h3>
@@ -104,8 +95,9 @@ export function ImportPanel({ index, room, onDone }: {
 				<a href={UMADUMP_URL} target="_blank" rel="noreferrer" className="text-brand hover:text-brand/75">
 					umadump
 				</a>{" "}
-				wrote (a community tool we don&apos;t make, for the Steam version). The file is read here, in your browser. Only
-				the list below is saved, never your game account id or your memos.
+				wrote (a community tool we don&apos;t make, for the Steam version). The file is read here, in your browser.
+				Everything it says about each veteran is kept on your account, your memos and game account id included. Other
+				players&apos; account ids (a borrowed veteran&apos;s owner) are removed before anything is sent.
 			</p>
 
 			<label className={`${ACTION_BUTTON} w-fit cursor-pointer`}>
@@ -129,7 +121,6 @@ export function ImportPanel({ index, room, onDone }: {
 				<>
 					<p className="text-sm text-gray-300">
 						{read.veterans.length} {read.veterans.length === 1 ? "veteran" : "veterans"} in the file.
-						{over > 0 && ` Only ${Math.max(room, 0)} more fit, so the oldest ${over} start unticked.`}
 					</p>
 					{(read.unknownUmas > 0 || read.unknownSkills > 0) && (
 						<p className="text-xs text-gray-400">
@@ -153,7 +144,10 @@ export function ImportPanel({ index, room, onDone }: {
 											checked={ticked.has(veteran.import_key)}
 											onChange={() => toggle(veteran.import_key)}
 										/>
-										<span className="min-w-0 flex-1 truncate">{uma?.name ?? "Unknown uma"}</span>
+										<span className="min-w-0 flex-1 truncate">
+											{uma?.name ?? "Unknown uma"}
+											{veteran.borrowed && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-gray-500">Borrowed</span>}
+										</span>
 										<span className="text-xs text-gray-400">{statLine(veteran)}</span>
 										<span className="w-16 text-right text-xs text-gray-500">
 											{veteran.skills.length} {veteran.skills.length === 1 ? "skill" : "skills"}

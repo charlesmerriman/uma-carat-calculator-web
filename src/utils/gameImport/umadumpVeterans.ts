@@ -8,14 +8,18 @@
  * kind of data. This file is the game's own veteran shape, one object per
  * trained uma.
  *
- * WHAT IS READ, AND WHAT NEVER LEAVES THE DEVICE
- * ----------------------------------------------
- * Only: `trained_chara_id` (the game's id for the veteran, which a re-import
- * and later a race replay match on), `card_id` (the outfit), the five stats,
- * the ten `proper_*` aptitudes, `skill_array`, `rank_score` and `create_time`
- * (newest first, when the 200 cap cuts). Each row is BUILT from those fields,
- * never copied, so nothing else in the file can ride along: not `viewer_id`
- * (the game account), not `memo` (free text), not the parents' owners.
+ * WHAT IS SENT, AND WHAT NEVER LEAVES THE DEVICE (owner, 2026-10-26)
+ * ------------------------------------------------------------------
+ * Everything the file says about each veteran, as `game_data`: sparks, both
+ * parents, the training deck, the career, the player's own game account id
+ * and memo. The columns the site queries (`import_key` from
+ * `trained_chara_id`, the outfit from `card_id`, the stats, the ten
+ * aptitudes, the skills, `rank_score`) are read out beside it.
+ *
+ * OTHER players' account ids never leave the device: stripOtherPlayers drops
+ * any `*viewer_id` that is not the file's own (a borrowed veteran's owner, a
+ * borrowed parent's owner) and any trainer name, at any depth. The server
+ * strips the same again (trained_umas.strip_other_players).
  *
  * RECOGNISED BY SHAPE, NEVER BY NAME: a player may rename the file.
  *
@@ -38,6 +42,10 @@ export interface ImportedVeteran {
 	wit: number
 	apt: Record<AptitudeKey, number | null>
 	skills: VeteranSkill[]
+	/** The veteran's whole game object, other players' ids removed. */
+	game_data: Record<string, unknown>
+	/** Another player's veteran (a rental). Shown in the preview; the server works it out again. */
+	borrowed: boolean
 	/** ms since 1970, 0 when the file has no usable time. Never sent. */
 	createdAt: number
 }
@@ -80,6 +88,29 @@ const isWhole = (value: unknown): value is number => typeof value === "number" &
 /** A veteran object, by the fields every one has. */
 function looksLikeVeteran(value: unknown): value is Row {
 	return isRow(value) && isWhole(value.trained_chara_id) && isWhole(value.card_id) && isWhole(value.speed)
+}
+
+/**
+ * A copy of `value` without other players: any key ending in `viewer_id` whose
+ * value is another account (not 0, not `own`), and any trainer name, at any
+ * depth. The same rule as the server's trained_umas.strip_other_players.
+ */
+export function stripOtherPlayers(value: unknown, own: unknown): unknown {
+	if (Array.isArray(value)) return value.map((item) => stripOtherPlayers(item, own))
+	if (!isRow(value)) return value
+	const kept: Row = {}
+	for (const [key, item] of Object.entries(value)) {
+		if (key.includes("trainer_name")) continue
+		if (key.endsWith("viewer_id") && item !== 0 && item !== null && item !== own) continue
+		kept[key] = stripOtherPlayers(item, own)
+	}
+	return kept
+}
+
+/** Another player's veteran: the game's rental use, or an owner who isn't the file's own account. */
+function isBorrowed(row: Row): boolean {
+	const owner = row.owner_viewer_id
+	return row.use_type === 1 || (owner !== 0 && owner !== null && owner !== undefined && owner !== row.viewer_id)
 }
 
 /** "2025-07-10 03:21:45" (the game's UTC) -> ms; 0 when unreadable. */
@@ -142,6 +173,8 @@ export function readVeteranFile(
 			wit: stat("wit"),
 			apt,
 			skills,
+			game_data: stripOtherPlayers(row, row.viewer_id) as Record<string, unknown>,
+			borrowed: isBorrowed(row),
 			createdAt: createdAt(row.create_time),
 		})
 	}
@@ -149,7 +182,7 @@ export function readVeteranFile(
 	return { ok: true, veterans, unknownUmas, unknownSkills: unknownSkillIds.size }
 }
 
-/** A row as the import route takes it: the same minus the local-only time. */
-export function toImportItem({ createdAt: _createdAt, ...item }: ImportedVeteran): Omit<ImportedVeteran, "createdAt"> {
+/** A row as the import route takes it: the same minus what only the preview uses. */
+export function toImportItem({ createdAt: _createdAt, borrowed: _borrowed, ...item }: ImportedVeteran): Omit<ImportedVeteran, "createdAt" | "borrowed"> {
 	return item
 }
