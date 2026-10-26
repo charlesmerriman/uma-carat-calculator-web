@@ -10,6 +10,7 @@ import {
 	recommendedIds,
 	setCard,
 	setMemberUma,
+	setMemberVeteran,
 	teamSkillSources,
 	umaBlockReason,
 	whiteSkillPairs,
@@ -53,8 +54,19 @@ describe("pvpTeams", () => {
 		expect(members).toEqual([{ position: 1, uma: 1, style: "late", cards: [] }])
 		members = setCard(members, 1, 6, 302)
 		members = setMemberUma(members, 1, MARU)
-		expect(members).toEqual([{ position: 1, uma: 3, style: "late", cards: [{ slot: 6, support_card: 302 }] }])
+		// The deck stays; a veteran would not (none was linked here).
+		expect(members).toEqual([{ position: 1, uma: 3, style: "late", cards: [{ slot: 6, support_card: 302 }], trained_uma: null }])
 		expect(clearMember(members, 1)).toEqual([])
+	})
+
+	it("drops the veteran when the uma changes, and keeps it when she stays", () => {
+		let members = setMemberVeteran(setMemberUma([], 0, OGURI), 0, 7)
+		expect(members[0].trained_uma).toBe(7)
+		members = setMemberUma(members, 0, OGURI, "pace")
+		expect(members[0].trained_uma).toBe(7)
+		members = setMemberUma(members, 0, MARU)
+		expect(members[0].trained_uma).toBeNull()
+		expect(setMemberVeteran(members, 0, null)[0].trained_uma).toBeNull()
 	})
 
 	it("keeps members and cards sorted", () => {

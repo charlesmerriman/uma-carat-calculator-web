@@ -44,6 +44,8 @@ const TEAM: PvpTeam = {
 }
 
 const session = vi.hoisted(() => ({ signedIn: true }))
+// The account's veterans, as GET /trained-umas answers.
+const veterans = vi.hoisted(() => ({ list: [] as unknown[] }))
 const teams = vi.hoisted(() => ({ list: [] as PvpTeam[] }))
 const toastError = vi.hoisted(() => vi.fn())
 
@@ -89,9 +91,12 @@ function show(event: RaceEvent = CM) {
 beforeEach(() => {
 	session.signedIn = true
 	teams.list = [TEAM]
-	fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
-		Promise.resolve(new Response(init?.method === "GET" || !init?.method ? "[]" : "{}", { status: 200 }))
-	)
+	veterans.list = []
+	fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+		if (init?.method && init.method !== "GET") return Promise.resolve(new Response("{}", { status: 200 }))
+		const body = String(url).includes("/trained-umas") ? JSON.stringify(veterans.list) : "[]"
+		return Promise.resolve(new Response(body, { status: 200 }))
+	})
 	vi.stubGlobal("fetch", fetchMock)
 })
 
@@ -131,9 +136,9 @@ describe("logging a ticket", () => {
 		await waitFor(() => expect(puts()).toHaveLength(1))
 		expect(puts()[0].path).toBe("/pvp-runs/cm/10/day/1/ticket/1")
 		expect(puts()[0].body.runners).toEqual([
-			{ position: 0, uma: 41, style: "pace" },
-			{ position: 1, uma: 42, style: "front" },
-			{ position: 2, uma: 43, style: "end" },
+			{ position: 0, uma: 41, style: "pace", trained_uma: null },
+			{ position: 1, uma: 42, style: "front", trained_uma: null },
+			{ position: 2, uma: 43, style: "end", trained_uma: null },
 		])
 
 		fireEvent.change(await within(ticket).findByLabelText("Ticket 1, race 1"), { target: { value: "0" } })
@@ -186,3 +191,30 @@ describe("the finals", () => {
 		expect(puts()[2].body).toMatchObject({ races: [{ race: 1, winner: 1 }], placement: 1, finals_group: "A" })
 	})
 })
+
+describe("veterans", () => {
+	const VETERAN = {
+		id: 5, uma: 41, label: "Main Oguri", speed: 1200, stamina: 800, power: 1000, guts: 400, wit: 900,
+		apt: {}, skills: [], rank_score: null, source: "manual", import_key: null, missing_from_import: false,
+		created_at: "", updated_at: "",
+	}
+
+	it("brings the team's veteran onto a copied ticket, and can unlink her", async () => {
+		veterans.list = [VETERAN]
+		teams.list = [{ ...TEAM, members: TEAM.members.map((member) => (member.position === 0 ? { ...member, trained_uma: 5 } : member)) }]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Team 1" }))
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect((puts()[0].body.runners as Array<{ trained_uma: number | null }>).map((runner) => runner.trained_uma)).toEqual([5, null, null])
+
+		// Only Oguri has a veteran, so only her runner gets the pick.
+		const pick = await within(ticket).findByLabelText("Veteran for Oguri Cap")
+		expect(within(ticket).queryByLabelText("Veteran for Maruzensky")).toBeNull()
+		expect(pick).toHaveValue("5")
+		fireEvent.change(pick, { target: { value: "" } })
+		await waitFor(() => expect(puts()).toHaveLength(2))
+		expect((puts()[1].body.runners as Array<{ trained_uma: number | null }>)[0].trained_uma).toBeNull()
+	})
+})
+

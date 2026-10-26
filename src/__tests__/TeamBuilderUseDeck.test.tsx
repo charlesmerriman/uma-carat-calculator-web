@@ -8,13 +8,14 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, useLocation } from "react-router-dom"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 import { TeamBuilder } from "../components/pvp/TeamBuilder"
+import { TestQueryProvider } from "../test/TestQueryProvider"
 import { PvpTeamsContext, type PvpTeamsContextType } from "../services/PvpTeamsContext"
 import type { RaceEvent } from "../types"
 import type { PvpGuide } from "../types/pvpGuide"
-import type { CatalogueSupportCard, CatalogueUma, PvpTeam } from "../types/pvpTeam"
+import type { CatalogueSupportCard, CatalogueUma, PvpTeam, PvpTeamMember } from "../types/pvpTeam"
 
 const EVENT = {
 	id: 10, event_type: "champions_meeting", cm_number: 10, name: "Aquarius Cup", start_date: "2020-01-01T00:00:00Z",
@@ -69,7 +70,7 @@ const GUIDE = {
 } as unknown as PvpGuide
 vi.mock("../hooks/usePvpGuide", () => ({ usePvpGuide: () => ({ status: "ready", guide: GUIDE }) }))
 
-const MEMBERS = [
+const MEMBERS: PvpTeamMember[] = [
 	{ position: 0, uma: 1, style: "late" as const, cards: [{ slot: 1, support_card: 304 }, { slot: 2, support_card: 302 }] },
 	{ position: 1, uma: 3, style: "front" as const, cards: [] },
 ]
@@ -91,10 +92,12 @@ function HistoryState() {
 function renderBuilder(value: PvpTeamsContextType, state: unknown = { useDeck: { deckId: 1 } }) {
 	render(
 		<MemoryRouter initialEntries={[{ pathname: "/app/pvp", search: "?event=cm-10&view=team", state }]}>
-			<PvpTeamsContext.Provider value={value}>
-				<TeamBuilder event={EVENT} />
-				<HistoryState />
-			</PvpTeamsContext.Provider>
+			<TestQueryProvider>
+				<PvpTeamsContext.Provider value={value}>
+					<TeamBuilder event={EVENT} />
+					<HistoryState />
+				</PvpTeamsContext.Provider>
+			</TestQueryProvider>
 		</MemoryRouter>
 	)
 	return value
@@ -186,3 +189,38 @@ describe("Use this deck in My team", () => {
 		expect(screen.queryByRole("region", { name: "Use a guide deck" })).not.toBeInTheDocument()
 	})
 })
+
+describe("a member's veteran", () => {
+	afterEach(() => vi.unstubAllGlobals())
+
+	// Oguri's base Late is A (7); this veteran's is E (3).
+	const veteran = {
+		id: 5, uma: 1, label: "Main Oguri", speed: 1200, stamina: 800, power: 1000, guts: 400, wit: 900,
+		apt: { ...apt, late: 3 }, skills: [], rank_score: null, source: "manual", import_key: null,
+		missing_from_import: false, created_at: "", updated_at: "",
+	}
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify([veteran]), { status: 200 }))))
+	})
+
+	it("picks one of the account's veterans of her outfit", async () => {
+		const value = renderBuilder({ ...teamsValue([team("t1")]), mode: "account" }, null)
+		const pick = await screen.findByLabelText("Veteran for Oguri Cap")
+		// Maruzensky has no veteran: no pick for her.
+		expect(screen.queryByLabelText("Veteran for Maruzensky")).toBeNull()
+		fireEvent.change(pick, { target: { value: "5" } })
+		expect(value.editTeam).toHaveBeenCalledWith("t1", { members: [{ ...MEMBERS[0], trained_uma: 5 }, MEMBERS[1]] })
+	})
+
+	it("reads a linked veteran's aptitude letters, not the uma's own", async () => {
+		const linked = team("t1", [{ ...MEMBERS[0], trained_uma: 5 }, MEMBERS[1]])
+		renderBuilder({ ...teamsValue([linked]), mode: "account" }, null)
+		await waitFor(() => expect(screen.getAllByLabelText("Aptitudes for this race")[0].textContent).toContain("Late E"))
+	})
+
+	it("offers no pick to a guest", () => {
+		renderBuilder(teamsValue([team("t1")]), null)
+		expect(screen.queryByLabelText("Veteran for Oguri Cap")).toBeNull()
+	})
+})
+

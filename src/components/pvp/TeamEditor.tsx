@@ -27,6 +27,7 @@ import {
 	recommendedIds,
 	setCard,
 	setMemberStyle,
+	setMemberVeteran,
 	setMemberUma,
 	umaBlockReason,
 } from "../../utils/pvpTeams"
@@ -36,10 +37,11 @@ import { TeamGrid, type DeckDeal } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
+import type { TrainedUma } from "../../types/trainedUma"
 
 type PlaceTarget = { pool: "uma"; position: number } | { pool: "support"; position: number; slot: number }
 
-export function TeamEditor({ event, members, index, guide, layout = "full", deal, onChange }: {
+export function TeamEditor({ event, members, index, guide, layout = "full", deal, veterans, onChange }: {
 	event: RaceEvent
 	members: PvpTeamMember[]
 	index: PvpCatalogueIndex
@@ -48,6 +50,8 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 	layout?: "full" | "compact"
 	/** A guide deck being dealt onto a spot ("Use this deck", My team only). */
 	deal?: DeckDeal
+	/** The account's veterans, for each member's "which veteran" pick (My team, signed in). */
+	veterans?: TrainedUma[]
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
@@ -98,6 +102,8 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 				onClearUma={(position) => onChange(clearMember(members, position))}
 				onClearCard={(position, slot) => onChange(clearCard(members, position, slot))}
 				deal={deal}
+				veterans={veterans}
+				onVeteranChange={veterans ? (position, trainedUma) => onChange(setMemberVeteran(members, position, trainedUma)) : undefined}
 			/>
 
 			{picker?.pool === "uma" && (

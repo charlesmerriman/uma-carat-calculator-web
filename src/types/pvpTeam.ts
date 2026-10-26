@@ -116,6 +116,12 @@ export interface PvpTeamMember {
 	style: MemberStyle
 	/** Filled slots only, any order on the wire; kept sorted by slot here. */
 	cards: PvpTeamCardSlot[]
+	/**
+	 * The account's veteran that IS this uma (the Collection page), or
+	 * null/absent. A link, never her numbers; the server checks it is the
+	 * owner's own and of this outfit. Never on a guest's device copy.
+	 */
+	trained_uma?: number | null
 }
 
 /** What a team holds, the same on the server and on the device. */

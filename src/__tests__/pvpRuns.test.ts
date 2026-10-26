@@ -7,6 +7,7 @@ import {
 	lineupFromTeam,
 	previousLineup,
 	runsOf,
+	sameLineup,
 	sameSlot,
 	setRace,
 	summarizeRuns,
@@ -95,13 +96,19 @@ describe("editing a ticket", () => {
 		expect(setRace(raced, 1, undefined)).toEqual([{ race: 3, winner: 2 }])
 	})
 
-	it("copies a team's umas and styles into a lineup, in spot order, without the deck", () => {
+	it("copies a team's umas, styles and veterans into a lineup, in spot order, without the deck", () => {
 		expect(
 			lineupFromTeam([
-				{ position: 1, uma: MARU, style: "front", cards: [{ slot: 1, support_card: 9 }] },
+				{ position: 1, uma: MARU, style: "front", cards: [{ slot: 1, support_card: 9 }], trained_uma: 7 },
 				{ position: 0, uma: OGURI, style: "pace", cards: [] },
 			])
-		).toEqual([LINEUP[0], LINEUP[1]])
+		).toEqual([{ ...LINEUP[0], trained_uma: null }, { ...LINEUP[1], trained_uma: 7 }])
+	})
+
+	it("counts a different veteran as a different lineup", () => {
+		const withVeteran = LINEUP.map((runner) => ({ ...runner, trained_uma: runner.position === 0 ? 7 : null }))
+		expect(sameLineup(LINEUP, LINEUP.map((runner) => ({ ...runner, trained_uma: null })))).toBe(true)
+		expect(sameLineup(LINEUP, withVeteran)).toBe(false)
 	})
 
 	it("offers the latest EARLIER ticket's lineup for a new one", () => {
