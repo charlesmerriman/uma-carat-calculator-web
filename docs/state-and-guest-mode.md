@@ -435,7 +435,8 @@ Planned banners use a **discriminated union**:
 - `SavedPlannedBanner` — has `id` (from the DB) and `user`
 - `LocalPlannedBanner` — has `tempId` (client-only, before first save)
 
-Narrow with the `isSavedBanner()` / `isLocalBanner()` type guards.
+Code tells the two apart by which key is set, and matches a row to its state by `id` or
+`tempId` (see `BannerRow`).
 
 Request types use IDs (e.g. `banner_uma: number | null`); response types use nested
 objects. All types live in `src/types/` and are barrel-exported from `src/types/index.ts`.

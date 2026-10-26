@@ -112,21 +112,6 @@ export function moveUma(doc: Doc, from: number, to: number): Doc {
 	return { ...doc, uma_recommendations: moveRow(doc.uma_recommendations, from, to) }
 }
 
-/** Move a style's rows to another style (a bulk move), skipping ones that style already has. */
-export function moveUmasToStyle(doc: Doc, indices: number[], style: PvpStyle): Doc {
-	const chosen = new Set(indices)
-	const held = new Set(doc.uma_recommendations.filter((row) => row.style === style).map((row) => row.uma))
-	const kept: GuideUmaRow[] = []
-	const moved: GuideUmaRow[] = []
-	doc.uma_recommendations.forEach((row, i) => {
-		if (chosen.has(i) && !held.has(row.uma) && row.style !== style) moved.push({ ...row, style })
-		else kept.push(row)
-	})
-	let next = kept
-	for (const row of moved) next = insertAfterStyle(next, style, row)
-	return { ...doc, uma_recommendations: next }
-}
-
 /**
  * Insert `row` right after the last row of its style, so it lands at the end
  * of that tab; a style with no rows yet gets it at the end of the section.
@@ -171,10 +156,6 @@ export function setStyleNote(doc: Doc, style: PvpStyle, body: string): Doc {
 	return { ...doc, style_notes: replaceAt(doc.style_notes, index, { style, body }) }
 }
 
-export function removeStyleNote(doc: Doc, style: PvpStyle): Doc {
-	return { ...doc, style_notes: doc.style_notes.filter((row) => row.style !== style) }
-}
-
 // ── Decks ────────────────────────────────────────────────────────────────────
 
 export function addDeck(doc: Doc, style: PvpStyle, label = "Standard"): Doc {
@@ -214,10 +195,6 @@ export function deckFromCards(style: PvpStyle, label: string, cards: Array<{ slo
 			.filter((card) => card.slot >= 1 && card.slot <= DECK_SLOTS)
 			.map((card) => ({ slot: card.slot, order: 0, is_borrow: card.slot === DECK_SLOTS, support_card: card.support_card, note: "" })),
 	}
-}
-
-export function insertDeck(doc: Doc, deck: GuideDeckRow): Doc {
-	return { ...doc, decks: insertAfterStyle(doc.decks, deck.style, deck) }
 }
 
 function slotRows(deck: GuideDeckRow, slot: number): GuideSlotRow[] {
@@ -275,13 +252,3 @@ export function addAlternative(doc: Doc, deckIndex: number, slot: number, cardId
 	return withSlots(doc, deckIndex, [...deck.slots, row])
 }
 
-/** Swap the cards of two slots in a deck (a drag from one tile to another). */
-export function swapSlots(doc: Doc, deckIndex: number, a: number, b: number): Doc {
-	if (a === b) return doc
-	const deck = doc.decks[deckIndex]
-	return withSlots(
-		doc,
-		deckIndex,
-		deck.slots.map((row) => (row.slot === a ? { ...row, slot: b } : row.slot === b ? { ...row, slot: a } : row))
-	)
-}

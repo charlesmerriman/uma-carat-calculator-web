@@ -123,22 +123,3 @@ export interface LocalPlannedPurchase extends BasePlannedPurchase {
 
 export type UserPlannedPurchase = SavedPlannedPurchase | LocalPlannedPurchase
 
-export function isSavedPurchase(
-	purchase: UserPlannedPurchase
-): purchase is SavedPlannedPurchase {
-	return purchase.id !== undefined
-}
-
-export function isLocalPurchase(
-	purchase: UserPlannedPurchase
-): purchase is LocalPlannedPurchase {
-	return purchase.tempId !== undefined
-}
-
-/** Narrow a product to one that grants a selector ticket. */
-export function isSelectorProduct(product: AnniversaryEventProduct): boolean {
-	return (
-		product.product_type === "uma_selector" ||
-		product.product_type === "support_selector"
-	)
-}

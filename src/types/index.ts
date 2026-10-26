@@ -41,8 +41,6 @@ export type {
 	UserStepUpSelection
 } from "./user"
 
-export { isSavedBanner, isLocalBanner } from "./user"
-
 export type {
 	GameEvent,
 	ChampionsMeeting,
@@ -109,12 +107,6 @@ export type {
 	SharedPlanSummary
 } from "./plan"
 export { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "./plan"
-
-export {
-	isSavedPurchase,
-	isLocalPurchase,
-	isSelectorProduct
-} from "./anniversary"
 
 export type {
 	SiteContent,

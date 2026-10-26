@@ -106,8 +106,7 @@ export type OrganizedTimelineData = (
 export type TimelineEvent = OrganizedTimelineData[number]
 
 /**
- * The union's narrowing helpers, kept beside the union itself — the same
- * arrangement as isSavedBanner/isLocalBanner in ./user.
+ * The union's narrowing helpers, kept beside the union itself.
  *
  * Prefer these over hand-written checks at call sites. Champions Meetings and
  * League of Heroes events are structurally indistinguishable from each other,
