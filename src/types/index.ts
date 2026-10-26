@@ -28,7 +28,6 @@ export type {
 export type {
 	ClubRank,
 	TeamTrialsRank,
-	TeamTrailsRank,
 	ChampionsMeetingRank,
 	LeagueOfHeroesRank
 } from "./ranks"

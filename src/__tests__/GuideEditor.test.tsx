@@ -64,7 +64,8 @@ vi.mock("../services/CalculatorContext", () => ({
 }))
 vi.mock("../hooks/usePvpCatalogue", () => ({ usePvpCatalogue: () => ({ status: "ready", ...INDEX }) }))
 
-const { GuideEditor } = await import("../components/pvp/editor/GuideEditor")
+// The default export, the one loadGuideEditor hands to lazy().
+const { default: GuideEditor } = await import("../components/pvp/editor/GuideEditor")
 const { usePvpGuide, clearPvpGuideCache } = await import("../hooks/usePvpGuide")
 
 type Call = { method: string; path: string; body: unknown }

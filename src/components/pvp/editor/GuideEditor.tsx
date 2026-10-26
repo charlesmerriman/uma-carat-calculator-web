@@ -40,7 +40,7 @@ function Notice({ children }: { children: string }) {
 	return <p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">{children}</p>
 }
 
-export function GuideEditor({ event, onViewAsVisitor, autosaveMs }: {
+function GuideEditor({ event, onViewAsVisitor, autosaveMs }: {
 	event: RaceEvent
 	onViewAsVisitor: () => void
 	/** For tests: how long after the last edit the save goes. */
