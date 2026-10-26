@@ -224,7 +224,8 @@ describe("veterans", () => {
 	})
 
 	it("splits the win rates by veteran, each linked to the Collection", async () => {
-		veterans.list = [VETERAN, { ...VETERAN, id: 6, label: "Second Oguri" }]
+		// The second has no label: she is named by the game's grade and score.
+		veterans.list = [VETERAN, { ...VETERAN, id: 6, label: "", rank_score: 15120, rank_grade: 15 }]
 		const lineup = (veteran: number) => [{ position: 0, uma: 41, style: "pace", trained_uma: veteran }]
 		runs.list = [
 			{ kind: "cm", event: 10, stage: "day", day: 1, ticket: 1, runners: lineup(5), races: [{ race: 1, winner: 0 }],
@@ -236,7 +237,7 @@ describe("veterans", () => {
 		const summary = await screen.findByRole("region", { name: "Your win rates" })
 		const first = within(summary).getByRole("link", { name: "Main Oguri" })
 		expect(first).toHaveAttribute("href", "/app/collection?veteran=5")
-		expect(within(summary).getByRole("link", { name: "Second Oguri" })).toHaveAttribute("href", "/app/collection?veteran=6")
+		expect(within(summary).getByRole("link", { name: "S 15,120" })).toHaveAttribute("href", "/app/collection?veteran=6")
 		expect(within(summary).getByText("1 of 1")).toBeInTheDocument()
 		expect(within(summary).getByText("0 of 1")).toBeInTheDocument()
 	})

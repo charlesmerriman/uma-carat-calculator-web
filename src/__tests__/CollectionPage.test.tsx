@@ -29,7 +29,7 @@ const SKILLS = [
 
 const STATS = { speed: 1200, stamina: 800, power: 1000, guts: 400, wit: 900 }
 const veteran = (id: number, extra: Partial<TrainedUma> = {}): TrainedUma => ({
-	id, uma: 41, label: "", ...STATS, apt: APT, skills: [], rank_score: null, source: "manual", import_key: null,
+	id, uma: 41, label: "", ...STATS, apt: APT, skills: [], rank_score: null, rank_grade: null, source: "manual", import_key: null,
 	missing_from_import: false, memo: "", is_borrowed: false, trained_at: null, has_game_data: false, created_at: "2026-10-26T00:00:00Z", updated_at: "2026-10-26T00:00:00Z", ...extra,
 })
 
@@ -180,7 +180,7 @@ describe("adding by hand", () => {
 			path: "/trained-umas",
 			body: {
 				uma: 41, label: "", speed: 1150, stamina: 700, power: 950, guts: 420, wit: 880,
-				apt: { ...APT, mile: 8 }, skills: [{ skill: 10, level: 4 }],
+				apt: { ...APT, mile: 8 }, skills: [{ skill: 10, level: 4 }], rank_score: null,
 			},
 		})
 		// The form closes and she is on the list.

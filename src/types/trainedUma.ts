@@ -22,11 +22,15 @@ export interface VeteranInput extends Record<StatKey, number> {
 	/** The game's 1..8 (G..S), null when not known. */
 	apt: Record<AptitudeKey, number | null>
 	skills: VeteranSkill[]
+	/** The evaluation score the game shows on her; a hand entry may type it. */
+	rank_score?: number | null
 }
 
 export interface TrainedUma extends VeteranInput {
 	id: number
 	rank_score: number | null
+	/** The game's grade number for that score (utils/veteranGrade.ts reads it); import only. */
+	rank_grade: number | null
 	/** "import": read from the game's export, numbers fixed. "manual": typed in. */
 	source: "import" | "manual"
 	import_key: number | null
