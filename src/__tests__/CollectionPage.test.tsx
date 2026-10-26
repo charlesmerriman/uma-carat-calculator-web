@@ -71,7 +71,7 @@ function show() {
 beforeEach(() => {
 	session.signedIn = true
 	stored = []
-	fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+	fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET"
 		if (method === "GET") return Promise.resolve(new Response(JSON.stringify(stored), { status: 200 }))
 		if (method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }))
