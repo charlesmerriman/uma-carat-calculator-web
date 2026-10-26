@@ -25,7 +25,7 @@ const SKILLS = [
 const STATS = { speed: 1200, stamina: 800, power: 1000, guts: 400, wit: 900 }
 const veteran = (id: number, extra: Partial<TrainedUma> = {}): TrainedUma => ({
 	id, uma: 41, label: "", ...STATS, apt: APT, skills: [], rank_score: null, source: "manual", import_key: null,
-	missing_from_import: false, created_at: "2026-10-26T00:00:00Z", updated_at: "2026-10-26T00:00:00Z", ...extra,
+	missing_from_import: false, memo: "", is_borrowed: false, trained_at: null, has_game_data: false, created_at: "2026-10-26T00:00:00Z", updated_at: "2026-10-26T00:00:00Z", ...extra,
 })
 
 const session = vi.hoisted(() => ({ signedIn: true }))
@@ -48,14 +48,24 @@ const { CollectionPage } = await import("../components/collection/CollectionPage
 const fetchMock = vi.fn()
 let stored: TrainedUma[] = []
 
-/** The calls made with `method`, their path and parsed body. */
+/** Every request as the mock received it, bodies parsed (and unzipped). */
+let sent: Array<{ method: string; path: string; body: unknown }> = []
+
+/** A request body as JSON, unzipped first when it was sent gzipped (the import is). */
+async function readBody(init: RequestInit | undefined): Promise<unknown> {
+	if (!init?.body) return null
+	const gzipped = (init.headers as Record<string, string> | undefined)?.["Content-Encoding"] === "gzip"
+	if (!gzipped) return JSON.parse(String(init.body))
+	const unpacked = new Response(init.body).body?.pipeThrough(new DecompressionStream("gzip"))
+	return JSON.parse(await new Response(unpacked).text())
+}
+
+/** A sent body, typed loosely enough for the assertions below. */
+type SentBody = Record<string, unknown> & { items: Array<Record<string, unknown> & { game_data: Record<string, unknown> }> }
+
+/** The calls made with `method`: their path and parsed body. */
 function calls(method: string) {
-	return fetchMock.mock.calls
-		.filter(([, init]) => ((init as RequestInit | undefined)?.method ?? "GET") === method)
-		.map(([url, init]) => ({
-			path: new URL(String(url), "http://api").pathname,
-			body: (init as RequestInit).body ? JSON.parse(String((init as RequestInit).body)) : null,
-		}))
+	return sent.filter((call) => call.method === method).map(({ path, body }) => ({ path, body: body as SentBody }))
 }
 
 function show() {
@@ -71,18 +81,22 @@ function show() {
 beforeEach(() => {
 	session.signedIn = true
 	stored = []
-	fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
+	sent = []
+	fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET"
-		if (method === "GET") return Promise.resolve(new Response(JSON.stringify(stored), { status: 200 }))
-		if (method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }))
-		if (String(_url).endsWith("/trained-umas/import")) {
-			const { items } = JSON.parse(String(init?.body)) as { items: Array<Partial<TrainedUma>> }
+		const path = new URL(String(url), "http://api").pathname
+		const body = await readBody(init)
+		sent.push({ method, path, body })
+		if (method === "GET") return new Response(JSON.stringify(stored), { status: 200 })
+		if (method === "DELETE") return new Response(null, { status: 204 })
+		if (path.endsWith("/trained-umas/import")) {
+			const { items } = body as { items: Array<Partial<TrainedUma>> }
 			const veterans = items.map((item, index) => veteran(100 + index, { ...item, source: "import" }))
-			return Promise.resolve(new Response(JSON.stringify({ created: items.length, updated: 0, removed: 0, kept: 0, veterans }), { status: 200 }))
+			return new Response(JSON.stringify({ created: items.length, updated: 0, removed: 0, kept: 0, veterans }), { status: 200 })
 		}
-		const body = JSON.parse(String(init?.body)) as Partial<TrainedUma>
-		const saved = method === "POST" ? veteran(99, body) : { ...stored[0], ...body }
-		return Promise.resolve(new Response(JSON.stringify(saved), { status: method === "POST" ? 201 : 200 }))
+		const fields = body as Partial<TrainedUma>
+		const saved = method === "POST" ? veteran(99, fields) : { ...stored[0], ...fields }
+		return new Response(JSON.stringify(saved), { status: method === "POST" ? 201 : 200 })
 	})
 	vi.stubGlobal("fetch", fetchMock)
 })
@@ -110,7 +124,7 @@ describe("who sees what", () => {
 		expect(within(rows[0]).getByText("Spd 1200 · Sta 800 · Pow 1000 · Gut 400 · Wit 900")).toBeInTheDocument()
 		expect(within(rows[1]).getByText("Maruzensky")).toBeInTheDocument()
 		expect(within(rows[1]).getByText("By hand")).toBeInTheDocument()
-		expect(screen.getByText("2 of 200")).toBeInTheDocument()
+		expect(screen.getByRole("heading", { name: /Veterans/ })).toHaveTextContent("Veterans 2")
 	})
 })
 
@@ -182,8 +196,9 @@ describe("editing and deleting", () => {
 describe("importing from the game", () => {
 	// Two veterans in umadump's shape: the newer Maruzensky, the older Oguri.
 	const FILE = [
-		{ viewer_id: 311943848596, memo: "secret", trained_chara_id: 12, card_id: 100601, speed: 1200, stamina: 800, power: 1000,
+		{ viewer_id: 311943848596, memo: "Ace", trained_chara_id: 12, card_id: 100601, speed: 1200, stamina: 800, power: 1000,
 			guts: 400, wiz: 900, rank_score: 15000, proper_ground_turf: 8, skill_array: [{ skill_id: 100061, level: 3 }],
+			succession_chara_array: [{ card_id: 100101, owner_viewer_id: 206074645533 }],
 			create_time: "2025-01-01 00:00:00" },
 		{ viewer_id: 311943848596, memo: "", trained_chara_id: 13, card_id: 100401, speed: 1100, stamina: 700, power: 900,
 			guts: 500, wiz: 800, rank_score: 14000, skill_array: [], create_time: "2026-01-01 00:00:00" },
@@ -208,8 +223,9 @@ describe("importing from the game", () => {
 		expect(sent.path).toBe("/trained-umas/import")
 		expect(sent.body.items).toHaveLength(1)
 		expect(sent.body.items[0]).toMatchObject({ import_key: 12, uma: 41, wit: 900, skills: [{ skill: 10, level: 3 }] })
-		expect(JSON.stringify(sent.body)).not.toContain("viewer_id")
-		expect(JSON.stringify(sent.body)).not.toContain("secret")
+		// Everything about her, your own id and memo included; never another player's id.
+		expect(sent.body.items[0].game_data).toMatchObject({ viewer_id: 311943848596, memo: "Ace" })
+		expect(JSON.stringify(sent.body)).not.toContain("206074645533")
 
 		await waitFor(() => expect(screen.queryByRole("region", { name: "Import from the game" })).not.toBeInTheDocument())
 		expect(screen.getByText("From the game")).toBeInTheDocument()

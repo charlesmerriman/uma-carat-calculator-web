@@ -38,9 +38,6 @@ import {
 } from "../../utils/trainedUmas"
 import type { TrainedUma } from "../../types/trainedUma"
 
-/** The API's cap (TRAINED_UMA_CAP). */
-const VETERAN_CAP = 200
-
 const STAT_SHORT: Record<(typeof STAT_KEYS)[number], string> = {
 	speed: "Spd",
 	stamina: "Sta",
@@ -102,7 +99,6 @@ function Veterans() {
 	}
 
 	const veterans = list.data
-	const atCap = veterans.length >= VETERAN_CAP
 	const saving = create.isPending || update.isPending
 	const saveError = create.error ?? update.error
 	const close = () => {
@@ -125,7 +121,7 @@ function Veterans() {
 		<section className="flex flex-col gap-3" aria-labelledby="veterans">
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<h2 id="veterans" className="text-base font-semibold text-gray-100">
-					Veterans <span className="text-sm font-normal text-gray-400">{veterans.length} of {VETERAN_CAP}</span>
+					Veterans <span className="text-sm font-normal text-gray-400">{veterans.length}</span>
 				</h2>
 				{editing === null && (
 					<div className="flex flex-wrap gap-2">
@@ -133,13 +129,7 @@ function Veterans() {
 							<FileUp className="h-4 w-4" />
 							Import from the game
 						</button>
-						<button
-							type="button"
-							className={PRIMARY_BUTTON}
-							disabled={atCap}
-							title={atCap ? `You can keep up to ${VETERAN_CAP} veterans.` : undefined}
-							onClick={() => setEditing("new")}
-						>
+						<button type="button" className={PRIMARY_BUTTON} onClick={() => setEditing("new")}>
 							<Plus className="h-4 w-4" />
 							Add a veteran
 						</button>
@@ -148,12 +138,7 @@ function Veterans() {
 			</div>
 
 			{editing === "import" && (
-				<ImportPanel
-					index={catalogue}
-					// Hand-entered veterans are never replaced by an import, so they take room first.
-					room={VETERAN_CAP - veterans.filter((veteran) => veteran.source === "manual").length}
-					onDone={() => setEditing(null)}
-				/>
+				<ImportPanel index={catalogue} onDone={() => setEditing(null)} />
 			)}
 			{editing !== null && editing !== "import" && (
 				<VeteranForm
@@ -222,6 +207,14 @@ function VeteranRow({ veteran, index, oshi, onEdit, onDelete }: {
 					<span className="rounded-full border border-gray-600 px-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
 						{veteran.source === "import" ? "From the game" : "By hand"}
 					</span>
+					{veteran.is_borrowed && (
+						<span
+							className="rounded-full border border-gray-600 px-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+							title="Another player's veteran you had on loan in the game."
+						>
+							Borrowed
+						</span>
+					)}
 					{veteran.missing_from_import && (
 						<span
 							className="rounded-full border border-highlight/50 px-1.5 text-[10px] font-medium text-highlight"
@@ -237,6 +230,7 @@ function VeteranRow({ veteran, index, oshi, onEdit, onDelete }: {
 				<p className="text-xs text-gray-400">
 					{[strong, `${veteran.skills.length} ${veteran.skills.length === 1 ? "skill" : "skills"}`].filter(Boolean).join(" · ")}
 				</p>
+				{veteran.memo && <p className="text-xs italic text-gray-400">“{veteran.memo}”</p>}
 			</div>
 			<div className="flex items-center gap-1.5">
 				<button type="button" className={ACTION_BUTTON} onClick={onEdit} aria-label={`Edit ${name}`}>

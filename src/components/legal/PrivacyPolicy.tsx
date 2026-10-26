@@ -146,9 +146,10 @@ export const PrivacyPolicy: React.FC = () => {
 						we store each one&apos;s uma, stats, aptitudes and skills. Both are kept on your
 						account only (a guest can&apos;t add either), only you can see them, and they are
 						deleted with your account. If you import veterans from a file the game data tool
-						umadump wrote, the file is read in your browser: we receive only those details
-						and the game&apos;s own number for each veteran, never your game account id or
-						the notes in the file.
+						umadump wrote, the file is read in your browser and we keep everything it says
+						about each veteran, including your game account id and the notes you wrote on
+						them. Other players&apos; account ids in it (a veteran you borrowed, or a
+						borrowed parent) are removed in your browser and never reach us.
 					</p>
 
 					<h2 className={heading}>The PvP Gallery</h2>
