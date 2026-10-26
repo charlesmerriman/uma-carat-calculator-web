@@ -1500,9 +1500,11 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`milestones`), passed steps filled, the next one ringed. A null LoH offset hides that step.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
-- **Three views under the header, `?view=`**: Recommendations (the guide, default, no
-  parameter), My team (`team`, the builder) and Gallery (`gallery`, the posted teams; see
-  "Gallery view" below). The guide is fetched only on Recommendations.
+- **Four views under the header, `?view=`**: Recommendations (the guide, default, no
+  parameter), My team (`team`, the builder), CM Runs (`runs`, the player's logged tickets;
+  see "CM Runs view" below) and Gallery (`gallery`, the posted teams; see "Gallery view"
+  below). An editor gets a fifth, Edit guide. On a phone the tabs show their `short`
+  labels (Guide, Team, Runs, Edit); the full label stays the accessible name. The guide is fetched only on Recommendations.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar.
@@ -1748,6 +1750,30 @@ event, so switching events starts a fresh editor.
   document the action answers with.
 - Tests: `GuideEditor.test.tsx` (the flows), `guideDocument.test.ts` (the pure rules),
   `PvpGuidePage.test.tsx` (the tab).
+
+### CM Runs view (`components/pvp/RunsView.tsx`)
+
+A player's logged Champions Meeting tickets and their win rates (Henry's ask; design in
+`notes/pvp-planner-plan.md`, "R3 CM Runs"). API: `/pvp-runs` (`backend/docs/api-reference.md`).
+
+- **Account only** (owner, 2026-10-26): a guest gets a sign-in card; there is no device
+  store. A League of Heroes event shows a "coming later" line; the API already takes LoH.
+- **Day tabs 1 to 4 (Round 1 is days 1-2, Round 2 days 3-4) and Finals**, opening on the
+  day the CM is on now (`cmDayAt`: 24-hour days from the start date, the Finals from
+  `cm_finals_hours`). A day shows its four tickets side by side.
+- **A ticket COPIES its lineup** (uma and style per spot) from "Same as last ticket" or one
+  of the event's teams, so editing a team never rewrites a logged ticket. Five native
+  selects per ticket: one of the three won, Loss, or "–" (not run yet, which is not a loss).
+  The Finals card adds the group (A / B) and the placement; a winner fills a blank 1st.
+- **Every change saves at once through `services/pvpRunQueries.ts`** (TanStack Query). A
+  change is a FUNCTION of the ticket as the cache holds it (`save(slot, current => next)`),
+  never of the last render: two quick picks otherwise started from the same old ticket and
+  the second undid the first. Writes for one event share a mutation `scope`, so they reach
+  the server one at a time, in order. A refusal toasts the API's sentence, shows "Not
+  saved", and refetches.
+- **The counting rules are `utils/pvpRuns.ts`** (worked example in its header): an uma is
+  measured over every race she ran in; a round's "best ticket" is the game's own rule.
+- Tests: `RunsView.test.tsx` (the flows), `pvpRuns.test.ts` (the maths).
 
 ### Gallery view (`components/pvp/gallery/`)
 

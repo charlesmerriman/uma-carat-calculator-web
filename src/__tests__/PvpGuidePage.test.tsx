@@ -106,6 +106,10 @@ vi.mock("../components/pvp/TeamBuilder", async () => {
 		),
 	}
 })
+// The runs view has its own tests (RunsView.test.tsx); here only which view shows.
+vi.mock("../components/pvp/RunsView", () => ({
+	RunsView: ({ event: shown }: { event: RaceEvent }) => <div data-testid="runs-view">{`cm-${shown.id}`}</div>,
+}))
 // The page as everyone will have it, unless a test closes it: the early-access
 // rule itself is tested in usePvpAccess.test.tsx.
 const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
@@ -384,7 +388,7 @@ describe("PvpGuidePage views and layout", () => {
 		try {
 			const { unmount } = renderPage("/app/pvp?event=cm-10")
 			const views = within(screen.getByRole("tablist", { name: "View" }))
-			expect(views.getAllByRole("tab")).toHaveLength(4)
+			expect(views.getAllByRole("tab")).toHaveLength(5)
 			fireEvent.click(views.getByRole("tab", { name: "Edit guide" }))
 			expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=editor")
 			expect(await screen.findByTestId("guide-editor")).toHaveTextContent("cm-10")
@@ -404,7 +408,7 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByText("New since")).not.toBeInTheDocument()
 	})
 
-	it("offers My team and the Gallery, kept in the URL", async () => {
+	it("offers My team, CM Runs and the Gallery, kept in the URL", async () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		const views = within(screen.getByRole("tablist", { name: "View" }))
@@ -413,11 +417,15 @@ describe("PvpGuidePage views and layout", () => {
 		expect(views.getAllByRole("tab")).toEqual([
 			views.getByRole("tab", { name: "Recommendations" }),
 			views.getByRole("tab", { name: "My team" }),
+			views.getByRole("tab", { name: "CM Runs" }),
 			views.getByRole("tab", { name: "Gallery" }),
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")
 		expect(screen.getByTestId("team-builder").textContent).toBe("cm-10")
+		fireEvent.click(views.getByRole("tab", { name: /CM Runs/ }))
+		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=runs")
+		expect(screen.getByTestId("runs-view").textContent).toBe("cm-10")
 		fireEvent.click(views.getByRole("tab", { name: /Gallery/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=gallery")
 		// A chunk of its own now (gallery/loadGallery.ts), so it arrives a tick later.
