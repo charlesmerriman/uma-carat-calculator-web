@@ -26,6 +26,9 @@ import { useAccount } from "../../services/AuthContext"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpRuns, useRunsSaving, useSaveRun, type RunChange } from "../../services/pvpRunQueries"
+import { useTrainedUmas } from "../../services/trainedUmaQueries"
+import { VeteranSelect } from "../collection/VeteranSelect"
+import type { TrainedUma } from "../../types/trainedUma"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useSignInPrompt } from "../../hooks/useSignInPrompt"
@@ -59,6 +62,9 @@ const SELECT =
 	"min-h-9 w-full rounded-md border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-100 transition hover:border-gray-500 focus:border-brand focus:outline-none disabled:opacity-50"
 const SMALL_BUTTON =
 	"rounded-md border border-gray-600 px-2.5 py-1 text-xs font-medium text-gray-200 transition hover:border-brand hover:text-brand"
+
+/** One shared empty list, so "no veterans yet" is the same array on every render. */
+const NO_VETERANS: TrainedUma[] = []
 
 /** A day tab's id: a CM day 1..4, or the Finals. */
 type DayTab = number | "final"
@@ -104,6 +110,8 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	const catalogue = usePvpCatalogue()
 	const { teams, ensureLoaded } = usePvpTeams()
 	const oshiIds = useOshiIds()
+	// The account's veterans, for "which veteran ran" under each runner.
+	const veterans = useTrainedUmas(true).data ?? NO_VETERANS
 	const saving = useRunsSaving(ref)
 	const [failed, setFailed] = useState(false)
 	const save = useSaveRun(ref, (message) => {
@@ -161,6 +169,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 					choices={lineupChoices(runs, eventTeams, CM_RUN_DAYS + 1, 1)}
 					umasById={umasById}
 					oshiIds={oshiIds}
+					veterans={veterans}
 					onOpenMyTeam={onOpenMyTeam}
 					onWrite={(change) => write({ stage: "final" }, change)}
 				/>
@@ -177,6 +186,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 								choices={lineupChoices(runs, eventTeams, tab, ticket)}
 								umasById={umasById}
 								oshiIds={oshiIds}
+								veterans={veterans}
 								onOpenMyTeam={onOpenMyTeam}
 								onWrite={(change) => write(slot, change)}
 							/>
@@ -243,6 +253,8 @@ interface CardProps {
 	choices: LineupChoice[]
 	umasById: Map<number, CatalogueUma>
 	oshiIds: ReadonlySet<number>
+	/** The account's veterans (the Collection page), for each runner's pick. */
+	veterans: TrainedUma[]
 	onOpenMyTeam: () => void
 	/** A change to the ticket as it is when the save runs (pvpRunQueries.ts says why). */
 	onWrite: (change: RunChange) => void
@@ -345,7 +357,7 @@ function FinalCard(props: CardProps) {
  * The frame both cards share: the title, the lineup (or the choice of one),
  * and Change / Clear. The races go in `children`.
  */
-function RunCard({ title, run, choices, umasById, oshiIds, onOpenMyTeam, onWrite, children }: CardProps & {
+function RunCard({ title, run, choices, umasById, oshiIds, veterans, onOpenMyTeam, onWrite, children }: CardProps & {
 	title: string
 	children: ReactNode
 }) {
@@ -400,7 +412,22 @@ function RunCard({ title, run, choices, umasById, oshiIds, onOpenMyTeam, onWrite
 				)}
 			</div>
 
-			{hasLineup && <Lineup runners={runners} umasById={umasById} oshiIds={oshiIds} />}
+			{hasLineup && (
+				<Lineup
+					runners={runners}
+					umasById={umasById}
+					oshiIds={oshiIds}
+					veterans={veterans}
+					onVeteranChange={(position, trainedUma) =>
+						onWrite((current) => ({
+							...current,
+							runners: current.runners.map((runner) =>
+								runner.position === position ? { ...runner, trained_uma: trainedUma } : runner
+							),
+						}))
+					}
+				/>
+			)}
 
 			{(!hasLineup || picking) &&
 				(choices.length > 0 ? (
@@ -429,10 +456,12 @@ function RunCard({ title, run, choices, umasById, oshiIds, onOpenMyTeam, onWrite
 	)
 }
 
-function Lineup({ runners, umasById, oshiIds }: {
+function Lineup({ runners, umasById, oshiIds, veterans, onVeteranChange }: {
 	runners: PvpRunRunner[]
 	umasById: Map<number, CatalogueUma>
 	oshiIds: ReadonlySet<number>
+	veterans: TrainedUma[]
+	onVeteranChange: (position: number, trainedUma: number | null) => void
 }) {
 	return (
 		<ul className="grid grid-cols-3 gap-2">
@@ -450,6 +479,13 @@ function Lineup({ runners, umasById, oshiIds }: {
 							{uma?.name ?? "Unknown uma"}
 						</span>
 						<span className="text-[11px] text-gray-400">{STYLE_LABELS[runner.style]}</span>
+						<VeteranSelect
+							umaId={runner.uma}
+							value={runner.trained_uma}
+							veterans={veterans}
+							label={`Veteran for ${uma?.name ?? "this uma"}`}
+							onChange={(trainedUma) => onVeteranChange(runner.position, trainedUma)}
+						/>
 					</li>
 				)
 			})}
