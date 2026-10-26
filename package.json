@@ -19,7 +19,8 @@
     "content:pull": "node scripts/content-pull.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json --incremental false && tsc --noEmit -p tsconfig.node.json --incremental false",
-    "check": "npm run typecheck && npm run lint && vitest run",
+    "knip": "knip",
+    "check": "npm run typecheck && npm run lint && npm run knip && vitest run",
     "preview": "vite preview",
     "test": "vitest",
     "coverage": "vitest run --coverage"
@@ -60,6 +61,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^29.1.1",
+    "knip": "^5.88.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",

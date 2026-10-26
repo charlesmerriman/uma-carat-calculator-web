@@ -29,21 +29,12 @@ export interface ClubRank {
 /**
  * NOTE: This was originally misspelled as "TeamTrailsRank" throughout the codebase.
  * Fixed to "TeamTrialsRank" to match the backend model name.
- * The old name is exported as an alias below for any code not yet updated.
  */
 export interface TeamTrialsRank {
 	id: number
 	name: string
 	income_amount: number
 }
-
-/**
- * TYPESCRIPT CONCEPT: Type Aliases for Backward Compatibility
- * When renaming a type, you can export the old name as an alias so you don't
- * have to update every file at once. Remove this once all references are migrated.
- * @deprecated Use TeamTrialsRank instead
- */
-export type TeamTrailsRank = TeamTrialsRank
 
 /**
  * "From event #N on, this rank pays X carats" (backend models/race_rank_reward.py).

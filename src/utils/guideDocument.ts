@@ -37,15 +37,6 @@ export type EditorTab = "guide" | Exclude<PvpStyle, "everyone">
 export const STYLE_TABS: Array<Exclude<PvpStyle, "everyone">> = ["runaway", "front", "pace", "late", "end"]
 export const EDITOR_TABS: EditorTab[] = ["guide", ...STYLE_TABS]
 
-export const SECTIONS: GuideSection[] = [
-	"stat_configs",
-	"team_comps",
-	"uma_recommendations",
-	"skill_recommendations",
-	"style_notes",
-	"decks",
-]
-
 // The column lengths, the server's (calculatorapi/models/pvp_guide.py).
 export const MAX_LENGTH = {
 	style_ranking: 120,

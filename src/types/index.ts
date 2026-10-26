@@ -28,7 +28,6 @@ export type {
 export type {
 	ClubRank,
 	TeamTrialsRank,
-	TeamTrailsRank,
 	ChampionsMeetingRank,
 	LeagueOfHeroesRank
 } from "./ranks"
@@ -41,8 +40,6 @@ export type {
 	LocalPlannedBanner,
 	UserStepUpSelection
 } from "./user"
-
-export { isSavedBanner, isLocalBanner } from "./user"
 
 export type {
 	GameEvent,
@@ -110,12 +107,6 @@ export type {
 	SharedPlanSummary
 } from "./plan"
 export { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "./plan"
-
-export {
-	isSavedPurchase,
-	isLocalPurchase,
-	isSelectorProduct
-} from "./anniversary"
 
 export type {
 	SiteContent,

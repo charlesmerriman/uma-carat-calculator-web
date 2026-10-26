@@ -3,5 +3,6 @@
   "entry": ["src/entry-server.ts", "scripts/*.mjs"],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
   "ignore": ["src/buildId.d.ts"],
-  "ignoreDependencies": ["tailwindcss"]
+  "ignoreDependencies": ["tailwindcss"],
+  "ignoreExportsUsedInFile": true
 }

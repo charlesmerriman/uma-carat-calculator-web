@@ -211,31 +211,6 @@ export interface LocalPlannedBanner extends BasePlannedBanner {
 export type UserPlannedBanner = SavedPlannedBanner | LocalPlannedBanner
 
 /**
- * TYPESCRIPT CONCEPT: Type Guards
- *
- * A type guard is a function that narrows a union type. The return type
- * `banner is SavedPlannedBanner` tells TypeScript: "if this function
- * returns true, treat the argument as SavedPlannedBanner from here on."
- *
- * Usage:
- *   if (isSavedBanner(banner)) {
- *     console.log(banner.id)    // TypeScript knows `id` is `number` here
- *     console.log(banner.user)  // TypeScript knows `user` is `number` here
- *   }
- */
-export function isSavedBanner(
-	banner: UserPlannedBanner
-): banner is SavedPlannedBanner {
-	return banner.id !== undefined
-}
-
-export function isLocalBanner(
-	banner: UserPlannedBanner
-): banner is LocalPlannedBanner {
-	return banner.tempId !== undefined
-}
-
-/**
  * One of the ten cards the user intends to select at a Select Step-Up banner.
  *
  * Keyed to the BANNER, not to a planned row: "which ten would I pick here" is a
