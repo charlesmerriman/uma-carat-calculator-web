@@ -22,6 +22,7 @@ each banner ends, before they spend rather than after.
   events). Pick the banners you want and how many pulls each, and every row shows the carats and
   tickets left at that banner's end, with the odds of getting the card.
 - **A forecast chart** of carats and pulls over time, with optional layers.
+- **Twelve themes**, dark and light, and a colorblind mode.
 - **Several plans per account**, each shareable by link. A shared link unfurls in Discord and on X
   with a server-drawn preview of the plan's totals.
 - **Step-up banners, selector tickets and campaign packs**, each with its own rules.
@@ -34,12 +35,22 @@ each banner ends, before they spend rather than after.
 <table>
 <tr>
 <td width="50%" align="center" valign="top">
-<b>The plan and its carat forecast</b><br><br>
-<img src="docs/images/planner-forecast.webp" alt="A year of planned banners grouped by in-game scenario, above the carat forecast chart" width="100%">
+<b>The plan, its odds and the carat forecast</b><br><br>
+<img src="docs/images/planner-forecast.webp" alt="A year of planned banners grouped by in-game scenario, one row's odds options open, above the carat forecast chart (midnight theme)" width="100%">
 </td>
 <td width="50%" align="center" valign="top">
+<b>Light themes, and a colorblind mode</b><br><br>
+<img src="docs/images/planner-light.webp" alt="The planner in a light theme with the theme picker open" width="100%">
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" valign="top">
 <b>The timeline</b><br><br>
-<img src="docs/images/timeline.webp" alt="Upcoming banners and a Champions Meeting on the timeline" width="100%">
+<img src="docs/images/timeline.webp" alt="Upcoming banners on the timeline, with their featured umas and support cards" width="100%">
+</td>
+<td width="50%" align="center" valign="top">
+<b>Campaigns, scenarios and race events</b><br><br>
+<img src="docs/images/timeline-campaigns.webp" alt="A Champions Meeting's course details, an anniversary campaign, a new scenario, and a banner inside the campaign" width="100%">
 </td>
 </tr>
 <tr>
