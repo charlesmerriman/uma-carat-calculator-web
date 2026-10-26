@@ -143,13 +143,15 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						If you log your Champions Meeting runs on the PvP page, we store the umas you ran
 						on each ticket and the results you enter. If you add veterans to your Collection,
-						we store each one&apos;s uma, stats, aptitudes and skills. Both are kept on your
-						account only (a guest can&apos;t add either), only you can see them, and they are
-						deleted with your account. If you import veterans from a file the game data tool
-						umadump wrote, the file is read in your browser and we keep everything it says
-						about each veteran, including your game account id and the notes you wrote on
-						them. Other players&apos; account ids in it (a veteran you borrowed, or a
-						borrowed parent) are removed in your browser and never reach us.
+						we store each one&apos;s uma, stats, aptitudes and skills, and if you mark the umas
+						and support cards you own, we store which ones, with their stars or limit break.
+						All of it is kept on your account only (a guest can&apos;t add any), only you can
+						see it, and it is deleted with your account. If you import from files the game
+						data tool umadump wrote, the files are read in your browser and we keep everything
+						they say about your veterans, umas and cards, including your game account id and
+						the notes you wrote on your veterans. Other players&apos; account ids in them (a
+						veteran you borrowed, or a borrowed parent) are removed in your browser and never
+						reach us.
 					</p>
 
 					<h2 className={heading}>The PvP Gallery</h2>

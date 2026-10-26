@@ -55,9 +55,9 @@ describe("win rates", () => {
 		const { total, umas } = summarizeRuns([run])
 		expect(total).toEqual({ wins: 3, raced: 4 })
 		expect(umas).toEqual([
-			{ uma: OGURI, wins: 2, raced: 4 },
-			{ uma: MARU, wins: 1, raced: 4 },
-			{ uma: GOLD, wins: 0, raced: 4 },
+			{ uma: OGURI, trained_uma: null, wins: 2, raced: 4 },
+			{ uma: MARU, trained_uma: null, wins: 1, raced: 4 },
+			{ uma: GOLD, trained_uma: null, wins: 0, raced: 4 },
 		])
 		expect(formatRate(total)).toBe("75%")
 	})
@@ -65,9 +65,23 @@ describe("win rates", () => {
 	it("adds up an uma across tickets, and only the races she ran", () => {
 		const swapped: PvpRunRunner[] = [LINEUP[0], LINEUP[1], { position: 2, uma: 44, style: "late" }]
 		const { umas } = summarizeRuns([ticket(1, 1, races(2, 2, null)), ticket(1, 2, races(0, null), swapped)])
-		expect(umas.find((tally) => tally.uma === GOLD)).toEqual({ uma: GOLD, wins: 2, raced: 3 })
-		expect(umas.find((tally) => tally.uma === OGURI)).toEqual({ uma: OGURI, wins: 1, raced: 5 })
-		expect(umas.find((tally) => tally.uma === 44)).toEqual({ uma: 44, wins: 0, raced: 2 })
+		expect(umas.find((tally) => tally.uma === GOLD)).toEqual({ uma: GOLD, trained_uma: null, wins: 2, raced: 3 })
+		expect(umas.find((tally) => tally.uma === OGURI)).toEqual({ uma: OGURI, trained_uma: null, wins: 1, raced: 5 })
+		expect(umas.find((tally) => tally.uma === 44)).toEqual({ uma: 44, trained_uma: null, wins: 0, raced: 2 })
+	})
+
+	it("keeps two veterans of one uma, and a runner with none, as separate rows", () => {
+		const withVeteran = (veteran: number | null): PvpRunRunner[] => [{ ...LINEUP[0], trained_uma: veteran }]
+		const { umas } = summarizeRuns([
+			ticket(1, 1, races(0, 0), withVeteran(5)),
+			ticket(1, 2, races(null), withVeteran(6)),
+			ticket(1, 3, races(0), withVeteran(null)),
+		])
+		expect(umas).toEqual([
+			{ uma: OGURI, trained_uma: 5, wins: 2, raced: 2 },
+			{ uma: OGURI, trained_uma: null, wins: 1, raced: 1 },
+			{ uma: OGURI, trained_uma: 6, wins: 0, raced: 1 },
+		])
 	})
 
 	it("shows an en dash when nothing was raced", () => {

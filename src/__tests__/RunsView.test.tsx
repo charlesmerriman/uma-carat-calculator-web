@@ -46,6 +46,8 @@ const TEAM: PvpTeam = {
 const session = vi.hoisted(() => ({ signedIn: true }))
 // The account's veterans, as GET /trained-umas answers.
 const veterans = vi.hoisted(() => ({ list: [] as unknown[] }))
+// The event's logged runs, as GET /pvp-runs answers.
+const runs = vi.hoisted(() => ({ list: [] as unknown[] }))
 const teams = vi.hoisted(() => ({ list: [] as PvpTeam[] }))
 const toastError = vi.hoisted(() => vi.fn())
 
@@ -92,9 +94,10 @@ beforeEach(() => {
 	session.signedIn = true
 	teams.list = [TEAM]
 	veterans.list = []
+	runs.list = []
 	fetchMock.mockImplementation((url: string, init?: RequestInit) => {
 		if (init?.method && init.method !== "GET") return Promise.resolve(new Response("{}", { status: 200 }))
-		const body = String(url).includes("/trained-umas") ? JSON.stringify(veterans.list) : "[]"
+		const body = JSON.stringify(String(url).includes("/trained-umas") ? veterans.list : String(url).includes("/pvp-runs") ? runs.list : [])
 		return Promise.resolve(new Response(body, { status: 200 }))
 	})
 	vi.stubGlobal("fetch", fetchMock)
@@ -208,13 +211,34 @@ describe("veterans", () => {
 		await waitFor(() => expect(puts()).toHaveLength(1))
 		expect((puts()[0].body.runners as Array<{ trained_uma: number | null }>).map((runner) => runner.trained_uma)).toEqual([5, null, null])
 
-		// Only Oguri has a veteran, so only her runner gets the pick.
-		const pick = await within(ticket).findByLabelText("Veteran for Oguri Cap")
-		expect(within(ticket).queryByLabelText("Veteran for Maruzensky")).toBeNull()
-		expect(pick).toHaveValue("5")
-		fireEvent.change(pick, { target: { value: "" } })
+		// Only Oguri has a veteran, so only her runner gets the pick; it names hers.
+		const pick = await within(ticket).findByRole("button", { name: "Veteran for Oguri Cap: Main Oguri" })
+		expect(within(ticket).queryByRole("button", { name: /Veteran for Maruzensky/ })).toBeNull()
+		fireEvent.click(pick)
+		const picker = within(screen.getByRole("dialog", { name: "Which Oguri Cap is she?" }))
+		expect(picker.getByRole("button", { name: /Main Oguri/ })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(picker.getByRole("button", { name: "No veteran" }))
 		await waitFor(() => expect(puts()).toHaveLength(2))
 		expect((puts()[1].body.runners as Array<{ trained_uma: number | null }>)[0].trained_uma).toBeNull()
+		expect(screen.queryByRole("dialog")).toBeNull()
+	})
+
+	it("splits the win rates by veteran, each linked to the Collection", async () => {
+		veterans.list = [VETERAN, { ...VETERAN, id: 6, label: "Second Oguri" }]
+		const lineup = (veteran: number) => [{ position: 0, uma: 41, style: "pace", trained_uma: veteran }]
+		runs.list = [
+			{ kind: "cm", event: 10, stage: "day", day: 1, ticket: 1, runners: lineup(5), races: [{ race: 1, winner: 0 }],
+				finals_group: "", placement: null, note: "", updated_at: "" },
+			{ kind: "cm", event: 10, stage: "day", day: 1, ticket: 2, runners: lineup(6), races: [{ race: 1, winner: null }],
+				finals_group: "", placement: null, note: "", updated_at: "" },
+		]
+		show()
+		const summary = await screen.findByRole("region", { name: "Your win rates" })
+		const first = within(summary).getByRole("link", { name: "Main Oguri" })
+		expect(first).toHaveAttribute("href", "/app/collection?veteran=5")
+		expect(within(summary).getByRole("link", { name: "Second Oguri" })).toHaveAttribute("href", "/app/collection?veteran=6")
+		expect(within(summary).getByText("1 of 1")).toBeInTheDocument()
+		expect(within(summary).getByText("0 of 1")).toBeInTheDocument()
 	})
 })
 

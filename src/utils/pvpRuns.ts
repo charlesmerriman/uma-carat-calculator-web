@@ -15,6 +15,8 @@
  *   Oguri   2 of 4 = 50%, Maruzensky 1 of 4 = 25%, Gold Ship 0 of 4
  *
  * Each uma is measured against every race she ran in, won by anyone or lost.
+ * Two different veterans of one uma are two rows (owner, 2026-10-26): a tally
+ * is per uma AND veteran, and a runner with no veteran linked is her own row.
  *
  * The limits mirror the API (models/pvp_run.py): a CM is 4 days of 4 tickets
  * of 5 races, Round 1 days 1-2 and Round 2 days 3-4, then one final race.
@@ -134,6 +136,8 @@ export interface Tally {
 
 export interface UmaTally extends Tally {
 	uma: number
+	/** The veteran that ran, or null when none was linked. */
+	trained_uma: number | null
 }
 
 export interface RunsSummary {
@@ -149,19 +153,21 @@ export function tallyRun(run: Pick<PvpRun, "races">): Tally {
 	return { wins: run.races.filter((race) => race.winner !== null).length, raced: run.races.length }
 }
 
-/** The team's and each uma's wins over `runs`. See the header for the rules. */
+/** The team's and each uma's (each veteran's) wins over `runs`. See the header for the rules. */
 export function summarizeRuns(runs: Array<Pick<PvpRun, "races" | "runners">>): RunsSummary {
 	const total = { ...EMPTY }
-	const byUma = new Map<number, UmaTally>()
+	const byUma = new Map<string, UmaTally>()
 	for (const run of runs) {
 		const { wins, raced } = tallyRun(run)
 		total.wins += wins
 		total.raced += raced
 		for (const runner of run.runners) {
-			const tally = byUma.get(runner.uma) ?? { uma: runner.uma, wins: 0, raced: 0 }
+			const veteran = runner.trained_uma ?? null
+			const key = `${runner.uma}:${veteran ?? ""}`
+			const tally = byUma.get(key) ?? { uma: runner.uma, trained_uma: veteran, wins: 0, raced: 0 }
 			tally.raced += raced
 			tally.wins += run.races.filter((race) => race.winner === runner.position).length
-			byUma.set(runner.uma, tally)
+			byUma.set(key, tally)
 		}
 	}
 	const umas = [...byUma.values()].sort((a, b) => b.raced - a.raced || b.wins - a.wins)
