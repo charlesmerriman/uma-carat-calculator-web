@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
-import { ChevronDown, LogOut, UserRound } from "lucide-react"
+import { ChevronDown, Library, LogOut, UserRound } from "lucide-react"
 import { useAccount } from "../../services/AuthContext"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { Avatar } from "../account/Avatar"
@@ -131,6 +131,11 @@ export const ProfileMenu = () => {
 					<Link role="menuitem" to="/account" onClick={() => setOpen(false)} className={MENU_ITEM}>
 						<UserRound className="h-4 w-4" />
 						Account
+					</Link>
+					{/* The player's game collection (veterans): off the navbar on purpose. */}
+					<Link role="menuitem" to="/app/collection" onClick={() => setOpen(false)} className={MENU_ITEM}>
+						<Library className="h-4 w-4" />
+						Collection
 					</Link>
 					<button role="menuitem" type="button" onClick={() => void handleSignOut()} className={MENU_ITEM}>
 						<LogOut className="h-4 w-4" />

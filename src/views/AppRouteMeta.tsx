@@ -28,7 +28,7 @@ interface RouteMeta {
 	description: string
 }
 
-type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills"
+type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -59,6 +59,11 @@ const META: Record<AppPath, RouteMeta> = {
 		title: "PvP Guides",
 		description:
 			"What to build for each Uma Musume Champions Meeting and League of Heroes on global: recommended stats, umas, skills and support decks.",
+	},
+	// One player's own account: noindex below, and not prerendered.
+	"/app/collection": {
+		title: "Collection",
+		description: "Your Uma Musume veterans, with their stats, aptitudes and skills, to link to your PvP teams and CM runs.",
 	},
 	"/app/skills": {
 		title: "Skills",
@@ -117,6 +122,7 @@ export const AppRouteMeta = () => {
 
 	// The Skills page is shelved to guide editors (useSkillsPreview): noindex,
 	// like a shared plan, and not prerendered, until it is picked up again.
-	useDocumentMeta(meta.title, meta.description, path === "shared" || path === "/app/skills")
+	// The Collection is one player's account, so it never should be.
+	useDocumentMeta(meta.title, meta.description, path === "shared" || path === "/app/skills" || path === "/app/collection")
 	return null
 }

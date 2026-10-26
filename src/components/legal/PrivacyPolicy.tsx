@@ -142,9 +142,10 @@ export const PrivacyPolicy: React.FC = () => {
 					</p>
 					<p className={paragraph}>
 						If you log your Champions Meeting runs on the PvP page, we store the umas you ran
-						on each ticket and the results you enter. They are kept on your account only (a
-						guest can&apos;t log runs), only you can see them, and they are deleted with your
-						account.
+						on each ticket and the results you enter. If you add veterans to your Collection,
+						we store each one&apos;s uma, stats, aptitudes and skills. Both are kept on your
+						account only (a guest can&apos;t add either), only you can see them, and they are
+						deleted with your account.
 					</p>
 
 					<h2 className={heading}>The PvP Gallery</h2>

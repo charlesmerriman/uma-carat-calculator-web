@@ -80,6 +80,7 @@ knip treats an export used only inside its own file as fine (`ignoreExportsUsedI
 | `/app/legend-races` | Daily legend races |
 | `/app/pvp` | PvP guides, the team planner and the gallery |
 | `/app/<public_id>` | A shared plan's landing page (not prerendered) |
+| `/app/collection` | Your veterans: stats, aptitudes and skills (account only, `noindex`, not prerendered) |
 | `/faq` | Every income source, explained |
 | `/changelog` | Patch notes |
 | `/feedback` | Bug reports and suggestions |

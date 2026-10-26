@@ -728,7 +728,7 @@ because the image is `aria-hidden` and the caller owns the accessible name.
 Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: a
 pill (`NAV_PROFILE_TRIGGER` in `navStyles.ts`) with the account's avatar as its
 left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
-opening a menu with **Account** and **Sign out** (since 2026-09-12; sign-out used
+opening a menu with **Account**, **Collection** (since 2026-10-26) and **Sign out** (since 2026-09-12; sign-out used
 to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
 `desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
 is already save + settings + theme + this. A guest still sees the Login link. The
@@ -805,6 +805,32 @@ unlocks. The client filters nothing and decides nothing; the server refuses a
 variant a free account somehow sends. The parent owns the write; the dialog
 closes only once the PATCH succeeds, so a refused pick leaves the grid open
 with the server's reason toasted ("Your tier covers 3 favorites.").
+
+## Collection page (`components/collection/`)
+
+`/app/collection`: everything confirmed about the player's own game account (owner,
+2026-10-26; `notes/pvp-planner-plan.md`, R2, "The Collection"). Today one section,
+**Veterans** (umas they finished training); owned umas and support cards join later as tabs.
+
+- **Account only, and off the navbar.** A guest gets a sign-in card. It is reached from the
+  profile menu's Collection item and the Account page's Collection card
+  (`CollectionSummary`, which shares the cached list). Like `/account` it is NOT
+  prerendered and not in the sitemap; `AppRouteMeta` marks it noindex. It is in the API's
+  `visits.KNOWN_ROUTES`.
+- **Manage here, pick elsewhere.** Adding, editing and deleting veterans happens only here;
+  My team and CM Runs only choose from the list (`services/trainedUmaQueries.ts`,
+  TanStack Query, one cached list for every reader).
+- **The form (`VeteranForm`) is an inline panel, never a modal**: it opens the uma picker
+  (`PvpCardPicker`, an overlay), which a native `<dialog>` would cover in the top layer.
+  Picking the uma fills her aptitudes from her own (`withUma`), so the player changes only
+  what training changed. Skills are searched by name (`searchSkills`); a unique skill
+  (rarity 3 to 5) gets a level. The checks under each field are the API's rules
+  (`draftProblems`), shown once Save is tried. A veteran from the game (`source: "import"`)
+  keeps the game's numbers: its fields are disabled and an edit sends `label` only.
+- Rows show the label (else the uma's name), the five stats, the A and S letters, the skill
+  count, "From the game" / "By hand", and "Not in your latest import" when a re-import kept
+  her only because a logged CM run uses her.
+- Tests: `CollectionPage.test.tsx` (the flows), `trainedUmas.test.ts` (the form's rules).
 
 ## Brand mark and display font
 
