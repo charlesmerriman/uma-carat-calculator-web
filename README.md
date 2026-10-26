@@ -1,12 +1,13 @@
 # Uma Carat Calculator (Web)
 
 **Live at [umacaratcalculator.com](https://umacaratcalculator.com)**, a planning tool for
-Uma Musume Pretty Derby players with over **100,000 visitors a month**. Since its September 2026 launch: nearly 400,000
-visits, 16,600 accounts holding 18,500 saved plans, and 86 Patreon supporters.
+Uma Musume Pretty Derby players with over **100,000 visitors a month**. Since its September
+2026 launch: nearly 400,000 visits, 16,600 accounts (95% of them actively planning) holding
+18,500 saved plans, and 86 Patreon supporters.
 
 [![CI](https://github.com/charlesmerriman/uma-carat-calculator-web/actions/workflows/ci.yml/badge.svg)](https://github.com/charlesmerriman/uma-carat-calculator-web/actions/workflows/ci.yml)
 
-<!-- TODO: screenshot of the planner (docs/images/planner.png), then delete this line -->
+![The planner: income settings, current resources, and five planned banners with the carats left and the odds at each](docs/images/planner.webp)
 
 This is the React frontend. The Django API behind it is
 [uma-carat-calculator-api](https://github.com/charlesmerriman/uma-carat-calculator-api).
@@ -29,6 +30,10 @@ each banner ends, before they spend rather than after.
 - **PvP guides** for Champions Meeting and League of Heroes: a guide per event that staff
   write in an on-site editor, a team planner, and a community gallery with votes, comments and
   moderation.
+
+| The timeline | A PvP guide |
+|---|---|
+| ![Upcoming banners on the timeline, with their featured umas and support cards](docs/images/timeline.webp) | ![A Champions Meeting guide: course, schedule, style ranking and recommended stats](docs/images/pvp-guide.webp) |
 
 No page needs an account. A guest's plan is kept on their device, and signing in with Google,
 Discord or Patreon moves it to the account.
