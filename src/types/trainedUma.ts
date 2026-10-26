@@ -32,6 +32,14 @@ export interface TrainedUma extends VeteranInput {
 	import_key: number | null
 	/** Kept by a re-import only because a logged CM run links it. */
 	missing_from_import: boolean
+	/** The player's own note on her, from the game. Shown only to them. */
+	memo: string
+	/** Another player's veteran (a rental), from the game. */
+	is_borrowed: boolean
+	/** When the game says she finished training (ISO), null for a hand entry. The list's order. */
+	trained_at: string | null
+	/** Whether the raw game object is kept (GET /trained-umas/<id> sends it as `game_data`). */
+	has_game_data: boolean
 	created_at: string
 	updated_at: string
 }

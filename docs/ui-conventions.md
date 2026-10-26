@@ -827,9 +827,23 @@ with the server's reason toasted ("Your tier covers 3 favorites.").
   (rarity 3 to 5) gets a level. The checks under each field are the API's rules
   (`draftProblems`), shown once Save is tried. A veteran from the game (`source: "import"`)
   keeps the game's numbers: its fields are disabled and an edit sends `label` only.
+- **Import from the game** (`ImportPanel`, an inline panel): the player picks umadump's
+  `trained_chara_data.json`; `utils/gameImport/umadumpVeterans.ts` reads it IN THE BROWSER,
+  recognised by shape (a renamed file still works). **Everything about each veteran is sent**
+  as `game_data` (owner, 2026-10-26: sparks, parents, deck, career, the player's own game
+  account id and memo), except OTHER players' account ids and any trainer name, which
+  `stripOtherPlayers` removes first (the API strips them again). Outfits and skills are
+  matched through the catalogue's `game_id`; unknown ones are counted and left out. The
+  preview ticks every veteran, newest first, borrowed ones marked; there is **no limit** on
+  how many an account keeps. Saving replaces the last import (the API keeps any a logged CM
+  run uses), and the panel says so before Save. **The request is gzipped**
+  (`gzipText`, `CompressionStream`; plain JSON where a browser can't): 256 veterans are
+  1.9 MB raw against the API's 2.5 MB limit and 90 KB gzipped. umadump is linked as a
+  community tool the site does not make; the page never tells anyone to run it.
 - Rows show the label (else the uma's name), the five stats, the A and S letters, the skill
-  count, "From the game" / "By hand", and "Not in your latest import" when a re-import kept
-  her only because a logged CM run uses her.
+  count, "From the game" / "By hand", "Borrowed" for a rental, her game memo, and "Not in
+  your latest import" when a re-import kept her only because a logged CM run uses her.
+  Newest trained first (the API orders by the game's own time).
 - Tests: `CollectionPage.test.tsx` (the flows), `trainedUmas.test.ts` (the form's rules).
 
 ## Brand mark and display font

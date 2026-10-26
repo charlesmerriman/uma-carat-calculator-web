@@ -29,3 +29,38 @@ export function trainedUmaPatch(id: number, changes: Partial<VeteranInput>): Pro
 export function trainedUmaDelete(id: number): Promise<Response> {
 	return fetch(`${API_URL}/trained-umas/${id}`, { method: "DELETE", headers: jsonHeaders() })
 }
+
+/**
+ * `text` gzipped, or null where the browser can't compress (then the caller
+ * sends it plain). Through Response streams rather than Blob.stream(), which
+ * not every runtime has.
+ */
+export async function gzipText(text: string): Promise<ArrayBuffer | null> {
+	if (typeof CompressionStream === "undefined") return null
+	try {
+		const packed = new Response(text).body?.pipeThrough(new CompressionStream("gzip"))
+		return packed ? await new Response(packed).arrayBuffer() : null
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Write a game export's veterans: update by the game's id, add new ones, and
+ * remove the ones not in `items` unless a logged run links them. The items are
+ * built in the browser from the player's file (utils/gameImport).
+ *
+ * Gzipped: a long-time account's raw veterans run to megabytes, past the
+ * API's 2.5 MB body limit, and to about 90 KB gzipped. The API reads
+ * `Content-Encoding: gzip` (views/trained_uma.GzipJSONParser).
+ */
+export async function trainedUmaImport(items: unknown[]): Promise<Response> {
+	const text = JSON.stringify({ items })
+	const packed = await gzipText(text)
+	return fetch(`${API_URL}/trained-umas/import`, {
+		method: "POST",
+		headers: packed ? { ...jsonHeaders(), "Content-Encoding": "gzip" } : jsonHeaders(),
+		body: packed ?? text,
+	})
+}
+

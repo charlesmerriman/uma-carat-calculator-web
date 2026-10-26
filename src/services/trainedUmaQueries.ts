@@ -13,7 +13,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { refusalText } from "./galleryFetchCalls"
 import { HttpError } from "./queryClient"
-import { trainedUmaCreate, trainedUmaDelete, trainedUmaPatch, trainedUmasFetch } from "./trainedUmaFetchCalls"
+import { trainedUmaCreate, trainedUmaDelete, trainedUmaImport, trainedUmaPatch, trainedUmasFetch } from "./trainedUmaFetchCalls"
 import type { TrainedUma, VeteranInput } from "../types/trainedUma"
 
 export const trainedUmaKeys = {
@@ -78,3 +78,25 @@ export function useDeleteVeteran() {
 			client.setQueryData<TrainedUma[]>(trainedUmaKeys.all, (list = []) => list.filter((entry) => entry.id !== id)),
 	})
 }
+
+/** What an import did, and the list as it now stands. */
+export interface ImportOutcome {
+	created: number
+	updated: number
+	removed: number
+	kept: number
+	veterans: TrainedUma[]
+}
+
+export function useImportVeterans() {
+	const client = useQueryClient()
+	return useMutation({
+		mutationFn: async (items: unknown[]): Promise<ImportOutcome> => {
+			const response = await trainedUmaImport(items)
+			if (!response.ok) throw new HttpError(response.status, await refusalText(response, "The import wasn't saved."))
+			return (await response.json()) as ImportOutcome
+		},
+		onSuccess: (outcome) => client.setQueryData<TrainedUma[]>(trainedUmaKeys.all, outcome.veterans),
+	})
+}
+
