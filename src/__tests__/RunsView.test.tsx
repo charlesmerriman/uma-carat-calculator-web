@@ -70,6 +70,20 @@ const { RunsView } = await import("../components/pvp/RunsView")
 
 const fetchMock = vi.fn()
 
+/** Every DELETE sent so far, by path. */
+function deletes(): string[] {
+	return fetchMock.mock.calls
+		.filter(([, init]) => (init as RequestInit | undefined)?.method === "DELETE")
+		.map(([url]) => new URL(String(url), "http://api").pathname)
+}
+
+/** One logged day ticket, as GET /pvp-runs answers. */
+const logged = (ticket: number, races: Array<{ race: number; winner: number | null }>, extra: Record<string, unknown> = {}) => ({
+	kind: "cm", event: 10, stage: "day", day: 1, ticket, races,
+	runners: TEAM.members.map(({ position, uma, style }) => ({ position, uma, style, trained_uma: null })),
+	finals_group: "", placement: null, note: "", skipped: false, updated_at: "", ...extra,
+})
+
 /** Every PUT body sent so far, by path. */
 function puts(): Array<{ path: string; body: Record<string, unknown> }> {
 	return fetchMock.mock.calls
@@ -177,6 +191,62 @@ describe("logging a ticket", () => {
 		fireEvent.click(within(ticket).getByRole("button", { name: "Team 1" }))
 		await waitFor(() => expect(toastError).toHaveBeenCalledWith("A ticket is 5 races."))
 		expect(await screen.findByText("Not saved")).toBeTruthy()
+	})
+})
+
+describe("skipping", () => {
+	it("skips an unplayed ticket and takes it back", async () => {
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Skip this ticket" }))
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].body).toMatchObject({ runners: [], races: [], skipped: true })
+
+		const skipped = screen.getByRole("region", { name: "Ticket 1" })
+		expect(within(skipped).getByText("Skipped")).toBeTruthy()
+		// Nothing else was logged there, so taking it back clears the slot.
+		fireEvent.click(within(skipped).getByRole("button", { name: "Undo" }))
+		await waitFor(() => expect(deletes()).toEqual(["/pvp-runs/cm/10/day/1/ticket/1"]))
+		expect(within(screen.getByRole("region", { name: "Ticket 1" })).getByRole("button", { name: "Team 1" })).toBeTruthy()
+	})
+
+	it("stops a ticket early, and logging another race reopens it", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: 0 }, { race: 2, winner: null }])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Skip the rest" }))
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].body).toMatchObject({ skipped: true })
+		expect(within(ticket).getByText("Stopped after 2 races")).toBeTruthy()
+
+		// Slow typing, not a stop: race 3 ran after all.
+		fireEvent.change(within(ticket).getByLabelText("Ticket 1, race 3"), { target: { value: "1" } })
+		await waitFor(() => expect(puts()).toHaveLength(2))
+		expect(puts()[1].body).toMatchObject({ skipped: false })
+		expect(within(ticket).queryByText(/Stopped after/)).toBeNull()
+	})
+
+	it("offers a day that is over to mark its unlogged tickets skipped", async () => {
+		// Started 30 hours ago: today is Day 2, so Day 1 is over.
+		const started = { ...CM, start_date: new Date(Date.now() - 30 * 3_600_000).toISOString() } as RaceEvent
+		runs.list = [logged(1, [{ race: 1, winner: 0 }])]
+		show(started)
+		fireEvent.click(await screen.findByRole("tab", { name: /Day 1/ }))
+		expect(screen.getByText("Day 1 is over. Nothing is logged for Tickets 2, 3 and 4.")).toBeTruthy()
+		fireEvent.click(screen.getByRole("button", { name: "Mark the rest skipped" }))
+
+		await waitFor(() => expect(puts()).toHaveLength(3))
+		expect(puts().map(({ path }) => path)).toEqual([2, 3, 4].map((ticket) => `/pvp-runs/cm/10/day/1/ticket/${ticket}`))
+		expect(puts().every(({ body }) => body.skipped === true)).toBe(true)
+		expect(screen.queryByRole("button", { name: "Mark the rest skipped" })).toBeNull()
+		const summary = screen.getByRole("region", { name: "Your win rates" })
+		expect(within(summary).getByText("3 skipped")).toBeTruthy()
+	})
+
+	it("never offers it on the day that is on now", async () => {
+		show()
+		await screen.findByRole("region", { name: "Ticket 1" })
+		expect(screen.queryByRole("button", { name: "Mark the rest skipped" })).toBeNull()
 	})
 })
 

@@ -10,6 +10,11 @@
  * later never changes what was logged. Then five dropdowns say which of the
  * three won each race, or Loss.
  *
+ * A ticket can be skipped whole or stopped after some races, and both can be
+ * taken back (owner, 2026-10-26: a player may just be slow to type it in). A
+ * day that is over offers its unlogged tickets as skipped in one tap; nothing
+ * is ever skipped for the player (utils/pvpRuns.ts, "SKIPPED TICKETS").
+ *
  * Account only (owner, 2026-10-26): a guest gets a sign-in card and nothing is
  * kept on the device. Every change saves at once through
  * services/pvpRunQueries.ts. League of Heroes runs fit the same API but have no
@@ -43,9 +48,12 @@ import {
 	RUN_RACES,
 	bestTicketWins,
 	cmDayAt,
+	emptyContent,
 	findRun,
 	formatRate,
+	isPastDay,
 	lineupFromTeam,
+	logRace,
 	ordinal,
 	previousLineup,
 	roundOfDay,
@@ -54,6 +62,9 @@ import {
 	setRace,
 	summarizeRuns,
 	tallyRun,
+	ticketCounts,
+	ticketState,
+	unloggedTickets,
 } from "../../utils/pvpRuns"
 import type { RaceEvent } from "../../types"
 import type { CatalogueUma, PvpTeam } from "../../types/pvpTeam"
@@ -152,6 +163,10 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		setFailed(false)
 		save(slot, change)
 	}
+	// A day that is over, with tickets that have nothing logged: offered as
+	// skipped in one tap, never assumed (the player may still type them in).
+	const today = cmDayAt(event, calculationConstants, new Date())
+	const unlogged = tab !== "final" && isPastDay(tab, today) ? unloggedTickets(runs, tab) : []
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -175,6 +190,25 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 					onWrite={(change) => write({ stage: "final" }, change)}
 				/>
 			) : (
+				<>
+				{unlogged.length > 0 && (
+					<div className="card-panel flex flex-wrap items-center gap-3 p-3 text-sm text-gray-300">
+						<span className="min-w-0 flex-1">
+							Day {tab} is over. Nothing is logged for {ticketList(unlogged)}.
+						</span>
+						<button
+							type="button"
+							className={SMALL_BUTTON}
+							onClick={() =>
+								unlogged.forEach((ticket) =>
+									write({ stage: "day", day: tab, ticket }, () => ({ ...emptyContent(), skipped: true }))
+								)
+							}
+						>
+							Mark the rest skipped
+						</button>
+					</div>
+				)}
 				<div className="grid gap-3 sm:grid-cols-2">
 					{Array.from({ length: CM_RUN_TICKETS }, (_, index) => {
 						const ticket = index + 1
@@ -194,11 +228,18 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 						)
 					})}
 				</div>
+				</>
 			)}
 
 			<Summary runs={runs} umasById={umasById} oshiIds={oshiIds} veterans={veterans} />
 		</div>
 	)
+}
+
+/** "Ticket 3", "Tickets 3 and 4", "Tickets 2, 3 and 4". */
+function ticketList(tickets: number[]): string {
+	if (tickets.length === 1) return `Ticket ${tickets[0]}`
+	return `Tickets ${tickets.slice(0, -1).join(", ")} and ${tickets[tickets.length - 1]}`
 }
 
 /**
@@ -263,8 +304,31 @@ interface CardProps {
 
 function TicketCard({ title, ...props }: CardProps & { title: string }) {
 	const { run, umasById, onWrite } = props
+	const state = ticketState(run)
+	const skip = () => onWrite((current) => ({ ...current, skipped: true }))
+	const unskip = () => onWrite((current) => ({ ...current, skipped: false }))
+
+	if (state === "skipped") {
+		return (
+			<section className="card-panel flex items-center justify-between gap-2 p-3" aria-label={title}>
+				<div className="flex flex-col gap-0.5">
+					<h3 className="text-sm font-semibold text-gray-100">{title}</h3>
+					<p className="text-xs text-gray-400">Skipped</p>
+				</div>
+				{/* Back to how it was: its lineup if it had one, else nothing logged. */}
+				<button
+					type="button"
+					className={SMALL_BUTTON}
+					onClick={() => onWrite((current) => (current.runners.length ? { ...current, skipped: false } : null))}
+				>
+					Undo
+				</button>
+			</section>
+		)
+	}
+
 	return (
-		<RunCard title={title} {...props}>
+		<RunCard title={title} {...props} onSkip={skip}>
 			{run && run.runners.length > 0 && (
 				<>
 					<div className="flex flex-col gap-1.5">
@@ -275,18 +339,35 @@ function TicketCard({ title, ...props }: CardProps & { title: string }) {
 								label={`${title}, race ${index + 1}`}
 								run={run}
 								umasById={umasById}
-								onChange={(winner) =>
-									onWrite((current) => ({ ...current, races: setRace(current.races, index + 1, winner) }))
-								}
+								onChange={(winner) => onWrite((current) => logRace(current, index + 1, winner))}
 							/>
 						))}
 					</div>
-					<p className="text-sm text-gray-300">
-						{(() => {
-							const { wins, raced } = tallyRun(run)
-							return raced ? `${wins} of ${raced} won (${formatRate({ wins, raced })})` : "No races logged yet."
-						})()}
-					</p>
+					{(() => {
+						const { wins, raced } = tallyRun(run)
+						return (
+							<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+								<p className="min-w-0 flex-1 text-sm text-gray-300">
+									{raced ? `${wins} of ${raced} won (${formatRate({ wins, raced })})` : "No races logged yet."}
+								</p>
+								{state === "stopped" && (
+									<>
+										<span className="text-xs text-gray-400">
+											Stopped after {raced === 1 ? "1 race" : `${raced} races`}
+										</span>
+										<button type="button" className={SMALL_BUTTON} onClick={unskip}>
+											Undo
+										</button>
+									</>
+								)}
+								{state === "started" && (
+									<button type="button" className={SMALL_BUTTON} onClick={skip}>
+										{raced ? "Skip the rest" : "Skip this ticket"}
+									</button>
+								)}
+							</div>
+						)
+					})()}
 				</>
 			)}
 		</RunCard>
@@ -356,10 +437,12 @@ function FinalCard(props: CardProps) {
 
 /**
  * The frame both cards share: the title, the lineup (or the choice of one),
- * and Change / Clear. The races go in `children`.
+ * and Change / Clear, or Skip while nobody has run it (a day's ticket only).
+ * The races go in `children`.
  */
-function RunCard({ title, run, choices, umasById, oshiIds, veterans, onOpenMyTeam, onWrite, children }: CardProps & {
+function RunCard({ title, run, choices, umasById, oshiIds, veterans, onOpenMyTeam, onWrite, onSkip, children }: CardProps & {
 	title: string
+	onSkip?: () => void
 	children: ReactNode
 }) {
 	const [picking, setPicking] = useState(false)
@@ -382,6 +465,11 @@ function RunCard({ title, run, choices, umasById, oshiIds, veterans, onOpenMyTea
 		<section className="card-panel flex flex-col gap-3 p-3" aria-label={title}>
 			<div className="flex items-center justify-between gap-2">
 				<h3 className="text-sm font-semibold text-gray-100">{title}</h3>
+				{!hasLineup && onSkip && (
+					<button type="button" className={SMALL_BUTTON} onClick={onSkip}>
+						Skip this ticket
+					</button>
+				)}
 				{hasLineup && (
 					<div className="flex gap-1.5">
 						<button type="button" className={SMALL_BUTTON} onClick={() => setPicking((open) => !open)}>
@@ -540,7 +628,8 @@ function Summary({ runs, umasById, oshiIds, veterans }: {
 }) {
 	const { total, umas } = summarizeRuns(runsOf(runs, {}))
 	const final = findRun(runs, { stage: "final" })
-	if (!total.raced && !final) return null
+	const tickets = ticketCounts(runs)
+	if (!total.raced && !final && !tickets.skipped) return null
 	const rounds = [1, 2].map((round) => ({ round, best: bestTicketWins(runs, round) }))
 	return (
 		<section className="card-panel flex flex-col gap-3 p-3" aria-label="Your win rates">
@@ -548,8 +637,13 @@ function Summary({ runs, umasById, oshiIds, veterans }: {
 				<Trophy className="h-4 w-4 text-brand" />
 				This Champions Meeting
 			</h3>
-			<dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+			<dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
 				<Stat label="Win rate" value={formatRate(total)} detail={`${total.wins} of ${total.raced} races`} />
+				<Stat
+					label="Tickets used"
+					value={String(tickets.used)}
+					detail={tickets.skipped ? `${tickets.skipped} skipped` : undefined}
+				/>
 				{rounds.map(({ round, best }) => (
 					<Stat
 						key={round}

@@ -18,6 +18,15 @@
  * Two different veterans of one uma are two rows (owner, 2026-10-26): a tally
  * is per uma AND veteran, and a runner with no veteran linked is her own row.
  *
+ * SKIPPED TICKETS (owner, 2026-10-26)
+ * -----------------------------------
+ * A ticket's `skipped` flag is the player saying the races it does not list
+ * never ran: none listed = the ticket went unused, some = they stopped after
+ * those. It changes no win rate (an unlisted race was never counted) and only
+ * the player sets it: a past day's empty ticket may just not be typed in yet,
+ * so the view offers "Mark the rest skipped" and never assumes it. Logging a
+ * race the ticket did not list takes the skip back (logRace): it ran after all.
+ *
  * The limits mirror the API (models/pvp_run.py): a CM is 4 days of 4 tickets
  * of 5 races, Round 1 days 1-2 and Round 2 days 3-4, then one final race.
  */
@@ -107,13 +116,13 @@ export function previousLineup(runs: PvpRun[], day: number, ticket: number): Pvp
 
 /** An empty ticket's content: a lineup and nothing else. */
 export function emptyContent(runners: PvpRunRunner[] = []): PvpRunContent {
-	return { runners, races: [], finals_group: "", placement: null, note: "" }
+	return { runners, races: [], finals_group: "", placement: null, note: "", skipped: false }
 }
 
 /** A run's content, the part a PUT sends. */
 export function contentOf(run: PvpRun): PvpRunContent {
-	const { runners, races, finals_group, placement, note } = run
-	return { runners, races, finals_group, placement, note }
+	const { runners, races, finals_group, placement, note, skipped } = run
+	return { runners, races, finals_group, placement, note, skipped }
 }
 
 /**
@@ -124,6 +133,61 @@ export function setRace(races: PvpRunRace[], race: number, winner: number | null
 	const others = races.filter((entry) => entry.race !== race)
 	const next = winner === undefined ? others : [...others, { race, winner }]
 	return next.sort((a, b) => a.race - b.race)
+}
+
+/**
+ * The ticket with race `race` set as setRace does. Logging a race the ticket
+ * did not list takes a skip back: the player says it ran after all (they were
+ * slow to type it in, owner 2026-10-26). Changing or clearing a listed race
+ * keeps the skip, so "stopped after 2" stays stopped after a winner is fixed.
+ */
+export function logRace(content: PvpRunContent, race: number, winner: number | null | undefined): PvpRunContent {
+	const added = winner !== undefined && !content.races.some((entry) => entry.race === race)
+	return { ...content, races: setRace(content.races, race, winner), skipped: content.skipped && !added }
+}
+
+// ── Skips ────────────────────────────────────────────────────────────────
+
+/**
+ * Where a day's ticket stands, from its row (undefined = no row):
+ *
+ *   unlogged  no row: not played yet, or played and not typed in yet
+ *   skipped   the player skipped it whole (no races listed)
+ *   stopped   the player stopped after the races listed
+ *   started   a lineup, fewer than five races so far
+ *   done      all five raced
+ */
+export type TicketState = "unlogged" | "skipped" | "stopped" | "started" | "done"
+
+export function ticketState(run: Pick<PvpRun, "races" | "skipped"> | undefined): TicketState {
+	if (!run) return "unlogged"
+	if (run.skipped) return run.races.length ? "stopped" : "skipped"
+	return run.races.length >= RUN_RACES ? "done" : "started"
+}
+
+/** Day tickets played (a race or more listed, stopped ones too) and skipped whole. */
+export function ticketCounts(runs: PvpRun[]): { used: number; skipped: number } {
+	const days = runs.filter((run) => run.stage === "day")
+	return {
+		used: days.filter((run) => run.races.length > 0).length,
+		skipped: days.filter((run) => ticketState(run) === "skipped").length,
+	}
+}
+
+/** The tickets of `day` with no row at all: what "Mark the rest skipped" marks. */
+export function unloggedTickets(runs: PvpRun[], day: number): number[] {
+	return Array.from({ length: CM_RUN_TICKETS }, (_, index) => index + 1).filter(
+		(ticket) => !findRun(runs, { stage: "day", day, ticket })
+	)
+}
+
+/**
+ * A day that is over, given cmDayAt's answer for now: every day before it,
+ * and all of them once the final has started (null). Before the event starts
+ * cmDayAt holds at 1, so nothing is over yet.
+ */
+export function isPastDay(day: number, today: number | null): boolean {
+	return today === null || day < today
 }
 
 // ── Win rates ────────────────────────────────────────────────────────────
