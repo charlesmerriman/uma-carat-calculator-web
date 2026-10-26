@@ -2,8 +2,9 @@
  * "Which veteran is she?": a button under a My team member or a CM Runs
  * runner that opens a picker of the player's veterans of ONE outfit (owner,
  * 2026-10-26: a picker, not a dropdown). Each choice is a card with her
- * portrait, stats, best aptitudes, skills, memo and when she was trained, so
- * two Oguri Caps can be told apart. Drawn only when there is a veteran of that
+ * portrait, her grade and score ("A+ 13,815", utils/veteranGrade.ts), stats,
+ * best aptitudes, skills, memo and when she was trained, so two Oguri Caps can
+ * be told apart. The button names her the same way. Drawn only when there is a veteran of that
  * uma to pick (or one is linked): a member with none looks as it always did.
  *
  * An overlay like PvpCardPicker (portal, Escape and a click outside close it),
@@ -17,6 +18,7 @@ import { Check, X } from "lucide-react"
 import { FramedUma } from "../FramedUma"
 import { formatDate } from "../../utils/dateFormat"
 import { aptitudeSummary, statLine, veteransOf } from "../../utils/trainedUmas"
+import { statsTitle, veteranTag, veteranText } from "../../utils/veteranGrade"
 import type { CatalogueUma } from "../../types/pvpTeam"
 import type { TrainedUma } from "../../types/trainedUma"
 
@@ -37,11 +39,12 @@ export function VeteranPicker({ uma, value, veterans, oshi, onChange }: {
 		<>
 			<button
 				type="button"
-				aria-label={`Veteran for ${uma.name}: ${linked ? veteranName(linked, uma) : "none"}`}
+				aria-label={`Veteran for ${uma.name}: ${linked ? veteranText(linked) : "none"}`}
+				title={linked ? statsTitle(linked) : undefined}
 				onClick={() => setOpen(true)}
 				className="mt-1 w-full max-w-full truncate rounded-md border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-left text-[11px] text-gray-200 transition hover:border-brand hover:text-brand"
 			>
-				{linked ? `${linked.label ? `${linked.label} · ` : ""}${statLine(linked)}` : "Pick a veteran"}
+				{linked ? veteranText(linked) : "Pick a veteran"}
 			</button>
 			{open && (
 				<PickerOverlay
@@ -60,9 +63,9 @@ export function VeteranPicker({ uma, value, veterans, oshi, onChange }: {
 	)
 }
 
-/** Her label, else the uma's name. */
+/** Her label, else her game memo, else the uma's name: the card's heading. */
 function veteranName(veteran: TrainedUma, uma: Pick<CatalogueUma, "name">): string {
-	return veteran.label || uma.name
+	return veteran.label || veteran.memo || uma.name
 }
 
 function PickerOverlay({ uma, options, value, oshi, onPick, onClose }: {
@@ -120,6 +123,7 @@ function PickerOverlay({ uma, options, value, oshi, onPick, onClose }: {
 									<span className="min-w-0 flex-1">
 										<span className="block truncate text-sm font-semibold text-gray-100">
 											{veteranName(veteran, uma)}
+											{veteranTag(veteran) && <span className="ml-1.5 rounded bg-brand/15 px-1.5 py-px text-xs text-brand">{veteranTag(veteran)}</span>}
 											{veteran.is_borrowed && <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">Borrowed</span>}
 										</span>
 										<span className="block text-xs text-gray-300">{statLine(veteran)}</span>
