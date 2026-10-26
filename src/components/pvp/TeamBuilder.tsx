@@ -19,6 +19,7 @@ import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatal
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { pvpEventHref, refForRaceEvent, sameEvent } from "../../utils/pvpEvent"
 import { useAccount } from "../../services/AuthContext"
+import { useTrainedUmas } from "../../services/trainedUmaQueries"
 import { PublishDialog } from "./gallery/PublishDialog"
 import {
 	PVP_BORROW_SLOT,
@@ -150,6 +151,9 @@ function ReadyBuilder({ event, teamsState, index }: {
 }) {
 	const { teams, mode, saveState, createTeam, editTeam, renameTeam, deleteTeam, setTeamPost } = teamsState
 	const { account } = useAccount()
+	// The account's veterans, for each member's "which veteran" pick. Never a
+	// guest's: veterans live on an account only (the Collection page).
+	const veterans = useTrainedUmas(mode === "account").data
 	const [publishing, setPublishing] = useState(false)
 	const ref = refForRaceEvent(event)
 	const eventTeams = teams.filter((team) => sameEvent({ kind: team.kind, id: team.event }, ref))
@@ -439,7 +443,15 @@ function ReadyBuilder({ event, teamsState, index }: {
 					}}
 				/>
 
-				<TeamEditor event={event} members={members} index={index} guide={guide} deal={deal} onChange={applyMembers} />
+				<TeamEditor
+					event={event}
+					members={members}
+					index={index}
+					guide={guide}
+					deal={deal}
+					veterans={mode === "account" ? veterans : undefined}
+					onChange={applyMembers}
+				/>
 				<TeamNotes
 					// Per team, so an open note never follows a switch to another team.
 					key={team?.key ?? "none"}

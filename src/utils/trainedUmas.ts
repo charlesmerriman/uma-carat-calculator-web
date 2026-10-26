@@ -158,3 +158,18 @@ export function aptitudeSummary(apt: Record<AptitudeKey, number | null>): string
 		.map(({ key, label }) => `${label} ${aptitudeLetter(apt[key])}`)
 		.join(" · ")
 }
+
+/** The player's veterans of one outfit, the only ones that may stand in for her. */
+export function veteransOf(veterans: TrainedUma[], umaId: number): TrainedUma[] {
+	return veterans.filter((veteran) => veteran.uma === umaId)
+}
+
+/** "1200 / 800 / 1000 / 400 / 900": her stats in the game's order, for a tight spot. */
+export function statLine(veteran: Pick<TrainedUma, StatKey>): string {
+	return STAT_KEYS.map((key) => veteran[key]).join(" / ")
+}
+
+/** A veteran in a dropdown: "Main Oguri · 1200 / 800 / ...", or the stats alone without a label. */
+export function veteranOptionLabel(veteran: TrainedUma): string {
+	return veteran.label ? `${veteran.label} · ${statLine(veteran)}` : statLine(veteran)
+}

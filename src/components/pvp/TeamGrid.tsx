@@ -23,6 +23,8 @@ import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
+import { VeteranSelect } from "../collection/VeteranSelect"
+import type { TrainedUma } from "../../types/trainedUma"
 
 /**
  * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
@@ -57,6 +59,13 @@ export interface TeamGridProps {
 	onClearCard: (position: number, slot: number) => void
 	/** A guide deck being dealt (TeamBuilder's "Use this deck"); none elsewhere. */
 	deal?: DeckDeal
+	/**
+	 * The account's veterans and how to link one (My team, signed in). A
+	 * linked veteran's aptitudes replace the uma's base letters. Omitted
+	 * (a guest, the team window): no veteran picker.
+	 */
+	veterans?: TrainedUma[]
+	onVeteranChange?: (position: number, trainedUma: number | null) => void
 }
 
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
@@ -108,6 +117,8 @@ function MemberPanel({
 	onClearUma,
 	onClearCard,
 	deal,
+	veterans,
+	onVeteranChange,
 }: TeamGridProps & { position: number }) {
 	const member = memberAt(members, position)
 	const reduceMotion = useReducedMotion()
@@ -201,7 +212,23 @@ function MemberPanel({
 				</span>
 				<div className="min-w-0 flex-1">
 					<h3 className="truncate text-sm font-semibold text-gray-100">{umaLabel}</h3>
-					{course && uma && <AptitudeLetters uma={uma} course={course} style={member.style} />}
+					{course && uma && (
+						<AptitudeLetters
+							// Her veteran's letters once one is linked: inheritance may have fixed a D.
+							apt={veterans?.find((veteran) => veteran.id === member.trained_uma)?.apt ?? uma.apt}
+							course={course}
+							style={member.style}
+						/>
+					)}
+					{veterans && onVeteranChange && (
+						<VeteranSelect
+							umaId={member.uma}
+							value={member.trained_uma}
+							veterans={veterans}
+							label={`Veteran for ${umaLabel}`}
+							onChange={(trainedUma) => onVeteranChange(position, trainedUma)}
+						/>
+					)}
 				</div>
 				<label className="relative shrink-0">
 					<span className="sr-only">Running style for {umaLabel}</span>
@@ -374,8 +401,8 @@ function Tile({
  * "Turf A · Medium S · Front B": the letters this race asks of her. A and S
  * in gold, D and below in red, so a poor fit stands out before race day.
  */
-function AptitudeLetters({ uma, course, style }: {
-	uma: CatalogueUma
+function AptitudeLetters({ apt, course, style }: {
+	apt: CatalogueUma["apt"]
 	course: Pick<RaceEvent, "surface_type" | "distance" | "length">
 	style: MemberStyle
 }) {
@@ -384,7 +411,7 @@ function AptitudeLetters({ uma, course, style }: {
 	return (
 		<p className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-gray-400" aria-label="Aptitudes for this race">
 			{aptitudes.map((aptitude) => {
-				const value = uma.apt[aptitude.key]
+				const value = apt[aptitude.key]
 				const letter = aptitudeLetter(value) ?? "?"
 				const tone = value == null ? "text-gray-500" : value >= 7 ? "text-brand" : value <= 4 ? "text-highlight" : "text-gray-200"
 				return (

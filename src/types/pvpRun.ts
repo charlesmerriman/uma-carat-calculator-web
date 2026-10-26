@@ -15,6 +15,8 @@ export interface PvpRunRunner {
 	position: number
 	uma: number
 	style: MemberStyle
+	/** The veteran that ran (the Collection page), or null/absent. */
+	trained_uma?: number | null
 }
 
 /**

@@ -66,14 +66,14 @@ export function cmDayAt(event: RaceEvent, constants: CalculationConstants, now: 
 	return Math.min(CM_RUN_DAYS, Math.max(1, Math.floor(elapsed / DAY_MS) + 1))
 }
 
-/** A team's members as a ticket's lineup: the uma and style per spot, no deck. */
+/** A team's members as a ticket's lineup: the uma, style and veteran per spot, no deck. */
 export function lineupFromTeam(members: PvpTeamMember[]): PvpRunRunner[] {
 	return [...members]
 		.sort((a, b) => a.position - b.position)
-		.map(({ position, uma, style }) => ({ position, uma, style }))
+		.map(({ position, uma, style, trained_uma }) => ({ position, uma, style, trained_uma: trained_uma ?? null }))
 }
 
-/** Two lineups with the same uma and style in every spot. */
+/** Two lineups with the same uma, style and veteran in every spot. */
 export function sameLineup(a: PvpRunRunner[], b: PvpRunRunner[]): boolean {
 	if (a.length !== b.length) return false
 	const sorted = (lineup: PvpRunRunner[]) => [...lineup].sort((x, y) => x.position - y.position)
@@ -81,7 +81,12 @@ export function sameLineup(a: PvpRunRunner[], b: PvpRunRunner[]): boolean {
 	const right = sorted(b)
 	return left.every((runner, index) => {
 		const other = right[index]
-		return runner.position === other.position && runner.uma === other.uma && runner.style === other.style
+		return (
+			runner.position === other.position &&
+			runner.uma === other.uma &&
+			runner.style === other.style &&
+			(runner.trained_uma ?? null) === (other.trained_uma ?? null)
+		)
 	})
 }
 

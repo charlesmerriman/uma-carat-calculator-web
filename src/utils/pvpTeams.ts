@@ -76,7 +76,13 @@ export function setMemberUma(
 ): PvpTeamMember[] {
 	const current = memberAt(members, position)
 	const next: PvpTeamMember = current
-		? { ...current, uma: uma.id, style: style ?? current.style }
+		? {
+				...current,
+				uma: uma.id,
+				style: style ?? current.style,
+				// A veteran is one outfit: another uma in the spot drops the link.
+				trained_uma: current.uma === uma.id ? current.trained_uma : null,
+			}
 		: { position, uma: uma.id, style: style ?? defaultStyleFor(uma), cards: [] }
 	return sortMembers([...members.filter((member) => member.position !== position), next])
 }
@@ -84,6 +90,11 @@ export function setMemberUma(
 /** Take the uma out, and with it the deck: a deck belongs to its uma. */
 export function clearMember(members: PvpTeamMember[], position: number): PvpTeamMember[] {
 	return members.filter((member) => member.position !== position)
+}
+
+/** Link the veteran `trainedUma` (one of the member's own outfit) to the member, or `null` to unlink. */
+export function setMemberVeteran(members: PvpTeamMember[], position: number, trainedUma: number | null): PvpTeamMember[] {
+	return members.map((member) => (member.position === position ? { ...member, trained_uma: trainedUma } : member))
 }
 
 export function setMemberStyle(members: PvpTeamMember[], position: number, style: MemberStyle): PvpTeamMember[] {

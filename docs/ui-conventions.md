@@ -1791,6 +1791,9 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   of the event's teams, so editing a team never rewrites a logged ticket. Five native
   selects per ticket: one of the three won, Loss, or "–" (not run yet, which is not a loss).
   The Finals card adds the group (A / B) and the placement; a winner fills a blank 1st.
+- **Which veteran ran** (`VeteranSelect`, under each runner): the account's veterans of that
+  outfit only, drawn only when there is one. A ticket copied from a team brings the team's
+  links (`lineupFromTeam`), and a different veteran makes a different lineup (`sameLineup`).
 - **Every change saves at once through `services/pvpRunQueries.ts`** (TanStack Query). A
   change is a FUNCTION of the ticket as the cache holds it (`save(slot, current => next)`),
   never of the last render: two quick picks otherwise started from the same old ticket and
@@ -1915,6 +1918,10 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 - **Side panels** (`SidePanel.tsx`): Guide picks docks on the left from `xl`, Recommended skills
   on the right from `2xl`; narrower, each is a drawer from its own edge behind a toolbar button.
   Both collapse, remembered per browser.
+- **A member's veteran** (signed in only; `VeteranSelect` under her name): one of the
+  account's veterans of her outfit, from the Collection. Linked, the member's aptitude letters
+  are the VETERAN's, so a D that inheritance fixed reads as fixed. Changing the uma drops the
+  link (`setMemberUma`); a guest's team never holds one. The team window does not draw it.
 - **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
   starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
   ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
