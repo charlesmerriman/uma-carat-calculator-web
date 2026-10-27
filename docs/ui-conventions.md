@@ -2110,6 +2110,18 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   guide and strategy (times recommended, never stars), shares out of the decks or
   guide-strategies counted. A row opens to counts by event, strategy and deck, never a list of
   decks.
+- **The pinned panel** (`RankingsDock.tsx`, owner 2026-10-27): "Pin to the side" on the page
+  pins the tab on screen, one at a time, until unpinned (`services/rankingsPinStore.ts`, a
+  `useSyncExternalStore` store on `localStorage`, server snapshot "nothing pinned"). Mounted
+  in `AppShell` beside the scroller (the scroller sits in a row for it), behind the loading
+  gate, never in `Navbar`; not drawn on the Rankings page or without early access. From `xl`
+  it docks as a 24rem column on the left, or retracts to a slim "Rankings" edge tab;
+  below `xl` the edge tab opens `SideDrawer` (wider here, `width` prop), starting closed.
+  Header: a section menu, Full page, Unpin, hide. **The tabs lay out by container queries**
+  (`RankingsSection` is `@container`; `@4xl:grid-cols-2`, never `lg:`), so one tab fits the
+  page or the column. In the panel the PvP tab keeps its event in state, never `?event=`
+  (the address bar is the page underneath). The planner beside a docked panel switches to
+  cards by its own container query; never raise `--container-banner-table` for it.
 - **`RankList`** is every ranked table's look: place, picture, name, "count · share", an
   opening row. **`TeamCounts`** is the two team tables (umas by teams, cards by decks).
 

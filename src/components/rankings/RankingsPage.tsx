@@ -18,30 +18,13 @@
 
 import { useContext, type ReactNode } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { BookOpen, CalendarRange, ListOrdered, Swords, Users, type LucideIcon } from "lucide-react"
+import { ListOrdered, Pin, PinOff, type LucideIcon } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
-import { useRankingsPullPlans } from "../../hooks/useRankingsPullPlans"
-import { GuideRankings } from "./GuideRankings"
-import { PullPlans } from "./PullPlans"
-import { PvpTab } from "./PvpTab"
-import { PlayersTab } from "./PlayersTab"
+import { pinRankings, useRankingsPin, type RankingsSection as Section } from "../../services/rankingsPinStore"
+import { RankingsSection } from "./RankingsSection"
+import { parseSection, useVisibleSections } from "./sections"
 
-type RankingsView = "guides" | "pull-plans" | "pvp" | "players"
 const VIEW_PARAM = "view"
-
-/** The tabs, in order. A `gated` one is drawn only for the Raptive gate (useRankingsPullPlans). */
-const VIEWS: Array<{ id: RankingsView; label: string; icon: LucideIcon; gated?: boolean }> = [
-	{ id: "guides", label: "Guide rankings", icon: BookOpen },
-	{ id: "pull-plans", label: "Pull plans", icon: CalendarRange, gated: true },
-	{ id: "pvp", label: "PvP", icon: Swords },
-	{ id: "players", label: "Players", icon: Users },
-]
-
-/** The view a `?view=` value names among the tabs drawn; anything else is the first tab. */
-function parseRankingsView(value: string | null, shown: typeof VIEWS): RankingsView {
-	const view = shown.find((entry) => entry.id === value)
-	return view?.id ?? "guides"
-}
 
 const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-7xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
@@ -67,10 +50,11 @@ export const RankingsPage = () => {
 
 const RankingsBody = () => {
 	const [searchParams, setSearchParams] = useSearchParams()
-	const pullPlans = useRankingsPullPlans()
-	const shown = VIEWS.filter((entry) => !entry.gated || pullPlans)
-	const view = parseRankingsView(searchParams.get(VIEW_PARAM), shown)
-	const open = (next: RankingsView) => {
+	const shown = useVisibleSections()
+	const view = parseSection(searchParams.get(VIEW_PARAM), shown)
+	const pin = useRankingsPin()
+	const pinned = pin.section === view
+	const open = (next: Section) => {
 		const params = new URLSearchParams(searchParams)
 		// The PvP tab's event belongs to that tab.
 		if (next !== "pvp") params.delete("event")
@@ -82,10 +66,24 @@ const RankingsBody = () => {
 	return (
 		<div className={CONTAINER}>
 			<header>
-				<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
-					<ListOrdered className="h-5 w-5 shrink-0" />
-					Rankings
-				</h1>
+				<div className="flex flex-wrap items-center gap-2">
+					<h1 className="font-display mr-auto flex items-center gap-2 text-xl font-bold text-brand">
+						<ListOrdered className="h-5 w-5 shrink-0" />
+						Rankings
+					</h1>
+					{/* Pins THIS tab beside the Calculator, Timeline and PvP; one at a time. */}
+					<button
+						type="button"
+						aria-pressed={pinned}
+						onClick={() => pinRankings(pinned ? null : view)}
+						className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+							pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
+						}`}
+					>
+						{pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+						{pinned ? "Unpin" : "Pin to the side"}
+					</button>
+				</div>
 				<p className="mt-1 text-sm leading-relaxed text-gray-300">
 					What the guides recommend, what players build and plan, and what wins. For our Patreon supporters for
 					now.
@@ -98,12 +96,14 @@ const RankingsBody = () => {
 					</Tab>
 				))}
 			</div>
-			<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
-				{view === "guides" && <GuideRankings />}
-				{view === "pull-plans" && <PullPlans />}
-				{view === "pvp" && <PvpTab />}
-				{view === "players" && <PlayersTab />}
+			<div role="tabpanel" aria-label={shown.find((entry) => entry.id === view)?.label}>
+				<RankingsSection section={view} />
 			</div>
+			{pin.section !== null && !pinned && (
+				<p className="text-xs text-gray-400">
+					{shown.find((entry) => entry.id === pin.section)?.label ?? "A tab"} is pinned to the side of the other pages.
+				</p>
+			)}
 		</div>
 	)
 }

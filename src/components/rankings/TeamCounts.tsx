@@ -37,7 +37,7 @@ export function TeamCounts({ counts, catalogue, umaHint, cardHint }: {
 	const umas = counts.umas.filter((row) => catalogue.umasById.has(row.uma))
 	const cards = counts.cards.filter((row) => catalogue.cardsById.has(row.card))
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-2">
+		<div className="grid items-start gap-4 @4xl:grid-cols-2">
 			<RankList
 				title="Umas"
 				hint={umaHint}

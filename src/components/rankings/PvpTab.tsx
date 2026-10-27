@@ -6,7 +6,8 @@
  * are enough races.
  *
  * The event is `?event=cm-21`, like the PvP page, defaulting to the one
- * running now or the next.
+ * running now or the next. In the pinned panel it is the panel's own state:
+ * the address bar there belongs to the page underneath.
  */
 
 import { useMemo, useState } from "react"
@@ -14,6 +15,7 @@ import { useSearchParams } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import type { RaceEvent } from "../../types"
 import type { PvpRankingsPayload } from "../../types/rankingsTabs"
+import type { PvpEventRef } from "../../utils/pvpEvent"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
@@ -30,15 +32,21 @@ import { TeamCounts } from "./TeamCounts"
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 const CELL = "px-2 py-1.5 text-right tabular-nums"
 
-export function PvpTab() {
+export function PvpTab({ inPanel = false }: { inPanel?: boolean }) {
 	const { championsMeetingData, leagueOfHeroesData } = useCalculatorData()
 	const events = useMemo(() => raceEventsInOrder(championsMeetingData, leagueOfHeroesData), [championsMeetingData, leagueOfHeroesData])
 	const [searchParams, setSearchParams] = useSearchParams()
+	const [panelRef, setPanelRef] = useState<PvpEventRef | null>(null)
 	// One clock reading per mount, for the default event.
 	const [now] = useState(() => new Date())
-	const event = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM))) ?? defaultPvpEvent(events, now)
+	const chosen = inPanel ? panelRef : parsePvpEvent(searchParams.get(PVP_EVENT_PARAM))
+	const event = findEvent(events, chosen) ?? defaultPvpEvent(events, now)
 
 	const pick = (next: RaceEvent) => {
+		if (inPanel) {
+			setPanelRef(refForRaceEvent(next))
+			return
+		}
 		const params = new URLSearchParams(searchParams)
 		params.set(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(next)))
 		setSearchParams(params)

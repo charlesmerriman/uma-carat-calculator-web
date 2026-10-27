@@ -8,6 +8,7 @@ import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
 import { SkillsPage } from "../components/skills/SkillsPage"
 import { RankingsPage } from "../components/rankings/RankingsPage"
+import { RankingsDock } from "../components/rankings/RankingsDock"
 import { CollectionPage } from "../components/collection/CollectionPage"
 import { PvpGuidePage } from "../components/pvp/PvpGuidePage"
 import { Footer } from "../components/footer/Footer.tsx"
@@ -138,7 +139,13 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					    still keeps sideways overflow (a hover card past the right
 					    edge) from widening the page. At app-shell, overflow-auto
 					    sets both axes back to what overflow-y-auto gave. */}
-					<div data-app-scroller className="relative flex min-h-0 flex-1 flex-col overflow-x-clip app-shell:overflow-auto">
+					{/* A row, so the pinned Rankings panel (RankingsDock) can dock to the
+					    left of the scroller from xl. Always rendered, panel or not, so
+					    the markup a build-time render and hydration produce is the same;
+					    the panel itself draws nothing until the device's pin is read. */}
+					<div className="flex min-h-0 flex-1">
+					{!isLoading && !fetchError && <RankingsDock />}
+					<div data-app-scroller className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip app-shell:overflow-auto">
 						{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
 						    timeline keep a normal block formatting context and don't become
 						    flex items themselves. flex-1 grows it into the slack; min-height:auto
@@ -159,6 +166,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 						    build-time render. Renders nothing; see AppRouteMeta. */}
 						<AppRouteMeta />
 						<Footer />
+					</div>
 					</div>
 					{/* The team window, floating over the page. Behind the loading gate
 					    like the pages: it reads the events, and a build-time render carries none of it. */}
