@@ -98,6 +98,7 @@ export interface GuideDocument {
 	style_ranking: string
 	short_description: string
 	meta_analysis: string
+	under_construction: boolean
 	/** Notes for editors, never shown on the site. */
 	admin_comments: string
 	stat_configs: GuideStatRow[]

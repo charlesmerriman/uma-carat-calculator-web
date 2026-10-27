@@ -225,6 +225,8 @@ export interface PvpGuide {
 	short_description: string
 	/** Markdown. */
 	meta_analysis: string
+	/** The editors' "still being updated" switch: the reader shows a banner (Henry, 2026-10-24). */
+	under_construction: boolean
 	team_comps: PvpTeamComp[]
 	stat_configs: PvpStatConfig[]
 	uma_recommendations: PvpUmaRecommendation[]

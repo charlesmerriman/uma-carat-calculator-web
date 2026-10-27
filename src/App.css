@@ -1066,6 +1066,12 @@
 	}
 }
 
+/* The hazard tape along the top of an "Under construction" guide's banner
+   (PvpGuideView.tsx). The staging token, so each theme gets its own amber. */
+.construction-stripes {
+	background: repeating-linear-gradient(-45deg, var(--color-staging) 0 10px, transparent 10px 20px);
+}
+
 /* The free-pulls chip that can share the title line with it: a 20px box too
    (see its padding note below), so it is zero-layout in the same way. The 1px ring is an inset shadow rather than a border because a border
    would add 2px to the box, and to the title line with it.

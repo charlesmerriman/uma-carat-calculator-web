@@ -43,7 +43,7 @@ const EVENT = {
 function document(): GuideDocument {
 	return {
 		id: 7, version: 3, event_type: "champions_meeting", event: 10, is_published: false, updated_at: "2099-01-01T00:00:00Z",
-		scenario: null, style_ranking: "Front >> End", short_description: "Mile on turf.", meta_analysis: "", admin_comments: "",
+		scenario: null, style_ranking: "Front >> End", short_description: "Mile on turf.", meta_analysis: "", under_construction: false, admin_comments: "",
 		stat_configs: [{ style: "everyone", label: "", speed: "1100+", stamina: "", power: "", guts: "", wit: "", footnote: "" }],
 		team_comps: [],
 		uma_recommendations: [{ style: "front", uma: 41, stars: 5, role: "RA", note: "" }],
@@ -54,7 +54,7 @@ function document(): GuideDocument {
 }
 const READER: PvpGuide = {
 	event_type: "champions_meeting", event: 10, is_published: false, updated_at: "2099-01-01T00:00:00Z", scenario: null,
-	style_ranking: "Front >> End", short_description: "Mile on turf.", meta_analysis: "", team_comps: [], stat_configs: [],
+	style_ranking: "Front >> End", short_description: "Mile on turf.", meta_analysis: "", under_construction: false, team_comps: [], stat_configs: [],
 	uma_recommendations: [], skill_recommendations: [], style_notes: [], decks: [], skill_mentions: {},
 }
 const EDITABLE = { guides: [{ id: 7, kind: "cm", event: 10, name: "Aquarius Cup", is_published: false, version: 3, updated_at: "x", filled: ["front"] }], events: [] }
@@ -154,6 +154,15 @@ describe("GuideEditor", () => {
 		fireEvent.change(ranking, { target: { value: "Front" } })
 		await waitFor(() => expect(puts()).toHaveLength(2))
 		expect((puts()[1].body as GuideDocument).version).toBe(4)
+	})
+
+	it("marks the guide under construction and saves it", async () => {
+		renderEditor()
+		const toggle = await screen.findByRole("checkbox", { name: /Under construction/ })
+		expect(toggle).not.toBeChecked()
+		fireEvent.click(toggle)
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect((puts()[0].body as GuideDocument).under_construction).toBe(true)
 	})
 
 	it("marks a deck as swap-ins and saves it", async () => {

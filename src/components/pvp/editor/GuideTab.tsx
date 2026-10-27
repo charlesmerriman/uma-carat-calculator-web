@@ -14,7 +14,7 @@ import { SkillSection } from "./SkillSection"
 import { StatsEditor } from "./StatsEditor"
 import { TeamCompsEditor } from "./TeamCompsEditor"
 import { INPUT, SECTION, SECTION_HEADING, SELECT, SUBTLE } from "./editorStyles"
-import { setField, setScenario } from "../../../utils/guideDocumentEdits"
+import { setField, setScenario, setUnderConstruction } from "../../../utils/guideDocumentEdits"
 import { MAX_LENGTH } from "../../../utils/guideDocument"
 
 export function GuideTab() {
@@ -33,6 +33,17 @@ export function GuideTab() {
 					<h3 className={SECTION_HEADING}>Overview</h3>
 					<span className={SUBTLE}>Shown first, for the whole team.</span>
 				</div>
+				{/* Henry, 2026-10-24: for a guide published before it is updated
+				    for its event. Saved with the rest of the document. */}
+				<label className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-gray-200">
+					<input
+						type="checkbox"
+						checked={document.under_construction}
+						onChange={(change) => update((doc) => setUnderConstruction(doc, change.target.checked))}
+					/>
+					Under construction
+					<span className={SUBTLE}>Shows a banner saying this guide is still being updated.</span>
+				</label>
 				<label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400 sm:w-72">
 					Scenario
 					<select
