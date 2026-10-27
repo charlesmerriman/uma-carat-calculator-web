@@ -51,3 +51,13 @@ export function pvpEventHref(ref: PvpEventRef): string {
 export function shortEventName(event: RaceEvent): string {
 	return event.event_type === "champions_meeting" ? `CM ${event.cm_number}` : `LoH ${event.loh_number}`
 }
+
+/**
+ * "Champions Meeting 20 Sagittarius Cup" -> kicker "Champions Meeting 20",
+ * title "Sagittarius Cup". A name with nothing after its number ("League of
+ * Heroes 6") keeps the whole name as the title and no kicker.
+ */
+export function splitEventName(event: RaceEvent): { kicker: string; title: string } {
+	const match = /^((?:Champions Meeting|League of Heroes)\s+\d+)\s+(.+)$/i.exec(event.name.trim())
+	return match ? { kicker: match[1], title: match[2] } : { kicker: "", title: event.name }
+}

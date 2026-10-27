@@ -102,16 +102,17 @@ export function sameLineup(a: PvpRunRunner[], b: PvpRunRunner[]): boolean {
 }
 
 /**
- * The lineup a new ticket starts with: the latest earlier ticket's (players
- * usually run the same three all day), else nothing, and the view offers the
- * event's teams.
+ * The ticket a new one copies its lineup from: the latest earlier ticket with
+ * one (players usually run the same three all day), else null, and the view
+ * offers the event's teams. Returned whole so the view can name it ("Same
+ * three as Day 1, Ticket 4"). The final asks with day 5, ticket 1.
  */
-export function previousLineup(runs: PvpRun[], day: number, ticket: number): PvpRunRunner[] | null {
+export function previousRun(runs: PvpRun[], day: number, ticket: number): PvpRun | null {
 	const earlier = runs
 		.filter((run) => run.stage === "day" && run.runners.length > 0)
 		.filter((run) => (run.day ?? 0) < day || ((run.day ?? 0) === day && (run.ticket ?? 0) < ticket))
 		.sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || (a.ticket ?? 0) - (b.ticket ?? 0))
-	return earlier.at(-1)?.runners ?? null
+	return earlier.at(-1) ?? null
 }
 
 /** An empty ticket's content: a lineup and nothing else. */
