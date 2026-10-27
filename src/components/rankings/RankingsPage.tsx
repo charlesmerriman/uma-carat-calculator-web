@@ -4,7 +4,8 @@
  * how they play. One tab on screen at a time, `?view=`:
  *
  *   guides       Guide rankings, the source sheet's card table (GuideRankings)
- *   pull-plans   the banners players plan to pull on (Raptive gate, later)
+ *   pull-plans   the banners players plan to pull on (PullPlans), behind
+ *                the Raptive gate: guide editors only (useRankingsPullPlans)
  *   pvp          the teams players save, and what wins (later)
  *   players      favourite umas, Team Trials, income options (later)
  *
@@ -17,23 +18,29 @@
 
 import { useContext, type ReactNode } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { BookOpen, ListOrdered, Swords, Users, type LucideIcon } from "lucide-react"
+import { BookOpen, CalendarRange, ListOrdered, Swords, Users, type LucideIcon } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
+import { useRankingsPullPlans } from "../../hooks/useRankingsPullPlans"
 import { GuideRankings } from "./GuideRankings"
+import { PullPlans } from "./PullPlans"
 
-type RankingsView = "guides" | "pvp" | "players"
+type RankingsView = "guides" | "pull-plans" | "pvp" | "players"
 const VIEW_PARAM = "view"
 
-/** The tabs, in order. A `soon` tab is drawn but can't be opened yet. */
-const VIEWS: Array<{ id: RankingsView; label: string; icon: LucideIcon; soon: boolean }> = [
+/**
+ * The tabs, in order. A `soon` tab is drawn but can't be opened yet; a
+ * `gated` one is drawn only for the Raptive gate (useRankingsPullPlans).
+ */
+const VIEWS: Array<{ id: RankingsView; label: string; icon: LucideIcon; soon: boolean; gated?: boolean }> = [
 	{ id: "guides", label: "Guide rankings", icon: BookOpen, soon: false },
+	{ id: "pull-plans", label: "Pull plans", icon: CalendarRange, soon: false, gated: true },
 	{ id: "pvp", label: "PvP", icon: Swords, soon: true },
 	{ id: "players", label: "Players", icon: Users, soon: true },
 ]
 
-/** The view a `?view=` value names; anything unknown or not open yet is the first tab. */
-function parseRankingsView(value: string | null): RankingsView {
-	const view = VIEWS.find((entry) => entry.id === value && !entry.soon)
+/** The view a `?view=` value names among the tabs drawn; anything else is the first tab. */
+function parseRankingsView(value: string | null, shown: typeof VIEWS): RankingsView {
+	const view = shown.find((entry) => entry.id === value && !entry.soon)
 	return view?.id ?? "guides"
 }
 
@@ -61,7 +68,9 @@ export const RankingsPage = () => {
 
 const RankingsBody = () => {
 	const [searchParams, setSearchParams] = useSearchParams()
-	const view = parseRankingsView(searchParams.get(VIEW_PARAM))
+	const pullPlans = useRankingsPullPlans()
+	const shown = VIEWS.filter((entry) => !entry.gated || pullPlans)
+	const view = parseRankingsView(searchParams.get(VIEW_PARAM), shown)
 	const open = (next: RankingsView) => {
 		const params = new URLSearchParams(searchParams)
 		if (next === "guides") params.delete(VIEW_PARAM)
@@ -82,7 +91,7 @@ const RankingsBody = () => {
 				</p>
 			</header>
 			<div role="tablist" aria-label="Rankings" className="flex flex-wrap gap-1 border-b border-gray-700">
-				{VIEWS.map((entry) => (
+				{shown.map((entry) => (
 					<Tab key={entry.id} active={entry.id === view} soon={entry.soon} icon={entry.icon} onClick={() => open(entry.id)}>
 						{entry.label}
 					</Tab>
@@ -90,6 +99,7 @@ const RankingsBody = () => {
 			</div>
 			<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
 				{view === "guides" && <GuideRankings />}
+				{view === "pull-plans" && <PullPlans />}
 			</div>
 		</div>
 	)

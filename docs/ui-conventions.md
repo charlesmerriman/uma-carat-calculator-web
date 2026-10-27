@@ -2079,8 +2079,16 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
   too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
   in the API's `visits.KNOWN_ROUTES` so landings count.
-- **Tabs, `?view=`**: Guide rankings (default, no parameter), then PvP and Players drawn as
-  "Soon" until they land; Pull plans joins behind its Raptive gate. One tab on screen.
+- **Tabs, `?view=`**: Guide rankings (default, no parameter), Pull plans (`pull-plans`, behind
+  the Raptive gate), then PvP and Players drawn as "Soon" until they land. One tab on screen.
+  A tab the reader can't open is never drawn, and its `?view=` falls back to the first tab.
+- **Pull plans** (`PullPlans.tsx`) is the admin's Popular banners tables for supporters:
+  planners, total, average and **typical (the median)** per banner, a type filter, by date or
+  by planners, ended banners behind a switch (`utils/pullPlanRankings.ts`); a step-up's
+  figures are STEPS and say so. Demand by month is a one-series bar chart (`DemandChart.tsx`,
+  Recharts, lazy like `ForecastPlot`) with the same numbers in a table under it. **Hidden until
+  Raptive approves** (Henry, "similar to skills tab"): `useRankingsPullPlans()` (guide
+  editors) and the API's `views/rankings.sees_pull_plans`; un-gating is flipping both.
 - **Hourly**: each tab's payload is built at most once an hour on the server and never
   invalidated; the page says "Updated 40 minutes ago" from its `generated_at`.
 - **Guide rankings** (`GuideRankings.tsx`) is the source sheet's card table with its filters
@@ -2094,7 +2102,8 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   guide and strategy (times recommended, never stars), shares out of the decks or
   guide-strategies counted. A row opens to counts by event, strategy and deck, never a list of
   decks.
-- **`RankList`** is every tab's table: place, picture, name, "count · share", an opening row.
+- **`RankList`** is every ranked table's look: place, picture, name, "count · share", an
+  opening row. Every tab fetches through `useRankingsPayload(path)` (loading, refused, error).
 
 ## Selectors page (`components/selectors/`)
 

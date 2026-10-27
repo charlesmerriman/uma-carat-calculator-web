@@ -5,6 +5,7 @@ import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { RankingsPage } from "../components/rankings/RankingsPage"
 import type { RaceEvent } from "../types"
 import type { GuideRankingsPayload } from "../types/guideRankings"
+import type { PullPlanRankingsPayload } from "../types/pullPlanRankings"
 
 /**
  * The Rankings page (/app/rankings): who sees it, and the Guide rankings
@@ -20,6 +21,8 @@ const CM21 = {
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({ championsMeetingData: [CM21], leagueOfHeroesData: [] }),
 }))
+// The chart is Recharts in its own chunk; here only that the tab draws it.
+vi.mock("../components/rankings/DemandChart", () => ({ default: () => <div data-testid="demand-chart" /> }))
 vi.mock("../hooks/useOshiIds", () => ({ useOshiIds: () => new Set<number>() }))
 vi.mock("../hooks/usePvpCatalogue", () => ({
 	usePvpCatalogue: () => ({
@@ -50,13 +53,25 @@ const PAYLOAD: GuideRankingsPayload = {
 	}],
 }
 
+const PULL_PLANS: PullPlanRankingsPayload = {
+	generated_at: "2026-10-27T20:00:00Z",
+	banners: [{
+		type: "uma", unit: "pulls", id: 88, name: "Gentildonna", start_date: "2026-11-05T00:00:00Z",
+		end_date: "2026-11-15T00:00:00Z", predicted: true, status: "upcoming",
+		planners: 5807, total: 958155, average: 165, median: 150,
+	}],
+	demand: [{ month: "2026-11", banners: 6, planners: 9000, total_pulls: 1200000, excluded: 0, step_up_planners: 40 }],
+}
+
 const fetchMock = vi.fn()
 
-function renderPage(earlyAccess: boolean) {
-	const value = { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess } } as unknown as AuthContextType
+function renderPage(earlyAccess: boolean, { editor = false, url = "/app/rankings" } = {}) {
+	const value = {
+		isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, guide_editor: editor },
+	} as unknown as AuthContextType
 	return render(
 		<AuthContext.Provider value={value}>
-			<MemoryRouter initialEntries={["/app/rankings"]}>
+			<MemoryRouter initialEntries={[url]}>
 				<RankingsPage />
 			</MemoryRouter>
 		</AuthContext.Provider>
@@ -65,7 +80,9 @@ function renderPage(earlyAccess: boolean) {
 
 beforeEach(() => {
 	fetchMock.mockReset()
-	fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(PAYLOAD), { status: 200 })))
+	fetchMock.mockImplementation((url: string) =>
+		Promise.resolve(new Response(JSON.stringify(url.endsWith("/pull-plans") ? PULL_PLANS : PAYLOAD), { status: 200 }))
+	)
 	vi.stubGlobal("fetch", fetchMock)
 })
 
@@ -105,5 +122,26 @@ describe("RankingsPage", () => {
 		renderPage(true)
 		fireEvent.change(await screen.findByRole("searchbox", { name: "Search for a card" }), { target: { value: "fine" } })
 		expect(within(screen.getByRole("region", { name: "Card search" })).getByText("#2 · 1 deck · 50%")).toBeInTheDocument()
+	})
+
+	it("keeps Pull plans to the Raptive gate (guide editors)", () => {
+		const { unmount } = renderPage(true, { url: "/app/rankings?view=pull-plans" })
+		expect(screen.queryByRole("tab", { name: "Pull plans" })).not.toBeInTheDocument()
+		// The address alone doesn't open it: the first tab shows.
+		expect(screen.getByRole("tab", { name: "Guide rankings", selected: true })).toBeInTheDocument()
+		unmount()
+		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
+		expect(screen.getByRole("tab", { name: "Pull plans", selected: true })).toBeInTheDocument()
+	})
+
+	it("draws the planned banners with a typical figure, and the demand by month", async () => {
+		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
+		const table = await screen.findByRole("region", { name: "Banners players plan" })
+		const row = within(table).getByText("Gentildonna").closest("tr")!
+		expect(row).toHaveTextContent("5,807")
+		expect(row).toHaveTextContent("150")
+		expect(row).toHaveTextContent("(predicted)")
+		expect(await screen.findByTestId("demand-chart")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Demand by month" })).getByText("2026/11")).toBeInTheDocument()
 	})
 })
