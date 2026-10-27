@@ -4,10 +4,10 @@
  *
  *   section  which Rankings tab is pinned, or null for none. One at a time.
  *            Lasts until unpinned.
- *   docked   on a wide screen (xl up), whether the pinned panel is open
- *            beside the page or retracted to a slim tab on the left edge.
- *            Below xl it is always the tab, opening a drawer that starts
- *            closed, so this is never read there.
+ *   docked   from desktop-nav (1024px) up, whether the pinned window is
+ *            open over the page's left side or retracted to a slim tab on
+ *            the left edge. Below that the window starts retracted every
+ *            load (it would cover the screen), so this is not read there.
  *
  * An external store (useSyncExternalStore) like themeStore.ts, for the same
  * reason: /app is prerendered, and a render that reads localStorage throws
@@ -90,7 +90,7 @@ export function pinRankings(section: RankingsSection | null): void {
 	update({ section, docked: true })
 }
 
-/** Open the pinned panel beside the page (true) or retract it to the edge tab (false). */
+/** Open the pinned window (true) or retract it to the edge tab (false). */
 export function dockRankings(docked: boolean): void {
 	update({ ...getSnapshot(), docked })
 }

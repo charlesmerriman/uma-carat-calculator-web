@@ -2112,16 +2112,17 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   decks.
 - **The pinned panel** (`RankingsDock.tsx`, owner 2026-10-27): "Pin to the side" on the page
   pins the tab on screen, one at a time, until unpinned (`services/rankingsPinStore.ts`, a
-  `useSyncExternalStore` store on `localStorage`, server snapshot "nothing pinned"). Mounted
-  in `AppShell` beside the scroller (the scroller sits in a row for it), behind the loading
-  gate, never in `Navbar`; not drawn on the Rankings page or without early access. From `xl`
-  it docks as a 24rem column on the left, or retracts to a slim "Rankings" edge tab;
-  below `xl` the edge tab opens `SideDrawer` (wider here, `width` prop), starting closed.
-  Header: a section menu, Full page, Unpin, hide. **The tabs lay out by container queries**
-  (`RankingsSection` is `@container`; `@4xl:grid-cols-2`, never `lg:`), so one tab fits the
-  page or the column. In the panel the PvP tab keeps its event in state, never `?event=`
-  (the address bar is the page underneath). The planner beside a docked panel switches to
-  cards by its own container query; never raise `--container-banner-table` for it.
+  `useSyncExternalStore` store on `localStorage`, server snapshot "nothing pinned"). **A window
+  over the page, never beside it**: the team window's mirror on the LEFT (same classes,
+  26rem wide), the page keeps its full width (owner: a first version docked as a column and
+  pushed the site aside). Mounted in `AppShell` after the scroller, behind the loading gate,
+  never in `Navbar`; not drawn on the Rankings page or without early access. Close or Escape
+  retracts it to a slim "Rankings" edge tab, which opens it again; the open state is
+  remembered from `desktop-nav` up, and below that it starts retracted every load (it covers
+  the top of the screen there). Header: a section menu, Full page, Unpin. **The tabs lay out
+  by container queries** (`RankingsSection` is `@container`; `@4xl:grid-cols-2`, never
+  `lg:`), so one tab fits the page or the window. In the panel the PvP tab keeps its event in
+  state, never `?event=` (the address bar is the page underneath).
 - **`RankList`** is every ranked table's look: place, picture, name, "count · share", an
   opening row. **`TeamCounts`** is the two team tables (umas by teams, cards by decks).
 
