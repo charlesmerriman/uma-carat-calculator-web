@@ -512,8 +512,10 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 		// row dropped "Gallery" alone onto a second line. On a phone a tab with
 		// a `short` label shows that, while its full label stays its name for a
 		// screen reader (and for tests querying by name). An editor gets a
-		// fifth column; both class strings are literal so Tailwind sees them.
-		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
+		// sixth column; both class strings are literal so Tailwind sees them.
+		// Six don't fit a 390px phone with their icons ("Gallery" alone is
+		// ~75px of a ~62px column), so an editor's phone drops the icons.
+		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}>
 			{shown.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
@@ -535,7 +537,7 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 								: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
 						}`}
 					>
-						<Icon className="h-4 w-4 shrink-0" />
+						<Icon className={`h-4 w-4 shrink-0 ${shown.length === 6 ? "hidden sm:block" : ""}`} />
 						{entry.short ? (
 							<>
 								<span className="sm:hidden" aria-hidden="true">{entry.short}</span>

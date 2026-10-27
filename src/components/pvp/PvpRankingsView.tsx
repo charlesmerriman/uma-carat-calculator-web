@@ -267,25 +267,55 @@ function RankRow({ place, art, name, counts, events, appearances }: {
 				<ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden="true" />
 			</button>
 			{open && (
-				<ul className="mt-2 flex flex-col gap-1 pl-[4.75rem] text-xs text-gray-300">
-					{appearances.map((appearance, index) => (
-						<li key={index}>
-							<Link
-								to={`${pvpEventHref(refForRaceEvent(appearance.event))}&${PVP_STYLE_PARAM}=${appearance.style}`}
-								className="text-brand transition hover:text-brand/75"
-							>
-								{shortEventName(appearance.event)} · {STYLE_LABELS[appearance.style]}
-							</Link>
-							{appearance.deck !== null && <> · {deckName(appearance.deck)}</>}
-							{appearance.role === "borrow" && <span className="text-gray-400"> (borrowed)</span>}
-							{appearance.role === "alt" && <span className="text-gray-400"> (alternative)</span>}
-							{appearance.stars !== null && <span className="text-gray-400"> · {"★".repeat(appearance.stars)}</span>}
+				// One line per event, each place it appears as a chip that opens
+				// that guide on its style: 49 decks read as five lines, not 49.
+				<ul className="mt-2 flex flex-col gap-1.5 pl-[4.75rem] text-xs">
+					{groupByEvent(appearances).map(({ event, rows }) => (
+						<li key={`${event.event_type}-${event.id}`} className="flex flex-wrap items-center gap-1">
+							<span className="w-12 shrink-0 font-semibold text-gray-300">{shortEventName(event)}</span>
+							{rows.map((appearance, index) => (
+								<Link
+									key={index}
+									to={`${pvpEventHref(refForRaceEvent(appearance.event))}&${PVP_STYLE_PARAM}=${appearance.style}`}
+									className={`rounded border px-1.5 py-0.5 transition hover:border-brand hover:text-brand ${
+										appearance.role === "alt" ? "border-dashed border-gray-600 text-gray-400" : "border-gray-600 text-gray-200"
+									}`}
+									title={appearanceTitle(appearance)}
+								>
+									{STYLE_LABELS[appearance.style]}
+									{appearance.deck !== null && ` ${deckName(appearance.deck)}`}
+									{appearance.role === "borrow" && " (borrowed)"}
+									{appearance.role === "alt" && " (alt.)"}
+									{appearance.stars !== null && ` ${"★".repeat(appearance.stars)}`}
+								</Link>
+							))}
 						</li>
 					))}
 				</ul>
 			)}
 		</div>
 	)
+}
+
+/** A pick's places, grouped by event, in the order they came. */
+function groupByEvent(appearances: RankingAppearance[]): Array<{ event: RaceEvent; rows: RankingAppearance[] }> {
+	const groups: Array<{ event: RaceEvent; rows: RankingAppearance[] }> = []
+	for (const appearance of appearances) {
+		const group = groups.find((candidate) => candidate.event === appearance.event)
+		if (group) group.rows.push(appearance)
+		else groups.push({ event: appearance.event, rows: [appearance] })
+	}
+	return groups
+}
+
+/** A chip's hover text: the whole place in words. */
+function appearanceTitle(appearance: RankingAppearance): string {
+	const where = `${appearance.event.name}, ${STYLE_LABELS[appearance.style]}`
+	if (appearance.deck === null) return `${where}, ${appearance.stars ?? 0} stars`
+	const deck = `${deckName(appearance.deck)} deck`
+	if (appearance.role === "borrow") return `${where}, ${deck}, the borrowed card`
+	if (appearance.role === "alt") return `${where}, ${deck}, as an alternative (not counted)`
+	return `${where}, ${deck}`
 }
 
 /** "Whale", or an honorable-mention or one-off deck's own label. */
