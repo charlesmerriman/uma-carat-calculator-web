@@ -6,6 +6,7 @@ import { RankingsPage } from "../components/rankings/RankingsPage"
 import type { RaceEvent } from "../types"
 import type { GuideRankingsPayload } from "../types/guideRankings"
 import type { PullPlanRankingsPayload } from "../types/pullPlanRankings"
+import type { PlayersRankingsPayload, PvpRankingsPayload } from "../types/rankingsTabs"
 
 /**
  * The Rankings page (/app/rankings): who sees it, and the Guide rankings
@@ -63,6 +64,27 @@ const PULL_PLANS: PullPlanRankingsPayload = {
 	demand: [{ month: "2026-11", banners: 6, planners: 9000, total_pulls: 1200000, excluded: 0, step_up_planners: 40 }],
 }
 
+const PVP: PvpRankingsPayload = {
+	generated_at: "2026-10-27T20:00:00Z",
+	built: { teams: 4, decks: 12, umas: [{ uma: 41, teams: 3, styles: { pace: 3 } }], cards: [{ card: 1, decks: 6, borrows: 2 }] },
+	runs: { players: 2, races: 30, min_races: 20, rows: [{ uma: 41, style: "pace", races: 30, wins: 12 }] },
+}
+
+const PLAYERS: PlayersRankingsPayload = {
+	generated_at: "2026-10-27T20:00:00Z",
+	engaged: 200,
+	favourites: [{ uma: 41, people: 50 }],
+	ranks: [{ label: "Team Trials", people: 100, rows: [{ name: "Class 6", people: 38 }] }],
+	income: [{ key: "daily_carat", label: "Daily Carat Pack", people: 84 }],
+	selectors: [{ campaign: "1st Anniversary", label: "SSR Support Selector", buyers: 30, picked: 20, top: [{ card: 2, people: 9 }] }],
+}
+
+const BODIES: Array<[RegExp, unknown]> = [
+	[/\/pull-plans$/, PULL_PLANS],
+	[/\/rankings\/pvp\/cm\/21$/, PVP],
+	[/\/players$/, PLAYERS],
+]
+
 const fetchMock = vi.fn()
 
 function renderPage(earlyAccess: boolean, { editor = false, url = "/app/rankings" } = {}) {
@@ -81,7 +103,7 @@ function renderPage(earlyAccess: boolean, { editor = false, url = "/app/rankings
 beforeEach(() => {
 	fetchMock.mockReset()
 	fetchMock.mockImplementation((url: string) =>
-		Promise.resolve(new Response(JSON.stringify(url.endsWith("/pull-plans") ? PULL_PLANS : PAYLOAD), { status: 200 }))
+		Promise.resolve(new Response(JSON.stringify(BODIES.find(([pattern]) => pattern.test(url))?.[1] ?? PAYLOAD), { status: 200 }))
 	)
 	vi.stubGlobal("fetch", fetchMock)
 })
@@ -143,5 +165,22 @@ describe("RankingsPage", () => {
 		expect(row).toHaveTextContent("(predicted)")
 		expect(await screen.findByTestId("demand-chart")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Demand by month" })).getByText("2026/11")).toBeInTheDocument()
+	})
+
+	it("shows what players build and what wins on the PvP tab", async () => {
+		renderPage(true, { url: "/app/rankings?view=pvp&event=cm-21" })
+		expect(await screen.findByText(/posted or not: 4 teams/)).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Support cards" })).getByText("6 decks · 50% · 2 borrowed")).toBeInTheDocument()
+		const wins = within(screen.getByRole("region", { name: "What wins" }))
+		expect(wins.getByText("Maruzensky").closest("tr")).toHaveTextContent("40%")
+	})
+
+	it("shows the four players panels", async () => {
+		renderPage(true, { url: "/app/rankings?view=players" })
+		const favourites = await screen.findByRole("region", { name: "Favourite umas" })
+		expect(within(favourites).getByText("50 players · 25%")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Team Trials" })).getByText("38%")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Campaign selectors" })).getByText("Fine Motion 9")).toBeInTheDocument()
 	})
 })
