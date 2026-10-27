@@ -147,43 +147,46 @@ function VeteranTile({ veteran, umaName, portrait, oshi, open, onOpen }: {
 			id={`veteran-${veteran.id}`}
 			aria-pressed={open}
 			onClick={onOpen}
-			className={`flex w-full min-w-0 items-center gap-3 rounded-xl border p-2.5 pr-3 text-left transition ${
+			className={`flex w-full min-w-0 flex-col gap-2.5 rounded-xl border p-2.5 pr-3 text-left transition ${
 				open ? "border-brand bg-brand/10 ring-1 ring-brand" : "border-edge bg-(--card-fill) hover:border-gray-500"
 			}`}
 		>
-			<span className="relative shrink-0">
-				<FramedUma src={portrait} oshi={oshi} alt="" className="w-15" />
-				{grade && (
-					<GradeBadge
-						grade={grade}
-						className={`absolute -bottom-1.5 -left-1.5 h-7 w-8 ${grade.length > 2 ? "text-[10px]" : "text-xs"}`}
-					/>
-				)}
-			</span>
-			<span className="flex min-w-0 flex-1 flex-col gap-px">
-				<span className="truncate text-sm font-semibold text-gray-100">{title}</span>
-				<span className="truncate text-xs text-gray-400">{sub}</span>
-				{veteran.rank_score != null && (
-					<span className="font-display mt-0.5 text-[15px] font-bold text-gray-100">{formatScore(veteran.rank_score)}</span>
-				)}
-				{/* Her stats in the game's order, each over its colour, so they fit one line. */}
-				<span className="mt-1 grid grid-cols-5 gap-0.5" title={statsTitle(veteran)}>
-					{STAT_KEYS.map((key) => (
-						<span
-							key={key}
-							className="border-t-2 pt-0.5 text-center text-[10.5px] font-semibold tabular-nums text-gray-200"
-							style={{ borderTopColor: STAT_COLORS[key] }}
-						>
-							<span className="sr-only">{STAT_LABELS[key]} </span>
-							{veteran[key]}
-						</span>
-					))}
+			<span className="flex min-w-0 items-center gap-3">
+				<span className="relative shrink-0">
+					<FramedUma src={portrait} oshi={oshi} alt="" className="w-15" />
+					{grade && (
+						<GradeBadge
+							grade={grade}
+							className={`absolute -bottom-1.5 -left-1.5 h-7 w-8 ${grade.length > 2 ? "text-[10px]" : "text-xs"}`}
+						/>
+					)}
 				</span>
-				{flag && (
-					<FlagChip tone={flag.tone} title={flag.title} className="mt-1 self-start">
-						{flag.text}
-					</FlagChip>
-				)}
+				<span className="flex min-w-0 flex-1 flex-col gap-px">
+					<span className="truncate text-sm font-semibold text-gray-100">{title}</span>
+					<span className="truncate text-xs text-gray-400">{sub}</span>
+					{veteran.rank_score != null && (
+						<span className="font-display mt-0.5 text-[15px] font-bold text-gray-100">{formatScore(veteran.rank_score)}</span>
+					)}
+					{flag && (
+						<FlagChip tone={flag.tone} title={flag.title} className="mt-1 self-start">
+							{flag.text}
+						</FlagChip>
+					)}
+				</span>
+			</span>
+			{/* Her stats in the game's order, each over its colour, across the whole
+			    tile: under the name alone, four-digit stats ran into each other. */}
+			<span className="grid grid-cols-5 gap-1.5" title={statsTitle(veteran)}>
+				{STAT_KEYS.map((key) => (
+					<span
+						key={key}
+						className="border-t-2 pt-0.5 text-center text-[11px] font-semibold tabular-nums text-gray-200"
+						style={{ borderTopColor: STAT_COLORS[key] }}
+					>
+						<span className="sr-only">{STAT_LABELS[key]} </span>
+						{veteran[key]}
+					</span>
+				))}
 			</span>
 		</button>
 	)
