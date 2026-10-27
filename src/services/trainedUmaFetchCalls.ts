@@ -18,6 +18,11 @@ export function trainedUmasFetch(): Promise<Response> {
 	return fetch(`${API_URL}/trained-umas`, { method: "GET", headers: jsonHeaders() })
 }
 
+/** One veteran, with her raw game data and the names of her sparks. */
+export function trainedUmaFetch(id: number): Promise<Response> {
+	return fetch(`${API_URL}/trained-umas/${id}`, { method: "GET", headers: jsonHeaders() })
+}
+
 export function trainedUmaCreate(input: VeteranInput): Promise<Response> {
 	return fetch(`${API_URL}/trained-umas`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify(input) })
 }

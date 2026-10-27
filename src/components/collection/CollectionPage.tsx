@@ -4,9 +4,11 @@
  * Veterans (the umas they finished training), Umas and Support cards (what
  * they own; RosterGrids.tsx). notes/pvp-planner-plan.md, R2, "The Collection".
  *
- * The tab is `?tab=` (veterans by default), so a link can open one. `?veteran=`
- * scrolls to that veteran and rings her row: CM Runs' win rates link here.
- * "Import from the game" sits above the tabs: one import fills all three.
+ * The tab is `?tab=` (veterans by default), so a link can open one, and each
+ * tab is a card with its count (owner, 2026-10-27, the redesign:
+ * notes/collection-redesign-plan.md). `?veteran=` opens that veteran's card
+ * (VeteransTab.tsx): CM Runs' win rates link here. "Import from the game"
+ * sits in the header: one import fills all three.
  *
  * Account only (owner, 2026-10-26): a guest gets a sign-in card. Not in the
  * navbar: reached from the profile menu and a card on the Account page, and
@@ -19,118 +21,182 @@
  * Inside the /app loading gate, so it may read the clock during render.
  */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
-import { FileUp, Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { FileUp, Library, Loader2, Plus } from "lucide-react"
 import { useAccount } from "../../services/AuthContext"
-import { useCreateVeteran, useDeleteVeteran, useTrainedUmas, useUpdateVeteran } from "../../services/trainedUmaQueries"
-import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
+import { useTrainedUmas } from "../../services/trainedUmaQueries"
+import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useSignInPrompt } from "../../hooks/useSignInPrompt"
 import { failureText } from "../../services/galleryQueries"
-import { FramedUma } from "../FramedUma"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "../pvp/gallery/galleryStyles"
-import { VeteranForm } from "./VeteranForm"
-import { veteranTag } from "../../utils/veteranGrade"
 import { ImportPanel } from "./ImportPanel"
 import { OwnedCardsGrid, OwnedUmasGrid } from "./RosterGrids"
+import { VeteransTab, type Editing } from "./VeteransTab"
 import { SaveStatus } from "../pvp/SaveStatus"
 import { useClearRoster, useEditRoster, useRoster, useRosterSaving } from "../../services/rosterQueries"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { cardReleases } from "../../utils/cardRelease"
+import { formatDate } from "../../utils/dateFormat"
 import type { RosterChanges } from "../../types/roster"
-import {
-	STAT_KEYS,
-	aptitudeSummary,
-	draftFromVeteran,
-	draftToInput,
-	emptyDraft,
-	type VeteranDraft,
-} from "../../utils/trainedUmas"
-import type { TrainedUma } from "../../types/trainedUma"
 
-const STAT_SHORT: Record<(typeof STAT_KEYS)[number], string> = {
-	speed: "Spd",
-	stamina: "Sta",
-	power: "Pow",
-	guts: "Gut",
-	wit: "Wit",
-}
+const PAGE = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-7xl flex-col gap-5 sm:w-[calc(100%-2rem)]"
 
-export function CollectionPage() {
-	const { isLoggedIn } = useAccount()
-	const { signInState } = useSignInPrompt()
+function PageHeader({ actions }: { actions?: ReactNode }) {
 	return (
-		<div className="mx-auto my-3 flex w-[calc(100%-1rem)] max-w-4xl flex-col gap-4 sm:w-[calc(100%-2rem)]">
-			<header>
-				<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
-					<Library className="h-5 w-5 shrink-0" />
+		<header className="flex flex-wrap items-end justify-between gap-4">
+			<div className="min-w-0">
+				<h1 className="font-display flex items-center gap-2 text-2xl font-bold text-brand">
+					<Library className="h-6 w-6 shrink-0" />
 					Collection
 				</h1>
 				<p className="mt-1 text-sm text-gray-400">
 					What you have in the game, kept on your account. Link your veterans to your teams and CM runs.
 				</p>
-			</header>
-			{isLoggedIn ? (
-				<SignedInCollection />
-			) : (
-				<div className="card-panel flex flex-wrap items-center gap-3 p-4 text-sm text-gray-300">
-					<span className="min-w-0 flex-1">Sign in to keep your veterans on your account.</span>
-					<Link to="/login" state={signInState} className={ACTION_BUTTON}>
-						Sign in
-					</Link>
-				</div>
-			)}
+			</div>
+			{actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+		</header>
+	)
+}
+
+export function CollectionPage() {
+	const { isLoggedIn } = useAccount()
+	const { signInState } = useSignInPrompt()
+	if (isLoggedIn) return <SignedInCollection />
+	return (
+		<div className={PAGE}>
+			<PageHeader />
+			<div className="card-panel flex flex-wrap items-center gap-3 p-4 text-sm text-gray-300">
+				<span className="min-w-0 flex-1">Sign in to keep your veterans on your account.</span>
+				<Link to="/login" state={signInState} className={ACTION_BUTTON}>
+					Sign in
+				</Link>
+			</div>
 		</div>
 	)
 }
 
 type CollectionTab = "veterans" | "umas" | "cards"
-const TABS: Array<{ id: CollectionTab; label: string }> = [
-	{ id: "veterans", label: "Veterans" },
-	{ id: "umas", label: "Umas" },
-	{ id: "cards", label: "Support cards" },
-]
+const TAB_IDS: CollectionTab[] = ["veterans", "umas", "cards"]
 
 function SignedInCollection() {
 	const [params, setParams] = useSearchParams()
-	const tab: CollectionTab = TABS.find((entry) => entry.id === params.get("tab"))?.id ?? "veterans"
+	const tab: CollectionTab = TAB_IDS.find((id) => id === params.get("tab")) ?? "veterans"
 	const catalogue = usePvpCatalogue()
 	const [importing, setImporting] = useState(false)
-	const choose = (next: CollectionTab) =>
+	const [editing, setEditing] = useState<Editing>(null)
+	const choose = (next: CollectionTab) => {
+		setEditing(null)
 		setParams(next === "veterans" ? {} : { tab: next }, { replace: true })
+	}
+	const openImport = () => {
+		setImporting(true)
+		window.scrollTo({ top: 0 })
+	}
 
 	return (
-		<>
-			<div className="flex flex-wrap items-center gap-2">
-				<div role="tablist" aria-label="Collection" className="flex flex-1 gap-1 border-b border-gray-700">
-					{TABS.map((entry) => (
-						<button
-							key={entry.id}
-							type="button"
-							role="tab"
-							aria-selected={tab === entry.id}
-							onClick={() => choose(entry.id)}
-							className={`-mb-px border-b-2 px-3 py-2 text-sm font-semibold transition ${
-								tab === entry.id ? "border-brand text-brand" : "border-transparent text-gray-400 hover:text-gray-100"
-							}`}
-						>
-							{entry.label}
-						</button>
-					))}
-				</div>
-				{!importing && (
-					<button type="button" className={ACTION_BUTTON} onClick={() => setImporting(true)}>
-						<FileUp className="h-4 w-4" />
-						Import from the game
-					</button>
+		<div className={PAGE}>
+			<PageHeader
+				actions={
+					<>
+						{tab === "veterans" && editing === null && (
+							<button type="button" className={ACTION_BUTTON} onClick={() => setEditing("new")}>
+								<Plus className="h-4 w-4" />
+								Add a veteran
+							</button>
+						)}
+						{!importing && (
+							<button type="button" className={PRIMARY_BUTTON} onClick={() => setImporting(true)}>
+								<FileUp className="h-4 w-4" />
+								Import from the game
+							</button>
+						)}
+					</>
+				}
+			/>
+			<TabCards tab={tab} onChoose={choose} />
+			{importing && catalogue.status === "ready" && <ImportPanel index={catalogue} onDone={() => setImporting(false)} />}
+			<div role="tabpanel" aria-labelledby={`collection-tab-${tab}`}>
+				{tab === "veterans" ? (
+					<VeteransTab editing={editing} onEditing={setEditing} onImport={openImport} />
+				) : (
+					<RosterTab tab={tab} />
 				)}
 			</div>
-			{importing && catalogue.status === "ready" && <ImportPanel index={catalogue} onDone={() => setImporting(false)} />}
-			{tab === "veterans" && <Veterans highlight={Number(params.get("veteran")) || null} />}
-			{tab !== "veterans" && <RosterTab tab={tab} />}
-		</>
+		</div>
+	)
+}
+
+/**
+ * The three tabs as cards, each with its count: how many veterans, and how
+ * many of the umas and cards on Global the player owns, with a bar. The counts
+ * fill in as the lists load (one cached request each, shared with the tabs).
+ */
+function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: CollectionTab) => void }) {
+	const veterans = useTrainedUmas(true).data
+	const roster = useRoster(true).data
+	const catalogue = usePvpCatalogue()
+	const ready = catalogue.status === "ready" ? catalogue.catalogue : null
+	const owned = (ids: Set<number>, rows: Array<{ id: number; on_global?: boolean }>) => {
+		const offered = rows.filter((row) => row.on_global !== false)
+		return { count: offered.filter((row) => ids.has(row.id)).length, total: offered.length }
+	}
+	const umas = ready && roster ? owned(new Set(roster.umas.map((row) => row.uma)), ready.umas) : null
+	const cards = ready && roster ? owned(new Set(roster.support_cards.map((row) => row.support_card)), ready.support_cards) : null
+	const newest = veterans?.find((veteran) => veteran.trained_at)?.trained_at
+
+	return (
+		<div role="tablist" aria-label="Collection" className="grid gap-3 sm:grid-cols-3">
+			<TabCard id="veterans" tab={tab} onChoose={onChoose} label="Veterans" hint="umas you trained" count={veterans?.length}>
+				{newest && <span className="text-xs text-gray-300">Newest trained {formatDate(newest)}</span>}
+			</TabCard>
+			<TabCard id="umas" tab={tab} onChoose={onChoose} label="Umas" hint="outfits unlocked" count={umas?.count} total={umas?.total} />
+			<TabCard id="cards" tab={tab} onChoose={onChoose} label="Support cards" hint="owned, with limit breaks" count={cards?.count} total={cards?.total} />
+		</div>
+	)
+}
+
+function TabCard({ id, tab, onChoose, label, hint, count, total, children }: {
+	id: CollectionTab
+	tab: CollectionTab
+	onChoose: (tab: CollectionTab) => void
+	label: string
+	hint: string
+	count: number | undefined
+	/** "of N", with a bar, for a list the catalogue bounds. */
+	total?: number
+	children?: ReactNode
+}) {
+	const current = tab === id
+	return (
+		<button
+			type="button"
+			role="tab"
+			id={`collection-tab-${id}`}
+			aria-selected={current}
+			onClick={() => onChoose(id)}
+			className={`flex flex-col gap-1.5 rounded-2xl border px-4 py-3.5 text-left transition ${
+				current ? "border-brand bg-brand/10 ring-1 ring-brand" : "border-edge bg-(--card-fill) hover:border-gray-500"
+			}`}
+		>
+			<span className="flex items-baseline justify-between gap-2">
+				<span className={`text-sm font-bold ${current ? "text-brand" : "text-gray-200"}`}>{label}</span>
+				<span className="text-xs text-gray-400">{hint}</span>
+			</span>
+			<span className="font-display text-2xl font-bold leading-none text-gray-100">
+				{count ?? <Loader2 className="h-5 w-5 animate-spin text-gray-500" aria-label="Loading" />}
+				{total !== undefined && <span className="ml-1.5 text-sm font-medium text-gray-400">of {total}</span>}
+			</span>
+			{total !== undefined ? (
+				<span className="block h-1.5 overflow-hidden rounded-full bg-gray-700" aria-hidden="true">
+					<span className="block h-full rounded-full bg-brand" style={{ width: `${total ? ((count ?? 0) / total) * 100 : 0}%` }} />
+				</span>
+			) : (
+				children
+			)}
+		</button>
 	)
 }
 
@@ -188,192 +254,6 @@ function RosterTab({ tab }: { tab: "umas" | "cards" }) {
 				/>
 			)}
 		</div>
-	)
-}
-
-/** What the panel above the list is doing: nothing, adding, or editing one veteran. */
-type Editing = null | "new" | TrainedUma
-
-function Veterans({ highlight }: { highlight: number | null }) {
-	const list = useTrainedUmas(true)
-	const catalogue = usePvpCatalogue()
-	const oshiIds = useOshiIds()
-	const create = useCreateVeteran()
-	const update = useUpdateVeteran()
-	const remove = useDeleteVeteran()
-	const [editing, setEditing] = useState<Editing>(null)
-
-	if (list.isError || catalogue.status === "error") {
-		return <Notice>Your veterans didn't load. Reload the page to try again.</Notice>
-	}
-	if (list.isPending || catalogue.status !== "ready") {
-		return (
-			<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
-				<Loader2 className="h-4 w-4 animate-spin" />
-				Loading your veterans…
-			</div>
-		)
-	}
-
-	const veterans = list.data
-	const saving = create.isPending || update.isPending
-	const saveError = create.error ?? update.error
-	const close = () => {
-		create.reset()
-		update.reset()
-		setEditing(null)
-	}
-	const save = (draft: VeteranDraft) => {
-		const input = draftToInput(draft)
-		if (editing === "new") {
-			create.mutate(input, { onSuccess: close })
-		} else if (editing) {
-			// A veteran from the game takes its label only (the API refuses the rest).
-			const changes = editing.source === "import" ? { label: input.label } : { ...input, uma: undefined }
-			update.mutate({ id: editing.id, changes }, { onSuccess: close })
-		}
-	}
-
-	return (
-		<section className="flex flex-col gap-3" aria-labelledby="veterans">
-			<div className="flex flex-wrap items-center justify-between gap-2">
-				<h2 id="veterans" className="text-base font-semibold text-gray-100">
-					Veterans <span className="text-sm font-normal text-gray-400">{veterans.length}</span>
-				</h2>
-				{editing === null && (
-					<button type="button" className={PRIMARY_BUTTON} onClick={() => setEditing("new")}>
-						<Plus className="h-4 w-4" />
-						Add a veteran
-					</button>
-				)}
-			</div>
-
-			{editing !== null && (
-				<VeteranForm
-					// A fresh form per veteran, so switching from one edit to another resets it.
-					key={editing === "new" ? "new" : editing.id}
-					title={editing === "new" ? "Add a veteran" : `Edit ${veteranName(editing, catalogue)}`}
-					initial={editing === "new" ? emptyDraft() : draftFromVeteran(editing)}
-					fromGame={editing !== "new" && editing.source === "import"}
-					index={catalogue}
-					oshiIds={oshiIds}
-					saving={saving}
-					error={saveError ? failureText(saveError, "That veteran wasn't saved.") : null}
-					onSave={save}
-					onCancel={close}
-				/>
-			)}
-
-			{veterans.length === 0 ? (
-				editing === null && (
-					<Notice>
-						No veterans yet. Add the umas you've finished training, with their stats and skills, to link them
-						to your teams and CM runs.
-					</Notice>
-				)
-			) : (
-				<ul className="flex flex-col gap-2">
-					{veterans.map((veteran) => (
-						<VeteranRow
-							key={veteran.id}
-							veteran={veteran}
-							index={catalogue}
-							oshi={oshiIds.has(veteran.uma)}
-							highlighted={veteran.id === highlight}
-							onEdit={() => setEditing(veteran)}
-							onDelete={() => remove.mutate(veteran.id)}
-						/>
-					))}
-				</ul>
-			)}
-		</section>
-	)
-}
-
-/** Her label, else the uma's name. */
-function veteranName(veteran: TrainedUma, index: PvpCatalogueIndex): string {
-	return veteran.label || index.umasById.get(veteran.uma)?.name || "Unknown uma"
-}
-
-function VeteranRow({ veteran, index, oshi, highlighted, onEdit, onDelete }: {
-	veteran: TrainedUma
-	index: PvpCatalogueIndex
-	oshi: boolean
-	/** Opened by a link to her (`?veteran=`): scrolled to and ringed. */
-	highlighted: boolean
-	onEdit: () => void
-	onDelete: () => void
-}) {
-	const [confirming, setConfirming] = useState(false)
-	const rowRef = useRef<HTMLLIElement>(null)
-	useEffect(() => {
-		if (highlighted) rowRef.current?.scrollIntoView({ block: "center" })
-	}, [highlighted])
-	const uma = index.umasById.get(veteran.uma)
-	const name = veteranName(veteran, index)
-	const strong = aptitudeSummary(veteran.apt)
-	return (
-		<li
-			ref={rowRef}
-			id={`veteran-${veteran.id}`}
-			className={`card-panel flex flex-wrap items-center gap-3 p-3 ${highlighted ? "border-brand ring-1 ring-brand" : ""}`}
-		>
-			<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={oshi} alt="" className="w-12 shrink-0" />
-			<div className="min-w-0 flex-1">
-				<p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-gray-100">
-					{name}
-					{veteran.label && uma && <span className="text-xs font-normal text-gray-400">{uma.name}</span>}
-					{veteranTag(veteran) && (
-						<span className="rounded bg-brand/15 px-1.5 text-xs font-semibold text-brand">{veteranTag(veteran)}</span>
-					)}
-					<span className="rounded-full border border-gray-600 px-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
-						{veteran.source === "import" ? "From the game" : "By hand"}
-					</span>
-					{veteran.is_borrowed && (
-						<span
-							className="rounded-full border border-gray-600 px-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
-							title="Another player's veteran you had on loan in the game."
-						>
-							Borrowed
-						</span>
-					)}
-					{veteran.missing_from_import && (
-						<span
-							className="rounded-full border border-highlight/50 px-1.5 text-[10px] font-medium text-highlight"
-							title="Kept because a CM run you logged used her."
-						>
-							Not in your latest import
-						</span>
-					)}
-				</p>
-				<p className="text-xs text-gray-300">
-					{STAT_KEYS.map((key) => `${STAT_SHORT[key]} ${veteran[key]}`).join(" · ")}
-				</p>
-				<p className="text-xs text-gray-400">
-					{[strong, `${veteran.skills.length} ${veteran.skills.length === 1 ? "skill" : "skills"}`].filter(Boolean).join(" · ")}
-				</p>
-				{veteran.memo && <p className="text-xs italic text-gray-400">“{veteran.memo}”</p>}
-			</div>
-			<div className="flex items-center gap-1.5">
-				<button type="button" className={ACTION_BUTTON} onClick={onEdit} aria-label={`Edit ${name}`}>
-					<Pencil className="h-4 w-4" />
-				</button>
-				{confirming ? (
-					<button
-						type="button"
-						className={`${ACTION_BUTTON} border-highlight/60 text-highlight`}
-						onClick={onDelete}
-						onBlur={() => setConfirming(false)}
-					>
-						Delete her?
-					</button>
-				) : (
-					<button type="button" className={ACTION_BUTTON} onClick={() => setConfirming(true)} aria-label={`Delete ${name}`}>
-						<Trash2 className="h-4 w-4" />
-					</button>
-				)}
-			</div>
-		</li>
 	)
 }
 

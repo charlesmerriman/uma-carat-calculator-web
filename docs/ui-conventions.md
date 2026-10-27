@@ -811,9 +811,10 @@ with the server's reason toasted ("Your tier covers 3 favorites.").
 `/app/collection`: everything confirmed about the player's own game account (owner,
 2026-10-26; `notes/pvp-planner-plan.md`, R2, "The Collection"). Three tabs, `?tab=`
 (`veterans` by default, `umas`, `cards`): **Veterans** (umas they finished training),
-**Umas** and **Support cards** (what they own, `RosterGrids.tsx`). "Import from the game"
-sits above the tabs: one import fills all three. `?veteran=<id>` scrolls to that veteran and
-rings her row (CM Runs' win rates link there).
+**Umas** and **Support cards** (what they own, `RosterGrids.tsx`). Each tab is a card with
+its count (veterans; owned of the Global umas or cards, with a bar). "Import from the game"
+sits in the header: one import fills all three. The page is `max-w-7xl` (1280px) since the
+redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mockup's link).
 
 - **The Umas and Support cards grids** (`RosterGrids.tsx`): every Global uma or card as a
   tile (JP-only ones are not offered). Tap to mark owned, tap again or **Remove** to unmark,
@@ -856,11 +857,38 @@ rings her row (CM Runs' win rates link there).
   each file REPLACES its list, hand edits included, and what the file lacks is removed; a
   list with no file is not sent, so it is left alone. The request is gzipped (`gzipBody.ts`).
   umadump is linked as a community tool the site does not make.
-- Rows show the label (else the uma's name), the five stats, the A and S letters, the skill
-  count, "From the game" / "By hand", "Borrowed" for a rental, her game memo, and "Not in
-  your latest import" when a re-import kept her only because a logged CM run uses her.
-  Newest trained first (the API orders by the game's own time).
-- Tests: `CollectionPage.test.tsx` (the flows), `trainedUmas.test.ts` (the form's rules).
+- **The Veterans tab** (`VeteransTab.tsx`): tiles (`VeteranList.tsx`) and the open veteran's
+  card (`VeteranCard.tsx`). **Which one is open is `?veteran=<id>`** (CM Runs' win rates link
+  there). From `lg` up the card sits beside the list, sticky, and with no param the first
+  veteran shown is open; below `lg` the list shows until a tile is tapped, then her card with
+  "All veterans" to go back. CSS alone decides which shows (`hidden lg:block`); nothing reads
+  the screen size at render. `?uma=<id>` starts the list on one uma. The add/edit form takes
+  the whole tab's place.
+- **A tile** tells same-uma veterans apart: label (else the uma's name), the grade hexagon
+  and score (`veteranGrade.ts`), the five stats, and ONE flag (Borrowed, then "Not in your
+  latest import", then By hand; `utils/veteranLook.tileFlag`). Search (name, label, memo),
+  Uma, Sort (newest trained, score, each stat) and "A or better at" (one distance or style)
+  are `utils/veteranList.ts`.
+- **Her card** is laid out like the game's veteran screen: framed portrait, name, label,
+  running style, scenario, trained date, the grade and score; her flags and game memo; five
+  stat blocks (number and bar, **no per-stat letter**: the game data has no table for them,
+  so they wait for the owner to confirm the ladder); the aptitude grid, with an up-arrow
+  where she is above the uma's own letter. Tabs **Skills** (unique, evolved, gold, white,
+  in the PvP guide's surfaces), **Sparks** (hers; "As a parent she passes on", her sparks plus
+  her two parents' summed by name; the lineage, two parents with their two each) and
+  **Training** (the deck with limit breaks, finishing places, scenario, fans, titles). A hand
+  entry's Sparks and Training offer the import instead.
+- **Her game data is fetched when her card opens** (`useVeteran`, GET /trained-umas/<id>: the
+  raw `game_data` and the API's `sparks` names), never with the list, and read only through
+  `utils/veteranGameData.ts`, which trusts nothing about the shape. Her lineage and deck name
+  outfits and cards by the GAME's id (the catalogue's `game_id`). An edit or delete updates
+  that cache; an import drops every one.
+- **Colours** (`index.css` `:root`: `--color-stat-*`, `--color-spark-*`; `App.css`:
+  `.grade-badge` / `.grade-band` by `data-tier`, `.spark-chip` / `.spark-dot` by
+  `data-spark`, `.place-square` by `data-place`) are fills and edges only, never text, so one
+  set serves every theme. The grade and podium fills are fixed game colours with dark ink.
+- Tests: `CollectionPage.test.tsx` (the flows and her card), `trainedUmas.test.ts` (the form's
+  rules), `veteranGameData.test.ts` (reading her game data), `veteranList.test.ts` (the list).
 
 ## Brand mark and display font
 

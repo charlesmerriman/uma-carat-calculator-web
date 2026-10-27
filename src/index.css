@@ -392,6 +392,21 @@ html {
 	--color-style-pace: #a4db22;
 	--color-style-late: #fdde34;
 	--color-style-end: #ffb231;
+
+	/* A VETERAN'S CARD (the Collection, components/collection/VeteranCard.tsx):
+	   the five stats and the three coloured spark kinds, in the hues the game
+	   gives them (blue stat sparks, pink aptitude ones, green uniques). Fills,
+	   bars and edges only, never text, so one set serves every theme: the
+	   text beside them stays the theme's ink. :root rather than @theme for the
+	   style colours' reason above (read through var() in App.css). */
+	--color-stat-speed: #4f9dff;
+	--color-stat-stamina: #ff7a59;
+	--color-stat-power: #ffb640;
+	--color-stat-guts: #ff6fae;
+	--color-stat-wit: #3fc98a;
+	--color-spark-stat: #4f8ef7;
+	--color-spark-aptitude: #f2649f;
+	--color-spark-unique: #2fbf7a;
 }
 
 /* ===== THEME OVERRIDES =====
