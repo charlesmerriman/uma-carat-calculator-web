@@ -147,8 +147,9 @@ export const PrivacyPolicy: React.FC = () => {
 						and support cards you own, we store which ones, with their stars or limit break.
 						All of it is kept on your account only (a guest can&apos;t add any), only you can
 						see it, and it is deleted with your account. We also count it into totals across
-						all players, such as how often an uma wins in Champions Meeting. A total never
-						shows anyone&apos;s own runs or Collection. If you import from files the game
+						all players, such as how often an uma wins in Champions Meeting. Your saved PvP
+						teams count toward these totals too, whether or not you post them to the gallery.
+						A total never shows anyone&apos;s own runs, teams or Collection. If you import from files the game
 						data tool umadump wrote, the files are read in your browser and we keep everything
 						they say about your veterans, umas and cards, including your game account id and
 						the notes you wrote on your veterans. Other players&apos; account ids in them (a
@@ -279,7 +280,9 @@ export const PrivacyPolicy: React.FC = () => {
 							example, the share of accounts that enable a given income option, which
 							banners are popular, or which umas win most in Champions Meeting). Basis: <strong>legitimate interest</strong>, Article
 							6(1)(f), in improving the Site. These figures are totals and never identify
-							anyone.
+							anyone. Patreon supporters can see some of these totals on the Site&apos;s
+							Rankings page: counts only, never a name, an account or one person&apos;s plan
+							or team.
 						</li>
 						<li>
 							<strong>Google Analytics</strong> and <strong>advertising cookies</strong>.
