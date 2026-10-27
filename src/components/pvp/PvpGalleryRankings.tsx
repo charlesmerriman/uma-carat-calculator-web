@@ -41,8 +41,9 @@ export function PvpGalleryRankings({ event }: { event: RaceEvent }) {
 	}
 
 	const { payload } = rankings
+	// A container: TeamCounts lays out by its width (shared with the Rankings page's panel).
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="@container flex flex-col gap-4">
 			<p className="text-sm text-gray-300">
 				{payload.posts === 0
 					? "Nobody has posted a team for this event yet."

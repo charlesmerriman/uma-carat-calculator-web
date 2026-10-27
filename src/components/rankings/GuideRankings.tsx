@@ -231,7 +231,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 			</p>
 
 			<section className="card-panel flex flex-col gap-2 p-3 sm:p-4" aria-label="Card search">
-				<div className="relative w-full sm:w-80">
+				<div className="relative w-full @xl:w-80">
 					<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 					<input
 						type="search"
@@ -261,7 +261,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				)}
 			</section>
 
-			<div className="grid items-start gap-4 lg:grid-cols-2">
+			<div className="grid items-start gap-4 @4xl:grid-cols-2">
 				<RankList
 					title="Overall"
 					hint="Decks a card is in, the borrowed card included. Alternatives don't count."
@@ -276,7 +276,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				/>
 			</div>
 
-			<div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+			<div className="grid items-start gap-4 @4xl:grid-cols-2 @7xl:grid-cols-3">
 				{CARD_TYPES.filter((type) => filters.cardTypes.has(type.id)).map((type) => (
 					<RankList
 						key={type.id}
@@ -339,7 +339,7 @@ function CardArt({ card }: { card: CatalogueSupportCard | undefined }) {
 
 function FilterRow({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
+		<div className="flex flex-col gap-1.5 @xl:flex-row @xl:items-start @xl:gap-3">
 			<span className="w-20 shrink-0 pt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</span>
 			<div className="flex min-w-0 flex-wrap items-center gap-1.5">{children}</div>
 		</div>

@@ -1,6 +1,8 @@
 /**
  * The two placements of a panel beside the team builder, shared by Guide
- * picks (left) and Recommended skills (right).
+ * picks (left) and Recommended skills (right). The Rankings page's pinned
+ * panel (rankings/RankingsDock.tsx) borrows SideDrawer; it docks in the app
+ * shell rather than the My team grid, so it has its own docked column.
  *
  *   DockedPanel  a column of the My team view's grid, sticky under the
  *                control band, scrolling on its own. Shown only from the
@@ -69,8 +71,15 @@ export function DockedPanel({ side, title, icon, onCollapse, children }: PanelCh
 	)
 }
 
-/** The retracted panel, sliding in from its side. */
-export function SideDrawer({ side, title, icon, open, onClose, children }: PanelChrome & { open: boolean; onClose: () => void }) {
+/**
+ * The retracted panel, sliding in from its side. `width` is a literal class
+ * (so Tailwind sees it); the Rankings panel's drawer is wider than Guide picks'.
+ */
+export function SideDrawer({ side, title, icon, open, onClose, width = "w-[min(20rem,88vw)]", children }: PanelChrome & {
+	open: boolean
+	onClose: () => void
+	width?: string
+}) {
 	useEffect(() => {
 		if (!open) return
 		const closeOnEscape = (keydown: KeyboardEvent) => {
@@ -89,7 +98,7 @@ export function SideDrawer({ side, title, icon, open, onClose, children }: Panel
 				role="dialog"
 				aria-modal="true"
 				aria-label={title}
-				className={`absolute inset-y-0 flex w-[min(20rem,88vw)] flex-col border-edge bg-gray-800 shadow-2xl ${classes.sheet}`}
+				className={`absolute inset-y-0 flex ${width} flex-col border-edge bg-gray-800 shadow-2xl ${classes.sheet}`}
 			>
 				<header className="flex items-center justify-between border-b border-gray-700 py-1.5 pl-3 pr-1.5">
 					<h2 className={HEADING}>

@@ -7,6 +7,7 @@ import type { RaceEvent } from "../types"
 import type { GuideRankingsPayload } from "../types/guideRankings"
 import type { PullPlanRankingsPayload } from "../types/pullPlanRankings"
 import type { PlayersRankingsPayload, PvpRankingsPayload } from "../types/rankingsTabs"
+import { resetRankingsPinForTests } from "../services/rankingsPinStore"
 
 /**
  * The Rankings page (/app/rankings): who sees it, and the Guide rankings
@@ -110,6 +111,8 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.unstubAllGlobals()
+	localStorage.clear()
+	resetRankingsPinForTests()
 })
 
 describe("RankingsPage", () => {
@@ -182,5 +185,13 @@ describe("RankingsPage", () => {
 		expect(within(screen.getByRole("region", { name: "Team Trials" })).getByText("38%")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Campaign selectors" })).getByText("Fine Motion 9")).toBeInTheDocument()
+	})
+
+	it("pins the tab on screen to the side, and unpins it", () => {
+		renderPage(true, { url: "/app/rankings?view=players" })
+		fireEvent.click(screen.getByRole("button", { name: "Pin to the side" }))
+		expect(localStorage.getItem("rankings-pin")).toBe("players")
+		fireEvent.click(screen.getByRole("button", { name: "Unpin", pressed: true }))
+		expect(localStorage.getItem("rankings-pin")).toBeNull()
 	})
 })
