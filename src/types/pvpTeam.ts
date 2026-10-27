@@ -61,6 +61,12 @@ export interface CatalogueSupportCard {
 	group_members?: string[]
 	/** In the global game today (has skill links from the global snapshot). */
 	on_global?: boolean
+	/**
+	 * A stand-in for "your best SSR Speed card" (owner, 2026-10-27): always
+	 * out, exempt from the deck's uma rules, and a deck may hold it twice.
+	 * Its name is rewritten on load (loadPvpCatalogue). Absent from an older API.
+	 */
+	placeholder?: boolean
 	skills: CatalogueSkillLink[]
 }
 

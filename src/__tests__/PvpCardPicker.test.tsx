@@ -226,6 +226,12 @@ describe("the Owned filter (the player's Collection)", () => {
 		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "Super Creek"])
 	})
 
+	it("lists placeholders first and never hides them behind Owned only", () => {
+		const anySpeed = { ...card(40, "Your best SSR Speed card", [], "speed"), placeholder: true }
+		renderSupportPicker({ owned, items: [...CARDS, anySpeed] })
+		expect(tileNames()).toEqual(["Your best SSR Speed card", "Kitasan Black"])
+	})
+
 	it("starts switched off when nothing is owned", () => {
 		renderSupportPicker({ owned: { ids: new Set(), limitBreaks: new Map() } })
 		expect(screen.getByRole("checkbox", { name: /Owned only/ })).not.toBeChecked()
