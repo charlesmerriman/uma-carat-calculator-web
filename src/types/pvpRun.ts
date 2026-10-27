@@ -41,6 +41,12 @@ export interface PvpRunContent {
 	/** The final only: 1..3, or null when not entered. */
 	placement: number | null
 	note: string
+	/**
+	 * A day's ticket only: the player says the races not in `races` never ran
+	 * (none listed = the ticket went unused, some = they stopped after those).
+	 * Only the player sets it, never the clock. ticketState() reads it.
+	 */
+	skipped: boolean
 }
 
 /** One run as the server sends it. */

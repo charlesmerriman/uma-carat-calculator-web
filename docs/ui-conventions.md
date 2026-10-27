@@ -1840,6 +1840,13 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   saved", and refetches.
 - **The counting rules are `utils/pvpRuns.ts`** (worked example in its header): an uma is
   measured over every race she ran in; a round's "best ticket" is the game's own rule.
+- **Skips are the player's word, never the clock's** (owner, 2026-10-26; api `skipped`).
+  An empty ticket has "Skip this ticket", a part-logged one "Skip the rest" ("Stopped after
+  2 races"), and both have Undo: a player may only have been slow to type it in. Logging a
+  race a stopped ticket did not list reopens it (`logRace`). A day that is over
+  (`isPastDay`) with unlogged tickets offers "Mark the rest skipped"; nothing is skipped for
+  the player. Not on the Finals. A skip moves no win rate; "Tickets used" counts it apart.
+  Read a ticket through `ticketState()` (unlogged, skipped, stopped, started, done).
 - Tests: `RunsView.test.tsx` (the flows), `pvpRuns.test.ts` (the maths).
 
 ### Gallery view (`components/pvp/gallery/`)

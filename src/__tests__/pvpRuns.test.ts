@@ -3,8 +3,11 @@ import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import {
 	bestTicketWins,
 	cmDayAt,
+	emptyContent,
 	formatRate,
+	isPastDay,
 	lineupFromTeam,
+	logRace,
 	previousLineup,
 	runsOf,
 	sameLineup,
@@ -12,6 +15,9 @@ import {
 	setRace,
 	summarizeRuns,
 	tallyRun,
+	ticketCounts,
+	ticketState,
+	unloggedTickets,
 } from "../utils/pvpRuns"
 import type { RaceEvent } from "../types"
 import type { PvpRun, PvpRunRace, PvpRunRunner } from "../types/pvpRun"
@@ -45,6 +51,7 @@ const ticket = (day: number, number: number, raced: PvpRunRace[], runners: PvpRu
 	finals_group: "",
 	placement: null,
 	note: "",
+	skipped: false,
 	updated_at: "2026-11-01T00:00:00Z",
 })
 
@@ -137,6 +144,52 @@ describe("editing a ticket", () => {
 		expect(sameSlot({ stage: "final" }, { stage: "final" })).toBe(true)
 		expect(sameSlot({ stage: "final" }, { stage: "day", day: 1, ticket: 1 })).toBe(false)
 		expect(sameSlot({ stage: "day", day: 1, ticket: 2 }, { stage: "day", day: 1, ticket: 2 })).toBe(true)
+	})
+})
+
+describe("skipped tickets", () => {
+	const skipped = (run: PvpRun): PvpRun => ({ ...run, skipped: true })
+
+	it("tells every state of a ticket apart", () => {
+		expect(ticketState(undefined)).toBe("unlogged")
+		expect(ticketState(skipped(ticket(1, 1, [], [])))).toBe("skipped")
+		expect(ticketState(skipped(ticket(1, 1, races(0, null))))).toBe("stopped")
+		expect(ticketState(ticket(1, 1, []))).toBe("started")
+		expect(ticketState(ticket(1, 1, races(0, null, 1)))).toBe("started")
+		expect(ticketState(ticket(1, 1, races(0, 0, 0, 0, 0)))).toBe("done")
+	})
+
+	it("takes a skip back when a race it did not list is logged, and only then", () => {
+		const stopped = { ...emptyContent(LINEUP), races: races(0, null), skipped: true }
+		expect(logRace(stopped, 3, 1).skipped).toBe(false)
+		expect(logRace(stopped, 3, null).skipped).toBe(false)
+		// Fixing or clearing a race already listed is still "stopped after".
+		expect(logRace(stopped, 2, 1)).toMatchObject({ races: races(0, 1), skipped: true })
+		expect(logRace(stopped, 2, undefined)).toMatchObject({ races: races(0), skipped: true })
+	})
+
+	it("counts tickets used, stopped ones too, apart from those skipped whole", () => {
+		const runs = [
+			ticket(1, 1, races(0, 0, 0, 0, 0)),
+			skipped(ticket(1, 2, races(0, null))),
+			skipped(ticket(1, 3, [], [])),
+			ticket(1, 4, []),
+		]
+		expect(ticketCounts(runs)).toEqual({ used: 2, skipped: 1 })
+		// A skip changes no win rate: the unlisted races were never counted.
+		expect(summarizeRuns(runs).total).toEqual({ wins: 6, raced: 7 })
+	})
+
+	it("lists the tickets of a day with nothing logged", () => {
+		expect(unloggedTickets([ticket(1, 2, []), ticket(2, 1, [])], 1)).toEqual([1, 3, 4])
+		expect(unloggedTickets([], 3)).toEqual([1, 2, 3, 4])
+	})
+
+	it("knows a day is over only once the next has started", () => {
+		expect(isPastDay(1, 1)).toBe(false)
+		expect(isPastDay(1, 2)).toBe(true)
+		expect(isPastDay(2, 2)).toBe(false)
+		expect(isPastDay(4, null)).toBe(true)
 	})
 })
 
