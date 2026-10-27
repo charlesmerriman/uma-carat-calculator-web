@@ -157,7 +157,21 @@ function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: Colle
 				{newest && <span className="hidden text-xs text-gray-300 sm:block">Newest trained {formatDate(newest)}</span>}
 			</TabCard>
 			<TabCard id="umas" tab={tab} onChoose={onChoose} label="Umas" hint="outfits unlocked" count={umas?.count} total={umas?.total} />
-			<TabCard id="cards" tab={tab} onChoose={onChoose} label="Support cards" hint="owned, with limit breaks" count={cards?.count} total={cards?.total} />
+			<TabCard
+				id="cards"
+				tab={tab}
+				onChoose={onChoose}
+				label={
+					<>
+						{/* "Support cards" is cut off a third of a phone wide. */}
+						<span className="sm:hidden">Cards</span>
+						<span className="hidden sm:inline">Support cards</span>
+					</>
+				}
+				hint="owned, with limit breaks"
+				count={cards?.count}
+				total={cards?.total}
+			/>
 		</div>
 	)
 }
@@ -166,7 +180,7 @@ function TabCard({ id, tab, onChoose, label, hint, count, total, children }: {
 	id: CollectionTab
 	tab: CollectionTab
 	onChoose: (tab: CollectionTab) => void
-	label: string
+	label: ReactNode
 	hint: string
 	count: number | undefined
 	/** "of N", with a bar, for a list the catalogue bounds. */
