@@ -119,7 +119,7 @@ vi.mock("../hooks/usePvpAccess", async () => ({
 	usePvpAccess: () => access.value,
 }))
 // Nobody signed in unless a test says so (the Edit guide tab is for editors).
-const session = vi.hoisted(() => ({ account: null as null | { guide_editor?: boolean; early_access?: boolean } }))
+const session = vi.hoisted(() => ({ account: null as null | { guide_editor: boolean } }))
 vi.mock("../services/AuthContext", async () => ({
 	...(await vi.importActual<typeof import("../services/AuthContext")>("../services/AuthContext")),
 	useAccount: () => ({ isLoggedIn: session.account !== null, status: session.account ? "ready" : "anonymous", account: session.account }),
@@ -129,10 +129,6 @@ vi.mock("../services/AuthContext", async () => ({
 vi.mock("../components/pvp/editor/loadGuideEditor", () => ({
 	loadGuideEditor: () =>
 		Promise.resolve({ default: ({ event: shown }: { event: RaceEvent }) => <div data-testid="guide-editor">{`cm-${shown.id}`}</div> }),
-}))
-// Rankings has its own tests (pvpRankings.test.ts); here only who gets it.
-vi.mock("../components/pvp/PvpRankingsView", () => ({
-	PvpRankingsView: ({ event }: { event: { id: number } }) => <div data-testid="rankings-view">{`cm-${event.id}`}</div>,
 }))
 // The gallery has its own tests (PvpGallery.test.tsx); here only which view shows.
 vi.mock("../components/pvp/gallery/GalleryView", () => ({
@@ -407,7 +403,7 @@ describe("PvpGuidePage views and layout", () => {
 		try {
 			const { unmount } = renderPage("/app/pvp?event=cm-10")
 			const views = within(screen.getByRole("tablist", { name: "View" }))
-			expect(views.getAllByRole("tab")).toHaveLength(6)
+			expect(views.getAllByRole("tab")).toHaveLength(5)
 			fireEvent.click(views.getByRole("tab", { name: "Edit guide" }))
 			expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=editor")
 			expect(await screen.findByTestId("guide-editor")).toHaveTextContent("cm-10")
@@ -419,22 +415,6 @@ describe("PvpGuidePage views and layout", () => {
 		renderPage("/app/pvp?event=cm-10&view=editor")
 		expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
 		expect(screen.queryByRole("tab", { name: "Edit guide" })).not.toBeInTheDocument()
-	})
-
-	it("keeps Rankings to early access, whatever the page's own lock says", () => {
-		respond(200, GUIDE)
-		const { unmount } = renderPage("/app/pvp?event=cm-10&view=rankings")
-		expect(screen.getByText(/Rankings show which support cards and umas/)).toBeInTheDocument()
-		expect(screen.queryByTestId("rankings-view")).not.toBeInTheDocument()
-		unmount()
-		session.account = { early_access: true }
-		try {
-			renderPage("/app/pvp?event=cm-10&view=rankings")
-			expect(screen.getByTestId("rankings-view")).toHaveTextContent("cm-10")
-			expect(screen.queryByText(/Rankings show which support cards and umas/)).not.toBeInTheDocument()
-		} finally {
-			session.account = null
-		}
 	})
 
 	it("keeps the cards new since the last event collapsed until asked", async () => {
@@ -454,7 +434,6 @@ describe("PvpGuidePage views and layout", () => {
 			views.getByRole("tab", { name: "My team" }),
 			views.getByRole("tab", { name: "CM Runs" }),
 			views.getByRole("tab", { name: "Gallery" }),
-			views.getByRole("tab", { name: "Rankings" }),
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")

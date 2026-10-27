@@ -1594,19 +1594,11 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`milestones`), passed steps filled, the next one ringed. A null LoH offset hides that step.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
-- **Five views under the header, `?view=`**: Recommendations (the guide, default, no
+- **Four views under the header, `?view=`**: Recommendations (the guide, default, no
   parameter), My team (`team`, the builder), CM Runs (`runs`, the player's logged tickets;
-  see "CM Runs view" below), Gallery (`gallery`, the posted teams; see "Gallery view"
-  below) and Rankings (`rankings`, below). An editor gets a sixth, Edit guide. On a phone
-  the tabs show their `short` labels (Guide, Team, Runs, Ranks, Edit); the full label stays
-  the accessible name. The guide is fetched only on Recommendations.
-- **Rankings** (`PvpRankingsView`, owner 2026-10-27): the cards and umas the guides recommend
-  most, counted by `utils/pvpRankings.ts` from `GET /pvp-rankings`'s rows, from the event on
-  screen onward (so Previous / Next move the window). **Early access only, by its own rule**:
-  `account.early_access`, never the page's `locked` (so `PVP_EARLY_ACCESS` going off and the
-  open CM's exception don't open it); the API refuses it the same way. A card counts once per
-  deck, the borrowed card included (owner) and alternatives only shown; Beginner / Standard /
-  Whale on by default, other decks off; an uma scores its summed stars.
+  see "CM Runs view" below) and Gallery (`gallery`, the posted teams; see "Gallery view"
+  below). An editor gets a fifth, Edit guide. On a phone the tabs show their `short`
+  labels (Guide, Team, Runs, Edit); the full label stays the accessible name. The guide is fetched only on Recommendations.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
@@ -2068,6 +2060,32 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   and the team window keep the keys and stay instant; `useReducedMotion()` zeroes it.
 - **Notes** (`TeamNotes.tsx`): ten per team, read-only until the pen, `==red==` and line breaks
   kept, the eraser's Undo in a toast. Colours are the `--color-note-*` tokens.
+
+## Rankings page (`components/rankings/`)
+
+Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
+
+- **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
+  navbar item (both bars; with six phone tabs the labels hide below 390px, and the desktop
+  item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
+  too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
+  in the API's `visits.KNOWN_ROUTES` so landings count.
+- **Tabs, `?view=`**: Guide rankings (default, no parameter), then PvP and Players drawn as
+  "Soon" until they land; Pull plans joins behind its Raptive gate. One tab on screen.
+- **Hourly**: each tab's payload is built at most once an hour on the server and never
+  invalidated; the page says "Updated 40 minutes ago" from its `generated_at`.
+- **Guide rankings** (`GuideRankings.tsx`) is the source sheet's card table with its filters
+  one to one (Henry): Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions, plus
+  "Other decks" for one-off decks the sheet has no column for), Strategy, Scenario ("Not set"
+  for a guide without one), Card type ("Friend", as elsewhere on the site, for the sheet's
+  "Pal"), every box ticked to start; plus the event window (All guides, or the next 3 / 5 / 10
+  events with a guide from a picked one). Then the sheet's note, a card search, Overall, Umas,
+  and one table per ticked card type. **Every rule is `utils/guideRankings.ts`**: a card counts
+  once per deck (the borrowed card too, "N borrowed"; an alternative never), an uma once per
+  guide and strategy (times recommended, never stars), shares out of the decks or
+  guide-strategies counted. A row opens to counts by event, strategy and deck, never a list of
+  decks.
+- **`RankList`** is every tab's table: place, picture, name, "count · share", an opening row.
 
 ## Selectors page (`components/selectors/`)
 
