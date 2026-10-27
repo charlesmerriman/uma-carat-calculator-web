@@ -23,12 +23,13 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { usePvpRankings } from "../../hooks/usePvpRankings"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
-import { PVP_STYLE_PARAM, STYLE_LABELS } from "../../utils/pvpGuide"
+import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { pvpEventHref, refForRaceEvent, shortEventName, type PvpEventKind } from "../../utils/pvpEvent"
 import {
 	DEFAULT_EVENT_COUNT,
 	DEFAULT_TIERS,
 	EVENT_COUNTS,
+	breakdown,
 	rankCards,
 	rankingEvents,
 	rankUmas,
@@ -56,7 +57,6 @@ const CARD_TYPES: Array<{ id: string; label: string }> = [
 	{ id: "friend", label: "Friend" },
 	{ id: "group", label: "Group" },
 ]
-const TIER_WORDS: Record<RankingTier, string> = { beginner: "Beginner", standard: "Standard", whale: "Whale", other: "" }
 
 // The card picker's switch and chip looks, so the filters read the same.
 const SEGMENTS = "flex flex-wrap gap-0.5 rounded-lg bg-gray-900/70 p-0.5"
@@ -238,16 +238,27 @@ function RankList({ title, hint, filters, rows, empty }: {
 	)
 }
 
-/** One ranked row: place, art, name and counts; a click opens where it appears. */
-function RankRow({ place, art, name, counts, events, appearances }: {
+/**
+ * One ranked row: place, art, name, its count, and the count per event. A
+ * click opens three short lines (by event, by style, by tier) rather than
+ * every deck (owner, 2026-10-27: "how many times, not every single one").
+ * The "by event" line links each event's guide; the row itself is a button,
+ * and a link can't sit inside one.
+ */
+function RankRow({ place, art, name, counts, appearances, unit }: {
 	place: number
 	art: React.ReactNode
 	name: string
 	counts: React.ReactNode
-	events: RaceEvent[]
 	appearances: RankingAppearance[]
+	/** "decks" counts decks, "stars" an uma's stars. */
+	unit: "decks" | "stars"
 }) {
 	const [open, setOpen] = useState(false)
+	const amount = (value: number) => (unit === "stars" ? `★${value}` : String(value))
+	const byEvent = breakdown(appearances, (appearance) => appearance.event)
+	const byStyle = breakdown(appearances, (appearance) => appearance.style)
+	const byTier = unit === "decks" ? breakdown(appearances, (appearance) => appearance.tier ?? "other") : []
 	return (
 		<div className="py-2">
 			<button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full min-w-0 items-center gap-3 rounded-md text-left transition hover:bg-gray-800/60">
@@ -257,71 +268,45 @@ function RankRow({ place, art, name, counts, events, appearances }: {
 					<span className="truncate text-sm font-semibold text-gray-100">{name}</span>
 					<span className="text-xs text-gray-400">{counts}</span>
 				</span>
-				<span className="hidden max-w-[40%] flex-wrap justify-end gap-1 sm:flex">
-					{events.map((event) => (
-						<span key={`${event.event_type}-${event.id}`} className="rounded bg-gray-700/70 px-1.5 py-0.5 text-[11px] text-gray-300">
-							{shortEventName(event)}
+				<span className="hidden max-w-[45%] flex-wrap justify-end gap-1 sm:flex">
+					{byEvent.map(([event, value]) => (
+						<span key={`${event.event_type}-${event.id}`} className="rounded bg-gray-700/70 px-1.5 py-0.5 text-[11px] tabular-nums text-gray-300">
+							{shortEventName(event)} <span className="text-gray-400">·</span> {amount(value)}
 						</span>
 					))}
 				</span>
 				<ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden="true" />
 			</button>
 			{open && (
-				// One line per event, each place it appears as a chip that opens
-				// that guide on its style: 49 decks read as five lines, not 49.
-				<ul className="mt-2 flex flex-col gap-1.5 pl-[4.75rem] text-xs">
-					{groupByEvent(appearances).map(({ event, rows }) => (
-						<li key={`${event.event_type}-${event.id}`} className="flex flex-wrap items-center gap-1">
-							<span className="w-12 shrink-0 font-semibold text-gray-300">{shortEventName(event)}</span>
-							{rows.map((appearance, index) => (
-								<Link
-									key={index}
-									to={`${pvpEventHref(refForRaceEvent(appearance.event))}&${PVP_STYLE_PARAM}=${appearance.style}`}
-									className={`rounded border px-1.5 py-0.5 transition hover:border-brand hover:text-brand ${
-										appearance.role === "alt" ? "border-dashed border-gray-600 text-gray-400" : "border-gray-600 text-gray-200"
-									}`}
-									title={appearanceTitle(appearance)}
-								>
-									{STYLE_LABELS[appearance.style]}
-									{appearance.deck !== null && ` ${deckName(appearance.deck)}`}
-									{appearance.role === "borrow" && " (borrowed)"}
-									{appearance.role === "alt" && " (alt.)"}
-									{appearance.stars !== null && ` ${"★".repeat(appearance.stars)}`}
-								</Link>
-							))}
-						</li>
-					))}
-				</ul>
+				<dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-[4.75rem] text-xs tabular-nums">
+					<dt className="text-gray-400">By event</dt>
+					<dd className="flex flex-wrap gap-x-3 text-gray-200">
+						{byEvent.map(([event, value]) => (
+							<Link key={`${event.event_type}-${event.id}`} to={pvpEventHref(refForRaceEvent(event))} className="text-brand transition hover:text-brand/75">
+								{shortEventName(event)} {amount(value)}
+							</Link>
+						))}
+					</dd>
+					<dt className="text-gray-400">By style</dt>
+					<dd className="text-gray-200">{byStyle.sort(([a], [b]) => STYLES.indexOf(a) - STYLES.indexOf(b)).map(([style, value]) => `${STYLE_LABELS[style]} ${amount(value)}`).join(" · ")}</dd>
+					{byTier.length > 0 && (
+						<>
+							<dt className="text-gray-400">By tier</dt>
+							<dd className="text-gray-200">{byTier.sort(([a], [b]) => tierOrder(a) - tierOrder(b)).map(([tier, value]) => `${tierLabel(tier)} ${value}`).join(" · ")}</dd>
+						</>
+					)}
+				</dl>
 			)}
 		</div>
 	)
 }
 
-/** A pick's places, grouped by event, in the order they came. */
-function groupByEvent(appearances: RankingAppearance[]): Array<{ event: RaceEvent; rows: RankingAppearance[] }> {
-	const groups: Array<{ event: RaceEvent; rows: RankingAppearance[] }> = []
-	for (const appearance of appearances) {
-		const group = groups.find((candidate) => candidate.event === appearance.event)
-		if (group) group.rows.push(appearance)
-		else groups.push({ event: appearance.event, rows: [appearance] })
-	}
-	return groups
+function tierOrder(tier: RankingTier): number {
+	return TIERS.findIndex((entry) => entry.id === tier)
 }
 
-/** A chip's hover text: the whole place in words. */
-function appearanceTitle(appearance: RankingAppearance): string {
-	const where = `${appearance.event.name}, ${STYLE_LABELS[appearance.style]}`
-	if (appearance.deck === null) return `${where}, ${appearance.stars ?? 0} stars`
-	const deck = `${deckName(appearance.deck)} deck`
-	if (appearance.role === "borrow") return `${where}, ${deck}, the borrowed card`
-	if (appearance.role === "alt") return `${where}, ${deck}, as an alternative (not counted)`
-	return `${where}, ${deck}`
-}
-
-/** "Whale", or an honorable-mention or one-off deck's own label. */
-function deckName(label: string): string {
-	const tier = label.trim().toLowerCase() as RankingTier
-	return TIER_WORDS[tier] || label.trim()
+function tierLabel(tier: RankingTier): string {
+	return TIERS.find((entry) => entry.id === tier)?.label ?? tier
 }
 
 function CardRow({ place, rank, card }: { place: number; rank: CardRank; card: CatalogueSupportCard | undefined }) {
@@ -334,8 +319,8 @@ function CardRow({ place, rank, card }: { place: number; rank: CardRank; card: C
 			name={card?.name ?? "Unknown card"}
 			art={card?.image ? <img src={card.image} alt="" loading="lazy" decoding="async" className="block aspect-[3/4] w-full rounded object-cover" /> : <span className="block aspect-[3/4] w-full rounded bg-gray-700" />}
 			counts={parts.join(" · ")}
-			events={rank.events}
 			appearances={rank.appearances}
+			unit="decks"
 		/>
 	)
 }
@@ -353,8 +338,8 @@ function UmaRow({ place, rank, uma }: { place: number; rank: UmaRank; uma: Catal
 					{rank.stars} {rank.stars === 1 ? "star" : "stars"} · best {rank.best} · {rank.events.length} {rank.events.length === 1 ? "event" : "events"}
 				</span>
 			}
-			events={rank.events}
 			appearances={rank.appearances}
+			unit="stars"
 		/>
 	)
 }

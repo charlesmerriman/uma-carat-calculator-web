@@ -45,8 +45,9 @@ export interface RankingFilters {
 export interface RankingAppearance {
 	event: RaceEvent
 	style: PvpStyle
-	/** The deck's label for a card; null for an uma. */
+	/** The deck's label and tier for a card; null for an uma. */
 	deck: string | null
+	tier: RankingTier | null
 	role: RankingRole | null
 	stars: number | null
 }
@@ -131,7 +132,7 @@ export function rankCards(
 				if (row.role === "borrow") rank.borrows += 1
 				if (!rank.events.includes(event)) rank.events.push(event)
 			}
-			rank.appearances.push({ event, style: row.style, deck: row.deck, role: row.role, stars: null })
+			rank.appearances.push({ event, style: row.style, deck: row.deck, tier: row.tier, role: row.role, stars: null })
 		}
 	}
 	// An alternative alone doesn't put a card on the list.
@@ -160,8 +161,25 @@ export function rankUmas(
 			rank.stars += row.stars
 			rank.best = Math.max(rank.best, row.stars)
 			if (!rank.events.includes(event)) rank.events.push(event)
-			rank.appearances.push({ event, style: row.style, deck: null, role: null, stars: row.stars })
+			rank.appearances.push({ event, style: row.style, deck: null, tier: null, role: null, stars: row.stars })
 		}
 	}
 	return [...ranks.values()].sort((a, b) => b.stars - a.stars || b.events.length - a.events.length)
+}
+
+/**
+ * How a pick's count splits by event, style or tier, as [key, amount] in the
+ * order first seen: decks for a card (alternatives left out, like the count),
+ * stars for an uma. What an opened row shows in place of every deck listed
+ * (owner, 2026-10-27: "how many times, not every single one").
+ */
+export function breakdown<K>(appearances: RankingAppearance[], keyOf: (appearance: RankingAppearance) => K): Array<[K, number]> {
+	const totals = new Map<K, number>()
+	for (const appearance of appearances) {
+		const amount = appearance.stars ?? (appearance.role === "alt" ? 0 : 1)
+		if (amount === 0) continue
+		const key = keyOf(appearance)
+		totals.set(key, (totals.get(key) ?? 0) + amount)
+	}
+	return [...totals.entries()]
 }

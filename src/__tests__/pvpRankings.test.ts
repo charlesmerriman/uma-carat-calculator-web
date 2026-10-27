@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { RaceEvent } from "../types"
 import type { PvpRankingsPayload } from "../types/pvpRankings"
-import { DEFAULT_TIERS, rankCards, rankingEvents, rankUmas } from "../utils/pvpRankings"
+import { DEFAULT_TIERS, breakdown, rankCards, rankingEvents, rankUmas } from "../utils/pvpRankings"
 
 /**
  * The Rankings view's counting rules (utils/pvpRankings.ts): which events,
@@ -116,5 +116,21 @@ describe("rankUmas", () => {
 			[SUZUKA, 3, 2, 2],
 		])
 		expect(rankUmas(PAYLOAD, [CM21], { style: "front" }, (uma) => uma !== MARU).map((rank) => rank.uma)).toEqual([SUZUKA])
+	})
+})
+
+describe("breakdown", () => {
+	it("splits a card's decks by event and tier, alternatives left out, and an uma's stars by style", () => {
+		const events = rankingEvents(EVENTS, CM21, PAYLOAD, ALL)
+		const withLight: PvpRankingsPayload = {
+			guides: [...PAYLOAD.guides, { kind: "cm", event: 22, cards: [{ card: LIGHT, style: "late", deck: "Beginner", tier: "beginner", role: "main" }], umas: [] }],
+		}
+		const kitasan = rankCards(PAYLOAD, events, filters).find((rank) => rank.card === KITASAN)!
+		expect(breakdown(kitasan.appearances, (row) => row.event)).toEqual([[CM21, 2], [CM23, 1]])
+		expect(breakdown(kitasan.appearances, (row) => row.tier)).toEqual([["beginner", 1], ["whale", 1], ["standard", 1]])
+		const light = rankCards(withLight, rankingEvents(EVENTS, CM21, withLight, ALL), filters).find((rank) => rank.card === LIGHT)!
+		expect(breakdown(light.appearances, (row) => row.event)).toEqual([[CM22, 1]])
+		const maru = rankUmas(PAYLOAD, events, { style: null }).find((rank) => rank.uma === MARU)!
+		expect(breakdown(maru.appearances, (row) => row.style)).toEqual([["front", 3], ["pace", 1]])
 	})
 })
