@@ -1540,15 +1540,17 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   a guide has two or more styles (`styleTabs`). Its type is `PvpStyleTab`, which only the
   guide's tabs and the page memory take; a team member's style stays a `PvpStyle`. The page owns it and
   `PvpGuideView`'s tabs are controlled; a tab click `replace`s, so Back never steps through
-  tabs. **With no style asked for, the guide opens on its top-ranked style** (owner,
-  2026-10-23): `parseStyleRanking` reads `style_ranking` ("Pace>>End>Late>Front"; `>>` a
-  clear gap, `=` / `>=` level; a word that names no style, CM 20's "Blaze", stays a step
-  with `style: null`), and `pickStyle(styles, wanted, ranking)` takes the first ranked style
-  the guide has, else its first. Each ranked tab shows its place ("Pace #1", `styleRanks`),
-  `aria-hidden` so the tab's name stays the style's. **Changing the event DROPS `?style=`**,
-  so the next event opens on its own rank 1. A guide with nothing for the asked-for style
-  falls back the same way and leaves the parameter alone. On a phone the five tabs are
-  equal columns on one line.
+  tabs. **With no style asked for, the guide opens on its first style**, in the usual Front,
+  Pace, Late, End order (`pickStyle(styles, wanted)`), **never on its top-ranked one** (owner,
+  2026-10-27, reversing 2026-10-23 at the team's request: players keep to one style, and the
+  page must not move them because of the meta analysis). The ranking only labels the tabs:
+  `parseStyleRanking` reads `style_ranking` ("Pace>>End>Late>Front"; `>>` a clear gap,
+  `=` / `>=` level; a word that names no style, CM 20's "Blaze", stays a step with
+  `style: null`), and each ranked tab shows its place ("Pace #1", `styleRanks`),
+  `aria-hidden` so the tab's name stays the style's. **Changing the event keeps `?style=`**,
+  so Next stays on the reader's style. A guide with nothing for the asked-for style shows
+  its first and leaves the parameter alone, so the pick returns on the next event that has
+  it. On a phone the five tabs are equal columns on one line.
 - **Comments on a guide** (Henry, 2026-10-21; `guide-comments-plan.md`): one thread per section,
   `""` for the whole guide (the side column's last box) and one per running style (under the
   style's pane). Each button names its thread ("Comments on Pace", "Comments on the whole
@@ -1569,10 +1571,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   stops engaging there.
 - **The tab remembers where it left the page** (`services/pvpPageMemory.ts`, sessionStorage,
   so a new tab opens on the current event). A bare `/app/pvp`, the navbar link, `<Navigate
-  replace>`s to the last address. The style is remembered WITH its event
-  (`rememberPvpStyle(style, "cm-21")`): an address that names no style (a Timeline card's
-  link) opens on the last style shown only for that same event; another event opens on its
-  guide's rank 1. Two keys on purpose: the page key is rewritten on every visit and would
+  replace>`s to the last address, and an address that names no style (a Timeline card's
+  link) opens on the last style shown, on any event. Two keys on purpose: the page key is rewritten on every visit and would
   drop the style. Tests must `sessionStorage.clear()` in `beforeEach`.
   **Every address the page writes names its event** (`setParam` pins the one on screen,
   then writes event, view, style in that order, the same as "Copy link"). Without it,

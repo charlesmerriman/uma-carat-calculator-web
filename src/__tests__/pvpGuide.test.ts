@@ -374,16 +374,12 @@ describe("the style ranking", () => {
 		expect(ranks.has("runaway")).toBe(false)
 	})
 
-	it("opens on the top-ranked style the guide has, unless one is asked for", () => {
-		const ranking = parseStyleRanking("Runaway>Pace>>End>Front")
-		// The guide has no Runaway pane, so its best style with one is Pace.
-		expect(pickStyle(["front", "pace", "end"], null, ranking)).toBe("pace")
-		expect(pickStyle(["front", "pace", "end"], "end", ranking)).toBe("end")
-		// Asked for a style the guide lacks: the ranking still decides.
-		expect(pickStyle(["front", "pace", "end"], "late", ranking)).toBe("pace")
-		// No ranking, or none of its styles: the first style, as before.
-		expect(pickStyle(["front", "end"], null, [])).toBe("front")
-		expect(pickStyle(["front", "end"], null, parseStyleRanking("Blaze"))).toBe("front")
+	it("opens on the first style, unless one the guide has is asked for", () => {
+		expect(pickStyle(["front", "pace", "end"], null)).toBe("front")
+		expect(pickStyle(["front", "pace", "end"], "end")).toBe("end")
+		// Asked for a style the guide lacks: its first.
+		expect(pickStyle(["front", "pace", "end"], "late")).toBe("front")
+		expect(pickStyle([], null)).toBeNull()
 	})
 })
 

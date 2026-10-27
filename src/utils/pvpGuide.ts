@@ -261,20 +261,16 @@ export function styleRanks(ranking: RankingStep[]): Map<PvpStyle, number> {
 
 /**
  * The style tab a guide shows: the one asked for when the guide has it, else
- * the guide's top-ranked style it has (owner, 2026-10-23: a reader lands on
- * the style the guide says to run), else its first. A guide with nothing for
- * the asked-for style falls back WITHOUT forgetting it, so a link's pick comes
- * back on the next event that has it. "All" is kept wherever the guide has
- * more than one style.
+ * its first in the usual Front, Pace, Late, End order. Never the guide's
+ * ranking (owner, 2026-10-27, reversing 2026-10-23): players keep to one style,
+ * and the page must not jump to another because of the meta analysis. A guide
+ * with nothing for the asked-for style falls back WITHOUT forgetting it, so the
+ * reader's pick comes back on the next event that has it. "All" is kept
+ * wherever the guide has more than one style.
  */
-export function pickStyle(
-	styles: PvpStyleTab[],
-	wanted: PvpStyleTab | null,
-	ranking: RankingStep[] = []
-): PvpStyleTab | null {
+export function pickStyle(styles: PvpStyleTab[], wanted: PvpStyleTab | null): PvpStyleTab | null {
 	if (wanted && styleTabs(styles).includes(wanted)) return wanted
-	const top = ranking.find((step) => step.style !== null && styles.includes(step.style))
-	return top?.style ?? styles[0] ?? null
+	return styles[0] ?? null
 }
 
 /**

@@ -844,24 +844,24 @@ describe("PvpGuidePage style links and memory", () => {
 	const styleTabs = () => within(screen.getAllByRole("tablist", { name: "Running style" })[0])
 	const location = () => screen.getByTestId("location").textContent
 
-	it("keeps the style in the URL, and drops it when the event changes", async () => {
+	it("keeps the style in the URL, and keeps it when the event changes", async () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		await screen.findByText("Recommended stats")
 		fireEvent.click(styleTabs().getByRole("tab", { name: "End" }))
 		expect(location()).toBe("/app/pvp?event=cm-10&style=end")
 		fireEvent.click(screen.getByRole("button", { name: /Next/ }))
-		// The next event opens on ITS guide's top-ranked style, not this one's pick.
-		expect(location()).toBe("/app/pvp?event=cm-11")
+		// Players keep to one style: Next stays on it.
+		expect(location()).toBe("/app/pvp?event=cm-11&style=end")
 		await screen.findByText("Recommended stats")
-		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
+		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
 	})
 
-	it("opens on the guide's top-ranked style when nothing names one", async () => {
+	it("opens on the first style even when the guide ranks another first, and still shows the ranks", async () => {
 		respond(200, { ...GUIDE, style_ranking: "End>>Front" })
 		renderPage("/app/pvp?event=cm-10")
 		await screen.findByText("Recommended stats")
-		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
+		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
 		expect(styleTabs().getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front#2", "End#1"])
 	})
 
@@ -912,7 +912,7 @@ describe("PvpGuidePage style links and memory", () => {
 		expect(await screen.findByText("Recommended stats")).toBeInTheDocument()
 	})
 
-	it("goes where a link to an event says, on the last style shown for that event only", async () => {
+	it("goes where a link to an event says, on the last style shown, for any event", async () => {
 		respond(200, GUIDE)
 		const first = renderPage("/app/pvp?event=cm-10&style=end")
 		await screen.findByText("Recommended stats")
@@ -923,10 +923,10 @@ describe("PvpGuidePage style links and memory", () => {
 		expect(location()).toBe("/app/pvp?event=cm-10")
 		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
 		second.unmount()
-		// Another event's link: that guide's top-ranked style, not this one's pick.
+		// Another event's link: still the reader's style.
 		renderPage("/app/pvp?event=cm-11")
 		await screen.findByText("Recommended stats")
-		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
+		expect(styleTabs().getByRole("tab", { name: "End" })).toHaveAttribute("aria-selected", "true")
 	})
 
 	it("copies the guide's preview link with the style on screen, the gallery's address, and never My team", async () => {
