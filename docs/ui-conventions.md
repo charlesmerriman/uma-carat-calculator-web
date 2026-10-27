@@ -1597,17 +1597,17 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Five views under the header, `?view=`**: Recommendations (the guide, default, no
   parameter), My team (`team`, the builder), CM Runs (`runs`, the player's logged tickets;
   see "CM Runs view" below), Gallery (`gallery`, the posted teams; see "Gallery view"
-  below) and Rankings (`rankings`, below). An editor gets a sixth, Edit guide. On a phone
+  below) and, for early access only, Rankings (`rankings`, below). An editor gets Edit guide. On a phone
   the tabs show their `short` labels (Guide, Team, Runs, Ranks, Edit); the full label stays
   the accessible name. The guide is fetched only on Recommendations.
 - **Rankings** (`PvpGalleryRankings`, owner 2026-10-27): the event on screen only, counting
   its **gallery posts** (Henry: "teams that people submitted into the gallery"): umas by posted
   teams with her, cards by member decks with the card (the borrowed card too, "N borrowed"),
   counts with shares, from `GET /rankings/gallery/<kind>/<id>` (counted on the server,
-  hourly). What the GUIDES recommend is the Rankings page (`/app/rankings`). **Early access
-  only, by its own rule**: `account.early_access`, never the page's `locked` (so
-  `PVP_EARLY_ACCESS` going off and the open CM's exception don't open it); the API refuses
-  it the same way.
+  hourly). What the GUIDES recommend is the Rankings page (`/app/rankings`). **Not drawn at
+  all without early access** (owner, 2026-10-27: "shouldn't be visible at all if you can't
+  access it"): the tab's `earlyAccess` flag, like Edit guide's `editors`, so there is no lock
+  card for it and `?view=rankings` reads as Recommendations; the API refuses it the same way.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
