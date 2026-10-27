@@ -634,10 +634,10 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 	onUseDeck?: (deck: PvpDeck) => void
 }) {
 	// The page owns the pick (it is `?style=` in the URL, so a link can name
-	// it). With none, or one the guide lacks (the pick is kept), the guide's
-	// top-ranked style shows, else its first.
+	// it). With none, or one the guide lacks (the pick is kept), its first
+	// style shows. The ranking only labels the tabs.
 	const ranking = parseStyleRanking(guide.style_ranking)
-	const shown = pickStyle(styles, style, ranking) ?? styles[0]
+	const shown = pickStyle(styles, style) ?? styles[0]
 	return (
 		<div className="flex min-w-0 flex-col gap-3">
 			{/* Pinned under the View tabs while this style's column scrolls by
@@ -710,7 +710,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 	// from xl; the band above holds the rest of what is team-wide.
 	const hasSide = generalSkills.length > 0
 	// The tab on screen, the same pick StyleColumn makes, for the band's ladder.
-	const shownStyle = pickStyle(styles, style, parseStyleRanking(guide.style_ranking))
+	const shownStyle = pickStyle(styles, style)
 
 	// The side column's height, for .pvp-side-sticky (App.css): pinned when it
 	// fits on screen, scrolled with the page to its end when it doesn't.
