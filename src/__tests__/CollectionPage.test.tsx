@@ -66,7 +66,7 @@ const { CollectionPage } = await import("../components/collection/CollectionPage
 const fetchMock = vi.fn()
 let stored: TrainedUma[] = []
 /** What GET /trained-umas/<id> adds to a stored veteran: her raw game data and spark names. */
-let details: Record<number, Pick<VeteranDetail, "game_data" | "sparks">> = {}
+let details: Record<number, Partial<Pick<VeteranDetail, "game_data" | "sparks">>> = {}
 let roster: Roster = { umas: [], support_cards: [] }
 
 /** Every request as the mock received it, bodies parsed (and unzipped). */
