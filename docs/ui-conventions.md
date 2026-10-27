@@ -1814,13 +1814,32 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
 
 - **Account only** (owner, 2026-10-26): a guest gets a sign-in card; there is no device
   store. A League of Heroes event shows a "coming later" line; the API already takes LoH.
-- **Day tabs 1 to 4 (Round 1 is days 1-2, Round 2 days 3-4) and Finals**, opening on the
-  day the CM is on now (`cmDayAt`: 24-hour days from the start date, the Finals from
-  `cm_finals_hours`). A day shows its four tickets side by side.
-- **A ticket COPIES its lineup** (uma and style per spot) from "Same as last ticket" or one
-  of the event's teams, so editing a team never rewrites a logged ticket. Five native
-  selects per ticket: one of the three won, Loss, or "–" (not run yet, which is not a loss).
-  The Finals card adds the group (A / B) and the placement; a winner fills a blank 1st.
+- **The look is the owner's redesign** (2026-10-27; `notes/cm-runs-plan.md`, section 0, and
+  its claude.ai mockup): the old look's twenty selects a day are gone.
+- **Day tabs grouped by round (Round 1 is days 1-2, Round 2 days 3-4) and Finals**, each
+  with a four-segment bar (one per ticket) and a "Today" badge, opening on the day the CM is
+  on now (`cmDayAt`: 24-hour days from the start date, the Finals from `cm_finals_hours`).
+  Below `sm` the tabs are a five-column grid: the round groups are `display: contents`, so
+  their labels lock to row 1 and the tabs to row 2 of one grid (one set of tabs, no copy).
+- **A day is a list, one row per ticket**: five squares (the winner's `FramedUma` ringed in
+  gold, a red cross for a loss, a dash after a stop, a dashed number for a race not run), a
+  score, and from `sm` the three faces. **One ticket is open**: the day's ticket in progress
+  (`defaultOpenTicket`), or the one the player opened; the first write pins it, so logging a
+  fifth race doesn't fold it. Open, it shows the lineup once, then per race four buttons
+  (the three umas and Loss): one tap logs, a tap on the chosen one clears to "not run",
+  which is not a loss. A Total row counts each column. Then Skip, and the Note (120
+  characters, saved on blur or Enter, shown grey under a closed row).
+- **A ticket COPIES its lineup** (uma, style, veteran per spot), so editing a team never
+  rewrites a logged ticket. The one-tap button is "Same three as Ticket 2" (or "Day 1, Ticket
+  4": `previousRun` returns the ticket so the label can name it), else "Use Team 1"; "Pick a
+  team" lists every choice as a card with faces. The Finals copy the event's last ticket.
+  With no team and nothing logged, the day is a "Who's running this CM?" card to My team.
+- **The Finals**: radio buttons for the group (A / B) and the placement (1st to 3rd), a tap
+  on the chosen one clears it, and the same tap row for the race; a winner fills a blank 1st.
+- **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,
+  the Finals, per-uma bars with the veteran link, per day); below `lg` they fall under the
+  day. On a phone a three-number strip (`WinRateStrip`) goes above the tabs and the side
+  column shows only the per-uma bars.
 - **Which veteran ran** (`VeteranPicker`, under each runner; a picker, never a dropdown,
   owner 2026-10-26): the account's veterans of that outfit only, each a card with her
   portrait, grade and score, stats, best letters, skills, memo and training date, plus "No
@@ -1841,7 +1860,7 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
 - **The counting rules are `utils/pvpRuns.ts`** (worked example in its header): an uma is
   measured over every race she ran in; a round's "best ticket" is the game's own rule.
 - **Skips are the player's word, never the clock's** (owner, 2026-10-26; api `skipped`).
-  An empty ticket has "Skip this ticket", a part-logged one "Skip the rest" ("Stopped after
+  An empty ticket has "Skip" (an open one with a lineup "Skip this ticket"), a part-logged one "Skip the rest" ("Stopped after
   2 races"), and both have Undo: a player may only have been slow to type it in. Logging a
   race a stopped ticket did not list reopens it (`logRace`). A day that is over
   (`isPastDay`) with unlogged tickets offers "Mark the rest skipped"; nothing is skipped for

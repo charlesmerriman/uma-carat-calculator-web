@@ -22,7 +22,11 @@ import { statsTitle, veteranTag, veteranText } from "../../utils/veteranGrade"
 import type { CatalogueUma } from "../../types/pvpTeam"
 import type { TrainedUma } from "../../types/trainedUma"
 
-export function VeteranPicker({ uma, value, veterans, oshi, onChange }: {
+/** The button as My team draws it; a caller with its own look passes `buttonClassName`. */
+const BUTTON =
+	"mt-1 w-full max-w-full truncate rounded-md border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-left text-[11px] text-gray-200 transition hover:border-brand hover:text-brand"
+
+export function VeteranPicker({ uma, value, veterans, oshi, onChange, buttonClassName = BUTTON }: {
 	uma: Pick<CatalogueUma, "id" | "name" | "portrait" | "image"> | undefined
 	/** The linked veteran's id, or null. */
 	value: number | null | undefined
@@ -30,6 +34,8 @@ export function VeteranPicker({ uma, value, veterans, oshi, onChange }: {
 	/** Draws the rainbow frame (one of the player's favorites). */
 	oshi: boolean
 	onChange: (trainedUma: number | null) => void
+	/** Replaces the button's classes, given whether a veteran is linked (the CM Runs runner card). */
+	buttonClassName?: string | ((linked: boolean) => string)
 }) {
 	const [open, setOpen] = useState(false)
 	const options = uma ? veteransOf(veterans, uma.id) : []
@@ -42,7 +48,7 @@ export function VeteranPicker({ uma, value, veterans, oshi, onChange }: {
 				aria-label={`Veteran for ${uma.name}: ${linked ? veteranText(linked) : "none"}`}
 				title={linked ? statsTitle(linked) : undefined}
 				onClick={() => setOpen(true)}
-				className="mt-1 w-full max-w-full truncate rounded-md border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-left text-[11px] text-gray-200 transition hover:border-brand hover:text-brand"
+				className={typeof buttonClassName === "function" ? buttonClassName(Boolean(linked)) : buttonClassName}
 			>
 				{linked ? veteranText(linked) : "Pick a veteran"}
 			</button>

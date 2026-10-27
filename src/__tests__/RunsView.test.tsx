@@ -7,8 +7,9 @@ import type { RaceEvent } from "../types"
 import type { CatalogueUma, PvpTeam } from "../types/pvpTeam"
 
 /**
- * The CM Runs view: who may use it, picking a ticket's lineup, logging races,
- * the finals, and what a refused save looks like. The counting rules have
+ * The CM Runs view: who may use it, starting a ticket's lineup, logging races
+ * with the race buttons, notes, skips, the finals, and what a refused save
+ * looks like. The counting rules have
  * unit tests (pvpRuns.test.ts); the routes are the API's tests.
  *
  * The event starts in 2099, so the view opens on Day 1.
@@ -84,6 +85,9 @@ const logged = (ticket: number, races: Array<{ race: number; winner: number | nu
 	finals_group: "", placement: null, note: "", skipped: false, updated_at: "", ...extra,
 })
 
+/** Five races, all logged. */
+const RACES_DONE = [1, 2, 3, 4, 5].map((race) => ({ race, winner: race % 2 ? 0 : null }))
+
 /** Every PUT body sent so far, by path. */
 function puts(): Array<{ path: string; body: Record<string, unknown> }> {
 	return fetchMock.mock.calls
@@ -140,15 +144,17 @@ describe("who can log runs", () => {
 	it("sends a player with no team to My team", async () => {
 		teams.list = []
 		show()
-		expect((await screen.findAllByRole("button", { name: "My team" })).length).toBe(4)
+		expect(await screen.findByText("Who's running this CM?")).toBeTruthy()
+		expect(screen.getAllByRole("button", { name: "Open My team" })).toHaveLength(1)
+		expect(screen.queryByRole("region", { name: "Ticket 1" })).toBeNull()
 	})
 })
 
 describe("logging a ticket", () => {
-	it("copies a team in, then saves each race as it is picked", async () => {
+	it("copies a team in, then saves each race as it is tapped", async () => {
 		show()
 		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
-		fireEvent.click(within(ticket).getByRole("button", { name: "Team 1" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Use Team 1" }))
 
 		await waitFor(() => expect(puts()).toHaveLength(1))
 		expect(puts()[0].path).toBe("/pvp-runs/cm/10/day/1/ticket/1")
@@ -158,24 +164,60 @@ describe("logging a ticket", () => {
 			{ position: 2, uma: 43, style: "end", trained_uma: null },
 		])
 
-		fireEvent.change(await within(ticket).findByLabelText("Ticket 1, race 1"), { target: { value: "0" } })
-		fireEvent.change(within(ticket).getByLabelText("Ticket 1, race 2"), { target: { value: "loss" } })
+		// The ticket just started is the open one: one button per uma and Loss, per race.
+		fireEvent.click(await within(ticket).findByRole("button", { name: "Ticket 1, race 1: Oguri Cap won" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Loss" }))
 		await waitFor(() => expect(puts()).toHaveLength(3))
 		expect(puts()[2].body.races).toEqual([{ race: 1, winner: 0 }, { race: 2, winner: null }])
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap won" })).toHaveAttribute("aria-pressed", "true")
 
-		expect(within(ticket).getByText("1 of 2 won (50%)")).toBeTruthy()
-		const summary = screen.getByRole("region", { name: "Your win rates" })
+		const summary = screen.getByRole("complementary", { name: "Your win rates" })
 		expect(within(summary).getByText("1 of 2 races")).toBeTruthy()
+		expect(within(summary).getByText("1 ticket used")).toBeTruthy()
 	})
 
-	it("offers the last ticket's umas for the next one", async () => {
+	it("clears a race with a second tap", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: 0 }, { race: 2, winner: 1 }])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Maruzensky won" }))
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].body.races).toEqual([{ race: 1, winner: 0 }])
+	})
+
+	it("offers the last ticket's umas for the next one, named by where they came from", async () => {
 		show()
 		const first = await screen.findByRole("region", { name: "Ticket 1" })
-		fireEvent.click(within(first).getByRole("button", { name: "Team 1" }))
+		fireEvent.click(within(first).getByRole("button", { name: "Use Team 1" }))
 		const second = screen.getByRole("region", { name: "Ticket 2" })
-		await waitFor(() => expect(within(second).getByRole("button", { name: "Same as last ticket" })).toBeTruthy())
-		// The team is the same three, so it is not offered twice.
-		expect(within(second).queryByRole("button", { name: "Team 1" })).toBeNull()
+		await waitFor(() => expect(within(second).getByRole("button", { name: "Same three as Ticket 1" })).toBeTruthy())
+		// The team is the same three, so the list doesn't offer it twice.
+		fireEvent.click(within(second).getByRole("button", { name: "Pick a team" }))
+		// The one-tap button and the list's card.
+		expect(within(second).getAllByRole("button", { name: /^Same three as Ticket 1/ })).toHaveLength(2)
+		expect(within(second).queryByRole("button", { name: /^Team 1/ })).toBeNull()
+	})
+
+	it("opens the ticket in progress and folds the rest", async () => {
+		runs.list = [logged(1, RACES_DONE), logged(2, [{ race: 1, winner: 2 }])]
+		show()
+		const done = await screen.findByRole("region", { name: "Ticket 1" })
+		expect(within(done).getByRole("button", { name: /^Ticket 1, All 5 raced/ })).toHaveAttribute("aria-expanded", "false")
+		const current = screen.getByRole("region", { name: "Ticket 2" })
+		expect(within(current).getByRole("button", { name: /^Ticket 2, 4 to go/ })).toHaveAttribute("aria-expanded", "true")
+		expect(within(current).getByRole("button", { name: "Ticket 2, race 1: Gold Ship won" })).toBeTruthy()
+		expect(within(done).queryByRole("button", { name: /race 1:/ })).toBeNull()
+	})
+
+	it("saves a note when the field is left", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: 0 }])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		const note = within(ticket).getByRole("textbox", { name: "Note for Ticket 1" })
+		fireEvent.change(note, { target: { value: "  Rainy, Oguri blocked " } })
+		fireEvent.blur(note)
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].body).toMatchObject({ note: "Rainy, Oguri blocked" })
 	})
 
 	it("says when a save is refused", async () => {
@@ -188,7 +230,7 @@ describe("logging a ticket", () => {
 					: new Response("[]", { status: 200 })
 			)
 		)
-		fireEvent.click(within(ticket).getByRole("button", { name: "Team 1" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Use Team 1" }))
 		await waitFor(() => expect(toastError).toHaveBeenCalledWith("A ticket is 5 races."))
 		expect(await screen.findByText("Not saved")).toBeTruthy()
 	})
@@ -198,7 +240,7 @@ describe("skipping", () => {
 	it("skips an unplayed ticket and takes it back", async () => {
 		show()
 		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
-		fireEvent.click(within(ticket).getByRole("button", { name: "Skip this ticket" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Skip" }))
 		await waitFor(() => expect(puts()).toHaveLength(1))
 		expect(puts()[0].body).toMatchObject({ runners: [], races: [], skipped: true })
 
@@ -207,7 +249,7 @@ describe("skipping", () => {
 		// Nothing else was logged there, so taking it back clears the slot.
 		fireEvent.click(within(skipped).getByRole("button", { name: "Undo" }))
 		await waitFor(() => expect(deletes()).toEqual(["/pvp-runs/cm/10/day/1/ticket/1"]))
-		expect(within(screen.getByRole("region", { name: "Ticket 1" })).getByRole("button", { name: "Team 1" })).toBeTruthy()
+		expect(within(screen.getByRole("region", { name: "Ticket 1" })).getByRole("button", { name: "Use Team 1" })).toBeTruthy()
 	})
 
 	it("stops a ticket early, and logging another race reopens it", async () => {
@@ -217,13 +259,17 @@ describe("skipping", () => {
 		fireEvent.click(within(ticket).getByRole("button", { name: "Skip the rest" }))
 		await waitFor(() => expect(puts()).toHaveLength(1))
 		expect(puts()[0].body).toMatchObject({ skipped: true })
+		// Still open after the write: the stop doesn't fold the ticket away.
 		expect(within(ticket).getByText("Stopped after 2 races")).toBeTruthy()
+		// Races 3 to 5 read as skipped, not as still to run.
+		expect(within(ticket).getAllByText("Skipped")).toHaveLength(3)
 
 		// Slow typing, not a stop: race 3 ran after all.
-		fireEvent.change(within(ticket).getByLabelText("Ticket 1, race 3"), { target: { value: "1" } })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 3: Maruzensky won" }))
 		await waitFor(() => expect(puts()).toHaveLength(2))
 		expect(puts()[1].body).toMatchObject({ skipped: false })
 		expect(within(ticket).queryByText(/Stopped after/)).toBeNull()
+		expect(within(ticket).queryByText("Skipped")).toBeNull()
 	})
 
 	it("offers a day that is over to mark its unlogged tickets skipped", async () => {
@@ -239,8 +285,8 @@ describe("skipping", () => {
 		expect(puts().map(({ path }) => path)).toEqual([2, 3, 4].map((ticket) => `/pvp-runs/cm/10/day/1/ticket/${ticket}`))
 		expect(puts().every(({ body }) => body.skipped === true)).toBe(true)
 		expect(screen.queryByRole("button", { name: "Mark the rest skipped" })).toBeNull()
-		const summary = screen.getByRole("region", { name: "Your win rates" })
-		expect(within(summary).getByText("3 skipped")).toBeTruthy()
+		const summary = screen.getByRole("complementary", { name: "Your win rates" })
+		expect(within(summary).getByText("1 ticket used, 3 skipped")).toBeTruthy()
 	})
 
 	it("never offers it on the day that is on now", async () => {
@@ -255,13 +301,22 @@ describe("the finals", () => {
 		show()
 		fireEvent.click(await screen.findByRole("tab", { name: /Finals/ }))
 		const finals = screen.getByRole("region", { name: "Finals" })
-		fireEvent.click(within(finals).getByRole("button", { name: "Team 1" }))
-		fireEvent.change(await within(finals).findByLabelText("Finals race"), { target: { value: "1" } })
-		fireEvent.change(within(finals).getByLabelText("Finals group"), { target: { value: "A" } })
+		fireEvent.click(within(finals).getByRole("button", { name: "Use Team 1" }))
+		fireEvent.click(await within(finals).findByRole("button", { name: "The Finals race: Maruzensky won" }))
+		fireEvent.click(within(finals).getByRole("radio", { name: "Group A" }))
 
 		await waitFor(() => expect(puts()).toHaveLength(3))
 		expect(puts()[2].path).toBe("/pvp-runs/cm/10/final")
 		expect(puts()[2].body).toMatchObject({ races: [{ race: 1, winner: 1 }], placement: 1, finals_group: "A" })
+		expect(within(finals).getByRole("radio", { name: "1st" })).toHaveAttribute("aria-checked", "true")
+	})
+
+	it("starts the Finals from the event's last ticket", async () => {
+		runs.list = [logged(3, [{ race: 1, winner: 0 }], { day: 4 })]
+		show()
+		fireEvent.click(await screen.findByRole("tab", { name: /Finals/ }))
+		const finals = screen.getByRole("region", { name: "Finals" })
+		expect(within(finals).getByRole("button", { name: "Same three as Day 4, Ticket 3" })).toBeTruthy()
 	})
 })
 
@@ -277,7 +332,7 @@ describe("veterans", () => {
 		teams.list = [{ ...TEAM, members: TEAM.members.map((member) => (member.position === 0 ? { ...member, trained_uma: 5 } : member)) }]
 		show()
 		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
-		fireEvent.click(within(ticket).getByRole("button", { name: "Team 1" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Use Team 1" }))
 		await waitFor(() => expect(puts()).toHaveLength(1))
 		expect((puts()[0].body.runners as Array<{ trained_uma: number | null }>).map((runner) => runner.trained_uma)).toEqual([5, null, null])
 
@@ -304,12 +359,11 @@ describe("veterans", () => {
 				finals_group: "", placement: null, note: "", updated_at: "" },
 		]
 		show()
-		const summary = await screen.findByRole("region", { name: "Your win rates" })
+		const summary = await screen.findByRole("complementary", { name: "Your win rates" })
 		const first = within(summary).getByRole("link", { name: "Main Oguri" })
 		expect(first).toHaveAttribute("href", "/app/collection?veteran=5")
 		expect(within(summary).getByRole("link", { name: "S 15,120" })).toHaveAttribute("href", "/app/collection?veteran=6")
-		expect(within(summary).getByText("1 of 1")).toBeInTheDocument()
-		expect(within(summary).getByText("0 of 1")).toBeInTheDocument()
+		expect(within(summary).getByText("1 of 1 won")).toBeInTheDocument()
+		expect(within(summary).getByText("0 of 1 won")).toBeInTheDocument()
 	})
 })
-

@@ -8,7 +8,7 @@ import {
 	isPastDay,
 	lineupFromTeam,
 	logRace,
-	previousLineup,
+	previousRun,
 	runsOf,
 	sameLineup,
 	sameSlot,
@@ -135,9 +135,12 @@ describe("editing a ticket", () => {
 	it("offers the latest EARLIER ticket's lineup for a new one", () => {
 		const other = [LINEUP[0]]
 		const runs = [ticket(1, 2, [], other), ticket(1, 1, []), ticket(2, 1, [])]
-		expect(previousLineup(runs, 1, 4)).toEqual(other)
-		expect(previousLineup(runs, 1, 2)).toEqual(LINEUP)
-		expect(previousLineup(runs, 1, 1)).toBeNull()
+		expect(previousRun(runs, 1, 4)?.runners).toEqual(other)
+		expect(previousRun(runs, 1, 4)?.ticket).toBe(2)
+		expect(previousRun(runs, 1, 2)?.runners).toEqual(LINEUP)
+		expect(previousRun(runs, 1, 1)).toBeNull()
+		// The final copies the last ticket of the event.
+		expect(previousRun(runs, 5, 1)).toMatchObject({ day: 2, ticket: 1 })
 	})
 
 	it("tells a final from a ticket", () => {
