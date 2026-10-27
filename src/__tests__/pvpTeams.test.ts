@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
 	cardBlockReason,
+	placeholderName,
+	placeholderOrder,
 	clearMember,
 	deckRequestId,
 	deckToMemberCards,
@@ -33,7 +35,7 @@ const SIRIUS = ["Mejiro McQueen", "Rice Shower", "Winning Ticket", "Narita Brian
 // Sirius group cards, cards spelled unlike their umas ("TM Opera O" for
 // "T.M. Opera O"), and a group card with no members listed (not on global
 // yet, or an older API), named like an uma to show the name never counts.
-const CARDS = new Map<number, { id: number; name: string; card_type: string; group_members?: string[] }>(
+const CARDS = new Map<number, { id: number; name: string; card_type: string; group_members?: string[]; placeholder?: boolean }>(
 	[
 		{ id: 302, name: "Agnes Tachyon", card_type: "wit" },
 		{ id: 303, name: "Agnes Tachyon", card_type: "speed" },
@@ -44,6 +46,9 @@ const CARDS = new Map<number, { id: number; name: string; card_type: string; gro
 		{ id: 308, name: "Oguri Cap", card_type: "power" },
 		{ id: 309, name: "TM Opera O", card_type: "stamina" },
 		{ id: 310, name: "Maruzensky", card_type: "group" },
+		// A placeholder whose name happens to be an uma's: still no clash.
+		{ id: 311, name: "Your best SSR Speed card", card_type: "speed", placeholder: true },
+		{ id: 312, name: "Maruzensky", card_type: "speed", placeholder: true },
 	].map((card) => [card.id, card])
 )
 const LOOKUPS = { umasById: UMAS, cardsById: CARDS }
@@ -103,6 +108,34 @@ describe("pvpTeams", () => {
 		expect(cardBlockReason(member, null, 302, LOOKUPS)).toBe("Already in this deck")
 		expect(cardBlockReason(member, 1, 302, LOOKUPS)).toBeNull()
 		expect(cardBlockReason(undefined, 1, 302, LOOKUPS)).toBeNull()
+	})
+
+	it("lets a placeholder stand in twice and never clash with an uma", () => {
+		const [member] = setCard(setMemberUma([], 0, MARU), 0, 1, 311)
+		expect(cardBlockReason(member, 2, 311, LOOKUPS)).toBeNull()
+		expect(cardBlockReason(member, 6, 311, LOOKUPS)).toBeNull()
+		// Named like the trainee and like a card in the deck: neither counts.
+		expect(cardBlockReason(member, 2, 312, LOOKUPS)).toBeNull()
+		const [withAgnes] = setCard([member], 0, 2, 302)
+		expect(cardBlockReason(withAgnes, 3, 303, LOOKUPS)).toBe("Agnes Tachyon already has a card in this deck")
+	})
+
+	it("names a placeholder for what it stands in for, SSR first in order", () => {
+		expect(placeholderName({ card_type: "speed", rarity: 3 })).toBe("Your best SSR Speed card")
+		expect(placeholderName({ card_type: "friend", rarity: 1 })).toBe("Your best R Friend card")
+		expect(placeholderName({ card_type: null, rarity: null })).toBe("Your best SSR card")
+		const order = [
+			{ card_type: "speed", rarity: 1 },
+			{ card_type: "wit", rarity: 3 },
+			{ card_type: "speed", rarity: 3 },
+			{ card_type: "group", rarity: 2 },
+		].sort((a, b) => placeholderOrder(a) - placeholderOrder(b))
+		expect(order.map(placeholderName)).toEqual([
+			"Your best SSR Speed card",
+			"Your best SSR Wit card",
+			"Your best SR Group card",
+			"Your best R Speed card",
+		])
 	})
 
 	it("blocks a second card of the same uma, borrow slot included, but not the card it replaces", () => {

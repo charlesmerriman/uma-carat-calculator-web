@@ -10,6 +10,7 @@
 import { authHeaders } from "./authToken"
 import type { PvpTeamContent, PvpTeamMember, PvpCatalogue, PvpNote } from "../types/pvpTeam"
 import type { PvpEventRef } from "../utils/pvpEvent"
+import { placeholderOrder, placeholderName } from "../utils/pvpTeams"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -30,7 +31,20 @@ export function loadPvpCatalogue(): Promise<PvpCatalogue> {
 		cataloguePromise = fetch(`${API_URL}/pvp-catalogue`, { method: "GET" })
 			.then(async (response) => {
 				if (!response.ok) throw new Error(`GET /pvp-catalogue failed: ${response.status}`)
-				return (await response.json()) as PvpCatalogue
+				const catalogue = (await response.json()) as PvpCatalogue
+				// Placeholders take their player-facing name here, once, so every
+				// picker, team and gallery post that draws a card name says
+				// "Your best SSR Speed card" without knowing about them.
+				// They also sort among themselves SSR first, then by type, where
+				// the admin's names would put "R Friend" first.
+				const placeholders = catalogue.support_cards
+					.filter((card) => card.placeholder)
+					.sort((a, b) => placeholderOrder(a) - placeholderOrder(b))
+					.map((card) => ({ ...card, name: placeholderName(card), title: "" }))
+				return {
+					...catalogue,
+					support_cards: [...placeholders, ...catalogue.support_cards.filter((card) => !card.placeholder)],
+				}
 			})
 			.catch((error: unknown) => {
 				cataloguePromise = null

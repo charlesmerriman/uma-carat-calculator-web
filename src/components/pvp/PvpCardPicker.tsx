@@ -79,6 +79,8 @@ interface PickerItem {
 	cardType: string | null
 	/** A support card's 1 / 2 / 3 (R / SR / SSR); null for an uma. */
 	rarity: number | null
+	/** "Your best SSR Speed card": listed first, and never hidden by Owned only. */
+	placeholder: boolean
 	apt: CatalogueUma["apt"] | null
 }
 
@@ -127,6 +129,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 			skills: uma.skills,
 			cardType: null,
 			rarity: null,
+			placeholder: false,
 			apt: uma.apt,
 		}))
 	}
@@ -139,6 +142,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 		skills: card.skills,
 		cardType: card.card_type,
 		rarity: card.rarity,
+		placeholder: Boolean(card.placeholder),
 		apt: null,
 	}))
 }
@@ -192,7 +196,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 			const skillIds = new Set(item.skills.map((link) => link.skill))
 			// A pinned white is met by either half of its pair.
 			if (!pinnedSkills.every((id) => (pairs.get(id) ?? [id]).some((member) => skillIds.has(member)))) return false
-			if (ownedOnly && owned && !owned.ids.has(item.id)) return false
+			// Nobody owns a placeholder; it stands in for what they do own.
+			if (ownedOnly && owned && !owned.ids.has(item.id) && !item.placeholder) return false
 			// Support-only filters (see the header). A card with no rarity
 			// reads as SSR, the convention on SupportCard.rarity.
 			if (pool === "support") {
@@ -204,11 +209,13 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 			if (item.alias.toLocaleLowerCase().includes(query)) return true
 			return item.skills.some((link) => matchingSkillIds.has(link.skill))
 		})
-		// Stable: what can be picked before what can't, the guide's picks
-		// first within each, the catalogue's name order within those.
+		// Stable: what can be picked before what can't, then the placeholders
+		// together, then the guide's picks, the catalogue's name order within
+		// those.
 		.sort(
 			(a, b) =>
 				Number(blockReason(a.id) !== null) - Number(blockReason(b.id) !== null) ||
+				Number(b.placeholder) - Number(a.placeholder) ||
 				Number(recommended.has(b.id)) - Number(recommended.has(a.id))
 		)
 

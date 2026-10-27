@@ -22,7 +22,10 @@ export function useCardReleases(
 		[umaBannerData, supportBannerData]
 	)
 	return (pool, id) =>
-		releaseStatus(
+		// A placeholder is a stand-in, out for every event (owner, 2026-10-27).
+		pool === "support" && index.cardsById.get(id)?.placeholder
+			? { kind: "available" }
+			: releaseStatus(
 			(pool === "uma" ? releases.umas : releases.supports).get(id),
 			event,
 			(pool === "uma" ? index.umasById : index.cardsById).get(id)?.on_global

@@ -140,7 +140,7 @@ export function memberStyleFrom(styles: readonly string[]): MemberStyle | undefi
 /** The catalogue lookups the team rules read. PvpCatalogueIndex is one. */
 export type TeamRuleLookups = {
 	umasById: Map<number, Pick<CatalogueUma, "name" | "character_id">>
-	cardsById: Map<number, Pick<CatalogueSupportCard, "name" | "card_type" | "group_members">>
+	cardsById: Map<number, Pick<CatalogueSupportCard, "name" | "card_type" | "group_members" | "placeholder">>
 }
 
 /**
@@ -210,8 +210,11 @@ export function cardBlockReason(
 ): string | null {
 	if (!member) return null
 	const others = member.cards.filter((card) => card.slot !== slot)
-	if (others.some((card) => card.support_card === cardId)) return "Already in this deck"
 	const candidate = lookups.cardsById.get(cardId)
+	// A placeholder is no one card and no one uma: it may stand in twice, and
+	// the uma rules below don't apply to it (the server agrees on the repeat).
+	if (candidate?.placeholder) return null
+	if (others.some((card) => card.support_card === cardId)) return "Already in this deck"
 	if (!candidate) return null
 	const candidateUmas = cardUmas(candidate)
 	const trainee = lookups.umasById.get(member.uma)
@@ -221,7 +224,7 @@ export function cardBlockReason(
 	if (self !== undefined) return `${self} can't support herself`
 	for (const card of others) {
 		const other = lookups.cardsById.get(card.support_card)
-		if (!other) continue
+		if (!other || other.placeholder) continue
 		const shared = cardUmas(other).find((uma) => candidateUmas.some((mine) => sameUma(mine, uma)))
 		if (shared === undefined) continue
 		// Two cards of one uma, or two of one group (Team Sirius twice).
@@ -310,6 +313,36 @@ export function deckRequestId(state: unknown): number | null {
  * or an API older than the field) counts as none of them: it can still be
  * refused as the same card twice, but blocks no uma.
  */
+const RARITY_WORDS: Record<number, string> = { 1: "R", 2: "SR", 3: "SSR" }
+const TYPE_WORDS: Record<string, string> = {
+	speed: "Speed",
+	stamina: "Stamina",
+	power: "Power",
+	guts: "Guts",
+	wit: "Wit",
+	friend: "Friend",
+	group: "Group",
+}
+
+/**
+ * What a placeholder card is called everywhere a card's name shows: "Your
+ * best SSR Speed card" (owner, 2026-10-27). The admin's row is just "SSR
+ * Speed", which reads like a real card. A missing rarity reads as SSR, the
+ * convention on SupportCard.rarity.
+ */
+export function placeholderName(card: Pick<CatalogueSupportCard, "card_type" | "rarity">): string {
+	const rarity = RARITY_WORDS[card.rarity ?? 3] ?? ""
+	const type = TYPE_WORDS[card.card_type ?? ""] ?? ""
+	return ["Your best", rarity, type, "card"].filter(Boolean).join(" ")
+}
+
+/** Where a placeholder sorts among the others: SSR first, then the types in TYPE_WORDS's order. */
+export function placeholderOrder(card: Pick<CatalogueSupportCard, "card_type" | "rarity">): number {
+	const types = Object.keys(TYPE_WORDS)
+	const type = types.indexOf(card.card_type ?? "")
+	return (3 - (card.rarity ?? 3)) * 10 + (type === -1 ? types.length : type)
+}
+
 function cardUmas(card: Pick<CatalogueSupportCard, "name" | "card_type" | "group_members">): string[] {
 	return card.card_type === "group" ? (card.group_members ?? []) : [card.name]
 }
