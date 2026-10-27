@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 26, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 27, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -146,7 +146,9 @@ export const PrivacyPolicy: React.FC = () => {
 						we store each one&apos;s uma, stats, aptitudes and skills, and if you mark the umas
 						and support cards you own, we store which ones, with their stars or limit break.
 						All of it is kept on your account only (a guest can&apos;t add any), only you can
-						see it, and it is deleted with your account. If you import from files the game
+						see it, and it is deleted with your account. We also count it into totals across
+						all players, such as how often an uma wins in Champions Meeting. A total never
+						shows anyone&apos;s own runs or Collection. If you import from files the game
 						data tool umadump wrote, the files are read in your browser and we keep everything
 						they say about your veterans, umas and cards, including your game account id and
 						the notes you wrote on your veterans. Other players&apos; account ids in them (a
@@ -274,8 +276,8 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							<strong>Aggregate statistics</strong> about how the calculator is used (for
-							example, the share of accounts that enable a given income option, or which
-							banners are popular). Basis: <strong>legitimate interest</strong>, Article
+							example, the share of accounts that enable a given income option, which
+							banners are popular, or which umas win most in Champions Meeting). Basis: <strong>legitimate interest</strong>, Article
 							6(1)(f), in improving the Site. These figures are totals and never identify
 							anyone.
 						</li>
