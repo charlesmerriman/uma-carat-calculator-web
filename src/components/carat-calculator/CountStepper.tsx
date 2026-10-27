@@ -22,6 +22,8 @@ const PANEL_FALLBACK_WIDTH = 300
 /** Gap between the field and the panel (room for the caret), and the panel and the viewport edge. */
 const GAP = 8
 const EDGE = 8
+/** The /app shell's scroll container (views/ApplicationViews.tsx), `position: relative`. */
+const APP_SCROLLER = "[data-app-scroller]"
 /** How close the caret may get to the pad's rounded corners. */
 const CARET_INSET = 12
 
@@ -56,6 +58,18 @@ interface CountStepperProps {
  * plus a rect measured from the anchor sidesteps both, at the cost of having to
  * re-place on scroll.
  *
+ * WHY THE PORTAL GOES INTO THE APP'S SCROLLER, not <body>, when the field is in
+ * one (Daptrius, 2026-10-22, "Pop-Up lag"). A `fixed` pad re-placed from a
+ * scroll listener runs on the main thread, while Chrome scrolls smoothly on
+ * the compositor whenever the OS has animations on (Windows' "Show animations",
+ * which also turns smooth scrolling off when unticked). The rows glided and the
+ * pad caught up a frame or more later. `[data-app-scroller]` is
+ * `position: relative`, so an `absolute` pad inside it scrolls WITH the rows,
+ * on the compositor, on a desktop (the shell's own scroller) and on a phone
+ * (the page). The scroll listener stays for the above/below flip; for a scroll
+ * of that scroller it lands on the same coordinates and changes nothing.
+ * Outside the shell (a page with no scroller) the pad stays `fixed` on <body>.
+ *
  * WHY FOCUS IS THE ONLY TRIGGER: the pad is meant to save a click, not add one,
  * and focusing the field is something you were already doing to type in it — on
  * touch as much as with a mouse. It carried a chevron button underneath at
@@ -84,6 +98,9 @@ export const CountStepper = ({
 	} | null>(null)
 	const anchorRef = useRef<HTMLDivElement>(null)
 	const panelRef = useRef<HTMLDivElement>(null)
+	// The app's scroller holding the field, or null for <body> (see above).
+	// Found when the pad opens: the field never moves to another scroller.
+	const [host, setHost] = useState<HTMLElement | null>(null)
 
 	const place = useCallback((): void => {
 		const anchor = anchorRef.current
@@ -126,7 +143,27 @@ export const CountStepper = ({
 		const placement: Placement =
 			preferAbove ? (fitsAbove || !fitsBelow ? "above" : "below") : fitsBelow ? "below" : "above"
 		const top = placement === "below" ? rect.bottom + GAP : Math.max(EDGE, rect.top - GAP - panelHeight)
-		setPosition({ left, top, placement, caretLeft })
+		// Everything above is in viewport coordinates, as a `fixed` pad wants.
+		// Inside the scroller an `absolute` pad counts from the scroller's
+		// content origin instead: its box on screen, less what it has scrolled.
+		const scroller = anchor.closest<HTMLElement>(APP_SCROLLER)
+		const origin = scroller?.getBoundingClientRect()
+		const next = {
+			left: origin && scroller ? left - origin.left + scroller.scrollLeft : left,
+			top: origin && scroller ? top - origin.top + scroller.scrollTop : top,
+			placement,
+			caretLeft,
+		}
+		// A scroll of the host itself lands on the same numbers: skip the render.
+		setPosition((previous) =>
+			previous &&
+			previous.left === next.left &&
+			previous.top === next.top &&
+			previous.placement === next.placement &&
+			previous.caretLeft === next.caretLeft
+				? previous
+				: next
+		)
 	}, [preferAbove])
 
 	/**
@@ -236,7 +273,10 @@ export const CountStepper = ({
 		<div
 			ref={anchorRef}
 			className="flex"
-			onFocus={() => setOpen(true)}
+			onFocus={() => {
+				setHost(anchorRef.current?.closest<HTMLElement>(APP_SCROLLER) ?? null)
+				setOpen(true)
+			}}
 			onBlur={handleBlur}
 		>
 			{children}
@@ -264,7 +304,7 @@ export const CountStepper = ({
 						// once. Chips carry their own titles, so this shows on the
 						// pad's dead space only.
 						title={chips.hint}
-						className="fixed z-50 rounded-lg border border-edge bg-gray-800 p-1 shadow-lg"
+						className={`${host ? "absolute" : "fixed"} z-50 rounded-lg border border-edge bg-gray-800 p-1 shadow-lg`}
 						// Focus never leaves the field, so the pad stays open for the
 						// next click and the arrow keys keep working. On the whole
 						// panel rather than each chip: a press on the pad's own dead
@@ -299,7 +339,7 @@ export const CountStepper = ({
 							{chips.presets.map(renderChip)}
 						</div>
 					</div>,
-					document.body
+					host ?? document.body
 				)}
 		</div>
 	)
