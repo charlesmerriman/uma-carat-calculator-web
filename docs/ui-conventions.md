@@ -2080,8 +2080,16 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
   in the API's `visits.KNOWN_ROUTES` so landings count.
 - **Tabs, `?view=`**: Guide rankings (default, no parameter), Pull plans (`pull-plans`, behind
-  the Raptive gate), then PvP and Players drawn as "Soon" until they land. One tab on screen.
-  A tab the reader can't open is never drawn, and its `?view=` falls back to the first tab.
+  the Raptive gate), PvP (`pvp`, with `?event=cm-21` like the PvP page) and Players
+  (`players`). One tab on screen. A tab the reader can't open is never drawn, and its `?view=`
+  falls back to the first tab. Every tab fetches through `useRankingsPayload(path)`.
+- **PvP** (`PvpTab.tsx`), one event: "Teams players build" counts **every saved team**,
+  posted or not (the PvP page's own Rankings view counts the gallery only), drawn by
+  `TeamCounts`, the same tables as that view; "What wins" is CM Runs' win rate per uma and
+  strategy (`utils/runResults.ts`), only from `min_races` races up, else "Not enough runs yet".
+- **Players** (`PlayersTab.tsx`): favourite umas, Team Trials and club rank (shares out of the
+  players who set one), income options on (out of engaged accounts), campaign selectors with
+  their top picks. All from the admin analytics, staff out.
 - **Pull plans** (`PullPlans.tsx`) is the admin's Popular banners tables for supporters:
   planners, total, average and **typical (the median)** per banner, a type filter, by date or
   by planners, ended banners behind a switch (`utils/pullPlanRankings.ts`); a step-up's
@@ -2103,7 +2111,7 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   guide-strategies counted. A row opens to counts by event, strategy and deck, never a list of
   decks.
 - **`RankList`** is every ranked table's look: place, picture, name, "count · share", an
-  opening row. Every tab fetches through `useRankingsPayload(path)` (loading, refused, error).
+  opening row. **`TeamCounts`** is the two team tables (umas by teams, cards by decks).
 
 ## Selectors page (`components/selectors/`)
 

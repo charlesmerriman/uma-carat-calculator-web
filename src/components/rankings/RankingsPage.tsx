@@ -6,8 +6,8 @@
  *   guides       Guide rankings, the source sheet's card table (GuideRankings)
  *   pull-plans   the banners players plan to pull on (PullPlans), behind
  *                the Raptive gate: guide editors only (useRankingsPullPlans)
- *   pvp          the teams players save, and what wins (later)
- *   players      favourite umas, Team Trials, income options (later)
+ *   pvp          the teams players save, and what wins (PvpTab)
+ *   players      favourite umas, ranks, income options, selectors (PlayersTab)
  *
  * PATREON ONLY FOR NOW (owner, 2026-10-27): early access (`account.early_access`,
  * backend benefits.early_access) sees the page and its navbar item, and
@@ -23,24 +23,23 @@ import { AuthContext } from "../../services/AuthContext"
 import { useRankingsPullPlans } from "../../hooks/useRankingsPullPlans"
 import { GuideRankings } from "./GuideRankings"
 import { PullPlans } from "./PullPlans"
+import { PvpTab } from "./PvpTab"
+import { PlayersTab } from "./PlayersTab"
 
 type RankingsView = "guides" | "pull-plans" | "pvp" | "players"
 const VIEW_PARAM = "view"
 
-/**
- * The tabs, in order. A `soon` tab is drawn but can't be opened yet; a
- * `gated` one is drawn only for the Raptive gate (useRankingsPullPlans).
- */
-const VIEWS: Array<{ id: RankingsView; label: string; icon: LucideIcon; soon: boolean; gated?: boolean }> = [
-	{ id: "guides", label: "Guide rankings", icon: BookOpen, soon: false },
-	{ id: "pull-plans", label: "Pull plans", icon: CalendarRange, soon: false, gated: true },
-	{ id: "pvp", label: "PvP", icon: Swords, soon: true },
-	{ id: "players", label: "Players", icon: Users, soon: true },
+/** The tabs, in order. A `gated` one is drawn only for the Raptive gate (useRankingsPullPlans). */
+const VIEWS: Array<{ id: RankingsView; label: string; icon: LucideIcon; gated?: boolean }> = [
+	{ id: "guides", label: "Guide rankings", icon: BookOpen },
+	{ id: "pull-plans", label: "Pull plans", icon: CalendarRange, gated: true },
+	{ id: "pvp", label: "PvP", icon: Swords },
+	{ id: "players", label: "Players", icon: Users },
 ]
 
 /** The view a `?view=` value names among the tabs drawn; anything else is the first tab. */
 function parseRankingsView(value: string | null, shown: typeof VIEWS): RankingsView {
-	const view = shown.find((entry) => entry.id === value && !entry.soon)
+	const view = shown.find((entry) => entry.id === value)
 	return view?.id ?? "guides"
 }
 
@@ -73,6 +72,8 @@ const RankingsBody = () => {
 	const view = parseRankingsView(searchParams.get(VIEW_PARAM), shown)
 	const open = (next: RankingsView) => {
 		const params = new URLSearchParams(searchParams)
+		// The PvP tab's event belongs to that tab.
+		if (next !== "pvp") params.delete("event")
 		if (next === "guides") params.delete(VIEW_PARAM)
 		else params.set(VIEW_PARAM, next)
 		setSearchParams(params)
@@ -86,13 +87,13 @@ const RankingsBody = () => {
 					Rankings
 				</h1>
 				<p className="mt-1 text-sm leading-relaxed text-gray-300">
-					What the guides recommend most, counted across every guide or the next few events. For our Patreon
-					supporters for now.
+					What the guides recommend, what players build and plan, and what wins. For our Patreon supporters for
+					now.
 				</p>
 			</header>
 			<div role="tablist" aria-label="Rankings" className="flex flex-wrap gap-1 border-b border-gray-700">
 				{shown.map((entry) => (
-					<Tab key={entry.id} active={entry.id === view} soon={entry.soon} icon={entry.icon} onClick={() => open(entry.id)}>
+					<Tab key={entry.id} active={entry.id === view} icon={entry.icon} onClick={() => open(entry.id)}>
 						{entry.label}
 					</Tab>
 				))}
@@ -100,14 +101,15 @@ const RankingsBody = () => {
 			<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
 				{view === "guides" && <GuideRankings />}
 				{view === "pull-plans" && <PullPlans />}
+				{view === "pvp" && <PvpTab />}
+				{view === "players" && <PlayersTab />}
 			</div>
 		</div>
 	)
 }
 
-function Tab({ active, soon, icon: Icon, onClick, children }: {
+function Tab({ active, icon: Icon, onClick, children }: {
 	active: boolean
-	soon: boolean
 	icon: LucideIcon
 	onClick: () => void
 	children: ReactNode
@@ -117,19 +119,15 @@ function Tab({ active, soon, icon: Icon, onClick, children }: {
 			type="button"
 			role="tab"
 			aria-selected={active}
-			disabled={soon}
 			onClick={onClick}
 			className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition ${
 				active
 					? "border-brand text-brand"
-					: soon
-						? "cursor-default border-transparent text-gray-500"
-						: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
+					: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
 			}`}
 		>
 			<Icon className="h-4 w-4 shrink-0" />
 			{children}
-			{soon && <span className="rounded bg-gray-700/70 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">Soon</span>}
 		</button>
 	)
 }
