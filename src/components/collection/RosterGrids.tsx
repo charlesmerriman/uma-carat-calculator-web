@@ -535,7 +535,8 @@ export function OwnedUmasGrid({ umas, owned, releases, oshiIds, veteranCounts, s
 	return (
 		<section className="flex flex-col gap-4" aria-label="Umas you own">
 			<Summary label="Your umas at a glance" status={status}>
-				<span className="flex flex-wrap gap-6">
+				{/* Four across, a phone included, so the card stays short. */}
+				<span className="grid w-full grid-cols-4 gap-3 sm:flex sm:w-auto sm:gap-6">
 					{/* The count big, what it counts under it: "★5 4" ran together and read as 54. */}
 					<Figure value={summary.five} label={<><span className="text-brand">★</span> five stars</>} />
 					<Figure value={summary.four} label={<><span className="text-brand">★</span> four stars</>} />
@@ -745,7 +746,8 @@ export function OwnedCardsGrid({ cards, owned, releases, status, onEdit, onClear
 		<section className="flex flex-col gap-4" aria-label="Support cards you own">
 			<Summary label="Your support cards at a glance" status={status}>
 				<Figure value={<><span className="text-brand">{summary.mlb}</span> at MLB</>} label={`of the ${summary.owned} you own`} />
-				<ul className="grid min-w-0 flex-[1_1_28rem] grid-cols-4 gap-x-3 gap-y-2 sm:grid-cols-7">
+				{/* Three across on a phone: at four, "Stamina" and "Friend" were cut to "Sta" and "Frien". */}
+				<ul className="grid min-w-0 flex-[1_1_28rem] grid-cols-3 gap-x-3 gap-y-2 sm:grid-cols-4 lg:grid-cols-7">
 					{summary.byType.map((entry) => (
 						<li key={entry.type} className="flex min-w-0 flex-col gap-1">
 							<span className="flex items-center justify-between gap-1 text-xs">
