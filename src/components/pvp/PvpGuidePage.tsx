@@ -10,6 +10,9 @@
  *   My team          the player's own team builder (TeamBuilder)
  *   CM Runs          the player's logged tickets and win rates (RunsView)
  *   Gallery          teams other players posted for this event (GalleryView)
+ *   Rankings         what this event's gallery posts use most, counted
+ *                    (PvpGalleryRankings); early access only, whatever the
+ *                    page's own lock says
  *
  * The event, the view and the guide's running style are all URL parameters
  * (`?event=cm-12&view=team`, `?event=cm-12&style=pace`), so every screen is a
@@ -50,6 +53,7 @@ import {
 	History,
 	LayoutGrid,
 	Link2,
+	ListOrdered,
 	Loader2,
 	PenLine,
 	Swords,
@@ -109,6 +113,7 @@ import { isOpenPvpEvent, lockedPvpEvents, usePvpAccess } from "../../hooks/usePv
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { RunsView } from "./RunsView"
+import { PvpGalleryRankings } from "./PvpGalleryRankings"
 import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
@@ -118,8 +123,12 @@ import type { UseDeckRequest } from "../../utils/pvpTeams"
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
 const FALLBACK_TITLE = "PvP Guides"
 
+/** What the early-access card says on Rankings, in place of the guides' line. */
+const RANKINGS_BLURB =
+	"Rankings show which umas and support cards the players who posted to this event's gallery use most. They are for our Patreon supporters for now."
+
 /** The page's views, in tab order. The id is the `?view=` value. */
-type PvpView = "recommendations" | "team" | "runs" | "gallery" | "editor"
+type PvpView = "recommendations" | "team" | "runs" | "gallery" | "rankings" | "editor"
 const VIEW_PARAM = "view"
 /**
  * `short`, when set, is the label a phone shows; the full one stays the
@@ -132,6 +141,7 @@ const VIEWS: Array<{ id: PvpView; label: string; short?: string; icon: LucideIco
 	{ id: "team", label: "My team", short: "Team", icon: Users, soon: false },
 	{ id: "runs", label: "CM Runs", short: "Runs", icon: Trophy, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
+	{ id: "rankings", label: "Rankings", short: "Ranks", icon: ListOrdered, soon: false },
 	{ id: "editor", label: "Edit guide", short: "Edit", icon: PenLine, soon: false, editors: true },
 ]
 
@@ -199,7 +209,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const { search } = useLocation()
 	// Whether the Edit guide tab is drawn. The server checks every write
 	// again, so this only decides what is on screen.
-	const isEditor = Boolean(useAccount().account?.guide_editor)
+	const { account } = useAccount()
+	const isEditor = Boolean(account?.guide_editor)
+	const earlyAccess = Boolean(account?.early_access)
 
 	// One clock reading per mount, so every label measures from the same "now".
 	const now = useMemo(() => new Date(), [])
@@ -217,10 +229,17 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	// Whether the view on screen is closed to this reader: while locked,
 	// anything but the free event's guide and the open CM's guide, My team and
 	// Gallery. An editor is staff, so never locked.
+	//
+	// Rankings has its own rule (owner, 2026-10-27: supporters only for now):
+	// early access, read straight from the account, so opening the rest of the
+	// page to everyone (PVP_EARLY_ACCESS) never opens it, and the open CM's
+	// exception doesn't either. The API refuses it the same way.
 	const viewLocked =
-		locked &&
-		!(view === "recommendations" && event === freeEvent) &&
-		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
+		view === "rankings"
+			? !earlyAccess
+			: locked &&
+				!(view === "recommendations" && event === freeEvent) &&
+				!(view !== "editor" && event !== null && isOpenPvpEvent(event))
 	// Whether My team would be closed to this reader on this event: then the
 	// guide's "Use this deck" is not offered (it would land on a lock card).
 	const teamLocked = locked && !(event !== null && isOpenPvpEvent(event))
@@ -394,7 +413,13 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 						<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
 							{/* A locked guide fetches nothing (guideState stays idle), so
 							    only the card and the event's new cards show under it. */}
-							{viewLocked && <PvpEarlyAccess pending={false} freeEvent={freeEvent} />}
+							{viewLocked && (
+								<PvpEarlyAccess
+									pending={false}
+									freeEvent={freeEvent}
+									blurb={view === "rankings" ? RANKINGS_BLURB : undefined}
+								/>
+							)}
 							{view === "recommendations" && (
 								<div className="flex flex-col gap-4">
 									{guideState.status === "loading" && (
@@ -451,6 +476,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 									<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
 								</Suspense>
 							)}
+							{view === "rankings" && !viewLocked && event && <PvpGalleryRankings event={event} />}
 							{view === "editor" && !viewLocked && (
 								<Suspense
 									fallback={
@@ -486,8 +512,10 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 		// row dropped "Gallery" alone onto a second line. On a phone a tab with
 		// a `short` label shows that, while its full label stays its name for a
 		// screen reader (and for tests querying by name). An editor gets a
-		// fifth column; both class strings are literal so Tailwind sees them.
-		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
+		// sixth column; both class strings are literal so Tailwind sees them.
+		// Six don't fit a 390px phone with their icons ("Gallery" alone is
+		// ~75px of a ~62px column), so an editor's phone drops the icons.
+		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${shown.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}>
 			{shown.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
@@ -509,7 +537,7 @@ function ViewTabs({ view, isEditor, onChange }: { view: PvpView; isEditor: boole
 								: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
 						}`}
 					>
-						<Icon className="h-4 w-4 shrink-0" />
+						<Icon className={`h-4 w-4 shrink-0 ${shown.length === 6 ? "hidden sm:block" : ""}`} />
 						{entry.short ? (
 							<>
 								<span className="sm:hidden" aria-hidden="true">{entry.short}</span>
