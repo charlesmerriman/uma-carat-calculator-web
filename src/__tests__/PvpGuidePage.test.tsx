@@ -403,7 +403,8 @@ describe("PvpGuidePage views and layout", () => {
 
 	it("gives an editor an Edit guide tab, and nobody else", async () => {
 		respond(200, GUIDE)
-		session.account = { guide_editor: true }
+		// An editor is staff, so early access too: Rankings as well.
+		session.account = { guide_editor: true, early_access: true }
 		try {
 			const { unmount } = renderPage("/app/pvp?event=cm-10")
 			const views = within(screen.getByRole("tablist", { name: "View" }))
@@ -421,17 +422,19 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByRole("tab", { name: "Edit guide" })).not.toBeInTheDocument()
 	})
 
-	it("keeps Rankings to early access, whatever the page's own lock says", () => {
+	it("draws Rankings for early access only; anyone else never sees the tab", () => {
 		respond(200, GUIDE)
 		const { unmount } = renderPage("/app/pvp?event=cm-10&view=rankings")
-		expect(screen.getByText(/Rankings show which umas and support cards/)).toBeInTheDocument()
+		expect(screen.queryByRole("tab", { name: "Rankings" })).not.toBeInTheDocument()
+		// The link alone lands on the guide, with no lock card about Rankings.
+		expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
 		expect(screen.queryByTestId("rankings-view")).not.toBeInTheDocument()
 		unmount()
 		session.account = { early_access: true }
 		try {
 			renderPage("/app/pvp?event=cm-10&view=rankings")
+			expect(screen.getByRole("tab", { name: "Rankings" })).toHaveAttribute("aria-selected", "true")
 			expect(screen.getByTestId("rankings-view")).toHaveTextContent("cm-10")
-			expect(screen.queryByText(/Rankings show which umas and support cards/)).not.toBeInTheDocument()
 		} finally {
 			session.account = null
 		}
@@ -454,7 +457,6 @@ describe("PvpGuidePage views and layout", () => {
 			views.getByRole("tab", { name: "My team" }),
 			views.getByRole("tab", { name: "CM Runs" }),
 			views.getByRole("tab", { name: "Gallery" }),
-			views.getByRole("tab", { name: "Rankings" }),
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")

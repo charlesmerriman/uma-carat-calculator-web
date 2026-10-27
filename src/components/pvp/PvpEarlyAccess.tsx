@@ -24,12 +24,7 @@ import { ACTION_BUTTON, PRIMARY_BUTTON } from "./gallery/galleryStyles"
  * `freeEvent` is the event whose guide is open to everyone; null hides the
  * link (no event listed, or the reader is already on that guide's page).
  */
-export function PvpEarlyAccess({ pending, freeEvent = null, blurb }: {
-	pending: boolean
-	freeEvent?: RaceEvent | null
-	/** The card's explanation for a view with its own rule (Rankings); the guides' line by default. */
-	blurb?: string
-}) {
+export function PvpEarlyAccess({ pending, freeEvent = null }: { pending: boolean; freeEvent?: RaceEvent | null }) {
 	const { isLoggedIn } = useAccount()
 	const { signInState } = useSignInPrompt()
 
@@ -47,13 +42,9 @@ export function PvpEarlyAccess({ pending, freeEvent = null, blurb }: {
 						This part is in early access
 					</h2>
 					<p className="text-sm leading-relaxed text-gray-300">
-						{blurb ?? (
-							<>
-								Our Patreon supporters get every PvP guide, the team builder and the team gallery first. The guide
-								for the current or next event is free for everyone
-								{PVP_OPEN_CM_NUMBER !== null && `, and so is all of Champions Meeting ${PVP_OPEN_CM_NUMBER}`}.
-							</>
-						)}
+						Our Patreon supporters get every PvP guide, the team builder and the team gallery first. The guide
+						for the current or next event is free for everyone
+						{PVP_OPEN_CM_NUMBER !== null && `, and so is all of Champions Meeting ${PVP_OPEN_CM_NUMBER}`}.
 					</p>
 					<div className="flex flex-wrap justify-center gap-2">
 						{freeEvent && (
