@@ -62,11 +62,15 @@ function readMember(raw: unknown): PvpTeamMember | null {
 	const row = raw as Record<string, unknown>
 	if (!isInRange(row.position, 0, PVP_TEAM_SIZE - 1) || !isId(row.uma)) return null
 	if (!MEMBER_STYLES.includes(row.style as MemberStyle)) return null
-	// One card per slot and per deck: the first of a clash wins, the rest go.
+	// One card per slot: the first of a clash wins, the rest go. The same card
+	// twice is kept: a placeholder ("Your best SSR Speed card") may stand in
+	// twice, and telling one apart needs the catalogue. The picker refuses any
+	// other repeat, and the server refuses one at sign-in, as for two outfits
+	// of one character below.
 	const cards: PvpTeamCardSlot[] = []
 	for (const card of Array.isArray(row.cards) ? row.cards.map(readCard) : []) {
 		if (!card) continue
-		if (cards.some((kept) => kept.slot === card.slot || kept.support_card === card.support_card)) continue
+		if (cards.some((kept) => kept.slot === card.slot)) continue
 		cards.push(card)
 	}
 	cards.sort((a, b) => a.slot - b.slot)

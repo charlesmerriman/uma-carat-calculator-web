@@ -66,6 +66,21 @@ describe("guestPvpTeamStore", () => {
 		expect(read[1].notes).toEqual([{ text: "fine", color: "blue" }])
 	})
 
+	it("keeps one card per slot, and the same card in two slots (a placeholder may stand in twice)", () => {
+		store([
+			{
+				...team(),
+				members: [
+					{ position: 0, uma: 41, style: "front", cards: [{ slot: 1, support_card: 579 }, { slot: 1, support_card: 5 }, { slot: 2, support_card: 579 }] },
+				],
+			},
+		])
+		expect(readGuestPvpTeams()[0].members[0].cards).toEqual([
+			{ slot: 1, support_card: 579 },
+			{ slot: 2, support_card: 579 },
+		])
+	})
+
 	it("keeps only extra fields it knows", () => {
 		store([{ ...team(), id: 99, secret: "x" }])
 		expect(Object.keys(readGuestPvpTeams()[0]).sort()).toEqual(["event", "focus", "kind", "members", "name", "notes", "updatedAt"])
