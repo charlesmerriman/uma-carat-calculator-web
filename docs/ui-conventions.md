@@ -871,9 +871,11 @@ redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mocku
   "All veterans" to go back. CSS alone decides which shows (`hidden lg:block`); nothing reads
   the screen size at render. `?uma=<id>` starts the list on one uma. The add/edit form takes
   the whole tab's place.
-- **A tile** tells same-uma veterans apart: label (else the uma's name), the grade hexagon
-  and score (`veteranGrade.ts`), the five stats, and ONE flag (Borrowed, then "Not in your
-  latest import", then By hand; `utils/veteranLook.tileFlag`). Search (name, label, memo),
+- **A tile** tells same-uma veterans apart: her label or game memo with the uma under it,
+  else the uma's name with her outfit and trained date on the second line (`tileLines`: an
+  alt outfit's brackets are split off so a narrow tile never cuts it), the grade hexagon and
+  score (`veteranGrade.ts`), the five stats as columns over their colours, and ONE flag
+  (Borrowed, then "Not in your latest import", then By hand; `utils/veteranLook.tileFlag`). Search (name, label, memo),
   Uma, Sort (newest trained, score, each stat) and "A or better at" (one distance or style)
   are `utils/veteranList.ts`.
 - **Her card** is laid out like the game's veteran screen: framed portrait, name, label,
@@ -895,7 +897,8 @@ redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mocku
   `data-spark`, `.place-square` by `data-place`) are fills and edges only, never text, so one
   set serves every theme. The grade and podium fills are fixed game colours with dark ink.
 - Tests: `CollectionPage.test.tsx` (the flows and her card), `trainedUmas.test.ts` (the form's
-  rules), `veteranGameData.test.ts` (reading her game data), `veteranList.test.ts` (the list).
+  rules), `veteranGameData.test.ts` (reading her game data), `veteranList.test.ts` (the list),
+  `veteranLook.test.ts` (a tile's lines).
 
 ## Brand mark and display font
 

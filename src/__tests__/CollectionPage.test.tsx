@@ -161,7 +161,7 @@ describe("who sees what", () => {
 		expect(within(first).getByText("Main Oguri")).toBeInTheDocument()
 		expect(within(first).getByText("Oguri Cap")).toBeInTheDocument()
 		expect(within(first).getByText("Not in your latest import")).toBeInTheDocument()
-		expect(within(first).getByText("1200 / 800 / 1000 / 400 / 900")).toBeInTheDocument()
+		expect(within(first).getByTitle("Speed 1200, Stamina 800, Power 1000, Guts 400, Wit 900")).toHaveTextContent("Speed 1200Stamina 800Power 1000Guts 400Wit 900")
 		expect(within(second).getByText("Maruzensky")).toBeInTheDocument()
 		expect(within(second).getByText("By hand")).toBeInTheDocument()
 		expect(screen.getByRole("tab", { name: /Veterans/ })).toHaveTextContent("2")

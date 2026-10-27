@@ -4,18 +4,19 @@
  * one opens her card (VeteranCard.tsx) beside the list on a wide screen, in
  * its place on a phone. The filtering is utils/veteranList.ts.
  *
- * A tile tells two veterans of one uma apart at a glance: her label (else the
- * uma's name), the game's grade and score (the way the game names one), and
- * her five stats. Every uma is FramedUma, the rainbow frame for a favorite.
+ * A tile tells two veterans of one uma apart at a glance: her label or game
+ * memo (else the uma's name, with the outfit on its own line so a narrow tile
+ * never cuts it off), the game's grade and score (the way the game names
+ * one), and her five stats in their colours. Every uma is FramedUma, the
+ * rainbow frame for a favorite.
  */
 
 import { Search } from "lucide-react"
 import { FramedUma } from "../FramedUma"
 import { FlagChip, GradeBadge } from "./veteranBadges"
-import { tileFlag } from "../../utils/veteranLook"
-import { formatDate } from "../../utils/dateFormat"
+import { STAT_COLORS, tileFlag, tileLines } from "../../utils/veteranLook"
 import { formatScore, gradeLabel, statsTitle } from "../../utils/veteranGrade"
-import { statLine } from "../../utils/trainedUmas"
+import { STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
 import { GOOD_AT, VETERAN_SORTS, umaChoices, type VeteranFilter, type VeteranSort } from "../../utils/veteranList"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import type { TrainedUma } from "../../types/trainedUma"
@@ -110,7 +111,7 @@ export function VeteranList({ veterans, shown, filter, onFilter, index, oshiIds,
 					No veteran matches. Clear the search or the filter to see them all.
 				</p>
 			) : (
-				<ul className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-2.5">
+				<ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2.5">
 					{shown.map((veteran) => (
 						<li key={veteran.id}>
 							<VeteranTile
@@ -139,8 +140,7 @@ function VeteranTile({ veteran, umaName, portrait, oshi, open, onOpen }: {
 }) {
 	const grade = gradeLabel(veteran.rank_grade)
 	const flag = tileFlag(veteran)
-	// Her label when she has one, the uma under it; else the uma, and when she was trained.
-	const sub = veteran.label ? umaName : veteran.trained_at ? `Trained ${formatDate(veteran.trained_at)}` : "Entered by hand"
+	const { title, sub } = tileLines(veteran, umaName)
 	return (
 		<button
 			type="button"
@@ -161,13 +161,23 @@ function VeteranTile({ veteran, umaName, portrait, oshi, open, onOpen }: {
 				)}
 			</span>
 			<span className="flex min-w-0 flex-1 flex-col gap-px">
-				<span className="truncate text-sm font-semibold text-gray-100">{veteran.label || umaName}</span>
+				<span className="truncate text-sm font-semibold text-gray-100">{title}</span>
 				<span className="truncate text-xs text-gray-400">{sub}</span>
 				{veteran.rank_score != null && (
 					<span className="font-display mt-0.5 text-[15px] font-bold text-gray-100">{formatScore(veteran.rank_score)}</span>
 				)}
-				<span className="text-[11.5px] tabular-nums text-gray-300" title={statsTitle(veteran)}>
-					{statLine(veteran)}
+				{/* Her stats in the game's order, each over its colour, so they fit one line. */}
+				<span className="mt-1 grid grid-cols-5 gap-0.5" title={statsTitle(veteran)}>
+					{STAT_KEYS.map((key) => (
+						<span
+							key={key}
+							className="border-t-2 pt-0.5 text-center text-[10.5px] font-semibold tabular-nums text-gray-200"
+							style={{ borderTopColor: STAT_COLORS[key] }}
+						>
+							<span className="sr-only">{STAT_LABELS[key]} </span>
+							{veteran[key]}
+						</span>
+					))}
 				</span>
 				{flag && (
 					<FlagChip tone={flag.tone} title={flag.title} className="mt-1 self-start">

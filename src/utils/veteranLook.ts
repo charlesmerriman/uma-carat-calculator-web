@@ -1,10 +1,45 @@
 /**
- * How a veteran is drawn on the Collection page, as data: the tier her grade's
- * hexagon is filled by, and the flags that say where she came from. The
- * pieces that draw them are components/collection/veteranBadges.tsx.
+ * How a veteran is drawn on the Collection page, as data: a tile's two lines,
+ * the tier her grade's hexagon is filled by, her stats' hues, and the flags
+ * that say where she came from. The pieces that draw them are
+ * components/collection/veteranBadges.tsx, VeteranList.tsx and VeteranCard.tsx.
  */
 
-import type { TrainedUma } from "../types/trainedUma"
+import { formatDate } from "./dateFormat"
+import type { StatKey, TrainedUma } from "../types/trainedUma"
+
+/** Each stat's hue (index.css :root): a bar or an edge, never text. */
+export const STAT_COLORS: Record<StatKey, string> = {
+	speed: "var(--color-stat-speed)",
+	stamina: "var(--color-stat-stamina)",
+	power: "var(--color-stat-power)",
+	guts: "var(--color-stat-guts)",
+	wit: "var(--color-stat-wit)",
+}
+
+/**
+ * "TM Opera O (New Year)" as its name and its outfit, so a narrow tile can
+ * show both instead of cutting the outfit off. The catalogue writes an alt
+ * outfit in brackets after the name; a name without one stays whole.
+ */
+export function splitOutfit(umaName: string): { name: string; outfit: string | null } {
+	const match = /^(.+?)\s*\(([^()]+)\)$/.exec(umaName)
+	return match ? { name: match[1], outfit: match[2] } : { name: umaName, outfit: null }
+}
+
+/**
+ * A veteran tile's two lines. Her label, else her memo from the game, is the
+ * name the player gave her, so it leads, with the uma under it. Without
+ * either: the uma's name, then her outfit and when she was trained.
+ */
+export function tileLines(veteran: Pick<TrainedUma, "label" | "memo" | "trained_at">, umaName: string): { title: string; sub: string } {
+	const own = veteran.label || veteran.memo
+	if (own) return { title: own, sub: umaName }
+	const { name, outfit } = splitOutfit(umaName)
+	const when = veteran.trained_at ? formatDate(veteran.trained_at) : null
+	if (outfit) return { title: name, sub: when ? `${outfit} · ${when}` : outfit }
+	return { title: name, sub: when ? `Trained ${when}` : "Entered by hand" }
+}
 
 export type GradeTier = "u" | "ss" | "s" | "a" | "b" | "other" | "none"
 
