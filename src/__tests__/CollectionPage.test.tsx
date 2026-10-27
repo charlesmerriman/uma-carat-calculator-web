@@ -287,37 +287,58 @@ describe("importing from the game", () => {
 })
 
 describe("the Umas and Support cards tabs", () => {
-	it("marks an uma owned with a tap, then sets her stars; JP-only umas are not offered", async () => {
+	it("adds an uma at her base stars with a tap, then sets her stars in her editor; JP-only umas are not offered", async () => {
 		show("/app/collection?tab=umas")
 		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
 		expect(grid.queryByRole("button", { name: /JP Only/ })).toBeNull()
 		fireEvent.click(grid.getByRole("button", { name: "Maruzensky" }))
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
-		expect(calls("PATCH")[0].body).toEqual({ umas: [{ uma: 42, owned: true }] })
-		// On screen at once: she is owned and gets a stars pick.
-		expect(grid.getByRole("button", { name: "Maruzensky, owned" })).toHaveAttribute("aria-pressed", "true")
-		fireEvent.change(grid.getByLabelText("Stars for Maruzensky"), { target: { value: "4" } })
+		expect(calls("PATCH")[0].body).toEqual({ umas: [{ uma: 42, owned: true, stars: 3 }] })
+		// On screen at once: she is owned, and a tap now opens her editor.
+		fireEvent.click(grid.getByRole("button", { name: "Maruzensky, owned" }))
+		const editor = within(grid.getByRole("dialog", { name: "Maruzensky: stars and potential" }))
+		expect(editor.getByRole("button", { name: "3 stars" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(editor.getByRole("button", { name: "4 stars" }))
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(2))
 		expect(calls("PATCH")[1].body).toEqual({ umas: [{ uma: 42, owned: true, stars: 4 }] })
+		fireEvent.click(editor.getByRole("button", { name: "Potential 2" }))
+		await waitFor(() => expect(calls("PATCH")).toHaveLength(3))
+		expect(calls("PATCH")[2].body).toEqual({ umas: [{ uma: 42, owned: true, talent_level: 2 }] })
+		fireEvent.click(editor.getByRole("button", { name: "Done" }))
+		expect(grid.queryByRole("dialog")).toBeNull()
 	})
 
-	it("unmarks an uma with Remove, and starts over after asking once", async () => {
+	it("removes an uma from her editor, and starts over from the menu after asking once", async () => {
 		roster = {
 			umas: [41, 42].map((uma) => ({ uma, stars: 3, talent_level: 5, source: "import" as const, obtained_at: null })),
 			support_cards: [],
 		}
 		show("/app/collection?tab=umas")
 		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
-		fireEvent.click(grid.getByRole("button", { name: "Remove Oguri Cap" }))
+		expect(within(grid.getByRole("region", { name: "Your umas at a glance" })).getByText("at potential 5").previousSibling).toHaveTextContent("2")
+		fireEvent.click(grid.getByRole("button", { name: "Oguri Cap, owned" }))
+		fireEvent.click(grid.getByRole("button", { name: "Remove from my umas" }))
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
 		expect(calls("PATCH")[0].body).toEqual({ umas: [{ uma: 41, owned: false }] })
 
+		fireEvent.click(grid.getByRole("button", { name: "More list actions" }))
 		fireEvent.click(grid.getByRole("button", { name: "Start over" }))
 		expect(grid.getByText(/Remove all 1 umas\? This can't be undone\./)).toBeInTheDocument()
 		expect(calls("DELETE")).toHaveLength(0)
 		fireEvent.click(grid.getByRole("button", { name: "Remove all" }))
 		await waitFor(() => expect(calls("DELETE").map((call) => call.path)).toEqual(["/roster/umas"]))
-		await waitFor(() => expect(grid.getByText("0 of 2 owned")).toBeInTheDocument())
+		await waitFor(() => expect(grid.getByRole("button", { name: "Owned 0" })).toBeInTheDocument())
+	})
+
+	it("shows owned or missing ones only, and links an uma's veterans", async () => {
+		stored = [veteran(1), veteran(2)]
+		roster = { umas: [{ uma: 41, stars: 5, talent_level: 5, source: "import", obtained_at: null }], support_cards: [] }
+		show("/app/collection?tab=umas")
+		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
+		expect(await grid.findByRole("link", { name: "2 veterans" })).toHaveAttribute("href", "/app/collection?uma=41")
+		fireEvent.click(grid.getByRole("button", { name: "Missing 1" }))
+		expect(grid.queryByRole("button", { name: "Oguri Cap, owned" })).toBeNull()
+		expect(grid.getByRole("button", { name: "Maruzensky" })).toBeInTheDocument()
 	})
 
 	it("has no button that marks everything owned", async () => {
@@ -330,7 +351,7 @@ describe("the Umas and Support cards tabs", () => {
 		roster = { umas: [{ uma: 41, stars: 5, talent_level: 5, source: "import", obtained_at: null }], support_cards: [] }
 		show("/app/collection?tab=umas")
 		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
-		const order = () => grid.getAllByRole("button", { pressed: undefined }).filter((button) => button.hasAttribute("aria-pressed")).map((button) => button.getAttribute("aria-label"))
+		const order = () => grid.getAllByRole("button").filter((button) => button.hasAttribute("data-tile")).map((button) => button.getAttribute("aria-label"))
 		expect(order()).toEqual(["Maruzensky", "Oguri Cap, owned"])
 		// Flip to oldest first.
 		fireEvent.click(grid.getByRole("button", { name: /Release date, newest first/ }))
@@ -341,15 +362,33 @@ describe("the Umas and Support cards tabs", () => {
 		expect(order()).toEqual(["Oguri Cap, owned", "Maruzensky"])
 	})
 
-	it("sets an owned card's limit break", async () => {
+	it("sets an owned card's limit break and spare copies in its editor", async () => {
 		roster = { umas: [], support_cards: [{ support_card: 9, limit_break: 2, spare_copies: 0, source: "import", obtained_at: null }] }
 		show("/app/collection?tab=cards")
 		const grid = within(await screen.findByRole("region", { name: "Support cards you own" }))
 		expect(grid.getByTestId("limit-break-badge")).toHaveTextContent("LB2")
-		fireEvent.change(grid.getByLabelText("Limit break for Kitasan Black"), { target: { value: "4" } })
+		fireEvent.click(grid.getByRole("button", { name: "Kitasan Black, owned" }))
+		const editor = within(grid.getByRole("dialog", { name: "Kitasan Black: limit break and spare copies" }))
+		fireEvent.click(editor.getByRole("button", { name: "MLB" }))
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
 		expect(calls("PATCH")[0].body).toEqual({ support_cards: [{ support_card: 9, owned: true, limit_break: 4 }] })
 		expect(grid.getByTestId("limit-break-badge")).toHaveTextContent("MLB")
+		fireEvent.click(editor.getByRole("button", { name: "One more spare copy" }))
+		await waitFor(() => expect(calls("PATCH")).toHaveLength(2))
+		expect(calls("PATCH")[1].body).toEqual({ support_cards: [{ support_card: 9, owned: true, spare_copies: 1 }] })
+		expect(grid.getByTitle("Spare copies")).toHaveTextContent("+1")
+	})
+
+	it("filters cards by rarity and type, and counts MLB", async () => {
+		roster = { umas: [], support_cards: [{ support_card: 9, limit_break: 4, spare_copies: 0, source: "import", obtained_at: null }] }
+		show("/app/collection?tab=cards")
+		const grid = within(await screen.findByRole("region", { name: "Support cards you own" }))
+		expect(grid.getByText("of the 1 you own")).toBeInTheDocument()
+		fireEvent.click(within(grid.getByRole("group", { name: "Card type" })).getByRole("button", { name: "Wit" }))
+		expect(grid.queryByRole("button", { name: /Kitasan Black/ })).toBeNull()
+		expect(grid.getByRole("button", { name: "Agnes Tachyon" })).toBeInTheDocument()
+		fireEvent.click(within(grid.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "SR" }))
+		expect(grid.getByText("Nothing matches.")).toBeInTheDocument()
 	})
 
 	it("imports all three files at once: veterans, umas and cards", async () => {

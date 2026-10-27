@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyRosterChanges, limitBreakLabel, ownedForPicker } from "../utils/roster"
+import { applyRosterChanges, cardSummary, limitBreakLabel, ownedForPicker, umaSummary } from "../utils/roster"
 import type { Roster } from "../types/roster"
 
 /** The Collection grid's rules (utils/roster.ts): what a tap does to the cached roster. */
@@ -38,5 +38,35 @@ describe("labels and the picker", () => {
 		expect(ownedForPicker(undefined, "uma")).toBeNull()
 		expect([...(ownedForPicker(ROSTER, "uma")?.ids ?? [])]).toEqual([1])
 		expect(ownedForPicker(ROSTER, "support")?.limitBreaks.get(10)).toBe(2)
+	})
+})
+
+describe("the grids' summaries", () => {
+	it("counts owned umas by stars, an unset one with the three or fewer", () => {
+		const owned = [5, 5, 4, 3, 1, null].map((stars, index) => ({ stars, talent_level: index < 2 ? 5 : 2 }))
+		expect(umaSummary(owned)).toEqual({ five: 2, four: 1, threeOrFewer: 3, potentialFive: 2 })
+	})
+
+	it("counts MLB cards and owned of each type, Global cards only", () => {
+		const offered = [
+			{ id: 1, card_type: "speed" },
+			{ id: 2, card_type: "speed" },
+			{ id: 3, card_type: "wit" },
+		]
+		const owned = [
+			{ support_card: 1, limit_break: 4 },
+			{ support_card: 3, limit_break: 2 },
+			// A JP-only card a stale import left behind: not offered, not counted.
+			{ support_card: 9, limit_break: 4 },
+		]
+		expect(cardSummary(offered, owned, ["speed", "wit", "friend"])).toEqual({
+			owned: 2,
+			mlb: 1,
+			byType: [
+				{ type: "speed", owned: 1, total: 2 },
+				{ type: "wit", owned: 1, total: 1 },
+				{ type: "friend", owned: 0, total: 0 },
+			],
+		})
 	})
 })
