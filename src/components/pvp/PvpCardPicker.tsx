@@ -21,8 +21,10 @@
  *     the grid, greyed, with the reason (the OshiPicker rule): a card that
  *     vanishes from search looks like a missing card.
  *
- * Support cards also get a rarity switch (All, SSR, SR, R; All to start) and
- * a row of type filters. Both are support-only: on the skill search's Umas
+ * Support cards also get a rarity switch (All, SSR, SR, R; All to start), a
+ * separate Placeholder switch beside it, and a row of type filters. The
+ * placeholders ("Your best SSR Speed card") show ONLY under Placeholder, never
+ * under All or a rarity (owner, 2026-10-27). Both are support-only: on the skill search's Umas
  * tab they stay set but apply to nothing, so switching back finds them as
  * left, and they never empty the uma grid.
  */
@@ -55,7 +57,8 @@ const RARITIES = [
 	{ id: 2, label: "SR" },
 	{ id: 1, label: "R" },
 ] as const
-type RarityFilter = (typeof RARITIES)[number]["id"]
+/** A rarity, or "placeholder": the stand-in cards, which no other choice shows. */
+type RarityFilter = (typeof RARITIES)[number]["id"] | "placeholder"
 
 const CARD_TYPE_LABELS: Record<string, string> = {
 	speed: "Speed",
@@ -79,7 +82,7 @@ interface PickerItem {
 	cardType: string | null
 	/** A support card's 1 / 2 / 3 (R / SR / SSR); null for an uma. */
 	rarity: number | null
-	/** "Your best SSR Speed card": listed first, and never hidden by Owned only. */
+	/** "Your best SSR Speed card": shown only under Placeholder, never hidden by Owned only. */
 	placeholder: boolean
 	apt: CatalogueUma["apt"] | null
 }
@@ -202,20 +205,20 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 			// reads as SSR, the convention on SupportCard.rarity.
 			if (pool === "support") {
 				if (cardType && item.cardType !== cardType) return false
-				if (rarity !== null && (item.rarity ?? 3) !== rarity) return false
+				if (rarity === "placeholder") {
+					if (!item.placeholder) return false
+				} else if (item.placeholder || (rarity !== null && (item.rarity ?? 3) !== rarity)) return false
 			}
 			if (!query) return true
 			if (item.name.toLocaleLowerCase().includes(query)) return true
 			if (item.alias.toLocaleLowerCase().includes(query)) return true
 			return item.skills.some((link) => matchingSkillIds.has(link.skill))
 		})
-		// Stable: what can be picked before what can't, then the placeholders
-		// together, then the guide's picks, the catalogue's name order within
-		// those.
+		// Stable: what can be picked before what can't, the guide's picks
+		// first within each, the catalogue's name order within those.
 		.sort(
 			(a, b) =>
 				Number(blockReason(a.id) !== null) - Number(blockReason(b.id) !== null) ||
-				Number(b.placeholder) - Number(a.placeholder) ||
 				Number(recommended.has(b.id)) - Number(recommended.has(a.id))
 		)
 
@@ -313,6 +316,20 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 											{option.label}
 										</button>
 									))}
+								</div>
+								{/* Its own box beside the rarities, not one of them: the
+								    stand-ins are no rarity's cards (owner, 2026-10-27). */}
+								<div className="flex rounded-lg bg-gray-900/70 p-0.5" role="group" aria-label="Placeholder cards">
+									<button
+										type="button"
+										aria-pressed={rarity === "placeholder"}
+										onClick={() => setRarity(rarity === "placeholder" ? null : "placeholder")}
+										className={`rounded-md px-2.5 py-0.5 text-xs font-medium transition ${
+											rarity === "placeholder" ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+										}`}
+									>
+										Placeholder
+									</button>
 								</div>
 								{/* ml-auto keeps the chips on the right even when they wrap
 								    to a line of their own. */}

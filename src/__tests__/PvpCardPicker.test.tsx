@@ -226,10 +226,26 @@ describe("the Owned filter (the player's Collection)", () => {
 		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "Super Creek"])
 	})
 
-	it("lists placeholders first and never hides them behind Owned only", () => {
+	it("keeps placeholders under their own switch, out of All, and never behind Owned only", () => {
 		const anySpeed = { ...card(40, "Your best SSR Speed card", [], "speed"), placeholder: true }
-		renderSupportPicker({ owned, items: [...CARDS, anySpeed] })
-		expect(tileNames()).toEqual(["Your best SSR Speed card", "Kitasan Black"])
+		const anyWit = { ...card(41, "Your best SR Wit card", [], "wit", 2), placeholder: true }
+		renderSupportPicker({ owned, items: [anySpeed, anyWit, ...CARDS] })
+		expect(tileNames()).toEqual(["Kitasan Black"])
+		fireEvent.click(screen.getByRole("checkbox", { name: /Owned only/ }))
+		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "Super Creek"])
+		fireEvent.click(screen.getByRole("button", { name: "SSR" }))
+		expect(tileNames()).not.toContain("Your best SSR Speed card")
+		const placeholder = screen.getByRole("button", { name: "Placeholder" })
+		fireEvent.click(placeholder)
+		expect(placeholder).toHaveAttribute("aria-pressed", "true")
+		expect(tileNames()).toEqual(["Your best SSR Speed card", "Your best SR Wit card"])
+		// The type chips still narrow them; Owned only never hides them.
+		fireEvent.click(screen.getByRole("checkbox", { name: /Owned only/ }))
+		fireEvent.click(screen.getByRole("button", { name: "Wit" }))
+		expect(tileNames()).toEqual(["Your best SR Wit card"])
+		// A second click goes back to All.
+		fireEvent.click(placeholder)
+		expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
 	})
 
 	it("starts switched off when nothing is owned", () => {
