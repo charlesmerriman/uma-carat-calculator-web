@@ -110,7 +110,9 @@ function SignedInCollection() {
 						{!importing && (
 							<button type="button" className={PRIMARY_BUTTON} onClick={() => setImporting(true)}>
 								<FileUp className="h-4 w-4" />
-								Import from the game
+								{/* Short on a phone, so both buttons fit one line. */}
+								<span className="sm:hidden">Import</span>
+								<span className="hidden sm:inline">Import from the game</span>
 							</button>
 						)}
 					</>
@@ -133,6 +135,8 @@ function SignedInCollection() {
  * The three tabs as cards, each with its count: how many veterans, and how
  * many of the umas and cards on Global the player owns, with a bar. The counts
  * fill in as the lists load (one cached request each, shared with the tabs).
+ * Three across at every width; on a phone they drop the hints, so the list
+ * starts on the first screen.
  */
 function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: CollectionTab) => void }) {
 	const veterans = useTrainedUmas(true).data
@@ -148,9 +152,9 @@ function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: Colle
 	const newest = veterans?.find((veteran) => veteran.trained_at)?.trained_at
 
 	return (
-		<div role="tablist" aria-label="Collection" className="grid gap-3 sm:grid-cols-3">
+		<div role="tablist" aria-label="Collection" className="grid grid-cols-3 gap-2 sm:gap-3">
 			<TabCard id="veterans" tab={tab} onChoose={onChoose} label="Veterans" hint="umas you trained" count={veterans?.length}>
-				{newest && <span className="text-xs text-gray-300">Newest trained {formatDate(newest)}</span>}
+				{newest && <span className="hidden text-xs text-gray-300 sm:block">Newest trained {formatDate(newest)}</span>}
 			</TabCard>
 			<TabCard id="umas" tab={tab} onChoose={onChoose} label="Umas" hint="outfits unlocked" count={umas?.count} total={umas?.total} />
 			<TabCard id="cards" tab={tab} onChoose={onChoose} label="Support cards" hint="owned, with limit breaks" count={cards?.count} total={cards?.total} />
@@ -177,17 +181,17 @@ function TabCard({ id, tab, onChoose, label, hint, count, total, children }: {
 			id={`collection-tab-${id}`}
 			aria-selected={current}
 			onClick={() => onChoose(id)}
-			className={`flex flex-col gap-1.5 rounded-2xl border px-4 py-3.5 text-left transition ${
+			className={`flex min-w-0 flex-col gap-1.5 rounded-2xl border px-3 py-2.5 text-left transition sm:px-4 sm:py-3.5 ${
 				current ? "border-brand bg-brand/10 ring-1 ring-brand" : "border-edge bg-(--card-fill) hover:border-gray-500"
 			}`}
 		>
 			<span className="flex items-baseline justify-between gap-2">
-				<span className={`text-sm font-bold ${current ? "text-brand" : "text-gray-200"}`}>{label}</span>
-				<span className="text-xs text-gray-400">{hint}</span>
+				<span className={`truncate text-xs font-bold sm:text-sm ${current ? "text-brand" : "text-gray-200"}`}>{label}</span>
+				<span className="hidden text-xs text-gray-400 lg:inline">{hint}</span>
 			</span>
-			<span className="font-display text-2xl font-bold leading-none text-gray-100">
+			<span className="font-display whitespace-nowrap text-xl font-bold leading-none text-gray-100 sm:text-2xl">
 				{count ?? <Loader2 className="h-5 w-5 animate-spin text-gray-500" aria-label="Loading" />}
-				{total !== undefined && <span className="ml-1.5 text-sm font-medium text-gray-400">of {total}</span>}
+				{total !== undefined && <span className="ml-1 text-xs font-medium text-gray-400 sm:ml-1.5 sm:text-sm">of {total}</span>}
 			</span>
 			{total !== undefined ? (
 				<span className="block h-1.5 overflow-hidden rounded-full bg-gray-700" aria-hidden="true">

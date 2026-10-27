@@ -24,7 +24,7 @@ import { ArrowLeft, ChevronUp, FileUp, Link2, Loader2, Pencil, Trash2 } from "lu
 import { FramedUma } from "../FramedUma"
 import { ACTION_BUTTON } from "../pvp/gallery/galleryStyles"
 import { FlagChip, GradeBadge } from "./veteranBadges"
-import { cardFlags, gradeTier } from "../../utils/veteranLook"
+import { STAT_COLORS, cardFlags, gradeTier } from "../../utils/veteranLook"
 import { useVeteran } from "../../services/trainedUmaQueries"
 import { aptitudeLetter } from "../../utils/courseAptitude"
 import { formatDate } from "../../utils/dateFormat"
@@ -35,7 +35,7 @@ import { formatScore, gradeLabel } from "../../utils/veteranGrade"
 import { legacyOf, readVeteranGame, statSpark, type Parent, type Spark, type VeteranGame } from "../../utils/veteranGameData"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
-import type { StatKey, TrainedUma } from "../../types/trainedUma"
+import type { TrainedUma } from "../../types/trainedUma"
 
 /** The catalogue by the GAME's ids: her lineage names outfits, her deck cards, by those. */
 export interface GameIdIndex {
@@ -45,13 +45,6 @@ export interface GameIdIndex {
 
 type CardTab = "skills" | "sparks" | "training"
 
-const STAT_COLORS: Record<StatKey, string> = {
-	speed: "var(--color-stat-speed)",
-	stamina: "var(--color-stat-stamina)",
-	power: "var(--color-stat-power)",
-	guts: "var(--color-stat-guts)",
-	wit: "var(--color-stat-wit)",
-}
 /** Where a stat bar is full: the cap in most scenarios. Higher stats fill it. */
 const STAT_BAR_FULL = 1200
 
