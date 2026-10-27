@@ -2036,8 +2036,9 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   "Your best SSR Speed card". `loadPvpCatalogue` renames them once on load (`placeholderName`)
   and lists them first, SSR first (`placeholderOrder`), so every name on screen is right
   without knowing about them. They are always out (`useCardReleases`), skip the deck's uma
-  rules and may sit in one deck twice (`cardBlockReason`; the API agrees), come first in the
-  picker, and are never hidden by Owned only. Guides don't use them ("Any Wit" slots do that).
+  rules and may sit in one deck twice (`cardBlockReason`; the API agrees). In the picker they
+  show ONLY under their own Placeholder switch, a separate box right of All/SSR/SR/R, never
+  under All or a rarity (owner, 2026-10-27), and Owned only never hides them. Guides don't use them ("Any Wit" slots do that).
 - **"Use this deck"** (owner, 2026-10-24; release C of `guide-visuals-plan-2.md`): a button
   under each deck on a style's tab (not the All tab; not offered while My team is locked to
   the reader) switches to My team with `{ useDeck: { deckId } }` in the ROUTER STATE, never
