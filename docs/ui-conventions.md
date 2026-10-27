@@ -1601,7 +1601,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   labels (Guide, Team, Runs, Edit); the full label stays the accessible name. The guide is fetched only on Recommendations.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
-  drafts with a "Draft, visible to staff only" bar.
+  drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
+  construction** (`under_construction`, the Guide tab's checkbox; Henry, 2026-10-24) gets
+  a banner in the same place, above the band, with a `staging` hazard-tape strip
+  (`.construction-stripes`): it covers nothing, so the guide stays readable under it.
 - **Every guide section is optional** and steps aside when empty. On top, the band
   (`GuideBand`); under it, from `xl`, two columns: a side column (general skills, the whole
   guide's thread) and ONE style pane. Below `xl` the side column FOLLOWS the style

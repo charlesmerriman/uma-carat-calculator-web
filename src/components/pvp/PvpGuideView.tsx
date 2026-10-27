@@ -18,7 +18,7 @@
 import { Link } from "react-router-dom"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
-import { Eye, Layers } from "lucide-react"
+import { Construction, Eye, Layers } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
@@ -731,6 +731,19 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 				<div className="flex items-center gap-2 rounded-lg border border-staging/60 bg-staging/10 px-3 py-2 text-sm font-semibold text-gray-100">
 					<Eye className="h-4 w-4 shrink-0" />
 					Draft, visible to staff only.
+				</div>
+			)}
+			{/* The editors' switch (Henry, 2026-10-24): above everything, so it is
+			    the first thing a reader sees, and covering nothing. */}
+			{guide.under_construction && (
+				<div role="status" className="overflow-hidden rounded-lg border border-staging/60 bg-staging/10 text-sm text-gray-100">
+					<div className="construction-stripes h-1.5" aria-hidden="true" />
+					<div className="flex items-center gap-2 px-3 py-2">
+						<Construction className="h-4 w-4 shrink-0 text-staging" aria-hidden="true" />
+						<p>
+							<span className="font-semibold">Under construction.</span> This guide is still being updated for this event, so some picks may change.
+						</p>
+					</div>
 				</div>
 			)}
 

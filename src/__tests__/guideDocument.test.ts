@@ -70,6 +70,7 @@ function document(): GuideDocument {
 		style_ranking: "Front >> End",
 		short_description: "Take [[Groundwork]] first.",
 		meta_analysis: "",
+		under_construction: false,
 		admin_comments: "private",
 		stat_configs: [{ style: "everyone", label: "", speed: "1100+", stamina: "578*", power: "", guts: "", wit: "", footnote: "" }],
 		team_comps: [{ text: "2 Front + 1 Pace", note: "" }],

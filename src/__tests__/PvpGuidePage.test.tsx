@@ -52,6 +52,7 @@ const GUIDE: PvpGuide = {
 	style_ranking: "Front >> End",
 	short_description: "Mile on dirt. ==Stamina 578 is enough==.",
 	meta_analysis: "",
+	under_construction: false,
 	team_comps: [{ text: "2 Front + 1 Late", note: "Henry's Team" }],
 	stat_configs: [
 		{ style: "everyone", label: "Minimum", speed: "1200*", stamina: "578*", power: "", guts: "400+", wit: "1000", footnote: "*Bonus Speed every 300 Power." },
@@ -290,6 +291,20 @@ describe("PvpGuidePage", () => {
 		expect(screen.getAllByText("Borrow").length).toBe(1)
 		// Sections the guide leaves empty step aside.
 		expect(screen.queryByText("Meta analysis")).not.toBeInTheDocument()
+	})
+
+	it("says when the guide is still being updated", async () => {
+		respond(200, { ...GUIDE, under_construction: true })
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.getByText("Under construction.").closest("[role=status]")).toHaveTextContent(/This guide is still being updated/)
+	})
+
+	it("shows no construction banner on a finished guide", async () => {
+		respond(200, GUIDE)
+		renderPage()
+		await screen.findByText("Recommended stats")
+		expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument()
 	})
 
 	it("switches style panes with the tabs", async () => {

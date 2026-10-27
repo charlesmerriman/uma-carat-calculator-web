@@ -49,6 +49,10 @@ export function setField(doc: Doc, field: "style_ranking" | "short_description" 
 	return { ...doc, [field]: value }
 }
 
+export function setUnderConstruction(doc: Doc, underConstruction: boolean): Doc {
+	return { ...doc, under_construction: underConstruction }
+}
+
 export function setScenario(doc: Doc, scenario: number | null): Doc {
 	return { ...doc, scenario }
 }

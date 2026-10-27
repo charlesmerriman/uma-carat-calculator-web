@@ -256,6 +256,7 @@ export function hydrateGuide(
 		style_ranking: document.style_ranking,
 		short_description: document.short_description,
 		meta_analysis: document.meta_analysis,
+		under_construction: document.under_construction,
 		team_comps: document.team_comps.map((row) => ({ text: row.text, note: row.note })),
 		stat_configs: document.stat_configs
 			.map((row, order) => ({ row, order }))
