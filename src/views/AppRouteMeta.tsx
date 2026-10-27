@@ -28,7 +28,7 @@ interface RouteMeta {
 	description: string
 }
 
-type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection"
+type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection" | "/app/rankings"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -64,6 +64,11 @@ const META: Record<AppPath, RouteMeta> = {
 	"/app/collection": {
 		title: "Collection",
 		description: "Your Uma Musume veterans, with their stats, aptitudes and skills, to link to your PvP teams and CM runs.",
+	},
+	// Early access only (Patreon supporters): noindex below, and not prerendered.
+	"/app/rankings": {
+		title: "Rankings",
+		description: "Which Uma Musume support cards and umas the PvP guides recommend most, across every guide or the next few events.",
 	},
 	"/app/skills": {
 		title: "Skills",
@@ -122,7 +127,12 @@ export const AppRouteMeta = () => {
 
 	// The Skills page is shelved to guide editors (useSkillsPreview): noindex,
 	// like a shared plan, and not prerendered, until it is picked up again.
-	// The Collection is one player's account, so it never should be.
-	useDocumentMeta(meta.title, meta.description, path === "shared" || path === "/app/skills" || path === "/app/collection")
+	// The Collection is one player's account, so it never should be, and
+	// Rankings is behind early access.
+	useDocumentMeta(
+		meta.title,
+		meta.description,
+		path === "shared" || path === "/app/skills" || path === "/app/collection" || path === "/app/rankings"
+	)
 	return null
 }

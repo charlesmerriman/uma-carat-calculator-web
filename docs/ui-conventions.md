@@ -2061,6 +2061,32 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 - **Notes** (`TeamNotes.tsx`): ten per team, read-only until the pen, `==red==` and line breaks
   kept, the eraser's Undo in a toast. Colours are the `--color-note-*` tokens.
 
+## Rankings page (`components/rankings/`)
+
+Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
+
+- **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
+  navbar item (both bars; with six phone tabs the labels hide below 390px, and the desktop
+  item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
+  too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
+  in the API's `visits.KNOWN_ROUTES` so landings count.
+- **Tabs, `?view=`**: Guide rankings (default, no parameter), then PvP and Players drawn as
+  "Soon" until they land; Pull plans joins behind its Raptive gate. One tab on screen.
+- **Hourly**: each tab's payload is built at most once an hour on the server and never
+  invalidated; the page says "Updated 40 minutes ago" from its `generated_at`.
+- **Guide rankings** (`GuideRankings.tsx`) is the source sheet's card table with its filters
+  one to one (Henry): Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions, plus
+  "Other decks" for one-off decks the sheet has no column for), Strategy, Scenario ("Not set"
+  for a guide without one), Card type ("Friend", as elsewhere on the site, for the sheet's
+  "Pal"), every box ticked to start; plus the event window (All guides, or the next 3 / 5 / 10
+  events with a guide from a picked one). Then the sheet's note, a card search, Overall, Umas,
+  and one table per ticked card type. **Every rule is `utils/guideRankings.ts`**: a card counts
+  once per deck (the borrowed card too, "N borrowed"; an alternative never), an uma once per
+  guide and strategy (times recommended, never stars), shares out of the decks or
+  guide-strategies counted. A row opens to counts by event, strategy and deck, never a list of
+  decks.
+- **`RankList`** is every tab's table: place, picture, name, "count · share", an opening row.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It

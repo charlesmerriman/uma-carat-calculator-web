@@ -7,6 +7,7 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
 import { SkillsPage } from "../components/skills/SkillsPage"
+import { RankingsPage } from "../components/rankings/RankingsPage"
 import { CollectionPage } from "../components/collection/CollectionPage"
 import { PvpGuidePage } from "../components/pvp/PvpGuidePage"
 import { Footer } from "../components/footer/Footer.tsx"
@@ -202,6 +203,9 @@ export const ApplicationViews = () => (
 			{/* A static path, so it outranks the ":publicId" share route below;
 			    "pvp" is also too short to pass isPublicId. */}
 			<Route path="pvp" element={<PvpGuidePage />}/>
+			{/* Early access only, and noindex. Static like "timeline", so it
+			    outranks ":publicId" (it is eight letters too). */}
+			<Route path="rankings" element={<RankingsPage />}/>
 			{/* Account only, and off the navbar: the profile menu links it. */}
 			<Route path="collection" element={<CollectionPage />}/>
 		</Route>

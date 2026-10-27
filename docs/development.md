@@ -79,6 +79,7 @@ knip treats an export used only inside its own file as fine (`ignoreExportsUsedI
 | `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
 | `/app/legend-races` | Daily legend races |
 | `/app/pvp` | PvP guides, the team planner and the gallery |
+| `/app/rankings` | Rankings: what the guides recommend most (early access only, `noindex`, not prerendered) |
 | `/app/<public_id>` | A shared plan's landing page (not prerendered) |
 | `/app/collection` | Your veterans (each one's card: stats, aptitudes, skills, sparks, lineage, deck, career), umas and support cards (account only, `noindex`, not prerendered) |
 | `/faq` | Every income source, explained |
