@@ -139,13 +139,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					    still keeps sideways overflow (a hover card past the right
 					    edge) from widening the page. At app-shell, overflow-auto
 					    sets both axes back to what overflow-y-auto gave. */}
-					{/* A row, so the pinned Rankings panel (RankingsDock) can dock to the
-					    left of the scroller from xl. Always rendered, panel or not, so
-					    the markup a build-time render and hydration produce is the same;
-					    the panel itself draws nothing until the device's pin is read. */}
-					<div className="flex min-h-0 flex-1">
-					{!isLoading && !fetchError && <RankingsDock />}
-					<div data-app-scroller className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip app-shell:overflow-auto">
+					<div data-app-scroller className="relative flex min-h-0 flex-1 flex-col overflow-x-clip app-shell:overflow-auto">
 						{/* Plain block wrapper (not <Outlet /> directly) so the calculator and
 						    timeline keep a normal block formatting context and don't become
 						    flex items themselves. flex-1 grows it into the slack; min-height:auto
@@ -167,10 +161,12 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 						<AppRouteMeta />
 						<Footer />
 					</div>
-					</div>
 					{/* The team window, floating over the page. Behind the loading gate
 					    like the pages: it reads the events, and a build-time render carries none of it. */}
 					{!isLoading && !fetchError && <TeamDrawerSlot />}
+					{/* The pinned Rankings panel: a window over the page's left side, the
+					    team window's mirror. Behind the gate for the same reason. */}
+					{!isLoading && !fetchError && <RankingsDock />}
 				</div>
 			</TeamDrawerProvider>
 		</PvpTeamsProvider>

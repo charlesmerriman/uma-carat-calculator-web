@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -8,8 +8,8 @@ import { pinRankings, resetRankingsPinForTests } from "../services/rankingsPinSt
 /**
  * The pinned Rankings panel (RankingsDock + services/rankingsPinStore.ts):
  * who sees it, where, its three states, and that they last on the device.
- * jsdom applies no media queries, so the docked column and the edge tab
- * both render whenever their state says so; the `xl:` classes pick on a
+ * jsdom applies no media queries, so the window and the edge tab both
+ * render whenever their state says so; the `desktop-nav:` classes pick on a
  * real screen.
  */
 
@@ -53,34 +53,39 @@ describe("RankingsDock", () => {
 		expect(localStorage.getItem("rankings-pin")).toBe("players")
 	})
 
-	it("retracts to the edge tab and docks again from it", () => {
+	it("retracts to the edge tab and opens again from it", async () => {
 		act(() => pinRankings("guides"))
 		renderDock()
 		fireEvent.click(screen.getByRole("button", { name: "Hide rankings" }))
-		expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
+		// It slides out before it unmounts.
+		await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument())
 		expect(localStorage.getItem("rankings-pin-docked")).toBe("retracted")
-		// Two edge tabs: the drawer's (below xl) and the re-dock (from xl).
-		const tabs = screen.getAllByRole("button", { name: "Rankings" })
-		fireEvent.click(tabs[1])
+		fireEvent.click(screen.getByRole("button", { name: "Rankings" }))
 		expect(screen.getByRole("complementary", { name: "Rankings: Guide rankings" })).toBeInTheDocument()
+		expect(localStorage.getItem("rankings-pin-docked")).toBeNull()
 	})
 
-	it("opens the drawer from the edge tab, and Escape closes it", () => {
+	it("retracts on Escape from inside the window", async () => {
 		act(() => pinRankings("pvp"))
 		renderDock()
-		fireEvent.click(screen.getAllByRole("button", { name: "Rankings" })[0])
-		expect(screen.getByRole("dialog", { name: "Rankings" })).toBeInTheDocument()
-		fireEvent.keyDown(window, { key: "Escape" })
+		fireEvent.keyDown(screen.getByRole("combobox", { name: "Rankings section" }), { key: "Escape" })
+		await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument())
+	})
+
+	it("floats over the page: fixed, no backdrop, not a dialog", () => {
+		act(() => pinRankings("guides"))
+		renderDock()
+		expect(screen.getByRole("complementary")).toHaveClass("fixed")
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
 	})
 
 	it("switches section from its menu, and unpins", () => {
 		act(() => pinRankings("guides"))
 		renderDock()
-		fireEvent.change(screen.getAllByRole("combobox", { name: "Rankings section" })[0], { target: { value: "pvp" } })
+		fireEvent.change(screen.getByRole("combobox", { name: "Rankings section" }), { target: { value: "pvp" } })
 		expect(screen.getByTestId("section")).toHaveTextContent("pvp")
 		expect(screen.getByRole("link", { name: "Full page" })).toHaveAttribute("href", "/app/rankings?view=pvp")
-		fireEvent.click(screen.getAllByRole("button", { name: "Unpin" })[0])
+		fireEvent.click(screen.getByRole("button", { name: "Unpin" }))
 		expect(screen.queryByTestId("section")).not.toBeInTheDocument()
 		expect(localStorage.getItem("rankings-pin")).toBeNull()
 	})
