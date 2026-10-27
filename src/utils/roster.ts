@@ -67,3 +67,38 @@ export function ownedForPicker(roster: Roster | undefined, pool: "uma" | "suppor
 	}
 }
 
+
+/** "All", "Owned" or "Missing": which tiles a Collection grid shows. */
+export type RosterView = "all" | "owned" | "missing"
+
+/** The Umas tab's summary: owned umas by stars, and how many reached potential 5. */
+export function umaSummary(owned: Pick<OwnedUmaRow, "stars" | "talent_level">[]) {
+	return {
+		five: owned.filter((row) => row.stars === 5).length,
+		four: owned.filter((row) => row.stars === 4).length,
+		// Three or fewer, and the ones with no stars set (a hand add the player never changed).
+		threeOrFewer: owned.filter((row) => row.stars === null || row.stars <= 3).length,
+		potentialFive: owned.filter((row) => row.talent_level === 5).length,
+	}
+}
+
+/**
+ * The Support cards tab's summary: how many owned cards are MLB, and per card
+ * type how many of the offered ones are owned. `offered` is the Global
+ * catalogue; `types` the order to list them in.
+ */
+export function cardSummary(
+	offered: Array<{ id: number; card_type: string | null }>,
+	owned: Pick<OwnedCardRow, "support_card" | "limit_break">[],
+	types: readonly string[]
+) {
+	const ownedIds = new Set(owned.map((row) => row.support_card))
+	return {
+		owned: offered.filter((card) => ownedIds.has(card.id)).length,
+		mlb: owned.filter((row) => row.limit_break >= 4 && offered.some((card) => card.id === row.support_card)).length,
+		byType: types.map((type) => {
+			const ofType = offered.filter((card) => card.card_type === type)
+			return { type, owned: ofType.filter((card) => ownedIds.has(card.id)).length, total: ofType.length }
+		}),
+	}
+}

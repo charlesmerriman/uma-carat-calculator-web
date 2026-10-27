@@ -817,11 +817,18 @@ sits in the header: one import fills all three. The page is `max-w-7xl` (1280px)
 redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mockup's link).
 
 - **The Umas and Support cards grids** (`RosterGrids.tsx`): every Global uma or card as a
-  tile (JP-only ones are not offered). Tap to mark owned, tap again or **Remove** to unmark,
-  then stars or limit break. Search, Owned only, a type filter on cards, and **Start over**,
-  which empties that list after an inline confirmation. **No "mark everything" button**
-  (owner: too easy to fill a collection with things you don't have). Edits are optimistic and
-  queued in order (`services/rosterQueries.ts`, the CM Runs pattern).
+  tile (JP-only ones are not offered), its state ON the art: an uma's stars and potential, a
+  card's limit break pips (MLB) and spare copies (`.art-badge`, fixed colours over the art).
+  A tap on an unowned (greyed, "+") tile adds it, an uma at her base stars (her rarity); a
+  tap on an owned one opens its editor under the tile (a non-modal dialog: Stars and
+  Potential, or Limit break and a spare copies stepper; Remove; Done), which Escape or a
+  press outside closes. A summary card on top (umas by stars and potential 5; cards at MLB
+  and owned per type) carries the save line. Search, **All / Owned / Missing**, rarity and
+  type chips on cards, and **Start over** in the ⋯ menu, which empties that list after an
+  inline confirmation. An uma tile with veterans links to them (`?uma=`, outside the tile's
+  button). **No "mark everything" button** (owner: too easy to fill a collection with things
+  you don't have). Edits are optimistic and queued in order (`services/rosterQueries.ts`, the
+  CM Runs pattern).
 - **Sorts combine** (`utils/rosterSort.ts`): chips in the order added, each flips direction,
   "then by" adds one, Reset goes back to **newest released first** (the default; a release is
   the first Global banner's start, `utils/cardRelease.cardReleases`). A missing value sorts

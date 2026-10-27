@@ -1008,6 +1008,19 @@
 .place-square[data-place="2"] { background: #c9cdd6; color: #16181d; }
 .place-square[data-place="3"] { background: #d29a6b; color: #1c1008; }
 
+/* A label laid over game art on the Collection's Umas and Support cards
+   tiles (stars, potential, limit break pips, spare copies): a dark band with
+   light ink, and gold for what is earned. Fixed colours: the art under it is
+   the same on every theme, so the band is too. */
+.art-badge {
+	background: rgb(16 16 20 / 84%);
+	color: #e4e4ea;
+}
+.art-on { color: #f2c94c; }
+.art-off { color: rgb(255 255 255 / 28%); }
+.art-pip-on { background: #f2c94c; }
+.art-pip-off { background: rgb(255 255 255 / 28%); }
+
 /* A running style's name in its colour (--style-color, set on the element from
    the --color-style-* tokens, index.css), on the dark themes only: Hakuraku's
    yellow and lime are unreadable as text on white, so a light theme keeps the

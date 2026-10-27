@@ -223,6 +223,13 @@ function RosterTab({ tab }: { tab: "umas" | "cards" }) {
 	const roster = useRoster(true)
 	const catalogue = usePvpCatalogue()
 	const oshiIds = useOshiIds()
+	// How many veterans of each outfit: an uma tile links to them.
+	const veterans = useTrainedUmas(true).data
+	const veteranCounts = useMemo(() => {
+		const counts = new Map<number, number>()
+		for (const veteran of veterans ?? []) counts.set(veteran.uma, (counts.get(veteran.uma) ?? 0) + 1)
+		return counts
+	}, [veterans])
 	const saving = useRosterSaving()
 	const [failed, setFailed] = useState(false)
 	const edit = useEditRoster((message) => {
@@ -248,17 +255,17 @@ function RosterTab({ tab }: { tab: "umas" | "cards" }) {
 		setFailed(false)
 		edit(changes)
 	}
+	const status = <SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam />
 	return (
 		<div className="flex flex-col gap-2">
-			<div className="flex justify-end">
-				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam />
-			</div>
 			{tab === "umas" ? (
 				<OwnedUmasGrid
 					umas={catalogue.catalogue.umas}
 					owned={roster.data.umas}
 					releases={releases.umas}
 					oshiIds={oshiIds}
+					veteranCounts={veteranCounts}
+					status={status}
 					onEdit={onEdit}
 					onClear={() => clear.mutate("umas", { onError: (error) => toast.error(failureText(error, "That list wasn't cleared.")) })}
 				/>
@@ -267,6 +274,7 @@ function RosterTab({ tab }: { tab: "umas" | "cards" }) {
 					cards={catalogue.catalogue.support_cards}
 					owned={roster.data.support_cards}
 					releases={releases.supports}
+					status={status}
 					onEdit={onEdit}
 					onClear={() => clear.mutate("support_cards", { onError: (error) => toast.error(failureText(error, "That list wasn't cleared.")) })}
 				/>

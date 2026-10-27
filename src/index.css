@@ -407,6 +407,10 @@ html {
 	--color-spark-stat: #4f8ef7;
 	--color-spark-aptitude: #f2649f;
 	--color-spark-unique: #2fbf7a;
+	/* A support card's type on the Collection's Support cards tab: the five
+	   stat hues above, plus these two. Dots and bars only, like the rest. */
+	--color-card-friend: #b48cff;
+	--color-card-group: #3fbfc6;
 }
 
 /* ===== THEME OVERRIDES =====
