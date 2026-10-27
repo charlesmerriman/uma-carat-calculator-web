@@ -4,13 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { Roster } from "../types/roster"
-import type { TrainedUma } from "../types/trainedUma"
+import type { TrainedUma, VeteranDetail } from "../types/trainedUma"
 
 /**
- * The Collection page's Veterans: who sees what, adding one by hand through
- * the uma picker, the checks before Save, a game veteran's label-only edit,
- * and delete. The form's rules have unit tests (trainedUmas.test.ts); the
- * routes are the API's tests.
+ * The Collection page's Veterans: who sees what, the tiles and her card (her
+ * sparks, lineage, deck and career, read from her game data), adding one by
+ * hand through the uma picker, the checks before Save, a game veteran's
+ * label-only edit, and delete. The form's rules and the game data's reading
+ * have unit tests (trainedUmas.test.ts, veteranGameData.test.ts); the routes
+ * are the API's tests.
  */
 
 const APT = { turf: 8, dirt: 1, short: 3, mile: 7, medium: 7, long: 6, front: 2, pace: 7, late: 7, end: 4 }
@@ -63,6 +65,8 @@ const { CollectionPage } = await import("../components/collection/CollectionPage
 
 const fetchMock = vi.fn()
 let stored: TrainedUma[] = []
+/** What GET /trained-umas/<id> adds to a stored veteran: her raw game data and spark names. */
+let details: Record<number, Partial<Pick<VeteranDetail, "game_data" | "sparks">>> = {}
 let roster: Roster = { umas: [], support_cards: [] }
 
 /** Every request as the mock received it, bodies parsed (and unzipped). */
@@ -98,6 +102,7 @@ function show(path = "/app/collection") {
 beforeEach(() => {
 	session.signedIn = true
 	stored = []
+	details = {}
 	roster = { umas: [], support_cards: [] }
 	sent = []
 	fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
@@ -114,6 +119,12 @@ beforeEach(() => {
 		if (path === "/roster/import") {
 			const counts = { added: 1, updated: 0, removed: 0 }
 			return new Response(JSON.stringify({ umas: counts, support_cards: counts, roster }), { status: 200 })
+		}
+		const one = /^\/trained-umas\/(\d+)$/.exec(path)
+		if (one && method === "GET") {
+			const id = Number(one[1])
+			const found = stored.find((each) => each.id === id)
+			return new Response(JSON.stringify({ ...found, game_data: null, sparks: {}, ...details[id] }), { status: found ? 200 : 404 })
 		}
 		if (method === "GET") return new Response(JSON.stringify(stored), { status: 200 })
 		if (method === "DELETE") return new Response(null, { status: 204 })
@@ -142,17 +153,23 @@ describe("who sees what", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("lists each veteran with her stats, where she came from, and a kept one's flag", async () => {
+	it("shows each veteran as a tile with her stats and a kept one's flag, and the first one's card", async () => {
 		stored = [veteran(1, { label: "Main Oguri", source: "import", import_key: 12, missing_from_import: true }), veteran(2, { uma: 42 })]
 		show()
-		const rows = await screen.findAllByRole("listitem")
-		expect(within(rows[0]).getByText("Main Oguri")).toBeInTheDocument()
-		expect(within(rows[0]).getByText("From the game")).toBeInTheDocument()
-		expect(within(rows[0]).getByText("Not in your latest import")).toBeInTheDocument()
-		expect(within(rows[0]).getByText("Spd 1200 · Sta 800 · Pow 1000 · Gut 400 · Wit 900")).toBeInTheDocument()
-		expect(within(rows[1]).getByText("Maruzensky")).toBeInTheDocument()
-		expect(within(rows[1]).getByText("By hand")).toBeInTheDocument()
-		expect(screen.getByRole("heading", { name: /Veterans/ })).toHaveTextContent("Veterans 2")
+		const list = within(await screen.findByRole("region", { name: "Your veterans" }))
+		const [first, second] = list.getAllByRole("button", { pressed: undefined }).filter((tile) => tile.id.startsWith("veteran-"))
+		expect(within(first).getByText("Main Oguri")).toBeInTheDocument()
+		expect(within(first).getByText("Oguri Cap")).toBeInTheDocument()
+		expect(within(first).getByText("Not in your latest import")).toBeInTheDocument()
+		expect(within(first).getByTitle("Speed 1200, Stamina 800, Power 1000, Guts 400, Wit 900")).toHaveTextContent("Speed 1200Stamina 800Power 1000Guts 400Wit 900")
+		expect(within(second).getByText("Maruzensky")).toBeInTheDocument()
+		expect(within(second).getByText("By hand")).toBeInTheDocument()
+		expect(screen.getByRole("tab", { name: /Veterans/ })).toHaveTextContent("2")
+		// Wide screens open the first one without a link.
+		const card = within(screen.getByRole("article"))
+		expect(card.getByRole("heading", { name: "Oguri Cap" })).toBeInTheDocument()
+		expect(card.getByText("From the game")).toBeInTheDocument()
+		expect(card.getByText("Main Oguri")).toBeInTheDocument()
 	})
 })
 
@@ -183,9 +200,9 @@ describe("adding by hand", () => {
 				apt: { ...APT, mile: 8 }, skills: [{ skill: 10, level: 4 }], rank_score: null,
 			},
 		})
-		// The form closes and she is on the list.
+		// The form closes and she is on the list, her card open.
 		await waitFor(() => expect(screen.queryByRole("region", { name: "Add a veteran" })).not.toBeInTheDocument())
-		expect(screen.getByText("Oguri Cap")).toBeInTheDocument()
+		expect(screen.getByRole("heading", { name: "Oguri Cap" })).toBeInTheDocument()
 	})
 
 	it("says what is missing and sends nothing", async () => {
@@ -202,7 +219,7 @@ describe("editing and deleting", () => {
 	it("lets a game veteran change its label only", async () => {
 		stored = [veteran(1, { source: "import", import_key: 12 })]
 		show()
-		fireEvent.click(await screen.findByRole("button", { name: "Edit Oguri Cap" }))
+		fireEvent.click(await screen.findByRole("button", { name: "Edit label" }))
 		const form = within(screen.getByRole("region", { name: "Edit Oguri Cap" }))
 		expect(form.getByLabelText("Speed")).toBeDisabled()
 		fireEvent.change(form.getByLabelText("Label (optional)"), { target: { value: "Ace" } })
@@ -214,10 +231,10 @@ describe("editing and deleting", () => {
 	it("asks once, then deletes", async () => {
 		stored = [veteran(1)]
 		show()
-		fireEvent.click(await screen.findByRole("button", { name: "Delete Oguri Cap" }))
+		fireEvent.click(await screen.findByRole("button", { name: "Delete" }))
 		fireEvent.click(screen.getByRole("button", { name: "Delete her?" }))
 		await waitFor(() => expect(calls("DELETE")).toEqual([{ path: "/trained-umas/1", body: null }]))
-		await waitFor(() => expect(screen.queryByRole("listitem")).not.toBeInTheDocument())
+		expect(await screen.findByText(/No veterans yet/)).toBeInTheDocument()
 	})
 })
 
@@ -361,12 +378,92 @@ describe("the Umas and Support cards tabs", () => {
 })
 
 describe("a link to one veteran", () => {
-	it("rings the veteran a CM Runs link names", async () => {
+	it("opens the veteran a CM Runs link names, and a tap opens another", async () => {
 		stored = [veteran(1), veteran(2, { uma: 42 })]
 		show("/app/collection?veteran=2")
-		const rows = await screen.findAllByRole("listitem")
-		expect(rows[1]).toHaveClass("border-brand")
-		expect(rows[0]).not.toHaveClass("border-brand")
+		expect(await screen.findByRole("heading", { name: "Maruzensky" })).toBeInTheDocument()
+		const tile = (id: number) => document.getElementById(`veteran-${id}`)
+		expect(tile(2)).toHaveAttribute("aria-pressed", "true")
+		expect(tile(1)).toHaveAttribute("aria-pressed", "false")
+		fireEvent.click(tile(1)!)
+		expect(screen.getByRole("heading", { name: "Oguri Cap" })).toBeInTheDocument()
+	})
+})
+
+describe("her card", () => {
+	const factors = (...ids: number[]) => ids.map((factor_id) => ({ factor_id, level: 0 }))
+	const SPARKS = {
+		"103": { name: "Speed", kind: "stat", stars: 3 },
+		"102": { name: "Speed", kind: "stat", stars: 2 },
+		"201": { name: "Stamina", kind: "stat", stars: 1 },
+		"3401": { name: "Long", kind: "aptitude", stars: 1 },
+		"1000401": { name: "Oka Sho", kind: "race", stars: 1 },
+	} as const
+	const GAME = {
+		scenario_id: 2, running_style: 2, fans: 255610, win_saddle_id_array: [1, 10, 12],
+		factor_info_array: factors(103, 1000401),
+		succession_chara_array: [
+			{ position_id: 10, card_id: 100401, rank: 17, factor_info_array: factors(102, 3401) },
+			{ position_id: 11, card_id: 100601, rank: 15, factor_info_array: factors(201) },
+			{ position_id: 20, card_id: 100601, rank: 18, factor_info_array: factors(201) },
+		],
+		support_card_list: [{ position: 1, support_card_id: 30028, limit_break_count: 4 }],
+		race_result_list: [{ turn: 12, result_rank: 1 }, { turn: 30, result_rank: 2 }, { turn: 40, result_rank: 1 }],
+	}
+
+	it("lays out a game veteran: grade, skills, sparks and lineage, deck and career", async () => {
+		stored = [veteran(1, {
+			source: "import", import_key: 12, has_game_data: true, rank_score: 13815, rank_grade: 14, trained_at: "2026-07-14T03:00:00Z",
+			skills: [{ skill: 9, level: 1 }, { skill: 10, level: 4 }],
+		})]
+		details = { 1: { game_data: GAME, sparks: SPARKS } }
+		show()
+		const card = within(await screen.findByRole("article"))
+		expect(card.getByText("A+")).toBeInTheDocument()
+		expect(card.getByText("13,815")).toBeInTheDocument()
+		// Unique first.
+		expect(card.getByText("2 skills: 1 unique, 0 gold, 1 white")).toBeInTheDocument()
+		expect(card.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Triumphant PulseUnique · Lv 4", "Corner Adept ○"])
+		expect(await card.findByText("Unity Cup")).toBeInTheDocument()
+		// Her running style and scenario, on the line under her name.
+		expect(card.getByText("Unity Cup").parentElement).toHaveTextContent("Pace")
+
+		fireEvent.click(card.getByRole("tab", { name: /Sparks/ }))
+		expect(card.getByText("Oka Sho")).toBeInTheDocument()
+		// Hers and her parents': Speed 3 + 2, then the 1-star Stamina (blue) before Long (pink).
+		const passes = within(card.getByText("As a parent she passes on").closest("section")!)
+		expect(passes.getAllByText(/★$/).map((total) => total.parentElement?.textContent)).toEqual(["5★Speed", "1★Stamina", "1★Long"])
+		expect(passes.getByText("0 unique sparks and 1 white spark across the three of them")).toBeInTheDocument()
+		expect(card.getByText("Parent · SS")).toBeInTheDocument()
+		expect(card.getByText("Parent · SS+")).toBeInTheDocument()
+
+		fireEvent.click(card.getByRole("tab", { name: /Training/ }))
+		expect(card.getByRole("img", { name: "Finishing places, in order: 1, 2, 1" })).toBeInTheDocument()
+		expect(card.getByText("2 wins")).toBeInTheDocument()
+		expect(card.getByText("255,610")).toBeInTheDocument()
+		expect(card.getByText("Titles won").nextSibling).toHaveTextContent("3")
+		expect(card.getByText("Kitasan Black")).toBeInTheDocument()
+		expect(calls("GET").filter((call) => call.path === "/trained-umas/1")).toHaveLength(1)
+	})
+
+	it("says a hand entry's sparks come from the game, and fetches nothing more", async () => {
+		stored = [veteran(1)]
+		show()
+		const card = within(await screen.findByRole("article"))
+		fireEvent.click(card.getByRole("tab", { name: /Sparks/ }))
+		expect(card.getByText(/Sparks and lineage come from the game's export/)).toBeInTheDocument()
+		expect(card.getByRole("button", { name: /Import from the game/ })).toBeInTheDocument()
+		expect(calls("GET").some((call) => call.path === "/trained-umas/1")).toBe(false)
+	})
+
+	it("narrows the list to an aptitude at A or better", async () => {
+		stored = [veteran(1), veteran(2, { uma: 42, apt: { ...APT, long: 7 } })]
+		show()
+		const list = within(await screen.findByRole("region", { name: "Your veterans" }))
+		fireEvent.click(list.getByRole("button", { name: "Long" }))
+		expect(list.getByText("Showing 1 of 2")).toBeInTheDocument()
+		expect(document.getElementById("veteran-1")).toBeNull()
+		expect(document.getElementById("veteran-2")).not.toBeNull()
 	})
 })
 

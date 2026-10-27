@@ -949,6 +949,65 @@
 	background-image: linear-gradient(135deg, #ffe6f2 0%, #f28cbc 100%);
 }
 
+/* A VETERAN'S GRADE (the Collection's tiles and card, VeteranCard.tsx): the
+   game's evaluation letters on a hexagon, filled by tier the way the game
+   tints them: the U ranks a violet-to-pink sheen, SS a deep gold, S the pale
+   gold, A orange, B pink, below that a slate blue. Fixed fills with dark ink,
+   the .skill-gold reasoning: it reads the same on every theme. The size is
+   the element's own (h-/w- utilities); the letters scale with it. */
+.grade-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+	background: #9fb4d9;
+	color: #15121c;
+	font-family: var(--font-display);
+	font-weight: 800;
+	line-height: 1;
+}
+.grade-badge[data-tier="u"] { background: linear-gradient(135deg, #d4b8ff, #ff9fcf); }
+.grade-badge[data-tier="ss"] { background: #f2c94c; }
+.grade-badge[data-tier="s"] { background: #ecd994; }
+.grade-badge[data-tier="a"] { background: #ffab70; }
+.grade-badge[data-tier="b"] { background: #f39bc0; }
+
+/* The same tier as a thin band across the top of her card. */
+.grade-band { background: #9fb4d9; }
+.grade-band[data-tier="u"] { background: linear-gradient(90deg, #d4b8ff, #ff9fcf); }
+.grade-band[data-tier="ss"] { background: #f2c94c; }
+.grade-band[data-tier="s"] { background: #ecd994; }
+.grade-band[data-tier="a"] { background: #ffab70; }
+.grade-band[data-tier="b"] { background: #f39bc0; }
+.grade-band[data-tier="none"] { background: var(--color-gray-600); }
+
+/* A spark on her card, tinted by kind (--color-spark-*, index.css): a wash and
+   an edge in the kind's hue, the theme's own text on top. A white spark (a
+   skill, race or scenario) is a plain inset chip. `data-spark` names the kind
+   on any element, so the legend's dots (.spark-dot) read the same hue. */
+[data-spark="stat"] { --spark: var(--color-spark-stat); }
+[data-spark="aptitude"] { --spark: var(--color-spark-aptitude); }
+[data-spark="unique"] { --spark: var(--color-spark-unique); }
+.spark-chip {
+	border: 1px solid var(--color-edge);
+	background: color-mix(in srgb, var(--color-gray-900) 50%, transparent);
+}
+.spark-chip:is([data-spark="stat"], [data-spark="aptitude"], [data-spark="unique"]) {
+	background: color-mix(in srgb, var(--spark) 16%, transparent);
+	border-color: color-mix(in srgb, var(--spark) 60%, transparent);
+}
+.spark-dot { background: var(--spark, var(--color-gray-400)); }
+
+/* Her finishing place in each race: gold, silver and bronze for the podium,
+   dark ink on those fixed fills; any other place a plain inset square. */
+.place-square {
+	background: var(--color-gray-700);
+	color: var(--color-gray-200);
+}
+.place-square[data-place="1"] { background: #e8c35a; color: #1a1406; }
+.place-square[data-place="2"] { background: #c9cdd6; color: #16181d; }
+.place-square[data-place="3"] { background: #d29a6b; color: #1c1008; }
+
 /* A running style's name in its colour (--style-color, set on the element from
    the --color-style-* tokens, index.css), on the dark themes only: Hakuraku's
    yellow and lime are unreadable as text on white, so a light theme keeps the

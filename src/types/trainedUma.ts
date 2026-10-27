@@ -47,3 +47,21 @@ export interface TrainedUma extends VeteranInput {
 	created_at: string
 	updated_at: string
 }
+
+/** What a spark is, by the colour a player knows it by (backend models/spark.py). */
+export type SparkKind = "stat" | "aptitude" | "unique" | "skill" | "race" | "scenario" | "carnival"
+
+export interface SparkName {
+	name: string
+	kind: SparkKind
+	/** 1..3. */
+	stars: number
+}
+
+/** One veteran as GET /trained-umas/<id> sends her: the list's fields plus her game data. */
+export interface VeteranDetail extends TrainedUma {
+	/** The game's whole object for her, null for a hand entry. Read only through utils/veteranGameData.ts. */
+	game_data: Record<string, unknown> | null
+	/** Her sparks' and her lineage's names, keyed by the game's id. Absent from an API older than the field. */
+	sparks?: Record<string, SparkName>
+}
