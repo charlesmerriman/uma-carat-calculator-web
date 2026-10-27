@@ -1594,11 +1594,20 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   (`milestones`), passed steps filled, the next one ringed. A null LoH offset hides that step.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
-- **Four views under the header, `?view=`**: Recommendations (the guide, default, no
+- **Five views under the header, `?view=`**: Recommendations (the guide, default, no
   parameter), My team (`team`, the builder), CM Runs (`runs`, the player's logged tickets;
-  see "CM Runs view" below) and Gallery (`gallery`, the posted teams; see "Gallery view"
-  below). An editor gets a fifth, Edit guide. On a phone the tabs show their `short`
-  labels (Guide, Team, Runs, Edit); the full label stays the accessible name. The guide is fetched only on Recommendations.
+  see "CM Runs view" below), Gallery (`gallery`, the posted teams; see "Gallery view"
+  below) and Rankings (`rankings`, below). An editor gets a sixth, Edit guide. On a phone
+  the tabs show their `short` labels (Guide, Team, Runs, Ranks, Edit); the full label stays
+  the accessible name. The guide is fetched only on Recommendations.
+- **Rankings** (`PvpGalleryRankings`, owner 2026-10-27): the event on screen only, counting
+  its **gallery posts** (Henry: "teams that people submitted into the gallery"): umas by posted
+  teams with her, cards by member decks with the card (the borrowed card too, "N borrowed"),
+  counts with shares, from `GET /rankings/gallery/<kind>/<id>` (counted on the server,
+  hourly). What the GUIDES recommend is the Rankings page (`/app/rankings`). **Early access
+  only, by its own rule**: `account.early_access`, never the page's `locked` (so
+  `PVP_EARLY_ACCESS` going off and the open CM's exception don't open it); the API refuses
+  it the same way.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
