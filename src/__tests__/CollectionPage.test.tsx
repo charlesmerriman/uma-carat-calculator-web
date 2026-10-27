@@ -317,7 +317,7 @@ describe("the Umas and Support cards tabs", () => {
 		const grid = within(await screen.findByRole("region", { name: "Umas you own" }))
 		expect(within(grid.getByRole("region", { name: "Your umas at a glance" })).getByText("at potential 5").previousSibling).toHaveTextContent("2")
 		fireEvent.click(grid.getByRole("button", { name: "Oguri Cap, owned" }))
-		fireEvent.click(grid.getByRole("button", { name: "Remove from my umas" }))
+		fireEvent.click(grid.getByRole("button", { name: "Remove" }))
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1))
 		expect(calls("PATCH")[0].body).toEqual({ umas: [{ uma: 41, owned: false }] })
 

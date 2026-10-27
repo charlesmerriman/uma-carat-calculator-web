@@ -290,7 +290,7 @@ function Summary({ label, children, status }: { label: string; children: ReactNo
 	)
 }
 
-function Figure({ value, label }: { value: ReactNode; label: string }) {
+function Figure({ value, label }: { value: ReactNode; label: ReactNode }) {
 	return (
 		<span className="flex flex-col">
 			<span className="font-display text-xl font-bold text-gray-100">{value}</span>
@@ -466,7 +466,7 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 						close()
 						onEdit({ umas: [{ uma: uma.id, owned: false }] })
 					}}
-					removeText="Remove from my umas"
+					removeText="Remove"
 				>
 					<Choices
 						label="Stars"
@@ -536,9 +536,10 @@ export function OwnedUmasGrid({ umas, owned, releases, oshiIds, veteranCounts, s
 		<section className="flex flex-col gap-4" aria-label="Umas you own">
 			<Summary label="Your umas at a glance" status={status}>
 				<span className="flex flex-wrap gap-6">
-					<Figure value={<><span className="text-brand">★5</span> {summary.five}</>} label="five stars" />
-					<Figure value={<><span className="text-brand">★4</span> {summary.four}</>} label="four stars" />
-					<Figure value={<><span className="text-brand">★3</span> {summary.threeOrFewer}</>} label="three or fewer" />
+					{/* The count big, what it counts under it: "★5 4" ran together and read as 54. */}
+					<Figure value={summary.five} label={<><span className="text-brand">★</span> five stars</>} />
+					<Figure value={summary.four} label={<><span className="text-brand">★</span> four stars</>} />
+					<Figure value={summary.threeOrFewer} label={<><span className="text-brand">★</span> three or fewer</>} />
 					<Figure value={summary.potentialFive} label="at potential 5" />
 				</span>
 				<p className="min-w-0 flex-[1_1_16rem] text-sm text-gray-300">
@@ -657,7 +658,7 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 						close()
 						onEdit({ support_cards: [{ support_card: card.id, owned: false }] })
 					}}
-					removeText="Remove from my cards"
+					removeText="Remove"
 				>
 					<Choices
 						label="Limit break"
@@ -668,11 +669,11 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 						name={limitBreakLabel}
 					/>
 					<div className="flex items-center justify-between gap-2">
-						<span className="flex flex-col">
+						<span className="flex min-w-0 flex-col">
 							<span className="text-xs font-semibold text-gray-300">Spare copies</span>
-							<span className="text-[11px] text-gray-400">Held beyond the one in use</span>
+							<span className="text-[11px] text-gray-400">Beyond the one in use</span>
 						</span>
-						<span className="inline-flex items-center gap-0.5 rounded-lg border border-gray-600 bg-gray-900/50 p-0.5">
+						<span className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-600 bg-gray-900/50 p-0.5">
 							<button
 								type="button"
 								aria-label="One fewer spare copy"
