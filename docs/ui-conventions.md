@@ -2072,17 +2072,30 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 
 ## Rankings page (`components/rankings/`)
 
-Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
+Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; the redesign
+(approved 2026-10-28, built step by step) is `notes/rankings-redesign-plan.md`.
+
+- **The kit** (`components/rankings/kit/`, redesign step 1): every list is `RankRow`s in a
+  `RankedList` (top ten, then "Show all"). A row's `Bar` is **scaled to the list's leader**
+  (`fill = count / first count`), never to 100%; the share stays as text. Under 40rem of
+  CONTAINER the bar column goes and a 3 px hairline under the name carries the fill. Also
+  `Podium` (the top three), `StatBand` (a lead and three figures), `Lens` (one list, many
+  views), `FilterToolbar` / `FilterPill` / `TickOptions` / `Tokens` (pills that state their
+  filter, a token per changed one), `Movement`, `Sparkline` (inline SVG), `CardArt`,
+  `CardTypeChip` (a dot of the type's hue, never coloured text). The `--color-status-*`
+  tokens (running, upcoming, ended, predicted) are `@theme`, redrawn for the light themes.
 
 - **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
   navbar item (both bars; with six phone tabs the labels hide below 390px, and the desktop
   item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
   too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
   in the API's `visits.KNOWN_ROUTES` so landings count.
-- **Tabs, `?view=`**: Guide rankings (default, no parameter), Pull plans (`pull-plans`, behind
+- **Tabs, `?view=`**: Guides (default, no parameter), Pull plans (`pull-plans`, behind
   the Raptive gate), PvP (`pvp`, with `?event=cm-21` like the PvP page) and Players
   (`players`). One tab on screen. A tab the reader can't open is never drawn, and its `?view=`
-  falls back to the first tab. Every tab fetches through `useRankingsPayload(path)`.
+  falls back to the first tab. Every tab fetches through `useRankingsPayload(path)`. A tab's
+  badge (`useSectionBadges`: events with a guide, the PvP event's short name) comes from the
+  calculator's events, so no payload is fetched to draw the bar.
 - **PvP** (`PvpTab.tsx`), one event: "Teams players build" counts **every saved team**,
   posted or not (the PvP page's own Rankings view counts the gallery only), drawn by
   `TeamCounts`, the same tables as that view; "What wins" is CM Runs' win rate per uma and
@@ -2098,18 +2111,22 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`.
   Raptive approves** (Henry, "similar to skills tab"): `useRankingsPullPlans()` (guide
   editors) and the API's `views/rankings.sees_pull_plans`; un-gating is flipping both.
 - **Hourly**: each tab's payload is built at most once an hour on the server and never
-  invalidated; the page says "Updated 40 minutes ago" from its `generated_at`.
-- **Guide rankings** (`GuideRankings.tsx`) is the source sheet's card table with its filters
-  one to one (Henry): Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions, plus
-  "Other decks" for one-off decks the sheet has no column for), Strategy, Scenario ("Not set"
-  for a guide without one), Card type ("Friend", as elsewhere on the site, for the sheet's
-  "Pal"), every box ticked to start; plus the event window (All guides, or the next 3 / 5 / 10
-  events with a guide from a picked one). Then the sheet's note, a card search, Overall, Umas,
-  and one table per ticked card type. **Every rule is `utils/guideRankings.ts`**: a card counts
-  once per deck (the borrowed card too, "N borrowed"; an alternative never), an uma once per
-  guide and strategy (times recommended, never stars), shares out of the decks or
-  guide-strategies counted. A row opens to counts by event, strategy and deck, never a list of
-  decks.
+  invalidated; the page says "Updated 40 minutes ago" from its `generated_at`, in the header
+  for a tab that reports it (`useReportUpdated`, `rankingsUpdated.ts`; Guides so far).
+- **Guides** (`GuideRankings.tsx`) is the source sheet's card table with its filters one to
+  one (Henry), housed as five pills: Events (All guides, or the next 3 / 5 / 10 events with a
+  guide from a picked one), Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions,
+  plus "Other decks" for one-off decks the sheet has no column for), Strategy, Scenario ("Not
+  set" for a guide without one), Card type ("Friend", as elsewhere on the site, for the
+  sheet's "Pal"); every box ticked to start, and a changed one draws a token. Then the band,
+  the top three, and ONE list with a lens (Overall, each card type, Umas), the lens
+  remembered on the device (`rankingsPinStore` choices, `rankings-choices`), beside a rail:
+  search (any card or uma, with its place under the filters), the QC note, the guides with no
+  scenario. **Every rule is `utils/guideRankings.ts`**: a card counts once per deck (the
+  borrowed card too, "N borrowed"; an alternative never), an uma once per guide and strategy
+  (times recommended, never stars), shares out of the decks or guide-strategies counted. A row
+  opens to by event (links), by strategy (a stacked bar), by deck tier and a sparkline of the
+  last ten counted events (`usageByEvent`), never a list of decks.
 - **The pinned panel** (`RankingsDock.tsx`, owner 2026-10-27): "Pin to the side" on the page
   pins the tab on screen, one at a time, until unpinned (`services/rankingsPinStore.ts`, a
   `useSyncExternalStore` store on `localStorage`, server snapshot "nothing pinned"). **A window

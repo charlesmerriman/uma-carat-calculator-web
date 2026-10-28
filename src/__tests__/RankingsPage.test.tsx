@@ -10,8 +10,8 @@ import type { PlayersRankingsPayload, PvpRankingsPayload } from "../types/rankin
 import { resetRankingsPinForTests } from "../services/rankingsPinStore"
 
 /**
- * The Rankings page (/app/rankings): who sees it, and the Guide rankings
- * tab drawing utils/guideRankings.ts's counts with the sheet's tick boxes.
+ * The Rankings page (/app/rankings): who sees it, and the Guides tab
+ * drawing utils/guideRankings.ts's counts with the sheet's tick boxes.
  * The counting rules themselves are guideRankings.test.ts.
  */
 
@@ -122,38 +122,57 @@ describe("RankingsPage", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("ranks the guides' cards with counts and shares", async () => {
+	it("ranks the guides' cards with counts and shares, the leader's bar full", async () => {
 		renderPage(true)
 		const overall = await screen.findByRole("region", { name: "Overall" })
 		const rows = within(overall).getAllByRole("listitem")
 		expect(rows[0]).toHaveTextContent("Kitasan Black")
-		expect(rows[0]).toHaveTextContent("2 decks · 100%")
+		expect(within(rows[0]).getByText("2 decks")).toBeInTheDocument()
+		expect(within(rows[0]).getByText("100%")).toBeInTheDocument()
 		expect(rows[1]).toHaveTextContent("Fine Motion")
 		expect(rows[1]).toHaveTextContent("1 borrowed")
-		expect(within(screen.getByRole("region", { name: "Umas" })).getByText("Recommended 1 time · 100%")).toBeInTheDocument()
 		expect(fetchMock.mock.calls[0][0]).toMatch(/\/rankings\/guides$/)
+		// The band says what is counted.
+		expect(within(screen.getByRole("region", { name: "What the guides recommend" })).getByText("Guides counted")).toBeInTheDocument()
+		expect((await screen.findByText(/^Updated /)).tagName).toBe("TIME")
 	})
 
-	it("recounts when a tick box goes off", async () => {
+	it("switches the one list with the lens, and remembers the lens", async () => {
+		renderPage(true)
+		await screen.findByRole("region", { name: "Overall" })
+		fireEvent.click(screen.getByRole("tab", { name: /^Umas/ }))
+		const umas = screen.getByRole("region", { name: "Umas" })
+		expect(within(umas).getByText("Maruzensky")).toBeInTheDocument()
+		expect(within(umas).getByText("1 pick")).toBeInTheDocument()
+		expect(JSON.parse(localStorage.getItem("rankings-choices") ?? "{}")).toEqual({ guides: { lens: "umas" } })
+	})
+
+	it("recounts when a tick box goes off, says so in a token, and resets", async () => {
 		renderPage(true)
 		const overall = await screen.findByRole("region", { name: "Overall" })
-		fireEvent.click(screen.getByRole("button", { name: "Whale", pressed: true }))
+		fireEvent.click(screen.getByRole("button", { name: /^Include/ }))
+		fireEvent.click(screen.getByRole("checkbox", { name: /Whale/ }))
 		const rows = within(overall).getAllByRole("listitem")
 		expect(rows).toHaveLength(1)
-		expect(rows[0]).toHaveTextContent("1 deck · 100%")
+		expect(within(rows[0]).getByText("1 deck")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: /^Include/ })).toHaveTextContent("Include 6 of 7")
+		expect(screen.getByText(/Showing 1 guide and 1 deck for/)).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Reset" }))
+		expect(within(overall).getAllByRole("listitem")).toHaveLength(2)
+		expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument()
 	})
 
-	it("finds one card's count with the card search", async () => {
+	it("finds one card's place with the search", async () => {
 		renderPage(true)
-		fireEvent.change(await screen.findByRole("searchbox", { name: "Search for a card" }), { target: { value: "fine" } })
-		expect(within(screen.getByRole("region", { name: "Card search" })).getByText("#2 · 1 deck · 50%")).toBeInTheDocument()
+		fireEvent.change(await screen.findByRole("searchbox", { name: "Find a card or uma" }), { target: { value: "fine" } })
+		expect(within(screen.getByRole("region", { name: "Search" })).getByText("#2 overall · 1 deck · 50%")).toBeInTheDocument()
 	})
 
 	it("keeps Pull plans to the Raptive gate (guide editors)", () => {
 		const { unmount } = renderPage(true, { url: "/app/rankings?view=pull-plans" })
 		expect(screen.queryByRole("tab", { name: "Pull plans" })).not.toBeInTheDocument()
 		// The address alone doesn't open it: the first tab shows.
-		expect(screen.getByRole("tab", { name: "Guide rankings", selected: true })).toBeInTheDocument()
+		expect(screen.getByRole("tab", { name: "Guides", selected: true })).toBeInTheDocument()
 		unmount()
 		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
 		expect(screen.getByRole("tab", { name: "Pull plans", selected: true })).toBeInTheDocument()
