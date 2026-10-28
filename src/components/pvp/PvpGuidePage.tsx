@@ -129,10 +129,10 @@ const VIEW_PARAM = "view"
  * `short`, when set, is the label a phone shows; the full one stays the
  * tab's name. `editors` marks the view only a guide editor gets
  * (`account.guide_editor`), `earlyAccess` one only early access gets
- * (`account.early_access`, owner 2026-10-27: Rankings, supporters only,
- * "shouldn't be visible at all if you can't access it"). For anyone else
- * the tab is not drawn and its `?view=` reads as Recommendations; the API
- * refuses them too.
+ * (`account.early_access`). For anyone else the tab is not drawn and its
+ * `?view=` reads as Recommendations. Rankings had it until redesign step 6:
+ * now everyone gets the tab, the top three of each list (the server cuts the
+ * payload) and the supporter card.
  */
 const VIEWS: Array<{
 	id: PvpView
@@ -147,7 +147,7 @@ const VIEWS: Array<{
 	{ id: "team", label: "My team", short: "Team", icon: Users, soon: false },
 	{ id: "runs", label: "CM Runs", short: "Runs", icon: Trophy, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
-	{ id: "rankings", label: "Rankings", short: "Ranks", icon: ListOrdered, soon: false, earlyAccess: true },
+	{ id: "rankings", label: "Rankings", short: "Ranks", icon: ListOrdered, soon: false },
 	{ id: "editor", label: "Edit guide", short: "Edit", icon: PenLine, soon: false, editors: true },
 ]
 
@@ -245,10 +245,11 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const view = parseView(searchParams.get(VIEW_PARAM), reader)
 	// Whether the view on screen is closed to this reader: while locked,
 	// anything but the free event's guide and the open CM's guide, My team and
-	// Gallery. An editor is staff, so never locked. Rankings never gets here
-	// locked: parseView gives it to early access only, who are never locked.
+	// Gallery. An editor is staff, so never locked. Rankings is never locked:
+	// a locked reader gets its top three (the server cuts the payload).
 	const viewLocked =
 		locked &&
+		view !== "rankings" &&
 		!(view === "recommendations" && event === freeEvent) &&
 		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
 	// Whether My team would be closed to this reader on this event: then the

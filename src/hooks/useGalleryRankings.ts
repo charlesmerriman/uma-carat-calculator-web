@@ -9,6 +9,8 @@ import { useRankingsPayload, type RankingsState } from "./useRankingsPayload"
 
 export interface GalleryRankingsPayload {
 	generated_at: string
+	/** True for a reader without early access: each list cut to its top three, no `previous` (redesign step 6). */
+	limited?: boolean
 	/** Visible posts counted: an uma's share is out of this. */
 	posts: number
 	/** Every member's deck counted: a card's share is out of this. */

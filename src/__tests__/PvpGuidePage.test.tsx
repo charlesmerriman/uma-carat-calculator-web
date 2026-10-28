@@ -422,22 +422,12 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByRole("tab", { name: "Edit guide" })).not.toBeInTheDocument()
 	})
 
-	it("draws Rankings for early access only; anyone else never sees the tab", () => {
+	it("draws Rankings for everyone, its top three unlocked even for a locked reader", () => {
 		respond(200, GUIDE)
-		const { unmount } = renderPage("/app/pvp?event=cm-10&view=rankings")
-		expect(screen.queryByRole("tab", { name: "Rankings" })).not.toBeInTheDocument()
-		// The link alone lands on the guide, with no lock card about Rankings.
-		expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
-		expect(screen.queryByTestId("rankings-view")).not.toBeInTheDocument()
-		unmount()
-		session.account = { early_access: true }
-		try {
-			renderPage("/app/pvp?event=cm-10&view=rankings")
-			expect(screen.getByRole("tab", { name: "Rankings" })).toHaveAttribute("aria-selected", "true")
-			expect(screen.getByTestId("rankings-view")).toHaveTextContent("cm-10")
-		} finally {
-			session.account = null
-		}
+		renderPage("/app/pvp?event=cm-10&view=rankings")
+		// The server cuts the payload for anyone without early access (redesign step 6).
+		expect(screen.getByRole("tab", { name: "Rankings" })).toHaveAttribute("aria-selected", "true")
+		expect(screen.getByTestId("rankings-view")).toHaveTextContent("cm-10")
 	})
 
 	it("keeps the cards new since the last event collapsed until asked", async () => {
@@ -446,7 +436,7 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByText("New since")).not.toBeInTheDocument()
 	})
 
-	it("offers My team, CM Runs and the Gallery, kept in the URL", async () => {
+	it("offers My team, CM Runs, the Gallery and Rankings, kept in the URL", async () => {
 		respond(200, GUIDE)
 		renderPage("/app/pvp?event=cm-10")
 		const views = within(screen.getByRole("tablist", { name: "View" }))
@@ -457,6 +447,7 @@ describe("PvpGuidePage views and layout", () => {
 			views.getByRole("tab", { name: "My team" }),
 			views.getByRole("tab", { name: "CM Runs" }),
 			views.getByRole("tab", { name: "Gallery" }),
+			views.getByRole("tab", { name: "Rankings" }),
 		])
 		fireEvent.click(views.getByRole("tab", { name: /My team/ }))
 		expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=team")

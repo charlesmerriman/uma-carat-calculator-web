@@ -46,6 +46,7 @@ import { CardBuildList, TrioList, UmaBuildList } from "./TeamLists"
 import { knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
 import { EventStrip } from "./EventStrip"
 import { YourTeam } from "./YourTeam"
+import { SupporterCard } from "./kit/SupporterCard"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 /** Two lists side by side when both fit at 26rem, else stacked: by the container, like the kit. */
@@ -116,6 +117,9 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 	useEffect(() => onTeams(payload.built.teams), [onTeams, payload.built.teams])
 	const gallery = useGalleryRankings(refForRaceEvent(event))
 	const { built, runs } = payload
+	// Without early access each list is its top three (redesign step 6): no opened rows,
+	// no "Your team" (a place needs the whole list), and the supporter card at the end.
+	const limited = Boolean(payload.limited)
 	const umas = knownUmas(built, catalogue)
 	// Rank movement against the week's start (the server's snapshot), by id.
 	const umaMoves = movement(built.umas.map((row) => row.uma), payload.previous?.umas)
@@ -190,7 +194,7 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 						hint="Teams with her. The bar is split by running style."
 						counts={built}
 						catalogue={catalogue}
-						detail={umaDetail}
+						detail={limited ? undefined : umaDetail}
 						moves={umaMoves}
 					/>
 					<CardBuildList
@@ -207,9 +211,11 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 				<WhatWins runs={runs} umas={umas} teams={built.teams} catalogue={catalogue} previous={payload.previous?.runs} />
 				<div className="flex min-w-0 flex-col gap-3">
 					{built.trios && <TrioList trios={built.trios} teams={built.teams} catalogue={catalogue} />}
-					<YourTeam event={event} ranked={umas.map((row) => row.uma)} catalogue={catalogue} />
+					{/* A place needs the whole list, which a limited reader isn't sent. */}
+					{!limited && <YourTeam event={event} ranked={umas.map((row) => row.uma)} catalogue={catalogue} />}
 				</div>
 			</div>
+			{limited && <SupporterCard />}
 		</div>
 	)
 }
@@ -238,7 +244,8 @@ function WhatWins({ runs, umas, teams, catalogue, previous }: {
 	const moves = movement(rates.ranked.map((entry) => `${entry.uma}-${entry.style}`), previous)
 	const row = (entry: WinRateRow, place: number | null) => {
 		const uma = catalogue.umasById.get(entry.uma)
-		const styleTeams = umas.find((built) => built.uma === entry.uma)?.styles[entry.style] ?? 0
+		// Undefined for an uma a limited reader's top three doesn't hold: no share then, never a false 0%.
+		const styleTeams = umas.find((built) => built.uma === entry.uma)?.styles[entry.style]
 		return (
 			<RankRow
 				place={place}
@@ -249,7 +256,7 @@ function WhatWins({ runs, umas, teams, catalogue, previous }: {
 				sub={
 					<span>
 						{STYLE_LABELS[entry.style]}
-						{teams > 0 && ` · ${formatShare(styleTeams / teams)} of teams`}
+						{teams > 0 && styleTeams !== undefined && ` · ${formatShare(styleTeams / teams)} of teams`}
 					</span>
 				}
 				fill={leader > 0 ? Math.min(1, entry.rate / leader) : 0}

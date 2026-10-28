@@ -1608,10 +1608,9 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   guide does with it ("Guide recommends her"; "Guide 3 of 12", the guide's decks holding the
   card, alternatives out), the band gives the gallery's share of every saved team (the PvP
   rankings payload), and "Most copied posts" links each post. Every saved team is the
-  Rankings page's PvP tab, linked from the band. **Not drawn at
-  all without early access** (owner, 2026-10-27: "shouldn't be visible at all if you can't
-  access it"): the tab's `earlyAccess` flag, like Edit guide's `editors`, so there is no lock
-  card for it and `?view=rankings` reads as Recommendations; the API refuses it the same way.
+  Rankings page's PvP tab, linked from the band. Drawn for EVERYONE since redesign step 6, never
+  behind the page's lock: a reader without early access gets the top three and the supporter
+  card. (It was drawn for early access alone until redesign step 6.)
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
@@ -2089,11 +2088,17 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   `CardTypeChip` (a dot of the type's hue, never coloured text). The `--color-status-*`
   tokens (running, upcoming, ended, predicted) are `@theme`, redrawn for the light themes.
 
-- **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
-  navbar item (both bars; with six phone tabs the labels hide below 390px, and the desktop
-  item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
-  too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
-  in the API's `visits.KNOWN_ROUTES` so landings count.
+- **The top three for everyone, the rest for supporters** (redesign step 6; it was
+  "Patreon only for now", owner 2026-10-27). The navbar item is drawn for everyone (both bars;
+  with six phone tabs the labels hide below 390px, and the desktop item is icon-only below
+  `xl`). The SERVER decides what a reader gets: early access the whole payload, anyone else,
+  guests included, each list cut to its top three with `limited: true` (backend
+  `rankings_public.py`; Guides then get the server's own count, not rows). A limited tab draws
+  its band and lists and ends in `kit/SupporterCard.tsx`; Guides use `LimitedGuides.tsx` (no
+  filters, Overall or Umas, the podium); PvP drops opened rows and "Your team"; Players shows
+  the band and three favourites. "Pin to the side" and the window are early access only (they
+  need whole lists). Pull plans keep the Raptive gate. Not prerendered, not in the sitemap,
+  `noindex` (`AppRouteMeta`), like the Skills page; in the API's `visits.KNOWN_ROUTES`.
 - **Tabs, `?view=`**: Guides (default, no parameter), Pull plans (`pull-plans`, behind
   the Raptive gate), PvP (`pvp`, with `?event=cm-21` like the PvP page) and Players
   (`players`). One tab on screen. A tab the reader can't open is never drawn, and its `?view=`

@@ -32,11 +32,7 @@ export const Navbar = () => {
 	// another tab — re-renders this slot, instead of leaving it showing a
 	// signed-in avatar to someone the server no longer recognises. Sign-out
 	// itself lives in ProfileMenu now.
-	const { isLoggedIn, account } = useAccount()
-	// Rankings is Patreon only for now (owner, 2026-10-27): its item is drawn
-	// for early access alone. The account is unknown during the prerender and
-	// while it loads, so the item appears after load and never flashes.
-	const showRankings = Boolean(account?.early_access)
+	const { isLoggedIn } = useAccount()
 
 	// Team drawer + settings gear + theme picker, grouped so every nav cluster
 	// renders the same controls. TeamDrawerButton and SettingsMenu render
@@ -75,10 +71,10 @@ export const Navbar = () => {
 	// 360px even that truncates, so the words hide there and the icons carry
 	// the bar; the label stays in the accessibility tree (sr-only).
 	//
-	// A sixth tab (Rankings, early access only) takes each cell to about 54px
-	// at 375px, where "Calculator" no longer fits, so with six the words hide
-	// below 390px instead. Both strings are literal so Tailwind sees them.
-	const mobileLabel = showRankings ? "truncate max-[389px]:sr-only" : "truncate max-[359px]:sr-only"
+	// The sixth tab (Rankings, everyone's since redesign step 6: the top three
+	// of each list, the rest for supporters) takes each cell to about 54px at
+	// 375px, where "Calculator" no longer fits, so the words hide below 390px.
+	const mobileLabel = "truncate max-[389px]:sr-only"
 	const mobileNavClass = (active: boolean) =>
 		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
@@ -191,7 +187,7 @@ export const Navbar = () => {
 				    phone never reaches the cap. Height unchanged, so the
 				    scroll-padding figures in index.css still hold. */}
 				<div className="border-t border-gray-700 px-2 py-2">
-				<div className={`mx-auto grid max-w-[32rem] gap-1 ${showRankings ? "grid-cols-6" : "grid-cols-5"}`}>
+				<div className="mx-auto grid max-w-[32rem] grid-cols-6 gap-1">
 					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>Calculator</span>
@@ -214,12 +210,10 @@ export const Navbar = () => {
 						<Swords className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>PvP</span>
 					</Link>
-					{showRankings && (
-						<Link to="/app/rankings" className={mobileNavClass(isRankings)} {...prefetchOnIntent}>
-							<ListOrdered className="h-4 w-4 shrink-0" />
-							<span className={mobileLabel}>Rankings</span>
-						</Link>
-					)}
+					<Link to="/app/rankings" className={mobileNavClass(isRankings)} {...prefetchOnIntent}>
+						<ListOrdered className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Rankings</span>
+					</Link>
 				</div>
 				</div>
 			</nav>
@@ -269,12 +263,10 @@ export const Navbar = () => {
 							PvP
 						</Link>
 						{/* Icon only below xl: a sixth label overflows the bar at 1024px. */}
-						{showRankings && (
-							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
-								<ListOrdered className="h-4 w-4" />
-								<span className="sr-only xl:not-sr-only">Rankings</span>
-							</Link>
-						)}
+						<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
+							<ListOrdered className="h-4 w-4" />
+							<span className="sr-only xl:not-sr-only">Rankings</span>
+						</Link>
 					</div>
 
 					{/* Right: Save indicator + settings + theme picker + avatar menu / Login */}

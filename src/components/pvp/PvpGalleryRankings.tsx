@@ -36,6 +36,7 @@ import { useReportUpdated } from "../rankings/rankingsUpdated"
 import { Panel } from "../rankings/kit/Panel"
 import { StatBand } from "../rankings/kit/StatBand"
 import { CardBuildList, UmaBuildList } from "../rankings/TeamLists"
+import { SupporterCard } from "../rankings/kit/SupporterCard"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
@@ -128,6 +129,8 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 			)}
 
 			{payload.copied && payload.copied.length > 0 && <MostCopied posts={payload.copied} event={event} catalogue={catalogue} />}
+			{/* Without early access each list is its top three (redesign step 6). */}
+			{payload.limited && <SupporterCard />}
 		</div>
 	)
 }

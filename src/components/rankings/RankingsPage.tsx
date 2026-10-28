@@ -9,15 +9,18 @@
  *   pvp          the teams players save, and what wins (PvpTab)
  *   players      favourite umas, ranks, income options, selectors (PlayersTab)
  *
- * PATREON ONLY FOR NOW (owner, 2026-10-27): early access (`account.early_access`,
- * backend benefits.early_access) sees the page and its navbar item, and
- * every /rankings/* route checks the same on the server. Anyone else who
- * lands here gets a short note. Not prerendered and noindex, like the Skills
- * page: the content is behind an account.
+ * THE TOP THREE FOR EVERYONE (redesign step 6; owner, 2026-10-27 "Patreon
+ * only for now", widened then): anyone, guests included, sees the page and
+ * its navbar item. The server decides what each reader gets (backend
+ * views/rankings.py): early access (`account.early_access`) the whole of
+ * every list, anyone else each list's top three (`limited`), and each tab
+ * draws the supporter card where a limited list stops. "Pin to the side" is
+ * for early access only: the window needs whole lists. Not prerendered and
+ * noindex, like the Skills page.
  */
 
 import { useContext, useState, type ReactNode } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { ListOrdered, Pin, PinOff, type LucideIcon } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
 import { pinRankings, useRankingsPin, type RankingsSection as Section } from "../../services/rankingsPinStore"
@@ -31,27 +34,11 @@ const VIEW_PARAM = "view"
 
 const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-7xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
-export const RankingsPage = () => {
-	const auth = useContext(AuthContext)
-	if (!auth?.account?.early_access) {
-		const waiting = Boolean(auth?.isLoggedIn) && auth?.status === "loading"
-		return (
-			<div className={CONTAINER}>
-				<p className="text-sm text-gray-400" role="status">
-					{waiting ? "Loading..." : (
-						<>
-							Rankings are for our Patreon supporters for now.{" "}
-							<Link to="/app" className="text-brand transition hover:text-brand/75">Back to the calculator</Link>
-						</>
-					)}
-				</p>
-			</div>
-		)
-	}
-	return <RankingsBody />
-}
+export const RankingsPage = () => <RankingsBody />
 
 const RankingsBody = () => {
+	const auth = useContext(AuthContext)
+	const earlyAccess = Boolean(auth?.account?.early_access)
 	const [searchParams, setSearchParams] = useSearchParams()
 	const shown = useVisibleSections()
 	const view = parseSection(searchParams.get(VIEW_PARAM), shown)
@@ -84,17 +71,19 @@ const RankingsBody = () => {
 				)}
 				{/* Pins THIS tab beside the Calculator, Timeline and PvP; one at a time. A quiet
 				    button: the page's answer, not its pin, is the strongest thing on it. */}
-				<button
-					type="button"
-					aria-pressed={pinned}
-					onClick={() => pinRankings(pinned ? null : view)}
-					className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-						pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
-					}`}
-				>
-					{pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-					{pinned ? "Unpin" : "Pin to the side"}
-				</button>
+				{earlyAccess && (
+					<button
+						type="button"
+						aria-pressed={pinned}
+						onClick={() => pinRankings(pinned ? null : view)}
+						className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+							pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
+						}`}
+					>
+						{pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+						{pinned ? "Unpin" : "Pin to the side"}
+					</button>
+				)}
 			</header>
 			<div role="tablist" aria-label="Rankings" className="flex gap-0.5 overflow-x-auto border-b border-gray-600 [scrollbar-width:none]">
 				{shown.map((entry) => (
@@ -108,7 +97,7 @@ const RankingsBody = () => {
 					<RankingsSection section={view} />
 				</RankingsUpdatedContext.Provider>
 			</div>
-			{pin.section !== null && !pinned && (
+			{earlyAccess && pin.section !== null && !pinned && (
 				<p className="text-xs text-gray-400">
 					{shown.find((entry) => entry.id === pin.section)?.label ?? "A tab"} is pinned to the side of the other pages.
 				</p>

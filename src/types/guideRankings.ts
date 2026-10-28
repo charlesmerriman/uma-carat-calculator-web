@@ -50,6 +50,8 @@ export interface RankingScenario {
 export interface GuideRankingsPayload {
 	/** When the server built this payload (ISO 8601). It rebuilds at most once an hour. */
 	generated_at: string
+	/** Early access gets the whole payload; anyone else LimitedGuideRankings below. */
+	limited?: false
 	/** The scenarios some guide names, in release order. */
 	scenarios: RankingScenario[]
 	guides: RankingGuide[]
@@ -60,3 +62,19 @@ export interface GuideRankingsPayload {
 	 */
 	previous?: { generated_at: string; guides: RankingGuide[] } | null
 }
+
+/**
+ * The guides for a reader without early access (redesign step 6, backend
+ * rankings_public.py): the server's own count with every box ticked, the
+ * top three cards and umas, and the band's totals. No rows to count, no
+ * filters, no movement.
+ */
+export interface LimitedGuideRankings {
+	generated_at: string
+	limited: true
+	totals: { guides: number; decks: number; scenarios: number }
+	cards: Array<{ card: number; decks: number; borrows: number; share: number }>
+	umas: Array<{ uma: number; picks: number; share: number }>
+}
+
+export type GuideRankingsResponse = GuideRankingsPayload | LimitedGuideRankings

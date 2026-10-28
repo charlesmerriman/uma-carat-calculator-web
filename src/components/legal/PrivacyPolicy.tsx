@@ -280,9 +280,9 @@ export const PrivacyPolicy: React.FC = () => {
 							example, the share of accounts that enable a given income option, which
 							banners are popular, or which umas win most in Champions Meeting). Basis: <strong>legitimate interest</strong>, Article
 							6(1)(f), in improving the Site. These figures are totals and typical figures
-							(medians) and never identify anyone. Patreon supporters can see some of these figures on
-							the Site&apos;s Rankings page: totals and medians only, never a name, an account or one
-							person&apos;s plan or team.
+							(medians) and never identify anyone. Anyone can see the top three of each list on the
+							Site&apos;s Rankings page; Patreon supporters can see the rest. Totals and medians only,
+							never a name, an account or one person&apos;s plan or team.
 						</li>
 						<li>
 							<strong>Google Analytics</strong> and <strong>advertising cookies</strong>.

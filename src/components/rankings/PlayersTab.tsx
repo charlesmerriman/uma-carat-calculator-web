@@ -30,6 +30,7 @@ import { DistBar } from "./kit/DistBar"
 import { OptionRows } from "./kit/OptionRows"
 import { Panel, PanelHead } from "./kit/Panel"
 import { StatBand } from "./kit/StatBand"
+import { SupporterCard } from "./kit/SupporterCard"
 import { Wall } from "./kit/Wall"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
@@ -82,33 +83,9 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 				From the players who use the calculator with an account, staff left out. Counts, never a name.
 			</StatBand>
 
-			<div className={GRID}>
-				<div className="flex min-w-0 flex-col gap-3">
-					{payload.ranks.length > 0 && (
-						<section aria-label="Ranks" className="card-panel flex min-w-0 flex-col gap-4 p-3">
-							{payload.ranks.map((rank) => (
-								<div key={rank.label} className="flex flex-col gap-2">
-									<PanelHead title={rank.label === "Team Trials" ? "Team Trials class" : rank.label} hint={`Of the ${rank.people.toLocaleString()} who set it.`} />
-									<DistBar label={rank.label} rows={highestFirst(rank.rows)} total={rank.people} />
-								</div>
-							))}
-						</section>
-					)}
-					<Panel title="Income options" hint="Players with each option on in the calculator.">
-						<OptionRows
-							rows={[...payload.income].sort((a, b) => b.people - a.people).map((row) => ({
-								key: row.key,
-								label: row.label,
-								// Switching it on was a choice: worth saying beside the share.
-								note: row.default_on === false ? "starts off" : undefined,
-								value: row.people,
-								share: share(row.people, engaged),
-								count: row.people.toLocaleString(),
-							}))}
-						/>
-					</Panel>
-				</div>
-				<div className="flex min-w-0 flex-col gap-3">
+			{payload.limited ? (
+				// Without early access: the band and the three most picked favourites (redesign step 6).
+				<>
 					<Panel title="Favourite umas" hint="Players who picked her as a favourite. The first favourite is the account picture.">
 						{favourites.length === 0 ? (
 							<p className="px-1 text-xs text-gray-400">Nobody has picked a favourite yet.</p>
@@ -116,10 +93,48 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 							<Wall label="Favourite umas, most picked first" entries={favourites} />
 						)}
 					</Panel>
-					{payload.budget && payload.budget.length > 0 && <Budget rows={payload.budget} />}
-					<Selectors selectors={payload.selectors} catalogue={catalogue} />
+					<SupporterCard />
+				</>
+			) : (
+				<div className={GRID}>
+					<div className="flex min-w-0 flex-col gap-3">
+						{payload.ranks.length > 0 && (
+							<section aria-label="Ranks" className="card-panel flex min-w-0 flex-col gap-4 p-3">
+								{payload.ranks.map((rank) => (
+									<div key={rank.label} className="flex flex-col gap-2">
+										<PanelHead title={rank.label === "Team Trials" ? "Team Trials class" : rank.label} hint={`Of the ${rank.people.toLocaleString()} who set it.`} />
+										<DistBar label={rank.label} rows={highestFirst(rank.rows)} total={rank.people} />
+									</div>
+								))}
+							</section>
+						)}
+						<Panel title="Income options" hint="Players with each option on in the calculator.">
+							<OptionRows
+								rows={[...payload.income].sort((a, b) => b.people - a.people).map((row) => ({
+									key: row.key,
+									label: row.label,
+									// Switching it on was a choice: worth saying beside the share.
+									note: row.default_on === false ? "starts off" : undefined,
+									value: row.people,
+									share: share(row.people, engaged),
+									count: row.people.toLocaleString(),
+								}))}
+							/>
+						</Panel>
+					</div>
+					<div className="flex min-w-0 flex-col gap-3">
+						<Panel title="Favourite umas" hint="Players who picked her as a favourite. The first favourite is the account picture.">
+							{favourites.length === 0 ? (
+								<p className="px-1 text-xs text-gray-400">Nobody has picked a favourite yet.</p>
+							) : (
+								<Wall label="Favourite umas, most picked first" entries={favourites} />
+							)}
+						</Panel>
+						{payload.budget && payload.budget.length > 0 && <Budget rows={payload.budget} />}
+						<Selectors selectors={payload.selectors} catalogue={catalogue} />
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	)
 }

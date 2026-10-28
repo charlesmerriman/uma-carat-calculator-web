@@ -56,6 +56,7 @@ import {
 } from "../../utils/guideRankings"
 import { movement } from "../../utils/rankingsMovement"
 import { useReportUpdated } from "./rankingsUpdated"
+import { LimitedGuides } from "./LimitedGuides"
 import { CardArt } from "./kit/CardArt"
 import { CardTypeChip } from "./kit/CardTypeChip"
 import { FilterPill, FilterToolbar, GroupPill, Tokens, type FilterGroup, type FilterToken } from "./kit/FilterToolbar"
@@ -112,6 +113,8 @@ export function GuideRankings() {
 			</div>
 		)
 	}
+	// Without early access: the server's top three, no rows to count (redesign step 6).
+	if (rankings.payload.limited) return <LimitedGuides payload={rankings.payload} catalogue={catalogue} />
 	// Keyed by the build, so a newer payload starts from fresh filters (its scenarios may differ).
 	return <GuideRankingsBody key={rankings.payload.generated_at} payload={rankings.payload} catalogue={catalogue} events={events} />
 }

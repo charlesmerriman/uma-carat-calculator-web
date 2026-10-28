@@ -141,10 +141,35 @@ afterEach(() => {
 })
 
 describe("RankingsPage", () => {
-	it("is a note for anyone without early access, and fetches nothing", () => {
+	it("shows a reader without early access the top three, the supporter card, and no pin", async () => {
+		const limited = {
+			generated_at: "2026-10-27T20:00:00Z", limited: true,
+			totals: { guides: 51, decks: 607, scenarios: 9 },
+			cards: [{ card: 1, decks: 176, borrows: 15, share: 0.29 }, { card: 2, decks: 86, borrows: 12, share: 0.14 }],
+			umas: [{ uma: 41, picks: 22, share: 0.13 }],
+		}
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(limited), { status: 200 })))
 		renderPage(false)
-		expect(screen.getByText(/Rankings are for our Patreon supporters for now/)).toBeInTheDocument()
-		expect(fetchMock).not.toHaveBeenCalled()
+		const podium = within(await screen.findByRole("list", { name: "Top three, Overall" }))
+		expect(podium.getByText("Kitasan Black")).toBeInTheDocument()
+		expect(podium.getByText("176 decks")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "What the guides recommend" })).getByText("607")).toBeInTheDocument()
+		expect(screen.getByRole("region", { name: "The full list" })).toHaveTextContent("The full list is for our Patreon supporters")
+		// No filters, and no window to pin: it needs whole lists.
+		expect(screen.queryByRole("group", { name: "Filters" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "Pin to the side" })).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("tab", { name: "Umas" }))
+		expect(within(screen.getByRole("list", { name: "Top three, Umas" })).getByText("22 picks")).toBeInTheDocument()
+	})
+
+	it("cuts the PvP tab short for a limited reader: no Your team, the supporter card", async () => {
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(new Response(JSON.stringify(/\/rankings\/pvp\//.test(url) ? { ...PVP, limited: true, previous: undefined } : { ...PAYLOAD, limited: undefined }), { status: 200 }))
+		)
+		renderPage(false, { url: "/app/rankings?view=pvp&event=cm-21" })
+		await screen.findByRole("region", { name: "Umas players build" })
+		expect(screen.queryByRole("region", { name: "Your team" })).not.toBeInTheDocument()
+		expect(screen.getByRole("region", { name: "The full list" })).toBeInTheDocument()
 	})
 
 	it("ranks the guides' cards with counts and shares, the leader's bar full", async () => {

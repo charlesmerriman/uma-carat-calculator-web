@@ -33,6 +33,8 @@ export interface RunResultRow {
 
 export interface PvpRankingsPayload {
 	generated_at: string
+	/** True for a reader without early access: each list cut to its top three, no `previous` (redesign step 6). */
+	limited?: boolean
 	/** Every saved team for the event, counted. */
 	built: TeamCountsData
 	runs: {
@@ -52,6 +54,8 @@ export interface PvpRankingsPayload {
 
 export interface PlayersRankingsPayload {
 	generated_at: string
+	/** True for a reader without early access: each list cut to its top three, no `previous` (redesign step 6). */
+	limited?: boolean
 	/** Accounts that use the calculator: the income panel's denominator. */
 	engaged: number
 	favourites: Array<{ uma: number; people: number }>
