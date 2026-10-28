@@ -61,7 +61,7 @@ describe("RankingsDock", () => {
 		await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument())
 		expect(localStorage.getItem("rankings-pin-docked")).toBe("retracted")
 		fireEvent.click(screen.getByRole("button", { name: "Rankings" }))
-		expect(screen.getByRole("complementary", { name: "Rankings: Guide rankings" })).toBeInTheDocument()
+		expect(screen.getByRole("complementary", { name: "Rankings: Guides" })).toBeInTheDocument()
 		expect(localStorage.getItem("rankings-pin-docked")).toBeNull()
 	})
 

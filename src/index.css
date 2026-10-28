@@ -305,6 +305,16 @@ html {
 	--color-recommended-fill: #f5c542;
 	--color-recommended-ink: #2a1a00;
 	--color-recommended-tint: rgb(245 197 66 / 14%);
+	/* RANKINGS STATUS (components/rankings/kit/StatusPill.tsx, notes/
+	   rankings-redesign-plan.md): an event or banner running now, upcoming,
+	   ended, or on predicted dates. Text and a /15 fill of the same token
+	   (`text-status-running bg-status-running/15`); rank movement reuses them
+	   (up = running, down = predicted, new = upcoming). Redrawn under
+	   [data-theme-mode="light"]. */
+	--color-status-running: #7fd3a6;
+	--color-status-upcoming: #8fb8ff;
+	--color-status-predicted: #f0b27a;
+	--color-status-ended: #8e8e9a;
 	--color-ssr-deep: #2b2008;
 	--color-ssr-mid: #5a4312;
 	--color-ssr-glow: rgb(255 214 102 / 55%);
@@ -612,6 +622,11 @@ html {
 	   gold with dark ink on every theme. */
 	--color-recommended: #7a4f00;
 	--color-recommended-tint: rgb(122 79 0 / 16%);
+	/* Rankings status, deepened for white surfaces. */
+	--color-status-running: #1f6f4a;
+	--color-status-upcoming: #2b5bb8;
+	--color-status-predicted: #b5651d;
+	--color-status-ended: #606068;
 	--color-ssr-deep: #fff5d9;
 	--color-ssr-mid: #f5dc93;
 	--color-ssr-glow: rgb(201 138 18 / 45%);

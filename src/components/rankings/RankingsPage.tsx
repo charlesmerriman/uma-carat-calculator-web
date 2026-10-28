@@ -3,7 +3,7 @@
  * guides recommend, what players plan to pull, what they build for PvP, and
  * how they play. One tab on screen at a time, `?view=`:
  *
- *   guides       Guide rankings, the source sheet's card table (GuideRankings)
+ *   guides       what the guides recommend, the source sheet's card table (GuideRankings)
  *   pull-plans   the banners players plan to pull on (PullPlans), behind
  *                the Raptive gate: guide editors only (useRankingsPullPlans)
  *   pvp          the teams players save, and what wins (PvpTab)
@@ -16,13 +16,16 @@
  * page: the content is behind an account.
  */
 
-import { useContext, type ReactNode } from "react"
+import { useContext, useState, type ReactNode } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { ListOrdered, Pin, PinOff, type LucideIcon } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
 import { pinRankings, useRankingsPin, type RankingsSection as Section } from "../../services/rankingsPinStore"
+import { formatDate } from "../../utils/dateFormat"
+import { formatTimeAgo } from "../../utils/relativeDate"
 import { RankingsSection } from "./RankingsSection"
-import { parseSection, useVisibleSections } from "./sections"
+import { RankingsUpdatedContext } from "./rankingsUpdated"
+import { parseSection, useSectionBadges, useVisibleSections } from "./sections"
 
 const VIEW_PARAM = "view"
 
@@ -54,6 +57,10 @@ const RankingsBody = () => {
 	const view = parseSection(searchParams.get(VIEW_PARAM), shown)
 	const pin = useRankingsPin()
 	const pinned = pin.section === view
+	const badges = useSectionBadges(searchParams.get("event"))
+	// The open tab's payload time (rankingsUpdated.ts), read against one clock reading.
+	const [updated, setUpdated] = useState<string | null>(null)
+	const [now] = useState(() => Date.now())
 	const open = (next: Section) => {
 		const params = new URLSearchParams(searchParams)
 		// The PvP tab's event belongs to that tab.
@@ -65,39 +72,41 @@ const RankingsBody = () => {
 
 	return (
 		<div className={CONTAINER}>
-			<header>
-				<div className="flex flex-wrap items-center gap-2">
-					<h1 className="font-display mr-auto flex items-center gap-2 text-xl font-bold text-brand">
-						<ListOrdered className="h-5 w-5 shrink-0" />
-						Rankings
-					</h1>
-					{/* Pins THIS tab beside the Calculator, Timeline and PvP; one at a time. */}
-					<button
-						type="button"
-						aria-pressed={pinned}
-						onClick={() => pinRankings(pinned ? null : view)}
-						className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-							pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
-						}`}
-					>
-						{pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-						{pinned ? "Unpin" : "Pin to the side"}
-					</button>
-				</div>
-				<p className="mt-1 text-sm leading-relaxed text-gray-300">
-					What the guides recommend, what players build and plan, and what wins. For our Patreon supporters for
-					now.
-				</p>
+			<header className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+				<h1 className="font-display mr-auto flex items-center gap-2 text-xl font-bold text-brand">
+					<ListOrdered className="h-5 w-5 shrink-0" />
+					Rankings
+				</h1>
+				{updated && (
+					<time dateTime={updated} title={formatDate(updated)} className="text-xs text-gray-400">
+						Updated {formatTimeAgo(updated, now)}
+					</time>
+				)}
+				{/* Pins THIS tab beside the Calculator, Timeline and PvP; one at a time. A quiet
+				    button: the page's answer, not its pin, is the strongest thing on it. */}
+				<button
+					type="button"
+					aria-pressed={pinned}
+					onClick={() => pinRankings(pinned ? null : view)}
+					className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+						pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
+					}`}
+				>
+					{pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+					{pinned ? "Unpin" : "Pin to the side"}
+				</button>
 			</header>
-			<div role="tablist" aria-label="Rankings" className="flex flex-wrap gap-1 border-b border-gray-700">
+			<div role="tablist" aria-label="Rankings" className="flex gap-0.5 overflow-x-auto border-b border-gray-600 [scrollbar-width:none]">
 				{shown.map((entry) => (
-					<Tab key={entry.id} active={entry.id === view} icon={entry.icon} onClick={() => open(entry.id)}>
+					<Tab key={entry.id} active={entry.id === view} icon={entry.icon} badge={badges[entry.id]} onClick={() => open(entry.id)}>
 						{entry.label}
 					</Tab>
 				))}
 			</div>
 			<div role="tabpanel" aria-label={shown.find((entry) => entry.id === view)?.label}>
-				<RankingsSection section={view} />
+				<RankingsUpdatedContext.Provider value={setUpdated}>
+					<RankingsSection section={view} />
+				</RankingsUpdatedContext.Provider>
 			</div>
 			{pin.section !== null && !pinned && (
 				<p className="text-xs text-gray-400">
@@ -108,9 +117,11 @@ const RankingsBody = () => {
 	)
 }
 
-function Tab({ active, icon: Icon, onClick, children }: {
+function Tab({ active, icon: Icon, badge, onClick, children }: {
 	active: boolean
 	icon: LucideIcon
+	/** "51", "CM 21": a hint after the name, not part of the tab's name for a screen reader. */
+	badge?: string
 	onClick: () => void
 	children: ReactNode
 }) {
@@ -120,7 +131,7 @@ function Tab({ active, icon: Icon, onClick, children }: {
 			role="tab"
 			aria-selected={active}
 			onClick={onClick}
-			className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition ${
+			className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition ${
 				active
 					? "border-brand text-brand"
 					: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
@@ -128,6 +139,11 @@ function Tab({ active, icon: Icon, onClick, children }: {
 		>
 			<Icon className="h-4 w-4 shrink-0" />
 			{children}
+			{badge && (
+				<span aria-hidden="true" className="rounded-full bg-gray-700 px-[7px] py-px text-[11px] font-medium tabular-nums text-gray-400">
+					{badge}
+				</span>
+			)}
 		</button>
 	)
 }

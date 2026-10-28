@@ -230,6 +230,18 @@ export function breakdown<K>(appearances: RankingAppearance[], keyOf: (appearanc
 	return [...totals.entries()]
 }
 
+/**
+ * A pick's use across the last `size` counted events, oldest first: what an
+ * opened row's sparkline draws. `events` is the counted guides' events in
+ * event order (countedGuides), so the window and the tick boxes apply; an
+ * event where the pick isn't used is a 0, never skipped. A card counts its
+ * decks there (alternatives out, like the count); an uma her picks.
+ */
+export function usageByEvent(appearances: RankingAppearance[], events: RaceEvent[], size: number): number[] {
+	const last = events.slice(-size)
+	return last.map((event) => appearances.filter((appearance) => appearance.event === event && appearance.role !== "alt").length)
+}
+
 /** "29%": a share for the tables, whole percent, "<1%" rather than a misleading 0. */
 export function formatShare(share: number): string {
 	if (share > 0 && share < 0.005) return "<1%"

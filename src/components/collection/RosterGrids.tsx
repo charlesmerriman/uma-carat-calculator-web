@@ -38,22 +38,13 @@ import {
 	type UmaSortKey,
 } from "../../utils/rosterSort"
 import { parseApiDate } from "../../utils/dateFormat"
+import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import type { CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
 import type { OwnedCardRow, OwnedUmaRow, RosterChanges } from "../../types/roster"
 
 const CARD_TYPES = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
 const CARD_TYPE_LABELS: Record<string, string> = {
 	speed: "Speed", stamina: "Stamina", power: "Power", guts: "Guts", wit: "Wit", friend: "Friend", group: "Group",
-}
-/** A type's hue (index.css :root): a dot beside its name and a bar, never text. */
-const CARD_TYPE_COLORS: Record<string, string> = {
-	speed: "var(--color-stat-speed)",
-	stamina: "var(--color-stat-stamina)",
-	power: "var(--color-stat-power)",
-	guts: "var(--color-stat-guts)",
-	wit: "var(--color-stat-wit)",
-	friend: "var(--color-card-friend)",
-	group: "var(--color-card-group)",
 }
 const RARITIES = [
 	{ rarity: 3, label: "SSR" },

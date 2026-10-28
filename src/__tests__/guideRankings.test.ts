@@ -12,6 +12,7 @@ import {
 	hasUnsetScenario,
 	rankCards,
 	rankUmas,
+	usageByEvent,
 	type GuideFilters,
 } from "../utils/guideRankings"
 
@@ -210,6 +211,19 @@ describe("breakdown", () => {
 		const guides = countedGuides(EVENTS, PAYLOAD, ALL, { size: null })
 		const light = rankCards(guides, ALL, typeOf).find((rank) => rank.card === LIGHT)!
 		expect(breakdown(light.appearances, (appearance) => appearance.event)).toEqual([[CM20, 1]])
+	})
+})
+
+describe("usageByEvent", () => {
+	it("reads the last N counted events in order, zeros where unused, alternatives out", () => {
+		const appearances = [
+			{ event: CM20, style: "pace" as const, tier: "standard" as const, role: "main" as const },
+			{ event: CM20, style: "pace" as const, tier: "whale" as const, role: "borrow" as const },
+			{ event: CM22, style: "end" as const, tier: "whale" as const, role: "main" as const },
+			{ event: CM22, style: "end" as const, tier: "beginner" as const, role: "alt" as const },
+		]
+		expect(usageByEvent(appearances, [CM20, CM21, CM22], 10)).toEqual([2, 0, 1])
+		expect(usageByEvent(appearances, [CM20, CM21, CM22], 2)).toEqual([0, 1])
 	})
 })
 
