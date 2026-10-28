@@ -1,24 +1,40 @@
 /**
  * The Rankings page's Players tab (`?view=players`): how the site's players
  * play, from the admin analytics among accounts that use the calculator
- * (staff out): favourite umas, Team Trials class and club rank, the income
- * options they turn on, and the campaign selectors they plan to buy and what
- * they plan to take with them. Counts, with the share beside them.
+ * (staff out): Team Trials class and club rank, favourite umas, the income
+ * options they turn on, and the campaign selectors they plan to buy with
+ * what they plan to take. Counts and shares, never a name.
+ *
+ * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 11, 22): the
+ * band, the two ranks as stacked distribution bars, favourites as a wall of
+ * portraits, income options as labelled bars, and one selector in front with
+ * the rest behind "Show earlier". Step 4 adds the typical budget by class,
+ * "starts off" on the income options, and which selector is on sale.
  */
 
+import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import type { PlayersRankingsPayload } from "../../types/rankingsTabs"
+import type { CatalogueUma } from "../../types/pvpTeam"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
-import { formatDate } from "../../utils/dateFormat"
-import { formatTimeAgo } from "../../utils/relativeDate"
 import { formatShare } from "../../utils/guideRankings"
-import { RankList } from "./RankList"
+import { useReportUpdated } from "./rankingsUpdated"
+import { CardArt } from "./kit/CardArt"
+import { DistBar } from "./kit/DistBar"
+import { OptionRows } from "./kit/OptionRows"
+import { Panel, PanelHead } from "./kit/Panel"
+import { StatBand } from "./kit/StatBand"
+import { Wall } from "./kit/Wall"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
-const CELL = "px-2 py-1.5 text-right tabular-nums"
+const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
+/** The income option the band's third figure reads. */
+const DAILY_CARAT = "daily_carat"
+
+const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 
 export function PlayersTab() {
 	const state = useRankingsPayload<PlayersRankingsPayload>("/rankings/players")
@@ -39,120 +55,147 @@ export function PlayersTab() {
 }
 
 function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; catalogue: PvpCatalogueIndex }) {
-	const oshiIds = useOshiIds()
-	const favourites = payload.favourites.filter((row) => catalogue.umasById.has(row.uma))
+	useReportUpdated(payload.generated_at)
+	const { engaged } = payload
+	const share = (people: number, of: number) => formatShare(of > 0 ? people / of : 0)
+	const favourites = payload.favourites.flatMap((row) => {
+		const uma = catalogue.umasById.get(row.uma)
+		return uma ? [{ uma, count: plural(row.people, "player") }] : []
+	})
+	const trials = payload.ranks.find((rank) => rank.label === "Team Trials")
+	const topClass = trials?.rows.reduce<(typeof trials.rows)[number] | null>((best, row) => (best && best.people >= row.people ? best : row), null)
+	const dailyCarat = payload.income.find((row) => row.key === DAILY_CARAT)
+
 	return (
-		<div className="flex flex-col gap-4">
-			<p className="text-xs text-gray-400">
-				From the {payload.engaged.toLocaleString()} players who use the calculator with an account.{" "}
-				<time dateTime={payload.generated_at} title={formatDate(payload.generated_at)}>
-					Updated {formatTimeAgo(payload.generated_at)}.
-				</time>
-			</p>
-			<div className="grid items-start gap-4 @4xl:grid-cols-2">
-				<RankList
-					title="Favourite umas"
-					hint="Players who picked her as a favourite on their account."
-					empty="Nobody has picked a favourite yet."
-					rows={favourites.map((row, index) => {
-						const uma = catalogue.umasById.get(row.uma)
-						return {
-							key: row.uma,
-							place: index + 1,
-							name: uma?.name ?? "Unknown uma",
-							art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-full" />,
-							counts: `${row.people.toLocaleString()} ${row.people === 1 ? "player" : "players"} · ${formatShare(row.people / payload.engaged)}`,
-							details: [],
-						}
-					})}
-				/>
-				<div className="flex flex-col gap-4">
-					{payload.ranks.map((rank) => (
-						<Panel key={rank.label} title={rank.label} hint={`Of the ${rank.people.toLocaleString()} players who set it.`}>
-							<Table
-								headers={["Rank", "Players", "Share"]}
-								rows={rank.rows.map((row) => [row.name, row.people.toLocaleString(), formatShare(rank.people ? row.people / rank.people : 0)])}
-							/>
-						</Panel>
-					))}
-				</div>
-				<Panel title="Income options" hint="Players with each option on in the calculator.">
-					<Table
-						headers={["Option", "Players", "Share"]}
-						rows={payload.income.map((row) => [row.label, row.people.toLocaleString(), formatShare(payload.engaged ? row.people / payload.engaged : 0)])}
-					/>
-				</Panel>
-				<Panel title="Campaign selectors" hint="Players planning to buy each selector, and what they plan to take with it.">
-					{payload.selectors.length === 0 ? (
-						<p className="text-sm text-gray-400">No campaign selectors yet.</p>
-					) : (
-						<ul className="flex flex-col divide-y divide-gray-700/70">
-							{payload.selectors.map((selector) => (
-								<li key={`${selector.campaign}-${selector.label}`} className="flex flex-col gap-1 py-2">
-									<span className="text-sm font-semibold text-gray-100">
-										{selector.label} <span className="font-normal text-gray-400">· {selector.campaign}</span>
-									</span>
-									<span className="text-xs tabular-nums text-gray-400">
-										{selector.buyers.toLocaleString()} {selector.buyers === 1 ? "buyer" : "buyers"}, {selector.picked.toLocaleString()} picked
-									</span>
-									{selector.top.length > 0 && (
-										<span className="text-xs text-gray-300">
-											{selector.top
-												.map((pick) => {
-													const name = pick.uma !== undefined ? catalogue.umasById.get(pick.uma)?.name : catalogue.cardsById.get(pick.card ?? -1)?.name
-													return name ? `${name} ${pick.people.toLocaleString()}` : null
-												})
-												.filter(Boolean)
-												.join(" · ")}
-										</span>
-									)}
-								</li>
+		<div className="flex flex-col gap-3.5">
+			<StatBand
+				title="Who plays here"
+				stats={[
+					{ label: "Players", value: engaged.toLocaleString() },
+					...(trials && topClass ? [{ label: `In ${topClass.name}`, value: share(topClass.people, trials.people) }] : []),
+					...(dailyCarat ? [{ label: "Buy the Daily Carat Pack", value: share(dailyCarat.people, engaged) }] : []),
+				]}
+			>
+				From the players who use the calculator with an account, staff left out. Counts, never a name.
+			</StatBand>
+
+			<div className={GRID}>
+				<div className="flex min-w-0 flex-col gap-3">
+					{payload.ranks.length > 0 && (
+						<section aria-label="Ranks" className="card-panel flex min-w-0 flex-col gap-4 p-3">
+							{payload.ranks.map((rank) => (
+								<div key={rank.label} className="flex flex-col gap-2">
+									<PanelHead title={rank.label === "Team Trials" ? "Team Trials class" : rank.label} hint={`Of the ${rank.people.toLocaleString()} who set it.`} />
+									<DistBar label={rank.label} rows={highestFirst(rank.rows)} total={rank.people} />
+								</div>
 							))}
-						</ul>
+						</section>
 					)}
-				</Panel>
+					<Panel title="Income options" hint="Players with each option on in the calculator.">
+						<OptionRows
+							rows={[...payload.income].sort((a, b) => b.people - a.people).map((row) => ({
+								key: row.key,
+								label: row.label,
+								value: row.people,
+								share: share(row.people, engaged),
+								count: row.people.toLocaleString(),
+							}))}
+						/>
+					</Panel>
+				</div>
+				<div className="flex min-w-0 flex-col gap-3">
+					<Panel title="Favourite umas" hint="Players who picked her as a favourite. The first favourite is the account picture.">
+						{favourites.length === 0 ? (
+							<p className="px-1 text-xs text-gray-400">Nobody has picked a favourite yet.</p>
+						) : (
+							<Wall label="Favourite umas, most picked first" entries={favourites} />
+						)}
+					</Panel>
+					<Selectors selectors={payload.selectors} catalogue={catalogue} />
+				</div>
 			</div>
 		</div>
 	)
 }
 
-function Panel({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
+/**
+ * A rank's rows highest first, "None" last (mock 11-players.png: Class 6
+ * leads). The server sends them lowest first, the order the admin's tables
+ * read; the bar's colour ramp runs from the brand, so the top rank gets it.
+ */
+function highestFirst(rows: Array<{ name: string; people: number }>) {
+	const reversed = [...rows].reverse()
+	return [...reversed.filter((row) => row.name !== "None"), ...reversed.filter((row) => row.name === "None")]
+}
+
+type Selector = PlayersRankingsPayload["selectors"][number]
+
+/**
+ * The campaign selectors: the first one anyone plans to buy in front, with
+ * its top picks as pictures, and the rest behind "Show earlier". Which one is
+ * on sale comes from the server in step 4; until then this says "planned",
+ * never "on sale".
+ */
+function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue: PvpCatalogueIndex }) {
+	const [earlier, setEarlier] = useState(false)
+	const front = selectors.find((selector) => selector.buyers > 0) ?? null
+	const rest = selectors.filter((selector) => selector !== front && selector.buyers > 0)
 	return (
-		<section className="card-panel flex min-w-0 flex-col gap-3 p-3 sm:p-4" aria-label={title}>
-			<div className="flex flex-col gap-0.5">
-				<h2 className="font-display text-base font-bold text-brand">{title}</h2>
-				<p className="text-xs text-gray-400">{hint}</p>
-			</div>
-			{children}
-		</section>
+		<Panel title="Campaign selectors" hint={front ? `${front.label} · ${front.campaign}` : undefined}>
+			{front === null ? (
+				<p className="px-1 text-xs text-gray-400">Nobody plans to buy a campaign selector yet.</p>
+			) : (
+				<>
+					<SelectorPicks selector={front} catalogue={catalogue} />
+					<p className="px-1 text-xs text-gray-300">
+						{plural(front.buyers, "player")} {front.buyers === 1 ? "plans" : "plan"} to buy it; {front.picked.toLocaleString()}{" "}
+						{front.picked === 1 ? "has" : "have"} picked.
+					</p>
+					{rest.length > 0 && (
+						<button type="button" aria-expanded={earlier} onClick={() => setEarlier(!earlier)} className="self-start px-1 text-[11px] text-brand transition hover:text-brand/75">
+							{earlier ? "Hide the others" : `Show earlier (${rest.length})`}
+						</button>
+					)}
+					{earlier &&
+						rest.map((selector) => (
+							<div key={`${selector.campaign}-${selector.label}`} className="flex flex-col gap-1.5 border-t border-edge px-1 pt-2">
+								<span className="text-xs font-semibold text-gray-100">
+									{selector.label} <span className="font-normal text-gray-400">· {selector.campaign}</span>
+								</span>
+								<SelectorPicks selector={selector} catalogue={catalogue} />
+								<span className="text-[11px] tabular-nums text-gray-400">
+									{plural(selector.buyers, "buyer")}, {selector.picked.toLocaleString()} picked
+								</span>
+							</div>
+						))}
+				</>
+			)}
+		</Panel>
 	)
 }
 
-function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
+/** A selector's top picks as chips: the uma's portrait or the card's art, the name, and how many picked it. */
+function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue: PvpCatalogueIndex }) {
+	const oshiIds = useOshiIds()
+	if (selector.top.length === 0) return null
 	return (
-		<table className="w-full text-sm">
-			<thead className="text-xs text-gray-400">
-				<tr className="border-b border-gray-700">
-					{headers.map((header, index) => (
-						<th key={header} scope="col" className={index === 0 ? "px-2 py-1.5 text-left font-semibold" : `${CELL} font-semibold`}>
-							{header}
-						</th>
-					))}
-				</tr>
-			</thead>
-			<tbody className="divide-y divide-gray-700/70 text-gray-200">
-				{rows.map((row) => (
-					<tr key={row[0]}>
-						{row.map((cell, index) =>
-							index === 0 ? (
-								<th key={index} scope="row" className="px-2 py-1.5 text-left font-normal">{cell}</th>
-							) : (
-								<td key={index} className={CELL}>{cell}</td>
-							)
-						)}
-					</tr>
-				))}
-			</tbody>
-		</table>
+		<ul className="flex flex-wrap gap-2">
+			{selector.top.map((pick) => {
+				// An uma pick or a card pick, by which id the server sent.
+				const uma: CatalogueUma | undefined = pick.uma !== undefined ? catalogue.umasById.get(pick.uma) : undefined
+				const card = pick.card !== undefined ? catalogue.cardsById.get(pick.card) : undefined
+				const name = uma?.name ?? card?.name
+				if (!name) return null
+				return (
+					<li key={`${pick.uma ?? "c"}-${pick.card ?? "u"}`} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3">
+						{uma ? <FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
+						<span className="flex min-w-0 flex-col">
+							<b className="truncate text-[13px] font-semibold text-gray-100">{name}</b>
+							<span className="text-[11px] tabular-nums text-gray-400">{pick.people.toLocaleString()} picked</span>
+						</span>
+					</li>
+				)
+			})}
+		</ul>
 	)
 }

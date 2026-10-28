@@ -66,6 +66,9 @@ import { RankedList } from "./kit/RankedList"
 import { Sparkline } from "./kit/Sparkline"
 import { StatBand } from "./kit/StatBand"
 import { Bar } from "./kit/Bar"
+import { Detail, DetailBlock } from "./kit/Detail"
+import { StyleLegend } from "./kit/StyleLegend"
+import { stylePart } from "./kit/stylePart"
 
 const STYLES: PvpStyle[] = ["runaway", "front", "pace", "late", "end"]
 const KINDS: Array<{ id: PvpEventKind; label: string }> = [
@@ -455,11 +458,9 @@ function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard 
 		? breakdown(appearances, (appearance) => appearance.tier ?? "other").sort(([a], [b]) => RANKING_TIERS.indexOf(a) - RANKING_TIERS.indexOf(b))
 		: []
 	const usage = usageByEvent(appearances, events)
-	const heading = "text-[10px] uppercase tracking-wider text-gray-400"
 	return (
-		<div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-x-[18px] gap-y-2.5">
-			<div className="flex min-w-0 flex-col gap-1.5">
-				<span className={heading}>By event</span>
+		<Detail>
+			<DetailBlock heading="By event">
 				<span className="flex flex-wrap gap-1">
 					{byEvent.map(([event, count]) => (
 						<Link
@@ -471,25 +472,13 @@ function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard 
 						</Link>
 					))}
 				</span>
-			</div>
-			<div className="flex min-w-0 flex-col gap-1.5">
-				<span className={heading}>By strategy</span>
-				<Bar
-					fill={1}
-					parts={byStyle.map(([style, count]) => ({ key: style, value: count, color: `var(--color-style-${style})`, label: STYLE_LABELS[style] }))}
-				/>
-				<span className="flex flex-wrap gap-x-2.5 gap-y-1 text-[11px] tabular-nums text-gray-400" aria-hidden="true">
-					{byStyle.map(([style, count]) => (
-						<span key={style} className="inline-flex items-center gap-1">
-							<i className="inline-block h-2 w-2 rounded-sm" style={{ background: `var(--color-style-${style})` }} />
-							{STYLE_LABELS[style]} {count}
-						</span>
-					))}
-				</span>
-			</div>
+			</DetailBlock>
+			<DetailBlock heading="By strategy">
+				<Bar fill={1} parts={byStyle.map(([style, count]) => stylePart(style, count))} />
+				<StyleLegend entries={byStyle} />
+			</DetailBlock>
 			{isCard && (
-				<div className="flex min-w-0 flex-col gap-1.5">
-					<span className={heading}>By deck</span>
+				<DetailBlock heading="By deck">
 					<span className="flex flex-wrap gap-x-2.5 gap-y-1.5">
 						{byTier.map(([tier, count]) => (
 							<span key={tier} className="flex flex-col text-[10px] text-gray-400">
@@ -504,20 +493,19 @@ function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard 
 							</span>
 						)}
 					</span>
-				</div>
+				</DetailBlock>
 			)}
 			{events.length >= 2 && (
-				<div className="flex min-w-0 flex-col gap-1.5">
-					<span className={heading}>Across {events.length} events</span>
+				<DetailBlock heading={`Across ${events.length} events`}>
 					<Sparkline
 						points={usage}
 						marker={next ? events.indexOf(next) : null}
 						label={`${isCard ? "Decks" : "Picks"} per event, oldest first${nextLabel ? `, marked at ${nextLabel}` : ""}`}
 					/>
 					{nextLabel && <span className="text-[10px] text-gray-400">Oldest on the left. The mark is {nextLabel}.</span>}
-				</div>
+				</DetailBlock>
 			)}
-		</div>
+		</Detail>
 	)
 }
 

@@ -2096,23 +2096,34 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   falls back to the first tab. Every tab fetches through `useRankingsPayload(path)`. A tab's
   badge (`useSectionBadges`: events with a guide, the PvP event's short name) comes from the
   calculator's events, so no payload is fetched to draw the bar.
-- **PvP** (`PvpTab.tsx`), one event: "Teams players build" counts **every saved team**,
-  posted or not (the PvP page's own Rankings view counts the gallery only), drawn by
-  `TeamCounts`, the same tables as that view; "What wins" is CM Runs' win rate per uma and
-  strategy (`utils/runResults.ts`), only from `min_races` races up, else "Not enough runs yet".
-- **Players** (`PlayersTab.tsx`): favourite umas, Team Trials and club rank (shares out of the
-  players who set one), income options on (out of engaged accounts), campaign selectors with
-  their top picks. All from the admin analytics, staff out.
-- **Pull plans** (`PullPlans.tsx`) is the admin's Popular banners tables for supporters:
-  planners, total, average and **typical (the median)** per banner, a type filter, by date or
-  by planners, ended banners behind a switch (`utils/pullPlanRankings.ts`); a step-up's
-  figures are STEPS and say so. Demand by month is a one-series bar chart (`DemandChart.tsx`,
-  Recharts, lazy like `ForecastPlot`) with the same numbers in a table under it. **Hidden until
-  Raptive approves** (Henry, "similar to skills tab"): `useRankingsPullPlans()` (guide
-  editors) and the API's `views/rankings.sees_pull_plans`; un-gating is flipping both.
+- **PvP** (`PvpTab.tsx`), one event, picked on a sideways strip of event cards
+  (`EventStrip.tsx`; `?event=` on the page, else the remembered event, else the one running or
+  next; the pinned window uses the remembered one alone). "Umas players build" counts **every
+  saved team**, posted or not (the PvP page's own Rankings view counts the gallery only), with
+  a bar split by running style; an opened uma reads her strategies, her share of the event's
+  gallery posts (`GET /rankings/gallery`) and her CM Runs win rate together. "Cards in their
+  decks" the same way. "What wins" is CM Runs' win rate per uma and strategy
+  (`utils/runResults.ts`): **shown from `min_races` (20), ranked from `RANKED_RACES` (100)**;
+  20 to 99 races sit under the ranked rows, muted, with no place; one to three marks say how
+  much to trust a rate (20, 100, 300 races). "Your team" reads the reader's own saved team
+  (`usePvpTeams`) and gives each uma's place.
+- **Players** (`PlayersTab.tsx`): Team Trials class and club rank as stacked bars, highest
+  first (`DistBar`, a ramp from the brand down to the grays), favourite umas as a wall of
+  portraits (`Wall`), income options as labelled bars by share (`OptionRows`), and the first
+  campaign selector anyone plans to buy with its top picks, the rest behind "Show earlier".
+  All from the admin analytics, staff out.
+- **Pull plans** (`PullPlans.tsx`) is the admin's Popular banners tables for supporters, as
+  one list of `PullPlanRow`s: the date block, the kind badge (`.banner-type-tile--*`), the
+  status pill, planners with their share of everyone planning (the payload's `planners`),
+  and **typical (the median)** beside the average; a type lens and a sort lens (remembered
+  on the device), ended banners behind a switch (`utils/pullPlanRankings.ts`); a step-up's
+  figures are STEPS and say so. "When the pulls fall due" is six divs (`monthShares`: this
+  month, the next four, Later), no chart library. **Hidden until Raptive approves** (Henry,
+  "similar to skills tab"): `useRankingsPullPlans()` (guide editors) and the API's
+  `views/rankings.sees_pull_plans`; un-gating is flipping both.
 - **Hourly**: each tab's payload is built at most once an hour on the server and never
   invalidated; the page says "Updated 40 minutes ago" from its `generated_at`, in the header
-  for a tab that reports it (`useReportUpdated`, `rankingsUpdated.ts`; Guides so far).
+  for the open tab (`useReportUpdated`, `rankingsUpdated.ts`).
 - **Guides** (`GuideRankings.tsx`) is the source sheet's card table with its filters one to
   one (Henry), housed as five pills: Events (All guides, or the next 3 / 5 / 10 events with a
   guide from a picked one), Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions,

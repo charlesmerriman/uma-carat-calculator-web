@@ -1,9 +1,15 @@
 /**
  * The Rankings page's Pull plans tab (`?view=pull-plans`): the banners
  * players plan to pull on, how many plan each and how much (planners,
- * total, average, typical = the median), and when the demand falls due.
+ * total, average, typical = the median), and when the pulls fall due.
  * The admin analytics' Popular banners tables, shown to supporters
  * (notes/rankings-page-plan.md).
+ *
+ * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 07, 08, 20):
+ * the band, the month strip ("When the pulls fall due", six divs in place
+ * of the Recharts chart and its table), the type and sort lenses (both
+ * remembered on the device with the pinned window's choices), and one list
+ * of PullPlanRow. A row opens in step 4, once the server sends its spread.
  *
  * BEHIND THE RAPTIVE GATE: guide editors only (useRankingsPullPlans) until
  * the owner lifts it; the API refuses everyone else the same way.
@@ -11,34 +17,33 @@
  * Which rows show and their order is utils/pullPlanRankings.ts.
  */
 
-import { Suspense, lazy, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
-import type { PlannedBannerRank, PlannedBannerType, PullPlanRankingsPayload } from "../../types/pullPlanRankings"
-import { pullPlanRows, type PullPlanSort } from "../../utils/pullPlanRankings"
-import { formatDate } from "../../utils/dateFormat"
-import { formatTimeAgo } from "../../utils/relativeDate"
-import { monthLabel } from "./pullPlanLabels"
+import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinStore"
+import type { PlannedBannerType, PullPlanRankingsPayload } from "../../types/pullPlanRankings"
+import { formatShare } from "../../utils/guideRankings"
+import { compactNumber, monthShares, pullPlanRows, type PullPlanSort } from "../../utils/pullPlanRankings"
+import { useReportUpdated } from "./rankingsUpdated"
+import { Lens } from "./kit/Lens"
+import { Panel } from "./kit/Panel"
+import { RankedList } from "./kit/RankedList"
+import { StatBand } from "./kit/StatBand"
+import { PullPlanRow } from "./PullPlanRow"
 
-const DemandChart = lazy(() => import("./DemandChart"))
-
-const TYPES: Array<{ id: PlannedBannerType | null; label: string }> = [
-	{ id: null, label: "All" },
+type TypeChoice = PlannedBannerType | "all"
+const TYPES: Array<{ id: TypeChoice; label: string }> = [
+	{ id: "all", label: "All" },
 	{ id: "uma", label: "Uma" },
 	{ id: "support", label: "Support" },
 	{ id: "step_up", label: "Step-up" },
 ]
-const TYPE_LABELS: Record<PlannedBannerType, string> = { uma: "Uma", support: "Support", step_up: "Step-up" }
 const SORTS: Array<{ id: PullPlanSort; label: string }> = [
 	{ id: "date", label: "By date" },
 	{ id: "planners", label: "By planners" },
 ]
 
-const SEGMENTS = "flex flex-wrap gap-0.5 rounded-lg bg-gray-900/70 p-0.5"
-const segment = (on: boolean) =>
-	`rounded-md px-2.5 py-0.5 text-xs font-medium transition ${on ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"}`
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
-const CELL = "px-2 py-1.5 text-right tabular-nums"
 
 export function PullPlans() {
 	const state = useRankingsPayload<PullPlanRankingsPayload>("/rankings/pull-plans")
@@ -56,134 +61,97 @@ export function PullPlans() {
 }
 
 function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
-	const [type, setType] = useState<PlannedBannerType | null>(null)
-	const [sort, setSort] = useState<PullPlanSort>("date")
+	useReportUpdated(payload.generated_at)
+	const choices = useRankingsChoices()["pull-plans"]
+	// A remembered value from an older build falls back to the default.
+	const type: TypeChoice = TYPES.some((option) => option.id === choices?.type) ? (choices?.type as TypeChoice) : "all"
+	const sort: PullPlanSort = choices?.sort === "planners" ? "planners" : "date"
 	const [showEnded, setShowEnded] = useState(false)
-	const rows = useMemo(() => pullPlanRows(payload.banners, { type, sort, showEnded }), [payload, type, sort, showEnded])
+	// One clock reading per mount: which month is "now" on the strip.
+	const [now] = useState(() => new Date())
+
+	const rows = useMemo(
+		() => pullPlanRows(payload.banners, { type: type === "all" ? null : type, sort, showEnded }),
+		[payload, type, sort, showEnded]
+	)
+	const ahead = payload.banners.filter((row) => row.status !== "ended")
+	const pullsAhead = ahead.filter((row) => row.unit === "pulls").reduce((sum, row) => sum + row.total, 0)
+	const leader = Math.max(0, ...rows.map((row) => row.planners))
+	const months = useMemo(() => monthShares(payload.demand, now), [payload, now])
 
 	return (
-		<div className="flex flex-col gap-4">
-			<p className="text-xs text-gray-400">
-				From the plans players keep on the site (their active plan only). Typical is the middle planner's number, which a
-				few huge budgets can't pull up the way they pull up the average.{" "}
-				<time dateTime={payload.generated_at} title={formatDate(payload.generated_at)}>
-					Updated {formatTimeAgo(payload.generated_at)}.
-				</time>
-			</p>
-
-			<section className="card-panel flex min-w-0 flex-col gap-3 p-3 sm:p-4" aria-label="Banners players plan">
-				<div className="flex flex-wrap items-center gap-2">
-					<h2 className="font-display mr-auto text-base font-bold text-brand">Banners players plan</h2>
-					<div className={SEGMENTS} role="group" aria-label="Banner type">
-						{TYPES.map((option) => (
-							<button key={option.label} type="button" aria-pressed={type === option.id} onClick={() => setType(option.id)} className={segment(type === option.id)}>
-								{option.label}
-							</button>
-						))}
-					</div>
-					<div className={SEGMENTS} role="group" aria-label="Sort">
-						{SORTS.map((option) => (
-							<button key={option.id} type="button" aria-pressed={sort === option.id} onClick={() => setSort(option.id)} className={segment(sort === option.id)}>
-								{option.label}
-							</button>
-						))}
-					</div>
-					<label className="flex items-center gap-1.5 text-xs text-gray-300">
-						<input type="checkbox" checked={showEnded} onChange={(event) => setShowEnded(event.target.checked)} className="accent-brand" />
-						Ended banners
-					</label>
-				</div>
-				{rows.length === 0 ? (
-					<p className="text-sm text-gray-400">Nobody plans a banner like that yet.</p>
-				) : (
-					<div className="overflow-x-auto">
-						<table className="w-full min-w-[40rem] text-sm">
-							<thead className="text-xs text-gray-400">
-								<tr className="border-b border-gray-700">
-									<th scope="col" className="px-2 py-1.5 text-left font-semibold">Banner</th>
-									<th scope="col" className="px-2 py-1.5 text-left font-semibold">Dates</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Planners</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Total</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Average</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Typical</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-700/70 text-gray-200">
-								{rows.map((row) => (
-									<BannerRow key={`${row.type}-${row.id}`} row={row} />
-								))}
-							</tbody>
-						</table>
-					</div>
-				)}
-				<p className="text-xs text-gray-400">A step-up's figures are ladder steps, not pulls.</p>
-			</section>
+		<div className="flex flex-col gap-3.5">
+			<StatBand
+				title="What players plan to pull on"
+				stats={[
+					...(payload.planners !== undefined ? [{ label: "Planners", value: payload.planners.toLocaleString() }] : []),
+					{ label: "Pulls planned", value: compactNumber(pullsAhead) },
+					{ label: "Banners ahead", value: ahead.length.toLocaleString() },
+				]}
+			>
+				From the plan each player has open, staff left out. Typical is the middle planner's number; a few huge budgets can't pull
+				it up.
+			</StatBand>
 
 			{payload.demand.length > 0 && (
-				<section className="card-panel flex min-w-0 flex-col gap-3 p-3 sm:p-4" aria-label="Demand by month">
-					<div className="flex flex-col gap-0.5">
-						<h2 className="font-display text-base font-bold text-brand">Pulls planned by month</h2>
-						<p className="text-xs text-gray-400">By the month each banner ends, when the carats leave. Step-ups aren't in the pull totals.</p>
-					</div>
-					<Suspense fallback={<div className="h-56 w-full" />}>
-						<DemandChart months={payload.demand} />
-					</Suspense>
-					<div className="overflow-x-auto">
-						<table className="w-full min-w-[28rem] text-sm">
-							<thead className="text-xs text-gray-400">
-								<tr className="border-b border-gray-700">
-									<th scope="col" className="px-2 py-1.5 text-left font-semibold">Month</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Banners</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Planners</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Pulls</th>
-									<th scope="col" className={`${CELL} font-semibold`}>Step-up planners</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-700/70 text-gray-200">
-								{payload.demand.map((month) => (
-									<tr key={month.month}>
-										<th scope="row" className="px-2 py-1.5 text-left font-normal">{monthLabel(month.month)}</th>
-										<td className={CELL}>{month.banners}</td>
-										<td className={CELL}>{month.planners.toLocaleString()}</td>
-										<td className={CELL}>{month.total_pulls.toLocaleString()}</td>
-										<td className={CELL}>{month.step_up_planners.toLocaleString()}</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				</section>
+				<Panel title="When the pulls fall due" hint={'Share of planned pulls by the month a banner ends. Undated banners sit in "Later".'}>
+					<MonthStrip months={months} />
+				</Panel>
 			)}
+
+			<div className="flex flex-wrap items-center gap-2">
+				<Lens label="Banner type" options={TYPES} value={type} onChange={(next) => chooseRankings("pull-plans", { type: next })} />
+				<Lens label="Order" options={SORTS} value={sort} onChange={(next) => chooseRankings("pull-plans", { sort: next })} />
+				<span className="text-[11px] text-gray-400">
+					{showEnded ? "Ended banners shown" : "Ended banners hidden"} ·{" "}
+					<button type="button" aria-pressed={showEnded} onClick={() => setShowEnded(!showEnded)} className="text-brand transition hover:text-brand/75">
+						{showEnded ? "hide" : "show"}
+					</button>
+				</span>
+			</div>
+
+			<RankedList
+				label="Banners players plan"
+				items={rows}
+				start={20}
+				itemKey={(row) => `${row.type}-${row.id}`}
+				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.planners / leader : 0} everyone={payload.planners} />}
+				empty="Nobody plans a banner like that yet."
+				footnote={
+					<span className="text-gray-400">
+						{payload.planners !== undefined ? "Planners is the share of everyone with a plan. " : ""}A step-up's figures are ladder
+						steps, not pulls.
+					</span>
+				}
+			/>
 		</div>
 	)
 }
 
-function BannerRow({ row }: { row: PlannedBannerRank }) {
-	const steps = row.unit === "steps"
-	const figure = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}${steps ? " steps" : ""}`
-	const dates =
-		row.start_date === null
-			? "Not dated yet"
-			: `${formatDate(row.start_date)}${row.end_date ? ` to ${formatDate(row.end_date)}` : ""}`
+/**
+ * Six columns, this month to "Later", each a bar of its share of the pulls
+ * planned (tallest = the biggest month). The running month is drawn in the
+ * running colour and says "now". Divs, no chart library.
+ */
+function MonthStrip({ months }: { months: ReturnType<typeof monthShares> }) {
+	const top = Math.max(0, ...months.map((month) => month.share))
 	return (
-		<tr>
-			<td className="px-2 py-1.5">
-				<span className="flex min-w-0 items-center gap-2">
-					<span className="shrink-0 rounded bg-gray-700/70 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
-						{TYPE_LABELS[row.type]}
+		<ol className="grid grid-cols-6 items-end gap-2 px-1 @min-[40rem]:gap-4" aria-label="Share of planned pulls by month">
+			{months.map((month) => (
+				<li key={month.key} className="flex min-w-0 flex-col items-center gap-1">
+					<span className="flex h-20 w-full max-w-[3.5rem] items-end" aria-hidden="true">
+						<span
+							className={`block w-full rounded-t-[4px] border-t-2 ${month.current ? "border-status-running bg-status-running/35" : "border-brand bg-brand/35"}`}
+							style={{ height: `${top > 0 ? Math.max(2, (month.share / top) * 100) : 2}%` }}
+						/>
 					</span>
-					<span className="truncate">{row.name}</span>
-				</span>
-			</td>
-			<td className="px-2 py-1.5 text-xs text-gray-400">
-				{dates}
-				{row.predicted && row.start_date !== null && <span title="Predicted from the JP schedule"> (predicted)</span>}
-				{row.status === "running" && <span className="text-brand"> · running</span>}
-			</td>
-			<td className={CELL}>{row.planners.toLocaleString()}</td>
-			<td className={CELL}>{figure(row.total)}</td>
-			<td className={CELL}>{figure(row.average)}</td>
-			<td className={CELL}>{figure(row.median)}</td>
-		</tr>
+					<b className="text-xs font-semibold tabular-nums text-gray-100">{formatShare(month.share)}</b>
+					<span className="truncate text-[10px] tabular-nums text-gray-400">
+						{month.label}
+						{month.current ? " · now" : ""}
+					</span>
+				</li>
+			))}
+		</ol>
 	)
 }

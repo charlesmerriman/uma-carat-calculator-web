@@ -35,6 +35,12 @@ export interface DemandMonth {
 
 export interface PullPlanRankingsPayload {
 	generated_at: string
+	/**
+	 * Everyone with any banner in their active plan, each once: a row's
+	 * share is out of this (api #191). Optional: an hour-old cached payload
+	 * from before that release has none, and the shares wait for it.
+	 */
+	planners?: number
 	banners: PlannedBannerRank[]
 	demand: DemandMonth[]
 }
