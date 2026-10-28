@@ -236,15 +236,19 @@ describe("RankingsPage", () => {
 		expect(screen.getByRole("tab", { name: "Pull plans", selected: true })).toBeInTheDocument()
 	})
 
-	it("draws the planned banners with their share of everyone planning, and a typical figure", async () => {
+	it("draws the planned banners with their share of everyone planning, a typical figure and no counts", async () => {
 		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
 		const list = await screen.findByRole("region", { name: "Banners players plan" })
 		const row = within(list).getByText("Gentildonna").closest("li")!
-		expect(row).toHaveTextContent("5,807")
-		expect(row).toHaveTextContent("36% of planners")
+		// Shares only: never how many plan it, or how many pulls in all (owner, 2026-10-28).
+		expect(row).not.toHaveTextContent("5,807")
+		expect(row).not.toHaveTextContent("958")
+		expect(row).toHaveTextContent("36%of planners")
 		expect(row).toHaveTextContent("typical · avg 165")
 		expect(row).toHaveTextContent("Predicted")
-		expect(within(screen.getByRole("region", { name: "What players plan to pull on" })).getByText("16,000")).toBeInTheDocument()
+		const band = screen.getByRole("region", { name: "What players plan to pull on" })
+		expect(band).not.toHaveTextContent("16,000")
+		expect(within(band).getByText("Plan the top banner")).toBeInTheDocument()
 		expect(screen.getByRole("region", { name: "When the pulls fall due" })).toBeInTheDocument()
 	})
 
@@ -269,37 +273,39 @@ describe("RankingsPage", () => {
 	it("shows what players build, what wins and where your team sits on the PvP tab", async () => {
 		renderPage(true, { url: "/app/rankings?view=pvp&event=cm-21" })
 		const umas = await screen.findByRole("region", { name: "Umas players build" })
-		expect(within(umas).getByText("3 teams")).toBeInTheDocument()
+		expect(within(umas).queryByText("3 teams")).not.toBeInTheDocument()
 		// Maruzensky wasn't in the week's start: new.
 		expect(within(umas).getByText("new")).toBeInTheDocument()
 		expect(within(umas).getByText("75%")).toBeInTheDocument()
 		const cards = screen.getByRole("region", { name: "Cards in their decks" })
-		expect(within(cards).getByText("6 decks")).toBeInTheDocument()
-		expect(within(cards).getByText("2 borrowed")).toBeInTheDocument()
+		expect(within(cards).getByText("50%")).toBeInTheDocument()
+		expect(within(cards).getByText("33% borrowed")).toBeInTheDocument()
 		// 30 races: shown (over the floor of 20) but not ranked (under 100), so no place.
 		const wins = screen.getByRole("region", { name: "What wins" })
 		expect(within(wins).getByText("40%")).toBeInTheDocument()
 		expect(within(wins).queryByLabelText("Place 1")).not.toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Your team" })).getByText("#1")).toBeInTheDocument()
-		expect(within(screen.getByRole("region", { name: "Trios players build most" })).getByText("2 teams · 50%")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Trios players build most" })).getByText("50% of teams")).toBeInTheDocument()
 		// The opened row reads the gallery and CM Runs beside the build count.
 		fireEvent.click(within(umas).getByRole("button", { expanded: false }))
 		expect((await within(umas).findByText("Posted to the gallery")).parentElement).toHaveTextContent("In 50% of the 2 posted teams")
-		expect(within(umas).getByText("In CM Runs").parentElement).toHaveTextContent("Wins 40% of 30 races")
+		expect(within(umas).getByText("In CM Runs").parentElement).toHaveTextContent("Wins 40% of her races")
 	})
 
 	it("shows the players' ranks, favourites, income options and selectors", async () => {
 		renderPage(true, { url: "/app/rankings?view=players" })
 		const favourites = await screen.findByRole("region", { name: "Favourite umas" })
-		expect(within(favourites).getByText("50 players")).toBeInTheDocument()
+		expect(within(favourites).getByText("25%")).toBeInTheDocument()
+		expect(screen.getByRole("region", { name: "Who plays here" })).not.toHaveTextContent("200")
 		expect(within(screen.getByRole("region", { name: "Ranks" })).getByRole("img", { name: "Team Trials: Class 6 38%" })).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
 		// The one on sale leads, with when it ends; the past one waits behind "Show earlier".
 		const selectors = within(screen.getByRole("region", { name: "Selector on sale" }))
 		expect(selectors.getByText("$10 Uma Selector · 2nd Anniversary · ends 2026/11/3")).toBeInTheDocument()
-		expect(selectors.getByText("4 picked")).toBeInTheDocument()
+		expect(selectors.getByText("80% of picks")).toBeInTheDocument()
+		expect(selectors.getByText(/6% of players plan to buy it/)).toBeInTheDocument()
 		fireEvent.click(selectors.getByRole("button", { name: "Show earlier (1)" }))
-		expect(selectors.getByText("9 picked")).toBeInTheDocument()
+		expect(selectors.getByText("45% of picks")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("starts off")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Typical budget by class" })).getByText("24,000")).toBeInTheDocument()
 	})

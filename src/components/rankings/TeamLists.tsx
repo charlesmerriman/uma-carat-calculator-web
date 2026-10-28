@@ -11,7 +11,8 @@
  *
  * Each takes the caller's extra line under a name (`sub`: the PvP page's
  * "Guide recommends her") and an uma row's opened breakdown (`detail`).
- * An id that left the catalogue can't be drawn, so it is left off.
+ * An id that left the catalogue can't be drawn, so it is left off. Every
+ * figure is a share, never a count of teams or decks (owner, 2026-10-28).
  */
 
 import type { ReactNode } from "react"
@@ -29,8 +30,6 @@ import { RankedList } from "./kit/RankedList"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
-
-const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 
 export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
@@ -66,8 +65,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 						sub={sub?.(row.uma)}
 						fill={leader > 0 ? row.teams / leader : 0}
 						parts={stylesOf(row).map(([style, count]) => stylePart(style, count))}
-						count={plural(row.teams, "team")}
-						share={formatShare(counts.teams ? row.teams / counts.teams : 0)}
+						count={formatShare(counts.teams ? row.teams / counts.teams : 0)}
 						detail={detail?.(row)}
 					/>
 				)
@@ -107,12 +105,11 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 							<>
 								<CardTypeChip type={card?.card_type} />
 								{sub?.(row.card)}
-								{row.borrows > 0 && <span>{row.borrows.toLocaleString()} borrowed</span>}
+								{row.borrows > 0 && <span>{formatShare(row.borrows / row.decks)} borrowed</span>}
 							</>
 						}
 						fill={leader > 0 ? row.decks / leader : 0}
-						count={plural(row.decks, "deck")}
-						share={formatShare(counts.decks ? row.decks / counts.decks : 0)}
+						count={formatShare(counts.decks ? row.decks / counts.decks : 0)}
 					/>
 				)
 			}}
@@ -120,7 +117,7 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 	)
 }
 
-/** The exact three-uma teams built most (mock 09-pvp.png): three portraits, the names, the count. */
+/** The exact three-uma teams built most (mock 09-pvp.png): three portraits, the names, the share of teams. */
 export function TrioList({ trios, teams, catalogue }: {
 	trios: NonNullable<TeamCountsData["trios"]>
 	teams: number
@@ -145,7 +142,7 @@ export function TrioList({ trios, teams, catalogue }: {
 							<span className="flex min-w-0 flex-col">
 								<b className="text-[13px] font-semibold text-gray-100">{umas.map((uma) => uma.name).join(" · ")}</b>
 								<span className="text-[11px] tabular-nums text-gray-400">
-									{plural(trio.teams, "team")} · {formatShare(teams ? trio.teams / teams : 0)}
+									{formatShare(teams ? trio.teams / teams : 0)} of teams
 								</span>
 							</span>
 						</li>

@@ -1,7 +1,7 @@
 /**
  * Labelled bars (mock 11-players.png, "Income options"): a label with an
  * optional small note, a Bar scaled to the leader, and the share bold with
- * the count beside it. For lists of settings, where there is no art.
+ * an optional count beside it. For lists of settings, where there is no art.
  */
 
 import type { ReactNode } from "react"
@@ -15,8 +15,8 @@ export interface OptionRow {
 	value: number
 	/** Bold: "42%". */
 	share: ReactNode
-	/** Muted after the share: "6,720". */
-	count: ReactNode
+	/** Muted after the share: "6,720". Never a count of players (the Rankings page shows shares). */
+	count?: ReactNode
 }
 
 export function OptionRows({ rows }: { rows: OptionRow[] }) {
@@ -31,7 +31,8 @@ export function OptionRows({ rows }: { rows: OptionRow[] }) {
 					</span>
 					<Bar fill={leader > 0 ? row.value / leader : 0} className="@max-[30rem]:hidden" />
 					<span className="whitespace-nowrap text-right text-xs tabular-nums text-gray-400">
-						<b className="text-[13px] font-semibold text-gray-100">{row.share}</b> · {row.count}
+						<b className="text-[13px] font-semibold text-gray-100">{row.share}</b>
+						{row.count !== undefined && <> · {row.count}</>}
 					</span>
 				</li>
 			))}

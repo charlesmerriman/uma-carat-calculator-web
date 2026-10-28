@@ -46,7 +46,8 @@ export interface WindowRow {
 	/** count / the list's leader. */
 	fill: number
 	count: string
-	share: string
+	/** Under the count; a list of people's choices has none (its count is the share). */
+	share?: string
 }
 
 export interface WindowSetting {
@@ -203,8 +204,8 @@ function PullPlansSource({ children }: { children: Render }) {
 			name: row.name,
 			art: <span className={`${KIND_CLASS[row.type]} rounded px-1 py-0.5 text-[8px] font-bold uppercase leading-none`}>{TYPE_OPTIONS.find((option) => option.id === row.type)?.label}</span>,
 			fill: leader > 0 ? row.planners / leader : 0,
-			count: row.planners.toLocaleString(),
-			share: everyone ? formatShare(row.planners / everyone) : "",
+			// Shares, never a count of people (owner, 2026-10-28), here as on the tabs.
+			count: everyone ? formatShare(row.planners / everyone) : "",
 		}))
 		// Movement is by planners, the order the server snapshots: drawn in that order only.
 		const ids = new Set(rows.map((row) => row.id))
@@ -255,8 +256,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 					name: card?.name ?? "Unknown card",
 					art: <CardArt card={card} className="w-7" />,
 					fill,
-					count: row.decks.toLocaleString(),
-					share: formatShare(built.decks ? row.decks / built.decks : 0),
+					count: formatShare(built.decks ? row.decks / built.decks : 0),
 				}
 			})
 			return withMovement(cardRows, previous?.cards.map((id) => `card-${id}`))
@@ -268,8 +268,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				fill,
-				count: row.teams.toLocaleString(),
-				share: formatShare(built.teams ? row.teams / built.teams : 0),
+				count: formatShare(built.teams ? row.teams / built.teams : 0),
 			}
 		})
 		return withMovement(umaRows, previous?.umas.map((id) => `uma-${id}`))
@@ -316,8 +315,7 @@ function PlayersSource({ children }: { children: Render }) {
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				fill,
-				count: row.people.toLocaleString(),
-				share: formatShare(engaged ? row.people / engaged : 0),
+				count: formatShare(engaged ? row.people / engaged : 0),
 			}
 		})
 		return withMovement(favouriteRows, previous?.favourites.map((id) => `uma-${id}`))

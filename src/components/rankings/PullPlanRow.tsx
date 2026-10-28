@@ -1,9 +1,9 @@
 /**
  * One banner on the Pull plans tab (mocks 07-pull.png, 20-pull-light.png):
- * the date block, the kind badge, the name over its status and how much is
- * planned, a planners bar scaled to the list's leader, planners with their
- * share of everyone planning, and the typical (median) figure with the
- * average beside it.
+ * the date block, the kind badge, the name over its status, a planners bar
+ * scaled to the list's leader, planners as a share of everyone planning
+ * (never a count: owner, 2026-10-28), and the typical (median) figure with
+ * the average beside it.
  *
  * A step-up's figures are ladder STEPS, never pulls (rules file step-up.md),
  * and the row says so in both places it shows one. Under 47.5rem of
@@ -21,7 +21,7 @@ import { ChevronDown } from "lucide-react"
 import type { PlannedBannerRank, PlannedBannerType } from "../../types/pullPlanRankings"
 import { formatDate } from "../../utils/dateFormat"
 import { formatShare } from "../../utils/guideRankings"
-import { compactNumber, spreadLabel } from "../../utils/pullPlanRankings"
+import { spreadLabel } from "../../utils/pullPlanRankings"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
@@ -74,16 +74,17 @@ export function PullPlanRow({ row, fill, everyone, timelineOf, movement }: {
 				<span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] tabular-nums text-gray-400">
 					<StatusPill status={statusOf(row)} />
 					<span className="@min-[47.5rem]:hidden">{dates} ·</span>
-					<span>
-						{compactNumber(row.total)} {steps ? "steps" : "pulls"} planned
+					{/* The typical column's figure, for the widths that hide that column. */}
+					<span className="@min-[47.5rem]:hidden">
+						typical {figure(row.median)} {steps ? "steps" : "pulls"}
 					</span>
 				</span>
 				<Bar fill={fill} hairline className="mt-1 @min-[47.5rem]:hidden" />
 			</span>
 			<Bar fill={fill} className="hidden @min-[47.5rem]:block" />
 			<span className="flex flex-col items-end whitespace-nowrap text-right text-[11px] tabular-nums text-gray-400">
-				<b className="text-[13px] font-semibold text-gray-100">{row.planners.toLocaleString()}</b>
-				{everyone ? `${formatShare(row.planners / everyone)} of planners` : row.planners === 1 ? "planner" : "planners"}
+				<b className="text-[13px] font-semibold text-gray-100">{everyone ? formatShare(row.planners / everyone) : "…"}</b>
+				of planners
 			</span>
 			<span className="hidden flex-col items-end whitespace-nowrap text-right text-[11px] tabular-nums text-gray-400 @min-[47.5rem]:flex">
 				<b className="text-[13px] font-semibold text-gray-100">

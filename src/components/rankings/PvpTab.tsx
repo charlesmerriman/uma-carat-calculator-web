@@ -15,9 +15,13 @@
  * THE EVENT: `?event=cm-21`, like the PvP page, then the one remembered on
  * the device (rankingsPinStore choices, shared with the pinned window), then
  * the one running now or next. Picking writes both.
+ *
+ * SHARES, NOT COUNTS (owner, 2026-10-28): nothing here says how many teams
+ * were saved, races logged or players took part, so no one can estimate the
+ * site's players from it. Gallery posts are public, so their count stays.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import type { RaceEvent } from "../../types"
@@ -63,10 +67,7 @@ export function PvpTab() {
 	const anchor = defaultPvpEvent(events, now)
 	const fromAddress = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
 	const event = fromAddress ?? findEvent(events, parsePvpEvent(remembered)) ?? anchor
-	const [teams, setTeams] = useState<{ key: string; teams: number } | null>(null)
 	const key = event ? `${event.event_type}-${event.id}` : ""
-	// Stable per event, so the body's effect reports once.
-	const onTeams = useCallback((count: number) => setTeams({ key, teams: count }), [key])
 
 	const pick = (next: RaceEvent) => {
 		const value = formatPvpEvent(refForRaceEvent(next))
@@ -79,14 +80,14 @@ export function PvpTab() {
 	if (!event || !anchor) return <p className={PANEL_NOTE}>No PvP events are listed yet.</p>
 	return (
 		<div className="flex flex-col gap-3.5">
-			<EventStrip events={events} anchor={anchor} chosen={event} teams={teams?.key === key ? teams.teams : null} now={now} onPick={pick} />
+			<EventStrip events={events} anchor={anchor} chosen={event} now={now} onPick={pick} />
 			{/* Keyed by the event, so a new one starts fresh. */}
-			<PvpEventRankings key={key} event={event} onTeams={onTeams} />
+			<PvpEventRankings key={key} event={event} />
 		</div>
 	)
 }
 
-function PvpEventRankings({ event, onTeams }: { event: RaceEvent; onTeams: (teams: number) => void }) {
+function PvpEventRankings({ event }: { event: RaceEvent }) {
 	const ref = refForRaceEvent(event)
 	const state = useRankingsPayload<PvpRankingsPayload>(`/rankings/pvp/${ref.kind}/${ref.id}`)
 	const catalogue = usePvpCatalogue()
@@ -102,21 +103,17 @@ function PvpEventRankings({ event, onTeams }: { event: RaceEvent; onTeams: (team
 			</div>
 		)
 	}
-	return <PvpBody event={event} payload={state.payload} catalogue={catalogue} onTeams={onTeams} />
+	return <PvpBody event={event} payload={state.payload} catalogue={catalogue} />
 }
 
-function PvpBody({ event, payload, catalogue, onTeams }: {
-	event: RaceEvent
-	payload: PvpRankingsPayload
-	catalogue: PvpCatalogueIndex
-	onTeams: (teams: number) => void
-}) {
+function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: PvpRankingsPayload; catalogue: PvpCatalogueIndex }) {
 	useReportUpdated(payload.generated_at)
-	// The strip shows the chosen event's team count once its payload is in.
-	useEffect(() => onTeams(payload.built.teams), [onTeams, payload.built.teams])
 	const gallery = useGalleryRankings(refForRaceEvent(event))
 	const { built, runs } = payload
 	const umas = knownUmas(built, catalogue)
+	// The band's two shares: the uma built most, and the best ranked win rate.
+	const topUma = umas[0] ? catalogue.umasById.get(umas[0].uma) : undefined
+	const bestRate = winRates(runs.rows, runs.min_races).ranked.find((row) => catalogue.umasById.has(row.uma))
 	// Rank movement against the week's start (the server's snapshot), by id.
 	const umaMoves = movement(built.umas.map((row) => row.uma), payload.previous?.umas)
 	const cardMoves = movement(built.cards.map((row) => row.card), payload.previous?.cards)
@@ -155,7 +152,7 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 					<span className="text-[11px] text-gray-300">
 						{races > 0 ? (
 							<>
-								Wins <b className="font-semibold text-gray-100">{formatShare(wins / races)}</b> of {plural(races, "race")}
+								Wins <b className="font-semibold text-gray-100">{formatShare(wins / races)}</b> of her races
 							</>
 						) : (
 							"No races logged yet"
@@ -171,11 +168,11 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 			<StatBand
 				title={`${title}: what players build, and what wins`}
 				stats={[
-					{ label: "Saved teams", value: built.teams.toLocaleString() },
+					...(topUma && built.teams > 0 ? [{ label: `Build ${topUma.name}`, value: formatShare(umas[0].teams / built.teams) }] : []),
+					...(bestRate ? [{ label: "Best win rate", value: formatShare(bestRate.rate), suffix: catalogue.umasById.get(bestRate.uma)?.name }] : []),
 					...(gallery.status === "error" || gallery.status === "refused"
 						? []
 						: [{ label: "Posted to the gallery", value: posted ? posted.posts.toLocaleString() : "…" }]),
-					{ label: "Races logged", value: runs.races.toLocaleString(), suffix: runs.players > 0 ? `by ${plural(runs.players, "player")}` : undefined },
 				]}
 			>
 				Every team saved for {short} on the site, posted or not, and every ticket logged in CM Runs.
@@ -187,7 +184,7 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 				<div className={GRID}>
 					<UmaBuildList
 						label="Umas players build"
-						hint="Teams with her. The bar is split by running style."
+						hint="Share of teams with her. The bar is split by running style."
 						counts={built}
 						catalogue={catalogue}
 						detail={umaDetail}
@@ -195,7 +192,7 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 					/>
 					<CardBuildList
 						label="Cards in their decks"
-						hint="Member decks with the card, the borrowed one included."
+						hint="Share of member decks with the card, the borrowed one included."
 						counts={built}
 						catalogue={catalogue}
 						moves={cardMoves}
@@ -255,12 +252,7 @@ function WhatWins({ runs, umas, teams, catalogue, previous }: {
 				fill={leader > 0 ? Math.min(1, entry.rate / leader) : 0}
 				tone="win"
 				count={formatShare(entry.rate)}
-				share={
-					<span className="inline-flex items-center gap-1.5">
-						{plural(entry.races, "race")}
-						<Marks marks={entry.marks} />
-					</span>
-				}
+				share={<Marks marks={entry.marks} />}
 			/>
 		)
 	}
@@ -268,7 +260,7 @@ function WhatWins({ runs, umas, teams, catalogue, previous }: {
 		<RankedList
 			label="What wins"
 			title
-			hint={`Win rate from CM Runs, with how much to trust it. Under 100 races sinks to the bottom. From ${plural(runs.players, "player")}.`}
+			hint="Win rate from CM Runs, with how much to trust it. Under 100 races sinks to the bottom."
 			items={ranked}
 			itemKey={(entry) => `${entry.uma}-${entry.style}`}
 			empty="Not enough runs yet."
