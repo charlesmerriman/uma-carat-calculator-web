@@ -18,7 +18,7 @@
  * Counting is utils/guideRankings.ts, which has the rules. This draws them.
  */
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Loader2, Search } from "lucide-react"
 import type { RaceEvent } from "../../types"
@@ -57,7 +57,8 @@ import {
 import { useReportUpdated } from "./rankingsUpdated"
 import { CardArt } from "./kit/CardArt"
 import { CardTypeChip } from "./kit/CardTypeChip"
-import { FilterPill, FilterToolbar, TickOptions, Tokens, type FilterToken } from "./kit/FilterToolbar"
+import { FilterPill, FilterToolbar, GroupPill, Tokens, type FilterGroup, type FilterToken } from "./kit/FilterToolbar"
+import { FilterSheet } from "./kit/FilterSheet"
 import { tickSummary } from "./kit/tickSummary"
 import { Lens, type LensOption } from "./kit/Lens"
 import { Podium, type PodiumEntry } from "./kit/Podium"
@@ -265,6 +266,90 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 		payload.guides.some((guide) => guide.scenario === NO_SCENARIO && sameEvent({ kind: guide.kind, id: guide.event }, refForRaceEvent(event)))
 	)
 
+	// THE FILTERS AS DATA: the toolbar's pills (desktop-nav up) and the phone sheet draw these.
+	const items = <T,>(key: keyof GuideFilters, options: Array<{ id: T; label: string; count?: ReactNode }>, selected: ReadonlySet<T>) =>
+		options.map((option) => ({
+			key: String(option.id),
+			label: option.label,
+			count: option.count,
+			on: selected.has(option.id),
+			toggle: () => toggle(key, option.id as never),
+		}))
+	const groups: FilterGroup[] = [
+		{
+			key: "include",
+			label: "Include",
+			title: "Events and decks",
+			state: tickSummary(includeTicked, includeTotal, "Everything"),
+			changed: includeTicked < includeTotal,
+			reset: () => resetKeys("kinds", "tiers"),
+			sections: [
+				items("kinds", KINDS.map((kind) => ({ ...kind, count: plural(menuCounts.kinds.get(kind.id) ?? 0, "guide") })), filters.kinds),
+				items("tiers", RANKING_TIERS.map((id) => ({ id, label: TIER_LABELS[id], count: plural(menuCounts.tiers.get(id) ?? 0, "deck") })), filters.tiers),
+			],
+		},
+		{
+			key: "strategy",
+			label: "Strategy",
+			title: "Running style",
+			state: tickSummary(filters.styles.size, STYLES.length),
+			changed: filters.styles.size < STYLES.length,
+			reset: () => resetKeys("styles"),
+			sections: [items("styles", STYLES.map((id) => ({ id, label: STYLE_LABELS[id], count: menuCounts.styles.get(id) ?? 0 })), filters.styles)],
+		},
+		{
+			key: "scenario",
+			label: "Scenario",
+			title: "Training scenario",
+			state: tickSummary(filters.scenarios.size, scenarioOptions.length),
+			changed: filters.scenarios.size < scenarioOptions.length,
+			reset: () => resetKeys("scenarios"),
+			sections: [items("scenarios", scenarioOptions.map((option) => ({ ...option, count: menuCounts.scenarios.get(option.id) ?? 0 })), filters.scenarios)],
+			collapse: true,
+		},
+		{
+			key: "cardTypes",
+			label: "Card type",
+			title: "Card type",
+			state: tickSummary(filters.cardTypes.size, CARD_TYPE_IDS.length, `All ${CARD_TYPE_IDS.length}`),
+			changed: filters.cardTypes.size < CARD_TYPE_IDS.length,
+			reset: () => resetKeys("cardTypes"),
+			sections: [items("cardTypes", CARD_TYPE_IDS.map((id) => ({ id: id as string, label: CARD_TYPE_LABELS[id] })), filters.cardTypes)],
+		},
+	]
+	// The Events window: inside its pill on a desktop, the sheet's first group on a phone.
+	const eventsMenu = (
+		<>
+			<Lens
+				label="How many events"
+				className="mx-1.5 mb-1.5"
+				options={[{ id: 0, label: "All" }, ...WINDOW_SIZES.map((size) => ({ id: size, label: `Next ${size}` }))]}
+				value={windowSize ?? 0}
+				onChange={(size) => setWindowSize(size === 0 || from === null ? null : size)}
+			/>
+			{from !== null && (
+				<label className="flex items-center gap-2 px-1.5 py-1 text-xs text-gray-300">
+					Starting from
+					<select
+						value={guided.indexOf(from)}
+						onChange={(event) => setFrom(guided[Number(event.target.value)] ?? null)}
+						className="min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-2 py-1 text-xs text-gray-100 focus:border-brand focus:outline-none"
+					>
+						{guided.map((option, index) => (
+							<option key={`${option.event_type}-${option.id}`} value={index}>
+								{option.name}
+							</option>
+						))}
+					</select>
+				</label>
+			)}
+		</>
+	)
+	const resetAll = () => {
+		setFilters(defaults)
+		setWindowSize(null)
+	}
+
 	return (
 		<div className="flex flex-col gap-3.5">
 			<StatBand
@@ -280,90 +365,13 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 
 			<div className="flex flex-col gap-2">
 				<div className="flex flex-wrap items-center gap-1.5">
-					<FilterToolbar>
+					<FilterToolbar className="hidden desktop-nav:flex">
 						<FilterPill label="Events" state={windowSize === null ? "All guides" : `Next ${windowSize}`} changed={windowSize !== null} title="Which guides">
-							<Lens
-								label="How many events"
-								className="mx-1.5 mb-1.5"
-								options={[{ id: 0, label: "All" }, ...WINDOW_SIZES.map((size) => ({ id: size, label: `Next ${size}` }))]}
-								value={windowSize ?? 0}
-								onChange={(size) => setWindowSize(size === 0 || from === null ? null : size)}
-							/>
-							{from !== null && (
-								<label className="flex items-center gap-2 px-1.5 py-1 text-xs text-gray-300">
-									Starting from
-									<select
-										value={guided.indexOf(from)}
-										onChange={(event) => setFrom(guided[Number(event.target.value)] ?? null)}
-										className="min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-2 py-1 text-xs text-gray-100 focus:border-brand focus:outline-none"
-									>
-										{guided.map((option, index) => (
-											<option key={`${option.event_type}-${option.id}`} value={index}>
-												{option.name}
-											</option>
-										))}
-									</select>
-								</label>
-							)}
+							{eventsMenu}
 						</FilterPill>
-						<FilterPill
-							label="Include"
-							state={tickSummary(includeTicked, includeTotal, "Everything")}
-							changed={includeTicked < includeTotal}
-							title="Events and decks"
-							onAll={() => resetKeys("kinds", "tiers")}
-						>
-							<TickOptions
-								options={KINDS.map((kind) => ({ ...kind, count: plural(menuCounts.kinds.get(kind.id) ?? 0, "guide") }))}
-								selected={filters.kinds}
-								onToggle={(id) => toggle("kinds", id)}
-							/>
-							<hr className="mx-1.5 my-0.5 border-gray-600" />
-							<TickOptions
-								options={RANKING_TIERS.map((id) => ({ id, label: TIER_LABELS[id], count: plural(menuCounts.tiers.get(id) ?? 0, "deck") }))}
-								selected={filters.tiers}
-								onToggle={(id) => toggle("tiers", id)}
-							/>
-						</FilterPill>
-						<FilterPill
-							label="Strategy"
-							state={tickSummary(filters.styles.size, STYLES.length)}
-							changed={filters.styles.size < STYLES.length}
-							title="Running style"
-							onAll={() => resetKeys("styles")}
-						>
-							<TickOptions
-								options={STYLES.map((id) => ({ id, label: STYLE_LABELS[id], count: menuCounts.styles.get(id) ?? 0 }))}
-								selected={filters.styles}
-								onToggle={(id) => toggle("styles", id)}
-							/>
-						</FilterPill>
-						<FilterPill
-							label="Scenario"
-							state={tickSummary(filters.scenarios.size, scenarioOptions.length)}
-							changed={filters.scenarios.size < scenarioOptions.length}
-							title="Training scenario"
-							onAll={() => resetKeys("scenarios")}
-						>
-							<TickOptions
-								options={scenarioOptions.map((option) => ({ ...option, count: menuCounts.scenarios.get(option.id) ?? 0 }))}
-								selected={filters.scenarios}
-								onToggle={(id) => toggle("scenarios", id)}
-							/>
-						</FilterPill>
-						<FilterPill
-							label="Card type"
-							state={tickSummary(filters.cardTypes.size, CARD_TYPE_IDS.length, `All ${CARD_TYPE_IDS.length}`)}
-							changed={filters.cardTypes.size < CARD_TYPE_IDS.length}
-							title="Card type"
-							onAll={() => resetKeys("cardTypes")}
-						>
-							<TickOptions
-								options={CARD_TYPE_IDS.map((id) => ({ id: id as string, label: CARD_TYPE_LABELS[id] }))}
-								selected={filters.cardTypes}
-								onToggle={(id) => toggle("cardTypes", id)}
-							/>
-						</FilterPill>
+						{groups.map((group) => (
+							<GroupPill key={group.key} group={group} />
+						))}
 					</FilterToolbar>
 					<label className="relative w-full @min-[40rem]:ml-auto @min-[40rem]:w-auto @min-[40rem]:min-w-[12rem]">
 						<Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" aria-hidden="true" />
@@ -384,10 +392,20 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 							: `Showing ${plural(guides.length, "guide")} and ${plural(deckCount, "deck")}${tokens.length > 0 ? " for" : "."}`
 					}
 					tokens={tokens}
-					onReset={() => {
-						setFilters(defaults)
-						setWindowSize(null)
-					}}
+					onReset={resetAll}
+				/>
+				{/* Below desktop-nav the pills give way to one button and a bottom sheet. */}
+				<FilterSheet
+					groups={groups}
+					lead={
+						<div role="group" aria-label="Which guides" className="flex flex-col gap-1">
+							<span className="text-[10px] uppercase tracking-wider text-gray-400">Events</span>
+							{eventsMenu}
+						</div>
+					}
+					changed={tokens.length}
+					result={`Show ${plural(deckCount, "deck")}`}
+					onReset={resetAll}
 				/>
 			</div>
 

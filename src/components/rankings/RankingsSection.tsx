@@ -1,11 +1,10 @@
 /**
- * One Rankings tab's body, for the page and the pinned panel alike.
+ * One Rankings tab's body on the page.
  *
- * A CONTAINER, so the tabs lay out by their own width (`@4xl:grid-cols-2`)
- * and not the screen's: the same tab fills the page or a 24rem column
- * beside the Calculator. In the panel (`inPanel`) the PvP tab keeps its
- * event to itself instead of in the address bar, which belongs to the page
- * underneath.
+ * A CONTAINER, so the tabs lay out by their own width (the kit's `@min-[..]`
+ * queries) and not the screen's. The pinned window has its own body since
+ * the redesign (RankingsDock.tsx, WindowSources.tsx), so this is the page's
+ * alone.
  */
 
 import type { RankingsSection as Section } from "../../services/rankingsPinStore"
@@ -14,12 +13,12 @@ import { PullPlans } from "./PullPlans"
 import { PvpTab } from "./PvpTab"
 import { PlayersTab } from "./PlayersTab"
 
-export function RankingsSection({ section, inPanel = false }: { section: Section; inPanel?: boolean }) {
+export function RankingsSection({ section }: { section: Section }) {
 	return (
 		<div className="@container">
 			{section === "guides" && <GuideRankings />}
 			{section === "pull-plans" && <PullPlans />}
-			{section === "pvp" && <PvpTab inPanel={inPanel} />}
+			{section === "pvp" && <PvpTab />}
 			{section === "players" && <PlayersTab />}
 		</div>
 	)

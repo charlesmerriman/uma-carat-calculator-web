@@ -7,7 +7,9 @@
  *
  *   FilterToolbar   the row; keeps which menu is open (one at a time)
  *   FilterPill      a pill and its menu; `changed` draws it in brand
- *   TickOptions     a menu's tick boxes, each with a muted count
+ *   GroupPill       a FilterGroup (a filter as data) as its pill; the phone
+ *                   sheet (FilterSheet.tsx) draws the same groups
+ *   TickItems       a menu's tick boxes, each with a muted count
  *   Tokens          "Showing 11 guides ... for [token ×] Reset"
  *   tickSummary     a pill's state from its ticks (tickSummary.ts)
  *
@@ -106,31 +108,58 @@ export function FilterPill({ label, state, changed, title, onAll, children }: {
 	)
 }
 
-export interface TickOption<T> {
-	id: T
+/** One tick box: what the pills' menus and the phone sheet both draw. */
+export interface TickItem {
+	key: string
 	label: string
 	/** Muted at the right: "38 guides", "214". */
 	count?: ReactNode
+	on: boolean
+	toggle: () => void
 }
 
-export function TickOptions<T extends string | number | null>({ options, selected, onToggle }: {
-	options: TickOption<T>[]
-	selected: ReadonlySet<T>
-	onToggle: (id: T) => void
-}) {
+/**
+ * A tick-box filter as data, so the toolbar's pill and the phone sheet
+ * (FilterSheet.tsx) read one definition: its pill's label and state, the
+ * menu's title, its boxes in one or more sections (Include has two), and
+ * how to put it back to everything on.
+ */
+export interface FilterGroup {
+	key: string
+	label: string
+	title: string
+	state: string
+	changed: boolean
+	reset: () => void
+	sections: TickItem[][]
+	/** In the sheet, show the ticked boxes only behind "Show all N" (Scenario's twelve). */
+	collapse?: boolean
+}
+
+export function TickItems({ items }: { items: TickItem[] }) {
 	return (
 		<>
-			{options.map((option) => (
-				<label
-					key={String(option.id)}
-					className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-[5px] text-xs text-gray-100 transition hover:bg-gray-700"
-				>
-					<input type="checkbox" checked={selected.has(option.id)} onChange={() => onToggle(option.id)} className="h-3.5 w-3.5 shrink-0 accent-brand" />
-					<span className="min-w-0 flex-1">{option.label}</span>
-					{option.count !== undefined && <span className="shrink-0 text-[11px] tabular-nums text-gray-400">{option.count}</span>}
+			{items.map((item) => (
+				<label key={item.key} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-[5px] text-xs text-gray-100 transition hover:bg-gray-700">
+					<input type="checkbox" checked={item.on} onChange={item.toggle} className="h-3.5 w-3.5 shrink-0 accent-brand" />
+					<span className="min-w-0 flex-1">{item.label}</span>
+					{item.count !== undefined && <span className="shrink-0 text-[11px] tabular-nums text-gray-400">{item.count}</span>}
 				</label>
 			))}
 		</>
+	)
+}
+
+/** A FilterGroup as a pill with its menu. */
+export function GroupPill({ group }: { group: FilterGroup }) {
+	return (
+		<FilterPill label={group.label} state={group.state} changed={group.changed} title={group.title} onAll={group.reset}>
+			{group.sections.map((items, index) => (
+				<div key={index} className={index > 0 ? "mt-0.5 border-t border-gray-600 pt-1" : ""}>
+					<TickItems items={items} />
+				</div>
+			))}
+		</FilterPill>
 	)
 }
 

@@ -11,17 +11,8 @@ import { useEffect, useRef } from "react"
 import type { RaceEvent } from "../../types"
 import { hasEnded, isRunning } from "../../utils/pvpGuide"
 import { shortEventName, splitEventName } from "../../utils/pvpEvent"
+import { eventsAround } from "../../utils/rankingsWindow"
 import { StatusPill } from "./kit/StatusPill"
-
-/** Events shown either side of the one running now or next. */
-const AROUND = 3
-
-/** The strip's events: those around `anchor`, in date order, with `chosen` added if outside. */
-function stripEvents(events: RaceEvent[], anchor: RaceEvent, chosen: RaceEvent): RaceEvent[] {
-	const at = events.indexOf(anchor)
-	const near = events.slice(Math.max(0, at - AROUND), at + AROUND + 1)
-	return near.includes(chosen) ? near : [...near, chosen].sort((a, b) => events.indexOf(a) - events.indexOf(b))
-}
 
 export function EventStrip({ events, anchor, chosen, teams, now, onPick }: {
 	events: RaceEvent[]
@@ -39,7 +30,7 @@ export function EventStrip({ events, anchor, chosen, teams, now, onPick }: {
 	}, [chosen])
 	return (
 		<div role="group" aria-label="Event" className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-			{stripEvents(events, anchor, chosen).map((event) => {
+			{eventsAround(events, anchor, chosen).map((event) => {
 				const on = event === chosen
 				const status = isRunning(event, now) ? "running" : hasEnded(event, now) ? "ended" : "upcoming"
 				const { title } = splitEventName(event)

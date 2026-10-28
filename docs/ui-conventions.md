@@ -2138,21 +2138,27 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   (times recommended, never stars), shares out of the decks or guide-strategies counted. A row
   opens to by event (links), by strategy (a stacked bar), by deck tier and a sparkline of the
   last ten counted events (`usageByEvent`), never a list of decks.
-- **The pinned panel** (`RankingsDock.tsx`, owner 2026-10-27): "Pin to the side" on the page
-  pins the tab on screen, one at a time, until unpinned (`services/rankingsPinStore.ts`, a
-  `useSyncExternalStore` store on `localStorage`, server snapshot "nothing pinned"). **A window
-  over the page, never beside it**: the team window's mirror on the LEFT (same classes,
-  26rem wide), the page keeps its full width (owner: a first version docked as a column and
-  pushed the site aside). Mounted in `AppShell` after the scroller, behind the loading gate,
-  never in `Navbar`; not drawn on the Rankings page or without early access. Close or Escape
-  retracts it to a slim "Rankings" edge tab, which opens it again; the open state is
-  remembered from `desktop-nav` up, and below that it starts retracted every load (it covers
-  the top of the screen there). Header: a section menu, Full page, Unpin. **The tabs lay out
-  by container queries** (`RankingsSection` is `@container`; `@4xl:grid-cols-2`, never
-  `lg:`), so one tab fits the page or the window. In the panel the PvP tab keeps its event in
-  state, never `?event=` (the address bar is the page underneath).
-- **`RankList`** is every ranked table's look: place, picture, name, "count · share", an
-  opening row. **`TeamCounts`** is the two team tables (umas by teams, cards by decks).
+- **The pinned window** (`RankingsDock.tsx`, owner 2026-10-27; redrawn in redesign step 3):
+  "Pin to the side" on the page pins one section, one at a time, until unpinned
+  (`services/rankingsPinStore.ts`, a `useSyncExternalStore` store on `localStorage`, server
+  snapshot "nothing pinned"). **A window over the page, never beside it**: the team window's
+  mirror on the LEFT, 23rem wide, never taller than its ten rows; the page keeps its full
+  width. Mounted in `AppShell` after the scroller, behind the loading gate, never in `Navbar`;
+  not drawn on the Rankings page or without early access. **Its own body, not the tab**:
+  `WindowSources.tsx` ranks ONE list per section (Guides with every box ticked and the
+  remembered lens; Pull plans by the remembered type and sort; PvP for the remembered event,
+  umas or cards; Players' favourites) and the window draws four icon tabs, a context line
+  with "Change" (the list's one or two settings, which are the page's remembered choices,
+  `rankings-choices`), a search (Guides, PvP), ten compact `RankRow`s and "Full page".
+  Retract or Escape leaves a tab in the **bottom-left corner on every width** (icon, a count
+  of how many of the top ten moved since the window last showed them, `rankings-pin-seen` and
+  `utils/rankingsWindow.movedCount`; the list's short name from `desktop-nav` up). The open
+  state is remembered from `desktop-nav` up; below that it starts retracted every load and
+  opens as a drawer. The source stays mounted while retracted, since the corner tab's count
+  needs the list.
+- **Filters on a phone**: below `desktop-nav` the Guides pills give way to a "Filters · N"
+  button (bottom right) and a bottom sheet (`kit/FilterSheet.tsx`, a native `<dialog>`). The
+  pills and the sheet draw the same `FilterGroup`s, so they can't disagree.
 
 ## Selectors page (`components/selectors/`)
 

@@ -175,6 +175,20 @@ describe("RankingsPage", () => {
 		expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument()
 	})
 
+	it("puts the filters in a sheet on a phone, the same filters as the pills", async () => {
+		renderPage(true)
+		const overall = await screen.findByRole("region", { name: "Overall" })
+		fireEvent.click(screen.getByRole("button", { name: "Filters" }))
+		const sheet = screen.getByRole("dialog", { name: "Filters", hidden: true })
+		fireEvent.click(within(sheet).getByRole("button", { name: "Whale", pressed: true, hidden: true }))
+		expect(within(overall).getAllByRole("listitem")).toHaveLength(1)
+		// The pill says so too, and the button counts the changed filter.
+		expect(screen.getByRole("button", { name: /^Include/ })).toHaveTextContent("Include 6 of 7")
+		expect(screen.getByRole("button", { name: "Filters · 1" })).toBeInTheDocument()
+		fireEvent.click(within(sheet).getByRole("button", { name: "Show 1 deck", hidden: true }))
+		expect(screen.queryByRole("dialog", { hidden: true })).not.toBeInTheDocument()
+	})
+
 	it("finds one card's place with the search", async () => {
 		renderPage(true)
 		fireEvent.change(await screen.findByRole("searchbox", { name: "Find a card or uma" }), { target: { value: "fine" } })

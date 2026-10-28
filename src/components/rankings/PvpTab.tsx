@@ -11,11 +11,9 @@
  * her share of the gallery's posts and her CM Runs win rate together.
  * "Trios players build most" comes in step 4 with the server's figure.
  *
- * THE EVENT: on the page it is `?event=cm-21`, like the PvP page, then the
- * one remembered on the device (rankingsPinStore choices), then the one
- * running now or next. In the pinned window the address bar belongs to the
- * page underneath, so there it is the remembered one alone. Picking writes
- * both.
+ * THE EVENT: `?event=cm-21`, like the PvP page, then the one remembered on
+ * the device (rankingsPinStore choices, shared with the pinned window), then
+ * the one running now or next. Picking writes both.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -55,7 +53,7 @@ const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 
-export function PvpTab({ inPanel = false }: { inPanel?: boolean }) {
+export function PvpTab() {
 	const { championsMeetingData, leagueOfHeroesData } = useCalculatorData()
 	const events = useMemo(() => raceEventsInOrder(championsMeetingData, leagueOfHeroesData), [championsMeetingData, leagueOfHeroesData])
 	const [searchParams, setSearchParams] = useSearchParams()
@@ -63,7 +61,7 @@ export function PvpTab({ inPanel = false }: { inPanel?: boolean }) {
 	// One clock reading per mount, for the default event and the strip's statuses.
 	const [now] = useState(() => new Date())
 	const anchor = defaultPvpEvent(events, now)
-	const fromAddress = inPanel ? null : findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
+	const fromAddress = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
 	const event = fromAddress ?? findEvent(events, parsePvpEvent(remembered)) ?? anchor
 	const [teams, setTeams] = useState<{ key: string; teams: number } | null>(null)
 	const key = event ? `${event.event_type}-${event.id}` : ""
@@ -73,7 +71,6 @@ export function PvpTab({ inPanel = false }: { inPanel?: boolean }) {
 	const pick = (next: RaceEvent) => {
 		const value = formatPvpEvent(refForRaceEvent(next))
 		chooseRankings("pvp", { event: value })
-		if (inPanel) return
 		const params = new URLSearchParams(searchParams)
 		params.set(PVP_EVENT_PARAM, value)
 		setSearchParams(params)
