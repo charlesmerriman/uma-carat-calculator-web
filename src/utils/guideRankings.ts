@@ -231,15 +231,16 @@ export function breakdown<K>(appearances: RankingAppearance[], keyOf: (appearanc
 }
 
 /**
- * A pick's use across the last `size` counted events, oldest first: what an
- * opened row's sparkline draws. `events` is the counted guides' events in
- * event order (countedGuides), so the window and the tick boxes apply; an
- * event where the pick isn't used is a 0, never skipped. A card counts its
- * decks there (alternatives out, like the count); an uma her picks.
+ * A pick's use across every counted event, oldest first: what an opened
+ * row's sparkline draws (owner, 2026-10-28: the whole window, so the Events
+ * filter decides the span; "the last ten" showed only far-future guides).
+ * `events` is the counted guides' events in event order (countedGuides), so
+ * the window and the tick boxes apply; an event where the pick isn't used is
+ * a 0, never skipped. A card counts its decks there (alternatives out, like
+ * the count); an uma her picks.
  */
-export function usageByEvent(appearances: RankingAppearance[], events: RaceEvent[], size: number): number[] {
-	const last = events.slice(-size)
-	return last.map((event) => appearances.filter((appearance) => appearance.event === event && appearance.role !== "alt").length)
+export function usageByEvent(appearances: RankingAppearance[], events: RaceEvent[]): number[] {
+	return events.map((event) => appearances.filter((appearance) => appearance.event === event && appearance.role !== "alt").length)
 }
 
 /** "29%": a share for the tables, whole percent, "<1%" rather than a misleading 0. */
