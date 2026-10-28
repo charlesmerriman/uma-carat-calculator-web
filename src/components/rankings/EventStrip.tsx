@@ -1,7 +1,7 @@
 /**
  * The PvP tab's event picker (mock 09-pvp.png): a sideways row of event
- * cards, each its short name and title, a status pill, and for the chosen
- * one its team count. Replaces the native <select>. Shows the events around
+ * cards, each its short name and title and a status pill (no team count:
+ * the Rankings page never says how many). Replaces the native <select>. Shows the events around
  * the one running now or next (three either side), plus the chosen one if
  * it falls outside; the strip scrolls sideways when it doesn't fit, and the
  * chosen card is scrolled into view.
@@ -14,13 +14,11 @@ import { shortEventName, splitEventName } from "../../utils/pvpEvent"
 import { eventsAround } from "../../utils/rankingsWindow"
 import { StatusPill } from "./kit/StatusPill"
 
-export function EventStrip({ events, anchor, chosen, teams, now, onPick }: {
+export function EventStrip({ events, anchor, chosen, now, onPick }: {
 	events: RaceEvent[]
 	/** The event running now or next: the strip centres on it. */
 	anchor: RaceEvent
 	chosen: RaceEvent
-	/** The chosen event's saved teams, once its payload has loaded. */
-	teams: number | null
 	now: Date
 	onPick: (event: RaceEvent) => void
 }) {
@@ -51,7 +49,6 @@ export function EventStrip({ events, anchor, chosen, teams, now, onPick }: {
 						</b>
 						<span className="flex items-center gap-1.5 text-[11px] tabular-nums text-gray-400">
 							<StatusPill status={status} />
-							{on && teams !== null && `${teams.toLocaleString()} ${teams === 1 ? "team" : "teams"}`}
 						</span>
 					</button>
 				)

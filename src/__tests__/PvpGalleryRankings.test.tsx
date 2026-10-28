@@ -78,17 +78,16 @@ const PAYLOAD: GalleryRankingsPayload = {
 }
 
 describe("PvpGalleryRankings", () => {
-	it("counts the event's posted teams with shares, borrows apart", async () => {
+	it("ranks the event's posted teams by share, borrows apart", async () => {
 		serve(PAYLOAD)
 		renderView()
 		const umas = within(await screen.findByRole("region", { name: "Umas" }))
 		expect(fetchMock.mock.calls[0][0]).toMatch(/\/rankings\/gallery\/cm\/21$/)
 		expect(umas.getAllByRole("listitem")).toHaveLength(1)
-		expect(umas.getByText("120 teams")).toBeInTheDocument()
 		expect(umas.getByText("84%")).toBeInTheDocument()
 		const cards = within(screen.getByRole("region", { name: "Support cards" }))
-		expect(cards.getByText("401 decks")).toBeInTheDocument()
-		expect(cards.getByText("20 borrowed")).toBeInTheDocument()
+		expect(cards.getByText("93%")).toBeInTheDocument()
+		expect(cards.getByText("5% borrowed")).toBeInTheDocument()
 	})
 
 	it("says what the guide does with each pick, alternatives not counted", async () => {
@@ -98,11 +97,11 @@ describe("PvpGalleryRankings", () => {
 		expect(within(screen.getByRole("region", { name: "Support cards" })).getByText("Guide 1 of 2")).toBeInTheDocument()
 	})
 
-	it("gives the gallery's share of every saved team, and links there", async () => {
+	it("never gives the gallery's share of every saved team, which would give that total away, and links there", async () => {
 		serve(PAYLOAD)
 		renderView()
 		const band = within(await screen.findByRole("region", { name: "What the gallery is running for Libra Cup" }))
-		expect(await band.findByText("11%")).toBeInTheDocument()
+		expect(band.queryByText("Of all saved teams")).not.toBeInTheDocument()
 		expect(band.getByRole("link", { name: "Rankings page" })).toHaveAttribute("href", "/app/rankings?view=pvp&event=cm-21")
 	})
 

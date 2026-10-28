@@ -7,7 +7,8 @@
  * else.
  *
  * THE REDESIGN (notes/rankings-redesign-plan.md step 4, mocks 17, 24): the
- * band (posted teams, decks, and the gallery's share of every saved team),
+ * band (posted teams and decks: the gallery is public, so its counts are
+ * too; never its share of every saved team, which would give that total away),
  * the two lists on the Rankings kit (TeamLists.tsx, the PvP tab's own),
  * each row saying what the event's GUIDE does with it ("Guide recommends
  * her", "Guide 3 of 12": in how many of the guide's decks the card is), and
@@ -22,14 +23,11 @@ import { Link } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import type { RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
-import type { PvpRankingsPayload } from "../../types/rankingsTabs"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
 import { useGalleryRankings, type GalleryRankingsPayload } from "../../hooks/useGalleryRankings"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
-import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
-import { formatShare } from "../../utils/guideRankings"
 import { movement } from "../../utils/rankingsMovement"
 import { formatPvpEvent, pvpEventHref, refForRaceEvent, splitEventName } from "../../utils/pvpEvent"
 import { useReportUpdated } from "../rankings/rankingsUpdated"
@@ -67,9 +65,6 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 }) {
 	useReportUpdated(payload.generated_at)
 	const ref = refForRaceEvent(event)
-	// Every saved team for the event, for the gallery's share of them. The tab doesn't wait for it.
-	const saved = useRankingsPayload<PvpRankingsPayload>(`/rankings/pvp/${ref.kind}/${ref.id}`)
-	const savedTeams = saved.status === "ready" ? saved.payload.built.teams : null
 	const { title } = splitEventName(event)
 	const rankingsHref = `/app/rankings?view=pvp&event=${formatPvpEvent(ref)}`
 
@@ -93,7 +88,6 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 				stats={[
 					{ label: "Posted teams", value: payload.posts.toLocaleString() },
 					{ label: "Decks", value: payload.decks.toLocaleString() },
-					...(savedTeams ? [{ label: "Of all saved teams", value: formatShare(payload.posts / savedTeams) }] : []),
 				]}
 			>
 				{payload.posts === 0
@@ -110,7 +104,7 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 				<div className={GRID}>
 					<UmaBuildList
 						label="Umas"
-						hint={guide ? "Posted teams with her, and whether the guide recommends her." : "Posted teams with her."}
+						hint={guide ? "Share of posted teams with her, and whether the guide recommends her." : "Share of posted teams with her."}
 						counts={{ teams: payload.posts, umas: payload.umas }}
 						catalogue={catalogue}
 						sub={(uma) => (recommended.has(uma) ? <span className="text-brand">Guide recommends her</span> : null)}
@@ -118,7 +112,7 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 					/>
 					<CardBuildList
 						label="Support cards"
-						hint={guideDecks > 0 ? `Posted decks with the card, and how many of the guide's ${guideDecks} decks hold it.` : "Posted decks with the card."}
+						hint={guideDecks > 0 ? `Share of posted decks with the card, and how many of the guide's ${guideDecks} decks hold it.` : "Share of posted decks with the card."}
 						counts={payload}
 						catalogue={catalogue}
 						sub={(card) => (guideDecks > 0 && deckCounts.has(card) ? <span className="text-brand">Guide {deckCounts.get(card)} of {guideDecks}</span> : null)}

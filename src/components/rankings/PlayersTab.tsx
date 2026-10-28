@@ -3,7 +3,9 @@
  * play, from the admin analytics among accounts that use the calculator
  * (staff out): Team Trials class and club rank, favourite umas, the income
  * options they turn on, and the campaign selectors they plan to buy with
- * what they plan to take. Counts and shares, never a name.
+ * what they plan to take. Shares only, never a count of players (owner,
+ * 2026-10-28: nothing on the page may let a reader estimate how many
+ * people use the site) and never a name.
  *
  * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 11, 22): the
  * band, the two ranks as stacked distribution bars, favourites as a wall of
@@ -37,8 +39,6 @@ const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,
 /** The income option the band's third figure reads. */
 const DAILY_CARAT = "daily_carat"
 
-const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
-
 export function PlayersTab() {
 	const state = useRankingsPayload<PlayersRankingsPayload>("/rankings/players")
 	const catalogue = usePvpCatalogue()
@@ -63,7 +63,7 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 	const share = (people: number, of: number) => formatShare(of > 0 ? people / of : 0)
 	const favourites = payload.favourites.flatMap((row) => {
 		const uma = catalogue.umasById.get(row.uma)
-		return uma ? [{ uma, count: plural(row.people, "player") }] : []
+		return uma ? [{ uma, count: share(row.people, engaged) }] : []
 	})
 	const trials = payload.ranks.find((rank) => rank.label === "Team Trials")
 	const topClass = trials?.rows.reduce<(typeof trials.rows)[number] | null>((best, row) => (best && best.people >= row.people ? best : row), null)
@@ -74,12 +74,12 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 			<StatBand
 				title="Who plays here"
 				stats={[
-					{ label: "Players", value: engaged.toLocaleString() },
 					...(trials && topClass ? [{ label: `In ${topClass.name}`, value: share(topClass.people, trials.people) }] : []),
 					...(dailyCarat ? [{ label: "Buy the Daily Carat Pack", value: share(dailyCarat.people, engaged) }] : []),
+					...(trials ? [{ label: "Set their class", value: share(trials.people, engaged) }] : []),
 				]}
 			>
-				From the players who use the calculator with an account, staff left out. Counts, never a name.
+				From the players who use the calculator with an account, staff left out. Shares, never a name.
 			</StatBand>
 
 			<div className={GRID}>
@@ -88,7 +88,7 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 						<section aria-label="Ranks" className="card-panel flex min-w-0 flex-col gap-4 p-3">
 							{payload.ranks.map((rank) => (
 								<div key={rank.label} className="flex flex-col gap-2">
-									<PanelHead title={rank.label === "Team Trials" ? "Team Trials class" : rank.label} hint={`Of the ${rank.people.toLocaleString()} who set it.`} />
+									<PanelHead title={rank.label === "Team Trials" ? "Team Trials class" : rank.label} hint={`Of the ${share(rank.people, engaged)} of players who set it.`} />
 									<DistBar label={rank.label} rows={highestFirst(rank.rows)} total={rank.people} />
 								</div>
 							))}
@@ -103,13 +103,12 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 								note: row.default_on === false ? "starts off" : undefined,
 								value: row.people,
 								share: share(row.people, engaged),
-								count: row.people.toLocaleString(),
 							}))}
 						/>
 					</Panel>
 				</div>
 				<div className="flex min-w-0 flex-col gap-3">
-					<Panel title="Favourite umas" hint="Players who picked her as a favourite. The first favourite is the account picture.">
+					<Panel title="Favourite umas" hint="Share of players who picked her as a favourite. The first favourite is the account picture.">
 						{favourites.length === 0 ? (
 							<p className="px-1 text-xs text-gray-400">Nobody has picked a favourite yet.</p>
 						) : (
@@ -117,7 +116,7 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 						)}
 					</Panel>
 					{payload.budget && payload.budget.length > 0 && <Budget rows={payload.budget} />}
-					<Selectors selectors={payload.selectors} catalogue={catalogue} />
+					<Selectors selectors={payload.selectors} engaged={engaged} catalogue={catalogue} />
 				</div>
 			</div>
 		</div>
@@ -170,9 +169,10 @@ function Budget({ rows }: { rows: NonNullable<PlayersRankingsPayload["budget"]> 
  * The campaign selectors: the one on sale in front (else the most recent
  * past one, else the first anyone plans to buy, for a payload from before
  * the server sent `status`), with its top picks as pictures, and the rest
- * behind "Show earlier".
+ * behind "Show earlier". Buyers are a share of every player, picks a share
+ * of the buyers who picked.
  */
-function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue: PvpCatalogueIndex }) {
+function Selectors({ selectors, engaged, catalogue }: { selectors: Selector[]; engaged: number; catalogue: PvpCatalogueIndex }) {
 	const [earlier, setEarlier] = useState(false)
 	const bought = selectors.filter((selector) => selector.buyers > 0)
 	// The payload lists campaigns oldest first, so the last past one is the most recent.
@@ -194,8 +194,8 @@ function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue:
 				<>
 					<SelectorPicks selector={front} catalogue={catalogue} />
 					<p className="px-1 text-xs text-gray-300">
-						{plural(front.buyers, "player")} {front.buyers === 1 ? "plans" : "plan"} to buy it; {front.picked.toLocaleString()}{" "}
-						{front.picked === 1 ? "has" : "have"} picked.
+						{formatShare(engaged ? front.buyers / engaged : 0)} of players plan to buy it, and{" "}
+						{formatShare(front.buyers ? front.picked / front.buyers : 0)} of them have picked.
 					</p>
 					{rest.length > 0 && (
 						<button type="button" aria-expanded={earlier} onClick={() => setEarlier(!earlier)} className="self-start px-1 text-[11px] text-brand transition hover:text-brand/75">
@@ -210,7 +210,7 @@ function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue:
 								</span>
 								<SelectorPicks selector={selector} catalogue={catalogue} />
 								<span className="text-[11px] tabular-nums text-gray-400">
-									{plural(selector.buyers, "buyer")}, {selector.picked.toLocaleString()} picked
+									{formatShare(engaged ? selector.buyers / engaged : 0)} of players, {formatShare(selector.buyers ? selector.picked / selector.buyers : 0)} of them picked
 								</span>
 							</div>
 						))}
@@ -220,7 +220,7 @@ function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue:
 	)
 }
 
-/** A selector's top picks as chips: the uma's portrait or the card's art, the name, and how many picked it. */
+/** A selector's top picks as chips: the uma's portrait or the card's art, the name, and its share of the picks. */
 function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue: PvpCatalogueIndex }) {
 	const oshiIds = useOshiIds()
 	if (selector.top.length === 0) return null
@@ -237,7 +237,7 @@ function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue:
 						{uma ? <FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
 						<span className="flex min-w-0 flex-col">
 							<b className="truncate text-[13px] font-semibold text-gray-100">{name}</b>
-							<span className="text-[11px] tabular-nums text-gray-400">{pick.people.toLocaleString()} picked</span>
+							<span className="text-[11px] tabular-nums text-gray-400">{formatShare(selector.picked ? pick.people / selector.picked : 0)} of picks</span>
 						</span>
 					</li>
 				)
