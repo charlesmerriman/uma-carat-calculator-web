@@ -310,8 +310,11 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	// (or the event) instead of stepping back through every tab clicked.
 	const selectStyle = (next: PvpStyleTab) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
-	// Fetched only on the view that shows it.
-	const guideState = usePvpGuide(event && view === "recommendations" && !viewLocked ? refForRaceEvent(event) : null)
+	// Fetched only on the views that show it: the guide itself, and the Rankings
+	// view's "Guide recommends her" / "Guide 3 of 12" (usePvpGuide caches it).
+	const guideState = usePvpGuide(
+		event && (view === "recommendations" || view === "rankings") && !viewLocked ? refForRaceEvent(event) : null
+	)
 
 	// The intro shows in full until a guide has been on screen once on this
 	// device, then folds behind a link (services/pvpPageMemory.ts). Read once
@@ -481,7 +484,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 									<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
 								</Suspense>
 							)}
-							{view === "rankings" && !viewLocked && event && <PvpGalleryRankings event={event} />}
+							{view === "rankings" && !viewLocked && event && <PvpGalleryRankings event={event} guide={guideState} />}
 							{view === "editor" && !viewLocked && (
 								<Suspense
 									fallback={

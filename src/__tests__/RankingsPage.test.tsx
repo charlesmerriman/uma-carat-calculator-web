@@ -21,7 +21,9 @@ const CM21 = {
 } as unknown as RaceEvent
 
 vi.mock("../services/CalculatorContext", () => ({
-	useCalculatorData: () => ({ championsMeetingData: [CM21], leagueOfHeroesData: [] }),
+	useCalculatorData: () => ({
+		championsMeetingData: [CM21], leagueOfHeroesData: [], umaBannerData: [], supportBannerData: [], stepUpBannerData: [],
+	}),
 }))
 // The reader's own saved teams: one for CM 21 with Maruzensky on Pace.
 vi.mock("../services/PvpTeamsContext", () => ({
@@ -68,13 +70,18 @@ const PULL_PLANS: PullPlanRankingsPayload = {
 		type: "uma", unit: "pulls", id: 88, name: "Gentildonna", start_date: "2026-11-05T00:00:00Z",
 		end_date: "2026-11-15T00:00:00Z", predicted: true, status: "upcoming",
 		planners: 5807, total: 958155, average: 165, median: 150,
+		spread: { edges: [0, 50, 100, 200, 300], planners: [500, 1500, 2800, 700, 307] },
+		also: [{ type: "support", id: 90, name: "Kitasan Black", planners: 2100 }],
 	}],
 	demand: [{ month: "2026-11", banners: 6, planners: 9000, total_pulls: 1200000, excluded: 0, step_up_planners: 40 }],
 }
 
 const PVP: PvpRankingsPayload = {
 	generated_at: "2026-10-27T20:00:00Z",
-	built: { teams: 4, decks: 12, umas: [{ uma: 41, teams: 3, styles: { pace: 3 } }], cards: [{ card: 1, decks: 6, borrows: 2 }] },
+	built: {
+		teams: 4, decks: 12, umas: [{ uma: 41, teams: 3, styles: { pace: 3 } }], cards: [{ card: 1, decks: 6, borrows: 2 }],
+		trios: [{ umas: [41, 41, 41], teams: 2 }],
+	},
 	runs: { players: 2, races: 30, min_races: 20, rows: [{ uma: 41, style: "pace", races: 30, wins: 12 }] },
 }
 
@@ -83,8 +90,12 @@ const PLAYERS: PlayersRankingsPayload = {
 	engaged: 200,
 	favourites: [{ uma: 41, people: 50 }],
 	ranks: [{ label: "Team Trials", people: 100, rows: [{ name: "Class 6", people: 38 }] }],
-	income: [{ key: "daily_carat", label: "Daily Carat Pack", people: 84 }],
-	selectors: [{ campaign: "1st Anniversary", label: "SSR Support Selector", buyers: 30, picked: 20, top: [{ card: 2, people: 9 }] }],
+	income: [{ key: "daily_carat", label: "Daily Carat Pack", people: 84, default_on: false }],
+	budget: [{ name: "Class 6", people: 38, carats: 24000, pulls: 150 }],
+	selectors: [
+		{ campaign: "1st Anniversary", label: "SSR Support Selector", buyers: 30, picked: 20, top: [{ card: 2, people: 9 }], status: "past", end_date: "2026-01-01T00:00:00Z" },
+		{ campaign: "2nd Anniversary", label: "$10 Uma Selector", buyers: 12, picked: 5, top: [{ uma: 41, people: 4 }], status: "on_sale", end_date: "2026-11-03T12:00:00Z" },
+	],
 }
 
 const GALLERY = {
@@ -217,6 +228,17 @@ describe("RankingsPage", () => {
 		expect(screen.getByRole("region", { name: "When the pulls fall due" })).toBeInTheDocument()
 	})
 
+	it("opens a planned banner to its pull spread and what its planners also plan", async () => {
+		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
+		const list = await screen.findByRole("region", { name: "Banners players plan" })
+		fireEvent.click(within(list).getByRole("button", { expanded: false }))
+		const spread = within(list).getByRole("list", { name: "Planners by pulls planned" })
+		expect(within(spread).getByText("100 to 199")).toBeInTheDocument()
+		expect(within(spread).getByText("48%")).toBeInTheDocument()
+		// Kitasan Black isn't in the calculator's banners here, so its chip is plain text.
+		expect(within(list).getByText("Kitasan Black · 36%")).toBeInTheDocument()
+	})
+
 	it("remembers the Pull plans order on the device", async () => {
 		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
 		await screen.findByRole("region", { name: "Banners players plan" })
@@ -237,6 +259,7 @@ describe("RankingsPage", () => {
 		expect(within(wins).getByText("40%")).toBeInTheDocument()
 		expect(within(wins).queryByLabelText("Place 1")).not.toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Your team" })).getByText("#1")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Trios players build most" })).getByText("2 teams · 50%")).toBeInTheDocument()
 		// The opened row reads the gallery and CM Runs beside the build count.
 		fireEvent.click(within(umas).getByRole("button", { expanded: false }))
 		expect((await within(umas).findByText("Posted to the gallery")).parentElement).toHaveTextContent("In 50% of the 2 posted teams")
@@ -249,9 +272,14 @@ describe("RankingsPage", () => {
 		expect(within(favourites).getByText("50 players")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Ranks" })).getByRole("img", { name: "Team Trials: Class 6 38%" })).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
-		const selectors = screen.getByRole("region", { name: "Campaign selectors" })
-		expect(within(selectors).getByText("Fine Motion")).toBeInTheDocument()
-		expect(within(selectors).getByText("9 picked")).toBeInTheDocument()
+		// The one on sale leads, with when it ends; the past one waits behind "Show earlier".
+		const selectors = within(screen.getByRole("region", { name: "Selector on sale" }))
+		expect(selectors.getByText("$10 Uma Selector · 2nd Anniversary · ends 2026/11/3")).toBeInTheDocument()
+		expect(selectors.getByText("4 picked")).toBeInTheDocument()
+		fireEvent.click(selectors.getByRole("button", { name: "Show earlier (1)" }))
+		expect(selectors.getByText("9 picked")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("starts off")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Typical budget by class" })).getByText("24,000")).toBeInTheDocument()
 	})
 
 	it("pins the tab on screen to the side, and unpins it", () => {

@@ -1599,12 +1599,16 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   see "CM Runs view" below), Gallery (`gallery`, the posted teams; see "Gallery view"
   below) and, for early access only, Rankings (`rankings`, below). An editor gets Edit guide. On a phone
   the tabs show their `short` labels (Guide, Team, Runs, Ranks, Edit); the full label stays
-  the accessible name. The guide is fetched only on Recommendations.
+  the accessible name. The guide is fetched only on Recommendations and Rankings.
 - **Rankings** (`PvpGalleryRankings`, owner 2026-10-27): the event on screen only, counting
   its **gallery posts** (Henry: "teams that people submitted into the gallery"): umas by posted
   teams with her, cards by member decks with the card (the borrowed card too, "N borrowed"),
   counts with shares, from `GET /rankings/gallery/<kind>/<id>` (counted on the server,
-  hourly). What the GUIDES recommend is the Rankings page (`/app/rankings`). **Not drawn at
+  hourly), drawn with the Rankings page's `TeamLists.tsx`. Each row says what the event's
+  guide does with it ("Guide recommends her"; "Guide 3 of 12", the guide's decks holding the
+  card, alternatives out), the band gives the gallery's share of every saved team (the PvP
+  rankings payload), and "Most copied posts" links each post. Every saved team is the
+  Rankings page's PvP tab, linked from the band. **Not drawn at
   all without early access** (owner, 2026-10-27: "shouldn't be visible at all if you can't
   access it"): the tab's `earlyAccess` flag, like Edit guide's `editors`, so there is no lock
   card for it and `?view=rankings` reads as Recommendations; the API refuses it the same way.
@@ -2106,18 +2110,23 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   (`utils/runResults.ts`): **shown from `min_races` (20), ranked from `RANKED_RACES` (100)**;
   20 to 99 races sit under the ranked rows, muted, with no place; one to three marks say how
   much to trust a rate (20, 100, 300 races). "Your team" reads the reader's own saved team
-  (`usePvpTeams`) and gives each uma's place.
+  (`usePvpTeams`) and gives each uma's place. "Trios players build most" is the server's exact
+  three-uma teams (`count_teams` `trios`).
 - **Players** (`PlayersTab.tsx`): Team Trials class and club rank as stacked bars, highest
   first (`DistBar`, a ramp from the brand down to the grays), favourite umas as a wall of
-  portraits (`Wall`), income options as labelled bars by share (`OptionRows`), and the first
-  campaign selector anyone plans to buy with its top picks, the rest behind "Show earlier".
+  portraits (`Wall`), income options as labelled bars by share (`OptionRows`, "starts off"
+  from `default_on`), the typical budget by class (the server's medians; a class of one is
+  never sent), and the selector on sale (`status`, else the most recent past one) with its
+  top picks, the rest behind "Show earlier".
   All from the admin analytics, staff out.
 - **Pull plans** (`PullPlans.tsx`) is the admin's Popular banners tables for supporters, as
   one list of `PullPlanRow`s: the date block, the kind badge (`.banner-type-tile--*`), the
   status pill, planners with their share of everyone planning (the payload's `planners`),
   and **typical (the median)** beside the average; a type lens and a sort lens (remembered
   on the device), ended banners behind a switch (`utils/pullPlanRankings.ts`); a step-up's
-  figures are STEPS and say so. "When the pulls fall due" is six divs (`monthShares`: this
+  figures are STEPS and say so. A row opens to its pull spread (`spread`, labelled by
+  `spreadLabel`; steps on a step-up) and "also planning" chips to each banner's Timeline card
+  (its BannerTimeline, from the calculator's banners). "When the pulls fall due" is six divs (`monthShares`: this
   month, the next four, Later), no chart library. **Hidden until Raptive approves** (Henry,
   "similar to skills tab"): `useRankingsPullPlans()` (guide editors) and the API's
   `views/rankings.sees_pull_plans`; un-gating is flipping both.

@@ -7,9 +7,10 @@
  *
  * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 11, 22): the
  * band, the two ranks as stacked distribution bars, favourites as a wall of
- * portraits, income options as labelled bars, and one selector in front with
- * the rest behind "Show earlier". Step 4 adds the typical budget by class,
- * "starts off" on the income options, and which selector is on sale.
+ * portraits, income options as labelled bars ("starts off" beside the ones a
+ * new account starts without), the typical budget by class (medians from the
+ * server, never one person's), and the selector on sale in front with the
+ * rest behind "Show earlier".
  */
 
 import { useState } from "react"
@@ -22,6 +23,8 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { formatShare } from "../../utils/guideRankings"
 import { useReportUpdated } from "./rankingsUpdated"
+import { formatDate } from "../../utils/dateFormat"
+import { Bar } from "./kit/Bar"
 import { CardArt } from "./kit/CardArt"
 import { DistBar } from "./kit/DistBar"
 import { OptionRows } from "./kit/OptionRows"
@@ -96,6 +99,8 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 							rows={[...payload.income].sort((a, b) => b.people - a.people).map((row) => ({
 								key: row.key,
 								label: row.label,
+								// Switching it on was a choice: worth saying beside the share.
+								note: row.default_on === false ? "starts off" : undefined,
 								value: row.people,
 								share: share(row.people, engaged),
 								count: row.people.toLocaleString(),
@@ -111,6 +116,7 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 							<Wall label="Favourite umas, most picked first" entries={favourites} />
 						)}
 					</Panel>
+					{payload.budget && payload.budget.length > 0 && <Budget rows={payload.budget} />}
 					<Selectors selectors={payload.selectors} catalogue={catalogue} />
 				</div>
 			</div>
@@ -131,17 +137,57 @@ function highestFirst(rows: Array<{ name: string; people: number }>) {
 type Selector = PlayersRankingsPayload["selectors"][number]
 
 /**
- * The campaign selectors: the first one anyone plans to buy in front, with
- * its top picks as pictures, and the rest behind "Show earlier". Which one is
- * on sale comes from the server in step 4; until then this says "planned",
- * never "on sale".
+ * The typical budget per Team Trials class (mock 11-players.png): the middle
+ * player's carats held and pulls planned, as two figures and a bar of the
+ * carats scaled to the richest class. Medians from the server.
+ */
+function Budget({ rows }: { rows: NonNullable<PlayersRankingsPayload["budget"]> }) {
+	const top = Math.max(0, ...rows.map((row) => row.carats ?? 0))
+	return (
+		<Panel title="Typical budget by class" hint="The middle player's carats held and pulls planned.">
+			<ul className="flex flex-col gap-1">
+				{rows.map((row) => (
+					<li key={row.name} className="grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2.5 py-0.5 @max-[30rem]:grid-cols-[5rem_minmax(0,1fr)]">
+						<span className="text-[13px] text-gray-100">{row.name}</span>
+						<Bar fill={top ? (row.carats ?? 0) / top : 0} className="@max-[30rem]:hidden" />
+						<span className="whitespace-nowrap text-right text-xs tabular-nums text-gray-400">
+							<b className="text-[13px] font-semibold text-gray-100">{(row.carats ?? 0).toLocaleString()}</b> carats
+							{row.pulls !== null && (
+								<>
+									{" · "}
+									<b className="text-[13px] font-semibold text-gray-100">{row.pulls.toLocaleString()}</b> pulls
+								</>
+							)}
+						</span>
+					</li>
+				))}
+			</ul>
+		</Panel>
+	)
+}
+
+/**
+ * The campaign selectors: the one on sale in front (else the most recent
+ * past one, else the first anyone plans to buy, for a payload from before
+ * the server sent `status`), with its top picks as pictures, and the rest
+ * behind "Show earlier".
  */
 function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue: PvpCatalogueIndex }) {
 	const [earlier, setEarlier] = useState(false)
-	const front = selectors.find((selector) => selector.buyers > 0) ?? null
-	const rest = selectors.filter((selector) => selector !== front && selector.buyers > 0)
+	const bought = selectors.filter((selector) => selector.buyers > 0)
+	// The payload lists campaigns oldest first, so the last past one is the most recent.
+	const front =
+		bought.find((selector) => selector.status === "on_sale") ??
+		[...bought].reverse().find((selector) => selector.status === "past") ??
+		bought[0] ??
+		null
+	const rest = bought.filter((selector) => selector !== front)
+	const onSale = front?.status === "on_sale"
 	return (
-		<Panel title="Campaign selectors" hint={front ? `${front.label} · ${front.campaign}` : undefined}>
+		<Panel
+			title={onSale ? "Selector on sale" : "Campaign selectors"}
+			hint={front ? `${front.label} · ${front.campaign}${onSale && front.end_date ? ` · ends ${formatDate(front.end_date)}` : ""}` : undefined}
+		>
 			{front === null ? (
 				<p className="px-1 text-xs text-gray-400">Nobody plans to buy a campaign selector yet.</p>
 			) : (

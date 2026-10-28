@@ -21,6 +21,14 @@ export interface PlannedBannerRank {
 	average: number
 	/** The middle planner's figure: the "typical" column. */
 	median: number
+	/**
+	 * How planners spread their pulls (steps on a step-up): `planners[i]`
+	 * plan from `edges[i]` up to the next edge, the last open. Null for a
+	 * banner with no sane row; absent before api #192.
+	 */
+	spread?: { edges: number[]; planners: number[] } | null
+	/** The three running or upcoming banners most often in the same plans, by people. */
+	also?: Array<{ type: PlannedBannerType; id: number; name: string; planners: number }>
 }
 
 export interface DemandMonth {

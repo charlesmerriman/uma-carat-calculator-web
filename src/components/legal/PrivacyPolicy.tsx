@@ -279,8 +279,8 @@ export const PrivacyPolicy: React.FC = () => {
 							<strong>Aggregate statistics</strong> about how the calculator is used (for
 							example, the share of accounts that enable a given income option, which
 							banners are popular, or which umas win most in Champions Meeting). Basis: <strong>legitimate interest</strong>, Article
-							6(1)(f), in improving the Site. These figures are totals and never identify
-							anyone. Patreon supporters can see some of these totals on the Site&apos;s
+							6(1)(f), in improving the Site. These figures are totals and typical figures
+							(medians) and never identify anyone. Patreon supporters can see some of these totals on the Site&apos;s
 							Rankings page: counts only, never a name, an account or one person&apos;s plan
 							or team.
 						</li>
