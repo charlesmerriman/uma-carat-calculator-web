@@ -215,15 +215,16 @@ describe("breakdown", () => {
 })
 
 describe("usageByEvent", () => {
-	it("reads the last N counted events in order, zeros where unused, alternatives out", () => {
+	it("reads every counted event in order, zeros where unused, alternatives out", () => {
 		const appearances = [
 			{ event: CM20, style: "pace" as const, tier: "standard" as const, role: "main" as const },
 			{ event: CM20, style: "pace" as const, tier: "whale" as const, role: "borrow" as const },
 			{ event: CM22, style: "end" as const, tier: "whale" as const, role: "main" as const },
 			{ event: CM22, style: "end" as const, tier: "beginner" as const, role: "alt" as const },
 		]
-		expect(usageByEvent(appearances, [CM20, CM21, CM22], 10)).toEqual([2, 0, 1])
-		expect(usageByEvent(appearances, [CM20, CM21, CM22], 2)).toEqual([0, 1])
+		expect(usageByEvent(appearances, [CM20, CM21, CM22])).toEqual([2, 0, 1])
+		// The window decides the span.
+		expect(usageByEvent(appearances, [CM21, CM22])).toEqual([0, 1])
 	})
 })
 

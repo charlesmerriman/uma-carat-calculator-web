@@ -31,7 +31,7 @@ import { useGuideRankings } from "../../hooks/useGuideRankings"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
-import { STYLE_LABELS, defaultPvpEvent, raceEventsInOrder } from "../../utils/pvpGuide"
+import { STYLE_LABELS, defaultPvpEvent, hasEnded, isRunning, raceEventsInOrder } from "../../utils/pvpGuide"
 import { pvpEventHref, refForRaceEvent, sameEvent, shortEventName, type PvpEventKind } from "../../utils/pvpEvent"
 import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import {
@@ -81,8 +81,6 @@ const TIER_LABELS: Record<RankingTier, string> = {
 }
 // "Friend" as on the rest of the site (the sheet says "Pal").
 const CARD_TYPE_IDS = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
-/** The sparkline's span: the last ten events with a guide in the window. */
-const USAGE_EVENTS = 10
 /** How many search results show at once. */
 const SEARCH_RESULTS = 5
 
@@ -143,6 +141,9 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 	const umas = useMemo(() => rankUmas(guides, filters, (id) => umasById.has(id)), [guides, filters, umasById])
 	const deckCount = useMemo(() => countedDecks(guides, filters), [guides, filters])
 	const countedEvents = useMemo(() => guides.map((counted) => counted.event), [guides])
+	// The sparkline's mark: the first counted event still running or ahead.
+	const nextEvent = countedEvents.find((event) => !hasEnded(event, now)) ?? null
+	const nextLabel = nextEvent ? `${shortEventName(nextEvent)}, ${isRunning(nextEvent, now) ? "the event running now" : "the next event"}` : null
 	const scenarioCount = new Set(guides.map((counted) => counted.guide.scenario).filter((id) => id !== NO_SCENARIO)).size
 	const menuCounts = useMemo(() => countOptions(payload), [payload])
 
@@ -212,7 +213,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				fill={fillOf(rank.decks)}
 				count={plural(rank.decks, "deck")}
 				share={formatShare(rank.share)}
-				detail={<RowDetail appearances={rank.appearances} alternatives={rank.alternatives} events={countedEvents} isCard />}
+				detail={<RowDetail appearances={rank.appearances} alternatives={rank.alternatives} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard />}
 			/>
 		)
 	}
@@ -226,7 +227,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				fill={fillOf(rank.picks)}
 				count={plural(rank.picks, "pick")}
 				share={formatShare(rank.share)}
-				detail={<RowDetail appearances={rank.appearances} alternatives={0} events={countedEvents} isCard={false} />}
+				detail={<RowDetail appearances={rank.appearances} alternatives={0} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard={false} />}
 			/>
 		)
 	}
@@ -435,13 +436,17 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 /**
  * An opened row, drawn: by event as chips linking to each guide, by strategy
  * as a stacked bar with a legend, a card's decks by tier as figures, and its
- * use across the last ten counted events as a sparkline (mock
- * 04-guides-row-open.png).
+ * use across every counted event as a sparkline, marked at the event running
+ * now or next (mock 04-guides-row-open.png; the span is the owner's call,
+ * 2026-10-28).
  */
-function RowDetail({ appearances, alternatives, events, isCard }: {
+function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard }: {
 	appearances: RankingAppearance[]
 	alternatives: number
 	events: RaceEvent[]
+	/** The counted event running now or next, marked on the sparkline. */
+	next: RaceEvent | null
+	nextLabel: string | null
 	isCard: boolean
 }) {
 	const byEvent = breakdown(appearances, (appearance) => appearance.event)
@@ -449,7 +454,7 @@ function RowDetail({ appearances, alternatives, events, isCard }: {
 	const byTier = isCard
 		? breakdown(appearances, (appearance) => appearance.tier ?? "other").sort(([a], [b]) => RANKING_TIERS.indexOf(a) - RANKING_TIERS.indexOf(b))
 		: []
-	const usage = usageByEvent(appearances, events, USAGE_EVENTS)
+	const usage = usageByEvent(appearances, events)
 	const heading = "text-[10px] uppercase tracking-wider text-gray-400"
 	return (
 		<div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-x-[18px] gap-y-2.5">
@@ -503,8 +508,13 @@ function RowDetail({ appearances, alternatives, events, isCard }: {
 			)}
 			{events.length >= 2 && (
 				<div className="flex min-w-0 flex-col gap-1.5">
-					<span className={heading}>Across the last {Math.min(USAGE_EVENTS, events.length)} events</span>
-					<Sparkline points={usage} label={isCard ? "Decks per event, oldest first" : "Picks per event, oldest first"} />
+					<span className={heading}>Across {events.length} events</span>
+					<Sparkline
+						points={usage}
+						marker={next ? events.indexOf(next) : null}
+						label={`${isCard ? "Decks" : "Picks"} per event, oldest first${nextLabel ? `, marked at ${nextLabel}` : ""}`}
+					/>
+					{nextLabel && <span className="text-[10px] text-gray-400">Oldest on the left. The mark is {nextLabel}.</span>}
 				</div>
 			)}
 		</div>
