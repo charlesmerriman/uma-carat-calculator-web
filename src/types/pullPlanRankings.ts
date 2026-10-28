@@ -1,6 +1,6 @@
 /**
  * GET /rankings/pull-plans (backend views/rankings.py): the admin
- * analytics' banner tables and demand by month, hourly. Shares, never a
+ * analytics' banner tables and demand by month, half-daily. Shares, never a
  * count of planners or pulls (backend rankings_shares.pull_plan_shares).
  */
 

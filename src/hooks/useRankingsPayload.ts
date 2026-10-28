@@ -4,7 +4,7 @@
  * only on the server, so a 401/403 is "refused", never an error to retry.
  *
  * Fetched when the tab mounts, never on /app load, and not cached here: the
- * server builds each payload at most once an hour and keeps it, so a refetch
+ * server builds each payload at most once every half day and keeps it, so a refetch
  * on the next visit is cheap and picks up the newer build. A new `path` (the
  * PvP page's next event) shows loading, never the last path's numbers.
  */

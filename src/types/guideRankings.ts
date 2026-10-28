@@ -1,6 +1,6 @@
 /**
  * GET /rankings/guides (backend views/rankings.py): every pick in the
- * published guides, as rows, built at most once an hour.
+ * published guides, as rows, built at most once every half day.
  * utils/guideRankings.ts does the counting.
  */
 
@@ -48,7 +48,7 @@ export interface RankingScenario {
 }
 
 export interface GuideRankingsPayload {
-	/** When the server built this payload (ISO 8601). It rebuilds at most once an hour. */
+	/** When the server built this payload (ISO 8601). It rebuilds at most once every half day. */
 	generated_at: string
 	/** The scenarios some guide names, in release order. */
 	scenarios: RankingScenario[]

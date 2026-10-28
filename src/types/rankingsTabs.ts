@@ -1,6 +1,6 @@
 /**
  * GET /rankings/pvp/<kind>/<id> and GET /rankings/players (backend
- * views/rankings.py), the Rankings page's PvP and Players tabs, hourly.
+ * views/rankings.py), the Rankings page's PvP and Players tabs, half-daily.
  *
  * SHARES, NEVER A COUNT OF PEOPLE (owner, 2026-10-28; backend
  * rankings_shares.py): every figure is a share from 0 to 1, rounded to the
