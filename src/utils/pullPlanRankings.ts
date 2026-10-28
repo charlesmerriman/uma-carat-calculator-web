@@ -93,3 +93,16 @@ export function compactNumber(value: number): string {
 	if (Math.abs(value) < 1_000_000) return `${Math.round(value / 1000)}K`
 	return `${(value / 1_000_000).toFixed(1)}M`
 }
+
+/**
+ * A spread bucket's label from its edges (GET /rankings/pull-plans `spread`):
+ * the first "under 50", the last "300+", the rest "50 to 99", or "3" for a
+ * bucket one wide (a step-up's).
+ */
+export function spreadLabel(edges: number[], index: number): string {
+	if (index === edges.length - 1) return `${edges[index]}+`
+	if (index === 0) return `under ${edges[1]}`
+	const low = edges[index]
+	const high = edges[index + 1] - 1
+	return low === high ? String(low) : `${low} to ${high}`
+}

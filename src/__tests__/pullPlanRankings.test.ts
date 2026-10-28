@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { PlannedBannerRank } from "../types/pullPlanRankings"
-import { compactNumber, monthShares, pullPlanRows } from "../utils/pullPlanRankings"
+import { compactNumber, monthShares, pullPlanRows, spreadLabel } from "../utils/pullPlanRankings"
 
 /** Pull plans' rows (utils/pullPlanRankings.ts): what shows, and the two orders. */
 
@@ -61,5 +61,14 @@ describe("monthShares", () => {
 describe("compactNumber", () => {
 	it("shortens thousands and millions", () => {
 		expect([compactNumber(950), compactNumber(604_321), compactNumber(2_140_000)]).toEqual(["950", "604K", "2.1M"])
+	})
+})
+
+describe("spreadLabel", () => {
+	it("labels pull buckets and one-wide step buckets", () => {
+		const pulls = [0, 50, 100, 200, 300]
+		expect(pulls.map((_, index) => spreadLabel(pulls, index))).toEqual(["under 50", "50 to 99", "100 to 199", "200 to 299", "300+"])
+		const steps = [0, 2, 3, 4, 5]
+		expect(steps.map((_, index) => spreadLabel(steps, index))).toEqual(["under 2", "2", "3", "4", "5+"])
 	})
 })

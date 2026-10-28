@@ -15,6 +15,13 @@ export interface GalleryRankingsPayload {
 	decks: number
 	umas: Array<{ uma: number; teams: number; styles: Partial<Record<string, number>> }>
 	cards: Array<{ card: number; decks: number; borrows: number }>
+	/** The exact three-uma teams posted most (api #192; absent before). */
+	trios?: Array<{ umas: number[]; teams: number }>
+	/**
+	 * The event's three most copied posts, without the poster's name: the post
+	 * page shows that (api #192; absent before).
+	 */
+	copied?: Array<{ public_id: string; caption: string; copies: number; umas: number[] }>
 }
 
 export function useGalleryRankings(ref: PvpEventRef): RankingsState<GalleryRankingsPayload> {

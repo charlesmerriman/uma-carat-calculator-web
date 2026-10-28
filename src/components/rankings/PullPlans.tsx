@@ -9,7 +9,7 @@
  * the band, the month strip ("When the pulls fall due", six divs in place
  * of the Recharts chart and its table), the type and sort lenses (both
  * remembered on the device with the pinned window's choices), and one list
- * of PullPlanRow. A row opens in step 4, once the server sends its spread.
+ * of PullPlanRow, each opening to its pull spread and "also planning".
  *
  * BEHIND THE RAPTIVE GATE: guide editors only (useRankingsPullPlans) until
  * the owner lifts it; the API refuses everyone else the same way.
@@ -20,6 +20,7 @@
 import { useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
+import { useCalculatorData } from "../../services/CalculatorContext"
 import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinStore"
 import type { PlannedBannerType, PullPlanRankingsPayload } from "../../types/pullPlanRankings"
 import { formatShare } from "../../utils/guideRankings"
@@ -78,6 +79,16 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 	const pullsAhead = ahead.filter((row) => row.unit === "pulls").reduce((sum, row) => sum + row.total, 0)
 	const leader = Math.max(0, ...rows.map((row) => row.planners))
 	const months = useMemo(() => monthShares(payload.demand, now), [payload, now])
+	// A banner's Timeline card is its BannerTimeline, which the calculator's banners carry.
+	const { umaBannerData, supportBannerData, stepUpBannerData } = useCalculatorData()
+	const timelines = useMemo(() => {
+		const map = new Map<string, number>()
+		for (const banner of umaBannerData) map.set(`uma-${banner.id}`, banner.banner_timeline.id)
+		for (const banner of supportBannerData) map.set(`support-${banner.id}`, banner.banner_timeline.id)
+		for (const banner of stepUpBannerData) map.set(`step_up-${banner.id}`, banner.banner_timeline.id)
+		return map
+	}, [umaBannerData, supportBannerData, stepUpBannerData])
+	const timelineOf = (type: PlannedBannerType, id: number) => timelines.get(`${type}-${id}`) ?? null
 
 	return (
 		<div className="flex flex-col gap-3.5">
@@ -115,7 +126,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 				items={rows}
 				start={20}
 				itemKey={(row) => `${row.type}-${row.id}`}
-				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.planners / leader : 0} everyone={payload.planners} />}
+				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.planners / leader : 0} everyone={payload.planners} timelineOf={timelineOf} />}
 				empty="Nobody plans a banner like that yet."
 				footnote={
 					<span className="text-gray-400">
