@@ -21,6 +21,10 @@
  * remembered copy, `rankings-choices` (JSON): the Guides lens, the PvP event,
  * the Pull plans type and sort. Same store, same server snapshot (nothing
  * chosen), so a choice made in the window is there when the full page opens.
+ *
+ * SEEN (step 3): the pinned list's top ten as the window last showed it,
+ * `rankings-pin-seen` ({section, ids}). The retracted edge tab counts how
+ * many of today's top ten moved since then (utils/rankingsWindow.ts).
  */
 
 import { useSyncExternalStore } from "react"
@@ -38,12 +42,20 @@ export const GUIDE_LENSES: readonly GuideLens[] = ["overall", "speed", "stamina"
 /** What each section remembers; a missing value is that section's default. */
 export interface RankingsChoices {
 	guides?: { lens?: GuideLens }
-	/** `event` is a PvP event ref as the address bar writes it ("cm-21"). */
-	pvp?: { event?: string }
+	/** `event` is a PvP event ref as the address bar writes it ("cm-21"); `list` is the window's list. */
+	pvp?: { event?: string; list?: "umas" | "cards" }
 	"pull-plans"?: { type?: string; sort?: string }
 }
 
 const CHOICES_KEY = "rankings-choices"
+const SEEN_KEY = "rankings-pin-seen"
+
+/** The top ten the window last showed, for one section. */
+export interface RankingsSeen {
+	section: RankingsSection
+	ids: string[]
+}
+let seenSnapshot: RankingsSeen | null | undefined
 const NO_CHOICES: RankingsChoices = {}
 let choicesSnapshot: RankingsChoices | null = null
 
@@ -101,6 +113,20 @@ function readChoices(): RankingsChoices {
 	}
 }
 
+function readSeen(): RankingsSeen | null {
+	try {
+		const parsed = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "null") as RankingsSeen | null
+		return parsed && SECTIONS.includes(parsed.section) && Array.isArray(parsed.ids) ? parsed : null
+	} catch {
+		return null
+	}
+}
+
+function getSeenSnapshot(): RankingsSeen | null {
+	if (seenSnapshot === undefined) seenSnapshot = readSeen()
+	return seenSnapshot
+}
+
 function getChoicesSnapshot(): RankingsChoices {
 	choicesSnapshot ??= readChoices()
 	return choicesSnapshot
@@ -111,6 +137,7 @@ function subscribe(listener: () => void): () => void {
 	// Another tab pinning, unpinning or choosing shows here too.
 	const onStorage = (event: StorageEvent) => {
 		if (event.key === CHOICES_KEY) choicesSnapshot = readChoices()
+		else if (event.key === SEEN_KEY) seenSnapshot = readSeen()
 		else if (event.key === SECTION_KEY || event.key === DOCK_KEY) snapshot = read()
 		else return
 		listener()
@@ -152,8 +179,26 @@ export function chooseRankings<S extends keyof RankingsChoices>(section: S, choi
 	listeners.forEach((listener) => listener())
 }
 
+export function useRankingsSeen(): RankingsSeen | null {
+	return useSyncExternalStore(subscribe, getSeenSnapshot, () => null)
+}
+
+/** Remember the top ten the window just showed; a no-op when nothing changed. */
+export function markRankingsSeen(section: RankingsSection, ids: string[]): void {
+	const current = getSeenSnapshot()
+	if (current && current.section === section && current.ids.join() === ids.join()) return
+	seenSnapshot = { section, ids }
+	try {
+		localStorage.setItem(SEEN_KEY, JSON.stringify(seenSnapshot))
+	} catch {
+		// Kept in memory for this page's life.
+	}
+	listeners.forEach((listener) => listener())
+}
+
 /** Tests only: forget the cached read, so each test starts from its own storage. */
 export function resetRankingsPinForTests(): void {
 	snapshot = null
 	choicesSnapshot = null
+	seenSnapshot = undefined
 }
