@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 27, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 28, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -280,9 +280,9 @@ export const PrivacyPolicy: React.FC = () => {
 							example, the share of accounts that enable a given income option, which
 							banners are popular, or which umas win most in Champions Meeting). Basis: <strong>legitimate interest</strong>, Article
 							6(1)(f), in improving the Site. These figures are totals and typical figures
-							(medians) and never identify anyone. Patreon supporters can see some of these totals on the Site&apos;s
-							Rankings page: counts only, never a name, an account or one person&apos;s plan
-							or team.
+							(medians) and never identify anyone. Patreon supporters can see some of these figures on
+							the Site&apos;s Rankings page: totals and medians only, never a name, an account or one
+							person&apos;s plan or team.
 						</li>
 						<li>
 							<strong>Google Analytics</strong> and <strong>advertising cookies</strong>.
