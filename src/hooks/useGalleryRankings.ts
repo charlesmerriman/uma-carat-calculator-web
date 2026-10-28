@@ -22,6 +22,8 @@ export interface GalleryRankingsPayload {
 	 * page shows that (api #192; absent before).
 	 */
 	copied?: Array<{ public_id: string; caption: string; copies: number; umas: number[] }>
+	/** The lists at the start of the week, for rank movement (api #193). */
+	previous?: { generated_at: string; umas: number[]; cards: number[] } | null
 }
 
 export function useGalleryRankings(ref: PvpEventRef): RankingsState<GalleryRankingsPayload> {

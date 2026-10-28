@@ -83,6 +83,7 @@ const PVP: PvpRankingsPayload = {
 		trios: [{ umas: [41, 41, 41], teams: 2 }],
 	},
 	runs: { players: 2, races: 30, min_races: 20, rows: [{ uma: 41, style: "pace", races: 30, wins: 12 }] },
+	previous: { generated_at: "2026-10-26T00:00:00Z", umas: [], cards: [1], runs: [] },
 }
 
 const PLAYERS: PlayersRankingsPayload = {
@@ -159,6 +160,25 @@ describe("RankingsPage", () => {
 		// The band says what is counted.
 		expect(within(screen.getByRole("region", { name: "What the guides recommend" })).getByText("Guides counted")).toBeInTheDocument()
 		expect((await screen.findByText(/^Updated /)).tagName).toBe("TIME")
+	})
+
+	it("draws each row's movement since the week's start, counted under the same filters", async () => {
+		// At the week's start Fine Motion (2) led Kitasan Black (1).
+		const previousGuides = [{
+			...PAYLOAD.guides[0],
+			cards: [
+				{ card: 2, deck: 1, style: "front" as const, tier: "beginner" as const, role: "main" as const },
+				{ card: 2, deck: 2, style: "front" as const, tier: "whale" as const, role: "main" as const },
+				{ card: 1, deck: 1, style: "front" as const, tier: "beginner" as const, role: "main" as const },
+			],
+		}]
+		fetchMock.mockImplementation(() =>
+			Promise.resolve(new Response(JSON.stringify({ ...PAYLOAD, previous: { generated_at: "2026-10-26T00:00:00Z", guides: previousGuides } }), { status: 200 }))
+		)
+		renderPage(true)
+		const rows = within(await screen.findByRole("region", { name: "Overall" })).getAllByRole("listitem")
+		expect(rows[0]).toHaveTextContent("Kitasan Black▲up 1")
+		expect(rows[1]).toHaveTextContent("Fine Motion▼down 1")
 	})
 
 	it("switches the one list with the lens, and remembers the lens", async () => {
@@ -250,6 +270,8 @@ describe("RankingsPage", () => {
 		renderPage(true, { url: "/app/rankings?view=pvp&event=cm-21" })
 		const umas = await screen.findByRole("region", { name: "Umas players build" })
 		expect(within(umas).getByText("3 teams")).toBeInTheDocument()
+		// Maruzensky wasn't in the week's start: new.
+		expect(within(umas).getByText("new")).toBeInTheDocument()
 		expect(within(umas).getByText("75%")).toBeInTheDocument()
 		const cards = screen.getByRole("region", { name: "Cards in their decks" })
 		expect(within(cards).getByText("6 decks")).toBeInTheDocument()

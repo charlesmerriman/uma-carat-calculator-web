@@ -23,7 +23,8 @@ const list = (section: string): WindowList => ({
 	context: `${section} context`,
 	tabName: section === "pvp" ? "PvP · CM 21" : section,
 	search: section === "players" ? undefined : "Find a card or uma",
-	rows: NAMES.map((name, index) => ({ id: `id-${index}`, name, art: null, fill: 1 - index / 12, count: String(100 - index), share: "1%" })),
+	rows: NAMES.map((name, index) => ({ id: `id-${index}`, name, art: null, fill: 1 - index / 12, count: String(100 - index), share: "1%", movement: index === 0 ? 2 : undefined })),
+	moved: section === "guides" ? 3 : null,
 	settings:
 		section === "guides"
 			? [{ label: "List", options: [{ id: "overall", label: "Overall" }, { id: "umas", label: "Umas" }], value: "overall", onChange: (value) => chooseRankings("guides", { lens: value as "umas" }) }]
@@ -78,6 +79,13 @@ describe("RankingsDock", () => {
 		expect(screen.getByRole("complementary", { name: "Rankings: PvP" })).toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "PvP", pressed: true })).toBeInTheDocument()
 		expect(localStorage.getItem("rankings-pin")).toBe("pvp")
+	})
+
+	it("says how many moved this week, and draws each row's chip", () => {
+		act(() => pinRankings("guides"))
+		renderDock()
+		expect(screen.getByRole("complementary")).toHaveTextContent("guides context · 3 moved this week")
+		expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Oguri Cap▲up 2")
 	})
 
 	it("searches the whole list, keeping each row's place", () => {

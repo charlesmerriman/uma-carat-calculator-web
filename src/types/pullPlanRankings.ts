@@ -51,4 +51,6 @@ export interface PullPlanRankingsPayload {
 	planners?: number
 	banners: PlannedBannerRank[]
 	demand: DemandMonth[]
+	/** "<type>-<id>" by planners at the start of the week, for rank movement (api #193). */
+	previous?: { generated_at: string; banners: string[] } | null
 }

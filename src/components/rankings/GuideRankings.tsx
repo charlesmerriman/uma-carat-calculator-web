@@ -54,6 +54,7 @@ import {
 	type RankingAppearance,
 	type UmaRank,
 } from "../../utils/guideRankings"
+import { movement } from "../../utils/rankingsMovement"
 import { useReportUpdated } from "./rankingsUpdated"
 import { CardArt } from "./kit/CardArt"
 import { CardTypeChip } from "./kit/CardTypeChip"
@@ -197,7 +198,25 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 		...CARD_TYPE_IDS.map((type) => ({ id: type as GuideLens, label: CARD_TYPE_LABELS[type], count: cards.filter((rank) => typeOf(rank.card) === type).length })),
 		{ id: "umas", label: "Umas", count: umas.length },
 	]
-	const lensCards = lens === "overall" ? cards : lens === "umas" ? [] : cards.filter((rank) => typeOf(rank.card) === lens)
+	const lensCards = useMemo(
+		() => (lens === "overall" ? cards : lens === "umas" ? [] : cards.filter((rank) => typeOf(rank.card) === lens)),
+		[lens, cards, typeOf]
+	)
+
+	// RANK MOVEMENT: the week's start counted under the same filters and lens, so a chip
+	// never reports a change the filters made.
+	const previousGuides = useMemo(
+		() => (payload.previous ? countedGuides(events, { ...payload, guides: payload.previous.guides }, filters, eventWindow) : null),
+		[events, payload, filters, eventWindow]
+	)
+	const moves = useMemo(() => {
+		if (!previousGuides) return new Map<number, number | "new">()
+		if (lens === "umas") {
+			return movement(umas.map((rank) => rank.uma), rankUmas(previousGuides, filters, (id) => umasById.has(id)).map((rank) => rank.uma))
+		}
+		const before = rankCards(previousGuides, filters, typeOf).filter((rank) => lens === "overall" || typeOf(rank.card) === lens)
+		return movement(lensCards.map((rank) => rank.card), before.map((rank) => rank.card))
+	}, [previousGuides, lens, umas, lensCards, filters, typeOf, umasById])
 	const leader = lens === "umas" ? (umas[0]?.picks ?? 0) : (lensCards[0]?.decks ?? 0)
 	const fillOf = (count: number) => (leader > 0 ? count / leader : 0)
 
@@ -208,6 +227,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				place={index + 1}
 				art={<CardArt card={card} />}
 				name={card?.name ?? "Unknown card"}
+				movement={moves.get(rank.card)}
 				sub={
 					<>
 						<CardTypeChip type={card?.card_type} />
@@ -228,6 +248,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				place={index + 1}
 				art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? oshiIds.has(uma.id) : false} className="w-12" />}
 				name={uma?.name ?? "Unknown uma"}
+				movement={moves.get(rank.uma)}
 				fill={fillOf(rank.picks)}
 				count={plural(rank.picks, "pick")}
 				share={formatShare(rank.share)}
@@ -246,6 +267,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 						count: plural(rank.picks, "pick"),
 						share: formatShare(rank.share),
 						fill: fillOf(rank.picks),
+						movement: moves.get(rank.uma),
 					}
 				})
 			: lensCards.slice(0, 3).map((rank) => {
@@ -257,6 +279,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 						count: plural(rank.decks, "deck"),
 						share: formatShare(rank.share),
 						fill: fillOf(rank.decks),
+						movement: moves.get(rank.card),
 					}
 				})
 	const lensLabel = lensOptions.find((option) => option.id === lens)?.label ?? "Overall"

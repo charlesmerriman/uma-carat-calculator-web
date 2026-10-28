@@ -53,4 +53,10 @@ export interface GuideRankingsPayload {
 	/** The scenarios some guide names, in release order. */
 	scenarios: RankingScenario[]
 	guides: RankingGuide[]
+	/**
+	 * The guide rows as they stood at the start of the week (the server's
+	 * RankingsSnapshot), counted with the filters on screen for rank
+	 * movement. Null before a first snapshot; absent before api #193.
+	 */
+	previous?: { generated_at: string; guides: RankingGuide[] } | null
 }

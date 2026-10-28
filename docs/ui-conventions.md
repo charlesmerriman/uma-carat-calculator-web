@@ -2165,6 +2165,13 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   state is remembered from `desktop-nav` up; below that it starts retracted every load and
   opens as a drawer. The source stays mounted while retracted, since the corner tab's count
   needs the list.
+- **Rank movement** (redesign step 5): every payload carries `previous`, its lists at the
+  start of the week (the API's `RankingsSnapshot`, rotated on the first rebuild after
+  Monday 00:00 UTC). `utils/rankingsMovement.movement` turns two orders into each row's
+  `Movement` chip ("▲2", "▼1", "new"). Guides send their old ROWS, counted with the filters
+  and lens on screen, so a chip never reports a change the filters made; Pull plans draw
+  movement in the "By planners" order only (the order the server snapshots); What wins only
+  for ranked rows. The window's context line says "N moved this week".
 - **Filters on a phone**: below `desktop-nav` the Guides pills give way to a "Filters · N"
   button (bottom right) and a bottom sheet (`kit/FilterSheet.tsx`, a native `<dialog>`). The
   pills and the sheet draw the same `FilterGroup`s, so they can't disagree.
