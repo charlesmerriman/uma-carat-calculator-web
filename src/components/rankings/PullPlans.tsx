@@ -18,7 +18,8 @@
  *
  * SHARES, NOT COUNTS (owner, 2026-10-28): no figure says how many people
  * plan or how many pulls they plan in all, since either would let a reader
- * estimate the site's players. Medians and averages are per planner, so
+ * estimate the site's players, and the server sends none
+ * (types/pullPlanRankings.ts). Medians and averages are per planner, so
  * they stay.
  */
 
@@ -82,7 +83,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 		[payload, type, sort, showEnded]
 	)
 	const ahead = payload.banners.filter((row) => row.status !== "ended")
-	const leader = Math.max(0, ...rows.map((row) => row.planners))
+	const leader = Math.max(0, ...rows.map((row) => row.share))
 	// Movement is by planners (the order the server snapshots), so it shows in that order only.
 	const moves = useMemo(() => {
 		if (sort !== "planners") return new Map<string, number | "new">()
@@ -92,7 +93,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 	const months = useMemo(() => monthShares(payload.demand, now), [payload, now])
 	const busiest = months.reduce<(typeof months)[number] | null>((best, month) => (best && best.share >= month.share ? best : month), null)
 	// The banner ahead the most players plan, as a share of everyone with a plan.
-	const mostPlanned = ahead.reduce<(typeof ahead)[number] | null>((best, row) => (best && best.planners >= row.planners ? best : row), null)
+	const mostPlanned = ahead.reduce<(typeof ahead)[number] | null>((best, row) => (best && best.share >= row.share ? best : row), null)
 	// A banner's Timeline card is its BannerTimeline, which the calculator's banners carry.
 	const { umaBannerData, supportBannerData, stepUpBannerData } = useCalculatorData()
 	const timelines = useMemo(() => {
@@ -110,9 +111,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 				title="What players plan to pull on"
 				stats={[
 					{ label: "Banners ahead", value: ahead.length.toLocaleString() },
-					...(mostPlanned && payload.planners
-						? [{ label: "Plan the top banner", value: formatShare(mostPlanned.planners / payload.planners), suffix: mostPlanned.name }]
-						: []),
+					...(mostPlanned ? [{ label: "Plan the top banner", value: formatShare(mostPlanned.share), suffix: mostPlanned.name }] : []),
 					...(busiest && busiest.share > 0 ? [{ label: "Busiest month", value: formatShare(busiest.share), suffix: busiest.label }] : []),
 				]}
 			>
@@ -142,7 +141,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 				items={rows}
 				start={20}
 				itemKey={(row) => `${row.type}-${row.id}`}
-				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.planners / leader : 0} everyone={payload.planners} timelineOf={timelineOf} movement={moves.get(`${row.type}-${row.id}`)} />}
+				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.share / leader : 0} timelineOf={timelineOf} movement={moves.get(`${row.type}-${row.id}`)} />}
 				empty="Nobody plans a banner like that yet."
 				footnote={
 					<span className="text-gray-400">

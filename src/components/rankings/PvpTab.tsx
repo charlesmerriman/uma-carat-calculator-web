@@ -18,14 +18,15 @@
  *
  * SHARES, NOT COUNTS (owner, 2026-10-28): nothing here says how many teams
  * were saved, races logged or players took part, so no one can estimate the
- * site's players from it. Gallery posts are public, so their count stays.
+ * site's players from it; the server sends shares and win rates only
+ * (types/rankingsTabs.ts). Gallery posts are public, so their count stays.
  */
 
 import { useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import type { RaceEvent } from "../../types"
-import type { PvpRankingsPayload } from "../../types/rankingsTabs"
+import type { PvpRankingsPayload, WinRateRow } from "../../types/rankingsTabs"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinStore"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
@@ -36,7 +37,7 @@ import { FramedUma } from "../FramedUma"
 import { STYLE_LABELS, defaultPvpEvent, findEvent, raceEventsInOrder } from "../../utils/pvpGuide"
 import { PVP_EVENT_PARAM, formatPvpEvent, parsePvpEvent, refForRaceEvent, shortEventName, splitEventName } from "../../utils/pvpEvent"
 import { formatShare } from "../../utils/guideRankings"
-import { winRates, type WinRateRow } from "../../utils/runResults"
+import { winRates } from "../../utils/runResults"
 import { movement } from "../../utils/rankingsMovement"
 import { useReportUpdated } from "./rankingsUpdated"
 import { Bar } from "./kit/Bar"
@@ -113,7 +114,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 	const umas = knownUmas(built, catalogue)
 	// The band's two shares: the uma built most, and the best ranked win rate.
 	const topUma = umas[0] ? catalogue.umasById.get(umas[0].uma) : undefined
-	const bestRate = winRates(runs.rows, runs.min_races).ranked.find((row) => catalogue.umasById.has(row.uma))
+	const bestRate = winRates(runs).ranked.find((row) => catalogue.umasById.has(row.uma))
 	// Rank movement against the week's start (the server's snapshot), by id.
 	const umaMoves = movement(built.umas.map((row) => row.uma), payload.previous?.umas)
 	const cardMoves = movement(built.cards.map((row) => row.card), payload.previous?.cards)
@@ -121,25 +122,24 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 	const { title } = splitEventName(event)
 	const short = shortEventName(event)
 
-	/** An uma opened: her strategies, her share of the gallery's posts, her CM Runs win rate. */
+	/** An uma opened: her strategies, her share of the gallery's posts, her CM Runs win rate per strategy. */
 	const umaDetail = (row: UmaBuildRow) => {
 		const styles = stylesOf(row)
-		const inGallery = posted?.umas.find((entry) => entry.uma === row.uma)?.teams ?? 0
-		const raced = runs.rows.filter((entry) => entry.uma === row.uma)
-		const races = raced.reduce((sum, entry) => sum + entry.races, 0)
-		const wins = raced.reduce((sum, entry) => sum + entry.wins, 0)
+		const inGallery = posted?.umas.find((entry) => entry.uma === row.uma)?.share ?? 0
+		// A rate per strategy: the server sends no races to add two of them up by.
+		const raced = runs.filter((entry) => entry.uma === row.uma)
 		return (
 			<Detail>
 				<DetailBlock heading="By strategy">
-					<Bar fill={1} parts={styles.map(([style, count]) => stylePart(style, count))} />
-					<StyleLegend entries={styles} />
+					<Bar fill={1} parts={styles.map(([style, share]) => stylePart(style, share))} />
+					<StyleLegend entries={styles.map(([style, share]) => [style, formatShare(share)])} />
 				</DetailBlock>
 				{posted && (
 					<DetailBlock heading="Posted to the gallery">
 						<span className="text-[11px] text-gray-300">
 							{inGallery > 0 ? (
 								<>
-									In <b className="font-semibold text-gray-100">{formatShare(inGallery / posted.posts)}</b> of the{" "}
+									In <b className="font-semibold text-gray-100">{formatShare(inGallery)}</b> of the{" "}
 									{plural(posted.posts, "posted team")}
 								</>
 							) : (
@@ -150,13 +150,14 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 				)}
 				<DetailBlock heading="In CM Runs">
 					<span className="text-[11px] text-gray-300">
-						{races > 0 ? (
-							<>
-								Wins <b className="font-semibold text-gray-100">{formatShare(wins / races)}</b> of her races
-							</>
-						) : (
-							"No races logged yet"
-						)}
+						{raced.length > 0
+							? raced.map((entry, index) => (
+									<span key={entry.style}>
+										{index > 0 && " · "}
+										{STYLE_LABELS[entry.style]} wins <b className="font-semibold text-gray-100">{formatShare(entry.rate)}</b>
+									</span>
+								))
+							: "Not enough races logged yet"}
 					</span>
 				</DetailBlock>
 			</Detail>
@@ -168,7 +169,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 			<StatBand
 				title={`${title}: what players build, and what wins`}
 				stats={[
-					...(topUma && built.teams > 0 ? [{ label: `Build ${topUma.name}`, value: formatShare(umas[0].teams / built.teams) }] : []),
+					...(topUma ? [{ label: `Build ${topUma.name}`, value: formatShare(umas[0].share) }] : []),
 					...(bestRate ? [{ label: "Best win rate", value: formatShare(bestRate.rate), suffix: catalogue.umasById.get(bestRate.uma)?.name }] : []),
 					...(gallery.status === "error" || gallery.status === "refused"
 						? []
@@ -178,7 +179,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 				Every team saved for {short} on the site, posted or not, and every ticket logged in CM Runs.
 			</StatBand>
 
-			{built.teams === 0 ? (
+			{built.umas.length === 0 ? (
 				<p className={PANEL_NOTE}>Nobody has saved a team for this event yet.</p>
 			) : (
 				<div className={GRID}>
@@ -201,9 +202,9 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 			)}
 
 			<div className={GRID}>
-				<WhatWins runs={runs} umas={umas} teams={built.teams} catalogue={catalogue} previous={payload.previous?.runs} />
+				<WhatWins runs={runs} umas={umas} catalogue={catalogue} previous={payload.previous?.runs} />
 				<div className="flex min-w-0 flex-col gap-3">
-					{built.trios && <TrioList trios={built.trios} teams={built.teams} catalogue={catalogue} />}
+					{built.trios && <TrioList trios={built.trios} catalogue={catalogue} />}
 					<YourTeam event={event} ranked={umas.map((row) => row.uma)} catalogue={catalogue} />
 				</div>
 			</div>
@@ -212,22 +213,21 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 }
 
 /**
- * Win rates from CM Runs, ranked from RANKED_RACES up; thinner rows (from the
- * server's floor) sit under them, muted, with no place. Each rate carries
+ * Win rates from CM Runs, ranked from 100 races up; thinner rows (from the
+ * server's floor) sit under them, muted, with no place. The server ranks them. Each rate carries
  * its confidence marks. The bar is the running green, scaled to the best
  * ranked rate.
  */
-function WhatWins({ runs, umas, teams, catalogue, previous }: {
+function WhatWins({ runs, umas, catalogue, previous }: {
 	runs: PvpRankingsPayload["runs"]
 	umas: PvpRankingsPayload["built"]["umas"]
-	teams: number
 	catalogue: PvpCatalogueIndex
 	/** The ranked rows at the week's start, as "<uma>-<style>". */
 	previous: string[] | undefined
 }) {
 	const oshiIds = useOshiIds()
 	const known = (row: WinRateRow) => catalogue.umasById.has(row.uma)
-	const rates = winRates(runs.rows, runs.min_races)
+	const rates = winRates(runs)
 	const ranked = rates.ranked.filter(known)
 	const unranked = rates.unranked.filter(known)
 	const leader = ranked[0]?.rate ?? unranked[0]?.rate ?? 0
@@ -235,7 +235,7 @@ function WhatWins({ runs, umas, teams, catalogue, previous }: {
 	const moves = movement(rates.ranked.map((entry) => `${entry.uma}-${entry.style}`), previous)
 	const row = (entry: WinRateRow, place: number | null) => {
 		const uma = catalogue.umasById.get(entry.uma)
-		const styleTeams = umas.find((built) => built.uma === entry.uma)?.styles[entry.style] ?? 0
+		const styleShare = umas.find((built) => built.uma === entry.uma)?.styles[entry.style] ?? 0
 		return (
 			<RankRow
 				place={place}
@@ -246,7 +246,7 @@ function WhatWins({ runs, umas, teams, catalogue, previous }: {
 				sub={
 					<span>
 						{STYLE_LABELS[entry.style]}
-						{teams > 0 && ` · ${formatShare(styleTeams / teams)} of teams`}
+						{styleShare > 0 && ` · ${formatShare(styleShare)} of teams`}
 					</span>
 				}
 				fill={leader > 0 ? Math.min(1, entry.rate / leader) : 0}

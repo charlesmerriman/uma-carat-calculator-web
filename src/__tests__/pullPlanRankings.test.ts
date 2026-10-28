@@ -1,21 +1,21 @@
 import { describe, expect, it } from "vitest"
 import type { PlannedBannerRank } from "../types/pullPlanRankings"
-import { compactNumber, monthShares, pullPlanRows, spreadLabel } from "../utils/pullPlanRankings"
+import { monthShares, pullPlanRows, spreadLabel } from "../utils/pullPlanRankings"
 
 /** Pull plans' rows (utils/pullPlanRankings.ts): what shows, and the two orders. */
 
-const row = (id: number, type: PlannedBannerRank["type"], status: PlannedBannerRank["status"], start: string | null, planners: number): PlannedBannerRank => ({
+const row = (id: number, type: PlannedBannerRank["type"], status: PlannedBannerRank["status"], start: string | null, share: number): PlannedBannerRank => ({
 	type, unit: type === "step_up" ? "steps" : "pulls", id, name: `Banner ${id}`,
-	start_date: start, end_date: null, predicted: false, status, planners, total: 0, average: 0, median: 0,
+	start_date: start, end_date: null, predicted: false, status, share, average: 0, median: 0,
 })
 
 // In the server's order: planners first.
 const ROWS = [
-	row(1, "uma", "upcoming", "2026-12-01T00:00:00Z", 500),
-	row(2, "support", "running", "2026-10-20T00:00:00Z", 300),
-	row(3, "uma", "upcoming", null, 300),
-	row(4, "uma", "ended", "2026-09-01T00:00:00Z", 900),
-	row(5, "step_up", "upcoming", "2026-11-01T00:00:00Z", 40),
+	row(1, "uma", "upcoming", "2026-12-01T00:00:00Z", 0.5),
+	row(2, "support", "running", "2026-10-20T00:00:00Z", 0.3),
+	row(3, "uma", "upcoming", null, 0.3),
+	row(4, "uma", "ended", "2026-09-01T00:00:00Z", 0.9),
+	row(5, "step_up", "upcoming", "2026-11-01T00:00:00Z", 0.04),
 ]
 const ids = (rows: PlannedBannerRank[]) => rows.map((entry) => entry.id)
 
@@ -39,11 +39,12 @@ describe("pullPlanRows", () => {
 })
 
 describe("monthShares", () => {
-	const month = (key: string, pulls: number) => ({ month: key, banners: 1, planners: 1, total_pulls: pulls, excluded: 0, step_up_planners: 0 })
+	const month = (key: string, share: number) => ({ month: key, share })
 
-	it("shares this month, the next four and Later, adding up to everything still ahead", () => {
+	it("shares this month, the next four and Later, scaled to add up to everything still ahead", () => {
+		// The server's shares are of every month it sent, the ended September's too.
 		const shares = monthShares(
-			[month("2026-09", 999), month("2026-10", 100), month("2026-12", 300), month("2027-03", 200), month("2027-06", 250), month("Later", 150)],
+			[month("2026-09", 0.5), month("2026-10", 0.05), month("2026-12", 0.15), month("2027-03", 0.1), month("2027-06", 0.125), month("Later", 0.075)],
 			new Date("2026-10-28T12:00:00Z")
 		)
 		expect(shares.map((entry) => [entry.key, entry.share])).toEqual([
@@ -55,12 +56,6 @@ describe("monthShares", () => {
 
 	it("is all zeros with nothing planned", () => {
 		expect(monthShares([], new Date("2026-10-28T00:00:00Z")).every((entry) => entry.share === 0)).toBe(true)
-	})
-})
-
-describe("compactNumber", () => {
-	it("shortens thousands and millions", () => {
-		expect([compactNumber(950), compactNumber(604_321), compactNumber(2_140_000)]).toEqual(["950", "604K", "2.1M"])
 	})
 })
 

@@ -72,8 +72,8 @@ const PAYLOAD: GalleryRankingsPayload = {
 	posts: 143,
 	decks: 429,
 	// 99 is no longer in the catalogue, so it is left off.
-	umas: [{ uma: 41, teams: 120, styles: { pace: 70, end: 50 } }, { uma: 99, teams: 3, styles: { front: 3 } }],
-	cards: [{ card: 1, decks: 401, borrows: 20 }],
+	umas: [{ uma: 41, share: 0.84, styles: { pace: 0.49, end: 0.35 } }, { uma: 99, share: 0.02, styles: { front: 0.02 } }],
+	cards: [{ card: 1, share: 0.93, borrowed: 0.05 }],
 	copied: [{ public_id: "abc123", caption: "Pace core", copies: 12, umas: [41] }],
 }
 

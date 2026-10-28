@@ -1,6 +1,7 @@
 /**
  * GET /rankings/pull-plans (backend views/rankings.py): the admin
- * analytics' banner tables and demand by month, hourly.
+ * analytics' banner tables and demand by month, hourly. Shares, never a
+ * count of planners or pulls (backend rankings_shares.pull_plan_shares).
  */
 
 export type PlannedBannerType = "uma" | "support" | "step_up"
@@ -16,39 +17,30 @@ export interface PlannedBannerRank {
 	end_date: string | null
 	predicted: boolean
 	status: "upcoming" | "running" | "ended"
-	planners: number
-	total: number
+	/** Its planners, of everyone with a plan: 0 to 1. */
+	share: number
 	average: number
 	/** The middle planner's figure: the "typical" column. */
 	median: number
 	/**
-	 * How planners spread their pulls (steps on a step-up): `planners[i]`
-	 * plan from `edges[i]` up to the next edge, the last open. Null for a
-	 * banner with no sane row; absent before api #192.
+	 * How planners spread their pulls (steps on a step-up): `shares[i]` plan
+	 * from `edges[i]` up to the next edge, the last open. Null for a banner
+	 * with no sane row.
 	 */
-	spread?: { edges: number[]; planners: number[] } | null
-	/** The three running or upcoming banners most often in the same plans, by people. */
-	also?: Array<{ type: PlannedBannerType; id: number; name: string; planners: number }>
+	spread?: { edges: number[]; shares: number[] } | null
+	/** The three running or upcoming banners most often in the same plans: `share` of this banner's planners. */
+	also?: Array<{ type: PlannedBannerType; id: number; name: string; share: number }>
 }
 
 export interface DemandMonth {
 	/** "2026-11", or "Later" for everything past the listed months and anything undated. */
 	month: string
-	banners: number
-	planners: number
-	total_pulls: number
-	excluded: number
-	step_up_planners: number
+	/** This month's share of every planned pull. */
+	share: number
 }
 
 export interface PullPlanRankingsPayload {
 	generated_at: string
-	/**
-	 * Everyone with any banner in their active plan, each once: a row's
-	 * share is out of this (api #191). Optional: an hour-old cached payload
-	 * from before that release has none, and the shares wait for it.
-	 */
-	planners?: number
 	banners: PlannedBannerRank[]
 	demand: DemandMonth[]
 	/** "<type>-<id>" by planners at the start of the week, for rank movement (api #193). */

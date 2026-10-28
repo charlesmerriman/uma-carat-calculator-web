@@ -40,14 +40,12 @@ function statusOf(row: PlannedBannerRank): Status {
 	return row.status
 }
 
-export function PullPlanRow({ row, fill, everyone, timelineOf, movement }: {
+export function PullPlanRow({ row, fill, timelineOf, movement }: {
 	row: PlannedBannerRank
 	/** Rank movement by planners over the week; only drawn in the planners order. */
 	movement?: MovementValue
-	/** planners / the list's leader. */
+	/** share / the list's leader. */
 	fill: number
-	/** Everyone with a plan (the payload's `planners`), or undefined before api #191. */
-	everyone: number | undefined
 	/** A banner's Timeline card (its BannerTimeline id), for the "also planning" chips. */
 	timelineOf: (type: PlannedBannerType, id: number) => number | null
 }) {
@@ -83,7 +81,7 @@ export function PullPlanRow({ row, fill, everyone, timelineOf, movement }: {
 			</span>
 			<Bar fill={fill} className="hidden @min-[47.5rem]:block" />
 			<span className="flex flex-col items-end whitespace-nowrap text-right text-[11px] tabular-nums text-gray-400">
-				<b className="text-[13px] font-semibold text-gray-100">{everyone ? formatShare(row.planners / everyone) : "…"}</b>
+				<b className="text-[13px] font-semibold text-gray-100">{formatShare(row.share)}</b>
 				of planners
 			</span>
 			<span className="hidden flex-col items-end whitespace-nowrap text-right text-[11px] tabular-nums text-gray-400 @min-[47.5rem]:flex">
@@ -121,7 +119,7 @@ export function PullPlanRow({ row, fill, everyone, timelineOf, movement }: {
 								<span className="flex flex-wrap gap-1">
 									{row.also.map((other) => {
 										const timeline = timelineOf(other.type, other.id)
-										const label = `${other.name} · ${formatShare(row.planners ? other.planners / row.planners : 0)}`
+										const label = `${other.name} · ${formatShare(other.share)}`
 										const chip = "rounded-full border border-brand/35 px-2 py-0.5 text-[11px] tabular-nums text-brand"
 										return timeline ? (
 											<Link key={`${other.type}-${other.id}`} to={timelineFocusHref({ kind: "banner", id: timeline })} className={`${chip} transition hover:bg-brand/15`}>
@@ -143,19 +141,18 @@ export function PullPlanRow({ row, fill, everyone, timelineOf, movement }: {
 	)
 }
 
-/** Five small bars, one per bucket, each its share of the planners with a sane figure. */
+/** Five small bars, one per bucket, each its share of the planners with a sane figure (the server's). */
 function Spread({ spread, unit }: { spread: NonNullable<PlannedBannerRank["spread"]>; unit: "pulls" | "steps" }) {
-	const total = spread.planners.reduce((sum, value) => sum + value, 0)
-	const top = Math.max(0, ...spread.planners)
+	const top = Math.max(0, ...spread.shares)
 	return (
 		<ol className="grid grid-cols-5 items-end gap-1.5" aria-label={`Planners by ${unit} planned`}>
-			{spread.planners.map((planners, index) => (
+			{spread.shares.map((share, index) => (
 				<li key={index} className="flex min-w-0 flex-col items-center gap-0.5">
 					<span className="flex h-8 w-full items-end" aria-hidden="true">
-						<span className="block w-full rounded-t-[3px] border-t-2 border-brand bg-brand/35" style={{ height: `${top ? Math.max(4, (planners / top) * 100) : 4}%` }} />
+						<span className="block w-full rounded-t-[3px] border-t-2 border-brand bg-brand/35" style={{ height: `${top ? Math.max(4, (share / top) * 100) : 4}%` }} />
 					</span>
 					<span className="truncate text-[10px] tabular-nums text-gray-400">{spreadLabel(spread.edges, index)}</span>
-					<b className="text-[11px] font-semibold tabular-nums text-gray-100">{formatShare(total ? planners / total : 0)}</b>
+					<b className="text-[11px] font-semibold tabular-nums text-gray-100">{formatShare(share)}</b>
 				</li>
 			))}
 		</ol>

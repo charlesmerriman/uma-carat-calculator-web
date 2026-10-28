@@ -1,5 +1,5 @@
 /**
- * The lists for a set of counted teams (types/rankingsTabs.ts TeamCountsData),
+ * The lists for a set of teams as shares (types/rankingsTabs.ts TeamSharesData),
  * shared by the Rankings page's PvP tab (every saved team) and the PvP
  * page's Rankings view (gallery posts), so the two read the same (mocks
  * 09-pvp.png and 17-pvp-page.png):
@@ -16,7 +16,7 @@
  */
 
 import type { ReactNode } from "react"
-import type { TeamCountsData } from "../../types/rankingsTabs"
+import type { TeamSharesData } from "../../types/rankingsTabs"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
@@ -34,7 +34,7 @@ import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCoun
 export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
 	hint: string
-	counts: Pick<TeamCountsData, "teams" | "umas">
+	counts: Pick<TeamSharesData, "umas">
 	catalogue: PvpCatalogueIndex
 	sub?: (uma: number) => ReactNode
 	detail?: (row: UmaBuildRow) => ReactNode
@@ -43,7 +43,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 }) {
 	const oshiIds = useOshiIds()
 	const umas = knownUmas(counts, catalogue)
-	const leader = umas[0]?.teams ?? 0
+	const leader = umas[0]?.share ?? 0
 	const used = MEMBER_STYLES.filter((style) => umas.some((row) => (row.styles[style] ?? 0) > 0))
 	return (
 		<RankedList
@@ -63,9 +63,9 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 						name={uma?.name ?? "Unknown uma"}
 						movement={moves?.get(row.uma)}
 						sub={sub?.(row.uma)}
-						fill={leader > 0 ? row.teams / leader : 0}
-						parts={stylesOf(row).map(([style, count]) => stylePart(style, count))}
-						count={formatShare(counts.teams ? row.teams / counts.teams : 0)}
+						fill={leader > 0 ? row.share / leader : 0}
+						parts={stylesOf(row).map(([style, share]) => stylePart(style, share))}
+						count={formatShare(row.share)}
 						detail={detail?.(row)}
 					/>
 				)
@@ -77,14 +77,14 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 	label: string
 	hint: string
-	counts: Pick<TeamCountsData, "decks" | "cards">
+	counts: Pick<TeamSharesData, "cards">
 	catalogue: PvpCatalogueIndex
 	sub?: (card: number) => ReactNode
 	/** Rank movement over the week, by card id. */
 	moves?: ReadonlyMap<number, MovementValue>
 }) {
 	const cards = counts.cards.filter((row) => catalogue.cardsById.has(row.card))
-	const leader = cards[0]?.decks ?? 0
+	const leader = cards[0]?.share ?? 0
 	return (
 		<RankedList
 			label={label}
@@ -105,11 +105,11 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 							<>
 								<CardTypeChip type={card?.card_type} />
 								{sub?.(row.card)}
-								{row.borrows > 0 && <span>{formatShare(row.borrows / row.decks)} borrowed</span>}
+								{row.borrowed > 0 && <span>{formatShare(row.borrowed)} borrowed</span>}
 							</>
 						}
-						fill={leader > 0 ? row.decks / leader : 0}
-						count={formatShare(counts.decks ? row.decks / counts.decks : 0)}
+						fill={leader > 0 ? row.share / leader : 0}
+						count={formatShare(row.share)}
 					/>
 				)
 			}}
@@ -118,9 +118,8 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 }
 
 /** The exact three-uma teams built most (mock 09-pvp.png): three portraits, the names, the share of teams. */
-export function TrioList({ trios, teams, catalogue }: {
-	trios: NonNullable<TeamCountsData["trios"]>
-	teams: number
+export function TrioList({ trios, catalogue }: {
+	trios: NonNullable<TeamSharesData["trios"]>
 	catalogue: PvpCatalogueIndex
 }) {
 	const oshiIds = useOshiIds()
@@ -142,7 +141,7 @@ export function TrioList({ trios, teams, catalogue }: {
 							<span className="flex min-w-0 flex-col">
 								<b className="text-[13px] font-semibold text-gray-100">{umas.map((uma) => uma.name).join(" · ")}</b>
 								<span className="text-[11px] tabular-nums text-gray-400">
-									{formatShare(teams ? trio.teams / teams : 0)} of teams
+									{formatShare(trio.share)} of teams
 								</span>
 							</span>
 						</li>

@@ -65,43 +65,42 @@ const PAYLOAD: GuideRankingsPayload = {
 
 const PULL_PLANS: PullPlanRankingsPayload = {
 	generated_at: "2026-10-27T20:00:00Z",
-	planners: 16000,
 	banners: [{
 		type: "uma", unit: "pulls", id: 88, name: "Gentildonna", start_date: "2026-11-05T00:00:00Z",
 		end_date: "2026-11-15T00:00:00Z", predicted: true, status: "upcoming",
-		planners: 5807, total: 958155, average: 165, median: 150,
-		spread: { edges: [0, 50, 100, 200, 300], planners: [500, 1500, 2800, 700, 307] },
-		also: [{ type: "support", id: 90, name: "Kitasan Black", planners: 2100 }],
+		share: 0.36, average: 165, median: 150,
+		spread: { edges: [0, 50, 100, 200, 300], shares: [0.09, 0.26, 0.48, 0.12, 0.05] },
+		also: [{ type: "support", id: 90, name: "Kitasan Black", share: 0.36 }],
 	}],
-	demand: [{ month: "2026-11", banners: 6, planners: 9000, total_pulls: 1200000, excluded: 0, step_up_planners: 40 }],
+	demand: [{ month: "2026-11", share: 1 }],
 }
 
 const PVP: PvpRankingsPayload = {
 	generated_at: "2026-10-27T20:00:00Z",
 	built: {
-		teams: 4, decks: 12, umas: [{ uma: 41, teams: 3, styles: { pace: 3 } }], cards: [{ card: 1, decks: 6, borrows: 2 }],
-		trios: [{ umas: [41, 41, 41], teams: 2 }],
+		umas: [{ uma: 41, share: 0.75, styles: { pace: 0.75 } }], cards: [{ card: 1, share: 0.5, borrowed: 0.33 }],
+		trios: [{ umas: [41, 41, 41], share: 0.5 }],
 	},
-	runs: { players: 2, races: 30, min_races: 20, rows: [{ uma: 41, style: "pace", races: 30, wins: 12 }] },
+	// 30 races: shown (over the floor of 20) but not ranked (under 100).
+	runs: [{ uma: 41, style: "pace", rate: 0.4, marks: 1, ranked: false }],
 	previous: { generated_at: "2026-10-26T00:00:00Z", umas: [], cards: [1], runs: [] },
 }
 
 const PLAYERS: PlayersRankingsPayload = {
 	generated_at: "2026-10-27T20:00:00Z",
-	engaged: 200,
-	favourites: [{ uma: 41, people: 50 }],
-	ranks: [{ label: "Team Trials", people: 100, rows: [{ name: "Class 6", people: 38 }] }],
-	income: [{ key: "daily_carat", label: "Daily Carat Pack", people: 84, default_on: false }],
-	budget: [{ name: "Class 6", people: 38, carats: 24000, pulls: 150 }],
+	favourites: [{ uma: 41, share: 0.25 }],
+	ranks: [{ label: "Team Trials", share: 0.5, rows: [{ name: "Class 6", share: 0.38 }] }],
+	income: [{ key: "daily_carat", label: "Daily Carat Pack", share: 0.42, default_on: false }],
+	budget: [{ name: "Class 6", carats: 24000, pulls: 150 }],
 	selectors: [
-		{ campaign: "1st Anniversary", label: "SSR Support Selector", buyers: 30, picked: 20, top: [{ card: 2, people: 9 }], status: "past", end_date: "2026-01-01T00:00:00Z" },
-		{ campaign: "2nd Anniversary", label: "$10 Uma Selector", buyers: 12, picked: 5, top: [{ uma: 41, people: 4 }], status: "on_sale", end_date: "2026-11-03T12:00:00Z" },
+		{ campaign: "1st Anniversary", label: "SSR Support Selector", buyers: 0.15, picked: 0.67, top: [{ card: 2, share: 0.45 }], status: "past", end_date: "2026-01-01T00:00:00Z" },
+		{ campaign: "2nd Anniversary", label: "$10 Uma Selector", buyers: 0.06, picked: 0.42, top: [{ uma: 41, share: 0.8 }], status: "on_sale", end_date: "2026-11-03T12:00:00Z" },
 	],
 }
 
 const GALLERY = {
 	generated_at: "2026-10-27T20:00:00Z", posts: 2, decks: 6,
-	umas: [{ uma: 41, teams: 1, styles: { pace: 1 } }], cards: [],
+	umas: [{ uma: 41, share: 0.5, styles: { pace: 0.5 } }], cards: [],
 }
 
 const BODIES: Array<[RegExp, unknown]> = [
@@ -241,8 +240,6 @@ describe("RankingsPage", () => {
 		const list = await screen.findByRole("region", { name: "Banners players plan" })
 		const row = within(list).getByText("Gentildonna").closest("li")!
 		// Shares only: never how many plan it, or how many pulls in all (owner, 2026-10-28).
-		expect(row).not.toHaveTextContent("5,807")
-		expect(row).not.toHaveTextContent("958")
 		expect(row).toHaveTextContent("36%of planners")
 		expect(row).toHaveTextContent("typical · avg 165")
 		expect(row).toHaveTextContent("Predicted")
@@ -280,7 +277,7 @@ describe("RankingsPage", () => {
 		const cards = screen.getByRole("region", { name: "Cards in their decks" })
 		expect(within(cards).getByText("50%")).toBeInTheDocument()
 		expect(within(cards).getByText("33% borrowed")).toBeInTheDocument()
-		// 30 races: shown (over the floor of 20) but not ranked (under 100), so no place.
+		// Unranked (the server's flag), so no place.
 		const wins = screen.getByRole("region", { name: "What wins" })
 		expect(within(wins).getByText("40%")).toBeInTheDocument()
 		expect(within(wins).queryByLabelText("Place 1")).not.toBeInTheDocument()
@@ -289,7 +286,7 @@ describe("RankingsPage", () => {
 		// The opened row reads the gallery and CM Runs beside the build count.
 		fireEvent.click(within(umas).getByRole("button", { expanded: false }))
 		expect((await within(umas).findByText("Posted to the gallery")).parentElement).toHaveTextContent("In 50% of the 2 posted teams")
-		expect(within(umas).getByText("In CM Runs").parentElement).toHaveTextContent("Wins 40% of her races")
+		expect(within(umas).getByText("In CM Runs").parentElement).toHaveTextContent("Pace wins 40%")
 	})
 
 	it("shows the players' ranks, favourites, income options and selectors", async () => {
@@ -301,13 +298,40 @@ describe("RankingsPage", () => {
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
 		// The one on sale leads, with when it ends; the past one waits behind "Show earlier".
 		const selectors = within(screen.getByRole("region", { name: "Selector on sale" }))
-		expect(selectors.getByText("$10 Uma Selector · 2nd Anniversary · ends 2026/11/3")).toBeInTheDocument()
+		expect(selectors.getByText("2nd Anniversary · ends 2026/11/3")).toBeInTheDocument()
+		expect(selectors.getByText("$10 Uma Selector")).toBeInTheDocument()
 		expect(selectors.getByText("80% of picks")).toBeInTheDocument()
 		expect(selectors.getByText(/6% of players plan to buy it/)).toBeInTheDocument()
-		fireEvent.click(selectors.getByRole("button", { name: "Show earlier (1)" }))
+		fireEvent.click(selectors.getByRole("button", { name: "Past campaigns (1)" }))
 		expect(selectors.getByText("45% of picks")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("starts off")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Typical budget by class" })).getByText("24,000")).toBeInTheDocument()
+	})
+
+	it("puts the next campaign's selectors in front when none is on sale, never a past one", async () => {
+		const next = (label: string, end: string) => ({ campaign: "3rd Anniversary", label, buyers: 0.1, picked: 0.5, top: [{ uma: 41, share: 1 }], status: "upcoming" as const, end_date: end })
+		const players: PlayersRankingsPayload = {
+			...PLAYERS,
+			selectors: [
+				PLAYERS.selectors[0],
+				{ ...next("Far Selector", "2028-01-01T00:00:00Z"), campaign: "4th Anniversary" },
+				next("$21 Uma Selector", "2027-09-11T00:00:00Z"),
+				next("$21 SSR Selector", "2027-09-11T00:00:00Z"),
+			],
+		}
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(new Response(JSON.stringify(/\/players$/.test(url) ? players : PAYLOAD), { status: 200 }))
+		)
+		renderPage(true, { url: "/app/rankings?view=players" })
+		const selectors = within(await screen.findByRole("region", { name: "Next campaign selectors" }))
+		// Both of the next campaign's selectors, side by side; the later and past ones wait.
+		expect(selectors.getByText("$21 Uma Selector")).toBeInTheDocument()
+		expect(selectors.getByText("$21 SSR Selector")).toBeInTheDocument()
+		expect(selectors.queryByText("SSR Support Selector")).not.toBeInTheDocument()
+		expect(selectors.queryByText(/Far Selector/)).not.toBeInTheDocument()
+		fireEvent.click(selectors.getByRole("button", { name: "Later campaigns (1)" }))
+		expect(selectors.getByText(/Far Selector/)).toBeInTheDocument()
+		expect(selectors.getByRole("button", { name: "Past campaigns (1)" })).toBeInTheDocument()
 	})
 
 	it("pins the tab on screen to the side, and unpins it", () => {
