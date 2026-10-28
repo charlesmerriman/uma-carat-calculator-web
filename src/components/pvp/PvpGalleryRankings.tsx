@@ -30,6 +30,7 @@ import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { formatShare } from "../../utils/guideRankings"
+import { movement } from "../../utils/rankingsMovement"
 import { formatPvpEvent, pvpEventHref, refForRaceEvent, splitEventName } from "../../utils/pvpEvent"
 import { useReportUpdated } from "../rankings/rankingsUpdated"
 import { Panel } from "../rankings/kit/Panel"
@@ -113,6 +114,7 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 						counts={{ teams: payload.posts, umas: payload.umas }}
 						catalogue={catalogue}
 						sub={(uma) => (recommended.has(uma) ? <span className="text-brand">Guide recommends her</span> : null)}
+						moves={movement(payload.umas.map((row) => row.uma), payload.previous?.umas)}
 					/>
 					<CardBuildList
 						label="Support cards"
@@ -120,6 +122,7 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 						counts={payload}
 						catalogue={catalogue}
 						sub={(card) => (guideDecks > 0 && deckCounts.has(card) ? <span className="text-brand">Guide {deckCounts.get(card)} of {guideDecks}</span> : null)}
+						moves={movement(payload.cards.map((row) => row.card), payload.previous?.cards)}
 					/>
 				</div>
 			)}

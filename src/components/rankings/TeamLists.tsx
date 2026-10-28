@@ -21,6 +21,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { formatShare } from "../../utils/guideRankings"
 import { CardArt } from "./kit/CardArt"
+import type { MovementValue } from "./kit/Movement"
 import { CardTypeChip } from "./kit/CardTypeChip"
 import { Panel } from "./kit/Panel"
 import { RankRow } from "./kit/RankRow"
@@ -31,13 +32,15 @@ import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCoun
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 
-export function UmaBuildList({ label, hint, counts, catalogue, sub, detail }: {
+export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
 	hint: string
 	counts: Pick<TeamCountsData, "teams" | "umas">
 	catalogue: PvpCatalogueIndex
 	sub?: (uma: number) => ReactNode
 	detail?: (row: UmaBuildRow) => ReactNode
+	/** Rank movement over the week, by uma id (utils/rankingsMovement.ts). */
+	moves?: ReadonlyMap<number, MovementValue>
 }) {
 	const oshiIds = useOshiIds()
 	const umas = knownUmas(counts, catalogue)
@@ -59,6 +62,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail }: {
 						place={index + 1}
 						art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-12" />}
 						name={uma?.name ?? "Unknown uma"}
+						movement={moves?.get(row.uma)}
 						sub={sub?.(row.uma)}
 						fill={leader > 0 ? row.teams / leader : 0}
 						parts={stylesOf(row).map(([style, count]) => stylePart(style, count))}
@@ -72,12 +76,14 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail }: {
 	)
 }
 
-export function CardBuildList({ label, hint, counts, catalogue, sub }: {
+export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 	label: string
 	hint: string
 	counts: Pick<TeamCountsData, "decks" | "cards">
 	catalogue: PvpCatalogueIndex
 	sub?: (card: number) => ReactNode
+	/** Rank movement over the week, by card id. */
+	moves?: ReadonlyMap<number, MovementValue>
 }) {
 	const cards = counts.cards.filter((row) => catalogue.cardsById.has(row.card))
 	const leader = cards[0]?.decks ?? 0
@@ -96,6 +102,7 @@ export function CardBuildList({ label, hint, counts, catalogue, sub }: {
 						place={index + 1}
 						art={<CardArt card={card} />}
 						name={card?.name ?? "Unknown card"}
+						movement={moves?.get(row.card)}
 						sub={
 							<>
 								<CardTypeChip type={card?.card_type} />

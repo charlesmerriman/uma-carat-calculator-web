@@ -43,6 +43,11 @@ export interface PvpRankingsPayload {
 		min_races: number
 		rows: RunResultRow[]
 	}
+	/**
+	 * The lists at the start of the week, ids in rank order, for rank movement
+	 * (api #193): `runs` keys are "<uma>-<style>", ranked from 100 races.
+	 */
+	previous?: { generated_at: string; umas: number[]; cards: number[]; runs: string[] } | null
 }
 
 export interface PlayersRankingsPayload {
@@ -50,6 +55,8 @@ export interface PlayersRankingsPayload {
 	/** Accounts that use the calculator: the income panel's denominator. */
 	engaged: number
 	favourites: Array<{ uma: number; people: number }>
+	/** Favourite umas in order at the start of the week, for rank movement (api #193). */
+	previous?: { generated_at: string; favourites: number[] } | null
 	ranks: Array<{ label: string; people: number; rows: Array<{ name: string; people: number }> }>
 	/** `default_on`: whether a new account starts with it on (api #192; absent before). */
 	income: Array<{ key: string; label: string; people: number; default_on?: boolean }>

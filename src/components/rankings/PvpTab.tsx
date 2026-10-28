@@ -33,6 +33,7 @@ import { STYLE_LABELS, defaultPvpEvent, findEvent, raceEventsInOrder } from "../
 import { PVP_EVENT_PARAM, formatPvpEvent, parsePvpEvent, refForRaceEvent, shortEventName, splitEventName } from "../../utils/pvpEvent"
 import { formatShare } from "../../utils/guideRankings"
 import { winRates, type WinRateRow } from "../../utils/runResults"
+import { movement } from "../../utils/rankingsMovement"
 import { useReportUpdated } from "./rankingsUpdated"
 import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
@@ -116,6 +117,9 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 	const gallery = useGalleryRankings(refForRaceEvent(event))
 	const { built, runs } = payload
 	const umas = knownUmas(built, catalogue)
+	// Rank movement against the week's start (the server's snapshot), by id.
+	const umaMoves = movement(built.umas.map((row) => row.uma), payload.previous?.umas)
+	const cardMoves = movement(built.cards.map((row) => row.card), payload.previous?.cards)
 	const posted = gallery.status === "ready" ? gallery.payload : null
 	const { title } = splitEventName(event)
 	const short = shortEventName(event)
@@ -187,18 +191,20 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
 						counts={built}
 						catalogue={catalogue}
 						detail={umaDetail}
+						moves={umaMoves}
 					/>
 					<CardBuildList
 						label="Cards in their decks"
 						hint="Member decks with the card, the borrowed one included."
 						counts={built}
 						catalogue={catalogue}
+						moves={cardMoves}
 					/>
 				</div>
 			)}
 
 			<div className={GRID}>
-				<WhatWins runs={runs} umas={umas} teams={built.teams} catalogue={catalogue} />
+				<WhatWins runs={runs} umas={umas} teams={built.teams} catalogue={catalogue} previous={payload.previous?.runs} />
 				<div className="flex min-w-0 flex-col gap-3">
 					{built.trios && <TrioList trios={built.trios} teams={built.teams} catalogue={catalogue} />}
 					<YourTeam event={event} ranked={umas.map((row) => row.uma)} catalogue={catalogue} />
@@ -214,11 +220,13 @@ function PvpBody({ event, payload, catalogue, onTeams }: {
  * its confidence marks. The bar is the running green, scaled to the best
  * ranked rate.
  */
-function WhatWins({ runs, umas, teams, catalogue }: {
+function WhatWins({ runs, umas, teams, catalogue, previous }: {
 	runs: PvpRankingsPayload["runs"]
 	umas: PvpRankingsPayload["built"]["umas"]
 	teams: number
 	catalogue: PvpCatalogueIndex
+	/** The ranked rows at the week's start, as "<uma>-<style>". */
+	previous: string[] | undefined
 }) {
 	const oshiIds = useOshiIds()
 	const known = (row: WinRateRow) => catalogue.umasById.has(row.uma)
@@ -226,6 +234,8 @@ function WhatWins({ runs, umas, teams, catalogue }: {
 	const ranked = rates.ranked.filter(known)
 	const unranked = rates.unranked.filter(known)
 	const leader = ranked[0]?.rate ?? unranked[0]?.rate ?? 0
+	// Only a ranked row has a place to move from.
+	const moves = movement(rates.ranked.map((entry) => `${entry.uma}-${entry.style}`), previous)
 	const row = (entry: WinRateRow, place: number | null) => {
 		const uma = catalogue.umasById.get(entry.uma)
 		const styleTeams = umas.find((built) => built.uma === entry.uma)?.styles[entry.style] ?? 0
@@ -233,6 +243,7 @@ function WhatWins({ runs, umas, teams, catalogue }: {
 			<RankRow
 				place={place}
 				muted={place === null}
+				movement={place === null ? undefined : moves.get(`${entry.uma}-${entry.style}`)}
 				art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(entry.uma)} className={`w-12 ${place === null ? "opacity-60" : ""}`} />}
 				name={uma?.name ?? "Unknown uma"}
 				sub={

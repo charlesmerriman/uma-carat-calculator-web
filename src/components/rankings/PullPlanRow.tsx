@@ -25,6 +25,7 @@ import { compactNumber, spreadLabel } from "../../utils/pullPlanRankings"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
+import { Movement, type MovementValue } from "./kit/Movement"
 import { StatusPill, type Status } from "./kit/StatusPill"
 
 const KINDS: Record<PlannedBannerRank["type"], { label: string; className: string }> = {
@@ -39,8 +40,10 @@ function statusOf(row: PlannedBannerRank): Status {
 	return row.status
 }
 
-export function PullPlanRow({ row, fill, everyone, timelineOf }: {
+export function PullPlanRow({ row, fill, everyone, timelineOf, movement }: {
 	row: PlannedBannerRank
+	/** Rank movement by planners over the week; only drawn in the planners order. */
+	movement?: MovementValue
 	/** planners / the list's leader. */
 	fill: number
 	/** Everyone with a plan (the payload's `planners`), or undefined before api #191. */
@@ -64,7 +67,10 @@ export function PullPlanRow({ row, fill, everyone, timelineOf }: {
 				{kind.label}
 			</span>
 			<span className="flex min-w-0 flex-col gap-0.5">
-				<span className="truncate text-[13px] font-semibold text-gray-100" title={row.name}>{row.name}</span>
+				<span className="flex min-w-0 items-center gap-1.5">
+					<span className="truncate text-[13px] font-semibold text-gray-100" title={row.name}>{row.name}</span>
+					<Movement value={movement} />
+				</span>
 				<span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] tabular-nums text-gray-400">
 					<StatusPill status={statusOf(row)} />
 					<span className="@min-[47.5rem]:hidden">{dates} ·</span>

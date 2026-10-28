@@ -183,7 +183,10 @@ function WindowBody({ entry, list, onNavigate }: { entry: SectionEntry; list: Wi
 		<div className="flex min-h-0 flex-col gap-2 p-2.5">
 			<div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
 				<b className="font-semibold text-gray-100">{entry.label}</b>
-				<span className="min-w-0">· {list.context}</span>
+				<span className="min-w-0">
+					· {list.context}
+					{list.moved ? ` · ${list.moved} moved this week` : ""}
+				</span>
 				{list.settings.length > 0 && (
 					<button
 						type="button"
@@ -234,7 +237,7 @@ function WindowBody({ entry, list, onNavigate }: { entry: SectionEntry; list: Wi
 					<ol className="flex flex-col divide-y divide-edge">
 						{rows.map(({ row, place }) => (
 							<li key={row.id}>
-								<RankRow compact place={place} art={row.art} name={row.name} fill={row.fill} count={row.count} share={row.share} />
+								<RankRow compact place={place} art={row.art} name={row.name} movement={row.movement} fill={row.fill} count={row.count} share={row.share} />
 							</li>
 						))}
 					</ol>

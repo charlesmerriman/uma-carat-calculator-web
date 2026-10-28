@@ -25,6 +25,7 @@ import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinSt
 import type { PlannedBannerType, PullPlanRankingsPayload } from "../../types/pullPlanRankings"
 import { formatShare } from "../../utils/guideRankings"
 import { compactNumber, monthShares, pullPlanRows, type PullPlanSort } from "../../utils/pullPlanRankings"
+import { movement } from "../../utils/rankingsMovement"
 import { useReportUpdated } from "./rankingsUpdated"
 import { Lens } from "./kit/Lens"
 import { Panel } from "./kit/Panel"
@@ -78,6 +79,12 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 	const ahead = payload.banners.filter((row) => row.status !== "ended")
 	const pullsAhead = ahead.filter((row) => row.unit === "pulls").reduce((sum, row) => sum + row.total, 0)
 	const leader = Math.max(0, ...rows.map((row) => row.planners))
+	// Movement is by planners (the order the server snapshots), so it shows in that order only.
+	const moves = useMemo(() => {
+		if (sort !== "planners") return new Map<string, number | "new">()
+		const shown = (key: string) => rows.some((row) => `${row.type}-${row.id}` === key)
+		return movement(rows.map((row) => `${row.type}-${row.id}`), payload.previous?.banners.filter(shown))
+	}, [sort, rows, payload])
 	const months = useMemo(() => monthShares(payload.demand, now), [payload, now])
 	// A banner's Timeline card is its BannerTimeline, which the calculator's banners carry.
 	const { umaBannerData, supportBannerData, stepUpBannerData } = useCalculatorData()
@@ -126,7 +133,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 				items={rows}
 				start={20}
 				itemKey={(row) => `${row.type}-${row.id}`}
-				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.planners / leader : 0} everyone={payload.planners} timelineOf={timelineOf} />}
+				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.planners / leader : 0} everyone={payload.planners} timelineOf={timelineOf} movement={moves.get(`${row.type}-${row.id}`)} />}
 				empty="Nobody plans a banner like that yet."
 				footnote={
 					<span className="text-gray-400">

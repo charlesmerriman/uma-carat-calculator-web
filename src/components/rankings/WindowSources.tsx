@@ -32,13 +32,17 @@ import { defaultPvpEvent, findEvent, raceEventsInOrder } from "../../utils/pvpGu
 import { formatPvpEvent, parsePvpEvent, refForRaceEvent, shortEventName, splitEventName } from "../../utils/pvpEvent"
 import { pullPlanRows, type PullPlanSort } from "../../utils/pullPlanRankings"
 import { eventsAround } from "../../utils/rankingsWindow"
+import { movedInTop, movement } from "../../utils/rankingsMovement"
 import { CardArt } from "./kit/CardArt"
 import type { LensOption } from "./kit/Lens"
+import type { MovementValue } from "./kit/Movement"
 
 export interface WindowRow {
 	id: string
 	name: string
 	art: ReactNode
+	/** Rank movement over the week (utils/rankingsMovement.ts). */
+	movement?: MovementValue
 	/** count / the list's leader. */
 	fill: number
 	count: string
@@ -63,6 +67,8 @@ export interface WindowList {
 	/** The search box's placeholder; none and the window has no search. */
 	search?: string
 	settings: WindowSetting[]
+	/** How many of the top ten moved this week; null with nothing to compare with yet. */
+	moved?: number | null
 }
 
 type Render = (list: WindowList) => ReactNode
@@ -75,6 +81,13 @@ const LENS_LABELS: Record<GuideLens, string> = { overall: "Overall", umas: "Umas
 function withFill<T>(items: T[], count: (item: T) => number, row: (item: T, fill: number) => WindowRow): WindowRow[] {
 	const leader = items.length > 0 ? count(items[0]) : 0
 	return items.map((item) => row(item, leader > 0 ? count(item) / leader : 0))
+}
+
+/** Each row's movement against `previous` (ids in the rows' own id form), and the top ten's count. */
+function withMovement(rows: WindowRow[], previous: string[] | null | undefined): { rows: WindowRow[]; moved: number | null } {
+	if (!previous) return { rows, moved: null }
+	const moves = movement(rows.map((row) => row.id), previous)
+	return { rows: rows.map((row) => ({ ...row, movement: moves.get(row.id) })), moved: movedInTop(rows.map((row) => row.id), moves) }
 }
 
 /** A payload's state as the window's, before its rows are ready. */
@@ -109,7 +122,10 @@ function GuidesSource({ children }: { children: Render }) {
 		// Every box ticked, every guide: the window never shows the filters.
 		const filters = allFilters(payload, STYLES, CARD_TYPE_IDS)
 		const guides = countedGuides(events, payload, filters, { size: null })
+		// The week's start, counted the same way (every box ticked), for movement.
+		const before = payload.previous ? countedGuides(events, { ...payload, guides: payload.previous.guides }, filters, { size: null }) : null
 		if (lens === "umas") {
+			const previous = before?.length !== undefined ? rankUmas(before, filters, (id) => index.umasById.has(id)).map((rank) => `uma-${rank.uma}`) : null
 			const rows = withFill(rankUmas(guides, filters, (id) => index.umasById.has(id)), (rank) => rank.picks, (rank, fill) => {
 				const uma = index.umasById.get(rank.uma)
 				return {
@@ -121,9 +137,11 @@ function GuidesSource({ children }: { children: Render }) {
 					share: formatShare(rank.share),
 				}
 			})
-			return { rows, guides: guides.length }
+			return { ...withMovement(rows, previous), guides: guides.length }
 		}
-		const cards = rankCards(guides, filters, typeOf).filter((rank) => lens === "overall" || typeOf(rank.card) === lens)
+		const ofLens = (ranks: ReturnType<typeof rankCards>) => ranks.filter((rank) => lens === "overall" || typeOf(rank.card) === lens)
+		const cards = ofLens(rankCards(guides, filters, typeOf))
+		const previous = before ? ofLens(rankCards(before, filters, typeOf)).map((rank) => `card-${rank.card}`) : null
 		const rows = withFill(cards, (rank) => rank.decks, (rank, fill) => {
 			const card = index.cardsById.get(rank.card)
 			return {
@@ -135,7 +153,7 @@ function GuidesSource({ children }: { children: Render }) {
 				share: formatShare(rank.share),
 			}
 		})
-		return { rows, guides: guides.length }
+		return { ...withMovement(rows, previous), guides: guides.length }
 	}, [payload, cardsById, umasById, events, lens, typeOf, oshiIds])
 
 	const base = {
@@ -152,7 +170,9 @@ function GuidesSource({ children }: { children: Render }) {
 		],
 	}
 	if (catalogue.status === "error") return children({ ...base, status: "error", rows: [] })
-	return children(pending(state, base) ?? (list ? { ...base, status: "ready", rows: list.rows } : { ...base, status: "loading", rows: [] }))
+	return children(
+		pending(state, base) ?? (list ? { ...base, status: "ready", rows: list.rows, moved: list.moved } : { ...base, status: "loading", rows: [] })
+	)
 }
 
 const TYPE_OPTIONS = [
@@ -172,13 +192,13 @@ function PullPlansSource({ children }: { children: Render }) {
 	const choices = useRankingsChoices()["pull-plans"]
 	const type = TYPE_OPTIONS.some((option) => option.id === choices?.type) ? (choices?.type ?? "all") : "all"
 	const sort: PullPlanSort = choices?.sort === "planners" ? "planners" : "date"
-	const rows = useMemo(() => {
-		if (state.status !== "ready") return []
+	const ranked = useMemo((): { rows: WindowRow[]; moved: number | null } => {
+		if (state.status !== "ready") return { rows: [], moved: null }
 		const everyone = state.payload.planners
 		const shown = pullPlanRows(state.payload.banners, { type: type === "all" ? null : (type as "uma" | "support" | "step_up"), sort, showEnded: false })
 		// The fill is planners against the most planned banner shown, whatever the order.
 		const leader = Math.max(0, ...shown.map((row) => row.planners))
-		return shown.map((row) => ({
+		const rows = shown.map((row): WindowRow => ({
 			id: `${row.type}-${row.id}`,
 			name: row.name,
 			art: <span className={`${KIND_CLASS[row.type]} rounded px-1 py-0.5 text-[8px] font-bold uppercase leading-none`}>{TYPE_OPTIONS.find((option) => option.id === row.type)?.label}</span>,
@@ -186,6 +206,9 @@ function PullPlansSource({ children }: { children: Render }) {
 			count: row.planners.toLocaleString(),
 			share: everyone ? formatShare(row.planners / everyone) : "",
 		}))
+		// Movement is by planners, the order the server snapshots: drawn in that order only.
+		const ids = new Set(rows.map((row) => row.id))
+		return sort === "planners" ? withMovement(rows, state.payload.previous?.banners.filter((id) => ids.has(id))) : { rows, moved: null }
 	}, [state, type, sort])
 	const base = {
 		context: `${SORT_OPTIONS.find((option) => option.id === sort)?.label} · ${TYPE_OPTIONS.find((option) => option.id === type)?.label}`,
@@ -195,7 +218,7 @@ function PullPlansSource({ children }: { children: Render }) {
 			{ label: "Order", options: SORT_OPTIONS, value: sort, onChange: (value: string) => chooseRankings("pull-plans", { sort: value }) },
 		],
 	}
-	return children(pending(state, base) ?? { ...base, status: "ready", rows })
+	return children(pending(state, base) ?? { ...base, status: "ready", ...ranked })
 }
 
 function PvpSource({ children }: { children: Render }) {
@@ -223,9 +246,9 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 	const oshiIds = useOshiIds()
 	const rows = useMemo(() => {
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
-		const { built } = state.payload
+		const { built, previous } = state.payload
 		if (list === "cards") {
-			return withFill(built.cards.filter((row) => catalogue.cardsById.has(row.card)), (row) => row.decks, (row, fill) => {
+			const cardRows = withFill(built.cards.filter((row) => catalogue.cardsById.has(row.card)), (row) => row.decks, (row, fill) => {
 				const card = catalogue.cardsById.get(row.card)
 				return {
 					id: `card-${row.card}`,
@@ -236,8 +259,9 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 					share: formatShare(built.decks ? row.decks / built.decks : 0),
 				}
 			})
+			return withMovement(cardRows, previous?.cards.map((id) => `card-${id}`))
 		}
-		return withFill(built.umas.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.teams, (row, fill) => {
+		const umaRows = withFill(built.umas.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.teams, (row, fill) => {
 			const uma = catalogue.umasById.get(row.uma)
 			return {
 				id: `uma-${row.uma}`,
@@ -248,6 +272,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 				share: formatShare(built.teams ? row.teams / built.teams : 0),
 			}
 		})
+		return withMovement(umaRows, previous?.umas.map((id) => `uma-${id}`))
 	}, [state, catalogue, list, oshiIds])
 	const { title } = splitEventName(event)
 	const short = shortEventName(event)
@@ -274,7 +299,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 		],
 	}
 	if (catalogue.status === "error") return children({ ...base, status: "error", rows: [] })
-	return children(pending(state, base) ?? (rows ? { ...base, status: "ready", rows } : { ...base, status: "loading", rows: [] }))
+	return children(pending(state, base) ?? (rows ? { ...base, status: "ready", ...rows } : { ...base, status: "loading", rows: [] }))
 }
 
 function PlayersSource({ children }: { children: Render }) {
@@ -283,8 +308,8 @@ function PlayersSource({ children }: { children: Render }) {
 	const oshiIds = useOshiIds()
 	const rows = useMemo(() => {
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
-		const { favourites, engaged } = state.payload
-		return withFill(favourites.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.people, (row, fill) => {
+		const { favourites, engaged, previous } = state.payload
+		const favouriteRows = withFill(favourites.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.people, (row, fill) => {
 			const uma = catalogue.umasById.get(row.uma)
 			return {
 				id: `uma-${row.uma}`,
@@ -295,8 +320,9 @@ function PlayersSource({ children }: { children: Render }) {
 				share: formatShare(engaged ? row.people / engaged : 0),
 			}
 		})
+		return withMovement(favouriteRows, previous?.favourites.map((id) => `uma-${id}`))
 	}, [state, catalogue, oshiIds])
 	const base = { context: "Favourite umas", tabName: "Players", settings: [] }
 	if (catalogue.status === "error") return children({ ...base, status: "error", rows: [] })
-	return children(pending(state, base) ?? (rows ? { ...base, status: "ready", rows } : { ...base, status: "loading", rows: [] }))
+	return children(pending(state, base) ?? (rows ? { ...base, status: "ready", ...rows } : { ...base, status: "loading", rows: [] }))
 }
