@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { PlannedBannerRank } from "../types/pullPlanRankings"
-import { pullPlanRows } from "../utils/pullPlanRankings"
+import { compactNumber, monthShares, pullPlanRows } from "../utils/pullPlanRankings"
 
 /** Pull plans' rows (utils/pullPlanRankings.ts): what shows, and the two orders. */
 
@@ -35,5 +35,31 @@ describe("pullPlanRows", () => {
 	it("filters by type", () => {
 		expect(ids(pullPlanRows(ROWS, { type: "uma", sort: "date", showEnded: true }))).toEqual([4, 1, 3])
 		expect(ids(pullPlanRows(ROWS, { type: "step_up", sort: "date", showEnded: false }))).toEqual([5])
+	})
+})
+
+describe("monthShares", () => {
+	const month = (key: string, pulls: number) => ({ month: key, banners: 1, planners: 1, total_pulls: pulls, excluded: 0, step_up_planners: 0 })
+
+	it("shares this month, the next four and Later, adding up to everything still ahead", () => {
+		const shares = monthShares(
+			[month("2026-09", 999), month("2026-10", 100), month("2026-12", 300), month("2027-03", 200), month("2027-06", 250), month("Later", 150)],
+			new Date("2026-10-28T12:00:00Z")
+		)
+		expect(shares.map((entry) => [entry.key, entry.share])).toEqual([
+			["2026-10", 0.1], ["2026-11", 0], ["2026-12", 0.3], ["2027-01", 0], ["2027-02", 0], ["Later", 0.6],
+		])
+		expect(shares[0]).toMatchObject({ label: "2026/10", current: true })
+		expect(shares[5].label).toBe("Later")
+	})
+
+	it("is all zeros with nothing planned", () => {
+		expect(monthShares([], new Date("2026-10-28T00:00:00Z")).every((entry) => entry.share === 0)).toBe(true)
+	})
+})
+
+describe("compactNumber", () => {
+	it("shortens thousands and millions", () => {
+		expect([compactNumber(950), compactNumber(604_321), compactNumber(2_140_000)]).toEqual(["950", "604K", "2.1M"])
 	})
 })

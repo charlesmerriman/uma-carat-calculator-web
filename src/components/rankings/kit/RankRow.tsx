@@ -33,6 +33,8 @@ export interface RankRowProps {
 	fill: number
 	/** A stacked bar in place of the plain one (an uma's running styles). */
 	parts?: BarPart[]
+	/** "win": the bar in the running green (a win rate). */
+	tone?: "win"
 	/** "176 decks": drawn bold. */
 	count: ReactNode
 	/** "29%": drawn muted under the count. */
@@ -45,9 +47,10 @@ export interface RankRowProps {
 }
 
 export function RankRow(props: RankRowProps) {
-	const { place, art, name, sub, movement, fill, parts, count, share, detail, compact = false, muted = false } = props
+	const { place, art, name, sub, movement, fill, parts, tone, count, share, detail, compact = false, muted = false } = props
 	const [open, setOpen] = useState(false)
 	const top = place !== null && place <= 3
+	const nameInk = muted ? "text-gray-400" : "text-gray-100"
 	const placeCell = (
 		<span
 			className={`text-right font-mono text-xs tabular-nums ${top && !muted ? "font-bold text-brand" : "text-gray-400"}`}
@@ -70,10 +73,10 @@ export function RankRow(props: RankRowProps) {
 				<span className="flex">{art}</span>
 				<span className="flex min-w-0 flex-col gap-1">
 					<span className="flex min-w-0 items-center gap-1.5">
-						<span className={`truncate text-[13px] font-semibold ${muted ? "text-gray-300" : "text-gray-100"}`}>{name}</span>
+						<span className={`truncate text-[13px] font-semibold ${nameInk}`}>{name}</span>
 						<Movement value={movement} />
 					</span>
-					<Bar fill={fill} parts={parts} hairline />
+					<Bar fill={fill} parts={parts} tone={tone} hairline />
 				</span>
 				{countCell}
 			</div>
@@ -86,14 +89,14 @@ export function RankRow(props: RankRowProps) {
 			<span className="flex">{art}</span>
 			<span className="flex min-w-0 flex-col gap-0.5">
 				<span className="flex min-w-0 items-center gap-1.5">
-					<span className={`truncate text-[13px] font-semibold ${muted ? "text-gray-300" : "text-gray-100"}`}>{name}</span>
+					<span className={`truncate text-[13px] font-semibold ${nameInk}`}>{name}</span>
 					<Movement value={movement} />
 				</span>
 				{sub && <span className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-gray-400">{sub}</span>}
 				{/* Under 40rem the bar column goes and this hairline carries the fill. */}
-				<Bar fill={fill} parts={parts} hairline className="mt-1 @min-[40rem]:hidden" />
+				<Bar fill={fill} parts={parts} tone={tone} hairline className="mt-1 @min-[40rem]:hidden" />
 			</span>
-			<Bar fill={fill} parts={parts} className="hidden @min-[40rem]:block" />
+			<Bar fill={fill} parts={parts} tone={tone} className={`hidden @min-[40rem]:block ${muted ? "opacity-60" : ""}`} />
 			{countCell}
 			{detail ? (
 				<ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />

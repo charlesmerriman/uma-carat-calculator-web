@@ -23,8 +23,14 @@ const CM21 = {
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({ championsMeetingData: [CM21], leagueOfHeroesData: [] }),
 }))
-// The chart is Recharts in its own chunk; here only that the tab draws it.
-vi.mock("../components/rankings/DemandChart", () => ({ default: () => <div data-testid="demand-chart" /> }))
+// The reader's own saved teams: one for CM 21 with Maruzensky on Pace.
+vi.mock("../services/PvpTeamsContext", () => ({
+	usePvpTeams: () => ({
+		status: "ready",
+		ensureLoaded: () => {},
+		teams: [{ key: "t1", id: 1, kind: "cm", event: 21, isFocus: true, updatedAt: 0, name: "", notes: [], members: [{ position: 0, uma: 41, style: "pace", cards: [] }] }],
+	}),
+}))
 vi.mock("../hooks/useOshiIds", () => ({ useOshiIds: () => new Set<number>() }))
 vi.mock("../hooks/usePvpCatalogue", () => ({
 	usePvpCatalogue: () => ({
@@ -57,6 +63,7 @@ const PAYLOAD: GuideRankingsPayload = {
 
 const PULL_PLANS: PullPlanRankingsPayload = {
 	generated_at: "2026-10-27T20:00:00Z",
+	planners: 16000,
 	banners: [{
 		type: "uma", unit: "pulls", id: 88, name: "Gentildonna", start_date: "2026-11-05T00:00:00Z",
 		end_date: "2026-11-15T00:00:00Z", predicted: true, status: "upcoming",
@@ -80,7 +87,13 @@ const PLAYERS: PlayersRankingsPayload = {
 	selectors: [{ campaign: "1st Anniversary", label: "SSR Support Selector", buyers: 30, picked: 20, top: [{ card: 2, people: 9 }] }],
 }
 
+const GALLERY = {
+	generated_at: "2026-10-27T20:00:00Z", posts: 2, decks: 6,
+	umas: [{ uma: 41, teams: 1, styles: { pace: 1 } }], cards: [],
+}
+
 const BODIES: Array<[RegExp, unknown]> = [
+	[/\/rankings\/gallery\/cm\/21$/, GALLERY],
 	[/\/pull-plans$/, PULL_PLANS],
 	[/\/rankings\/pvp\/cm\/21$/, PVP],
 	[/\/players$/, PLAYERS],
@@ -178,32 +191,53 @@ describe("RankingsPage", () => {
 		expect(screen.getByRole("tab", { name: "Pull plans", selected: true })).toBeInTheDocument()
 	})
 
-	it("draws the planned banners with a typical figure, and the demand by month", async () => {
+	it("draws the planned banners with their share of everyone planning, and a typical figure", async () => {
 		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
-		const table = await screen.findByRole("region", { name: "Banners players plan" })
-		const row = within(table).getByText("Gentildonna").closest("tr")!
+		const list = await screen.findByRole("region", { name: "Banners players plan" })
+		const row = within(list).getByText("Gentildonna").closest("li")!
 		expect(row).toHaveTextContent("5,807")
-		expect(row).toHaveTextContent("150")
-		expect(row).toHaveTextContent("(predicted)")
-		expect(await screen.findByTestId("demand-chart")).toBeInTheDocument()
-		expect(within(screen.getByRole("region", { name: "Demand by month" })).getByText("2026/11")).toBeInTheDocument()
+		expect(row).toHaveTextContent("36% of planners")
+		expect(row).toHaveTextContent("typical · avg 165")
+		expect(row).toHaveTextContent("Predicted")
+		expect(within(screen.getByRole("region", { name: "What players plan to pull on" })).getByText("16,000")).toBeInTheDocument()
+		expect(screen.getByRole("region", { name: "When the pulls fall due" })).toBeInTheDocument()
 	})
 
-	it("shows what players build and what wins on the PvP tab", async () => {
+	it("remembers the Pull plans order on the device", async () => {
+		renderPage(true, { editor: true, url: "/app/rankings?view=pull-plans" })
+		await screen.findByRole("region", { name: "Banners players plan" })
+		fireEvent.click(screen.getByRole("tab", { name: "By planners" }))
+		expect(JSON.parse(localStorage.getItem("rankings-choices") ?? "{}")).toEqual({ "pull-plans": { sort: "planners" } })
+	})
+
+	it("shows what players build, what wins and where your team sits on the PvP tab", async () => {
 		renderPage(true, { url: "/app/rankings?view=pvp&event=cm-21" })
-		expect(await screen.findByText(/posted or not: 4 teams/)).toBeInTheDocument()
-		expect(within(screen.getByRole("region", { name: "Support cards" })).getByText("6 decks · 50% · 2 borrowed")).toBeInTheDocument()
-		const wins = within(screen.getByRole("region", { name: "What wins" }))
-		expect(wins.getByText("Maruzensky").closest("tr")).toHaveTextContent("40%")
+		const umas = await screen.findByRole("region", { name: "Umas players build" })
+		expect(within(umas).getByText("3 teams")).toBeInTheDocument()
+		expect(within(umas).getByText("75%")).toBeInTheDocument()
+		const cards = screen.getByRole("region", { name: "Cards in their decks" })
+		expect(within(cards).getByText("6 decks")).toBeInTheDocument()
+		expect(within(cards).getByText("2 borrowed")).toBeInTheDocument()
+		// 30 races: shown (over the floor of 20) but not ranked (under 100), so no place.
+		const wins = screen.getByRole("region", { name: "What wins" })
+		expect(within(wins).getByText("40%")).toBeInTheDocument()
+		expect(within(wins).queryByLabelText("Place 1")).not.toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Your team" })).getByText("#1")).toBeInTheDocument()
+		// The opened row reads the gallery and CM Runs beside the build count.
+		fireEvent.click(within(umas).getByRole("button", { expanded: false }))
+		expect((await within(umas).findByText("Posted to the gallery")).parentElement).toHaveTextContent("In 50% of the 2 posted teams")
+		expect(within(umas).getByText("In CM Runs").parentElement).toHaveTextContent("Wins 40% of 30 races")
 	})
 
-	it("shows the four players panels", async () => {
+	it("shows the players' ranks, favourites, income options and selectors", async () => {
 		renderPage(true, { url: "/app/rankings?view=players" })
 		const favourites = await screen.findByRole("region", { name: "Favourite umas" })
-		expect(within(favourites).getByText("50 players · 25%")).toBeInTheDocument()
-		expect(within(screen.getByRole("region", { name: "Team Trials" })).getByText("38%")).toBeInTheDocument()
+		expect(within(favourites).getByText("50 players")).toBeInTheDocument()
+		expect(within(screen.getByRole("region", { name: "Ranks" })).getByRole("img", { name: "Team Trials: Class 6 38%" })).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
-		expect(within(screen.getByRole("region", { name: "Campaign selectors" })).getByText("Fine Motion 9")).toBeInTheDocument()
+		const selectors = screen.getByRole("region", { name: "Campaign selectors" })
+		expect(within(selectors).getByText("Fine Motion")).toBeInTheDocument()
+		expect(within(selectors).getByText("9 picked")).toBeInTheDocument()
 	})
 
 	it("pins the tab on screen to the side, and unpins it", () => {

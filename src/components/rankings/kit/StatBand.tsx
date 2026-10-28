@@ -25,7 +25,8 @@ export function StatBand({ title, children, stats }: { title: string; children: 
 				<div key={stat.label} className="flex min-w-0 flex-col gap-0.5 rounded-[10px] border border-edge bg-gray-800 px-2.5 py-2 @min-[47.5rem]:px-3 @min-[47.5rem]:py-2.5">
 					<b className="font-display text-[22px] font-bold leading-tight tabular-nums text-gray-100">
 						{stat.value}
-						{stat.suffix && <small className="ml-1 text-xs font-medium text-gray-400">{stat.suffix}</small>}
+						{/* Under the figure on a narrow band, beside it from 47.5rem. */}
+						{stat.suffix && <small className="block text-[11px] font-medium text-gray-400 @min-[47.5rem]:ml-1 @min-[47.5rem]:inline @min-[47.5rem]:text-xs">{stat.suffix}</small>}
 					</b>
 					<span className="text-[10px] uppercase tracking-wider text-gray-400 @min-[47.5rem]:text-[11px]">{stat.label}</span>
 				</div>
