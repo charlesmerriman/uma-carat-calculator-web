@@ -195,17 +195,16 @@ function PullPlansSource({ children }: { children: Render }) {
 	const sort: PullPlanSort = choices?.sort === "planners" ? "planners" : "date"
 	const ranked = useMemo((): { rows: WindowRow[]; moved: number | null } => {
 		if (state.status !== "ready") return { rows: [], moved: null }
-		const everyone = state.payload.planners
 		const shown = pullPlanRows(state.payload.banners, { type: type === "all" ? null : (type as "uma" | "support" | "step_up"), sort, showEnded: false })
 		// The fill is planners against the most planned banner shown, whatever the order.
-		const leader = Math.max(0, ...shown.map((row) => row.planners))
+		const leader = Math.max(0, ...shown.map((row) => row.share))
 		const rows = shown.map((row): WindowRow => ({
 			id: `${row.type}-${row.id}`,
 			name: row.name,
 			art: <span className={`${KIND_CLASS[row.type]} rounded px-1 py-0.5 text-[8px] font-bold uppercase leading-none`}>{TYPE_OPTIONS.find((option) => option.id === row.type)?.label}</span>,
-			fill: leader > 0 ? row.planners / leader : 0,
+			fill: leader > 0 ? row.share / leader : 0,
 			// Shares, never a count of people (owner, 2026-10-28), here as on the tabs.
-			count: everyone ? formatShare(row.planners / everyone) : "",
+			count: formatShare(row.share),
 		}))
 		// Movement is by planners, the order the server snapshots: drawn in that order only.
 		const ids = new Set(rows.map((row) => row.id))
@@ -249,26 +248,26 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
 		const { built, previous } = state.payload
 		if (list === "cards") {
-			const cardRows = withFill(built.cards.filter((row) => catalogue.cardsById.has(row.card)), (row) => row.decks, (row, fill) => {
+			const cardRows = withFill(built.cards.filter((row) => catalogue.cardsById.has(row.card)), (row) => row.share, (row, fill) => {
 				const card = catalogue.cardsById.get(row.card)
 				return {
 					id: `card-${row.card}`,
 					name: card?.name ?? "Unknown card",
 					art: <CardArt card={card} className="w-7" />,
 					fill,
-					count: formatShare(built.decks ? row.decks / built.decks : 0),
+					count: formatShare(row.share),
 				}
 			})
 			return withMovement(cardRows, previous?.cards.map((id) => `card-${id}`))
 		}
-		const umaRows = withFill(built.umas.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.teams, (row, fill) => {
+		const umaRows = withFill(built.umas.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.share, (row, fill) => {
 			const uma = catalogue.umasById.get(row.uma)
 			return {
 				id: `uma-${row.uma}`,
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				fill,
-				count: formatShare(built.teams ? row.teams / built.teams : 0),
+				count: formatShare(row.share),
 			}
 		})
 		return withMovement(umaRows, previous?.umas.map((id) => `uma-${id}`))
@@ -307,15 +306,15 @@ function PlayersSource({ children }: { children: Render }) {
 	const oshiIds = useOshiIds()
 	const rows = useMemo(() => {
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
-		const { favourites, engaged, previous } = state.payload
-		const favouriteRows = withFill(favourites.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.people, (row, fill) => {
+		const { favourites, previous } = state.payload
+		const favouriteRows = withFill(favourites.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.share, (row, fill) => {
 			const uma = catalogue.umasById.get(row.uma)
 			return {
 				id: `uma-${row.uma}`,
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				fill,
-				count: formatShare(engaged ? row.people / engaged : 0),
+				count: formatShare(row.share),
 			}
 		})
 		return withMovement(favouriteRows, previous?.favourites.map((id) => `uma-${id}`))

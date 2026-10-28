@@ -4,19 +4,21 @@
  * and rebuilt at most once an hour.
  */
 
+import type { TeamSharesData } from "../types/rankingsTabs"
 import type { PvpEventRef } from "../utils/pvpEvent"
 import { useRankingsPayload, type RankingsState } from "./useRankingsPayload"
 
-export interface GalleryRankingsPayload {
+/**
+ * The lists are shares (TeamSharesData), like the PvP tab's. A post is public
+ * (anyone can open it, with its copies), so `posts`, `decks` and `copies`
+ * stay counts.
+ */
+export interface GalleryRankingsPayload extends TeamSharesData {
 	generated_at: string
-	/** Visible posts counted: an uma's share is out of this. */
+	/** Visible posts. */
 	posts: number
-	/** Every member's deck counted: a card's share is out of this. */
+	/** Every member's deck in them. */
 	decks: number
-	umas: Array<{ uma: number; teams: number; styles: Partial<Record<string, number>> }>
-	cards: Array<{ card: number; decks: number; borrows: number }>
-	/** The exact three-uma teams posted most (api #192; absent before). */
-	trios?: Array<{ umas: number[]; teams: number }>
 	/**
 	 * The event's three most copied posts, without the poster's name: the post
 	 * page shows that (api #192; absent before).

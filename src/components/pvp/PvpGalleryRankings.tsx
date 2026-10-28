@@ -105,7 +105,7 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 					<UmaBuildList
 						label="Umas"
 						hint={guide ? "Share of posted teams with her, and whether the guide recommends her." : "Share of posted teams with her."}
-						counts={{ teams: payload.posts, umas: payload.umas }}
+						counts={payload}
 						catalogue={catalogue}
 						sub={(uma) => (recommended.has(uma) ? <span className="text-brand">Guide recommends her</span> : null)}
 						moves={movement(payload.umas.map((row) => row.uma), payload.previous?.umas)}
