@@ -16,6 +16,7 @@ import PredictedBadge from "../PredictedBadge"
 import { bannerKey } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { formatDate } from "../../utils/dateFormat"
+import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { AnniversaryEventStrip } from "./AnniversaryEventStrip"
 import { LegendRaceNote } from "./LegendRaceNote"
@@ -1071,7 +1072,7 @@ export function BannerWindowCard({
 								<h3 className="text-lg leading-snug font-semibold text-balance text-gray-100 sm:text-xl">{title}</h3>
 								<div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
 									<span>
-										{formatDate(group.start_date)} through {formatDate(group.end_date)}
+										<DateTimeRange start={group.start_date} end={group.end_date} />
 									</span>
 									{group.is_predicted && <PredictedBadge />}
 								</div>
@@ -1080,7 +1081,7 @@ export function BannerWindowCard({
 							<div className="min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
 								<div className="flex flex-wrap items-center gap-2">
 									<span>
-										{formatDate(group.start_date)} through {formatDate(group.end_date)}
+										<DateTimeRange start={group.start_date} end={group.end_date} />
 									</span>
 									{group.is_predicted && <PredictedBadge />}
 								</div>

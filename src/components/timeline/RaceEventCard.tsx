@@ -17,7 +17,7 @@
 import { BookOpen, Clock3, Loader2, Trophy } from "lucide-react"
 import { Link } from "react-router-dom"
 import PredictedBadge from "../PredictedBadge"
-import { formatDate } from "../../utils/dateFormat"
+import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { TIMELINE_FOCUS_HIGHLIGHT, getCountdownLabel } from "./timelineShared"
 import { CourseDetails } from "./CourseDetails"
@@ -74,7 +74,7 @@ export function RaceEventCard({
 								{event.is_predicted && <PredictedBadge />}
 							</div>
 							<p className="mt-0.5 text-sm text-gray-400">
-								{formatDate(event.start_date)} through {formatDate(event.end_date)}
+								<DateTimeRange start={event.start_date} end={event.end_date} />
 							</p>
 							{skipped && (
 								<p className="mt-0.5 text-sm text-gray-400">

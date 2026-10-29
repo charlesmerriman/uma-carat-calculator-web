@@ -13,6 +13,16 @@ frontend rules that are easy to break accidentally.
 Do not hand-roll `toLocaleDateString` or date-fns `format` at a call site. Four such
 copies previously drifted into two different locales and two different timezone bases.
 
+**Times of day go through `formatTime`, and their zone through `localZoneName`**, in the
+same file. Unlike dates they follow the viewer's locale ("3:00 PM" or "15:00"; owner,
+2026-10-28), in the viewer's zone, seconds dropped (an end at 21:59:59 UTC reads "x:59").
+A run of times names its zone ONCE, with the generic name (`PT`, `Japan Time`) so one
+label holds across a daylight-saving switch. The Timeline cards draw theirs through
+`DateTimeRange`, which keeps the dates as the element's own text and the times in child
+spans (the Timeline tests find a card by its dates). The PvP schedule strip puts each time
+under its date. Both read the zone where they run, so like `formatDate` they stay behind
+the `/app` loading gate.
+
 **A feed read top to bottom may say how long ago instead**: `formatTimeAgo` in
 `utils/relativeDate.ts` ("just now", "5 minutes ago", "2 days ago", then `formatDate` past
 30 days), with the `formatDate` string in a `title`. It reads the clock, so only behind the

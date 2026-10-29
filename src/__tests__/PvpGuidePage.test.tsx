@@ -496,6 +496,9 @@ describe("PvpGuidePage views and layout", () => {
 		// The whole event is in 2099, so registration is the next step.
 		expect(steps[0]).toHaveAttribute("aria-current", "step")
 		expect(steps[1]).not.toHaveAttribute("aria-current")
+		// Each step shows a time under its date, and the zone is named once, above.
+		for (const step of steps) expect(step.textContent).toMatch(/\d:\d\d/)
+		expect(screen.getAllByText(/^· times in \S/)).toHaveLength(1)
 	})
 
 	it("splits a meeting's number from its cup name", () => {

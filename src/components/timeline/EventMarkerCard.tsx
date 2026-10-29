@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
-import { formatDate } from "../../utils/dateFormat"
+import { DateTimeRange } from "./DateTimeRange"
 import { TIMELINE_FOCUS_HIGHLIGHT } from "./timelineShared"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
@@ -114,10 +114,12 @@ const EventMarkerBody = ({
 
 			{/* The bottom margin belongs to the art below, so it goes when the art does. */}
 			<p className={`text-sm text-gray-300 ${marker.image ? "mb-3" : ""}`}>
-				{marker.endDate
-					? `${formatDate(marker.startDate)} through ${formatDate(marker.endDate)}`
+				{marker.endDate ? (
+					<DateTimeRange start={marker.startDate} end={marker.endDate} />
+				) : (
 					// No end, and none is coming — see TimelineMarker.endDate.
-					: `Releases ${formatDate(marker.startDate)}`}
+					<>Releases <DateTimeRange start={marker.startDate} /></>
+				)}
 			</p>
 
 			{marker.image && (
