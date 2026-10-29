@@ -11,6 +11,7 @@ import { StagedBannerRow } from "./StagedBannerRow"
 import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcons"
 import { PlannerSectionBand } from "./PlannerSectionBand"
 import { buildPlannerRows, SCENARIO_BANDS_ONLY } from "../../utils/plannerSections"
+import { hasPlansBar } from "../../utils/plansBar"
 import { PlanSwitcher } from "./PlanSwitcher"
 import { SharePlanButton } from "./share/SharePlanButton"
 import { CaratForecastChart } from "./CaratForecastChart"
@@ -83,6 +84,8 @@ export const CaratCalculator: React.FC = () => {
 		calculationConstants,
 		setUserPlannedBannerData,
 		setStagedBanners,
+		plans,
+		activePlanId,
 	} = useCalculatorData()
 
 	// The rows, plus what the daily pulls on banners outside the plan took
@@ -288,8 +291,23 @@ export const CaratCalculator: React.FC = () => {
 
 						<div className="border-t border-gray-700 pb-4">
 							{/* The PLANS bar: a tab per plan over the sheet it switches. Renders
-							    nothing at all for a guest, bar included. */}
-							<PlanSwitcher />
+							    nothing at all for a guest, bar included. The share picture's
+							    button sits at its end, beside "...": a picture of the open
+							    plan belongs with the plan's own controls (owner, 2026-10-29). */}
+							<PlanSwitcher
+								actions={
+									userPlannedBannerData.length > 0 && (
+										<SharePlanButton
+											plannerRows={plannerRows}
+											bannerResources={bannerResources}
+											umaBannerData={umaBannerData}
+											supportBannerData={supportBannerData}
+											userStepUpSelectionData={userStepUpSelectionData}
+											inBar
+										/>
+									)
+								}
+							/>
 							{/* Add banner buttons — one row at EVERY width. Stacked, the three
 							    of them cost ~156px of a phone screen before a single planner
 							    row appeared; side by side they cost ~44px. */}
@@ -317,9 +335,9 @@ export const CaratCalculator: React.FC = () => {
 										</button>
 									</Fragment>
 								))}
-								{/* The sheet's one other action, on the row that is already its
-								    toolbar at every width, rather than a row of its own. */}
-								{userPlannedBannerData.length > 0 && (
+								{/* A guest has no PLANS bar, so their share button stays on the
+								    row that is already the sheet's toolbar at every width. */}
+								{userPlannedBannerData.length > 0 && !hasPlansBar(plans, activePlanId) && (
 									<>
 										<div className="hidden w-px bg-gray-700 self-stretch sm:block" />
 										<SharePlanButton

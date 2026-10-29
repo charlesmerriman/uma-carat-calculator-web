@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
-import type { FormEvent, MouseEvent } from "react"
+import type { FormEvent, MouseEvent, ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { Check, ChevronDown, Copy, Ellipsis, Pencil, Plus, Share2, Trash2, Wallet } from "lucide-react"
 import { toast } from "sonner"
@@ -7,6 +7,7 @@ import { useCalculatorData } from "../../services/CalculatorContext"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
 import type { PlanSharingChanges } from "../../types"
 import { sharedPlanLinkPath } from "../../utils/appRoutes"
+import { hasPlansBar } from "../../utils/plansBar"
 import { NAV_POPOVER } from "../navbar/navStyles"
 
 /**
@@ -137,7 +138,12 @@ const CAP_MESSAGE = `You can keep up to ${PLAN_CAP} plans.`
 const copiedLine = (count: number): string =>
 	count === 0 ? "Not copied yet." : count === 1 ? "Copied once." : `Copied ${count} times.`
 
-export const PlanSwitcher = () => {
+/**
+ * `actions`: controls about the open plan that aren't plan management, drawn
+ * at the bar's right end, after "..." (or the phone's plan dropdown). Today
+ * that is the share picture's button.
+ */
+export const PlanSwitcher = ({ actions }: { actions?: ReactNode }) => {
 	const {
 		plans,
 		activePlanId,
@@ -242,8 +248,8 @@ export const PlanSwitcher = () => {
 	}, [open, showsNameForm])
 
 	const activePlan = plans.find((plan) => plan.id === activePlanId)
-	// Guest, an API without plans, or the list not loaded yet.
-	if (activePlanId === null || !activePlan) return null
+	// Guest, an API without plans, or the list not loaded yet (hasPlansBar).
+	if (!hasPlansBar(plans, activePlanId) || !activePlan) return null
 
 	const atCap = plans.length >= PLAN_CAP
 	const isOnlyPlan = plans.length <= 1
@@ -498,6 +504,8 @@ export const PlanSwitcher = () => {
 				<span className="truncate font-medium text-gray-100">{activePlan.name}</span>
 				<ChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 			</button>
+
+			{actions}
 
 			{open && createPortal(
 				<div
