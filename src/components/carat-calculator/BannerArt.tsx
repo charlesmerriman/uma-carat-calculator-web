@@ -57,16 +57,20 @@ function resolveGuaranteedCard(
  *
  * Shared by BannerRow (both layouts) and the share picture, so the picture
  * shows exactly the art the sheet does. Images only: the caller decides whether
- * the cell links anywhere.
+ * the cell links anywhere. `large` is the picture's: art a size up (64px for
+ * the sheet's 56), since the art is what a picture is looked at for.
  */
-export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supportBannerData }: {
+export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supportBannerData, large = false }: {
 	target: PlannedBannerTarget
 	userStepUpSelectionData: UserStepUpSelection[]
 	umaBannerData: BannerUma[]
 	supportBannerData: BannerSupport[]
+	large?: boolean
 }) {
 	// The person's favorite umas, drawn in the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	const umaSize = large ? "w-16" : "w-14"
+	const cardClass = large ? "h-16 w-auto object-contain" : "thumb-banner"
 
 	if (target.type === "StepUp") {
 		const pool = stepUpPool(target)
@@ -83,7 +87,7 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 					alt={guaranteedCard.name}
 					oshi={oshiIds.has(guaranteedCard.uma.id)}
 					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
-					className="w-14"
+					className={umaSize}
 				/>
 			)
 		}
@@ -92,13 +96,13 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 				<img
 					src={guaranteedCard.image}
 					alt={guaranteedCard.name}
-					className="thumb-banner"
+					className={cardClass}
 					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
 				/>
 			)
 		}
 		if (target.banner.image) {
-			return <img src={target.banner.image} alt={target.banner.name} className="thumb-banner" title={pool?.hint} />
+			return <img src={target.banner.image} alt={target.banner.name} className={cardClass} title={pool?.hint} />
 		}
 		// Typographic fallback. The cutoff rides with it because this chip is
 		// exactly the statement it qualifies: "★3 cards, released by this date".
@@ -123,11 +127,11 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 							src={uma.portrait ?? uma.image}
 							alt={uma.name}
 							oshi={oshiIds.has(uma.id)}
-							className="w-14"
+							className={umaSize}
 						/>
 					))
 				: images.slice(0, 2).map((img) => (
-						<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" />
+						<img key={img.name} src={img.image} alt={img.name} className={cardClass} />
 					))}
 			<ExtraCardsBadge hidden={images.length - 2} />
 		</>

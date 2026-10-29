@@ -187,19 +187,6 @@
 	min-width: var(--container-banner-table);
 }
 
-/* The share picture's grid (carat-calculator/share/ShareableBannerTable.tsx).
-   The SAME fixed tracks as .banner-grid just above, minus the odds and delete
-   tracks: 962px. Resize a track there and resize it here too, or the picture
-   stops matching the sheet it shows.
-
-   Unlike .banner-grid it sets display itself and has no min-width: the picture
-   is always the wide layout, whatever the screen, and its root fixes its width
-   (962px of tracks + the border + the padding). */
-.banner-grid--share {
-	display: grid;
-	grid-template-columns: 70px 8rem 10.5rem 6.75rem 20.5rem 5rem 5rem;
-}
-
 /* Staging variant — same nine-cell row minus the derived-stats column, whose
    width goes to the banner select. Add to calculator sits in the MLB track.
 
@@ -1185,6 +1172,50 @@
    the favorites card): the same borderless art and corner, no frame. */
 .uma-frame--bare::after {
 	content: none;
+}
+
+/* ===== SHARE PICTURE =====
+   The pull plan's picture (carat-calculator/share/PlanPicture.tsx). It paints
+   the theme's own page glow, so a Violet plan comes out violet-lit and a Teal
+   one underwater, the way the page looks behind it. The page shows its glow
+   through a fixed layer under the page (PAGE GLOW in index.css), which a
+   picture drawn off screen never sees, so the picture paints the gradients
+   itself. This is no scrolling page, so the reasons Dark has no page glow
+   (the layer's repaint and antialiasing costs) don't apply: Dark, the one
+   theme without --page-glow, gets a soft bloom of its own accent instead. */
+.plan-picture {
+	background-color: var(--color-gray-900);
+	background-image: var(
+		--page-glow,
+		radial-gradient(circle at 8% -12%, color-mix(in srgb, var(--color-brand) 14%, transparent), transparent 30rem),
+		radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--color-brand) 8%, transparent), transparent 24rem)
+	);
+}
+
+/* A racecourse in the top-right corner: a stadium-shaped rail and its dashed
+   inner rail, in the theme's accent at low alpha, with the wordmark in the
+   infield. Mostly cropped by the picture's edge: what shows is the far turn
+   and the home straight, which runs at 118px, under the wordmark (bottom
+   ~87px) and above the figures (top ~141px). Move the header and re-check
+   that the straight still clears both. Borders only, so html-to-image draws
+   it the way the browser does. */
+.plan-picture-track {
+	position: absolute;
+	top: -182px;
+	right: -300px;
+	width: 700px;
+	height: 300px;
+	border: 2px solid color-mix(in srgb, var(--color-brand) 18%, transparent);
+	border-radius: 9999px;
+	pointer-events: none;
+}
+
+.plan-picture-track::after {
+	content: "";
+	position: absolute;
+	inset: 18px;
+	border: 1px dashed color-mix(in srgb, var(--color-brand) 14%, transparent);
+	border-radius: inherit;
 }
 
 /* ===== THUMBNAILS ===== */

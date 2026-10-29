@@ -2591,21 +2591,35 @@ then scrolls itself into view. Its numbers are explained in
 share sheet) and Download, each offered only where the browser can do it. Plan:
 `notes/share-plan-image-plan.md`.
 
-- **A separate read-only table, `ShareableBannerTable`**, never a read-only flag on
-  `BannerRow`. It keeps the art, name, dates, the four stat boxes, pulls and reserved
-  copies, plus a header ("Pull plan", or the account's name when the player ticks the box,
-  off by default), a totals line with the forecast's own "Short by" figure, and the site's
-  address. "Hide paid carats" blanks the paid box and the paid total.
+- **A poster, `PlanPicture`, never a read-only flag on `BannerRow`** (redesigned
+  2026-10-29). It is seen at half size or less in a chat feed, so it leads with what reads
+  there: the totals as headline tiles (pulls, free and paid carats spent, and the
+  forecast's own "Carats short" / "Carats to spare" figure in the status colours), then each
+  banner as a card on a dated rail, with its art a size up (`BannerArt large`), a type pill
+  (`BannerTypeChip`) and the pull count as the card's biggest number, coloured and metered
+  by `countStatus`. The sheet's four stat boxes stay as a small 2x2 grid. The scenario and
+  anniversary bands become dated milestones on the rail. "Show my name" (off by default)
+  also shows the account's picture, framed as the player's own favorite; "Hide paid
+  carats" drops the paid tile and blanks the paid figure.
+- **The theme reaches the picture through its tokens and its glow.** It is drawn while
+  mounted in the page, so every colour is the player's theme, colorblind mode included.
+  `.plan-picture` (App.css) paints the theme's `--page-glow` itself, because the page's
+  glow layer is fixed to the viewport and never reaches an off-screen node; Dark, which has
+  no glow, gets a soft bloom of its own accent. `.plan-picture-track` is the racecourse
+  in the corner: its straight runs between the wordmark and the tiles, so re-check it
+  when the header moves.
 - **Its numbers come from `utils/bannerRowFigures.ts`**, the same helper `BannerRow` reads
   (the "Passed" gate, the carats floored to tens, the stat boxes), and its art from
   `BannerArt`, which `BannerRow` also draws. Change a row's figures there, never in one
-  of the two tables.
-- **`.banner-grid--share` (App.css) repeats `.banner-grid`'s fixed tracks** minus the odds
-  and delete tracks, and sets `display: grid` itself: the picture is always the wide
-  layout, at 1004px, whatever the screen. Resize a track in both.
+  of the two views.
+- **Fixed at 960px, drawn at 2x**, whatever the screen. It no longer mirrors the sheet's
+  grid tracks, so a column change on the sheet doesn't touch it.
+- **Centre with flex, not auto margins.** The rail's nodes drew off the line in the PNG
+  with `mx-auto` and on it once `RailNode` centred them with flex. Why the clone lost the
+  centring wasn't pinned down, so check a new centred element in a real capture.
 - **The picture is made when the panel opens**, not on the click: Safari allows a clipboard
   write or the share sheet only inside the click, and drawing takes a second or two. The
-  table is mounted off screen only while the panel is open.
+  picture is mounted off screen only while the panel is open.
 - **`utils/shareImage.ts` is generic** (render a node to a PNG, then copy, share or
   download), loads `html-to-image` on first use, and draws twice for Safari. html2canvas is
   not an option: it can't read Tailwind 4's `oklch()` colours. Card art embeds because the

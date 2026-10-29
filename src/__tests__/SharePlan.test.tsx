@@ -1,12 +1,12 @@
 /**
- * The pull plan as a picture: what the read-only table prints, and the button
- * that makes it. The drawing itself (html-to-image) needs a real browser, so
- * the button's tests stub it; it was checked by hand in headless Chrome.
+ * The pull plan as a picture: what the picture prints, and the button that
+ * makes it. The drawing itself (html-to-image) needs a real browser, so the
+ * button's tests stub it; it was checked by hand in headless Chrome.
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ShareableBannerTable } from '../components/carat-calculator/share/ShareableBannerTable'
+import { PlanPicture } from '../components/carat-calculator/share/PlanPicture'
 import { SharePlanButton } from '../components/carat-calculator/share/SharePlanButton'
 import { EMPTY_BANNER_RESOURCES } from '../hooks/bannerResources'
 import type { BannerResources } from '../hooks/bannerResources'
@@ -22,9 +22,13 @@ vi.mock('../utils/shareImage', () => ({
   downloadImage: vi.fn(),
 }))
 let displayName = ''
+let avatarUrl: string | null = null
 vi.mock('../services/AuthContext', async () => ({
   ...(await vi.importActual<typeof import('../services/AuthContext')>('../services/AuthContext')),
-  useAccount: () => ({ account: displayName ? { display_name: displayName } : null, isLoggedIn: !!displayName }),
+  useAccount: () => ({
+    account: displayName ? { display_name: displayName, avatar_url: avatarUrl } : null,
+    isLoggedIn: !!displayName,
+  }),
 }))
 
 const NOW = new Date('2099-01-15T12:00:00Z')
@@ -57,15 +61,16 @@ const resources = (free: number, spent: number, paid = 0, paidSpent = 0): Banner
 })
 const RESOURCES = [resources(20_000, 15_000, 3_000, 1_500), resources(5_000, 7_500)]
 
-function renderTable(props: Partial<Parameters<typeof ShareableBannerTable>[0]> = {}) {
+function renderPicture(props: Partial<Parameters<typeof PlanPicture>[0]> = {}) {
   return render(
-    <ShareableBannerTable
+    <PlanPicture
       plannerRows={ROWS}
       bannerResources={RESOURCES}
       umaBannerData={[]}
       supportBannerData={[]}
       userStepUpSelectionData={[]}
       ownerName={null}
+      ownerPicture={null}
       hideSpend={false}
       now={NOW}
       {...props}
@@ -73,34 +78,50 @@ function renderTable(props: Partial<Parameters<typeof ShareableBannerTable>[0]> 
   )
 }
 
-describe('ShareableBannerTable', () => {
-  it('prints each row, the totals and the shortfall the forecast would', () => {
-    renderTable()
+/** A headline figure: the tile holding `label`, read for its value. */
+const tile = (label: string) => screen.getByText(label).parentElement?.textContent
 
-    expect(screen.getByRole('heading', { name: 'Pull plan' })).toBeInTheDocument()
+describe('PlanPicture', () => {
+  it('prints each row, the totals and the shortfall the forecast would', () => {
+    renderPicture()
+
+    expect(screen.getByRole('heading', { name: 'My pull plan' })).toBeInTheDocument()
     expect(screen.getByText('Kitasan Black')).toBeInTheDocument()
     expect(screen.getByText('Satono Diamond')).toBeInTheDocument()
-    expect(screen.getByText(/2 banners · 150 pulls · 22,500 free carats spent · 1,500 paid carats spent/)).toBeInTheDocument()
+    expect(screen.getByText(/^2 banners/)).toBeInTheDocument()
+    expect(tile('Pulls planned')).toContain('150')
+    expect(tile('Free carats spent')).toContain('22,500')
+    expect(tile('Paid carats spent')).toContain('1,500')
     // 5,000 before the second banner, 7,500 spent on it.
-    expect(screen.getByText(/Short by 2,500 carats/)).toBeInTheDocument()
+    expect(tile('Carats short')).toContain('2,500')
   })
 
-  it('blanks the paid box and drops the paid total under Hide paid carats', () => {
-    renderTable({ hideSpend: true })
+  it("marks a count the carats can't cover", () => {
+    renderPicture()
 
-    expect(screen.queryByText(/paid carats spent/)).not.toBeInTheDocument()
+    // 50 planned on the second banner against a ceiling of 33.
+    expect(screen.getAllByText('Over budget')).toHaveLength(1)
+  })
+
+  it('blanks the paid figures under Hide paid carats', () => {
+    renderPicture({ hideSpend: true })
+
+    expect(screen.queryByText('Paid carats spent')).not.toBeInTheDocument()
     expect(screen.getAllByText('Paid Carat Est.')[0].nextSibling?.textContent).toBe('–')
   })
 
-  it("names the plan only when asked to", () => {
-    renderTable({ ownerName: 'MooncakeMile' })
+  it('names the plan, with its picture, only when asked to', () => {
+    const { container } = renderPicture({ ownerName: 'MooncakeMile', ownerPicture: 'https://example.com/oguri.png' })
+
     expect(screen.getByRole('heading', { name: "MooncakeMile's pull plan" })).toBeInTheDocument()
+    expect(container.querySelector('img[src="https://example.com/oguri.png"]')).not.toBeNull()
   })
 })
 
 describe('SharePlanButton', () => {
   afterEach(() => {
     displayName = ''
+    avatarUrl = null
     vi.clearAllMocks()
   })
 
@@ -139,7 +160,17 @@ describe('SharePlanButton', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled())
   })
 
-  it('closes on Escape and takes the hidden table with it', async () => {
+  it('says the picture comes with the name when the account has one', async () => {
+    displayName = 'MooncakeMile'
+    avatarUrl = 'https://example.com/oguri.png'
+    renderButton()
+    fireEvent.click(screen.getByRole('button', { name: 'Share picture' }))
+
+    expect(screen.getByRole('checkbox', { name: 'Show my name and picture (MooncakeMile)' })).not.toBeChecked()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled())
+  })
+
+  it('closes on Escape and takes the hidden picture with it', async () => {
     renderButton()
     fireEvent.click(screen.getByRole('button', { name: 'Share picture' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled())
