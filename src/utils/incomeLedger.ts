@@ -306,6 +306,50 @@ export function cumulativeRaceRewards(
 	return total
 }
 
+/** One payout instant of a race event, as the Timeline card lists it. */
+export interface RacePayoutDay {
+	/** The ledger's ISO instant, untouched, for `formatDate`. */
+	at: string
+	carats: number
+	/** Before the start of today: in the balance the user typed in, not the projection. */
+	paid: boolean
+}
+
+export interface RaceRewardSchedule {
+	days: RacePayoutDay[]
+	/** The whole event at this rank (`raceRewardAmount`), paid days included. */
+	total: number
+	/** Null when the rank pays none; `at` is the row's `tickets_at` / `shards_at`. */
+	tickets: { uma: number; support: number; at: string } | null
+	shards: { ssr: number; sr: number; at: string } | null
+}
+
+/**
+ * One race event's rewards at a rank, payout by payout, for the Timeline
+ * card's "Your rewards" panel (hooks/useRaceRewards).
+ *
+ * The card shows these numbers next to the planner rows, so it must never
+ * disagree with them: the same split (raceDayAmounts), the same fallbacks for
+ * an older API (everything at `date`), and the same lower bound as
+ * cumulativeRaceRewards, the start of today in UTC. A day before that bound is
+ * `paid`; every other day is one the projection still counts.
+ */
+export function raceRewardSchedule(row: IncomeLedgerRow, rank: RaceRank, today: Date): RaceRewardSchedule {
+	const instants = row.payouts?.length ? row.payouts : [row.date]
+	const amounts = raceDayAmounts(rank, row.event_number ?? null, instants.length)
+	const from = startOfUtcDay(today).getTime()
+	const uma = rank.uma_ticket_amount
+	const support = rank.support_ticket_amount
+	const ssr = rank.ssr_shard_amount
+	const sr = rank.sr_shard_amount
+	return {
+		days: instants.map((at, day) => ({ at, carats: amounts[day], paid: new Date(at).getTime() < from })),
+		total: amounts.reduce((sum, amount) => sum + amount, 0),
+		tickets: uma + support > 0 ? { uma, support, at: row.tickets_at ?? row.date } : null,
+		shards: ssr + sr > 0 ? { ssr, sr, at: row.shards_at ?? row.date } : null,
+	}
+}
+
 /**
  * How much of one event's `carats_throughout` pool is still collectable as of
  * `now` — a single figure per event, independent of any banner window.

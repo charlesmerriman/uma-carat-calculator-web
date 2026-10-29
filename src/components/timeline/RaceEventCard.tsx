@@ -21,11 +21,13 @@ import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { TIMELINE_FOCUS_HIGHLIGHT, getCountdownLabel } from "./timelineShared"
 import { CourseDetails } from "./CourseDetails"
+import { RaceRewards } from "./RaceRewards"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import { availableCourseDetails, courseDetails } from "../../utils/courseDetails"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
 import { useRaceParticipation } from "../../hooks/useRaceParticipation"
+import { useRaceRewards } from "../../hooks/useRaceRewards"
 import { ToggleSwitch } from "../ToggleSwitch"
 import type { RefObject } from "react"
 import type { RaceEvent } from "../../types"
@@ -55,6 +57,10 @@ export function RaceEventCard({
 	// simply not drawn.
 	const participation = useRaceParticipation(event)
 	const skipped = participation?.participating === false
+	// What the event pays at the player's finish; null with nothing to show
+	// (see the hook), which is also when the switch above is missing.
+	const rewards = useRaceRewards(event)
+	const hasSidePanel = hasEventDetails || rewards !== null
 
 	return (
 		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
@@ -129,10 +135,11 @@ export function RaceEventCard({
 				 * cards' art has (see App.css and BANNER_ART). This used to be the
 				 * banner row's 1.28fr weight against one gap instead of two, which
 				 * came out 6px wider than the banners above and below it. The
-				 * details panel takes the rest. Without details the art sits alone
-				 * and centred, still at the shared width from xl up.
+				 * side panels (course details, your rewards) take the rest. With
+				 * neither the art sits alone and centred, still at the shared width
+				 * from xl up.
 				 */}
-				<div className={hasEventDetails
+				<div className={hasSidePanel
 					? "grid gap-4 xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(500px,1fr)] xl:items-stretch"
 					: "mx-auto max-w-[41rem] xl:w-[var(--timeline-art-width)]"}
 				>
@@ -153,10 +160,10 @@ export function RaceEventCard({
 						)}
 					</div>
 
-					{hasEventDetails && (
+					{hasSidePanel && (
 						<div className="flex min-w-0 flex-col gap-4">
 							<CourseDetails event={event} />
-
+							{rewards && <RaceRewards rewards={rewards} />}
 						</div>
 					)}
 				</div>

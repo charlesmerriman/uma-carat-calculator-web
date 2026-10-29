@@ -4,6 +4,7 @@ import {
   cumulativeRaceRewards,
   raceDayAmounts,
   raceRewardAmount,
+  raceRewardSchedule,
   upcomingRaceRewardRange,
   cumulativeThroughoutCarats,
   parseLedger,
@@ -409,5 +410,34 @@ describe('day-by-day race rewards', () => {
     const today = utc('2026-08-15T00:00:00Z')
     const rest = cumulativeRaceRewards(loh(3), 'league_of_heroes', today, utc('2026-08-31T21:59:59Z'), PLATINUM_4)
     expect(rest.carats).toBe(3450 - 390 - 300)
+  })
+
+  it("lists one event day by day for the Timeline card, agreeing with the projection", () => {
+    // Today is day 3, as above: days 1 and 2 are paid, and the days left
+    // add up to what cumulativeRaceRewards still counts.
+    const today = utc('2026-08-15T00:00:00Z')
+    const [event] = loh(3)
+    const schedule = raceRewardSchedule(event, PLATINUM_4, today)
+    expect(schedule.days.map((day) => day.carats)).toEqual([390, 300, 600, 1000, 500, 500, 100, 60])
+    expect(schedule.days.map((day) => day.paid)).toEqual([true, true, false, false, false, false, false, false])
+    expect(schedule.days.map((day) => day.at)).toEqual(PAYOUTS)
+    expect(schedule.total).toBe(3450)
+    const ahead = schedule.days.filter((day) => !day.paid).reduce((sum, day) => sum + day.carats, 0)
+    expect(ahead).toBe(cumulativeRaceRewards(loh(3), 'league_of_heroes', today, utc('2026-08-31T21:59:59Z'), PLATINUM_4).carats)
+    expect(schedule.tickets).toEqual({ uma: 1, support: 1, at: PAYOUTS[3] })
+    expect(schedule.shards).toEqual({ ssr: 2, sr: 2, at: PAYOUTS[2] })
+  })
+
+  it('lists one payout for a row with no instants, and no items for a rank that pays none', () => {
+    // An API older than `payouts`, `tickets_at` and `shards_at`.
+    const old = row({ date: PAYOUTS[7], kind: 'league_of_heroes', event_number: 3 })
+    const noItems = { ...PLATINUM_4, uma_ticket_amount: 0, support_ticket_amount: 0, ssr_shard_amount: 0, sr_shard_amount: 0 }
+    expect(raceRewardSchedule(old, noItems, TODAY)).toEqual({
+      days: [{ at: PAYOUTS[7], carats: 3450, paid: false }],
+      total: 3450,
+      tickets: null,
+      shards: null,
+    })
+    expect(raceRewardSchedule(old, PLATINUM_4, TODAY).tickets).toEqual({ uma: 1, support: 1, at: PAYOUTS[7] })
   })
 })
