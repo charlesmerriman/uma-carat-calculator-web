@@ -4,6 +4,8 @@
  * team's spots, asks before replacing cards, opens the uma picker for an
  * empty spot, and puts the deck on with the team rules applied. The mapping
  * itself is unit-tested in pvpTeams.test.ts (deckToMemberCards).
+ *
+ * Plus the toolbar's Duplicate, which goes through the same createTeam.
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
@@ -187,6 +189,34 @@ describe("Use this deck in My team", () => {
 	it("shows no banner when nothing was handed over", () => {
 		renderBuilder(teamsValue([team("t1")]), null)
 		expect(screen.queryByRole("region", { name: "Use a guide deck" })).not.toBeInTheDocument()
+	})
+})
+
+describe("Duplicate team", () => {
+	const NOTES: PvpTeam["notes"] = [{ text: "Save Kitasan for round 2", color: "yellow" }]
+
+	it("copies the selected team's umas, cards and notes as Copy of Team 1", () => {
+		const value = renderBuilder(teamsValue([{ ...team("t1"), notes: NOTES }]), null)
+		fireEvent.click(screen.getByRole("button", { name: "Duplicate team" }))
+		expect(value.createTeam).toHaveBeenCalledWith(expect.objectContaining({ kind: "cm", id: 10 }), {
+			name: "Copy of Team 1",
+			notes: NOTES,
+			members: MEMBERS,
+		})
+	})
+
+	it("keeps a long name within the 40 characters the API takes", () => {
+		const long = { ...team("t1"), name: "A".repeat(38) }
+		const value = renderBuilder(teamsValue([long]), null)
+		fireEvent.click(screen.getByRole("button", { name: "Duplicate team" }))
+		expect(vi.mocked(value.createTeam).mock.calls[0][1]?.name).toBe(`Copy of ${"A".repeat(32)}`)
+	})
+
+	it("is off at five teams, and says why", () => {
+		renderBuilder(teamsValue(["a", "b", "c", "d", "e"].map((key) => team(key))), null)
+		const button = screen.getByRole("button", { name: "Duplicate team" })
+		expect(button).toBeDisabled()
+		expect(button).toHaveAttribute("title", "You can keep up to 5 teams for one event.")
 	})
 })
 
