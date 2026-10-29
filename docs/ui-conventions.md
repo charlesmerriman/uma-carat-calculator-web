@@ -2585,11 +2585,17 @@ then scrolls itself into view. Its numbers are explained in
 - The line draws itself in on mount (Recharts' own animation), skipped under
   `prefers-reduced-motion`.
 
-## Share picture (`carat-calculator/share/`)
+## Share picture (`carat-calculator/share/`, `pvp/share/`)
 
-"Share picture" on the calculator turns the plan into a PNG: Copy, Share (the device's
-share sheet) and Download, each offered only where the browser can do it. Plan:
-`notes/share-plan-image-plan.md`.
+"Share picture" turns the pull plan, or a PvP team on My team, into a PNG: Copy, Share
+(the device's share sheet) and Download, each offered only where the browser can do it.
+Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
+
+- **One panel, two pictures.** `components/share/SharePictureButton.tsx` owns the button,
+  the portalled panel, the drawing and the three actions; `SharePlanButton` and
+  `ShareTeamButton` each pass their picture, their checkboxes (`ShareOption`), an
+  `optionsKey` that changes whenever the picture would, and a file name. A third picture
+  is a third wrapper, never a copy of the panel.
 
 - **A poster, `PlanPicture`, never a read-only flag on `BannerRow`** (redesigned
   2026-10-29). It is seen at half size or less in a chat feed, so it leads with what reads
@@ -2603,11 +2609,11 @@ share sheet) and Download, each offered only where the browser can do it. Plan:
   carats" drops the paid tile and blanks the paid figure.
 - **The theme reaches the picture through its tokens and its glow.** It is drawn while
   mounted in the page, so every colour is the player's theme, colorblind mode included.
-  `.plan-picture` (App.css) paints the theme's `--page-glow` itself, because the page's
+  `.share-picture` (App.css) paints the theme's `--page-glow` itself, because the page's
   glow layer is fixed to the viewport and never reaches an off-screen node; Dark, which has
-  no glow, gets a soft bloom of its own accent. `.plan-picture-track` is the racecourse
+  no glow, gets a soft bloom of its own accent. `.share-picture-track` is the racecourse
   in the corner: its straight runs between the wordmark and the tiles, so re-check it
-  when the header moves.
+  when a header moves. Both pictures wear the pair.
 - **Its numbers come from `utils/bannerRowFigures.ts`**, the same helper `BannerRow` reads
   (the "Passed" gate, the carats floored to tens, the stat boxes), and its art from
   `BannerArt`, which `BannerRow` also draws. Change a row's figures there, never in one
@@ -2631,3 +2637,23 @@ share sheet) and Download, each offered only where the browser can do it. Plan:
   not an option: it can't read Tailwind 4's `oklch()` colours. Card art embeds because the
   image CDN sends `Access-Control-Allow-Origin: *`; art from a host without it would fail
   the draw.
+- **The team picture is a lineup, `TeamPicture`** (owner, 2026-10-29; mocks in
+  `notes/team-picture/`): the race as four headline tiles (`courseTiles`, which drops a
+  tile still reading "TBD" and shows odd editor values as typed), the team shape strip
+  ("2 Pace + 1 End", each face on a straight where her style runs, `STYLE_ON_STRAIGHT`), then
+  the three umas side by side: portrait, her letters for THIS race (TeamGrid's tones), her
+  veteran's grade and stats, and her deck 3x2 with the borrowed card last. An empty spot
+  keeps its column, so the numbers match the strip. Words and numbers live in
+  `utils/teamPicture.ts`.
+- **Its options (owner, 2026-10-29):** "Show my name" off, "Show my veterans" off (offered
+  only when a member has one linked), "Show notes" on. Veterans hidden means her BASE
+  letters too: the letters a veteran fixed are the veteran's data.
+- **The event's art sits behind the top of the team picture** (owner's pick over none,
+  2026-10-29): `.share-picture-art`, full width from the top edge at 16:9, 15% opacity
+  (14% on a light theme) and a `mask-image` fade to the south, with the glow on its own
+  layer above it (`.share-picture-glow`). The mask draws in a real html-to-image capture
+  (checked in headless Chrome, four themes). The tiles and the strip go 78% opaque over it;
+  the columns stay solid. An event with no art draws the picture without it.
+- **Where the team's button sits:** at the end of the My team bar, after rename, duplicate
+  and delete (`TeamToolbar`'s `share` slot), once the team has an uma. Not in the team
+  window.

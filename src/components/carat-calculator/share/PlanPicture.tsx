@@ -28,7 +28,7 @@ import { BannerTypeChip } from "../BannerTypeBadge"
  * on the same rail.
  *
  * Every colour is a theme token, and the root paints the theme's own page glow
- * (`.plan-picture` in App.css), so the picture comes out in the player's theme,
+ * (`.share-picture` in App.css), so the picture comes out in the player's theme,
  * colorblind mode included. It is drawn while mounted in the page, which is why
  * the tokens reach it.
  *
@@ -94,9 +94,9 @@ export function PlanPicture({
 	)
 
 	return (
-		<div className="plan-picture relative w-[960px] overflow-hidden text-gray-100">
+		<div className="share-picture relative w-[960px] overflow-hidden text-gray-100">
 			{/* A racecourse rail in the corner, in the theme's accent: decoration only. */}
-			<div className="plan-picture-track" />
+			<div className="share-picture-track" />
 
 			<header className="relative px-10 pt-9 pb-8">
 				<div className="flex items-start justify-between gap-8">

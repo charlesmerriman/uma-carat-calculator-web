@@ -1175,31 +1175,34 @@
 }
 
 /* ===== SHARE PICTURE =====
-   The pull plan's picture (carat-calculator/share/PlanPicture.tsx). It paints
-   the theme's own page glow, so a Violet plan comes out violet-lit and a Teal
-   one underwater, the way the page looks behind it. The page shows its glow
-   through a fixed layer under the page (PAGE GLOW in index.css), which a
-   picture drawn off screen never sees, so the picture paints the gradients
-   itself. This is no scrolling page, so the reasons Dark has no page glow
-   (the layer's repaint and antialiasing costs) don't apply: Dark, the one
-   theme without --page-glow, gets a soft bloom of its own accent instead. */
-.plan-picture {
-	background-color: var(--color-gray-900);
-	background-image: var(
+   The pull plan's picture (carat-calculator/share/PlanPicture.tsx) and the PvP
+   team's (pvp/share/TeamPicture.tsx). Each paints the theme's own page glow,
+   so a Violet plan comes out violet-lit and a Teal one underwater, the way the
+   page looks behind it. The page shows its glow through a fixed layer under
+   the page (PAGE GLOW in index.css), which a picture drawn off screen never
+   sees, so the picture paints the gradients itself. This is no scrolling page,
+   so the reasons Dark has no page glow (the layer's repaint and antialiasing
+   costs) don't apply: Dark, the one theme without --page-glow, gets a soft
+   bloom of its own accent instead. --share-glow holds the gradients so the
+   art version's glow layer (below) paints the same ones. */
+.share-picture {
+	--share-glow: var(
 		--page-glow,
 		radial-gradient(circle at 8% -12%, color-mix(in srgb, var(--color-brand) 14%, transparent), transparent 30rem),
 		radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--color-brand) 8%, transparent), transparent 24rem)
 	);
+	background-color: var(--color-gray-900);
+	background-image: var(--share-glow);
 }
 
 /* A racecourse in the top-right corner: a stadium-shaped rail and its dashed
    inner rail, in the theme's accent at low alpha, with the wordmark in the
    infield. Mostly cropped by the picture's edge: what shows is the far turn
    and the home straight, which runs at 118px, under the wordmark (bottom
-   ~87px) and above the figures (top ~141px). Move the header and re-check
+   ~87px) and above the figures (top ~141px). Move a header and re-check
    that the straight still clears both. Borders only, so html-to-image draws
    it the way the browser does. */
-.plan-picture-track {
+.share-picture-track {
 	position: absolute;
 	top: -182px;
 	right: -300px;
@@ -1210,12 +1213,46 @@
 	pointer-events: none;
 }
 
-.plan-picture-track::after {
+.share-picture-track::after {
 	content: "";
 	position: absolute;
 	inset: 18px;
 	border: 1px dashed color-mix(in srgb, var(--color-brand) 14%, transparent);
 	border-radius: inherit;
+}
+
+/* The team picture's event art (owner, 2026-10-29): the CM's own art behind
+   the top, the full width from the top edge at 16:9, heavily faded, fading
+   out to the south (mock: notes/team-picture/mocks/07). The glow moves to a
+   layer ABOVE the art so the art takes the theme's light, and the root drops
+   its own copy so the gradients aren't painted twice. A light theme's page is
+   pale, so its art sits a touch fainter. */
+.share-picture--art {
+	background-image: none;
+}
+
+.share-picture-art {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	object-fit: cover;
+	object-position: top;
+	opacity: 0.15;
+	mask-image: linear-gradient(to bottom, #000 28%, transparent);
+	pointer-events: none;
+}
+
+[data-theme-mode="light"] .share-picture-art {
+	opacity: 0.14;
+}
+
+.share-picture-glow {
+	position: absolute;
+	inset: 0;
+	background-image: var(--share-glow);
+	pointer-events: none;
 }
 
 /* ===== THUMBNAILS ===== */
