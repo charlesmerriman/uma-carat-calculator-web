@@ -209,17 +209,20 @@ describe("the day a CM is on", () => {
 		expect(isPastDay(1, CM_NOT_STARTED)).toBe(false)
 	})
 
-	it("counts 24-hour days from the start, held at 4 after it", () => {
+	it("counts 24-hour days from the start", () => {
 		expect(at("2026-10-31T22:00:00Z")).toBe(1)
 		expect(at("2026-11-01T21:59:00Z")).toBe(1)
 		expect(at("2026-11-01T22:00:00Z")).toBe(2)
 		expect(at("2026-11-02T22:00:00Z")).toBe(3)
-		expect(at("2026-11-04T21:00:00Z")).toBe(4)
-		expect(at("2026-11-05T12:00:00Z")).toBe(4)
+		expect(at("2026-11-04T21:59:00Z")).toBe(4)
 	})
 
-	it("is the final once the final has started", () => {
-		expect(DEFAULT_CONSTANTS.cm_finals_hours).toBe(120)
+	it("is no day once Round 2 has ended: finals registration, then the final", () => {
+		// Round 2 starts 48 hours in and runs two days, so it ends 96 hours in.
+		expect(DEFAULT_CONSTANTS.cm_round_two_hours).toBe(48)
+		expect(at("2026-11-04T22:00:00Z")).toBeNull()
+		expect(at("2026-11-05T09:59:00Z")).toBeNull()
 		expect(at("2026-11-05T22:00:00Z")).toBeNull()
+		expect(isPastDay(4, null)).toBe(true)
 	})
 })

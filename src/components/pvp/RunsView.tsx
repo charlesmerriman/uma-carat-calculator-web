@@ -210,7 +210,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	}, [ensureLoaded])
 
 	// The tab opens on the day the CM is on now (Day 1 until Round 1 starts),
-	// or on the Finals once they start.
+	// or on the Finals once Round 2 has ended.
 	const [tab, setTab] = useState<DayTab>(() => {
 		const day = cmDayAt(event, calculationConstants, new Date())
 		return day === null ? "final" : Math.max(1, day)
@@ -1370,7 +1370,7 @@ function bestText(runs: PvpRun[], round: number): string {
 
 /**
  * The phone's three numbers, over the tabs: the win rate, today's races (the
- * Finals once they start) and the current round's best ticket. The per-uma
+ * Finals once Round 2 has ended) and the current round's best ticket. The per-uma
  * bars stay in the Summary, which a phone shows under the day.
  */
 function WinRateStrip({ event, runs, today }: { event: RaceEvent; runs: PvpRun[]; today: number | null }) {

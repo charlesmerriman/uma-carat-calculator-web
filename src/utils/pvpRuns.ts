@@ -69,23 +69,33 @@ export function roundOfDay(day: number): number {
 export const CM_NOT_STARTED = 0
 
 /**
- * The CM day `now` falls on: 1 from the start date, a new day every 24 hours,
- * held at the last day after it. `null` once the final has started
- * (`cm_finals_hours` after the start), so the view opens on the final. Days
- * count from the event's own start time, which is how the game's rounds are
- * spaced (Round 2 is `cm_round_two_hours` = 48 in).
+ * The CM day `now` falls on: 1 from the start date, a new day every 24 hours.
+ * Days count from the event's own start time, which is how the game's rounds
+ * are spaced (Round 2 is `cm_round_two_hours` = 48 in, and runs two days).
  *
- * Before the start it is CM_NOT_STARTED. The start date is Round 1, and
- * registration opens three days earlier (`cm_registration_opens_hours`), so
- * the tab is open while nothing can be raced yet. Holding at 1 there badged
- * Day 1 "Today" the moment CM 21's registration post went out (2026-10-28).
+ * The race days have quiet time on both sides, and neither is a day:
+ *
+ *   before the start     CM_NOT_STARTED. The start date is Round 1, and
+ *                        registration opens three days earlier
+ *                        (`cm_registration_opens_hours`). Holding at 1 there
+ *                        badged Day 1 "Today" the moment CM 21's registration
+ *                        post went out (2026-10-28).
+ *   after Round 2 ends   null, so every day is over and the view opens on the
+ *                        Finals. Round 2 ends 96 hours in, and the Finals are
+ *                        a day later (`cm_finals_hours` = 120); finals
+ *                        registration fills the gap. Holding at 4 called Day 4
+ *                        "Today" all through it (owner, 2026-10-28).
+ *
+ * Worked through CM 21 (start 2026-10-31 22:00 UTC): Oct 30 is 0, Nov 1 21:59
+ * is 1, Nov 4 21:59 is 4, Nov 4 22:00 onward is null.
  */
 export function cmDayAt(event: RaceEvent, constants: CalculationConstants, now: Date): number | null {
 	const start = parseApiDate(event.start_date)
 	if (!start) return 1
 	const elapsed = now.getTime() - start.getTime()
 	if (elapsed < 0) return CM_NOT_STARTED
-	if (elapsed >= constants.cm_finals_hours * 3_600_000) return null
+	const roundTwoEnds = constants.cm_round_two_hours * 3_600_000 + CM_DAYS_PER_ROUND * DAY_MS
+	if (elapsed >= roundTwoEnds) return null
 	return Math.min(CM_RUN_DAYS, Math.floor(elapsed / DAY_MS) + 1)
 }
 
@@ -196,7 +206,7 @@ export function unloggedTickets(runs: PvpRun[], day: number): number[] {
 
 /**
  * A day that is over, given cmDayAt's answer for now: every day before it,
- * and all of them once the final has started (null). Before the event starts
+ * and all of them once Round 2 has ended (null). Before the event starts
  * cmDayAt is CM_NOT_STARTED (0), so nothing is over yet.
  */
 export function isPastDay(day: number, today: number | null): boolean {
