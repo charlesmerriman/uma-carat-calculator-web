@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import {
+	CM_NOT_STARTED,
 	bestTicketWins,
 	cmDayAt,
 	emptyContent,
@@ -201,8 +202,14 @@ describe("the day a CM is on", () => {
 	const cm = { start_date: "2026-10-31T22:00:00Z" } as RaceEvent
 	const at = (iso: string) => cmDayAt(cm, DEFAULT_CONSTANTS, new Date(iso))
 
-	it("counts 24-hour days from the start, held to 1..4", () => {
-		expect(at("2026-10-29T12:00:00Z")).toBe(1)
+	it("is no day while registration is open, before Round 1 starts", () => {
+		// Registration opened 72 hours before the start: 2026-10-28 22:00 UTC.
+		expect(at("2026-10-28T22:00:00Z")).toBe(CM_NOT_STARTED)
+		expect(at("2026-10-31T21:59:00Z")).toBe(CM_NOT_STARTED)
+		expect(isPastDay(1, CM_NOT_STARTED)).toBe(false)
+	})
+
+	it("counts 24-hour days from the start, held at 4 after it", () => {
 		expect(at("2026-10-31T22:00:00Z")).toBe(1)
 		expect(at("2026-11-01T21:59:00Z")).toBe(1)
 		expect(at("2026-11-01T22:00:00Z")).toBe(2)

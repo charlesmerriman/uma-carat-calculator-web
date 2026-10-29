@@ -63,18 +63,30 @@ export function roundOfDay(day: number): number {
 }
 
 /**
+ * cmDayAt's answer before Round 1 starts: no day is today and none is over.
+ * The view still opens on Day 1 (Math.max(1, today)).
+ */
+export const CM_NOT_STARTED = 0
+
+/**
  * The CM day `now` falls on: 1 from the start date, a new day every 24 hours,
- * held at 1 before the start and at the last day after it. `null` once the
- * final has started (`cm_finals_hours` after the start), so the view opens on
- * the final. Days count from the event's own start time, which is how the
- * game's rounds are spaced (Round 2 is `cm_round_two_hours` = 48 in).
+ * held at the last day after it. `null` once the final has started
+ * (`cm_finals_hours` after the start), so the view opens on the final. Days
+ * count from the event's own start time, which is how the game's rounds are
+ * spaced (Round 2 is `cm_round_two_hours` = 48 in).
+ *
+ * Before the start it is CM_NOT_STARTED. The start date is Round 1, and
+ * registration opens three days earlier (`cm_registration_opens_hours`), so
+ * the tab is open while nothing can be raced yet. Holding at 1 there badged
+ * Day 1 "Today" the moment CM 21's registration post went out (2026-10-28).
  */
 export function cmDayAt(event: RaceEvent, constants: CalculationConstants, now: Date): number | null {
 	const start = parseApiDate(event.start_date)
 	if (!start) return 1
 	const elapsed = now.getTime() - start.getTime()
+	if (elapsed < 0) return CM_NOT_STARTED
 	if (elapsed >= constants.cm_finals_hours * 3_600_000) return null
-	return Math.min(CM_RUN_DAYS, Math.max(1, Math.floor(elapsed / DAY_MS) + 1))
+	return Math.min(CM_RUN_DAYS, Math.floor(elapsed / DAY_MS) + 1)
 }
 
 /** A team's members as a ticket's lineup: the uma, style and veteran per spot, no deck. */
@@ -185,7 +197,7 @@ export function unloggedTickets(runs: PvpRun[], day: number): number[] {
 /**
  * A day that is over, given cmDayAt's answer for now: every day before it,
  * and all of them once the final has started (null). Before the event starts
- * cmDayAt holds at 1, so nothing is over yet.
+ * cmDayAt is CM_NOT_STARTED (0), so nothing is over yet.
  */
 export function isPastDay(day: number, today: number | null): boolean {
 	return today === null || day < today
