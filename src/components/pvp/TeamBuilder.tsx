@@ -55,6 +55,7 @@ import { PvpCardPicker } from "./PvpCardPicker"
 import { TeamEditor } from "./TeamEditor"
 import type { DeckDeal } from "./TeamGrid"
 import { TeamNotes } from "./TeamNotes"
+import { ShareTeamButton } from "./share/ShareTeamButton"
 import type { RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam, PvpTeamMember } from "../../types/pvpTeam"
 import type { PvpTeamsContextType } from "../../services/PvpTeamsContext"
@@ -441,6 +442,18 @@ function ReadyBuilder({ event, teamsState, index }: {
 							)}
 						</>
 					}
+					share={
+						// Once the team has an uma: an empty team has nothing to draw.
+						team && team.members.length > 0 ? (
+							<ShareTeamButton
+								event={event}
+								team={team}
+								umasById={index.umasById}
+								cardsById={index.cardsById}
+								veterans={mode === "account" ? veterans : undefined}
+							/>
+						) : null
+					}
 					teams={eventTeams}
 					selected={team}
 					mode={mode}
@@ -719,11 +732,13 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 	)
 }
 
-function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSelect, onCreate, onDuplicate, onRename, onDelete }: {
+function TeamToolbar({ leading, trailing, share, teams, selected, mode, saveState, onSelect, onCreate, onDuplicate, onRename, onDelete }: {
 	/** Drawn first: the Guide picks button, below xl. */
 	leading?: ReactNode
 	/** Drawn last: the Skills button, below 2xl. */
 	trailing?: ReactNode
+	/** "Share picture", after the team's own actions (notes/team-picture-plan.md). */
+	share?: ReactNode
 	teams: PvpTeam[]
 	selected: PvpTeam | null
 	mode: PvpTeamsContextType["mode"]
@@ -827,6 +842,7 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 							</IconButton>
 						</>
 					))}
+				{share}
 				{trailing}
 			</div>
 		</div>
