@@ -213,6 +213,34 @@ export function isPastDay(day: number, today: number | null): boolean {
 	return today === null || day < today
 }
 
+// ── One lineup for every ticket ──────────────────────────────────────────
+
+/**
+ * The slots "Use Team 1 for all of them" fills (owner's pick, 2026-10-29;
+ * notes/v2-10-feedback-plan.md, item 10): every ticket with no lineup on a
+ * day that isn't over, then the Finals if it has none. A lineup with no races
+ * reads "started" (ticketState), so a past day's unplayed tickets are left
+ * for "Mark the rest skipped", and a ticket that is skipped or already has a
+ * lineup is never touched.
+ */
+export function slotsWithoutLineup(runs: PvpRun[], today: number | null): PvpRunSlot[] {
+	const empty = (slot: PvpRunSlot) => {
+		const run = findRun(runs, slot)
+		return !run || (run.runners.length === 0 && run.races.length === 0 && !run.skipped)
+	}
+	const slots: PvpRunSlot[] = []
+	for (let day = 1; day <= CM_RUN_DAYS; day++) {
+		if (isPastDay(day, today)) continue
+		for (let ticket = 1; ticket <= CM_RUN_TICKETS; ticket++) {
+			const slot: PvpRunSlot = { stage: "day", day, ticket }
+			if (empty(slot)) slots.push(slot)
+		}
+	}
+	const final: PvpRunSlot = { stage: "final" }
+	if (empty(final)) slots.push(final)
+	return slots
+}
+
 // ── Win rates ────────────────────────────────────────────────────────────
 
 export interface Tally {
