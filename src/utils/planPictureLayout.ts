@@ -2,34 +2,31 @@
  * How the pull plan's picture (PlanPicture) lays out a plan of a given length
  * (notes/v2-10-feedback-plan.md, item 2b).
  *
- * The picture always shows EVERY banner (owner, 2026-10-29: a picture of part
- * of a plan defeats the point). What changes with the length is the shape:
+ * Every banner, always, at full size (owner, 2026-10-29: a picture of part of
+ * a plan has no point, and nothing gets smaller; the picture gets bigger).
  *
- *   poster   up to 15 banners: the poster as designed, art a size up
- *   compact  16 to 30: one row per banner, about 60px instead of 120px
- *   columns  31 and up: compact rows in two columns side by side
+ *   poster   up to 30 banners: one column of the poster's cards
+ *   columns  31 and up: the same cards in two columns side by side, each
+ *            column exactly the poster's width
  *
- * Worked example: Daptrius's 26-banner plan was about 960 x 3,470 CSS px as a
- * poster, a strip Discord shows at thumbnail size. Compact it is about
- * 960 x 2,300. A 60-banner plan in columns is about 1,760 x 2,300, close to
- * square. utils/shareImage.ts (pixelRatioFor) still scales any picture that
- * would pass an iPhone's canvas cap, so a very long plan draws softer, never
- * fails.
+ * Why 31: one column of about 30 banners is as tall as an iPhone can draw at
+ * double size (its canvas cap, utils/shareImage.ts pixelRatioFor). Past that,
+ * one ever-taller column would only be drawn at a lower scale, and a 10:1
+ * strip is hard to read in Discord's viewer, so the picture grows wider
+ * instead. Worked example, 80 banners: one column would be about 960 x 9,950
+ * CSS px (10:1, drawn at 1.3x on an iPhone); two columns are about
+ * 1,880 x 5,650 (3:1).
  */
 
 import type { PlannerRow } from "./plannerSections"
 
-export type PlanPictureLayout = "poster" | "compact" | "columns"
+export type PlanPictureLayout = "poster" | "columns"
 
-/** The fewest banners drawn as compact rows. */
-export const COMPACT_FROM = 16
 /** The fewest banners drawn in two columns. */
 export const COLUMNS_FROM = 31
 
 export function planPictureLayout(banners: number): PlanPictureLayout {
-	if (banners >= COLUMNS_FROM) return "columns"
-	if (banners >= COMPACT_FROM) return "compact"
-	return "poster"
+	return banners >= COLUMNS_FROM ? "columns" : "poster"
 }
 
 /**

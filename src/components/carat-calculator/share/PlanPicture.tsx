@@ -37,10 +37,10 @@ import { BannerTypeChip } from "../BannerTypeBadge"
  * picture and the sheet can't disagree. Fixed width (960px, drawn at 2x), so
  * the picture is the same on a phone as on a desktop.
  *
- * Every banner is always drawn. A long plan changes shape instead
- * (planPictureLayout): from 16 banners each is a compact row, and from 31 the
- * rows run in two columns on a 1,760px picture, so it stays readable in a chat
- * feed rather than becoming a thin strip.
+ * Every banner is always drawn, at full size. From 31 banners the cards run
+ * in two columns side by side (planPictureLayout), each exactly the poster's
+ * width on a 1,880px picture, so a long plan grows wider instead of into a
+ * strip too tall to read.
  */
 export function PlanPicture({
 	plannerRows,
@@ -100,12 +100,11 @@ export function PlanPicture({
 	)
 
 	const layout = planPictureLayout(banners.length)
-	const compact = layout !== "poster"
 
 	return (
 		<div
 			data-layout={layout}
-			className={`share-picture relative ${layout === "columns" ? "w-[1760px]" : "w-[960px]"} overflow-hidden text-gray-100`}
+			className={`share-picture relative ${layout === "columns" ? "w-[1880px]" : "w-[960px]"} overflow-hidden text-gray-100`}
 		>
 			{/* A racecourse rail in the corner, in the theme's accent: decoration only. */}
 			<div className="share-picture-track" />
@@ -150,13 +149,11 @@ export function PlanPicture({
 			    node column, from the first node to the last. */}
 			<div className={`relative px-10 ${layout === "columns" ? "grid grid-cols-2 gap-x-10" : ""}`}>
 				{(layout === "columns" ? splitColumns(plannerRows) : [plannerRows]).map((rows, column) => (
-					<div key={column} className={`relative flex flex-col ${compact ? "gap-1.5" : "gap-2.5"}`}>
-						<div
-							className={`absolute left-[120px] w-0.5 -translate-x-1/2 bg-brand/25 ${compact ? "top-7 bottom-7" : "top-11 bottom-11"}`}
-						/>
+					<div key={column} className="relative flex flex-col gap-2.5">
+						<div className="absolute top-11 bottom-11 left-[120px] w-0.5 -translate-x-1/2 bg-brand/25" />
 						{rows.map((plannerRow) =>
 							plannerRow.kind === "band" ? (
-								plannerRow.markers.map((marker) => <Milestone key={marker.key} marker={marker} compact={compact} />)
+								plannerRow.markers.map((marker) => <Milestone key={marker.key} marker={marker} />)
 							) : (
 								<BannerEntry
 									key={plannerRow.banner.id ?? plannerRow.banner.tempId}
@@ -166,7 +163,6 @@ export function PlanPicture({
 									supportBannerData={supportBannerData}
 									userStepUpSelectionData={userStepUpSelectionData}
 									hideSpend={hideSpend}
-									compact={compact}
 									now={now}
 								/>
 							)
@@ -213,18 +209,18 @@ function Tile({ label, value, note, tone }: { label: string; value: string; note
 
 /** A scenario launch or an anniversary, as a dated point on the rail. Styled
  *  like the sheet's band (PlannerSectionBand): a scenario in the accent, an
- *  anniversary with a sparkle. A size down in compact rows. */
-function Milestone({ marker, compact }: { marker: PlannerMarker; compact: boolean }) {
+ *  anniversary with a sparkle. */
+function Milestone({ marker }: { marker: PlannerMarker }) {
 	const scenario = marker.kind === "scenario"
 	return (
-		<div className={`${RAIL_ROW} ${compact ? "py-0.5" : "py-1"}`}>
+		<div className={`${RAIL_ROW} py-1`}>
 			<span className="pr-1 text-right text-xs text-gray-400 tabular-nums">{formatDate(marker.startDate)}</span>
 			<RailNode>
 				<span className="h-2.5 w-2.5 rotate-45 bg-brand" />
 			</RailNode>
 			<div className="flex min-w-0 items-center gap-3">
 				<span
-					className={`flex shrink-0 items-center gap-1.5 tracking-wide ${compact ? "text-[13px]" : "text-[15px]"} ${
+					className={`flex shrink-0 items-center gap-1.5 text-[15px] tracking-wide ${
 						scenario ? "font-semibold text-brand" : "font-medium text-gray-200"
 					}`}
 				>
@@ -251,15 +247,13 @@ const METER_FILL: Record<PullCountStatus, string> = {
 	over: "bg-pull-neutral-border",
 }
 
-function BannerEntry({ plannerRow, resources, umaBannerData, supportBannerData, userStepUpSelectionData, hideSpend, compact, now }: {
+function BannerEntry({ plannerRow, resources, umaBannerData, supportBannerData, userStepUpSelectionData, hideSpend, now }: {
 	plannerRow: Extract<PlannerRow, { kind: "banner" }>
 	resources: BannerResources
 	umaBannerData: BannerUma[]
 	supportBannerData: BannerSupport[]
 	userStepUpSelectionData: UserStepUpSelection[]
 	hideSpend: boolean
-	/** A long plan's one-line row (planPictureLayout). */
-	compact: boolean
 	now: Date
 }) {
 	const banner = plannerRow.banner
@@ -297,79 +291,6 @@ function BannerEntry({ plannerRow, resources, umaBannerData, supportBannerData, 
 	) : figures.countStatus === "ok" ? (
 		<span className="text-pull-ok">{isStepUp ? "Full round" : "On pity"}</span>
 	) : null
-
-	const meter = showMeter && (
-		<div className={`flex overflow-hidden rounded-full bg-gray-700 ${compact ? "mt-1 h-1" : "mt-1.5 h-1.5"}`}>
-			<div className={METER_FILL[figures.countStatus]} style={{ width: `${(Math.min(count, ceiling) / scale) * 100}%` }} />
-			{count > ceiling && <div className="bg-pull-over-border" style={{ width: `${((count - ceiling) / scale) * 100}%` }} />}
-		</div>
-	)
-	const reserved = banner.reserved_copies > 0 && (
-		<p className={`mt-0.5 leading-tight ${compact ? "text-[10px]" : "text-[11px]"} ${figures.reservedStatus === "over" ? "text-pull-over" : "text-gray-300"}`}>
-			+{banner.reserved_copies} reserved
-		</p>
-	)
-
-	// A long plan's row: the same figures a size down, about half the height.
-	// The count's colour carries the status, so the caption goes.
-	if (compact) {
-		return (
-			<div className={RAIL_ROW}>
-				<div className="pr-1 text-right leading-tight tabular-nums">
-					{timeline ? (
-						<>
-							<p className="text-[13px] font-semibold text-gray-100">{formatDate(timeline.start_date)}</p>
-							<p className="text-[11px] text-gray-400">to {formatDate(timeline.end_date)}</p>
-						</>
-					) : (
-						<p className="text-xs text-gray-400">–</p>
-					)}
-				</div>
-				<RailNode>
-					<span className="h-2.5 w-2.5 rounded-full border-2 border-brand bg-gray-900" />
-				</RailNode>
-
-				<div
-					className={`flex min-h-14 items-center gap-3 rounded-lg border border-edge bg-(--card-fill) py-1.5 pr-3 pl-2 ${
-						excluded ? "opacity-60" : ""
-					}`}
-				>
-					{/* Relative: BannerArt's "+2" badge is placed against this cell. */}
-					<div className="relative flex w-[100px] shrink-0 items-center justify-center gap-1">
-						<BannerArt
-							target={target}
-							userStepUpSelectionData={userStepUpSelectionData}
-							umaBannerData={umaBannerData}
-							supportBannerData={supportBannerData}
-							small
-						/>
-					</div>
-					<div className="min-w-0 flex-1">
-						<BannerTypeChip type={bannerType} />
-						<p className="mt-0.5 line-clamp-2 text-[13px] leading-tight font-semibold text-gray-50">
-							{target.type === "Empty" ? "–" : target.banner.name}
-						</p>
-					</div>
-					<dl className="grid w-[184px] shrink-0 grid-cols-2 gap-x-2.5 gap-y-0.5">
-						{stats.map((stat) => (
-							<div key={stat.label} className="min-w-0">
-								<dt className="truncate text-[9.5px] leading-tight text-gray-400">{stat.label}</dt>
-								<dd className={`text-[12.5px] leading-tight font-semibold tabular-nums ${stat.valueClass ?? "text-gray-100"}`}>{stat.value}</dd>
-							</div>
-						))}
-					</dl>
-					<div className="w-[84px] shrink-0 text-center">
-						<p className="leading-none tabular-nums">
-							<span className={`font-display text-xl font-bold ${COUNT_TEXT[figures.countStatus]}`}>{count.toLocaleString()}</span>{" "}
-							<span className="text-[11px] text-gray-400">{unit}</span>
-						</p>
-						{meter}
-						{reserved}
-					</div>
-				</div>
-			</div>
-		)
-	}
 
 	return (
 		<div className={RAIL_ROW}>
@@ -423,9 +344,18 @@ function BannerEntry({ plannerRow, resources, umaBannerData, supportBannerData, 
 						{count.toLocaleString()}
 					</p>
 					<p className="mt-0.5 text-xs text-gray-400">{unit}</p>
-					{meter}
+					{showMeter && (
+						<div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-gray-700">
+							<div className={METER_FILL[figures.countStatus]} style={{ width: `${(Math.min(count, ceiling) / scale) * 100}%` }} />
+							{count > ceiling && <div className="bg-pull-over-border" style={{ width: `${((count - ceiling) / scale) * 100}%` }} />}
+						</div>
+					)}
 					{caption && <p className="mt-1 text-[11px] leading-tight font-medium">{caption}</p>}
-					{reserved}
+					{banner.reserved_copies > 0 && (
+						<p className={`mt-0.5 text-[11px] leading-tight ${figures.reservedStatus === "over" ? "text-pull-over" : "text-gray-300"}`}>
+							+{banner.reserved_copies} reserved
+						</p>
+					)}
 				</div>
 			</div>
 		</div>
