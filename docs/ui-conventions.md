@@ -2584,3 +2584,30 @@ then scrolls itself into view. Its numbers are explained in
   effect because `/app` is prerendered.
 - The line draws itself in on mount (Recharts' own animation), skipped under
   `prefers-reduced-motion`.
+
+## Share picture (`carat-calculator/share/`)
+
+"Share picture" on the calculator turns the plan into a PNG: Copy, Share (the device's
+share sheet) and Download, each offered only where the browser can do it. Plan:
+`notes/share-plan-image-plan.md`.
+
+- **A separate read-only table, `ShareableBannerTable`**, never a read-only flag on
+  `BannerRow`. It keeps the art, name, dates, the four stat boxes, pulls and reserved
+  copies, plus a header ("Pull plan", or the account's name when the player ticks the box,
+  off by default), a totals line with the forecast's own "Short by" figure, and the site's
+  address. "Hide paid carats" blanks the paid box and the paid total.
+- **Its numbers come from `utils/bannerRowFigures.ts`**, the same helper `BannerRow` reads
+  (the "Passed" gate, the carats floored to tens, the stat boxes), and its art from
+  `BannerArt`, which `BannerRow` also draws. Change a row's figures there, never in one
+  of the two tables.
+- **`.banner-grid--share` (App.css) repeats `.banner-grid`'s fixed tracks** minus the odds
+  and delete tracks, and sets `display: grid` itself: the picture is always the wide
+  layout, at 1004px, whatever the screen. Resize a track in both.
+- **The picture is made when the panel opens**, not on the click: Safari allows a clipboard
+  write or the share sheet only inside the click, and drawing takes a second or two. The
+  table is mounted off screen only while the panel is open.
+- **`utils/shareImage.ts` is generic** (render a node to a PNG, then copy, share or
+  download), loads `html-to-image` on first use, and draws twice for Safari. html2canvas is
+  not an option: it can't read Tailwind 4's `oklch()` colours. Card art embeds because the
+  image CDN sends `Access-Control-Allow-Origin: *`; art from a host without it would fail
+  the draw.

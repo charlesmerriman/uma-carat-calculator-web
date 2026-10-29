@@ -6,6 +6,8 @@ import type {
 	Uma,
 	UserStepUpSelection
 } from "../types"
+import { formatDate } from "./dateFormat"
+import type { PlannedBannerTarget } from "./bannerHelpers"
 
 /**
  * The ten cards a player picks before climbing a Select Step-Up's ladder.
@@ -336,4 +338,25 @@ export function effectiveSelections(
 	return hasCustomSelection(stored)
 		? stored
 		: defaultSelectionFor(stepUp, catalogue)
+}
+
+/**
+ * What a step-up row says about its pool: the game's shorthand chip ("SSR",
+ * "★3"), the campaign's JP cutoff, and the hint that explains the two. Null on
+ * every other row.
+ *
+ * The cutoff is folded onto the banner by the backend exactly as it is onto a
+ * selector product; read from there rather than joining anniversary_event_data,
+ * so one place resolves it, and it is the server. It is shown at all because a
+ * step-up's candidates are back-catalogue cards: without it a player could plan
+ * one for a unit it could never offer.
+ */
+export function stepUpPool(target: PlannedBannerTarget) {
+	if (target.type !== "StepUp") return null
+	const chip = target.banner.card_type === "support" ? "SSR" : "★3"
+	const cutoff = target.banner.jp_cutoff_date
+	const hint = cutoff
+		? `Choose from ${chip} cards released on JP by ${formatDate(cutoff)}`
+		: "This campaign has no JP release cutoff on its candidates"
+	return { chip, cutoff, hint }
 }

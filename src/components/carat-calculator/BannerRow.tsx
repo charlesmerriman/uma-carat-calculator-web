@@ -55,12 +55,6 @@ import {
 	shiftDistribution,
 } from "../../utils/probabilityCalculations"
 import { oddsCards } from "../../utils/rateUpRates"
-import {
-	effectiveSelections,
-	findGuaranteedCardArt,
-	selectionsForStepUp
-} from "../../utils/stepUpSelection"
-import { buildEligibleCardCatalogue } from "../../hooks/useEligibleCardCatalogue"
 import type { CalculationConstants } from "../../types/constants"
 import type { BannerResources } from "../../hooks/bannerResources"
 import { PULLS_PER_PITY_COPY } from "../../utils/probabilityCalculations"
@@ -70,12 +64,11 @@ import {
 	withRecommendedOption,
 } from "../../utils/reactSelectStyles"
 import { RecommendedMark } from "./RecommendedMark"
-import { ExtraCardsBadge } from "./ExtraCardsBadge"
-import { FramedUma } from "../FramedUma"
-import { useOshiIds } from "../../hooks/useOshiIds"
 import { usePhoneOddsHidden } from "../../hooks/usePhoneOddsHidden"
 import { ChevronDown } from "lucide-react"
 import { BannerTypeBadge } from "./BannerTypeBadge"
+import { BannerArt } from "./BannerArt"
+import { stepUpPool } from "../../utils/stepUpSelection"
 import { TrashIcon } from "./TrashIcon"
 import { CountStepper } from "./CountStepper"
 import { buildCopyChips, buildCountChips, coarsePullDelta } from "../../utils/countChips"
@@ -143,43 +136,6 @@ interface BannerOption {
 	key: number
 }
 
-/**
- * The card whose art a step-up row should show: the step 5 pick.
- *
- * An untouched step-up falls back to the DEFAULT selection's target — the most
- * recently available card — read through the same `effectiveSelections` seam the
- * picker and the campaign card use, so all three always agree about what the
- * user is looking at.
- *
- * Module-level and un-memoized on purpose. The React Compiler memoizes the call
- * for us; a manual useMemo here could not be preserved (and building the
- * catalogue through useEligibleCardCatalogue instead would mean flattening and
- * sorting the whole uma catalogue on every uma and support row too, since a hook
- * cannot be skipped for the rows that do not need it).
- */
-function resolveGuaranteedCard(
-	stepUp: BannerStepUp,
-	allSelections: UserStepUpSelection[],
-	umaBannerData: BannerUma[],
-	supportBannerData: BannerSupport[]
-) {
-	const catalogue = buildEligibleCardCatalogue({
-		pool: stepUp.card_type === "uma" ? "uma" : "support",
-		jpCutoffDate: stepUp.jp_cutoff_date,
-		umaBannerData,
-		supportBannerData,
-	})
-	return findGuaranteedCardArt(
-		effectiveSelections(
-			selectionsForStepUp(allSelections, stepUp.id),
-			stepUp,
-			catalogue
-		),
-		umaBannerData,
-		supportBannerData
-	)
-}
-
 export const BannerRow = ({
 	plannedBanner,
 	userPlannedBannerData,
@@ -203,8 +159,6 @@ export const BannerRow = ({
 	})
 
 	const isStepUp = bannerType === "StepUp"
-	// The person's favorite umas, drawn in the rainbow frame (FramedUma).
-	const oshiIds = useOshiIds()
 	// Phone cards only: one device-wide switch that folds every card's odds strip.
 	const phoneOdds = usePhoneOddsHidden()
 
@@ -334,38 +288,12 @@ export const BannerRow = ({
 			? target.banner.support_cards
 			: []
 
-	// The campaign's cutoff, folded onto the banner by the backend exactly as it
-	// is onto a selector product. Read from there rather than joining
-	// anniversary_event_data: one place resolves the cutoff, and it is the server.
-	const stepUpCutoff =
-		target.type === "StepUp" ? target.banner.jp_cutoff_date : null
-
-	// Which pool the step-up draws from, in the game's own shorthand. Doubles as
-	// the placeholder art until a campaign image is uploaded, so the row reads
-	// correctly before Phase 6's content lands.
-	const stepUpChip =
-		target.type === "StepUp"
-			? target.banner.card_type === "support"
-				? "SSR"
-				: "★3"
-			: null
-
-	// Why the row shows a cutoff at all: a step-up's candidates are back-catalogue
-	// cards, so a user could otherwise plan one for a unit it could never offer.
-	const stepUpCutoffHint = stepUpCutoff
-		? `Choose from ${stepUpChip} cards released on JP by ${formatDate(stepUpCutoff)}`
-		: "This campaign has no JP release cutoff on its candidates"
-
-	// The step 5 pick's art (null on non-step-up rows). See resolveGuaranteedCard.
-	const guaranteedCard =
-		target.type === "StepUp"
-			? resolveGuaranteedCard(
-					target.banner,
-					userStepUpSelectionData,
-					umaBannerData,
-					supportBannerData
-				)
-			: null
+	// The step-up's pool chip, JP cutoff and the hint explaining them (null on
+	// other rows). The images cell draws the chip; the phone card spells out the
+	// cutoff below the dates. See BannerArt.
+	const pool = stepUpPool(target)
+	const stepUpCutoff = pool?.cutoff ?? null
+	const stepUpCutoffHint = pool?.hint
 
 	// Hoisted above the images cell because the cell links to this banner's
 	// window on the Timeline; the date column further down reads the same value.
@@ -394,64 +322,14 @@ export const BannerRow = ({
 	const bannerName = currentBanner?.name ?? "this banner"
 
 	/** The images cell, shared by the desktop grid and (via props) the card. */
-	const imagesCell =
-		target.type === "StepUp" ? (
-			guaranteedCard?.uma ? (
-				<FramedUma
-					src={guaranteedCard.uma.portrait ?? guaranteedCard.image}
-					alt={guaranteedCard.name}
-					oshi={oshiIds.has(guaranteedCard.uma.id)}
-					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
-					className="w-14"
-				/>
-			) : guaranteedCard ? (
-				<img
-					src={guaranteedCard.image}
-					alt={guaranteedCard.name}
-					className="thumb-banner"
-					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
-				/>
-			) : target.banner.image ? (
-				<img
-					src={target.banner.image}
-					alt={target.banner.name}
-					className="thumb-banner"
-					title={stepUpCutoffHint}
-				/>
-			) : (
-				// Typographic fallback so the cell is never blank before the art is
-				// uploaded. The cutoff rides with it because this chip is exactly
-				// the statement it qualifies: "★3 cards, released by this date".
-				<div
-					title={stepUpCutoffHint}
-					className="flex flex-col items-center justify-center leading-none"
-				>
-					<span className="step-up-pool-chip text-sm font-bold text-step-up">{stepUpChip}</span>
-					{stepUpCutoff && (
-						<span className="mt-0.5 text-[9px] text-gray-400">
-							≤ {formatDate(stepUpCutoff)}
-						</span>
-					)}
-				</div>
-			)
-		) : (
-			<>
-				{target.type === "Uma"
-					? target.banner.umas.slice(0, 2).map((uma) => (
-							<FramedUma
-								key={uma.id}
-								src={uma.portrait ?? uma.image}
-								alt={uma.name}
-								oshi={oshiIds.has(uma.id)}
-								className="w-14"
-							/>
-						))
-					: images.slice(0, 2).map((img) => (
-							<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" />
-						))}
-				<ExtraCardsBadge hidden={images.length - 2} />
-			</>
-		)
+	const imagesCell = (
+		<BannerArt
+			target={target}
+			userStepUpSelectionData={userStepUpSelectionData}
+			umaBannerData={umaBannerData}
+			supportBannerData={supportBannerData}
+		/>
+	)
 
 	// --- Odds ---
 	// Which featured cards the strip is about: the row's saved choices, checked
