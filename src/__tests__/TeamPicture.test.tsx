@@ -13,8 +13,9 @@ import type { TrainedUma } from "../types/trainedUma"
 import { downloadImage } from "../utils/shareImage"
 
 vi.mock("../utils/shareImage", () => ({
-	renderNodeToPng: vi.fn(() => Promise.resolve(new Blob(["png"], { type: "image/png" }))),
-	shareSupport: () => ({ copy: false, share: false }),
+	renderNodeToPng: vi.fn(() => Promise.resolve({ blob: new Blob(["png"], { type: "image/png" }), missingArt: 0 })),
+	shareSupport: () => ({ copy: false, share: false, preferShare: false }),
+	newDrawCache: () => ({ fonts: new Map(), images: new Map() }),
 	copyImage: vi.fn(),
 	shareImageFile: vi.fn(),
 	downloadImage: vi.fn(),
