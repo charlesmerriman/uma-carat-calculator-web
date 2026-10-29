@@ -1441,6 +1441,71 @@ describe('Timeline category filter', () => {
     expect(sessionStorage.getItem('uma-planner-timeline-page')).toBe('1')
     expect(screen.getByAltText('Gentildonna')).toBeInTheDocument()
   })
+
+  it('offers Champions Meetings and League of Heroes, and keeps only that kind of card', () => {
+    const loh = {
+      ...raceEvent(10, '07'),
+      name: 'League of Heroes 1',
+      event_type: 'league_of_heroes',
+      loh_number: 1,
+    } as unknown as TimelineEvent
+    events = [categorised(1, 'standard', ['Yukino Bijin']), raceEvent(9, '05'), loh]
+    renderTimeline()
+
+    const options = Array.from(
+      screen.getByLabelText(FILTER).querySelectorAll('option'),
+    ).map((o) => o.textContent)
+    expect(options).toEqual(['All events', 'Standard', 'Champions Meetings', 'League of Heroes'])
+
+    selectCategory('race:champions_meeting')
+    expect(screen.getByText('Champions Meeting 9')).toBeInTheDocument()
+    expect(screen.queryByText('League of Heroes 1')).not.toBeInTheDocument()
+    expect(screen.queryByAltText('Yukino Bijin')).not.toBeInTheDocument()
+
+    selectCategory('race:league_of_heroes')
+    expect(screen.getByText('League of Heroes 1')).toBeInTheDocument()
+    expect(screen.queryByText('Champions Meeting 9')).not.toBeInTheDocument()
+  })
+
+  it('offers no League of Heroes option before one is on the calendar', () => {
+    events = [categorised(1, 'standard', ['Yukino Bijin']), raceEvent(9, '05')]
+    renderTimeline()
+
+    expect(screen.getByLabelText(FILTER)).toHaveTextContent('Champions Meetings')
+    expect(screen.getByLabelText(FILTER)).not.toHaveTextContent('League of Heroes')
+  })
+
+  it('keeps the chosen filter for the tab, across a trip to another page', () => {
+    events = [
+      categorised(1, 'standard', ['Yukino Bijin']),
+      categorised(2, 'rerun', ['Gentildonna']),
+    ]
+    const { unmount } = renderTimeline()
+    selectCategory('rerun')
+    unmount()
+
+    renderTimeline()
+
+    expect(screen.getByLabelText(FILTER)).toHaveValue('rerun')
+    expect(screen.queryByAltText('Yukino Bijin')).not.toBeInTheDocument()
+    expect(screen.getByAltText('Gentildonna')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['one the data no longer offers', 'free_pulls'],
+    ['a value the filter cannot take', 'marker:nonsense'],
+  ])('falls back to All events when the remembered filter is %s', (_, stored) => {
+    sessionStorage.setItem('uma-planner-timeline-filter', stored)
+    events = [
+      categorised(1, 'standard', ['Yukino Bijin']),
+      categorised(2, 'rerun', ['Gentildonna']),
+    ]
+    renderTimeline()
+
+    expect(screen.getByLabelText(FILTER)).toHaveValue('all')
+    expect(screen.getByAltText('Yukino Bijin')).toBeInTheDocument()
+    expect(screen.getByAltText('Gentildonna')).toBeInTheDocument()
+  })
 })
 
 /**

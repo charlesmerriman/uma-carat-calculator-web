@@ -23,6 +23,8 @@ import {
 	CATEGORY_ORDER,
 	MARKER_LABELS,
 	MARKER_ORDER,
+	RACE_LABELS,
+	RACE_ORDER,
 	bannerWindowHasFreePulls,
 	bannerWindowHasRecommended,
 	buildMarkerRows,
@@ -50,6 +52,7 @@ import type {
 	BannerCategory,
 	BannerUma,
 	BannerSupport,
+	RaceEvent,
 	UserPlannedBanner,
 	TimelineEvent,
 } from "../../types"
@@ -166,15 +169,16 @@ const searchInputClass =
 
 /**
  * The filter's value: the absence of a filter, a banner category, a marker
- * kind, "recommended only" or "free pulls".
+ * kind, a race event kind, "recommended only" or "free pulls".
  *
- * Five sources in one string, which is what a `<select>` gives you, so the
+ * Six sources in one string, which is what a `<select>` gives you, so the
  * axes have to stay tellable apart. Marker kinds are namespaced with a
  * `marker:` prefix rather than sitting bare alongside the categories — a
  * scenario has no `banner_category` and never will, and an unprefixed
  * `"scenario"` would be one added BannerCategory away from quietly meaning both
  * things at once. The prefix also makes narrowing a string test instead of a
- * membership check against a list that has to be kept in sync.
+ * membership check against a list that has to be kept in sync. Race kinds get
+ * a `race:` prefix for the same reason: `event_type` is a third axis.
  *
  * `RECOMMENDED_FILTER` needs no such prefix: it names no BannerCategory or
  * marker kind and never will, since "recommended" is an editorial flag on a
@@ -182,18 +186,21 @@ const searchInputClass =
  * the same kind of thing: a fact about a banner (it gives pulls away), true of
  * banners in any category.
  *
- * `"all"` is neither axis: it's the only value that keeps race events, and the
- * only one that shows banners and markers together.
+ * `"all"` is no axis at all: it's the only value that shows banners, markers
+ * and race events together.
  */
 const MARKER_FILTER_PREFIX = "marker:"
+const RACE_FILTER_PREFIX = "race:"
 const RECOMMENDED_FILTER = "recommended"
 const FREE_PULLS_FILTER = "free_pulls"
 
 type MarkerFilter = `${typeof MARKER_FILTER_PREFIX}${TimelineMarker["kind"]}`
+type RaceFilter = `${typeof RACE_FILTER_PREFIX}${RaceEvent["event_type"]}`
 type EventFilter =
 	| "all"
 	| BannerCategory
 	| MarkerFilter
+	| RaceFilter
 	| typeof RECOMMENDED_FILTER
 	| typeof FREE_PULLS_FILTER
 
@@ -202,6 +209,42 @@ function markerFilterKind(filter: EventFilter): TimelineMarker["kind"] | null {
 	return filter.startsWith(MARKER_FILTER_PREFIX)
 		? (filter.slice(MARKER_FILTER_PREFIX.length) as TimelineMarker["kind"])
 		: null
+}
+
+/** The race event kind a filter selects, or null. */
+function raceFilterKind(filter: EventFilter): RaceEvent["event_type"] | null {
+	return filter.startsWith(RACE_FILTER_PREFIX)
+		? (filter.slice(RACE_FILTER_PREFIX.length) as RaceEvent["event_type"])
+		: null
+}
+
+/**
+ * The filter, kept for the tab so it survives a trip to another page (Daptrius,
+ * 2026-10-22: "Filter selection should persist after changing pages"). The
+ * route unmounts on every navigation, the same problem the page index has, and
+ * `sessionStorage` for the same reason: it's "what I'm looking at in this tab".
+ *
+ * The stored value is NOT checked here, so the cast is only a claim: the
+ * component applies it through `activeFilter`, which keeps it only if it is
+ * one of the options on offer. That one check drops a filter the data no
+ * longer offers and anything else that might be sitting under the key.
+ */
+const FILTER_STORAGE_KEY = "uma-planner-timeline-filter"
+
+function readStoredFilter(): EventFilter {
+	try {
+		return (sessionStorage.getItem(FILTER_STORAGE_KEY) ?? "all") as EventFilter
+	} catch {
+		return "all"
+	}
+}
+
+function storeFilter(filter: EventFilter): void {
+	try {
+		sessionStorage.setItem(FILTER_STORAGE_KEY, filter)
+	} catch {
+		// The filter simply won't survive leaving the route.
+	}
 }
 
 type PaginationControlsProps = {
@@ -290,10 +333,13 @@ export const Timeline = () => {
 	 */
 	const [showPastOverride, setShowPastOverride] = useState<boolean | null>(null)
 	const [searchQuery, setSearchQuery] = useState("")
-	// Not persisted, matching the search box and the past/future toggle: it's a
-	// question you're asking right now, not a preference. Only the view mode and
-	// the paged position survive leaving the route.
-	const [eventFilter, setEventFilter] = useState<EventFilter>("all")
+	// Kept for the tab like the paged position (see readStoredFilter). The search
+	// box and the past/future toggle stay unpersisted: they're a question you're
+	// asking right now. The filter is the one people come back to.
+	//
+	// Read through `activeFilter` below, never directly: the stored value may be
+	// one the data no longer offers.
+	const [eventFilter, setEventFilter] = useState<EventFilter>(readStoredFilter)
 	const [currentPage, setCurrentPage] = useState(readStoredPage)
 	const [viewMode, setViewMode] = useState<TimelineViewMode>(readStoredViewMode)
 	const [visibleCount, setVisibleCount] = useState(INFINITE_CHUNK_SIZE)
@@ -435,118 +481,6 @@ export const Timeline = () => {
 		toast.success(`${fullBanner.name} staged! Head to the Calculator to confirm.`)
 	}
 
-	// Memoized because infinite scroll re-renders this component on every append,
-	// and re-scanning ~250 events (each search walking every featured uma and
-	// support card) on each one is real work for no benefit.
-	//
-	// Grouping runs LAST, on the already-filtered list. Doing it first would let
-	// a window straddle the past/future boundary and drag an ended banner into
-	// the current view, and would make a search match pull in banners that don't
-	// match. Everything downstream — paging, the reveal window, the counts —
-	// therefore measures ROWS (cards on screen), not raw events.
-	const timelineRows = useMemo(() => {
-		// Both filter values that show markers — "all" and a marker filter — want
-		// the same past/future and search passes first, so they live here rather
-		// than being written out at each branch.
-		//
-		// A scenario has no end date, so it can never be "over" the way a banner
-		// is. The past/future split classifies it on its start instant instead:
-		// once it has launched it belongs behind you in the calendar, even though
-		// it is still playable. That is a deliberate reading of an endless event,
-		// not an oversight.
-		//
-		// Rows are built (sorted and PAIRED) before any of these filters run, and
-		// the filters judge a pair by either half. Filtering the markers first
-		// would strip a pair's other half, so the same launch would be one row
-		// under "All events" and a different row, with a different key, under
-		// "Scenarios" — and the key is what holds the reader's place when the
-		// filter is lifted. See rowMarkers.
-		const matchingMarkerRows = (): TimelineRow[] => {
-			const query = searchQuery.toLowerCase()
-			return buildMarkerRows(buildTimelineMarkers(scenarioData, anniversaryEventData))
-				.filter((row) =>
-					showPast
-						? timelineRowStart(row) < today.getTime()
-						: timelineRowStart(row) >= today.getTime()
-				)
-				.filter((row) => query === "" || markerRowMatchesSearch(row, query))
-		}
-
-		// A marker filter drops the banner stream entirely, so it returns before
-		// any of the event work below: asking for scenarios means asking for
-		// scenarios, not for the banners that happen to open alongside them. The
-		// marker rows are already in chronological order, so there is nothing to
-		// splice them between.
-		const markerKind = markerFilterKind(eventFilter)
-		if (markerKind !== null) {
-			return matchingMarkerRows().filter((row) => markerRowMatchesKind(row, markerKind))
-		}
-
-		const rows = groupTimelineEvents(
-			organizedTimelineData
-				.filter((event) =>
-					showPast
-						? new Date(event.end_date) < today
-						: new Date(event.end_date) >= today
-				)
-				.filter((event) => searchQuery === "" || eventMatchesSearch(event, searchQuery))
-		)
-
-		if (eventFilter === "all") {
-			// Markers merge in AFTER grouping, on the final row order — running
-			// earlier would let one land inside a window that later folds together.
-			return spliceMarkerRows(rows, matchingMarkerRows())
-		}
-
-		// Markers are deliberately absent under a BANNER CATEGORY or RECOMMENDED
-		// filter: they are cross-cutting context rather than banners, so a
-		// scenario card stranded in a list of reruns (or of recommended picks)
-		// would answer a question nobody asked. The marker filters above are how
-		// you ask for them. Race events drop out below for the same reason.
-		//
-		// Applied AFTER grouping, and a group survives if ANY constituent matches
-		// — a revival window with an ordinary banner alongside it stays on screen
-		// under "Recommended only" if either half carries the star, the same rule
-		// the category filter uses just below.
-		if (eventFilter === RECOMMENDED_FILTER) {
-			return rows.filter(
-				(row) =>
-					row.kind === "banner_window" &&
-					row.group.banners.some(bannerWindowHasRecommended)
-			)
-		}
-
-		// "Free pulls" is the same cut on a different fact: a window stays if
-		// either side of any banner in it hands some out.
-		if (eventFilter === FREE_PULLS_FILTER) {
-			return rows.filter(
-				(row) =>
-					row.kind === "banner_window" &&
-					row.group.banners.some(bannerWindowHasFreePulls)
-			)
-		}
-
-		// Filtering the events first would drop the ordinary banner that shares a
-		// revival's window, leaving a card that misrepresents the week — the
-		// reader would see the revival alone and conclude nothing else was on.
-		//
-		// Race events drop out here on purpose: a Champions Meeting has no banner
-		// category, so "show me only reruns" cannot meaningfully include one.
-		return rows.filter(
-			(row) =>
-				row.kind === "banner_window" &&
-				row.group.banners.some((banner) => banner.banner_category === eventFilter)
-		)
-	}, [
-		organizedTimelineData,
-		scenarioData,
-		anniversaryEventData,
-		showPast,
-		searchQuery,
-		eventFilter,
-		today,
-	])
-
 	// Only offer categories the data actually contains. `race_prep_support` has
 	// no rows until the support backfill lands, and an option that can only ever
 	// return "No events found." is a dead end rather than a filter.
@@ -592,6 +526,159 @@ export const Timeline = () => {
 		}
 		return MARKER_ORDER.filter((kind) => present.has(kind))
 	}, [scenarioData, anniversaryEventData])
+
+	// And for race events: a League of Heroes option before the first LoH is on
+	// the calendar would be another dead end.
+	const availableRaceKinds = useMemo(() => {
+		const present = new Set<RaceEvent["event_type"]>()
+		for (const event of organizedTimelineData) {
+			if (isRaceEvent(event)) present.add(event.event_type)
+		}
+		return RACE_ORDER.filter((kind) => present.has(kind))
+	}, [organizedTimelineData])
+
+	/**
+	 * The filter actually applied: the chosen one while the data still offers
+	 * it, else "all".
+	 *
+	 * Only a value restored from sessionStorage can fall out of the options (the
+	 * reader picks from what's offered), e.g. "Recommended only" after the
+	 * flag came off every banner, or a key some other code wrote. Applying it
+	 * anyway would be a trap: the list
+	 * reads "No events found." while the select, holding a value none of its
+	 * options match, displays "All events", and choosing "All events" there
+	 * fires no change event, so nothing on screen could clear it.
+	 */
+	const activeFilter = useMemo((): EventFilter => {
+		const offered =
+			eventFilter === "all" ||
+			(eventFilter === RECOMMENDED_FILTER && hasRecommendedBanner) ||
+			(eventFilter === FREE_PULLS_FILTER && hasFreePullsBanner) ||
+			availableCategories.some((category) => category === eventFilter) ||
+			availableMarkerKinds.some((kind) => markerFilterKind(eventFilter) === kind) ||
+			availableRaceKinds.some((kind) => raceFilterKind(eventFilter) === kind)
+		return offered ? eventFilter : "all"
+	}, [eventFilter, hasRecommendedBanner, hasFreePullsBanner, availableCategories, availableMarkerKinds, availableRaceKinds])
+
+	// Memoized because infinite scroll re-renders this component on every append,
+	// and re-scanning ~250 events (each search walking every featured uma and
+	// support card) on each one is real work for no benefit.
+	//
+	// Grouping runs LAST, on the already-filtered list. Doing it first would let
+	// a window straddle the past/future boundary and drag an ended banner into
+	// the current view, and would make a search match pull in banners that don't
+	// match. Everything downstream — paging, the reveal window, the counts —
+	// therefore measures ROWS (cards on screen), not raw events.
+	const timelineRows = useMemo(() => {
+		// Both filter values that show markers — "all" and a marker filter — want
+		// the same past/future and search passes first, so they live here rather
+		// than being written out at each branch.
+		//
+		// A scenario has no end date, so it can never be "over" the way a banner
+		// is. The past/future split classifies it on its start instant instead:
+		// once it has launched it belongs behind you in the calendar, even though
+		// it is still playable. That is a deliberate reading of an endless event,
+		// not an oversight.
+		//
+		// Rows are built (sorted and PAIRED) before any of these filters run, and
+		// the filters judge a pair by either half. Filtering the markers first
+		// would strip a pair's other half, so the same launch would be one row
+		// under "All events" and a different row, with a different key, under
+		// "Scenarios" — and the key is what holds the reader's place when the
+		// filter is lifted. See rowMarkers.
+		const matchingMarkerRows = (): TimelineRow[] => {
+			const query = searchQuery.toLowerCase()
+			return buildMarkerRows(buildTimelineMarkers(scenarioData, anniversaryEventData))
+				.filter((row) =>
+					showPast
+						? timelineRowStart(row) < today.getTime()
+						: timelineRowStart(row) >= today.getTime()
+				)
+				.filter((row) => query === "" || markerRowMatchesSearch(row, query))
+		}
+
+		// A marker filter drops the banner stream entirely, so it returns before
+		// any of the event work below: asking for scenarios means asking for
+		// scenarios, not for the banners that happen to open alongside them. The
+		// marker rows are already in chronological order, so there is nothing to
+		// splice them between.
+		const markerKind = markerFilterKind(activeFilter)
+		if (markerKind !== null) {
+			return matchingMarkerRows().filter((row) => markerRowMatchesKind(row, markerKind))
+		}
+
+		const rows = groupTimelineEvents(
+			organizedTimelineData
+				.filter((event) =>
+					showPast
+						? new Date(event.end_date) < today
+						: new Date(event.end_date) >= today
+				)
+				.filter((event) => searchQuery === "" || eventMatchesSearch(event, searchQuery))
+		)
+
+		if (activeFilter === "all") {
+			// Markers merge in AFTER grouping, on the final row order — running
+			// earlier would let one land inside a window that later folds together.
+			return spliceMarkerRows(rows, matchingMarkerRows())
+		}
+
+		// A race filter keeps its own race cards and nothing else, the way a marker
+		// filter keeps its markers. Race events are never grouped into a banner
+		// window, so the grouped rows can be cut directly.
+		const raceKind = raceFilterKind(activeFilter)
+		if (raceKind !== null) {
+			return rows.filter((row) => row.kind === "race" && row.event.event_type === raceKind)
+		}
+
+		// Markers are deliberately absent under a BANNER CATEGORY or RECOMMENDED
+		// filter: they are cross-cutting context rather than banners, so a
+		// scenario card stranded in a list of reruns (or of recommended picks)
+		// would answer a question nobody asked. The marker filters above are how
+		// you ask for them. Race events drop out below for the same reason.
+		//
+		// Applied AFTER grouping, and a group survives if ANY constituent matches
+		// — a revival window with an ordinary banner alongside it stays on screen
+		// under "Recommended only" if either half carries the star, the same rule
+		// the category filter uses just below.
+		if (activeFilter === RECOMMENDED_FILTER) {
+			return rows.filter(
+				(row) =>
+					row.kind === "banner_window" &&
+					row.group.banners.some(bannerWindowHasRecommended)
+			)
+		}
+
+		// "Free pulls" is the same cut on a different fact: a window stays if
+		// either side of any banner in it hands some out.
+		if (activeFilter === FREE_PULLS_FILTER) {
+			return rows.filter(
+				(row) =>
+					row.kind === "banner_window" &&
+					row.group.banners.some(bannerWindowHasFreePulls)
+			)
+		}
+
+		// Filtering the events first would drop the ordinary banner that shares a
+		// revival's window, leaving a card that misrepresents the week — the
+		// reader would see the revival alone and conclude nothing else was on.
+		//
+		// Race events drop out here on purpose: a Champions Meeting has no banner
+		// category, so "show me only reruns" cannot meaningfully include one.
+		return rows.filter(
+			(row) =>
+				row.kind === "banner_window" &&
+				row.group.banners.some((banner) => banner.banner_category === activeFilter)
+		)
+	}, [
+		organizedTimelineData,
+		scenarioData,
+		anniversaryEventData,
+		showPast,
+		searchQuery,
+		activeFilter,
+		today,
+	])
 
 	/**
 	 * Where the row the list is anchored on ended up, once filtering, grouping and
@@ -821,8 +908,9 @@ export const Timeline = () => {
 	}
 
 	const handleFilterChange = (value: EventFilter): void => {
-		const anchor = eventFilter !== "all" && value === "all" ? measureAnchorRow() : null
+		const anchor = activeFilter !== "all" && value === "all" ? measureAnchorRow() : null
 		setEventFilter(value)
+		storeFilter(value)
 		rebuildList(anchor)
 	}
 
@@ -978,11 +1066,12 @@ export const Timeline = () => {
 					    view-mode toggles on the far side of the bar. */}
 					<div className="flex w-full items-center gap-2 lg:w-auto lg:justify-self-end">
 						{/* Hidden only when there is nothing to choose between — a
-						    single-option filter is just clutter. Counted across all three
-						    axes: one banner category plus one marker kind is still a real
+						    single-option filter is just clutter. Counted across every
+						    axis: one banner category plus one marker kind is still a real
 						    choice, and so is "Recommended only" or "Free pulls" plus nothing else. */}
 						{availableCategories.length +
 							availableMarkerKinds.length +
+							availableRaceKinds.length +
 							(hasRecommendedBanner ? 1 : 0) +
 							(hasFreePullsBanner ? 1 : 0) >
 							1 && (
@@ -993,7 +1082,7 @@ export const Timeline = () => {
 								<select
 									id="timeline-event-filter"
 									className={`${categorySelectClass} max-w-[45%] shrink-0 lg:max-w-none`}
-									value={eventFilter}
+									value={activeFilter}
 									onChange={(e) => handleFilterChange(e.target.value as EventFilter)}
 								>
 									<option value="all">All events</option>
@@ -1020,8 +1109,14 @@ export const Timeline = () => {
 											))}
 										</optgroup>
 									)}
-									{availableMarkerKinds.length > 0 && (
+									{availableRaceKinds.length + availableMarkerKinds.length > 0 && (
 										<optgroup label="Other events">
+											{/* Race events, then the markers, each in its own order. */}
+											{availableRaceKinds.map((kind) => (
+												<option key={kind} value={`${RACE_FILTER_PREFIX}${kind}`}>
+													{RACE_LABELS[kind]}
+												</option>
+											))}
 											{availableMarkerKinds.map((kind) => (
 												<option key={kind} value={`${MARKER_FILTER_PREFIX}${kind}`}>
 													{MARKER_LABELS[kind]}
