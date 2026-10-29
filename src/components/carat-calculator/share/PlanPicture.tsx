@@ -246,8 +246,12 @@ function BannerEntry({ plannerRow, resources, umaBannerData, supportBannerData, 
 	const figures = bannerRowFigures(banner, resources, isStepUp, now)
 	const timeline = plannedBannerTimeline(banner)
 	const excluded = isExcludedFromProjection(banner)
+	// The 2x2 grid reads Carat Est. over Paid Carat Est., the pull split over
+	// the most pulls (Daptrius, 2026-10-29): the sheet's first two swap places.
+	// The sheet itself keeps its order.
+	const [split, carats, paid, most] = figures.stats
 	// The paid figure stays in place, blanked and greyed, so the grid keeps its shape.
-	const stats = figures.stats.map((stat) =>
+	const stats = [carats, split, paid, most].map((stat) =>
 		hideSpend && stat.label === "Paid Carat Est." ? { ...stat, value: "–", valueClass: "text-gray-400" } : stat
 	)
 

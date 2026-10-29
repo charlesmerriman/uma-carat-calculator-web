@@ -30,8 +30,8 @@ import { FavoriteHeart } from "../TeamGrid"
  *
  * Then it is its own thing: the three umas stand side by side like a sports
  * lineup, so the picture reads as a team before anyone reads a word. Above
- * them the team shape strip puts each one on a straight of the course where
- * her style runs, under "2 Pace + 1 End", the way the guides write a comp.
+ * them the team shape strip puts each face where her style runs, Runaway to
+ * End, under "2 Pace + 1 End", the way the guides write a comp.
  * Each column has her portrait, her letters for THIS race, her veteran (only
  * when the player ticks the box) and her deck.
  *
@@ -188,10 +188,11 @@ function Gate({ position, className, children }: { position: number; className: 
 }
 
 /**
- * One straight of the course, the goal on the right, with each uma's face
- * where her style runs (STYLE_ON_STRAIGHT) and the team's shape beside it.
- * Two of one style stand side by side; the clamp keeps a face inside the
- * rails at either end.
+ * One straight of the course with each uma's face where her style runs,
+ * Runaway on the left to End on the right (STYLE_ON_STRAIGHT), and the team's
+ * shape beside it. Two of one style stand side by side; the clamp keeps a face
+ * inside the rails at either end. No goal post: it read the styles backwards
+ * and looked tacky (Daptrius, 2026-10-29).
  */
 function ShapeStrip({ members, umasById, isFavorite, fill }: {
 	members: PvpTeamMember[]
@@ -212,10 +213,6 @@ function ShapeStrip({ members, umasById, isFavorite, fill }: {
 			<div className="relative flex-1">
 				<div className="relative mt-0.5 h-[62px] rounded-full border-2 border-brand/30 bg-brand/5">
 					<div className="absolute inset-[7px] rounded-full border border-dashed border-brand/20" />
-					<div
-						className="absolute -top-1.5 -bottom-1.5 right-[34px] w-1 rounded-sm"
-						style={{ backgroundImage: "repeating-linear-gradient(to bottom, var(--color-gray-50) 0 6px, var(--color-gray-900) 6px 12px)" }}
-					/>
 					{placed.map((member) => {
 						const same = placed.filter((other) => other.style === member.style)
 						const offset = (same.indexOf(member) - (same.length - 1) / 2) * 54
@@ -224,7 +221,7 @@ function ShapeStrip({ members, umasById, isFavorite, fill }: {
 							<div
 								key={member.position}
 								className="absolute top-1/2 z-[1] w-12 -translate-x-1/2 -translate-y-1/2"
-								style={{ left: `clamp(32px, calc(${STYLE_ON_STRAIGHT[member.style]}% + ${offset}px), calc(100% - 70px))` }}
+								style={{ left: `clamp(32px, calc(${STYLE_ON_STRAIGHT[member.style]}% + ${offset}px), calc(100% - 32px))` }}
 							>
 								<Gate position={member.position} className="-top-1.5 -left-1.5 h-[18px] w-[18px] text-[11px]" />
 								<FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? isFavorite(uma.id) : false} className="w-full" />
@@ -242,7 +239,6 @@ function ShapeStrip({ members, umasById, isFavorite, fill }: {
 							{STYLE_LABELS[style]}
 						</span>
 					))}
-					<span className="absolute right-[36px] translate-x-1/2 text-gray-300">Goal</span>
 				</div>
 			</div>
 		</div>

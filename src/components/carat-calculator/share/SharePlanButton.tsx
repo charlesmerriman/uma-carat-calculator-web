@@ -4,6 +4,7 @@ import type { BannerResources } from "../../../hooks/bannerResources"
 import type { PlannerRow } from "../../../utils/plannerSections"
 import { useAccount } from "../../../services/AuthContext"
 import { ShareOption, SharePictureButton } from "../../share/SharePictureButton"
+import { shareFileName } from "../../../utils/shareFileName"
 import { PlanPicture } from "./PlanPicture"
 
 /**
@@ -11,12 +12,14 @@ import { PlanPicture } from "./PlanPicture"
  * with two options. The panel, the drawing and Copy / Share / Download are
  * SharePictureButton's, shared with the PvP team's picture.
  */
-export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, supportBannerData, userStepUpSelectionData, inBar = false }: {
+export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, supportBannerData, userStepUpSelectionData, planName = null, inBar = false }: {
 	plannerRows: PlannerRow[]
 	bannerResources: BannerResources[]
 	umaBannerData: BannerUma[]
 	supportBannerData: BannerSupport[]
 	userStepUpSelectionData: UserStepUpSelection[]
+	/** The open plan's name, for the file's name; a guest's plan has none. */
+	planName?: string | null
 	/** On the PLANS bar (signed in), dressed like the bar's "New" and "..."
 	 *  buttons; otherwise in the add-banner row, the guest's only toolbar. */
 	inBar?: boolean
@@ -41,7 +44,7 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 			}`}
 			blurb="A picture of your plan, to post anywhere."
 			shareTitle="My Uma Musume pull plan"
-			filename={(date) => `uma-plan-${date}.png`}
+			filename={(stamp) => shareFileName("uma-plan", [showName ? name : null, planName], stamp)}
 			optionsKey={`${showName && !!name}|${hideSpend}`}
 			options={
 				<>

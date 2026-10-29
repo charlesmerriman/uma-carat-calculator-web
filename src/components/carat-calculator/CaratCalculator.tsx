@@ -303,6 +303,7 @@ export const CaratCalculator: React.FC = () => {
 											umaBannerData={umaBannerData}
 											supportBannerData={supportBannerData}
 											userStepUpSelectionData={userStepUpSelectionData}
+											planName={plans.find((plan) => plan.id === activePlanId)?.name ?? null}
 											inBar
 										/>
 									)
