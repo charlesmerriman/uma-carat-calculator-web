@@ -84,3 +84,16 @@ export const BannerTypeBadge = ({ type }: { type: BannerRowType }) => (
 		<BannerTypeIcon type={type} className="w-5 h-5 opacity-90" />
 	</div>
 )
+
+/**
+ * The same kind as a small pill, for the share picture's cards (share/
+ * PlanPicture.tsx), which name the kind above the banner instead of giving it
+ * a column. Same fill and ink as the badge, so a theme or colorblind mode
+ * redraws both.
+ */
+export const BannerTypeChip = ({ type }: { type: BannerRowType }) => (
+	<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] leading-none font-bold tracking-wider ${TAB_CLASS[type]}`}>
+		<BannerTypeIcon type={type} className="h-3 w-3 opacity-90" />
+		{LABEL[type]}
+	</span>
+)

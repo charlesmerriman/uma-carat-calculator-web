@@ -22,7 +22,7 @@ export interface BannerRowStat {
 /**
  * What a planner row SHOWS, worked out from its resources.
  *
- * Lifted out of BannerRow so the share picture (ShareableBannerTable) reads the
+ * Lifted out of BannerRow so the share picture (PlanPicture) reads the
  * same function: a picture of a plan that showed one number while the sheet
  * showed another would be worse than no picture. Pure; `now` is passed in.
  *

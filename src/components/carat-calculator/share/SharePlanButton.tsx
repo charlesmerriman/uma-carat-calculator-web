@@ -8,7 +8,7 @@ import type { PlannerRow } from "../../../utils/plannerSections"
 import { useAccount } from "../../../services/AuthContext"
 import { copyImage, downloadImage, renderNodeToPng, shareImageFile, shareSupport } from "../../../utils/shareImage"
 import type { ShareSupport } from "../../../utils/shareImage"
-import { ShareableBannerTable } from "./ShareableBannerTable"
+import { PlanPicture } from "./PlanPicture"
 
 /** `uma-plan-2026-10-29.png`, the viewer's own date. */
 function pictureFilename(now: Date): string {
@@ -38,6 +38,7 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 }) {
 	const { account } = useAccount()
 	const name = account?.display_name.trim() || null
+	const avatar = account?.avatar_url ?? null
 	const [open, setOpen] = useState(false)
 	// Off by default (board post, 2026-10-21): the share link's preview never
 	// shows a name either, so showing it is the player's choice each time.
@@ -156,7 +157,7 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 						{name && (
 							<label className="flex items-center gap-2">
 								<input type="checkbox" checked={showName} onChange={(event) => setShowName(event.target.checked)} />
-								Show my name ({name})
+								{avatar ? "Show my name and picture" : "Show my name"} ({name})
 							</label>
 						)}
 						<label className="flex items-center gap-2">
@@ -197,13 +198,14 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 			{/* Off screen and hidden from screen readers: it exists only to be drawn. */}
 			{open && (
 				<div ref={stageRef} aria-hidden="true" className="pointer-events-none fixed left-[-10000px] top-0">
-					<ShareableBannerTable
+					<PlanPicture
 						plannerRows={plannerRows}
 						bannerResources={bannerResources}
 						umaBannerData={umaBannerData}
 						supportBannerData={supportBannerData}
 						userStepUpSelectionData={userStepUpSelectionData}
 						ownerName={showName ? name : null}
+						ownerPicture={showName ? avatar : null}
 						hideSpend={hideSpend}
 						now={now}
 					/>
