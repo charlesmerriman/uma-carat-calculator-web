@@ -391,26 +391,19 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 						<h2 id="carat-forecast-heading" className="font-display text-sm font-semibold text-gray-100">
 							Carat forecast
 						</h2>
-						{lowest && (
+						{/* Only a shortfall earns a line under the heading; a plan that
+						    stays funded says nothing (owner, 2026-10-29: the old
+						    "Lowest point" line read as clutter). */}
+						{lowest && lowest.after < 0 && (
 							<p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
-								{lowest.after < 0 ? (
-									<>
-										<AlertTriangle
-											className="h-3.5 w-3.5 shrink-0 text-(--color-pull-over)"
-											aria-hidden="true"
-										/>
-										<span className="truncate">
-											Short by <span className="font-semibold text-gray-200">{formatCarats(-lowest.after)}</span>{" "}
-											carats after {bannerName(lowest)}
-										</span>
-									</>
-								) : (
-									<span className="truncate">
-										Lowest point:{" "}
-										<span className="font-semibold text-gray-200">{formatCarats(lowest.after)}</span>{" "}
-										carats, after {bannerName(lowest)}
-									</span>
-								)}
+								<AlertTriangle
+									className="h-3.5 w-3.5 shrink-0 text-(--color-pull-over)"
+									aria-hidden="true"
+								/>
+								<span className="truncate">
+									Short by <span className="font-semibold text-gray-200">{formatCarats(-lowest.after)}</span>{" "}
+									carats after {bannerName(lowest)}
+								</span>
 							</p>
 						)}
 					</div>
