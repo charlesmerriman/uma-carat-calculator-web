@@ -1,6 +1,6 @@
 // @vitest-environment node
 // Pure date helpers — no DOM needed.
-import { formatDate, formatUtcDay, parseApiDate } from '../utils/dateFormat'
+import { formatDate, formatTime, formatUtcDay, localZoneName, parseApiDate } from '../utils/dateFormat'
 
 describe('formatDate', () => {
   it('formats a date-only string as YYYY/M/D with no zero padding', () => {
@@ -77,5 +77,54 @@ describe('formatUtcDay', () => {
   it('names the same UTC day east of Greenwich', () => {
     vi.stubEnv('TZ', 'Asia/Tokyo')
     expect(formatUtcDay(sample)).toBe('2029/11/2')
+  })
+})
+
+// The clock style follows the viewer's locale, so these accept either one:
+// "3:00 PM" (\s also matches the narrow no-break space newer ICU puts before
+// PM) or "15:00".
+describe('formatTime', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("reads an instant in the viewer's zone", () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles')
+    expect(formatTime('2026-10-31T22:00:00Z')).toMatch(/^(3:00\sPM|15:00)$/)
+  })
+
+  it('follows a clock change: the same UTC hour a week later is an hour earlier', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles')
+    expect(formatTime('2026-11-07T22:00:00Z')).toMatch(/^(2:00\sPM|14:00)$/)
+  })
+
+  it('drops the seconds of an end time, never rounding it up', () => {
+    vi.stubEnv('TZ', 'Asia/Tokyo')
+    expect(formatTime('2026-11-06T21:59:59Z')).toMatch(/^(6:59\sAM|0?6:59)$/)
+  })
+
+  it('has nothing to show for a date-only, empty or unreadable value', () => {
+    expect(formatTime('2026-10-31')).toBe('')
+    expect(formatTime(null)).toBe('')
+    expect(formatTime('soon')).toBe('')
+  })
+})
+
+describe('localZoneName', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('names the zone the same on both sides of a clock change', () => {
+    // CM 21 runs across the US switch on 2026-11-01: one label must fit both ends.
+    vi.stubEnv('TZ', 'America/Los_Angeles')
+    const before = localZoneName('2026-10-31T22:00:00Z')
+    expect(before).not.toBe('')
+    expect(localZoneName('2026-11-05T22:00:00Z')).toBe(before)
+  })
+
+  it('is empty for a missing or unreadable value', () => {
+    expect(localZoneName(undefined)).toBe('')
+    expect(localZoneName('soon')).toBe('')
   })
 })

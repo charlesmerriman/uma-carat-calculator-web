@@ -24,10 +24,12 @@
  *
  * Returns null when the string is neither.
  */
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+
 export function parseApiDate(dateStr: string): Date | null {
 	if (typeof dateStr !== "string") return null
 
-	const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim())
+	const dateOnly = DATE_ONLY.exec(dateStr.trim())
 	if (dateOnly) {
 		const [, year, month, day] = dateOnly
 		return new Date(Number(year), Number(month) - 1, Number(day))
@@ -51,6 +53,56 @@ export function formatDate(dateStr: string | null | undefined): string {
 	if (!date) return dateStr
 
 	return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+}
+
+/*
+ * Times of day: the one place the site follows the VIEWER'S conventions
+ * instead of a fixed format (owner, 2026-10-28). Their time zone, like
+ * formatDate's dates, and their locale's clock: "3:00 PM" in the US, "15:00"
+ * in Germany or Japan. A fixed 24-hour clock would read wrong to half the
+ * players, and a time exists to be acted on at a glance.
+ *
+ * A formatter is built per call, not kept: one built once would hold the
+ * zone it was built in, which a test (or a laptop crossing a border) can
+ * change, and the Timeline reveals ten cards at a time, so the cost is small.
+ * Nothing here reads the clock, but the output depends on where the code runs,
+ * so like formatDate it belongs behind the /app loading gate, never in
+ * prerendered text.
+ */
+
+/**
+ * Format an API instant as the viewer's clock time, e.g. "3:00 PM" or "15:00".
+ *
+ * Seconds are dropped, never rounded: a banner ending at 21:59:59 UTC reads
+ * "2:59 PM" in Los Angeles, which is how the game itself writes an end time.
+ * A date-only string has no time and gives "", as does anything unparseable.
+ */
+export function formatTime(dateStr: string | null | undefined): string {
+	if (dateStr == null || DATE_ONLY.test(dateStr.trim())) return ""
+	const date = parseApiDate(dateStr)
+	if (!date) return ""
+	return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date)
+}
+
+/**
+ * The viewer's time zone as a name that holds across a clock change: "PT",
+ * "Japan Time", "United Kingdom Time".
+ *
+ * Generic on purpose. A line of times is labelled ONCE, and an event can
+ * straddle a daylight-saving switch (CM 21 crosses the US one): "PDT" would
+ * then be wrong for its last times, while "PT" is right for all of them.
+ * `dateStr` picks the instant the name is read at; any of the times shown will
+ * do. "" when it can't be read.
+ */
+export function localZoneName(dateStr: string | null | undefined): string {
+	if (dateStr == null) return ""
+	const date = parseApiDate(dateStr)
+	if (!date) return ""
+	return (
+		new Intl.DateTimeFormat(undefined, { timeZoneName: "shortGeneric" })
+			.formatToParts(date)
+			.find((part) => part.type === "timeZoneName")?.value ?? ""
+	)
 }
 
 /**

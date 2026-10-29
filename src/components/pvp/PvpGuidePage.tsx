@@ -82,7 +82,7 @@ import {
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { availableCourseDetails } from "../../utils/courseDetails"
-import { formatDate } from "../../utils/dateFormat"
+import { formatDate, formatTime, localZoneName } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { guideLinkPath } from "../../utils/appRoutes"
 import {
@@ -680,6 +680,9 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 	const course = courseRows(event)
 	// The first milestone still ahead is "next"; everything before it is done.
 	const nextIndex = keyDates.findIndex((milestone) => new Date(milestone.date).getTime() > now.getTime())
+	// The zone, named once for the whole strip (owner, 2026-10-28). Generic
+	// ("PT"), so it holds when the event crosses a clock change; see localZoneName.
+	const zone = keyDates.length > 0 ? localZoneName(keyDates[0].date) : ""
 
 	return (
 		<section className="card-panel overflow-hidden rounded-xl" aria-labelledby="pvp-event-name">
@@ -749,6 +752,7 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 					<div className="min-w-0">
 						<h3 className={PANEL_LABEL}>
 							Schedule{event.is_predicted && <span className="normal-case tracking-normal"> (estimated)</span>}
+							{zone && <span className="normal-case tracking-normal"> · times in {zone}</span>}
 						</h3>
 						{/* A rail across from sm; below sm a list DOWN the page with the
 						    rail on its left (design polish item 26). Five milestones
@@ -788,8 +792,14 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 											<div className={`text-sm leading-tight sm:mt-1.5 sm:text-[11px] ${isNext ? "text-brand" : "text-gray-400"}`}>
 												{milestone.label}
 											</div>
-											<div className={`shrink-0 text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
-												{formatDate(milestone.date)}
+											{/* Date over time, in the viewer's own zone and clock (Henry,
+											    2026-10-14). On a line of its own so the rail's five
+											    columns never have to fit "2026/11/5 10:00 PM". */}
+											<div className="shrink-0 text-right sm:text-left">
+												<div className={`text-xs font-semibold ${done && !isNext ? "text-gray-400" : "text-gray-100"}`}>
+													{formatDate(milestone.date)}
+												</div>
+												<div className="text-[11px] text-gray-400">{formatTime(milestone.date)}</div>
 											</div>
 										</div>
 									</li>

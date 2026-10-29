@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { TIMELINE_FOCUS_HIGHLIGHT } from '../components/timeline/timelineShared'
+import { formatDate, formatTime, localZoneName } from '../utils/dateFormat'
 import { FOCUS_TAILROOM } from '../hooks/useFocusScroll'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type {
@@ -649,6 +650,19 @@ describe('Timeline date formatting', () => {
     const expected = `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()} through ${end.getFullYear()}/${end.getMonth() + 1}/${end.getDate()}`
 
     expect(screen.getByText(expected)).toBeInTheDocument()
+  })
+
+  it("adds the viewer's times and names the zone once", () => {
+    renderTimeline()
+    const start = '2099-01-01T22:00:00Z'
+    const end = '2099-02-01T21:59:59Z'
+    // Found by its dates alone: the times and the zone are child spans, so the
+    // line's own text is unchanged (see DateTimeRange).
+    const line = screen.getByText(`${formatDate(start)} through ${formatDate(end)}`)
+
+    expect(line.textContent).toContain(`${formatTime(start)} through`)
+    expect(line.textContent).toContain(`${formatTime(end)} (${localZoneName(start)})`)
+    expect(line.textContent?.match(/\(/g)).toHaveLength(1)
   })
 })
 
