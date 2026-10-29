@@ -17,11 +17,9 @@ import type { PullShortcut, RowOptionsChange } from "./RowOptionsPanel"
 import {
 	hasRowOptions,
 	isExcludedFromProjection,
-	pullsAlreadyMade,
 	pullsForChance,
 	pullsToNextExchange,
 } from "../../utils/rowOptions"
-import { startOfDay } from "date-fns"
 import Select from "react-select"
 import type { SingleValue } from "react-select"
 import { toast } from "sonner"
@@ -31,15 +29,12 @@ import { OddsCaption, OddsCardsPanel } from "./OddsCards"
 import { MobileBannerCard } from "./MobileBannerCard"
 import { NumberField } from "../NumberField"
 import { formatDate } from "../../utils/dateFormat"
+import { bannerRowFigures } from "../../utils/bannerRowFigures"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import {
 	bannerKey,
 	bannerTargetFields,
 	bannersForRowType,
-	getFreePulls,
-	getPullCountStatus,
-	getReservedStatus,
-	getStepCountStatus,
 	isRecommendedBanner,
 	isSelectableBanner,
 	plannedBannerKey,
@@ -227,51 +222,21 @@ export const BannerRow = ({
 
 	const currentDate = new Date()
 
-	// The pull economics (free/paid carats, tickets, discounts) are computed
-	// centrally in useBannerResources → applyPullStrategy; here we only apply the
-	// "Passed" gate for banners that have already ended. The cutoff is the START
-	// of today (local midnight), matching the projection's stable anchor — a
-	// banner ending *today* is still active, so it shows an estimate.
-	const bannerEndDateStr = plannedBannerTimeline(plannedBanner)?.end_date
-	const bannerHasEnded =
-		!!bannerEndDateStr &&
-		new Date(bannerEndDateStr).getTime() < startOfDay(new Date()).getTime()
-
-	const maxPossiblePulls: number | "Passed" = bannerHasEnded
-		? "Passed"
-		: resources.maxPossiblePulls
-
-	// Round a *displayed* carat estimate DOWN to the nearest ten (ones place is
-	// always 0, never a decimal). Flooring rather than rounding to nearest
-	// avoids overstating: rounding 145 up to 150 would imply a pull is
-	// affordable while "Max Pulls" (which floors 145/150 to 0) says it isn't.
-	// Presentation-only — the raw balances still drive the max-pulls math, so
-	// this never affects how many pulls are allowed. A passed banner shows 0:
-	// its resources were spent or expired, so an estimate would be misleading.
-	const toDisplayCarats = (carats: number): number =>
-		maxPossiblePulls === "Passed" ? 0 : Math.floor(carats / 10) * 10
-
-	const displayFreeCarats = toDisplayCarats(resources.freeCarats)
-	const displayPaidCarats = toDisplayCarats(resources.paidCarats)
-
-	// Ticket and paid-pull counts come straight from the strategy's breakdown
-	// rather than being re-derived here: it already resolved which ticket type
-	// matches this banner, and picking uma-vs-support again in the component
-	// would be a second place to get the no-cross-substitution rule wrong.
-	// Zeroed for a passed banner, mirroring the carat boxes above.
-	const { tickets: ticketPulls, paidPulls } =
-		maxPossiblePulls === "Passed"
-			? { tickets: 0, paidPulls: 0 }
-			: resources.maxPullBreakdown
-
-	// Copies actually paid for, which is what the odds may credit. A passed
-	// banner funds nothing, mirroring the zeroed carat boxes above.
-	const reservedFunding =
-		maxPossiblePulls === "Passed"
-			? { selectors: 0, crystals: 0, unfunded: 0 }
-			: resources.reservedFunding
-	const fundedReservedCopies = reservedFunding.selectors + reservedFunding.crystals
-	const reservedStatus = getReservedStatus(reservedFunding)
+	// What the row shows, from its resources: the "Passed" gate for a banner that
+	// has ended, the carats floored to tens, the funding, the field colours and
+	// the four stat boxes. One pure function shared with the share picture, so
+	// the two can't disagree (utils/bannerRowFigures.ts).
+	const {
+		bannerHasEnded,
+		pullUpperBound,
+		stepUpperBound,
+		reservedFunding,
+		fundedReservedCopies,
+		reservedStatus,
+		alreadyMade,
+		countStatus,
+		stats: derivedStats,
+	} = bannerRowFigures(plannedBanner, resources, isStepUp, currentDate)
 
 	const updateBannerInList = (
 		updater: (banner: UserPlannedBanner) => UserPlannedBanner
@@ -350,39 +315,15 @@ export const BannerRow = ({
 		setUserPlannedBannerData(updated)
 	}
 
-	// A banner that has already ended can fund nothing, so its bound is 0 — any
-	// leftover pulls on it correctly read as unachievable.
-	const pullUpperBound = typeof maxPossiblePulls === "number" ? maxPossiblePulls : 0
-
-	// The same "Passed" gate the pull column gets. A step-up row's engine fields
-	// are optional (absent on every other kind), so the fallback is 0 rather
-	// than a non-null assertion.
-	const maxPossibleSteps: number | "Passed" = bannerHasEnded
-		? "Passed"
-		: resources.maxPossibleSteps ?? 0
-	const stepUpperBound =
-		typeof maxPossibleSteps === "number" ? maxPossibleSteps : 0
-
 	// number_of_pulls carries STEPS on a step-up row — one column, two meanings,
-	// deliberately (see the plan's decision record). Everything downstream reads
-	// it through this pair rather than reaching for the field.
+	// deliberately (see the plan's decision record).
 	const plannedCount = plannedBanner.number_of_pulls
-	// Pulls already made on this banner (a row option). They are rolled for
-	// nothing and cost nothing; they only move the banner's 200-pull counter,
-	// which the odds and the green "on a threshold" state both read. Never on
-	// a step-up, whose ladder has no exchange.
-	const alreadyMade = isStepUp ? 0 : pullsAlreadyMade(plannedBanner)
-	const countStatus = isStepUp
-		? getStepCountStatus(plannedCount, stepUpperBound)
-		: getPullCountStatus(plannedCount, pullUpperBound, alreadyMade)
 	// Left out of the projection: the row shows what it would cost but spends
 	// nothing (useBannerResources skips its banking), so its numbers are dimmed
 	// and a notice says why.
 	const excluded = isExcludedFromProjection(plannedBanner)
 
 	const hasBanner = target.type !== "Empty"
-
-	const freePulls = getFreePulls(plannedBanner)
 
 	// A step-up has no featured cards — the player picks their own from the back
 	// catalogue — so it contributes none here.
@@ -716,72 +657,6 @@ export const BannerRow = ({
 	) : (
 		<span className="text-xs text-gray-600">–</span>
 	)
-
-	// Single source of truth for the derived-stats strip. Both the mobile card
-	// and the desktop grid render from this list, so a stat is added or reworded
-	// in ONE place — two hand-synced copies of the same boxes is exactly the
-	// drift that leaves one layout a stat behind the other.
-	// Labels follow the source spreadsheet this calculator is modelled on
-	// ("Carat Est.", "Paid Carat Est.", "Free/Tickets/Paid"), so users coming
-	// from the sheet read the same vocabulary. `title` carries the long form.
-	//
-	// Two of the four boxes say something different on a step-up row. That is how
-	// the source sheet's header swaps (Max Pulls→Max Steps, Misc Pulls→Step #)
-	// are honoured without touching the shared header: our headers are global to
-	// the table, but this strip is per row, so the relabel lands exactly where
-	// the meaning changes. Same four boxes, same widths —
-	// --container-banner-table does not move. See frontend/docs/ui-conventions.md.
-	//
-	// Plain strings, never NumberFlow (web #156 tried it, reverted 2026-10-22).
-	// Every row mounts both the card and the table strip, and one edit moves
-	// the carats of every row after it, so a 20-row plan started hundreds of
-	// digit animations per keystroke and players reported severe lag. The
-	// monthly tiles in IncomeForm keep it: five numbers, not five per row.
-	const derivedStats: {
-		label: string
-		value: string
-		title: string
-		valueClass?: string
-	}[] = [
-		isStepUp
-			? {
-					label: "Step #",
-					// Where this plan reaches on the ladder. "5x2-3" is two completed
-					// banners plus three steps into a third.
-					value: resources.stepLabel ?? "0",
-					title: "How far up the ladder this plan reaches. 5xN means N completed banners; a trailing -r is r steps into the next one",
-			  }
-			: {
-					// Unspaced slashes, matching formatDate's a/b/c. No thousands separators
-					// here — these are small counts and commas would collide with the slashes.
-					label: "Free/Tickets/Paid",
-					value: `${freePulls || 0}/${ticketPulls}/${paidPulls}`,
-					title: "Pulls you don't pay free carats for: the banner's free pulls, matching tickets, and pulls funded by paid carats",
-			  },
-		{
-			label: "Carat Est.",
-			value: displayFreeCarats.toLocaleString(),
-			title: "Estimated free (earned) carats available for this banner",
-			valueClass: "text-brand",
-		},
-		{
-			label: "Paid Carat Est.",
-			value: displayPaidCarats.toLocaleString(),
-			title: "Estimated paid (purchased) carats available for this banner",
-			valueClass: "text-brand",
-		},
-		isStepUp
-			? {
-					label: "Max Steps",
-					value: String(maxPossibleSteps),
-					title: "The most steps you could climb here before your paid carats or the campaign's banners run out",
-			  }
-			: {
-					label: "Max Pulls",
-					value: String(maxPossiblePulls),
-					title: "The most pulls this banner could support if every available resource went into it",
-			  },
-	]
 
 	// The pull ceiling, rendered beside the pulls field rather than in the strip
 	// below — see MobileBannerCard's `maxCount`. Built from derivedStats[3] rather
