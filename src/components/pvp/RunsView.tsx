@@ -57,6 +57,7 @@ import { STYLE_LABELS, styleColor } from "../../utils/pvpGuide"
 import { formatDate, parseApiDate } from "../../utils/dateFormat"
 import { refForRaceEvent, sameEvent, splitEventName } from "../../utils/pvpEvent"
 import {
+	CM_NOT_STARTED,
 	CM_RUN_DAYS,
 	CM_RUN_TICKETS,
 	RUN_RACES,
@@ -208,8 +209,12 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		ensureLoaded()
 	}, [ensureLoaded])
 
-	// The tab opens on the day the CM is on now, or on the Finals once they start.
-	const [tab, setTab] = useState<DayTab>(() => cmDayAt(event, calculationConstants, new Date()) ?? "final")
+	// The tab opens on the day the CM is on now (Day 1 until Round 1 starts),
+	// or on the Finals once they start.
+	const [tab, setTab] = useState<DayTab>(() => {
+		const day = cmDayAt(event, calculationConstants, new Date())
+		return day === null ? "final" : Math.max(1, day)
+	})
 	// Which ticket is open on each day, once the player has opened, closed or
 	// written one there. Until then the day opens its ticket in progress
 	// (defaultOpenTicket), worked out afresh on each render; the first write
@@ -269,7 +274,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 					{tab === "final" ? (
 						<FinalsHeader event={event} constants={calculationConstants} run={final} />
 					) : (
-						<DayHeader day={tab} today={today} runs={runs} />
+						<DayHeader event={event} day={tab} today={today} runs={runs} />
 					)}
 					{noLineups ? (
 						<NoTeamYet onOpenMyTeam={onOpenMyTeam} />
@@ -506,11 +511,13 @@ function CardHeader({ eyebrow, title, score, detail }: { eyebrow: string; title:
 	)
 }
 
-function DayHeader({ day, today, runs }: { day: number; today: number | null; runs: PvpRun[] }) {
+function DayHeader({ event, day, today, runs }: { event: RaceEvent; day: number; today: number | null; runs: PvpRun[] }) {
 	const tally = summarizeRuns(runsOf(runs, { day })).total
+	// During registration Day 1 says when Round 1 starts, as the Finals header gives its date.
+	const when = day === today ? " · Today" : day === 1 && today === CM_NOT_STARTED ? ` · Starts ${formatDate(event.start_date)}` : ""
 	return (
 		<CardHeader
-			eyebrow={`Round ${roundOfDay(day)}${day === today ? " · Today" : ""}`}
+			eyebrow={`Round ${roundOfDay(day)}${when}`}
 			title={`Day ${day}`}
 			score={tally.raced ? `${tally.wins} of ${tally.raced}` : "–"}
 			detail={tally.raced ? `races won · ${formatRate(tally)}` : "Nothing logged yet"}
@@ -1368,9 +1375,11 @@ function bestText(runs: PvpRun[], round: number): string {
  */
 function WinRateStrip({ event, runs, today }: { event: RaceEvent; runs: PvpRun[]; today: number | null }) {
 	const { total } = summarizeRuns(runsOf(runs, {}))
-	const day = today === null ? null : summarizeRuns(runsOf(runs, { day: today })).total
+	// Before Round 1 no day is today, so the middle cell shows Day 1, the day the view opens on.
+	const shown = today === null ? null : Math.max(1, today)
+	const day = shown === null ? null : summarizeRuns(runsOf(runs, { day: shown })).total
 	const final = findRun(runs, { stage: "final" })
-	const round = today === null ? 2 : roundOfDay(today)
+	const round = shown === null ? 2 : roundOfDay(shown)
 	const cell = "border-l border-edge pl-2.5"
 	return (
 		<section aria-label="Win rate so far" className="card-panel flex flex-col gap-2.5 px-3.5 pb-3.5 pt-3 sm:hidden">
@@ -1386,7 +1395,7 @@ function WinRateStrip({ event, runs, today }: { event: RaceEvent; runs: PvpRun[]
 				</div>
 				{day ? (
 					<div className={cell}>
-						<dt className="text-[11px] text-gray-400">Today</dt>
+						<dt className="text-[11px] text-gray-400">{today === CM_NOT_STARTED ? "Day 1" : "Today"}</dt>
 						<dd className="mt-0.5 font-display text-[22px] font-bold leading-tight text-gray-50">{day.raced ? `${day.wins}/${day.raced}` : "–"}</dd>
 						<dd className="mt-0.5 text-[11px] text-gray-400">races won</dd>
 					</div>

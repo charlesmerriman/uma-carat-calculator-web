@@ -296,6 +296,23 @@ describe("skipping", () => {
 	})
 })
 
+describe("the day it is", () => {
+	it("calls no day today while registration is open, and says when Round 1 starts", async () => {
+		// The 2099 event has not started: CM 21 showed Day 1 as "Today" here.
+		show()
+		await screen.findByRole("region", { name: "Ticket 1" })
+		expect(screen.queryByText("Today")).toBeNull()
+		expect(screen.getByText(/^Round 1 · Starts \d{4}\/\d+\/\d+$/)).toBeTruthy()
+	})
+
+	it("badges the day that is on once Round 1 has started", async () => {
+		const started = { ...CM, start_date: new Date(Date.now() - 30 * 3_600_000).toISOString() } as RaceEvent
+		show(started)
+		expect(within(await screen.findByRole("tab", { name: /Day 2/ })).getByText("Today")).toBeTruthy()
+		expect(within(screen.getByRole("tab", { name: /Day 1/ })).queryByText("Today")).toBeNull()
+	})
+})
+
 describe("the finals", () => {
 	it("records the group and fills 1st place when one of yours won", async () => {
 		show()
