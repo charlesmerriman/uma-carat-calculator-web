@@ -7,7 +7,8 @@ import type { RaceEvent } from "../types"
 import type { CatalogueUma, PvpTeam } from "../types/pvpTeam"
 
 /**
- * The CM Runs view: who may use it, starting a ticket's lineup, logging races
+ * The CM Runs view: who may use it, starting a ticket's lineup (one ticket,
+ * or every ticket left at once), logging races
  * with the race buttons, notes, skips, the finals, and what a refused save
  * looks like. The counting rules have
  * unit tests (pvpRuns.test.ts); the routes are the API's tests.
@@ -51,8 +52,9 @@ const veterans = vi.hoisted(() => ({ list: [] as unknown[] }))
 const runs = vi.hoisted(() => ({ list: [] as unknown[] }))
 const teams = vi.hoisted(() => ({ list: [] as PvpTeam[] }))
 const toastError = vi.hoisted(() => vi.fn())
+const toastSuccess = vi.hoisted(() => vi.fn())
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: toastError }) }))
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: toastError, success: toastSuccess }) }))
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({ calculationConstants: DEFAULT_CONSTANTS }),
 }))
@@ -125,6 +127,7 @@ afterEach(() => {
 	vi.unstubAllGlobals()
 	fetchMock.mockReset()
 	toastError.mockReset()
+	toastSuccess.mockReset()
 })
 
 describe("who can log runs", () => {
@@ -174,6 +177,35 @@ describe("logging a ticket", () => {
 		const summary = screen.getByRole("complementary", { name: "Your win rates" })
 		expect(within(summary).getByText("1 of 2 races")).toBeTruthy()
 		expect(within(summary).getByText("1 ticket used")).toBeTruthy()
+	})
+
+	it("puts one team on every ticket and the Finals in one tap", async () => {
+		show()
+		const bar = await screen.findByRole("region", { name: "Every ticket left" })
+		expect(within(bar).getByText("16 tickets and the Finals have no lineup yet.")).toBeTruthy()
+		fireEvent.click(within(bar).getByRole("button", { name: "Use Team 1 for all of them" }))
+
+		await waitFor(() => expect(puts()).toHaveLength(17))
+		const paths = puts().map((put) => put.path)
+		expect(paths[0]).toBe("/pvp-runs/cm/10/day/1/ticket/1")
+		expect(paths).toContain("/pvp-runs/cm/10/day/4/ticket/4")
+		expect(paths[16]).toBe("/pvp-runs/cm/10/final")
+		expect(puts().every((put) => (put.body.runners as unknown[]).length === 3)).toBe(true)
+		expect(toastSuccess).toHaveBeenCalledWith("Team 1 is on every ticket left.")
+		// Nothing left to fill, so the bar goes; Ticket 1 is open with its race buttons.
+		await waitFor(() => expect(screen.queryByRole("region", { name: "Every ticket left" })).toBeNull())
+		expect(screen.getByRole("button", { name: "Ticket 1, race 1: Oguri Cap won" })).toBeTruthy()
+	})
+
+	it("asks which team first when there are two", async () => {
+		teams.list = [TEAM, { ...TEAM, key: "t2", id: 2, name: "Plan B", members: TEAM.members.slice(0, 2) }]
+		show()
+		const bar = await screen.findByRole("region", { name: "Every ticket left" })
+		fireEvent.click(within(bar).getByRole("button", { name: "Pick a team for all of them" }))
+		fireEvent.click(within(bar).getByRole("button", { name: /Plan B/ }))
+
+		await waitFor(() => expect(puts()).toHaveLength(17))
+		expect(puts().every((put) => (put.body.runners as unknown[]).length === 2)).toBe(true)
 	})
 
 	it("clears a race with a second tap", async () => {

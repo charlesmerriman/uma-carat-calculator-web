@@ -16,7 +16,8 @@
  * latest earlier ticket's lineup (`previousRun`), or "Use Team 1" one of the
  * event's teams from My team; "Pick a team" lists them all. The lineup is
  * COPIED into the ticket, so editing the team later never changes what was
- * logged.
+ * logged. "Use Team 1 for all of them" (FillEveryTicket) does the same for
+ * every empty ticket ahead and the Finals at once: it took 17 taps.
  *
  * A ticket can be skipped whole or stopped after some races, and both can be
  * taken back (owner, 2026-10-26: a player may just be slow to type it in). A
@@ -75,6 +76,7 @@ import {
 	runsOf,
 	sameLineup,
 	setRace,
+	slotsWithoutLineup,
 	summarizeRuns,
 	tallyRun,
 	ticketCounts,
@@ -256,6 +258,13 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		}
 		save(slot, change)
 	}
+	// One lineup on every empty ticket ahead and the Finals (FillEveryTicket).
+	// Each slot saves on its own, through the event's one save queue.
+	const fillEvery = (slots: PvpRunSlot[], choice: LineupChoice) => {
+		setFailed(false)
+		for (const slot of slots) save(slot, (current) => withLineup(current, choice.runners))
+		toast.success(`${choice.previous ? "Those three are" : `${choice.label} is`} on every ticket left.`)
+	}
 	// No team in My team and nothing logged yet: there is nothing a ticket could copy.
 	const noLineups = eventTeams.length === 0 && !runs.some((run) => run.runners.length > 0)
 	const final = findRun(runs, { stage: "final" })
@@ -268,6 +277,8 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 				<DayTabs tab={tab} today={today} runs={runs} final={final} onChange={setTab} />
 				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
 			</div>
+
+			{!noLineups && <FillEveryTicket runs={runs} teams={eventTeams} today={today} shared={shared} onFill={fillEvery} />}
 
 			<div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:gap-5">
 				<section className="card-panel min-w-0" aria-label={tab === "final" ? "Finals" : `Day ${tab}`}>
@@ -368,6 +379,57 @@ function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: nu
 		})
 	})
 	return choices
+}
+
+/**
+ * "Use Team 1 for all of them": one tap puts a lineup on every ticket left
+ * (slotsWithoutLineup: the empty tickets of today and later days, and the
+ * Finals), where it took a tap per ticket, 17 in all (owner's pick B,
+ * 2026-10-29). With one lineup to offer the button uses it; with several it
+ * opens the picker first. Gone once fewer than two slots are empty: a single
+ * ticket starts from its own row.
+ */
+function FillEveryTicket({ runs, teams, today, shared, onFill }: {
+	runs: PvpRun[]
+	teams: PvpTeam[]
+	today: number | null
+	shared: Shared
+	onFill: (slots: PvpRunSlot[], choice: LineupChoice) => void
+}) {
+	const [picking, setPicking] = useState(false)
+	const slots = slotsWithoutLineup(runs, today)
+	// The latest ticket's three first, then each team that differs: what the Finals offers.
+	const choices = lineupChoices(runs, teams, CM_RUN_DAYS + 1, 1)
+	if (slots.length < 2 || choices.length === 0) return null
+
+	// Two slots or more, and only one can be the Finals, so there is always a ticket.
+	const tickets = slots.filter((slot) => slot.stage === "day").length
+	const finals = slots.some((slot) => slot.stage === "final")
+	const what = `${tickets} ${tickets === 1 ? "ticket" : "tickets"}${finals ? " and the Finals" : ""}`
+	const only = choices.length === 1 ? choices[0] : null
+	const fill = (choice: LineupChoice) => {
+		setPicking(false)
+		onFill(slots, choice)
+	}
+	return (
+		<section aria-label="Every ticket left" className="card-panel">
+			<div className="flex flex-wrap items-center gap-2.5 px-3 py-2.5 sm:px-3.5">
+				<p className="min-w-0 flex-1 text-[13px] text-gray-300 sm:text-sm">{what} have no lineup yet.</p>
+				<button
+					type="button"
+					className={SOFT_BUTTON}
+					aria-expanded={only ? undefined : picking}
+					onClick={() => (only ? fill(only) : setPicking((open) => !open))}
+				>
+					<Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+					{only ? (only.previous ? "Same three for all of them" : `Use ${only.label} for all of them`) : "Pick a team for all of them"}
+				</button>
+			</div>
+			{picking && (
+				<LineupPicker eyebrow="Every ticket left" heading="Who runs all of them?" choices={choices} shared={shared} onPick={fill} />
+			)}
+		</section>
+	)
 }
 
 /** The first choice as the one-tap button's words. */

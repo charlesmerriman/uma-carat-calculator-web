@@ -1905,6 +1905,11 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   4": `previousRun` returns the ticket so the label can name it), else "Use Team 1"; "Pick a
   team" lists every choice as a card with faces. The Finals copy the event's last ticket.
   With no team and nothing logged, the day is a "Who's running this CM?" card to My team.
+- **"Use Team 1 for all of them"** (`FillEveryTicket`, owner's pick 2026-10-29; it took 17
+  taps) puts one lineup on every empty slot `slotsWithoutLineup` returns: the tickets of
+  today and later days, and the Finals. Past days are left alone, since a lineup with no
+  races reads "started" and would hide "Mark the rest skipped". With several lineups to
+  offer it opens the picker first; with fewer than two empty slots it isn't shown.
 - **The Finals**: radio buttons for the group (A / B) and the placement (1st to 3rd), a tap
   on the chosen one clears it, and the same tap row for the race; a winner fills a blank 1st.
 - **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,

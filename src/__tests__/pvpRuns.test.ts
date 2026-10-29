@@ -17,6 +17,7 @@ import {
 	summarizeRuns,
 	tallyRun,
 	ticketCounts,
+	slotsWithoutLineup,
 	ticketState,
 	unloggedTickets,
 } from "../utils/pvpRuns"
@@ -194,6 +195,33 @@ describe("skipped tickets", () => {
 		expect(isPastDay(1, 2)).toBe(true)
 		expect(isPastDay(2, 2)).toBe(false)
 		expect(isPastDay(4, null)).toBe(true)
+	})
+})
+
+describe("one lineup for every ticket", () => {
+	const days = (from: number) =>
+		Array.from({ length: 4 - from + 1 }, (_, index) => from + index).flatMap((day) =>
+			[1, 2, 3, 4].map((number) => ({ stage: "day", day, ticket: number }))
+		)
+
+	it("fills all sixteen tickets and the Finals before the CM starts", () => {
+		expect(slotsWithoutLineup([], CM_NOT_STARTED)).toEqual([...days(1), { stage: "final" }])
+	})
+
+	it("leaves past days, lineups and skips alone", () => {
+		const skipped = { ...ticket(3, 2, [], []), skipped: true }
+		const lineupOnly = ticket(3, 1, [])
+		const slots = slotsWithoutLineup([lineupOnly, skipped, ticket(2, 1, races(0))], 3)
+		expect(slots).toEqual([
+			{ stage: "day", day: 3, ticket: 3 },
+			{ stage: "day", day: 3, ticket: 4 },
+			...days(4),
+			{ stage: "final" },
+		])
+	})
+
+	it("is the Finals alone once Round 2 has ended", () => {
+		expect(slotsWithoutLineup([], null)).toEqual([{ stage: "final" }])
 	})
 })
 
