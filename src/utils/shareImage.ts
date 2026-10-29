@@ -19,16 +19,55 @@
  * (an SVG foreignObject), which is why Tailwind 4's oklch() and color-mix()
  * colours come out right; html2canvas re-implements CSS and can't read them.
  *
- * Drawn twice, keeping the second. Safari decodes the inlined card art during
- * the first pass and draws it blank; by the second it has it.
+ * On Safari's engine it is drawn twice, keeping the second: Safari decodes the
+ * inlined card art during the first pass and draws it blank, and by the second
+ * it has it. Every other browser draws it right the first time, so it draws
+ * once (it used to draw twice everywhere, twice the work for nothing).
+ *
+ * `fonts` keeps the embedded-font CSS between the redraws of one panel opening,
+ * so the site's fonts are gathered once rather than on every redraw.
+ * html-to-image embeds only the font families the picture uses, and a checkbox
+ * can add text in another family, so the CSS is kept per set of families.
  */
-export async function renderNodeToPng(node: HTMLElement): Promise<Blob> {
-	const { toBlob } = await import("html-to-image")
-	const options = { pixelRatio: 2 }
-	await toBlob(node, options)
+export async function renderNodeToPng(node: HTMLElement, fonts?: Map<string, string>): Promise<Blob> {
+	const { getFontEmbedCSS, toBlob } = await import("html-to-image")
+	const options: { pixelRatio: number; fontEmbedCSS?: string } = { pixelRatio: 2 }
+	if (fonts) {
+		const families = fontFamiliesIn(node)
+		let css = fonts.get(families)
+		if (css === undefined) {
+			css = await getFontEmbedCSS(node)
+			fonts.set(families, css)
+		}
+		options.fontEmbedCSS = css
+	}
+	if (needsSecondPass()) await toBlob(node, options)
 	const blob = await toBlob(node, options)
 	if (!blob) throw new Error("The picture came out empty.")
 	return blob
+}
+
+/** Every font family `node` draws with, as one key: what html-to-image's
+ *  font embedding depends on. */
+function fontFamiliesIn(node: HTMLElement): string {
+	const families = new Set<string>()
+	for (const element of [node, ...node.querySelectorAll("*")]) {
+		families.add(getComputedStyle(element).fontFamily)
+	}
+	return [...families].sort().join("|")
+}
+
+/**
+ * Whether this browser runs Safari's engine (WebKit), the one that draws inlined
+ * art blank on the first pass. Every browser on an iPhone or iPad does, since
+ * Apple requires it (Chrome there says "CriOS", Firefox "FxiOS"); an iPad asking
+ * for the desktop site calls itself a Mac but has a touch screen; and Safari on
+ * a Mac is WebKit without Chrome's or Edge's name in its user agent.
+ */
+export function needsSecondPass(userAgent = navigator.userAgent, touchPoints = navigator.maxTouchPoints): boolean {
+	const apple = /iPad|iPhone|iPod/.test(userAgent) || (/Macintosh/.test(userAgent) && touchPoints > 1)
+	const safari = /AppleWebKit/.test(userAgent) && !/Chrome|Chromium|Android|Edg|OPR/.test(userAgent)
+	return apple || safari
 }
 
 /** What this browser can do with a picture. Download always works. */

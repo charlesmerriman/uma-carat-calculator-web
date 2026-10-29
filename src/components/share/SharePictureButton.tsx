@@ -11,6 +11,11 @@ import type { ShareSupport } from "../../utils/shareImage"
 const GAP = 6
 const EDGE = 8
 
+// How long a redraw waits after the last checkbox change: ticking two or three
+// boxes in a row then makes one picture, not one each. The first picture of an
+// opening doesn't wait.
+const REDRAW_DELAY_MS = 250
+
 /** `2026-10-29`, the viewer's own date, for the picture's file name. */
 function fileDate(now: Date): string {
 	const pad = (value: number) => String(value).padStart(2, "0")
@@ -31,7 +36,12 @@ function fileDate(now: Date): string {
  * inside the click. While it is being made the actions wait, and say so.
  *
  * The picture is mounted off screen only while the panel is open, so there's
- * no hidden copy of it in the page the rest of the time.
+ * no hidden copy of it in the page the rest of the time, and nothing is drawn.
+ *
+ * Drawing is the expensive part (the browser lays the whole poster out again
+ * and paints it at twice its size), so a redraw waits REDRAW_DELAY_MS for the
+ * checkboxes to settle, only one runs at a time, and the fonts it embeds are
+ * gathered once per opening (renderNodeToPng).
  *
  * THE PANEL IS PORTALLED TO <body>, like PlanSwitcher's (see its comment): the
  * planner box is `overflow-hidden` and an `@container`, so a panel rendered in
@@ -69,6 +79,14 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	const panelRef = useRef<HTMLDivElement>(null)
 	const stageRef = useRef<HTMLDivElement>(null)
+	// The draw in progress, if any. A draw can't be stopped once it has
+	// started, so a newer one waits for it to finish (its picture is then
+	// thrown away) instead of running beside it and doubling the work.
+	const drawing = useRef<Promise<void> | null>(null)
+	// Whether this opening has scheduled its first picture yet: only redraws wait.
+	const scheduled = useRef(false)
+	// The embedded-font CSS, kept for this opening's redraws (renderNodeToPng).
+	const fonts = useRef(new Map<string, string>())
 
 	const ready = drawn !== null && drawn.optionsKey === optionsKey
 
@@ -76,21 +94,29 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 	// option changes while open.
 	useEffect(() => {
 		if (!open) return
-		const node = stageRef.current?.firstElementChild
-		if (!(node instanceof HTMLElement)) return
 		let cancelled = false
-		void (async () => {
-			try {
+		const delay = scheduled.current ? REDRAW_DELAY_MS : 0
+		scheduled.current = true
+		const timer = setTimeout(() => {
+			const previous = drawing.current
+			drawing.current = (async () => {
+				await previous
 				// One frame, so the picture has been laid out before it is drawn.
 				await new Promise((resolve) => requestAnimationFrame(resolve))
-				const blob = await renderNodeToPng(node)
-				if (!cancelled) setDrawn({ blob, optionsKey })
-			} catch {
-				if (!cancelled) setFailed(true)
-			}
-		})()
+				// Read now, not when scheduled: the options may have redrawn it.
+				const node = stageRef.current?.firstElementChild
+				if (cancelled || !(node instanceof HTMLElement)) return
+				try {
+					const blob = await renderNodeToPng(node, fonts.current)
+					if (!cancelled) setDrawn({ blob, optionsKey })
+				} catch {
+					if (!cancelled) setFailed(true)
+				}
+			})()
+		}, delay)
 		return () => {
 			cancelled = true
+			clearTimeout(timer)
 		}
 	}, [open, optionsKey])
 
@@ -152,6 +178,10 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 			setSupport(shareSupport())
 			setDrawn(null)
 			setFailed(false)
+			// A new opening: its first picture doesn't wait, and the fonts are
+			// gathered afresh (the theme may have changed since).
+			scheduled.current = false
+			fonts.current = new Map()
 		}
 		setPosition(null)
 		setOpen(!open)

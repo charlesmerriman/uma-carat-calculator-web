@@ -151,6 +151,21 @@ describe('SharePlanButton', () => {
     expect(downloadImage).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^uma-plan-\d{4}-\d{2}-\d{2}\.png$/))
   })
 
+  it('makes one picture for boxes ticked in a row, not one each', async () => {
+    renderButton()
+    fireEvent.click(screen.getByRole('button', { name: 'Share picture' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled())
+
+    const box = screen.getByRole('checkbox', { name: 'Hide paid carats' })
+    fireEvent.click(box)
+    fireEvent.click(box)
+    fireEvent.click(box)
+    // The picture no longer matches the boxes, so the actions wait for it.
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled())
+    expect(renderNodeToPng).toHaveBeenCalledTimes(2)
+  })
+
   it('offers the name only to an account that has one, off by default', async () => {
     displayName = 'MooncakeMile'
     renderButton()
