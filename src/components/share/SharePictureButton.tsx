@@ -5,6 +5,7 @@ import { Copy, Download, ImageDown, Loader2, Share2 } from "lucide-react"
 import { toast } from "sonner"
 import { copyImage, downloadImage, newDrawCache, renderNodeToPng, shareImageFile, shareSupport } from "../../utils/shareImage"
 import type { DrawCache, DrawnPicture, ShareSupport } from "../../utils/shareImage"
+import { fileStamp } from "../../utils/shareFileName"
 
 // Gap between the button and the panel, and the least room kept to any
 // viewport edge. Same numbers CountStepper and PlanSwitcher use.
@@ -15,12 +16,6 @@ const EDGE = 8
 // boxes in a row then makes one picture, not one each. The first picture of an
 // opening doesn't wait.
 const REDRAW_DELAY_MS = 250
-
-/** `2026-10-29`, the viewer's own date, for the picture's file name. */
-function fileDate(now: Date): string {
-	const pad = (value: number) => String(value).padStart(2, "0")
-	return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-}
 
 /**
  * "Share picture": a button, and a panel with the caller's options and Copy,
@@ -62,8 +57,9 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 	options: ReactNode
 	/** Changes whenever an option the picture reads changes: the picture is redrawn. */
 	optionsKey: string
-	/** The file's name, from the viewer's date ("2026-10-29"). */
-	filename: (date: string) => string
+	/** The file's name, from the viewer's date and time ("2026-10-29-1615",
+	 *  utils/shareFileName.ts), so two pictures never share one. */
+	filename: (stamp: string) => string
 	/** The share sheet's title. */
 	shareTitle: string
 	/** The panel's first line. */
@@ -192,7 +188,7 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 		setOpen(!open)
 	}
 
-	const file = filename(fileDate(now))
+	const file = filename(fileStamp(now))
 
 	const copy = async () => {
 		if (!ready) return

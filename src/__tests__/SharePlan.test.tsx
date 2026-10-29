@@ -149,7 +149,7 @@ describe('SharePlanButton', () => {
     expect(renderNodeToPng).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: 'Download' }))
-    expect(downloadImage).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^uma-plan-\d{4}-\d{2}-\d{2}\.png$/))
+    expect(downloadImage).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^uma-plan-\d{4}-\d{2}-\d{2}-\d{4}\.png$/))
   })
 
   it('makes one picture for boxes ticked in a row, not one each', async () => {

@@ -148,7 +148,7 @@ describe("ShareTeamButton", () => {
 		expect(screen.getByRole("checkbox", { name: "Show notes" })).toBeChecked()
 		await waitFor(() => expect(screen.getByRole("button", { name: "Download" })).toBeEnabled())
 		fireEvent.click(screen.getByRole("button", { name: "Download" }))
-		expect(downloadImage).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^uma-team-cm21-\d{4}-\d{2}-\d{2}\.png$/))
+		expect(downloadImage).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^uma-team-cm21-\d{4}-\d{2}-\d{2}-\d{4}\.png$/))
 	})
 
 	it("offers the veterans only when the team has one linked", () => {

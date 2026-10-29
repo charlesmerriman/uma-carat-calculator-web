@@ -41,7 +41,7 @@ export function ShareTeamButton({ event, team, umasById, cardsById, veterans }: 
 			className="self-center"
 			blurb="A picture of this team, to post anywhere."
 			shareTitle="My Uma Musume team"
-			filename={(date) => teamPictureFilename(event, date)}
+			filename={(stamp) => teamPictureFilename(event, stamp, [showName ? name : null, teamName])}
 			optionsKey={`${showName && !!name}|${showVeterans && linked}|${showNotes}`}
 			options={
 				<>

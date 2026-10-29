@@ -5,7 +5,8 @@
 import { describe, expect, it } from "vitest"
 import type { RaceEvent } from "../types"
 import type { MemberStyle, PvpTeamMember } from "../types/pvpTeam"
-import { splitUmaName, teamPictureFilename, teamShape } from "../utils/teamPicture"
+import { STRAIGHT_STYLES, splitUmaName, teamPictureFilename, teamShape } from "../utils/teamPicture"
+import { fileSlug, fileStamp, shareFileName } from "../utils/shareFileName"
 
 const member = (position: number, style: MemberStyle): PvpTeamMember => ({ position, uma: position + 1, style, cards: [] })
 
@@ -32,10 +33,34 @@ describe("splitUmaName", () => {
 	})
 })
 
+describe("the team shape strip", () => {
+	it("runs Runaway to End, left to right, like the game", () => {
+		expect(STRAIGHT_STYLES).toEqual(["runaway", "front", "pace", "late", "end"])
+	})
+})
+
 describe("teamPictureFilename", () => {
-	it("names the event", () => {
-		expect(teamPictureFilename(CAPRICORN, "2026-10-29")).toBe("uma-team-cm21-2026-10-29.png")
+	it("names the event, the names shown and the minute", () => {
+		expect(teamPictureFilename(CAPRICORN, "2026-10-29-1615")).toBe("uma-team-cm21-2026-10-29-1615.png")
 		const loh = { ...CAPRICORN, event_type: "league_of_heroes", loh_number: 4 } as unknown as RaceEvent
-		expect(teamPictureFilename(loh, "2026-10-29")).toBe("uma-team-loh4-2026-10-29.png")
+		expect(teamPictureFilename(loh, "2026-10-29-1615", [null, "Plan B"])).toBe("uma-team-loh4-plan-b-2026-10-29-1615.png")
+		expect(teamPictureFilename(CAPRICORN, "2026-10-29-1615", ["MooncakeMile", null])).toBe("uma-team-cm21-mooncakemile-2026-10-29-1615.png")
+	})
+})
+
+describe("share file names", () => {
+	it("stamps the viewer's date and time to the minute", () => {
+		expect(fileStamp(new Date(2026, 9, 29, 16, 5))).toBe("2026-10-29-1605")
+	})
+
+	it("keeps letters and digits of any script, one dash between words", () => {
+		expect(fileSlug("  Main plan!! v2 ")).toBe("main-plan-v2")
+		expect(fileSlug("ウマ娘 計画")).toBe("ウマ娘-計画")
+		expect(fileSlug("x".repeat(60))).toHaveLength(40)
+	})
+
+	it("drops a blank part", () => {
+		expect(shareFileName("uma-plan", [null, "Main", "", undefined], "2026-10-29-1605")).toBe("uma-plan-main-2026-10-29-1605.png")
+		expect(shareFileName("uma-plan", ["!!!"], "2026-10-29-1605")).toBe("uma-plan-2026-10-29-1605.png")
 	})
 })

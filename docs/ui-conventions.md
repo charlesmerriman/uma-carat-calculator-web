@@ -2606,7 +2606,9 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
 - **One panel, two pictures.** `components/share/SharePictureButton.tsx` owns the button,
   the portalled panel, the drawing and the three actions; `SharePlanButton` and
   `ShareTeamButton` each pass their picture, their checkboxes (`ShareOption`), an
-  `optionsKey` that changes whenever the picture would, and a file name. A third picture
+  `optionsKey` that changes whenever the picture would, and a file name
+  (`utils/shareFileName.ts`: the plan's or team's name, the player's only when shown, and
+  the minute, so two pictures never share a name). A third picture
   is a third wrapper, never a copy of the panel.
 
 - **A poster, `PlanPicture`, never a read-only flag on `BannerRow`** (redesigned
@@ -2615,7 +2617,8 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
   forecast's own "Carats short" / "Carats to spare" figure in the status colours), then each
   banner as a card on a dated rail, with its art a size up (`BannerArt large`), a type pill
   (`BannerTypeChip`) and the pull count as the card's biggest number, coloured and metered
-  by `countStatus`. The sheet's four stat boxes stay as a small 2x2 grid. The scenario and
+  by `countStatus`. The sheet's four stat boxes stay as a small 2x2 grid, with Carat Est. over
+  Paid Carat Est. (the sheet's first two swap places on the picture only). The scenario and
   anniversary bands become dated milestones on the rail. "Show my name" (off by default)
   also shows the account's picture, framed as the player's own favorite; "Hide paid
   carats" drops the paid tile and blanks the paid figure.
@@ -2663,7 +2666,8 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
 - **The team picture is a lineup, `TeamPicture`** (owner, 2026-10-29; mocks in
   `notes/team-picture/`): the race as four headline tiles (`coursePairs`, a tile dropped
   while its headline still reads "TBD"), the team shape strip
-  ("2 Pace + 1 End", each face on a straight where her style runs, `STYLE_ON_STRAIGHT`), then
+  ("2 Pace + 1 End", each face where her style runs, Runaway on the left to End on the right
+  like the game, `STYLE_ON_STRAIGHT`; no goal post, Daptrius 2026-10-29), then
   the three umas side by side: portrait, her letters for THIS race (TeamGrid's tones), her
   veteran's grade and stats, and her deck 3x2 with the borrowed card last. An empty spot
   keeps its column, so the numbers match the strip. Words and numbers live in
