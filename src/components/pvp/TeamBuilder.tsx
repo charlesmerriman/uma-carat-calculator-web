@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { Check, LayoutGrid, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Send, Sparkles, Star, Trash2 } from "lucide-react"
+import { Check, Copy, LayoutGrid, Loader2, PanelLeftOpen, PanelRightOpen, Pencil, Plus, Send, Sparkles, Star, Trash2 } from "lucide-react"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
@@ -114,9 +114,20 @@ function gridLayout(left: boolean, right: boolean): string {
 	return ""
 }
 
+/** PvpTeam.name's max_length in the API. */
+const TEAM_NAME_MAX_LENGTH = 40
+
 /** "Team 2" when the player hasn't named it. */
 function teamLabel(team: PvpTeam, index: number): string {
 	return team.name.trim() || `Team ${index + 1}`
+}
+
+/**
+ * "Copy of Team 2". Cut to the API's limit: a long name plus the prefix would
+ * otherwise fail the create on an account and leave the copy only on screen.
+ */
+function copyName(team: PvpTeam, index: number): string {
+	return `Copy of ${teamLabel(team, index)}`.slice(0, TEAM_NAME_MAX_LENGTH)
 }
 
 export function TeamBuilder({ event }: { event: RaceEvent }) {
@@ -439,6 +450,17 @@ function ReadyBuilder({ event, teamsState, index }: {
 						const key = createTeam(ref)
 						if (key) setSelectedKey(key)
 					}}
+					onDuplicate={() => {
+						if (!team) return
+						// The content only: the copy starts unpinned and with no gallery
+						// post, and createTeam applies the per-event cap.
+						const key = createTeam(ref, {
+							name: copyName(team, eventTeams.indexOf(team)),
+							notes: team.notes,
+							members: team.members,
+						})
+						if (key) setSelectedKey(key)
+					}}
 					onRename={(name) => team && renameTeam(team.key, name)}
 					onDelete={() => {
 						if (!team) return
@@ -697,7 +719,7 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 	)
 }
 
-function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSelect, onCreate, onRename, onDelete }: {
+function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSelect, onCreate, onDuplicate, onRename, onDelete }: {
 	/** Drawn first: the Guide picks button, below xl. */
 	leading?: ReactNode
 	/** Drawn last: the Skills button, below 2xl. */
@@ -708,12 +730,14 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 	saveState: PvpTeamsContextType["saveState"]
 	onSelect: (key: string) => void
 	onCreate: () => void
+	onDuplicate: () => void
 	onRename: (name: string) => void
 	onDelete: () => void
 }) {
 	const [renaming, setRenaming] = useState(false)
 	const [confirmingDelete, setConfirmingDelete] = useState(false)
 	const atCap = teams.length >= PVP_TEAM_CAP_PER_EVENT
+	const capReason = `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.`
 	const selectedIndex = selected ? teams.indexOf(selected) : -1
 
 	return (
@@ -747,7 +771,7 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 					<button
 						type="button"
 						disabled={atCap}
-						title={atCap ? `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.` : undefined}
+						title={atCap ? capReason : undefined}
 						onClick={onCreate}
 						className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-gray-300 transition hover:bg-gray-700 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
 					>
@@ -794,6 +818,9 @@ function TeamToolbar({ leading, trailing, teams, selected, mode, saveState, onSe
 						<>
 							<IconButton label="Rename team" onClick={() => setRenaming(true)}>
 								<Pencil className="h-4 w-4" />
+							</IconButton>
+							<IconButton label="Duplicate team" disabledReason={atCap ? capReason : null} onClick={onDuplicate}>
+								<Copy className="h-4 w-4" />
 							</IconButton>
 							<IconButton label="Delete team" onClick={() => setConfirmingDelete(true)}>
 								<Trash2 className="h-4 w-4" />
@@ -877,7 +904,7 @@ function RenameField({ initial, placeholder, onDone }: {
 			<input
 				autoFocus
 				aria-label="Team name"
-				maxLength={40}
+				maxLength={TEAM_NAME_MAX_LENGTH}
 				value={value}
 				placeholder={placeholder}
 				onChange={(change) => setValue(change.target.value)}
@@ -893,19 +920,22 @@ function RenameField({ initial, placeholder, onDone }: {
 	)
 }
 
-function IconButton({ label, onClick, submit = false, children }: {
+function IconButton({ label, onClick, submit = false, disabledReason = null, children }: {
 	label: string
 	onClick?: () => void
 	submit?: boolean
+	/** Disables the button and becomes its tooltip, so the player learns why. */
+	disabledReason?: string | null
 	children: ReactNode
 }) {
 	return (
 		<button
 			type={submit ? "submit" : "button"}
 			aria-label={label}
-			title={label}
+			title={disabledReason ?? label}
+			disabled={disabledReason !== null}
 			onClick={onClick}
-			className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+			className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition enabled:hover:bg-gray-700 enabled:hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
 		>
 			{children}
 		</button>
