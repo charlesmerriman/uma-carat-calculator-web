@@ -184,7 +184,13 @@ describe("RankingsPage", () => {
 		renderPage(true)
 		await screen.findByRole("region", { name: "Overall" })
 		fireEvent.click(screen.getByRole("tab", { name: /^Umas/ }))
-		const umas = screen.getByRole("region", { name: "Umas" })
+		// findBy, not getBy. The list mounts when the payload lands, outside act(),
+		// and its subscription to the lens store is an effect React runs on a later
+		// task (setImmediate), racing findBy's setTimeout(0). When the click wins,
+		// the store has no listener yet; the choice still lands, because the
+		// subscribe re-checks the snapshot, but one task late. Failed this way once
+		// on CI (2026-10-28); a slowed setImmediate reproduces it every time.
+		const umas = await screen.findByRole("region", { name: "Umas" })
 		expect(within(umas).getByText("Maruzensky")).toBeInTheDocument()
 		expect(within(umas).getByText("1 pick")).toBeInTheDocument()
 		expect(JSON.parse(localStorage.getItem("rankings-choices") ?? "{}")).toEqual({ guides: { lens: "umas" } })
