@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { RaceEventCard } from '../components/timeline/RaceEventCard'
 import { CalculatorContext } from '../services/CalculatorContext'
 import { DEFAULT_GUEST_STATS } from '../services/guestMigration'
-import type { CalculatorContextType, ChampionsMeeting, UserStats } from '../types'
+import type { CalculatorContextType, ChampionsMeeting, ChampionsMeetingRank, UserStats } from '../types'
 import type { IncomeLedgerRow } from '../types/ledger'
 
 /**
  * The "taking part" switch on a race card: drawn while the event's payout is
  * still ahead, and flipping it writes the skip onto the stats block, which is
- * the only thing the projection reads (utils/raceParticipation).
+ * the only thing the projection reads (utils/raceParticipation). The "Your
+ * rewards" panel beside it (hooks/useRaceRewards) shares its bounds.
  */
 
 const meeting = (id: number, end: string): ChampionsMeeting => ({
@@ -57,16 +58,37 @@ const ledgerRow = (id: number, date: string): IncomeLedgerRow => ({
   sr_crystals: 0,
 })
 
-// One far-future CM and one long past, so the test never depends on today.
+// A CM that pays day by day (backend race_payouts.py): days 1 to 4, then the
+// finals; tickets with day 4.
+const PAYOUTS = [
+  '2099-01-11T00:00:00Z', '2099-01-12T00:00:00Z', '2099-01-13T00:00:00Z',
+  '2099-01-14T00:00:00Z', '2099-01-16T00:00:00Z',
+]
+
+// One far-future CM and one long past, so the test never depends on today,
+// and a far-future one with its payout days.
 const LEDGER = [
   ledgerRow(1, '2099-01-16T00:00:00Z'),
   ledgerRow(2, '2001-01-16T00:00:00Z'),
+  { ...ledgerRow(3, PAYOUTS[4]), payouts: PAYOUTS, tickets_at: PAYOUTS[3], shards_at: PAYOUTS[3] },
 ]
+
+const CHAMPION = {
+  id: 1,
+  name: 'Champion',
+  income_amount: 3300,
+  uma_ticket_amount: 5,
+  support_ticket_amount: 5,
+  ssr_shard_amount: 0,
+  sr_shard_amount: 0,
+  day_amounts: [130, 130, 270, 270, 2500],
+  rewards: [],
+} as ChampionsMeetingRank
 
 let latestStats: UserStats | null = null
 
-function Harness({ event }: { event: ChampionsMeeting }) {
-  const [stats, setStats] = useState<UserStats | null>({ ...DEFAULT_GUEST_STATS })
+function Harness({ event, stats: initial }: { event: ChampionsMeeting; stats?: Partial<UserStats> }) {
+  const [stats, setStats] = useState<UserStats | null>({ ...DEFAULT_GUEST_STATS, ...initial })
   // Reported after render, where the test reads it.
   useEffect(() => {
     latestStats = stats
@@ -75,6 +97,8 @@ function Harness({ event }: { event: ChampionsMeeting }) {
     userStatsData: stats,
     setUserStatsData: setStats,
     fullIncomeLedger: LEDGER,
+    championsMeetingRankData: [CHAMPION],
+    leagueOfHeroesRankData: [],
   } as unknown as CalculatorContextType
   return (
     <CalculatorContext.Provider value={value}>
@@ -113,5 +137,33 @@ describe('RaceEventCard taking-part switch', () => {
       </MemoryRouter>
     )
     expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+})
+
+describe('RaceEventCard rewards panel', () => {
+  it('lists what the event pays at the chosen finish, and shows it left out once skipped', () => {
+    render(<Harness event={meeting(3, '2099-01-17T00:00:00Z')} stats={{ champions_meeting_rank: 1 }} />)
+    expect(screen.getByText('Your rewards')).toBeInTheDocument()
+    expect(screen.getByText('carats as Champion')).toBeInTheDocument()
+    expect(screen.getByText('3,300')).toBeInTheDocument()
+    const days = within(screen.getByRole('list', { name: 'Carats by payout day' })).getAllByRole('listitem')
+    expect(days.map((day) => day.textContent?.match(/\+[\d,]+$/)?.[0])).toEqual(['+130', '+130', '+270', '+270', '+2,500'])
+    expect(screen.getByText('5 uma, 5 support')).toBeInTheDocument()
+    // This rank pays no shards, so there is no shards line.
+    expect(screen.queryByText(/Shards:/)).toBeNull()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Taking part in Champions Meeting 3' }))
+    expect(screen.getByText('carats left out')).toBeInTheDocument()
+  })
+
+  it('is not drawn with no finish picked', () => {
+    render(<Harness event={meeting(3, '2099-01-17T00:00:00Z')} />)
+    expect(screen.getByRole('checkbox')).toBeInTheDocument()
+    expect(screen.queryByText('Your rewards')).toBeNull()
+  })
+
+  it('is not drawn once the payout is behind the projection', () => {
+    render(<Harness event={meeting(2, '2001-01-17T00:00:00Z')} stats={{ champions_meeting_rank: 1 }} />)
+    expect(screen.queryByText('Your rewards')).toBeNull()
   })
 })
