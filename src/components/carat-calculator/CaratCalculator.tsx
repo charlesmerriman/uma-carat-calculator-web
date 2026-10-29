@@ -317,6 +317,20 @@ export const CaratCalculator: React.FC = () => {
 										</button>
 									</Fragment>
 								))}
+								{/* The sheet's one other action, on the row that is already its
+								    toolbar at every width, rather than a row of its own. */}
+								{userPlannedBannerData.length > 0 && (
+									<>
+										<div className="hidden w-px bg-gray-700 self-stretch sm:block" />
+										<SharePlanButton
+											plannerRows={plannerRows}
+											bannerResources={bannerResources}
+											umaBannerData={umaBannerData}
+											supportBannerData={supportBannerData}
+											userStepUpSelectionData={userStepUpSelectionData}
+										/>
+									</>
+								)}
 							</div>
 
 							{/* The empty plan: nothing planned and nothing staged. Without it a
@@ -429,17 +443,6 @@ export const CaratCalculator: React.FC = () => {
 										<div className="flex items-center gap-2 pt-3 pb-2 px-1">
 											<span className="text-xs font-semibold text-brand uppercase tracking-wider">Calculator</span>
 											<div className="flex-1 h-px bg-brand/20" />
-										</div>
-									)}
-									{userPlannedBannerData.length > 0 && (
-										<div className="flex justify-end pb-2">
-											<SharePlanButton
-												plannerRows={plannerRows}
-												bannerResources={bannerResources}
-												umaBannerData={umaBannerData}
-												supportBannerData={supportBannerData}
-												userStepUpSelectionData={userStepUpSelectionData}
-											/>
 										</div>
 									)}
 									{forecastPosition.position === "top" && renderForecast("mb-3")}

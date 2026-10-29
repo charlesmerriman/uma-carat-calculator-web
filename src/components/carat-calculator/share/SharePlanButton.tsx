@@ -133,15 +133,20 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 	}
 
 	return (
-		<div ref={panelRef} className="relative">
+		// A flex box, so the button stretches to the add-banner buttons' height
+		// beside it in the calculator's toolbar row.
+		<div ref={panelRef} className="relative flex shrink-0">
 			<button
 				type="button"
 				aria-expanded={open}
 				onClick={toggle}
-				className="flex items-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-200 transition hover:border-brand hover:text-brand"
+				title="Share picture"
+				className="flex items-center gap-1.5 rounded-md border border-gray-600 px-3 font-medium text-gray-200 transition hover:border-brand hover:text-brand"
 			>
 				<ImageDown className="h-4 w-4" aria-hidden="true" />
-				Share picture
+				{/* Icon only on a phone, where the add buttons already share the
+				    row; the accessible name is the same at every width. */}
+				<span className="sr-only sm:not-sr-only">Share picture</span>
 			</button>
 
 			{open && (
