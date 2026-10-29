@@ -95,6 +95,22 @@ export const MARKER_LABELS: Record<TimelineMarker["kind"], string> = {
 export const MARKER_ORDER: TimelineMarker["kind"][] = ["scenario", "anniversary"]
 
 /**
+ * Display names for the race events, as the filter offers them.
+ *
+ * A third map, for the reason MARKER_LABELS is a second one: a race event is
+ * neither a banner category nor a marker kind. Keyed by the union tag
+ * `event_type`, the one field that tells a Champions Meeting from a League of
+ * Heroes (the two are field-identical bar their number).
+ */
+export const RACE_LABELS: Record<RaceEvent["event_type"], string> = {
+	champions_meeting: "Champions Meetings",
+	league_of_heroes: "League of Heroes",
+}
+
+/** Filter order: the more frequent event first. */
+export const RACE_ORDER: RaceEvent["event_type"][] = ["champions_meeting", "league_of_heroes"]
+
+/**
  * Banners that open at the same moment, presented as one timeline card.
  *
  * The game regularly runs two banners concurrently — most visibly the Golden
