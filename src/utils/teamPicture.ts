@@ -6,7 +6,6 @@
 
 import type { RaceEvent } from "../types"
 import type { MemberStyle, PvpTeamMember } from "../types/pvpTeam"
-import { availableCourseDetails } from "./courseDetails"
 import { STYLE_LABELS } from "./pvpGuide"
 import { MEMBER_STYLES } from "./pvpTeams"
 
@@ -40,64 +39,6 @@ export const STYLE_ON_STRAIGHT: Record<MemberStyle, number> = {
 
 /** The strip's labels, back of the pack first. */
 export const STRAIGHT_STYLES: MemberStyle[] = [...MEMBER_STYLES].sort((a, b) => STYLE_ON_STRAIGHT[a] - STYLE_ON_STRAIGHT[b])
-
-export interface CourseTile {
-	label: string
-	value: string
-	note: string | null
-}
-
-/** "1200" or "1200m" as metres, else null. Editors type both. */
-function metres(text: string | undefined): number | null {
-	const match = text ? /^(\d{3,4})\s*m?$/i.exec(text.trim()) : null
-	return match ? Number(match[1]) : null
-}
-
-const GROUNDS = new Set(["firm", "good", "soft", "heavy"])
-
-/**
- * The race as four headline tiles: Racecourse (its direction under it),
- * Distance (the metres, the band under them), Surface (the ground) and
- * Weather (the season). Every field is typed by an editor and may still read
- * "TBD", so a tile whose headline isn't announced is left out, and a field
- * that doesn't read as expected is shown as typed rather than guessed at.
- */
-export function courseTiles(event: RaceEvent): CourseTile[] {
-	const known = new Map(availableCourseDetails(event).map((detail) => [detail.label, detail.value.trim()]))
-	const direction = known.get("Direction")
-	const condition = known.get("Track condition")
-
-	// The metres can sit in either field ("Distance: 2200", "Length: Medium"),
-	// and the band word in the other.
-	const length = known.get("Length")
-	const distance = known.get("Distance")
-	const meters = metres(length) ?? metres(distance)
-	const band = [distance, length].find((text) => text !== undefined && metres(text) === null) ?? null
-
-	const tiles: Array<CourseTile | null> = [
-		known.has("Racecourse")
-			? {
-					label: "Racecourse",
-					value: known.get("Racecourse")!,
-					note: direction === undefined ? null : /^(left|right)$/i.test(direction) ? `${direction}-handed` : direction,
-				}
-			: null,
-		meters !== null
-			? { label: "Distance", value: `${meters.toLocaleString("en-US")}m`, note: band }
-			: band !== null
-				? { label: "Distance", value: band, note: null }
-				: null,
-		known.has("Surface")
-			? {
-					label: "Surface",
-					value: known.get("Surface")!,
-					note: condition === undefined ? null : GROUNDS.has(condition.toLowerCase()) ? `${condition} ground` : condition,
-				}
-			: null,
-		known.has("Weather") ? { label: "Weather", value: known.get("Weather")!, note: known.get("Season") ?? null } : null,
-	]
-	return tiles.filter((tile): tile is CourseTile => tile !== null)
-}
 
 /** "Taiki Shuttle (Camping)" -> "Taiki Shuttle" over "Camping"; no outfit, no second line. */
 export function splitUmaName(name: string): { name: string; outfit: string | null } {

@@ -478,13 +478,15 @@ describe("PvpGuidePage views and layout", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("shows the course as labelled values, with length and distance folded together", () => {
+	it("shows the course as four pairs, the band under the metres", () => {
 		respond(404)
 		renderPage("/app/pvp?event=cm-10")
 		const header = within(screen.getByRole("region", { name: "Aquarius Cup" }))
 		expect(header.getByText("Racecourse").nextSibling?.textContent).toBe("Tokyo")
-		expect(header.getByText("Distance").nextSibling?.textContent).toBe("1600m · Mile")
-		// The sentinel "TBD" slots stay out.
+		const distance = header.getByText("Distance").nextSibling
+		expect(distance?.textContent).toBe("1,600m")
+		expect(distance?.nextSibling?.textContent).toBe("Mile")
+		// A pair whose halves are both the sentinel "TBD" stays out.
 		expect(header.queryByText("Weather")).not.toBeInTheDocument()
 	})
 
