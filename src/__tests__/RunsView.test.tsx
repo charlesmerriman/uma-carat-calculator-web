@@ -311,6 +311,14 @@ describe("the day it is", () => {
 		expect(within(await screen.findByRole("tab", { name: /Day 2/ })).getByText("Today")).toBeTruthy()
 		expect(within(screen.getByRole("tab", { name: /Day 1/ })).queryByText("Today")).toBeNull()
 	})
+
+	it("calls no day today once Round 2 has ended, and opens on the Finals", async () => {
+		// 100 hours in: Round 2 ended at 96, the Finals start at 120.
+		const finalsRegistration = { ...CM, start_date: new Date(Date.now() - 100 * 3_600_000).toISOString() } as RaceEvent
+		show(finalsRegistration)
+		expect((await screen.findByRole("tab", { name: /Finals/ })).getAttribute("aria-selected")).toBe("true")
+		expect(screen.queryByText("Today")).toBeNull()
+	})
 })
 
 describe("the finals", () => {
