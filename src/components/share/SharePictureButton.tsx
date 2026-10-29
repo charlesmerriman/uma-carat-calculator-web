@@ -3,8 +3,8 @@ import type { ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { Copy, Download, ImageDown, Loader2, Share2 } from "lucide-react"
 import { toast } from "sonner"
-import { copyImage, downloadImage, renderNodeToPng, shareImageFile, shareSupport } from "../../utils/shareImage"
-import type { ShareSupport } from "../../utils/shareImage"
+import { copyImage, downloadImage, newDrawCache, renderNodeToPng, shareImageFile, shareSupport } from "../../utils/shareImage"
+import type { DrawCache, DrawnPicture, ShareSupport } from "../../utils/shareImage"
 
 // Gap between the button and the panel, and the least room kept to any
 // viewport edge. Same numbers CountStepper and PlanSwitcher use.
@@ -40,8 +40,13 @@ function fileDate(now: Date): string {
  *
  * Drawing is the expensive part (the browser lays the whole poster out again
  * and paints it at twice its size), so a redraw waits REDRAW_DELAY_MS for the
- * checkboxes to settle, only one runs at a time, and the fonts it embeds are
- * gathered once per opening (renderNodeToPng).
+ * checkboxes to settle, only one runs at a time, and the fonts and art it
+ * embeds are gathered once per opening (renderNodeToPng). Art that couldn't
+ * be loaded is said so under the actions, never handed over silently.
+ *
+ * On an iPhone or iPad the panel leads with Share, as "Save or share", and
+ * leaves Download out: Download lands in Files, and the share sheet's "Save
+ * Image" is the only way a page can put a picture in Photos.
  *
  * THE PANEL IS PORTALLED TO <body>, like PlanSwitcher's (see its comment): the
  * planner box is `overflow-hidden` and an `@container`, so a panel rendered in
@@ -70,11 +75,11 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 }) {
 	const [open, setOpen] = useState(false)
 	const [now, setNow] = useState(() => new Date())
-	const [drawn, setDrawn] = useState<{ blob: Blob; optionsKey: string } | null>(null)
+	const [drawn, setDrawn] = useState<(DrawnPicture & { optionsKey: string }) | null>(null)
 	const [failed, setFailed] = useState(false)
 	// Read when the panel opens, in the click: it asks `navigator`, which a
 	// prerendered page may not touch while rendering.
-	const [support, setSupport] = useState<ShareSupport>({ copy: false, share: false })
+	const [support, setSupport] = useState<ShareSupport>({ copy: false, share: false, preferShare: false })
 	const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	const panelRef = useRef<HTMLDivElement>(null)
@@ -85,8 +90,8 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 	const drawing = useRef<Promise<void> | null>(null)
 	// Whether this opening has scheduled its first picture yet: only redraws wait.
 	const scheduled = useRef(false)
-	// The embedded-font CSS, kept for this opening's redraws (renderNodeToPng).
-	const fonts = useRef(new Map<string, string>())
+	// The embedded-font CSS and the inlined art, kept for this opening's redraws (renderNodeToPng).
+	const cache = useRef<DrawCache>(newDrawCache())
 
 	const ready = drawn !== null && drawn.optionsKey === optionsKey
 
@@ -107,8 +112,8 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 				const node = stageRef.current?.firstElementChild
 				if (cancelled || !(node instanceof HTMLElement)) return
 				try {
-					const blob = await renderNodeToPng(node, fonts.current)
-					if (!cancelled) setDrawn({ blob, optionsKey })
+					const picture = await renderNodeToPng(node, cache.current)
+					if (!cancelled) setDrawn({ ...picture, optionsKey })
 				} catch {
 					if (!cancelled) setFailed(true)
 				}
@@ -178,10 +183,10 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 			setSupport(shareSupport())
 			setDrawn(null)
 			setFailed(false)
-			// A new opening: its first picture doesn't wait, and the fonts are
-			// gathered afresh (the theme may have changed since).
+			// A new opening: its first picture doesn't wait, and the fonts and
+			// art are gathered afresh (the theme may have changed since).
 			scheduled.current = false
-			fonts.current = new Map()
+			cache.current = newDrawCache()
 		}
 		setPosition(null)
 		setOpen(!open)
@@ -243,20 +248,32 @@ export function SharePictureButton({ picture, options, optionsKey, filename, sha
 						</p>
 					) : (
 						<div className="flex flex-wrap gap-2">
+							{support.preferShare && (
+								<ActionButton disabled={!ready} onClick={share} icon={<Share2 className="h-4 w-4" aria-hidden="true" />}>
+									Save or share
+								</ActionButton>
+							)}
 							{support.copy && (
 								<ActionButton disabled={!ready} onClick={copy} icon={<Copy className="h-4 w-4" aria-hidden="true" />}>
 									Copy
 								</ActionButton>
 							)}
-							{support.share && (
+							{support.share && !support.preferShare && (
 								<ActionButton disabled={!ready} onClick={share} icon={<Share2 className="h-4 w-4" aria-hidden="true" />}>
 									Share
 								</ActionButton>
 							)}
-							<ActionButton disabled={!ready} onClick={download} icon={<Download className="h-4 w-4" aria-hidden="true" />}>
-								Download
-							</ActionButton>
+							{!support.preferShare && (
+								<ActionButton disabled={!ready} onClick={download} icon={<Download className="h-4 w-4" aria-hidden="true" />}>
+									Download
+								</ActionButton>
+							)}
 						</div>
+					)}
+					{ready && drawn.missingArt > 0 && (
+						<p className="mt-2 text-xs text-highlight" role="status">
+							Some art didn't load, so the picture has blank spots. Close this and try again.
+						</p>
 					)}
 					{!ready && !failed && (
 						<p className="mt-2 flex items-center gap-1.5 text-xs text-gray-400" role="status">

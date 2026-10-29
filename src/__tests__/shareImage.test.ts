@@ -1,7 +1,9 @@
-// Which browsers draw the share picture twice (utils/shareImage.ts): only
-// Safari's engine needs the second pass, so every other browser skips it.
+// Which browsers draw the share picture more than once (utils/shareImage.ts):
+// only Safari's engine needs the extra passes, so every other browser skips
+// them. And the scale a picture is drawn at, so it never passes an iPhone's
+// canvas cap.
 import { describe, expect, it } from 'vitest'
-import { needsSecondPass } from '../utils/shareImage'
+import { needsSecondPass, pixelRatioFor } from '../utils/shareImage'
 
 const SAFARI_ENGINE = {
   'Safari on an iPhone': ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1', 5],
@@ -25,5 +27,22 @@ describe('needsSecondPass', () => {
 
   it.each(Object.entries(OTHERS))('draws once for %s', (_name, [userAgent, touchPoints]) => {
     expect(needsSecondPass(userAgent, touchPoints)).toBe(false)
+  })
+})
+
+describe('pixelRatioFor', () => {
+  it('draws a short picture at twice its size', () => {
+    // A 10-banner plan: 960 x about 1,550 CSS px.
+    expect(pixelRatioFor(960, 1550)).toBe(2)
+  })
+
+  it('draws a long plan smaller, never past an iPhone canvas (16,777,216 px)', () => {
+    // About 40 and 80 banners: 960 x 5,150 and 960 x 9,950 CSS px.
+    for (const height of [5150, 9950]) {
+      const ratio = pixelRatioFor(960, height)
+      expect(ratio).toBeLessThan(2)
+      expect(960 * ratio * height * ratio).toBeLessThanOrEqual(16_777_216)
+    }
+    expect(pixelRatioFor(960, 5150)).toBeCloseTo(1.8, 1)
   })
 })

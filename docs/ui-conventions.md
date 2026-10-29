@@ -2625,7 +2625,9 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
   (the "Passed" gate, the carats floored to tens, the stat boxes), and its art from
   `BannerArt`, which `BannerRow` also draws. Change a row's figures there, never in one
   of the two views.
-- **Fixed at 960px, drawn at 2x**, whatever the screen. It no longer mirrors the sheet's
+- **Fixed at 960px, drawn at 2x**, whatever the screen, **unless that passes an iPhone's
+  canvas cap** (16,777,216 px): `pixelRatioFor` then scales it down, so a plan of about 33
+  banners and up draws a little softer instead of failing. It no longer mirrors the sheet's
   grid tracks, so a column change on the sheet doesn't touch it.
 - **Centre with flex, not auto margins.** The rail's nodes drew off the line in the PNG
   with `mx-auto` and on it once `RailNode` centred them with flex. Why the clone lost the
@@ -2640,10 +2642,19 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
   write or the share sheet only inside the click, and drawing takes a second or two. The
   picture is mounted off screen only while the panel is open.
 - **`utils/shareImage.ts` is generic** (render a node to a PNG, then copy, share or
-  download), loads `html-to-image` on first use, and draws twice for Safari. html2canvas is
-  not an option: it can't read Tailwind 4's `oklch()` colours. Card art embeds because the
-  image CDN sends `Access-Control-Allow-Origin: *`; art from a host without it would fail
-  the draw.
+  download) and loads `html-to-image` on first use. html2canvas is not an option: it can't
+  read Tailwind 4's `oklch()` colours.
+- **The art is inlined before drawing** (`inlineImages`): each `<img>` is fetched afresh
+  (`cache: "reload"`), swapped for a data URL and decoded, so html-to-image fetches nothing.
+  The image CDN sends `Access-Control-Allow-Origin: *` only to a request carrying an
+  Origin, which the page's own `<img>` tags don't send, so a cached copy can fail a CORS
+  read. Art that still fails is counted, and the panel says so; it is never left blank
+  silently. On Safari's engine the picture is drawn until the PNG stops growing (three to
+  four passes): its first pass draws inlined art blank, and two passes left a 26-banner
+  plan's art blank on iPhones in v2.10.
+- **On an iPhone or iPad the panel leads with "Save or share" and has no Download**:
+  Download lands in Files, and the share sheet's "Save Image" is a page's only way into
+  Photos (`ShareSupport.preferShare`).
 - **The team picture is a lineup, `TeamPicture`** (owner, 2026-10-29; mocks in
   `notes/team-picture/`): the race as four headline tiles (`coursePairs`, a tile dropped
   while its headline still reads "TBD"), the team shape strip

@@ -12,11 +12,12 @@ import { EMPTY_BANNER_RESOURCES } from '../hooks/bannerResources'
 import type { BannerResources } from '../hooks/bannerResources'
 import type { PlannerRow } from '../utils/plannerSections'
 import type { BannerUma, UserPlannedBanner } from '../types'
-import { downloadImage, renderNodeToPng } from '../utils/shareImage'
+import { downloadImage, renderNodeToPng, shareSupport } from '../utils/shareImage'
 
 vi.mock('../utils/shareImage', () => ({
-  renderNodeToPng: vi.fn(() => Promise.resolve(new Blob(['png'], { type: 'image/png' }))),
-  shareSupport: () => ({ copy: false, share: false }),
+  renderNodeToPng: vi.fn(() => Promise.resolve({ blob: new Blob(['png'], { type: 'image/png' }), missingArt: 0 })),
+  shareSupport: vi.fn(() => ({ copy: false, share: false, preferShare: false })),
+  newDrawCache: () => ({ fonts: new Map(), images: new Map() }),
   copyImage: vi.fn(),
   shareImageFile: vi.fn(),
   downloadImage: vi.fn(),
@@ -183,6 +184,26 @@ describe('SharePlanButton', () => {
 
     expect(screen.getByRole('checkbox', { name: 'Show my name and picture (MooncakeMile)' })).not.toBeChecked()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled())
+  })
+
+  it('says so when some art did not load', async () => {
+    vi.mocked(renderNodeToPng).mockResolvedValueOnce({ blob: new Blob(['png'], { type: 'image/png' }), missingArt: 2 })
+    renderButton()
+    fireEvent.click(screen.getByRole('button', { name: 'Share picture' }))
+
+    expect(await screen.findByText(/Some art didn't load/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled()
+  })
+
+  it('leads with Save or share on an iPhone, and leaves Download out', async () => {
+    vi.mocked(shareSupport).mockReturnValueOnce({ copy: true, share: true, preferShare: true })
+    renderButton()
+    fireEvent.click(screen.getByRole('button', { name: 'Share picture' }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save or share' })).toBeEnabled())
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
   })
 
   it('closes on Escape and takes the hidden picture with it', async () => {
