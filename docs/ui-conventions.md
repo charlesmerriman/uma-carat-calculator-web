@@ -1599,9 +1599,16 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **The header renders from the calculator payload**, guide or not, and stays COMPACT
   and LIGHT (owner, 2026-10-13: boxed grids, then pills, both read as congested): art
   thumbnail, "Champions Meeting 20" kicker over the cup name, countdown; then the course
-  as small labels over values (`availableCourseDetails`, length folded into distance) beside
+  as four pairs, unboxed (`CoursePairs`, the Timeline card's too: see "Course pairs") beside
   a step-line schedule: the start date plus the eight `*_hours` calculation constants
   (`milestones`), passed steps filled, the next one ringed. A null LoH offset hides that step.
+- **Course pairs (owner, 2026-10-29).** Wherever the site shows a race's course (the PvP
+  header, the Timeline card, the team picture) it is FOUR pairs from `coursePairs`
+  (`utils/courseDetails.ts`): Racecourse over its direction ("Left-handed"), Distance over
+  its band, Surface over the ground ("Firm ground"), Weather over the season. The line
+  under each headline is the same size, a step lighter, never a small muted footnote: the
+  owner wants both treated as equally important. A half not announced reads "TBD"; a pair
+  with neither half is left out. Editor values that don't parse show as typed.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
 - **Five views under the header, `?view=`**: Recommendations (the guide, default, no
@@ -2638,8 +2645,8 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
   image CDN sends `Access-Control-Allow-Origin: *`; art from a host without it would fail
   the draw.
 - **The team picture is a lineup, `TeamPicture`** (owner, 2026-10-29; mocks in
-  `notes/team-picture/`): the race as four headline tiles (`courseTiles`, which drops a
-  tile still reading "TBD" and shows odd editor values as typed), the team shape strip
+  `notes/team-picture/`): the race as four headline tiles (`coursePairs`, a tile dropped
+  while its headline still reads "TBD"), the team shape strip
   ("2 Pace + 1 End", each face on a straight where her style runs, `STYLE_ON_STRAIGHT`), then
   the three umas side by side: portrait, her letters for THIS race (TeamGrid's tones), her
   veteran's grade and stats, and her deck 3x2 with the borrowed card last. An empty spot

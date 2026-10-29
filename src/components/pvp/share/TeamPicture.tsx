@@ -10,7 +10,8 @@ import { STYLE_LABELS, styleColor } from "../../../utils/pvpGuide"
 import { splitEventName } from "../../../utils/pvpEvent"
 import { PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../../utils/pvpTeams"
 import { splitHighlights } from "../../../utils/remarkHighlight"
-import { STRAIGHT_STYLES, STYLE_ON_STRAIGHT, courseTiles, splitUmaName, teamShape } from "../../../utils/teamPicture"
+import { coursePairs } from "../../../utils/courseDetails"
+import { STRAIGHT_STYLES, STYLE_ON_STRAIGHT, splitUmaName, teamShape } from "../../../utils/teamPicture"
 import { STAT_KEYS, STAT_LABELS } from "../../../utils/trainedUmas"
 import { formatScore, gradeLabel } from "../../../utils/veteranGrade"
 import { Avatar } from "../../account/Avatar"
@@ -63,7 +64,8 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 	now: Date
 }) {
 	const { kicker, title } = splitEventName(event)
-	const tiles = courseTiles(event)
+	// A tile needs its headline; one still "TBD" is left off the picture.
+	const tiles = coursePairs(event).filter((pair) => pair.value !== null)
 	const art = event.image
 	// See-through over the art, so it reads behind the tiles; solid without it.
 	const fill = art ? "bg-[color-mix(in_srgb,var(--card-fill)_78%,transparent)]" : "bg-(--card-fill)"
@@ -102,7 +104,7 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 							<div key={tile.label} className={`min-w-0 flex-1 rounded-xl border border-edge px-4 py-3 ${fill}`}>
 								<p className="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{tile.label}</p>
 								<p className="font-display mt-1.5 truncate text-[1.625rem] leading-none font-bold text-gray-50">{tile.value}</p>
-								{tile.note && <p className="mt-1.5 truncate text-xs text-gray-400">{tile.note}</p>}
+								{tile.detail && <p className="mt-1.5 truncate text-xs text-gray-400">{tile.detail}</p>}
 							</div>
 						))}
 					</div>

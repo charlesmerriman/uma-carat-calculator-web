@@ -81,7 +81,8 @@ import {
 } from "../timeline/timelineShared"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
-import { availableCourseDetails } from "../../utils/courseDetails"
+import { announcedCoursePairs } from "../../utils/courseDetails"
+import { CoursePairs } from "../timeline/CourseDetails"
 import { formatDate, formatTime, localZoneName } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { guideLinkPath } from "../../utils/appRoutes"
@@ -644,24 +645,6 @@ function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogg
 	)
 }
 
-/** The course as label/value pairs, distance and length folded into one. */
-function courseRows(event: RaceEvent): Array<{ label: string; value: string }> {
-	const byLabel = new Map(availableCourseDetails(event).map((detail) => [detail.label, detail.value.trim()]))
-	const length = byLabel.get("Length")
-	const metres = length && /^\d+$/.test(length) ? `${length}m` : length
-	const distance = [metres, byLabel.get("Distance")].filter(Boolean).join(" · ")
-	const rows: Array<[string, string | undefined]> = [
-		["Racecourse", byLabel.get("Racecourse")],
-		["Surface", byLabel.get("Surface")],
-		["Distance", distance || undefined],
-		["Direction", byLabel.get("Direction")],
-		["Condition", byLabel.get("Track condition")],
-		["Season", byLabel.get("Season")],
-		["Weather", byLabel.get("Weather")],
-	]
-	return rows.filter((row): row is [string, string] => Boolean(row[1])).map(([label, value]) => ({ label, value }))
-}
-
 const PANEL_LABEL = "mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500"
 
 /**
@@ -677,7 +660,7 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 	onCopyLink: () => void
 }) {
 	const { kicker, title } = splitEventName(event)
-	const course = courseRows(event)
+	const hasCourse = announcedCoursePairs(event).length > 0
 	// The first milestone still ahead is "next"; everything before it is done.
 	const nextIndex = keyDates.findIndex((milestone) => new Date(milestone.date).getTime() > now.getTime())
 	// The zone, named once for the whole strip (owner, 2026-10-28). Generic
@@ -732,17 +715,8 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 			<div className="grid gap-4 border-t border-gray-700/70 bg-gray-900/30 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-8">
 				<div className="min-w-0">
 					<h3 className={PANEL_LABEL}>Course</h3>
-					{course.length > 0 ? (
-						<dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4" aria-label="Course">
-							{course.map((row) => (
-								<div key={row.label} className="min-w-0">
-									<dt className="text-[11px] text-gray-500">{row.label}</dt>
-									<dd className="truncate text-sm font-medium text-gray-100" title={row.value}>
-										{row.value}
-									</dd>
-								</div>
-							))}
-						</dl>
+					{hasCourse ? (
+						<CoursePairs event={event} />
 					) : (
 						<p className="text-sm text-gray-400">Not announced yet.</p>
 					)}
