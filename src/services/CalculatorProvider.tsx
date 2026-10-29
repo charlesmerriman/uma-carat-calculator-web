@@ -182,11 +182,51 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	// to decide whether it is safe to replace the rows on screen.
 	const lastSaveOkRef = useRef(true)
 
+	// What the last save sent for each collection, as JSON, kept ONLY when that
+	// save landed with no other save beside it; empty means "send everything".
+	// A collection exactly as it was sent then is left out of the next save (an
+	// absent key leaves it alone on the server): auto-save fires after every
+	// edit, an edit touches one collection, and the server was reading and
+	// comparing the other two for nothing.
+	//
+	// Why "alone": saves can overlap (a slow one is still on the wire when the
+	// next timer fires). If save A carried an edit that the user then undid,
+	// save B would match the state from BEFORE A and leave the undo out, and
+	// A would land last. So a save that starts while another is in flight sends
+	// everything, and any overlap at all forgets what was sent.
+	const lastSentRef = useRef<{ planId: number | null; payloads: Record<string, string> }>({
+		planId: null,
+		payloads: {}
+	})
+	const savesInFlightRef = useRef(0)
+	// Bumped by every save that starts while another is in flight, so a save
+	// can tell at its end whether anything overlapped it at either end.
+	const overlapsRef = useRef(0)
+
 	const performSave = useCallback(async (): Promise<void> => {
 		// Guests never PATCH: their plan is kept on the device (guestPlanStore).
 		// The auto-save timer is already gated, but saveNow could still land
 		// here. Both halves matter. See loadedAsRef for the first.
 		if (loadedAsRef.current !== "account" || !getAuthToken()) return
+		const collections = {
+			banners: prepareBannerData(),
+			purchases: preparePurchaseData(),
+			selections: prepareStepUpSelectionData()
+		}
+		const sent: Record<string, string> = {
+			banners: JSON.stringify(collections.banners),
+			purchases: JSON.stringify(collections.purchases),
+			selections: JSON.stringify(collections.selections)
+		}
+		const alone = savesInFlightRef.current === 0
+		if (!alone) overlapsRef.current += 1
+		const overlapsAtStart = overlapsRef.current
+		const before = alone && lastSentRef.current.planId === activePlanId ? lastSentRef.current.payloads : {}
+		// null = leave the collection out of this save (userCalculatorDataPatch).
+		const changed = <T,>(key: keyof typeof collections, payload: T): T | null =>
+			before[key] === sent[key] ? null : payload
+		savesInFlightRef.current += 1
+		let landed = false
 		try {
 			const response = await userCalculatorDataPatch(
 					// The plan these rows were loaded from. It comes from the same
@@ -194,11 +234,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					// even if the timer fires mid-switch. See userCalculatorDataPatch.
 					activePlanId,
 					userStatsData,
-					prepareBannerData(),
-					preparePurchaseData(),
-					prepareStepUpSelectionData()
+					changed("banners", collections.banners),
+					changed("purchases", collections.purchases),
+					changed("selections", collections.selections)
 				)
 			lastSaveOkRef.current = response.ok
+			landed = response.ok
 			if (!response.ok) {
 				toast.error("Save failed. Your changes may not have been saved.")
 			} else {
@@ -207,6 +248,14 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		} catch {
 			lastSaveOkRef.current = false
 			toast.error("Save failed. Check your connection.")
+		} finally {
+			savesInFlightRef.current -= 1
+			// Kept only for a save that ran alone from start to finish and landed;
+			// anything else (a failure, an overlap) means the next save sends all.
+			lastSentRef.current =
+				landed && alone && savesInFlightRef.current === 0 && overlapsRef.current === overlapsAtStart
+					? { planId: activePlanId, payloads: sent }
+					: { planId: null, payloads: {} }
 		}
 	}, [activePlanId, userStatsData, prepareBannerData, preparePurchaseData,
 		prepareStepUpSelectionData])

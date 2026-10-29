@@ -183,9 +183,10 @@ export function toStepUpSelectionPayload(
  *
  * A COLLECTION passed as `null` is omitted too, and the server then leaves it
  * alone (an absent key is "not part of this save"; `[]` is "delete every
- * row"). Auto-save always sends all three. The one caller that omits any is
- * the sign-in import (guestPlanImport.ts), which adds rows to a new plan and
- * must not touch purchases it never loaded.
+ * row"). Auto-save leaves out a collection exactly as its last save sent it
+ * (CalculatorProvider's performSave says when that is safe). The sign-in
+ * import (guestPlanImport.ts) omits purchases too: it adds rows to a new plan
+ * and must not touch purchases it never loaded.
  */
 export function userCalculatorDataPatch(
 	planId: number | null,

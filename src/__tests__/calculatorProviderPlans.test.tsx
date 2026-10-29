@@ -476,3 +476,70 @@ describe('CalculatorProvider plans', () => {
 		})
 	})
 })
+
+describe('CalculatorProvider leaves unchanged collections out of a save', () => {
+	// A save's arguments: [planId, stats, banners, purchases, step-up picks].
+	const sentCollections = (call: number) => {
+		const [, , banners, purchases, selections] = mockedPatch.mock.calls[call]
+		return { banners: banners !== null, purchases: purchases !== null, selections: selections !== null }
+	}
+	const everything = { banners: true, purchases: true, selections: true }
+	const save = async (): Promise<void> => {
+		await act(async () => {
+			await ctx().saveNow()
+		})
+	}
+
+	it('sends everything first, then only what changed', async () => {
+		await renderLoaded()
+		await editOpenPlan(5)
+		await save()
+		expect(sentCollections(0)).toEqual(everything)
+
+		await editOpenPlan(6)
+		await save()
+		expect(sentCollections(1)).toEqual({ banners: true, purchases: false, selections: false })
+	})
+
+	it('sends everything again after a save that failed', async () => {
+		await renderLoaded()
+		await editOpenPlan(5)
+		await save()
+		mockedPatch.mockResolvedValueOnce(json({ error: 'nope' }, 500))
+		await editOpenPlan(6)
+		await save()
+
+		await editOpenPlan(7)
+		await save()
+		expect(sentCollections(2)).toEqual(everything)
+	})
+
+	it('sends everything when saves overlap, and forgets what overlapping saves sent', async () => {
+		await renderLoaded()
+		await editOpenPlan(5)
+		await save()
+
+		// Save 2 hangs on the wire; save 3 starts beside it.
+		let finishSecond: (response: Response) => void = () => undefined
+		mockedPatch.mockImplementationOnce(() => new Promise<Response>((resolve) => { finishSecond = resolve }))
+		await editOpenPlan(6)
+		let second: Promise<void> = Promise.resolve()
+		act(() => {
+			second = ctx().saveNow()
+		})
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2))
+		await editOpenPlan(7)
+		await save()
+		expect(sentCollections(2)).toEqual(everything)
+
+		// Save 2 lands last; it overlapped save 3, so it may not vouch for anything.
+		await act(async () => {
+			finishSecond(json({ message: 'ok' }))
+			await second
+		})
+		await editOpenPlan(8)
+		await save()
+		expect(sentCollections(3)).toEqual(everything)
+	})
+})
+
