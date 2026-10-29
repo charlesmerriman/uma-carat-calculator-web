@@ -241,14 +241,14 @@ function SkillRow({ pick, sources, open, onToggle, spots, onSearch }: {
 					<span className="block truncate text-sm text-gray-100">{skill.name}</span>
 					{skill.unique_of && <span className="block truncate text-[11px] text-gray-500">{skill.unique_of}</span>}
 				</span>
-				{pick.tier !== null && (
-					<span className="shrink-0 rounded border border-gray-600 bg-gray-900 px-1 text-[10px] font-bold text-gray-300" title={`Tier ${pick.tier}`}>
-						T{pick.tier}
-					</span>
-				)}
 				{sources && (
 					<span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand text-black" title="Your team can get this">
 						<Check className="h-3 w-3" aria-label="Your team can get this" />
+					</span>
+				)}
+				{pick.tier !== null && (
+					<span className="shrink-0 rounded border border-gray-600 bg-gray-900 px-1 text-[10px] font-bold text-gray-300" title={`Tier ${pick.tier}`}>
+						T{pick.tier}
 					</span>
 				)}
 				<ChevronDown className={`h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
