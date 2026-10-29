@@ -211,7 +211,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	}, [activePlanId, userStatsData, prepareBannerData, preparePurchaseData,
 		prepareStepUpSelectionData])
 
-	const { timerIsGoing, startTimer, saveNow, cancelTimer } = useAutoSave({
+	const { timerIsGoing, startTimer, saveNow, cancelTimer, waitForSave } = useAutoSave({
 		saveFn: performSave,
 		delayMs: 5000
 	})
@@ -665,9 +665,12 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 				const deletingOpenPlan = planId === activePlanId
 				// A pending save for a DIFFERENT plan's rows is still wanted, so it
 				// is flushed. One for the plan being deleted is dropped instead:
-				// left alone it would fire at a plan id that no longer exists.
+				// left alone it would fire at a plan id that no longer exists. One
+				// already sent can't be dropped, so the DELETE waits for it rather
+				// than racing it on the server.
 				if (deletingOpenPlan) {
 					cancelTimer()
+					await waitForSave()
 				} else if (!(await flushPendingSave())) {
 					toast.error("Your changes didn't save, so the plan wasn't deleted.")
 					return false
@@ -704,7 +707,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 				toast.success("Plan deleted")
 				return true
 			}),
-		[runPlanAction, activePlanId, cancelTimer, flushPendingSave, applyPlan]
+		[runPlanAction, activePlanId, cancelTimer, waitForSave, flushPendingSave, applyPlan]
 	)
 
 	const setSeparateIncome = useCallback(

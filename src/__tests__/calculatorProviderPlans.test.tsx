@@ -11,7 +11,8 @@
  *   - rows that just arrived from the server are not an edit and must not arm
  *     a save of their own;
  *   - a pending save for a plan that is being deleted must be dropped, not
- *     fired at an id that no longer exists.
+ *     fired at an id that no longer exists, and one already sent must finish
+ *     before the delete goes out.
  *
  * None of these throw when they break. They lose a user's banners.
  */
@@ -318,6 +319,43 @@ describe('CalculatorProvider plans', () => {
 		expect(ctx().plans.map((plan) => plan.id)).toEqual([PLAN_B.id])
 		expect(ctx().activePlanId).toBe(PLAN_B.id)
 		expect(ctx().userPlannedBannerData).toEqual(ROWS_B)
+	})
+
+	it('waits for a save already on the wire before deleting its plan', async () => {
+		// The 2026-10-28 deadlock: the timer had fired, so there was nothing left
+		// to drop, and the DELETE raced the PATCH on the server.
+		let finishSave: (response: Response) => void = () => undefined
+		mockedPatch.mockImplementation(() => new Promise<Response>((resolve) => { finishSave = resolve }))
+		mockedDelete.mockResolvedValue(json({ active_plan_id: PLAN_B.id }))
+		await renderLoaded()
+		await editOpenPlan(999)
+
+		let saving: Promise<void> = Promise.resolve()
+		act(() => {
+			saving = ctx().saveNow()
+		})
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1))
+
+		let deleting: Promise<boolean> = Promise.resolve(false)
+		act(() => {
+			deleting = ctx().deletePlan(PLAN_A.id)
+		})
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
+		expect(mockedDelete).not.toHaveBeenCalled()
+
+		await act(async () => {
+			finishSave(json({ message: 'ok' }))
+			await saving
+			await deleting
+		})
+
+		expect(mockedDelete).toHaveBeenCalledTimes(1)
+		expect(mockedPatch.mock.invocationCallOrder[0]).toBeLessThan(
+			mockedDelete.mock.invocationCallOrder[0]
+		)
+		expect(ctx().activePlanId).toBe(PLAN_B.id)
 	})
 
 	it('keeps the open plan and its pending edit when deleting a different plan', async () => {
