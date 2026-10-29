@@ -58,19 +58,21 @@ function resolveGuaranteedCard(
  * Shared by BannerRow (both layouts) and the share picture, so the picture
  * shows exactly the art the sheet does. Images only: the caller decides whether
  * the cell links anywhere. `large` is the picture's: art a size up (64px for
- * the sheet's 56), since the art is what a picture is looked at for.
+ * the sheet's 56), since the art is what a picture is looked at for. `small`
+ * (44px) is the picture's compact rows, for a long plan (planPictureLayout).
  */
-export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supportBannerData, large = false }: {
+export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supportBannerData, large = false, small = false }: {
 	target: PlannedBannerTarget
 	userStepUpSelectionData: UserStepUpSelection[]
 	umaBannerData: BannerUma[]
 	supportBannerData: BannerSupport[]
 	large?: boolean
+	small?: boolean
 }) {
 	// The person's favorite umas, drawn in the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
-	const umaSize = large ? "w-16" : "w-14"
-	const cardClass = large ? "h-16 w-auto object-contain" : "thumb-banner"
+	const umaSize = large ? "w-16" : small ? "w-11" : "w-14"
+	const cardClass = large ? "h-16 w-auto object-contain" : small ? "h-11 w-auto object-contain" : "thumb-banner"
 
 	if (target.type === "StepUp") {
 		const pool = stepUpPool(target)

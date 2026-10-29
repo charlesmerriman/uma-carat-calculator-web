@@ -111,6 +111,20 @@ describe('PlanPicture', () => {
     expect(screen.getAllByText('Paid Carat Est.')[0].nextSibling?.textContent).toBe('–')
   })
 
+  it('draws every banner of a long plan, compact from 16 and in two columns from 31', () => {
+    const plan = (count: number): PlannerRow[] =>
+      Array.from({ length: count }, (_, at) => ({ kind: 'banner', banner: row(at + 1, `Banner ${at + 1}`, 10), index: at }))
+    const plenty = (count: number) => Array.from({ length: count }, () => resources(100_000, 1_500))
+
+    for (const [count, layout] of [[15, 'poster'], [16, 'compact'], [31, 'columns']] as const) {
+      const { container, unmount } = renderPicture({ plannerRows: plan(count), bannerResources: plenty(count) })
+      expect(container.firstElementChild?.getAttribute('data-layout')).toBe(layout)
+      expect(screen.getAllByText(/^Banner \d+$/)).toHaveLength(count)
+      expect(screen.getByText(new RegExp(`^${count} banners`))).toBeInTheDocument()
+      unmount()
+    }
+  })
+
   it('names the plan, with its picture, only when asked to', () => {
     const { container } = renderPicture({ ownerName: 'MooncakeMile', ownerPicture: 'https://example.com/oguri.png' })
 

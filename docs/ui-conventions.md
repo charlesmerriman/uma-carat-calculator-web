@@ -2633,9 +2633,15 @@ Plans: `notes/share-plan-image-plan.md`, `notes/team-picture-plan.md`.
   (the "Passed" gate, the carats floored to tens, the stat boxes), and its art from
   `BannerArt`, which `BannerRow` also draws. Change a row's figures there, never in one
   of the two views.
-- **Fixed at 960px, drawn at 2x**, whatever the screen, **unless that passes an iPhone's
-  canvas cap** (16,777,216 px): `pixelRatioFor` then scales it down, so a plan of about 33
-  banners and up draws a little softer instead of failing. It no longer mirrors the sheet's
+- **Every banner, always** (owner, 2026-10-29: a picture of part of a plan has no point).
+  A long plan changes shape instead (`utils/planPictureLayout.ts`): the poster up to 15
+  banners, compact rows (small art, about 60px each) from 16, and compact rows in two
+  columns on a 1,760px picture from 31, so a 60-banner plan comes out near square rather
+  than a strip Discord shows at thumbnail size. A milestone moves with the banner after it
+  when the columns split.
+- **Fixed at 960px (1,760px in columns), drawn at 2x**, whatever the screen, **unless that
+  passes an iPhone's canvas cap** (16,777,216 px): `pixelRatioFor` then scales it down, so a
+  very long plan draws a little softer instead of failing. It no longer mirrors the sheet's
   grid tracks, so a column change on the sheet doesn't touch it.
 - **Centre with flex, not auto margins.** The rail's nodes drew off the line in the PNG
   with `mx-auto` and on it once `RailNode` centred them with flex. Why the clone lost the
