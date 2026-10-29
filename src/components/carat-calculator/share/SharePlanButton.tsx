@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
+import { createPortal } from "react-dom"
 import { Copy, Download, ImageDown, Loader2, Share2 } from "lucide-react"
 import { toast } from "sonner"
 import type { BannerSupport, BannerUma, UserStepUpSelection } from "../../../types"
@@ -9,6 +10,11 @@ import { useAccount } from "../../../services/AuthContext"
 import { copyImage, downloadImage, renderNodeToPng, shareImageFile, shareSupport } from "../../../utils/shareImage"
 import type { ShareSupport } from "../../../utils/shareImage"
 import { PlanPicture } from "./PlanPicture"
+
+// Gap between the button and the panel, and the least room kept to any
+// viewport edge. Same numbers CountStepper and PlanSwitcher use.
+const GAP = 6
+const EDGE = 8
 
 /** `uma-plan-2026-10-29.png`, the viewer's own date. */
 function pictureFilename(now: Date): string {
@@ -26,15 +32,24 @@ function pictureFilename(now: Date): string {
  * takes a second or two; with the picture ready, every action runs inside the
  * click. While it is being made the actions wait, and say so.
  *
- * The table is mounted off screen only while the panel is open, so there's no
- * hidden copy of the plan in the page the rest of the time.
+ * The picture is mounted off screen only while the panel is open, so there's
+ * no hidden copy of the plan in the page the rest of the time.
+ *
+ * THE PANEL IS PORTALLED TO <body>, like PlanSwitcher's (see its comment): the
+ * planner box is `overflow-hidden` and an `@container`, so a panel rendered in
+ * place is clipped by it, and under the PLANS bar of a one-row plan the box
+ * ends before the panel does. The portal renders only after a click, never
+ * during the prerender.
  */
-export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, supportBannerData, userStepUpSelectionData }: {
+export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, supportBannerData, userStepUpSelectionData, inBar = false }: {
 	plannerRows: PlannerRow[]
 	bannerResources: BannerResources[]
 	umaBannerData: BannerUma[]
 	supportBannerData: BannerSupport[]
 	userStepUpSelectionData: UserStepUpSelection[]
+	/** On the PLANS bar (signed in), dressed like the bar's "New" and "..."
+	 *  buttons; otherwise in the add-banner row, the guest's only toolbar. */
+	inBar?: boolean
 }) {
 	const { account } = useAccount()
 	const name = account?.display_name.trim() || null
@@ -50,6 +65,8 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 	// Read when the panel opens, in the click: it asks `navigator`, which a
 	// prerendered page may not touch while rendering.
 	const [support, setSupport] = useState<ShareSupport>({ copy: false, share: false })
+	const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null)
 	const panelRef = useRef<HTMLDivElement>(null)
 	const stageRef = useRef<HTMLDivElement>(null)
 
@@ -78,22 +95,57 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 		}
 	}, [open, options])
 
-	// Close on Escape or a click outside the panel.
+	// Under the button, right edges aligned (it sits at the right end of its
+	// row), pulled back inside the viewport, and opening upward when there is
+	// no room below. Fixed coordinates, so it is recomputed on scroll and resize.
+	const place = useCallback((): void => {
+		const button = buttonRef.current
+		const panel = panelRef.current
+		if (!button || !panel) return
+		const anchor = button.getBoundingClientRect()
+		const left = Math.max(EDGE, Math.min(anchor.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - EDGE))
+		const below = anchor.bottom + GAP
+		const fitsBelow = below + panel.offsetHeight <= window.innerHeight - EDGE
+		const above = anchor.top - GAP - panel.offsetHeight
+		setPosition({ left, top: fitsBelow || above < EDGE ? below : above })
+	}, [])
+
+	// Before paint, and again when the panel's height changes (the loading line
+	// goes, an error replaces the buttons).
+	useLayoutEffect(() => {
+		if (open) place()
+	}, [open, ready, failed, place])
+
+	// Close on Escape or a click outside both the button and the panel (the
+	// panel lives in <body>, outside the button's box); follow scrolls and resizes.
 	useEffect(() => {
 		if (!open) return
+		const close = () => {
+			setOpen(false)
+			setPosition(null)
+		}
 		const onKey = (event: KeyboardEvent) => {
-			if (event.key === "Escape") setOpen(false)
+			if (event.key === "Escape") close()
 		}
 		const onPointer = (event: PointerEvent) => {
-			if (!panelRef.current?.contains(event.target as Node)) setOpen(false)
+			const target = event.target as Node
+			if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) return
+			close()
 		}
+		// Capture phase: the scroll that matters may be an ancestor's, and
+		// scroll events do not bubble.
+		const reposition = () => place()
 		document.addEventListener("keydown", onKey)
 		document.addEventListener("pointerdown", onPointer)
+		window.addEventListener("scroll", reposition, true)
+		window.addEventListener("resize", reposition)
 		return () => {
 			document.removeEventListener("keydown", onKey)
 			document.removeEventListener("pointerdown", onPointer)
+			window.removeEventListener("scroll", reposition, true)
+			window.removeEventListener("resize", reposition)
 		}
-	}, [open])
+	}, [open, place])
 
 	const toggle = () => {
 		if (!open) {
@@ -102,6 +154,7 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 			setPicture(null)
 			setFailed(false)
 		}
+		setPosition(null)
 		setOpen(!open)
 	}
 
@@ -134,24 +187,38 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 	}
 
 	return (
-		// A flex box, so the button stretches to the add-banner buttons' height
-		// beside it in the calculator's toolbar row.
-		<div ref={panelRef} className="relative flex shrink-0">
+		// A flex box: in the add-banner row the button stretches to the add
+		// buttons' height beside it; on the PLANS bar it centres at the bar's 32px.
+		<div className={`relative flex shrink-0 ${inBar ? "self-center" : ""}`}>
 			<button
+				ref={buttonRef}
 				type="button"
 				aria-expanded={open}
 				onClick={toggle}
 				title="Share picture"
-				className="flex items-center gap-1.5 rounded-md border border-gray-600 px-3 font-medium text-gray-200 transition hover:border-brand hover:text-brand"
+				className={`flex items-center gap-1.5 rounded-md border border-gray-600 font-medium transition ${
+					inBar
+						? "h-8 px-2 text-sm text-gray-300 hover:border-gray-400 hover:bg-gray-800 hover:text-gray-100"
+						: "px-3 text-gray-200 hover:border-brand hover:text-brand"
+				}`}
 			>
 				<ImageDown className="h-4 w-4" aria-hidden="true" />
-				{/* Icon only on a phone, where the add buttons already share the
-				    row; the accessible name is the same at every width. */}
+				{/* Icon only on a phone, where the row is already full; the
+				    accessible name is the same at every width. */}
 				<span className="sr-only sm:not-sr-only">Share picture</span>
 			</button>
 
-			{open && (
-				<div className="absolute right-0 top-full z-30 mt-2 w-72 rounded-lg border border-gray-600 bg-gray-900 p-3 text-sm text-gray-300 shadow-lg">
+			{open && createPortal(
+				<div
+					ref={panelRef}
+					style={{
+						left: position?.left ?? 0,
+						top: position?.top ?? 0,
+						// Invisible, not unmounted, until placed: place() measures it.
+						visibility: position ? "visible" : "hidden",
+					}}
+					className="fixed z-50 w-72 max-w-[calc(100vw-1rem)] rounded-lg border border-gray-600 bg-gray-900 p-3 text-sm text-gray-300 shadow-lg"
+				>
 					<p className="mb-2 text-gray-400">A picture of your plan, to post anywhere.</p>
 					<div className="mb-3 flex flex-col gap-1.5">
 						{name && (
@@ -192,7 +259,8 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 							Making the picture…
 						</p>
 					)}
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Off screen and hidden from screen readers: it exists only to be drawn. */}

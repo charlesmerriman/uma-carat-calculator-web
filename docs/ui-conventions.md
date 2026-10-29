@@ -2617,6 +2617,12 @@ share sheet) and Download, each offered only where the browser can do it. Plan:
 - **Centre with flex, not auto margins.** The rail's nodes drew off the line in the PNG
   with `mx-auto` and on it once `RailNode` centred them with flex. Why the clone lost the
   centring wasn't pinned down, so check a new centred element in a real capture.
+- **Where the button sits (owner, 2026-10-29):** at the end of the PLANS bar, after "...",
+  for an account (`PlanSwitcher`'s `actions` slot); a guest has no bar, so theirs stays at
+  the end of the add-banner row. `hasPlansBar` (`utils/plansBar.ts`) is the one test for which,
+  so the two can't both show or both vanish. Its panel is portalled to `<body>` like the
+  plans menu: the planner box clips anything placed inside it, and a one-row plan ends
+  before the panel does.
 - **The picture is made when the panel opens**, not on the click: Safari allows a clipboard
   write or the share sheet only inside the click, and drawing takes a second or two. The
   picture is mounted off screen only while the panel is open.
