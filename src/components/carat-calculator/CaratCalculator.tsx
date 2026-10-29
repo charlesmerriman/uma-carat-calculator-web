@@ -12,6 +12,7 @@ import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcon
 import { PlannerSectionBand } from "./PlannerSectionBand"
 import { buildPlannerRows, SCENARIO_BANDS_ONLY } from "../../utils/plannerSections"
 import { PlanSwitcher } from "./PlanSwitcher"
+import { SharePlanButton } from "./share/SharePlanButton"
 import { CaratForecastChart } from "./CaratForecastChart"
 import { useForecastPosition } from "../../hooks/useForecastPosition"
 import { EMPTY_BANNER_RESOURCES } from "../../hooks/bannerResources"
@@ -428,6 +429,17 @@ export const CaratCalculator: React.FC = () => {
 										<div className="flex items-center gap-2 pt-3 pb-2 px-1">
 											<span className="text-xs font-semibold text-brand uppercase tracking-wider">Calculator</span>
 											<div className="flex-1 h-px bg-brand/20" />
+										</div>
+									)}
+									{userPlannedBannerData.length > 0 && (
+										<div className="flex justify-end pb-2">
+											<SharePlanButton
+												plannerRows={plannerRows}
+												bannerResources={bannerResources}
+												umaBannerData={umaBannerData}
+												supportBannerData={supportBannerData}
+												userStepUpSelectionData={userStepUpSelectionData}
+											/>
 										</div>
 									)}
 									{forecastPosition.position === "top" && renderForecast("mb-3")}

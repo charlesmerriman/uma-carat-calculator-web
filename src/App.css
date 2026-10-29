@@ -187,6 +187,19 @@
 	min-width: var(--container-banner-table);
 }
 
+/* The share picture's grid (carat-calculator/share/ShareableBannerTable.tsx).
+   The SAME fixed tracks as .banner-grid just above, minus the odds and delete
+   tracks: 962px. Resize a track there and resize it here too, or the picture
+   stops matching the sheet it shows.
+
+   Unlike .banner-grid it sets display itself and has no min-width: the picture
+   is always the wide layout, whatever the screen, and its root fixes its width
+   (962px of tracks + the border + the padding). */
+.banner-grid--share {
+	display: grid;
+	grid-template-columns: 70px 8rem 10.5rem 6.75rem 20.5rem 5rem 5rem;
+}
+
 /* Staging variant — same nine-cell row minus the derived-stats column, whose
    width goes to the banner select. Add to calculator sits in the MLB track.
 
