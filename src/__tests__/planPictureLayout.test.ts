@@ -1,6 +1,6 @@
 /**
  * How the plan picture lays out a plan of a given length (utils/planPictureLayout.ts):
- * every banner, always, in a shape that stays readable.
+ * every banner, always, at full size; a long plan grows wider, not smaller.
  */
 import { describe, expect, it } from "vitest"
 import { planPictureLayout, splitColumns } from "../utils/planPictureLayout"
@@ -12,11 +12,9 @@ const band = (key: string): PlannerRow => ({ kind: "band", key, markers: [] })
 const names = (rows: PlannerRow[]) => rows.map((row) => (row.kind === "band" ? row.key : row.index))
 
 describe("planPictureLayout", () => {
-	it("keeps the poster to 15 banners, compact rows to 30, then two columns", () => {
+	it("keeps one column of full-size cards to 30 banners, then two", () => {
 		expect(planPictureLayout(1)).toBe("poster")
-		expect(planPictureLayout(15)).toBe("poster")
-		expect(planPictureLayout(16)).toBe("compact")
-		expect(planPictureLayout(30)).toBe("compact")
+		expect(planPictureLayout(30)).toBe("poster")
 		expect(planPictureLayout(31)).toBe("columns")
 	})
 })
