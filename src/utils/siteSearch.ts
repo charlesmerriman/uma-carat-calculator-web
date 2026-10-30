@@ -10,6 +10,10 @@
  * PvP guide. A skill has no page either (the Skills page is shelved), so it has
  * no `href`: the palette shows what it does and who teaches it instead.
  *
+ * Dedicated uma and support card pages are coming (owner, 2026-10-30), with
+ * details on every one. When they exist, these results go there, every card
+ * gets listed whether or not it has a banner, and skills can follow.
+ *
  * WHY FUSE
  * --------
  * People type names from memory, and these names are long and foreign:
