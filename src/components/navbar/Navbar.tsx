@@ -41,8 +41,8 @@ export const Navbar = () => {
 	// while it loads, so the item appears after load and never flashes.
 	const showRankings = Boolean(account?.early_access)
 
-	// Search + team drawer + settings gear + theme picker, grouped so every nav
-	// cluster renders the same controls. TeamDrawerButton and SettingsMenu
+	// Search + team drawer + settings gear + theme picker, grouped so the desktop
+	// nav's branches render the same controls. TeamDrawerButton and SettingsMenu
 	// render nothing outside app mode.
 	const searchButton = <SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 	const navControls = (
