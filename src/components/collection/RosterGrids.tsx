@@ -37,6 +37,7 @@ import {
 	type SortStep,
 	type UmaSortKey,
 } from "../../utils/rosterSort"
+import { collectionCardRelease, earliestRelease } from "../../utils/cardRelease"
 import { parseApiDate } from "../../utils/dateFormat"
 import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import type { CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
@@ -510,12 +511,13 @@ export function OwnedUmasGrid({ umas, owned, releases, oshiIds, veteranCounts, s
 	const offered = umas.filter((uma) => uma.on_global !== false)
 	const ownedOffered = owned.filter((row) => offered.some((uma) => uma.id === row.uma))
 	const summary = umaSummary(ownedOffered)
+	const launch = earliestRelease(releases)
 	const shown = sortBySteps(
 		offered.filter((uma) => matches(uma.name, query) && inView(view, byUma.has(uma.id))),
 		steps,
 		(key, uma) => {
 			const row = byUma.get(uma.id)
-			if (key === "released") return releases.get(uma.id)
+			if (key === "released") return releases.get(uma.id) ?? launch
 			if (key === "acquired") return time(row?.obtained_at)
 			if (key === "rarity") return uma.rarity
 			if (key === "stars") return row?.stars
@@ -725,7 +727,7 @@ export function OwnedCardsGrid({ cards, owned, releases, status, onEdit, onClear
 		steps,
 		(key, card) => {
 			const row = byCard.get(card.id)
-			if (key === "released") return releases.get(card.id)
+			if (key === "released") return collectionCardRelease(card, releases)
 			if (key === "acquired") return time(row?.obtained_at)
 			if (key === "rarity") return card.rarity
 			if (key === "limit_break") return row?.limit_break

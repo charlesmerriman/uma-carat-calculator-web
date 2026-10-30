@@ -849,7 +849,8 @@ redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mocku
   CM Runs pattern).
 - **Sorts combine** (`utils/rosterSort.ts`): chips in the order added, each flips direction,
   "then by" adds one, Reset goes back to **newest released first** (the default; a release is
-  the first Global banner's start, `utils/cardRelease.cardReleases`). A missing value sorts
+  the first Global banner's start, `utils/cardRelease.cardReleases`, else the game's own date for a
+  card on no banner, `collectionCardRelease`, and Global's launch for a Global uma on none). A missing value sorts
   last either way; ties end on the name. Umas: release, acquired, rarity, stars, potential,
   name. Cards: release, acquired, rarity, limit break, type, name.
 - **My team's pickers** (`PvpCardPicker` `owned`, from `utils/roster.ownedForPicker`): an

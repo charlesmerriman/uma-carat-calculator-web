@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cardReleases, releaseBlockReason, releaseNote, releaseStatus } from "../utils/cardRelease"
+import { cardReleases, collectionCardRelease, earliestRelease, releaseBlockReason, releaseNote, releaseStatus } from "../utils/cardRelease"
 import type { BannerSupport, BannerUma } from "../types"
 
 /** Libra Cup runs Nov 1 to Nov 8 (UTC noon, so local dates read the same). */
@@ -44,5 +44,28 @@ describe("cardRelease", () => {
 		expect(releaseBlockReason({ kind: "during", date: "2026/11/5" })).toBeNull()
 		expect(releaseNote({ kind: "during", date: "2026/11/5" })).toBe("Out 2026/11/5, during this event")
 		expect(releaseNote({ kind: "available" })).toBeNull()
+	})
+})
+
+describe("the Collection's release dates", () => {
+	const MARCH = Date.parse("2026-03-12T00:00:00Z")
+
+	it("uses the first banner when there is one", () => {
+		const releases = new Map([[1, MARCH]])
+		expect(collectionCardRelease({ id: 1, released_at: "2021-02-24T00:00:00Z" }, releases)).toBe(MARCH)
+	})
+
+	it("falls back to the game's date for a card on no banner", () => {
+		expect(collectionCardRelease({ id: 2, released_at: "2026-03-12T00:00:00Z" }, new Map())).toBe(MARCH)
+	})
+
+	it("has nothing for a card with neither", () => {
+		expect(collectionCardRelease({ id: 3, released_at: null }, new Map())).toBeUndefined()
+		expect(collectionCardRelease({ id: 3 }, new Map())).toBeUndefined()
+	})
+
+	it("finds Global's launch from the banners", () => {
+		expect(earliestRelease(new Map([[1, MARCH], [2, 5]]))).toBe(5)
+		expect(earliestRelease(new Map())).toBeUndefined()
 	})
 })
