@@ -12,7 +12,7 @@ import type { ReactNode } from "react"
 import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
-import { FavoriteHeart, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
+import { ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
 
@@ -65,11 +65,10 @@ export function CompactTeamGrid({
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}
 											</span>
-											{/* Under the number: the guide's star first, then the heart. */}
-											{(starred("uma", member.uma, member) || favorite) && (
-												<span className="pointer-events-none absolute left-1 top-7 flex flex-col gap-1">
-													{starred("uma", member.uma, member) && <StarBadge />}
-													{favorite && <FavoriteHeart />}
+											{/* Under the number: the guide's star. */}
+											{starred("uma", member.uma, member) && (
+												<span className="pointer-events-none absolute left-1 top-7">
+													<StarBadge />
 												</span>
 											)}
 											<span className="absolute bottom-6 left-0">
