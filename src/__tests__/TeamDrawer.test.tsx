@@ -215,15 +215,14 @@ describe("TeamDrawer", () => {
 				</AuthContext.Provider>
 			</MemoryRouter>
 		)
-		expect(screen.getByLabelText("Your favorite uma")).toBeInTheDocument()
-		// The rainbow frame: FramedUma marks a favorite with data-oshi.
+		// The rainbow frame alone: FramedUma marks a favorite with data-oshi.
+		expect(screen.queryByLabelText("Your favorite uma")).not.toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "Change uma 1: Maruzensky" }).querySelector(".uma-frame[data-oshi]")).not.toBeNull()
 	})
 
 	it("leaves the frame off for a guest", () => {
 		const members = [{ position: 0, uma: 41, style: "front" as const, cards: [] }]
 		renderDrawer(teamsValue([team("a", { members })]))
-		expect(screen.queryByLabelText("Your favorite uma")).not.toBeInTheDocument()
 		// Still framed, in the silver frame every uma wears.
 		const tile = screen.getByRole("button", { name: "Change uma 1: Maruzensky" })
 		expect(tile.querySelector(".uma-frame")).not.toBeNull()

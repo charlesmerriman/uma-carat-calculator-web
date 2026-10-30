@@ -333,7 +333,7 @@ html {
 	--color-note-green: #16321f;
 	--color-note-green-edge: #4a9160;
 
-	/* The favorite-uma heart on a PvP team (TeamGrid's FavoriteHeart). The
+	/* The favorite-uma heart on a share picture (TeamGrid's FavoriteHeart). The
 	   favorite's frame itself is the rainbow SVG (FramedUma), not a token.
 	   Redrawn deeper under [data-theme-mode="light"]. */
 	--color-oshi: #f472b6;

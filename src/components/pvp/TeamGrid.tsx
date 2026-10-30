@@ -313,7 +313,7 @@ function Tile({
 	disabled?: boolean
 	disabledHint?: string
 	starred?: boolean
-	/** A favorite uma: the rainbow frame (FramedUma) and a heart. */
+	/** A favorite uma: the rainbow frame (FramedUma). */
 	favorite?: boolean
 	flag?: ReleaseStatus
 	badge?: ReactNode
@@ -366,7 +366,6 @@ function Tile({
 					</span>
 				)}
 				<ReleaseFlag status={flag} />
-				{favorite && <FavoriteHeart className="absolute bottom-1 right-1" />}
 				{badge && (
 					<span className="pointer-events-none absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
 						{badge}
@@ -448,8 +447,9 @@ export function ReleaseFlag({ status }: { status: ReleaseStatus | undefined }) {
 }
 
 /**
- * The heart on a favorite uma's tile; the rainbow frame around it is FramedUma's.
- * `className` places it (absolute in a tile corner, or nothing inside a stack).
+ * The heart on a favorite uma in the share picture; the rainbow frame around
+ * it is FramedUma's. My team has only the frame (owner, 2026-10-30).
+ * `className` places it.
  */
 export function FavoriteHeart({ className = "" }: { className?: string }) {
 	return (
