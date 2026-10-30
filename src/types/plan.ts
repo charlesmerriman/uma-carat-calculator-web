@@ -25,6 +25,7 @@
  * the link leads to a landing card (SharedPlanLanding) whose one action is
  * "copy". Full rules: backend/docs/data-model.md ("Share links").
  */
+
 import type { UserPlannedPurchase } from "./anniversary"
 import type { PlannedBannerPayload, PlannedPurchasePayload } from "../services/calculatorFetchCalls"
 import type { UserPlannedBanner, UserStats } from "./user"
@@ -81,8 +82,13 @@ export interface SharedPlanSummary {
 	 * link preview omits them. */
 	pull_count?: number
 	step_count?: number
-	/** In the owner's order. Exactly one id is set on each. */
-	rows: { banner_uma: number | null; banner_support: number | null; banner_step_up: number | null }[]
+	/**
+	 * In the owner's order, in the shape a guest copy takes: catalogue ids,
+	 * counts and the row's choices, `note` only under share_notes. Exactly one
+	 * banner id is set on each. An API older than the card's table sends the
+	 * ids alone, so its counts are checked for before they're read.
+	 */
+	rows: PlannedBannerPayload[]
 }
 
 /** What the copier chose on the landing card. */

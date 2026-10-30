@@ -2464,8 +2464,10 @@ notes off. The item is hidden on an API older than sharing (no
   rows the plan holds.
 - KEEP IT SHORT (owner, 2026-10-12: the first draft explained too much). A heading, ONE
   info line ("5 banners · 230 pulls · Updated <formatDate> · Copied N times · Includes their
-  notes"), the banners, the controls. The totals are the plan's only numbers (owner,
-  2026-10-16, with the link preview): pulls, plus steps when it has step-ups. Nothing per row.
+  notes"), the banners, the controls. Each banner shows its pulls (or steps) and,
+  under `share_notes`, the owner's note (owner, 2026-10-30): the rows a guest copy takes, one
+  serializer, so the card gives away nothing the link didn't. "Your max" runs the projection on
+  those rows with the VIEWER'S resources, so it's what they'd see after copying.
 - Signed in: a name field prefilled "Copied plan", "Copy to my plans", greyed at the plan
   cap with one line why. The owner opening their own link sees "This is your plan. Open
   it". "Includes their resources" is stated, since an account copy takes them.

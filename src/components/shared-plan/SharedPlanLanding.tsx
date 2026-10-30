@@ -1,33 +1,39 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { sharedPlanSummaryFetch } from "../../services/planFetchCalls"
 import { statsAreDirty } from "../../services/guestMigration"
+import { guestPlanToState } from "../../services/guestPlanStore"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
-import type { Plan, SharedPlanSummary } from "../../types"
-import { plannedBannerTarget } from "../../utils/bannerHelpers"
+import type { Plan, SharedPlanSummary, UserPlannedBanner } from "../../types"
+import type { BannerResources } from "../../hooks/bannerResources"
+import { plannedBannerTarget, plannedPulls, plannedSteps } from "../../utils/bannerHelpers"
 import type { BannerRowType, PlannedBannerTarget } from "../../utils/bannerHelpers"
+import { bannerRowFigures } from "../../utils/bannerRowFigures"
 import { formatDate } from "../../utils/dateFormat"
 import { BannerTypeIcon } from "../carat-calculator/BannerTypeBadge"
 import { OguriSpinner } from "../OguriSpinner"
 import { FramedUma } from "../FramedUma"
+import { useBannerProjection } from "../../hooks/useBannerResources"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
 /**
  * /app/<public_id>: somebody's shared plan, and one thing to do with it.
  *
- * A SHARED PLAN IS COPIED, NEVER VIEWED. The owner's rule (2026-10-12): a plan
- * is editable only by the person who made it, and anyone else sees it by
- * taking a copy that is then theirs. So this is a card, not the calculator: it
- * says what the plan holds (which banners, how many, the pull and step totals,
- * how recently changed, how often copied) and offers "Copy". Per row it shows
- * only what the catalogue says (art, name, kind, end date), never the owner's
- * counts or notes: the summary carries totals only (.claude/rules/auth-privacy.md),
- * and nothing here is editable. (The totals came with the link preview, owner 2026-10-16;
- * backend views/plan_share.py states the same two numbers.) The summary the server sends carries catalogue ids only; names and
- * art come from the catalogue the app already holds, which is why this renders
- * INSIDE the /app loading gate.
+ * A SHARED PLAN IS COPIED, NOT OPENED. The owner's rule (2026-10-12): a plan is
+ * editable only by the person who made it, and anyone else takes a copy that
+ * is then theirs. So this is a card, not the calculator: it says what the plan
+ * holds and offers "Copy", and nothing here is editable.
+ *
+ * Each banner shows its pulls and, under share_notes, the owner's note (owner,
+ * 2026-10-30, after players asked to see them without copying). The rows are
+ * the ones a guest copy takes, so this shows nothing the link didn't already
+ * give away. "Your max" is the projection run on THOSE rows with the VIEWER'S
+ * own resources: the number they'd see after copying, and none of the owner's
+ * stats, which leave the account only in a guest's copy. Names and art come
+ * from the catalogue the app already holds, which is why this renders INSIDE
+ * the /app loading gate.
  *
  * Opening the link creates nothing. A plan is made only by the button, because
  * link previews and crawlers open links too.
@@ -92,7 +98,18 @@ const includesLine = (resources: boolean, notes: boolean): string | null =>
  * The date is the catalogue's, so it says when the banner closes, which is
  * what a reader weighs a plan by; the owner's pull count for the row is not
  * in the summary and is not shown. */
-const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "Empty" }> }) => {
+/** The three columns past the art line up with PlanRows' header row. */
+const ROW_GRID = "grid grid-cols-[6.25rem_minmax(0,1fr)] items-center gap-x-3 sm:grid-cols-[6.25rem_minmax(0,1fr)_5.5rem_5.5rem]"
+
+const BannerLine = ({ target, planned, max, note, counted }: {
+	target: Exclude<PlannedBannerTarget, { type: "Empty" }>
+	/** "120" or "12 steps"; null on an API older than the table. */
+	planned: string | null
+	max: string | null
+	note: string | undefined
+	/** False on a row the owner left out of the projection. */
+	counted: boolean
+}) => {
 	const oshiIds = useOshiIds()
 	// The same two thumbnails a planner row shows. A step-up features no cards,
 	// so it shows its campaign art when there is some, else its kind's glyph.
@@ -103,11 +120,11 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 				? target.banner.support_cards
 				: []
 	return (
-		<li className="flex items-center gap-3 rounded-lg border border-gray-700 bg-gray-900/60 px-3 py-2">
+		<li className={`${ROW_GRID} rounded-lg border border-gray-700 bg-gray-900/60 px-3 py-2`}>
 			{/* Fixed width, sized for two 48px tiles (the phone card's height), so
 			    the names line up whether a row has one card or two. Uma art is
 			    square and support art portrait; neither may overflow into the name. */}
-			<div className="flex h-12 w-[6.25rem] shrink-0 items-center justify-center gap-1">
+			<div className="flex h-12 items-center justify-center gap-1">
 				{target.type === "StepUp" ? (
 					target.banner.image ? (
 						<img src={target.banner.image} alt="" className="h-full w-auto object-contain" />
@@ -125,14 +142,130 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 				)}
 			</div>
 			<div className="min-w-0">
-				<p className="truncate text-sm font-medium text-gray-100">{target.banner.name}</p>
+				<p className="truncate text-sm font-medium text-gray-100" title={target.banner.name}>{target.banner.name}</p>
 				<p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">
 					<BannerTypeIcon type={target.type} className="h-3.5 w-3.5" />
 					<span>{TYPE_LABEL[target.type]}</span>
 					<span className="text-gray-500">· ends {formatDate(target.timeline.end_date)}</span>
+					{!counted && <span className="text-gray-500">· not counted in the plan</span>}
 				</p>
+				{planned !== null && (
+					<p className="mt-0.5 text-xs text-gray-300 sm:hidden">
+						{target.type === "StepUp" ? planned : `${planned} pulls`} · your max {max}
+					</p>
+				)}
+				{note && <p className="mt-1 whitespace-pre-line text-xs text-gray-300">{note}</p>}
 			</div>
+			{planned !== null && (
+				<>
+					<span className="hidden text-right text-sm font-semibold text-gray-100 sm:block">{planned}</span>
+					<span className="hidden text-right text-sm text-gray-300 sm:block">{max}</span>
+				</>
+			)}
 		</li>
+	)
+}
+
+/** What the row's Max Pulls box would say: "Passed" for a banner that has ended, as the planner does. */
+const maxText = (row: UserPlannedBanner, resources: BannerResources | undefined, isStepUp: boolean, now: Date): string => {
+	if (!resources) return "–"
+	const { maxPossiblePulls, maxPossibleSteps } = bannerRowFigures(row, resources, isStepUp, now)
+	return (isStepUp ? maxPossibleSteps : maxPossiblePulls).toLocaleString()
+}
+
+/**
+ * The plan's banners. Its own component so the projection's hook runs only
+ * once the summary has arrived. The rows are rebuilt against the catalogue
+ * the way a guest copy is, so a banner that has left it drops off here too.
+ */
+const PlanRows = ({ summary }: { summary: SharedPlanSummary }) => {
+	const {
+		umaBannerData,
+		supportBannerData,
+		stepUpBannerData,
+		anniversaryEventData,
+		userStatsData,
+		clubRankData,
+		teamTrialsRankData,
+		championsMeetingRankData,
+		leagueOfHeroesRankData,
+		userPlannedPurchaseData,
+		userStepUpSelectionData,
+		incomeLedger,
+		calculationConstants
+	} = useCalculatorData()
+	const hasCounts = summary.rows.every((row) => typeof row.number_of_pulls === "number")
+	const rows = useMemo(
+		() =>
+			guestPlanToState(
+				{
+					version: 1,
+					savedAt: 0,
+					stats: null,
+					banners: summary.rows.map((row) => ({ ...row, number_of_pulls: row.number_of_pulls ?? 0, reserved_copies: row.reserved_copies ?? 0 })),
+					purchases: [],
+					stepUpSelections: []
+				},
+				{
+					banner_uma_data: umaBannerData,
+					banner_support_data: supportBannerData,
+					banner_step_up_data: stepUpBannerData,
+					club_rank_data: [],
+					team_trials_rank_data: [],
+					champions_meeting_rank_data: [],
+					league_of_heroes_rank_data: []
+				}
+			).banners,
+		[summary.rows, umaBannerData, supportBannerData, stepUpBannerData]
+	)
+	const { rows: resources } = useBannerProjection({
+		userStatsData,
+		clubRankData,
+		teamTrialsRankData,
+		championsMeetingRankData,
+		leagueOfHeroesRankData,
+		userPlannedBannerData: rows,
+		anniversaryEventData,
+		userPlannedPurchaseData,
+		incomeLedger,
+		constants: calculationConstants,
+		umaBannerData,
+		supportBannerData,
+		userStepUpSelectionData
+	})
+
+	const now = new Date()
+	if (rows.length === 0) return <p className="mt-4 text-sm text-gray-400">This plan has no banners in it yet.</p>
+	return (
+		<>
+			{hasCounts && (
+				<>
+					<p className="mt-2 text-xs text-gray-400">Your max is what your own resources would cover on each banner if you copied this plan.</p>
+					<div className={`${ROW_GRID} mt-3 hidden px-3 text-xs font-semibold uppercase tracking-wide text-gray-400 sm:grid`} aria-hidden="true">
+						<span className="col-start-3 text-right">Pulls</span>
+						<span className="text-right">Your max</span>
+					</div>
+				</>
+			)}
+			<ul className="mt-1.5 flex flex-col gap-1.5">
+				{rows.map((row, index) => {
+					const target = plannedBannerTarget(row)
+					if (target.type === "Empty") return null
+					const isStepUp = target.type === "StepUp"
+					const steps = plannedSteps(row)
+					return (
+						<BannerLine
+							key={row.tempId}
+							target={target}
+							planned={hasCounts ? (isStepUp ? plural(steps, "step", "steps") : plannedPulls(row).toLocaleString()) : null}
+							max={maxText(row, resources[index], isStepUp, now)}
+							note={row.note}
+							counted={!row.excluded_from_projection}
+						/>
+					)
+				})}
+			</ul>
+		</>
 	)
 }
 
@@ -181,9 +314,6 @@ const MakeRoom = ({ plans, disabled, onDelete }: { plans: Plan[]; disabled: bool
 
 export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	const {
-		umaBannerData,
-		supportBannerData,
-		stepUpBannerData,
 		plans,
 		activePlanId,
 		isPlanBusy,
@@ -275,27 +405,6 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	const ownPlan = plans.find((plan) => plan.public_id === summary.public_id)
 	const atCap = isAccount && plans.length >= PLAN_CAP
 
-	// The summary's ids resolved against the catalogue, then narrowed with the
-	// same helper every planner row uses. A banner that has left the catalogue
-	// resolves to Empty and is left off the list; the count above still says
-	// how many rows the plan holds.
-	const targets = summary.rows
-		.map((row) =>
-			plannedBannerTarget({
-				banner_uma:
-					row.banner_uma === null ? null : (umaBannerData.find((b) => b.id === row.banner_uma) ?? null),
-				banner_support:
-					row.banner_support === null
-						? null
-						: (supportBannerData.find((b) => b.id === row.banner_support) ?? null),
-				banner_step_up:
-					row.banner_step_up === null
-						? null
-						: (stepUpBannerData.find((b) => b.id === row.banner_step_up) ?? null)
-			})
-		)
-		.filter((target): target is Exclude<PlannedBannerTarget, { type: "Empty" }> => target.type !== "Empty")
-
 	// The box is offered only when there is something to take.
 	const includeStats = !isAccount && summary.share_stats && takeStats
 	// What a guest copy would replace (CalculatorProvider.copySharedPlan): the
@@ -333,7 +442,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	const includes = includesLine(isAccount && summary.share_stats, summary.share_notes)
 
 	return (
-		<div className="mx-auto max-w-2xl px-4 py-10">
+		<div className="mx-auto max-w-3xl px-4 py-10">
 			<h1 className="font-display text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
 
 			{/* The copy controls sit ABOVE the banner list: a long plan pushed them
@@ -429,15 +538,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 						.join(" · ")}
 				</p>
 
-				{targets.length > 0 ? (
-					<ul className="mt-4 flex flex-col gap-2">
-						{targets.map((target) => (
-							<BannerLine key={`${target.type}-${target.banner.id}`} target={target} />
-						))}
-					</ul>
-				) : (
-					<p className="mt-4 text-sm text-gray-400">This plan has no banners in it yet.</p>
-				)}
+				<PlanRows summary={summary} />
 			</div>
 		</div>
 	)
