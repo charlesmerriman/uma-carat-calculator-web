@@ -53,6 +53,16 @@ export const Navbar = () => {
 			<ThemePicker />
 		</>
 	)
+	// A phone has less row than five buttons and the wordmark want, so the gear
+	// holds the theme too. The palette stands in only until the stats load,
+	// while the gear has nothing else to show.
+	const phoneControls = (
+		<>
+			{searchButton}
+			<TeamDrawerButton />
+			{calculatorData?.userStatsData ? <SettingsMenu withTheme /> : <ThemePicker />}
+		</>
+	)
 
 	const isCalculator = location.pathname === "/app"
 	const isTimeline = location.pathname === "/app/timeline"
@@ -164,12 +174,14 @@ export const Navbar = () => {
 						{logo}
 					</div>
 
-					<div className="flex shrink-0 items-center gap-1.5">
+					<div className="relative flex shrink-0 items-center gap-1.5">
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>
-									<div className="flex h-9 w-9 items-center justify-center">
-										{timerIsGoing && (
+									{/* Floats in the gap beside the buttons, only while a save
+									    waits. A slot held for it in the row squeezed the wordmark. */}
+									{timerIsGoing && (
+										<div className="absolute right-full mr-1.5 flex h-9 w-9 items-center justify-center">
 											<button
 												onClick={calculatorData.saveNow}
 												aria-label="Save now"
@@ -178,14 +190,14 @@ export const Navbar = () => {
 											>
 												<OguriSpinner size="sm" />
 											</button>
-										)}
-									</div>
-									{navControls}
+										</div>
+									)}
+									{phoneControls}
 									<ProfileMenu />
 								</>
 							) : (
 								<>
-									{navControls}
+									{phoneControls}
 									{signInToSyncButton}
 								</>
 							)

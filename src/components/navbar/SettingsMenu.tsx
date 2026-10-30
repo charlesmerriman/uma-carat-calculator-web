@@ -7,6 +7,7 @@ import { NumberField } from "../NumberField"
 import { miscEarningsMonthly } from "../../utils/cumulativeIncome"
 import { DEFAULT_CONSTANTS } from "../../constants/gameConstants"
 import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
+import { ThemeOptions } from "./ThemePicker"
 import type { CalculationConstants, UserStats } from "../../types"
 
 /** The boolean-valued keys of UserStats — the only fields these toggles set. */
@@ -133,7 +134,11 @@ const MiscEarningsAmount = ({
 	)
 }
 
-export const SettingsMenu = () => {
+/**
+ * `withTheme` adds the theme swatches above the toggles. Phones use it in place
+ * of the separate palette button; see `phoneControls` in Navbar.
+ */
+export const SettingsMenu = ({ withTheme = false }: { withTheme?: boolean }) => {
 	const calculatorData = useCalculatorDataSafe()
 	const [open, setOpen] = useState(false)
 	// Two presses to clear a guest's plan: the first swaps the button for a
@@ -173,8 +178,8 @@ export const SettingsMenu = () => {
 					setOpen((prev) => !prev)
 					setConfirmingClear(false)
 				}}
-				aria-label="Projection settings"
-				title="Projection settings"
+				aria-label={withTheme ? "Settings and theme" : "Projection settings"}
+				title={withTheme ? "Settings and theme" : "Projection settings"}
 				className={NAV_ICON_BUTTON}
 			>
 				<Settings className="h-4 w-4" />
@@ -192,6 +197,13 @@ export const SettingsMenu = () => {
 				// in a viewport barely 390px tall, so unbounded its lower toggles fall
 				// off the bottom of the screen with no way to reach them.
 				<div className={`${NAV_POPOVER} fixed left-1/2 top-16 z-50 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 overflow-y-auto p-3 desktop-nav:absolute desktop-nav:left-auto desktop-nav:top-full desktop-nav:right-0 desktop-nav:mt-1.5 desktop-nav:max-w-none desktop-nav:translate-x-0`}>
+					{/* First, so nobody has to scroll past the toggles to find it. */}
+					{withTheme && (
+						<section className="mb-3 flex flex-col gap-1 border-b border-gray-700 pb-2" aria-label="Theme">
+							<h3 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-brand">Theme</h3>
+							<ThemeOptions />
+						</section>
+					)}
 					<h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-brand">
 						Projection Settings
 					</h3>

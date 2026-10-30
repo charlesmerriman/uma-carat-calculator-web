@@ -5,11 +5,14 @@ import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 
 const PRIMARY_THEME_IDS = new Set(["gold", "light"])
 
-export const ThemePicker = () => {
+/**
+ * The theme swatches and the colorblind switch: the palette button's panel, and
+ * a section of the gear menu on phones (SettingsMenu `withTheme`), where one
+ * button does both jobs to leave the wordmark room. `onPicked` closes a panel
+ * after a swatch is chosen.
+ */
+export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 	const { activeTheme, themes, setTheme, colorblindMode, setColorblindMode } = useTheme()
-	const [open, setOpen] = useState(false)
-	const containerRef = useRef<HTMLDivElement>(null)
-	const panelId = useId()
 	const primaryThemes = themes.filter((theme) => PRIMARY_THEME_IDS.has(theme.id))
 	const alternateThemes = themes.filter((theme) => !PRIMARY_THEME_IDS.has(theme.id))
 
@@ -17,7 +20,7 @@ export const ThemePicker = () => {
 		<button
 			key={theme.id}
 			type="button"
-			onClick={() => { setTheme(theme.id); setOpen(false) }}
+			onClick={() => { setTheme(theme.id); onPicked?.() }}
 			aria-label={`Switch to ${theme.label} theme`}
 			aria-pressed={activeTheme === theme.id}
 			title={theme.label}
@@ -43,6 +46,42 @@ export const ThemePicker = () => {
 		</button>
 	)
 
+	return (
+		<>
+		<p className="px-2 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Primary themes</p>
+		<div role="group" aria-label="Primary themes" className="grid grid-cols-2 gap-1">
+			{primaryThemes.map(renderThemeButton)}
+		</div>
+		{(["dark", "light"] as const).map((mode) => (
+			<div key={mode} role="group" aria-label={`${mode === "dark" ? "Dark" : "Light"} themes`} className="mt-1 flex items-center justify-between gap-2 border-t border-gray-700 px-2 pt-2">
+				<p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-gray-500">{mode === "dark" ? "Dark themes" : "Light themes"}</p>
+				<div className="flex flex-wrap justify-end gap-1">
+					{alternateThemes.filter((theme) => theme.mode === mode).map(renderThemeButton)}
+				</div>
+			</div>
+		))}
+		<div className="mt-1 border-t border-gray-700 pt-1">
+			<button
+				type="button"
+				role="switch"
+				aria-checked={colorblindMode}
+				onClick={() => setColorblindMode(!colorblindMode)}
+				className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-xs text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
+			>
+				<span className="font-medium">Colorblind mode</span>
+				<span aria-hidden="true" className={`relative h-5 w-9 rounded-full transition ${colorblindMode ? "bg-brand" : "bg-gray-600"}`}>
+					<span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${colorblindMode ? "translate-x-4" : "translate-x-0.5"}`} />
+				</span>
+			</button>
+		</div>
+		</>
+	)
+}
+
+export const ThemePicker = () => {
+	const [open, setOpen] = useState(false)
+	const containerRef = useRef<HTMLDivElement>(null)
+	const panelId = useId()
 	// Close dropdown when clicking outside
 	useEffect(() => {
 		if (!open) return
@@ -81,32 +120,7 @@ export const ThemePicker = () => {
 
 			{open && (
 				<div id={panelId} className={`${NAV_POPOVER} fixed left-1/2 top-16 z-50 flex max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-col gap-1 overflow-y-auto p-2 desktop-nav:absolute desktop-nav:left-auto desktop-nav:top-full desktop-nav:right-0 desktop-nav:mt-1.5 desktop-nav:translate-x-0`}>
-					<p className="px-2 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Primary themes</p>
-					<div role="group" aria-label="Primary themes" className="grid grid-cols-2 gap-1">
-						{primaryThemes.map(renderThemeButton)}
-					</div>
-					{(["dark", "light"] as const).map((mode) => (
-						<div key={mode} role="group" aria-label={`${mode === "dark" ? "Dark" : "Light"} themes`} className="mt-1 flex items-center justify-between gap-2 border-t border-gray-700 px-2 pt-2">
-							<p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-gray-500">{mode === "dark" ? "Dark themes" : "Light themes"}</p>
-							<div className="flex flex-wrap justify-end gap-1">
-								{alternateThemes.filter((theme) => theme.mode === mode).map(renderThemeButton)}
-							</div>
-						</div>
-					))}
-					<div className="mt-1 border-t border-gray-700 pt-1">
-						<button
-							type="button"
-							role="switch"
-							aria-checked={colorblindMode}
-							onClick={() => setColorblindMode(!colorblindMode)}
-							className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-xs text-gray-300 transition hover:bg-gray-700 hover:text-gray-100"
-						>
-							<span className="font-medium">Colorblind mode</span>
-							<span aria-hidden="true" className={`relative h-5 w-9 rounded-full transition ${colorblindMode ? "bg-brand" : "bg-gray-600"}`}>
-								<span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${colorblindMode ? "translate-x-4" : "translate-x-0.5"}`} />
-							</span>
-						</button>
-					</div>
+					<ThemeOptions onPicked={() => setOpen(false)} />
 				</div>
 			)}
 		</div>
