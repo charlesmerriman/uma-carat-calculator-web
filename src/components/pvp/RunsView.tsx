@@ -32,10 +32,11 @@
  * kept on the device. Every change saves at once through
  * services/pvpRunQueries.ts.
  *
- * League of Heroes is this same view with a different RunShape: six day tabs
- * of five tickets, no rounds, and a Top 96 tab where the Finals would be, which
- * takes the team entered, a typed placement and a note (TopBody). Everything
- * else reads the shape, so a fix to a ticket reaches both.
+ * League of Heroes is this same view with a different RunShape: thirty tickets
+ * in tabs of five, no rounds and no days (a ticket can be saved for later:
+ * utils/pvpRuns.ts), and a Top 96 tab where the Finals would be, which takes the
+ * team entered, a typed placement and a note (TopBody). Everything else reads
+ * the shape, so a fix to a ticket reaches both.
  *
  * Inside the /app loading gate, so it may read the clock during render.
  */
@@ -66,12 +67,14 @@ import {
 	LOH_TOP_PLACEMENTS,
 	RUN_RACES,
 	bestTicketWins,
+	dayLabel,
 	emptyContent,
 	findRun,
 	formatRate,
 	isPastDay,
 	lineupFromTeam,
 	logRace,
+	openingTab,
 	ordinal,
 	previousRun,
 	registeredLineups,
@@ -85,6 +88,8 @@ import {
 	summarizeRuns,
 	tallyRun,
 	ticketCounts,
+	ticketNumber,
+	ticketRange,
 	ticketState,
 	unloggedTickets,
 	type RunShape,
@@ -224,12 +229,10 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		ensureLoaded()
 	}, [ensureLoaded])
 
-	// The tab opens on the day the event is on now (Day 1 until it starts),
-	// or on the Finals or Top 96 once the days are over.
-	const [tab, setTab] = useState<DayTab>(() => {
-		const day = runDayAt(event, calculationConstants, new Date(), shape)
-		return day === null ? "final" : Math.max(1, day)
-	})
+	// The tab the player chose. Until they do it's openingTab's, worked out
+	// once the runs are here; the first write pins it, so logging the last
+	// race of a LoH's five tickets doesn't move them on mid-tap.
+	const [chosenTab, setTab] = useState<DayTab | null>(null)
 	// Which ticket is open on each day, once the player has opened, closed or
 	// written one there. Until then the day opens its ticket in progress
 	// (defaultOpenTicket), worked out afresh on each render; the first write
@@ -258,11 +261,13 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	const runs = runsQuery.data
 	const shared: Shared = { umasById: catalogue.umasById, oshiIds, veterans, onOpenMyTeam }
 	const today = runDayAt(event, calculationConstants, new Date(), shape)
+	const tab: DayTab = chosenTab ?? openingTab(runs, today, shape)
 	const openOn = (day: number) => (day in openByDay ? openByDay[day] : defaultOpenTicket(runs, day, shape.tickets))
 	const setOpen = (day: number, ticket: number | null) => setOpenByDay((open) => ({ ...open, [day]: ticket }))
 
 	const write = (slot: PvpRunSlot, change: RunChange) => {
 		setFailed(false)
+		setTab(tab)
 		// Pin the day's open ticket as it is now, unless the player already chose
 		// one (a ticket just started opens itself in the same click).
 		if (slot.stage === "day") {
@@ -290,7 +295,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 				{shape.rounds ? (
 					<DayTabs tab={tab} today={today} runs={runs} final={final} shape={shape} onChange={setTab} />
 				) : (
-					<LeagueTabs tab={tab} today={today} runs={runs} final={final} shape={shape} onChange={setTab} />
+					<LeagueTabs tab={tab} runs={runs} final={final} shape={shape} onChange={setTab} />
 				)}
 				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
 			</div>
@@ -298,7 +303,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 			{!noLineups && <FillEveryTicket runs={runs} teams={eventTeams} today={today} shape={shape} shared={shared} onFill={fillEvery} />}
 
 			<div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:gap-5">
-				<section className="card-panel min-w-0" aria-label={tab === "final" ? (shape.rounds ? "Finals" : "Top 96") : `Day ${tab}`}>
+				<section className="card-panel min-w-0" aria-label={tab === "final" ? (shape.rounds ? "Finals" : "Top 96") : dayLabel(tab, shape)}>
 					{tab !== "final" ? (
 						<DayHeader event={event} day={tab} today={today} runs={runs} shape={shape} />
 					) : shape.rounds ? (
@@ -318,7 +323,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 					) : tab === "final" ? (
 						<FinalsBody
 							run={final}
-							choices={lineupChoices(runs, eventTeams, shape.days + 1, 1)}
+							choices={lineupChoices(runs, eventTeams, shape.days + 1, 1, shape)}
 							shared={shared}
 							onWrite={(change) => write({ stage: "final" }, change)}
 						/>
@@ -328,7 +333,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 							today={today}
 							runs={runs}
 							teams={eventTeams}
-							tickets={shape.tickets}
+							shape={shape}
 							open={openOn(tab)}
 							onOpen={(ticket) => setOpen(tab, ticket)}
 							shared={shared}
@@ -374,17 +379,23 @@ function ticketsText({ used, skipped }: { used: number; skipped: number }): stri
 	return `${used} ${used === 1 ? "ticket" : "tickets"} used${skipped ? `, ${skipped} skipped` : ""}`
 }
 
+/** "Ticket 2" on the same day, else "Day 1, Ticket 2". A LoH's numbers need no day. */
+function ticketSource(run: PvpRun, shape: RunShape, sameDay: boolean): string {
+	const number = ticketNumber(run.day ?? 1, run.ticket ?? 1, shape)
+	return sameDay || !shape.rounds ? `Ticket ${number}` : `Day ${run.day}, Ticket ${number}`
+}
+
 /**
  * Who could have run a ticket: the latest earlier ticket's three first (most
  * players run the same team all day), named by where they came from, then
  * each of the event's teams that differs from it. An unnamed team is "Team 2"
  * (TeamBuilder's rule); a named one carries that as its badge.
  */
-function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: number): LineupChoice[] {
+function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: number, shape: RunShape): LineupChoice[] {
 	const choices: LineupChoice[] = []
 	const previous = previousRun(runs, day, ticket)
 	if (previous) {
-		const source = previous.day === day ? `Ticket ${previous.ticket}` : `Day ${previous.day}, Ticket ${previous.ticket}`
+		const source = ticketSource(previous, shape, previous.day === day)
 		choices.push({
 			key: "previous",
 			label: `Same three as ${source}`,
@@ -415,10 +426,10 @@ function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: nu
  */
 function topChoices(runs: PvpRun[], teams: PvpTeam[], shape: RunShape): LineupChoice[] {
 	const registered = registeredLineups(runs)
-	if (registered.length === 0) return lineupChoices(runs, teams, shape.days + 1, 1)
+	if (registered.length === 0) return lineupChoices(runs, teams, shape.days + 1, 1, shape)
 	return registered.map((run) => ({
 		key: `ticket-${run.day}-${run.ticket}`,
-		label: `Same three as Day ${run.day}, Ticket ${run.ticket}`,
+		label: `Same three as ${ticketSource(run, shape, false)}`,
 		badge: null,
 		previous: true,
 		runners: run.runners,
@@ -444,7 +455,7 @@ function FillEveryTicket({ runs, teams, today, shape, shared, onFill }: {
 	const [picking, setPicking] = useState(false)
 	const slots = slotsWithoutLineup(runs, today, shape)
 	// The latest ticket's three first, then each team that differs: what the Finals offers.
-	const choices = lineupChoices(runs, teams, shape.days + 1, 1)
+	const choices = lineupChoices(runs, teams, shape.days + 1, 1, shape)
 	if (slots.length < 2 || choices.length === 0) return null
 
 	// Two slots or more, and only one can be the Finals, so there is always a ticket.
@@ -516,7 +527,7 @@ function DayTabs({ tab, today, runs, final, shape, onChange }: DayTabsProps) {
 					</span>
 					<div className="contents sm:flex sm:gap-2">
 						{days.map((day) => (
-							<DayTabButton key={day} day={day} today={today === day} runs={runs} tickets={shape.tickets} active={tab === day} onPick={() => onChange(day)} />
+							<DayTabButton key={day} day={day} today={today === day} runs={runs} shape={shape} active={tab === day} onPick={() => onChange(day)} />
 						))}
 					</div>
 				</div>
@@ -543,11 +554,11 @@ function DayTabs({ tab, today, runs, final, shape, onChange }: DayTabsProps) {
  * A League of Heroes has no rounds to label, so its seven tabs just wrap: four
  * across on a phone, one row from `sm` where there's room.
  */
-function LeagueTabs({ tab, today, runs, final, shape, onChange }: DayTabsProps) {
+function LeagueTabs({ tab, runs, final, shape, onChange }: Omit<DayTabsProps, "today">) {
 	return (
-		<div role="tablist" aria-label="Day" className="grid w-full grid-cols-4 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:gap-2">
+		<div role="tablist" aria-label="Tickets" className="grid w-full grid-cols-4 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:gap-2">
 			{Array.from({ length: shape.days }, (_, index) => index + 1).map((day) => (
-				<DayTabButton key={day} day={day} today={today === day} runs={runs} tickets={shape.tickets} active={tab === day} onPick={() => onChange(day)} row="" />
+				<DayTabButton key={day} day={day} today={false} runs={runs} shape={shape} active={tab === day} onPick={() => onChange(day)} row="" />
 			))}
 			<TabFrame active={tab === "final"} onPick={() => onChange("final")} row="">
 				<span className={`flex items-center gap-2 text-xs font-bold sm:text-[15px] ${tab === "final" ? "text-brand" : "text-gray-100"} max-sm:flex-col max-sm:gap-1.5`}>
@@ -576,11 +587,11 @@ function TabFrame({ active, onPick, row = "row-start-2", children }: { active: b
 	)
 }
 
-function DayTabButton({ day, today, runs, tickets, active, onPick, row }: {
+function DayTabButton({ day, today, runs, shape, active, onPick, row }: {
 	day: number
 	today: boolean
 	runs: PvpRun[]
-	tickets: number
+	shape: RunShape
 	active: boolean
 	onPick: () => void
 	row?: string
@@ -590,14 +601,22 @@ function DayTabButton({ day, today, runs, tickets, active, onPick, row }: {
 		<TabFrame active={active} onPick={onPick} row={row}>
 			<span className="flex w-full items-center justify-center gap-1 sm:justify-between sm:gap-2.5">
 				{today && <span className="size-1.5 rounded-full bg-brand sm:hidden" aria-hidden="true" />}
-				<span className={`text-[13px] font-bold sm:text-[15px] ${active ? "text-brand" : "text-gray-100"}`}>Day {day}</span>
+				<span className={`text-[13px] font-bold sm:text-[15px] ${active ? "text-brand" : "text-gray-100"}`}>
+					{/* Four LoH tabs share a phone's width: the range alone fits. */}
+					{shape.rounds ? `Day ${day}` : (
+						<>
+							<span className="sr-only sm:not-sr-only">Tickets </span>
+							{ticketRange(day, shape)}
+						</>
+					)}
+				</span>
 				{today && (
 					<span className="max-sm:sr-only rounded-full bg-brand px-1.75 py-px text-[11px] font-bold text-black">Today</span>
 				)}
 			</span>
 			{/* One segment per ticket: grey unlogged, ringed started, half gold raced some, gold done or stopped, outlined skipped. */}
 			<span className="flex gap-0.5 sm:gap-0.75" aria-hidden="true">
-				{Array.from({ length: tickets }, (_, index) => {
+				{Array.from({ length: shape.tickets }, (_, index) => {
 					const run = findRun(runs, { stage: "day", day, ticket: index + 1 })
 					return <span key={index} className={`block h-1 w-2.5 rounded-xs sm:h-1.25 sm:w-4.5 sm:rounded-sm ${segmentClass(run)}`} />
 				})}
@@ -638,23 +657,23 @@ function CardHeader({ eyebrow, title, score, detail }: { eyebrow: string; title:
 function DayHeader({ event, day, today, runs, shape }: { event: RaceEvent; day: number; today: number | null; runs: PvpRun[]; shape: RunShape }) {
 	const tally = summarizeRuns(runsOf(runs, { day })).total
 	// During registration Day 1 says when Round 1 starts, as the Finals header gives its date.
-	const when = day === today ? " · Today" : day === 1 && today === CM_NOT_STARTED ? ` · Starts ${formatDate(event.start_date)}` : ""
+	const when = shape.rounds && day === today ? " · Today" : day === 1 && today === CM_NOT_STARTED ? ` · Starts ${formatDate(event.start_date)}` : ""
 	return (
 		<CardHeader
 			eyebrow={`${shape.rounds ? `Round ${roundOfDay(day)}` : "League of Heroes"}${when}`}
-			title={`Day ${day}`}
+			title={dayLabel(day, shape)}
 			score={tally.raced ? `${tally.wins} of ${tally.raced}` : "–"}
 			detail={tally.raced ? `races won · ${formatRate(tally)}` : "Nothing logged yet"}
 		/>
 	)
 }
 
-function DayTickets({ day, today, runs, teams, tickets, open, onOpen, shared, onWrite }: {
+function DayTickets({ day, today, runs, teams, shape, open, onOpen, shared, onWrite }: {
 	day: number
 	today: number | null
 	runs: PvpRun[]
 	teams: PvpTeam[]
-	tickets: number
+	shape: RunShape
 	open: number | null
 	onOpen: (ticket: number | null) => void
 	shared: Shared
@@ -662,13 +681,14 @@ function DayTickets({ day, today, runs, teams, tickets, open, onOpen, shared, on
 }) {
 	// A day that is over, with tickets that have nothing logged: offered as
 	// skipped in one tap, never assumed (the player may still type them in).
-	const unlogged = isPastDay(day, today) ? unloggedTickets(runs, day, tickets) : []
+	const unlogged = isPastDay(day, today) ? unloggedTickets(runs, day, shape.tickets) : []
 	return (
 		<>
 			{unlogged.length > 0 && (
 				<div className="mx-2 mt-2 flex flex-col gap-2 rounded-[10px] border border-brand/30 bg-brand/5 px-3 py-2.5 sm:mx-2.5 sm:mt-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-3.5">
 					<span className="text-[13px] text-gray-200 sm:flex-[1_1_260px] sm:text-sm">
-						Day {day} is over. Nothing is logged for {ticketList(unlogged)}.
+						{shape.rounds ? `Day ${day}` : "The League of Heroes"} is over. Nothing is logged for{" "}
+						{ticketList(unlogged.map((ticket) => ticketNumber(day, ticket, shape)))}.
 					</span>
 					<button
 						type="button"
@@ -684,16 +704,16 @@ function DayTickets({ day, today, runs, teams, tickets, open, onOpen, shared, on
 				</div>
 			)}
 			<ol className="flex flex-col gap-1.5 p-2 sm:p-2.5">
-				{Array.from({ length: tickets }, (_, index) => {
+				{Array.from({ length: shape.tickets }, (_, index) => {
 					const ticket = index + 1
 					const slot: PvpRunSlot = { stage: "day", day, ticket }
 					return (
 						<li key={`runs-${day}-${ticket}`}>
 							<TicketRow
-								title={`Ticket ${ticket}`}
-								eyebrow={`Day ${day} · Round ${roundOfDay(day)}`}
+								title={`Ticket ${ticketNumber(day, ticket, shape)}`}
+								eyebrow={shape.rounds ? `Day ${day} · Round ${roundOfDay(day)}` : "League of Heroes"}
 								run={findRun(runs, slot)}
-								choices={lineupChoices(runs, teams, day, ticket)}
+								choices={lineupChoices(runs, teams, day, ticket, shape)}
 								open={open === ticket}
 								onOpen={(isOpen) => onOpen(isOpen ? ticket : null)}
 								shared={shared}
@@ -1325,7 +1345,7 @@ function TopHeader({ run }: { run: PvpRun | undefined }) {
 	const placement = run?.placement ?? null
 	return (
 		<CardHeader
-			eyebrow="After day 6"
+			eyebrow="Final bracket"
 			title="Top 96"
 			score={placement ? ordinal(placement) : "–"}
 			detail={placement ? "your placement" : "Not logged yet"}
@@ -1372,7 +1392,7 @@ function TopBody({ run, choices, shared, onWrite }: {
 			) : (
 				choices.length > 0 && (
 					<LineupStart
-						question="Which team did you enter? It has to be one you registered on days 1 to 6."
+						question="Which team did you enter? It has to be one you registered."
 						eyebrow="Top 96"
 						choices={choices}
 						shared={shared}
@@ -1602,7 +1622,8 @@ function WinRateStrip({ event, runs, today, shape }: { event: RaceEvent; runs: P
 	const { total } = summarizeRuns(runsOf(runs, {}))
 	// Before Round 1 no day is today, so the middle cell shows Day 1, the day the view opens on.
 	const shown = today === null ? null : Math.max(1, today)
-	const day = shown === null ? null : summarizeRuns(runsOf(runs, { day: shown })).total
+	// A LoH has no today to show (utils/pvpRuns.ts), so that cell is its Top 96.
+	const day = shown === null || !shape.rounds ? null : summarizeRuns(runsOf(runs, { day: shown })).total
 	const final = findRun(runs, { stage: "final" })
 	const round = shown === null ? 2 : roundOfDay(shown)
 	const cell = "border-l border-edge pl-2.5"
@@ -1666,7 +1687,7 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 	for (const run of dayRuns) {
 		for (const runner of run.runners) styles.set(`${runner.uma}:${runner.trained_uma ?? ""}`, runner.style)
 	}
-	const footnote = shape.rounds ? `Days 1 to ${shape.days}. The Finals race counts on its own.` : `Days 1 to ${shape.days}.`
+	const footnote = shape.rounds ? `Days 1 to ${shape.days}. The Finals race counts on its own.` : `All ${shape.days * shape.tickets} tickets.`
 	return (
 		<aside aria-label="Your win rates" className="card-panel min-w-0">
 			<div className="hidden flex-col gap-3.5 border-b border-edge px-5 py-4.5 sm:flex">
@@ -1748,14 +1769,14 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 			</div>
 
 			<div className="hidden flex-col gap-3 px-5 py-4.5 sm:flex">
-				<h3 className={EYEBROW}>By day</h3>
+				<h3 className={EYEBROW}>{shape.rounds ? "By day" : "By tickets"}</h3>
 				<div className={`grid gap-2 ${shape.rounds ? "grid-cols-4" : "grid-cols-3"}`}>
 					{Array.from({ length: shape.days }, (_, index) => {
 						const day = index + 1
 						const tally = summarizeRuns(runsOf(runs, { day })).total
 						return (
 							<div key={day} className={`${INSET} min-w-0 p-2 text-center`}>
-								<div className="text-[11px] font-semibold text-gray-400">Day {day}</div>
+								<div className="text-[11px] font-semibold text-gray-400">{shape.rounds ? `Day ${day}` : ticketRange(day, shape)}</div>
 								<div className={`font-display text-lg font-bold ${tally.raced ? "text-gray-50" : "text-gray-400"}`}>{formatRate(tally)}</div>
 								<div className="text-[11px] text-gray-400">{tally.raced ? `${tally.wins} of ${tally.raced}` : "Not started"}</div>
 							</div>

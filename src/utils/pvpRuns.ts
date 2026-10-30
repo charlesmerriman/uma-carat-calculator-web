@@ -29,10 +29,17 @@
  *
  * The limits mirror the API (models/pvp_run.py): a CM is 4 days of 4 tickets
  * of 5 races, Round 1 days 1-2 and Round 2 days 3-4, then one final race. A
- * League of Heroes is 6 days of 5 tickets of 5 races with no rounds, then the
- * Top 96: the team the player entered, one they registered on days 1-6, and a
- * placement they type in, 1 to 96, with no race (the two brackets are only
- * watched; Daptrius, 2026-10-30). A LoH race is
+ * League of Heroes is 30 tickets of 5 races with no rounds, then the Top 96:
+ * the team the player entered, one they registered, and a placement they type
+ * in, 1 to 96, with no race (the two brackets are only watched; Daptrius,
+ * 2026-10-30).
+ *
+ * A LoH TICKET ISN'T TIED TO A DAY. Five arrive each day, but a player can hold
+ * up to ten and race them later (Daptrius, 2026-10-30), so a ticket logged
+ * under "day" 2 may have run on day 3. The API still stores them as days 1-6 of
+ * 5 (`PVP_RUN_DAYS`), and here that is only a way to group them: the view says
+ * "Tickets 6-10" and "Ticket 7", never a day, and nothing is called today or
+ * over until the whole event is. A LoH race is
  * counted like a CM's, won when one of your three finishes first. RunShape is
  * the one place the two differ.
  */
@@ -131,8 +138,41 @@ export function runDayAt(event: RaceEvent, constants: CalculationConstants, now:
 	if (!start) return 1
 	const elapsed = now.getTime() - start.getTime()
 	if (elapsed < 0) return CM_NOT_STARTED
-	const day = Math.floor(elapsed / DAY_MS) + 1
-	return day > shape.days ? null : day
+	// 1 for the whole event: only "not started", "running" and "over" mean
+	// anything, since a saved ticket can run on any later day.
+	return elapsed >= shape.days * DAY_MS ? null : 1
+}
+
+/** A ticket's number on screen: 1 to 4 a day in a CM, 1 to 30 straight through a LoH. */
+export function ticketNumber(day: number, ticket: number, shape: RunShape): number {
+	return shape.rounds ? ticket : (day - 1) * shape.tickets + ticket
+}
+
+/** What a tab of tickets is called: "Day 2", or "Tickets 6-10" in a LoH. */
+export function dayLabel(day: number, shape: RunShape): string {
+	return shape.rounds ? `Day ${day}` : `Tickets ${ticketRange(day, shape)}`
+}
+
+/** "6-10": a LoH tab's tickets. */
+export function ticketRange(day: number, shape: RunShape): string {
+	return `${ticketNumber(day, 1, shape)}-${ticketNumber(day, shape.tickets, shape)}`
+}
+
+/**
+ * The tab the view opens on. A CM opens on the day it's on. A LoH opens on the
+ * first tickets with anything left to log, because the clock can't say which
+ * ticket a player is on. Both open on the Finals or the Top 96 once it's over.
+ */
+export function openingTab(runs: PvpRun[], today: number | null, shape: RunShape): number | "final" {
+	if (today === null) return "final"
+	if (shape.rounds) return Math.max(1, today)
+	for (let day = 1; day <= shape.days; day++) {
+		for (let ticket = 1; ticket <= shape.tickets; ticket++) {
+			const state = ticketState(findRun(runs, { stage: "day", day, ticket }))
+			if (state === "unlogged" || state === "started") return day
+		}
+	}
+	return "final"
 }
 
 /** A team's members as a ticket's lineup: the uma, style and veteran per spot, no deck. */
