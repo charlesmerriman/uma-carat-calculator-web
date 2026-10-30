@@ -26,6 +26,15 @@ import type {
 } from '../types'
 
 vi.mock('../services/planFetchCalls', () => ({ sharedPlanSummaryFetch: vi.fn() }))
+// The projection has its own tests; here it only has to reach the rows.
+vi.mock('../hooks/useBannerResources', async () => {
+	const { EMPTY_BANNER_RESOURCES } = await import('../hooks/bannerResources')
+	return {
+		useBannerProjection: ({ userPlannedBannerData }: { userPlannedBannerData: unknown[] }) => ({
+			rows: userPlannedBannerData.map((_, index) => ({ ...EMPTY_BANNER_RESOURCES, maxPossiblePulls: 300 + index })),
+		}),
+	}
+})
 
 const mockedSummary = vi.mocked(sharedPlanSummaryFetch)
 
@@ -58,8 +67,8 @@ const SUMMARY: SharedPlanSummary = {
 	pull_count: 1200,
 	step_count: 0,
 	rows: [
-		{ banner_uma: 100, banner_support: null, banner_step_up: null },
-		{ banner_uma: null, banner_support: 300, banner_step_up: null },
+		{ banner_uma: 100, banner_support: null, banner_step_up: null, number_of_pulls: 1000, reserved_copies: 0, note: "Spark her" },
+		{ banner_uma: null, banner_support: 300, banner_step_up: null, number_of_pulls: 200, reserved_copies: 0 },
 	],
 }
 
@@ -126,6 +135,24 @@ describe('SharedPlanLanding', () => {
 			screen.getByText('2 banners · 1,200 pulls · Updated 2026/10/11 · Copied 3 times · Includes their notes')
 		).toBeInTheDocument()
 		expect(mockedSummary).toHaveBeenCalledWith(LINK)
+	})
+
+	it("shows each banner's pulls, the viewer's max and a shared note", async () => {
+		renderCard()
+
+		expect(await screen.findByText('1,000 pulls · your max Passed')).toBeInTheDocument()
+		expect(screen.getByText('200 pulls · your max 301')).toBeInTheDocument()
+		expect(screen.getByText('Spark her')).toBeInTheDocument()
+	})
+
+	it('leaves the counts off on an API that sends ids alone', async () => {
+		mockedSummary.mockResolvedValue(
+			new Response(JSON.stringify({ ...SUMMARY, rows: [{ banner_uma: 100, banner_support: null, banner_step_up: null }] }))
+		)
+		renderCard()
+
+		expect(await screen.findByText('Kitasan Black banner')).toBeInTheDocument()
+		expect(screen.queryByText(/your max/i)).not.toBeInTheDocument()
 	})
 
 	it('copies nothing just by being opened', async () => {
