@@ -132,6 +132,33 @@ export function firstOpenCardSlot(member: PvpTeamMember): number | null {
 	return null
 }
 
+/**
+ * The picker's "Add to every deck on this team": the card goes in the chosen
+ * slot, then into each other deck's first open slot, a borrowed card into the
+ * other decks' borrow slots. Never replaces a card. A deck already holding it
+ * needs nothing; one that is full, or that the game's rules refuse, is skipped
+ * and reported so the player knows which deck to fix by hand.
+ */
+export function addCardToEveryDeck(
+	members: PvpTeamMember[],
+	position: number,
+	slot: number,
+	cardId: number,
+	lookups: TeamRuleLookups
+): { members: PvpTeamMember[]; skipped: { position: number; reason: string }[] } {
+	let next = setCard(members, position, slot, cardId)
+	const skipped: { position: number; reason: string }[] = []
+	for (const member of members) {
+		if (member.position === position || member.cards.some((card) => card.support_card === cardId)) continue
+		const borrowTaken = member.cards.some((card) => card.slot === PVP_BORROW_SLOT)
+		const open = slot === PVP_BORROW_SLOT ? (borrowTaken ? null : PVP_BORROW_SLOT) : firstOpenCardSlot(member)
+		const reason = open === null ? "deck is full" : cardBlockReason(member, open, cardId, lookups)
+		if (open === null || reason !== null) skipped.push({ position: member.position, reason: reason ?? "deck is full" })
+		else next = setCard(next, member.position, open, cardId)
+	}
+	return { members: next, skipped }
+}
+
 /** The first of a guide pick's styles a member can run ("everyone" is not one). */
 export function memberStyleFrom(styles: readonly string[]): MemberStyle | undefined {
 	return MEMBER_STYLES.find((style) => styles.includes(style))
