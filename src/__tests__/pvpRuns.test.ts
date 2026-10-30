@@ -3,6 +3,10 @@ import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import {
 	CM_NOT_STARTED,
 	bestTicketWins,
+	ordinal,
+	registeredLineups,
+	runDayAt,
+	runShape,
 	cmDayAt,
 	emptyContent,
 	eventHistory,
@@ -298,5 +302,40 @@ describe("the CM history", () => {
 			{ uma: OGURI, trained_uma: 8, wins: 2, raced: 2, events: 1 },
 			{ uma: OGURI, trained_uma: 7, wins: 3, raced: 5, events: 2 },
 		])
+	})
+})
+
+describe("a League of Heroes", () => {
+	const loh = { event_type: "league_of_heroes", start_date: "2027-01-25T22:00:00Z" } as unknown as RaceEvent
+	const shape = runShape(loh)
+	const at = (iso: string) => runDayAt(loh, DEFAULT_CONSTANTS, new Date(iso), shape)
+
+	it("is six days of five tickets, with no rounds", () => {
+		expect(shape).toEqual({ days: 6, tickets: 5, rounds: false })
+	})
+
+	it("counts its days from the start and is over after day 6", () => {
+		expect(at("2027-01-25T21:59:00Z")).toBe(0)
+		expect(at("2027-01-25T22:00:00Z")).toBe(1)
+		expect(at("2027-01-31T21:59:00Z")).toBe(6)
+		expect(at("2027-01-31T22:00:00Z")).toBeNull()
+	})
+
+	it("fills every ticket left and leaves the Top 96 out", () => {
+		const slots = slotsWithoutLineup([], 1, shape)
+		expect(slots).toHaveLength(30)
+		expect(slots.some((slot) => slot.stage === "final")).toBe(false)
+	})
+
+	it("reads each different lineup logged, latest first", () => {
+		const others: PvpRunRunner[] = [{ ...LINEUP[0], uma: 99 }, LINEUP[1], LINEUP[2]]
+		const runs = [ticket(1, 1, []), ticket(1, 2, [], others), ticket(2, 1, []), ticket(2, 2, [], [])]
+		expect(registeredLineups(runs).map((run) => [run.day, run.ticket])).toEqual([[2, 1], [1, 2]])
+	})
+
+	it("reads placements past 3rd", () => {
+		expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 42, 93, 96].map(ordinal)).toEqual(
+			["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "42nd", "93rd", "96th"]
+		)
 	})
 })

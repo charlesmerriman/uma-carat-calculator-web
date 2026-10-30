@@ -117,7 +117,7 @@ export function CmHistoryTab() {
 
 /**
  * One event: its name and dates, the win rate, each round's best ticket and
- * the Finals (a CM; an LoH has neither yet), and the umas that ran. Links to
+ * the Finals (a CM) or the best ticket and Top 96 (a LoH), and the umas that ran. Links to
  * the event's CM Runs tab.
  */
 function EventRow({ row, umasById, oshiIds }: { row: EventHistory; umasById: Map<number, CatalogueUma>; oshiIds: ReadonlySet<number> }) {
@@ -137,7 +137,7 @@ function EventRow({ row, umasById, oshiIds }: { row: EventHistory; umasById: Map
 					</p>
 				</div>
 				<Link to={runsHref} className="shrink-0 text-sm font-semibold text-brand hover:text-brand/75">
-					Open in CM Runs
+					Open in {isCm ? "CM" : "LoH"} Runs
 				</Link>
 			</div>
 			<div className="flex flex-wrap items-end gap-x-6 gap-y-3">
@@ -149,6 +149,12 @@ function EventRow({ row, umasById, oshiIds }: { row: EventHistory; umasById: Map
 						<span>{`${used} ${used === 1 ? "ticket" : "tickets"} used${skipped ? `, ${skipped} skipped` : ""}`}</span>
 					</span>
 				</div>
+				{!isCm && (
+					<dl className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:max-w-xs">
+						<Stat label="Best ticket" value={bestText(runs)} />
+						<Stat label="Top 96" value={final?.placement ? ordinal(final.placement) : "–"} detail={final?.placement ? undefined : "Not logged"} />
+					</dl>
+				)}
 				{isCm && (
 					<dl className="grid min-w-0 flex-1 grid-cols-3 gap-2 sm:max-w-md">
 						<Stat label="Round 1 best" value={bestText(runs, 1)} />
@@ -227,7 +233,7 @@ function RateBar({ tally }: { tally: Tally }) {
 }
 
 /** "4 of 5", or an en dash when the round has nothing raced. */
-function bestText(runs: EventHistory["runs"], round: number): string {
+function bestText(runs: EventHistory["runs"], round?: number): string {
 	const best = bestTicketWins(runs, round)
 	return best === null ? "–" : `${best} of ${RUN_RACES}`
 }
