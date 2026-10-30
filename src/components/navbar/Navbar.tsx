@@ -10,6 +10,8 @@ import { SettingsMenu } from "./SettingsMenu"
 import { TeamDrawerButton } from "./TeamDrawerButton"
 import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
+import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
+import { useSiteSearch } from "../../hooks/useSiteSearch"
 
 export const Navbar = () => {
 	const location = useLocation()
@@ -33,6 +35,7 @@ export const Navbar = () => {
 	// signed-in avatar to someone the server no longer recognises. Sign-out
 	// itself lives in ProfileMenu now.
 	const { isLoggedIn, account } = useAccount()
+	const siteSearch = useSiteSearch()
 	// Rankings is Patreon only for now (owner, 2026-10-27): its item is drawn
 	// for early access alone. The account is unknown during the prerender and
 	// while it loads, so the item appears after load and never flashes.
@@ -147,6 +150,7 @@ export const Navbar = () => {
 	// tabs under it (hooks/usePvpStickyOffsets.ts).
 	return (
 		<div className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
+			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
 			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
 				<div className="flex h-14 items-center justify-between gap-3 px-3">
@@ -155,6 +159,7 @@ export const Navbar = () => {
 					</div>
 
 					<div className="flex shrink-0 items-center gap-1.5">
+						<SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>
@@ -279,6 +284,7 @@ export const Navbar = () => {
 
 					{/* Right: Save indicator + settings + theme picker + avatar menu / Login */}
 					<div className="flex items-center justify-end gap-2">
+						<SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>

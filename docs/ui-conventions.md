@@ -2607,6 +2607,16 @@ then scrolls itself into view. Its numbers are explained in
 - The line draws itself in on mount (Recharts' own animation), skipped under
   `prefers-reduced-motion`.
 
+## Site search
+
+Ctrl+K / Cmd+K anywhere, or the navbar's search button. `hooks/useSiteSearch.ts` holds the
+open state and the key, `components/search/SiteSearch.tsx` the button and the lazy palette (its
+own chunk, cmdk and Fuse included, loaded on first opening), `utils/siteSearch.ts` what can be
+found and where it goes. An uma or card opens the Timeline on its banner, an event its guide, and
+a skill shows in the palette (no page of its own while the Skills page is shelved). A new page
+goes in `pageEntries`. Outside `/app` the banners come through `readCalculatorCatalogue`, the
+navbar's prefetch, so going on to the calculator costs no second request.
+
 ## Share picture (`carat-calculator/share/`, `pvp/share/`)
 
 "Share picture" turns the pull plan, or a PvP team on My team, into a PNG: Copy, Share
