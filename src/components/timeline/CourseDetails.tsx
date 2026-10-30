@@ -1,7 +1,7 @@
 /**
  * A race event's course, as four pairs (utils/courseDetails.ts `coursePairs`):
  * Racecourse over its direction, Distance over its band, Surface over the
- * ground, Weather over the season.
+ * ground, Season over the weather.
  *
  * Shared by the Timeline's RaceEventCard and the PvP page's event header, so
  * course data is entered once (on the event, in the admin) and the two

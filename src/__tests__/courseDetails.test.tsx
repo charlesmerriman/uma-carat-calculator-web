@@ -23,7 +23,7 @@ describe("coursePairs", () => {
 			{ label: "Racecourse", value: "Chukyo", detail: "Left-handed" },
 			{ label: "Distance", value: "1,200m", detail: "Sprint" },
 			{ label: "Surface", value: "Turf", detail: "Firm ground" },
-			{ label: "Weather", value: "Sunny", detail: "Winter" },
+			{ label: "Season", value: "Winter", detail: "Sunny" },
 		])
 	})
 
@@ -33,7 +33,7 @@ describe("coursePairs", () => {
 			{ label: "Racecourse", value: null, detail: "Left-handed" },
 			{ label: "Distance", value: "Sprint", detail: null },
 			{ label: "Surface", value: "Turf", detail: null },
-			{ label: "Weather", value: null, detail: null },
+			{ label: "Season", value: null, detail: null },
 		])
 		expect(announcedCoursePairs(announced).map((pair) => pair.label)).toEqual(["Racecourse", "Distance", "Surface"])
 	})
@@ -46,7 +46,7 @@ describe("coursePairs", () => {
 			{ label: "Racecourse", value: "Chukyo", detail: "Straight O" },
 			{ label: "Distance", value: "2,200m", detail: "Medium" },
 			{ label: "Surface", value: "Turf", detail: "Random" },
-			{ label: "Weather", value: "Sunny", detail: "Winter" },
+			{ label: "Season", value: "Winter", detail: "Sunny" },
 		])
 		expect(coursePairs({ ...CAPRICORN, length: "2600m", distance: "Long" } as RaceEvent)[1]).toEqual({ label: "Distance", value: "2,600m", detail: "Long" })
 	})
@@ -60,7 +60,7 @@ describe("CoursePairs", () => {
 		expect(column("Racecourse").getByText("Left-handed")).toBeInTheDocument()
 		expect(column("Distance").getByText("1,200m")).toBeInTheDocument()
 		expect(column("Distance").getByText("Sprint")).toBeInTheDocument()
-		expect(column("Weather").getByText("Winter")).toBeInTheDocument()
+		expect(column("Season").getByText("Sunny")).toBeInTheDocument()
 	})
 
 	it("draws nothing for a course with nothing announced", () => {

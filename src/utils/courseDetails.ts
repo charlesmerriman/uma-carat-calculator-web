@@ -44,7 +44,7 @@ export function availableCourseDetails(event: RaceEvent): CourseDetail[] {
 /**
  * The course as four pairs, each a headline with what belongs under it:
  * Racecourse (its direction), Distance (the band under the metres), Surface
- * (the ground) and Weather (the season). The Timeline card, the PvP guide's
+ * (the ground) and Season (the weather). The Timeline card, the PvP guide's
  * header and the team picture all lay the course out this way (owner,
  * 2026-10-29), so the pairing lives here once.
  *
@@ -53,10 +53,10 @@ export function availableCourseDetails(event: RaceEvent): CourseDetail[] {
  * direction) is shown as typed rather than guessed at. Always four, in order.
  */
 export interface CoursePair {
-	label: "Racecourse" | "Distance" | "Surface" | "Weather"
-	/** "Chukyo", "1,200m", "Turf", "Sunny"; null until it is announced. */
+	label: "Racecourse" | "Distance" | "Surface" | "Season"
+	/** "Chukyo", "1,200m", "Turf", "Winter"; null until it is announced. */
 	value: string | null
-	/** "Left-handed", "Sprint", "Firm ground", "Winter"; null when unknown. */
+	/** "Left-handed", "Sprint", "Firm ground", "Sunny"; null when unknown. */
 	detail: string | null
 }
 
@@ -94,7 +94,7 @@ export function coursePairs(event: RaceEvent): CoursePair[] {
 			value: known.get("Surface") ?? null,
 			detail: condition === undefined ? null : GROUNDS.has(condition.toLowerCase()) ? `${condition} ground` : condition,
 		},
-		{ label: "Weather", value: known.get("Weather") ?? null, detail: known.get("Season") ?? null },
+		{ label: "Season", value: known.get("Season") ?? null, detail: known.get("Weather") ?? null },
 	]
 }
 

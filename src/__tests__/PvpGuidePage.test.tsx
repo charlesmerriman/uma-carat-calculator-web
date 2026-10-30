@@ -487,7 +487,7 @@ describe("PvpGuidePage views and layout", () => {
 		expect(distance?.textContent).toBe("1,600m")
 		expect(distance?.nextSibling?.textContent).toBe("Mile")
 		// A pair whose halves are both the sentinel "TBD" stays out.
-		expect(header.queryByText("Weather")).not.toBeInTheDocument()
+		expect(header.queryByText("Season")).not.toBeInTheDocument()
 	})
 
 	it("draws the key dates as steps and marks the next one", () => {
