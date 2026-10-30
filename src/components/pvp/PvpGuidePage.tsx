@@ -152,6 +152,11 @@ const VIEWS: Array<{
 	{ id: "editor", label: "Edit guide", short: "Edit", icon: PenLine, soon: false, editors: true },
 ]
 
+/** A tab's name. The runs tab says which kind of event it logs. */
+function viewLabel(entry: { id: PvpView; label: string }, league: boolean): string {
+	return entry.id === "runs" && league ? "LoH Runs" : entry.label
+}
+
 /** Who is reading, for which tabs are drawn. */
 interface Reader {
 	isEditor: boolean
@@ -422,10 +427,10 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 						    while the page scrolls, so the views stay one tap away
 						    (Daptrius, 2026-10-22). Opaque, or the page shows through. */}
 						<div ref={tabsRef} className="sticky top-(--pvp-tabs-top,0px) z-20 bg-gray-900">
-							<ViewTabs view={view} reader={reader} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
+							<ViewTabs view={view} reader={reader} league={event.event_type !== "champions_meeting"} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
 						</div>
 
-						<div role="tabpanel" aria-label={VIEWS.find((entry) => entry.id === view)?.label}>
+						<div role="tabpanel" aria-label={viewLabel(VIEWS.find((entry) => entry.id === view) ?? VIEWS[0], event.event_type !== "champions_meeting")}>
 							{/* A locked guide fetches nothing (guideState stays idle), so
 							    only the card and the event's new cards show under it. */}
 							{viewLocked && <PvpEarlyAccess pending={false} freeEvent={freeEvent} />}
@@ -513,7 +518,7 @@ function prefetchGallery() {
 
 const GRID_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" }
 
-function ViewTabs({ view, reader, onChange }: { view: PvpView; reader: Reader; onChange: (view: PvpView) => void }) {
+function ViewTabs({ view, reader, league, onChange }: { view: PvpView; reader: Reader; league: boolean; onChange: (view: PvpView) => void }) {
 	const shown = viewsFor(reader)
 	return (
 		// No overflow-x-auto here: overflow on one axis makes the other "auto"
@@ -531,6 +536,7 @@ function ViewTabs({ view, reader, onChange }: { view: PvpView; reader: Reader; o
 			{shown.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
+				const label = viewLabel(entry, league)
 				return (
 					<button
 						key={entry.id}
@@ -553,10 +559,10 @@ function ViewTabs({ view, reader, onChange }: { view: PvpView; reader: Reader; o
 						{entry.short ? (
 							<>
 								<span className="sm:hidden" aria-hidden="true">{entry.short}</span>
-								<span className="sr-only sm:not-sr-only">{entry.label}</span>
+								<span className="sr-only sm:not-sr-only">{label}</span>
 							</>
 						) : (
-							entry.label
+							label
 						)}
 						{entry.soon && (
 							<span className="rounded-full border border-gray-600 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-gray-400">

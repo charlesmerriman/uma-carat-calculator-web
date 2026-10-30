@@ -139,9 +139,34 @@ describe("who can log runs", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("says League of Heroes is not here yet", () => {
+	it("logs a League of Heroes: six days, five tickets, then the Top 96", async () => {
+		runs.list = [logged(1, RACES_DONE, { kind: "loh", day: 2 })]
 		show(LOH)
-		expect(screen.getByText(/League of Heroes is coming later/)).toBeTruthy()
+		expect(await screen.findByRole("tab", { name: /^Day 6/ })).toBeTruthy()
+		expect(screen.queryByRole("tab", { name: /^Day 7/ })).toBeNull()
+		expect(screen.getByText("Ticket 5")).toBeTruthy()
+		expect(screen.queryByText("Ticket 6")).toBeNull()
+
+		fireEvent.click(screen.getByRole("tab", { name: /Top 96/ }))
+		// The team has to be one registered on the days, so that's what's offered.
+		fireEvent.click(screen.getByRole("button", { name: "Same three as Day 2, Ticket 1" }))
+		await waitFor(() => expect(puts().at(-1)?.path).toMatch(/\/pvp-runs\/loh\/10\/final$/))
+		expect(puts().at(-1)?.body.runners).toHaveLength(3)
+
+		const placement = await screen.findByLabelText("Your placement")
+		fireEvent.change(placement, { target: { value: "42" } })
+		fireEvent.blur(placement)
+		await waitFor(() => expect(puts().at(-1)?.body.placement).toBe(42))
+	})
+
+	it("sends a placement the Top 96 can't give back to the saved one", async () => {
+		show(LOH)
+		fireEvent.click(await screen.findByRole("tab", { name: /Top 96/ }))
+		const placement = await screen.findByLabelText("Your placement")
+		fireEvent.change(placement, { target: { value: "97" } })
+		fireEvent.blur(placement)
+		expect(toastError).toHaveBeenCalledWith("A Top 96 placement is 1 to 96.")
+		expect(puts()).toEqual([])
 	})
 
 	it("sends a player with no team to My team", async () => {

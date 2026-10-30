@@ -28,7 +28,13 @@
  * race the ticket did not list takes the skip back (logRace): it ran after all.
  *
  * The limits mirror the API (models/pvp_run.py): a CM is 4 days of 4 tickets
- * of 5 races, Round 1 days 1-2 and Round 2 days 3-4, then one final race.
+ * of 5 races, Round 1 days 1-2 and Round 2 days 3-4, then one final race. A
+ * League of Heroes is 6 days of 5 tickets of 5 races with no rounds, then the
+ * Top 96: the team the player entered, one they registered on days 1-6, and a
+ * placement they type in, 1 to 96, with no race (the two brackets are only
+ * watched; Daptrius, 2026-10-30). A LoH race is
+ * counted like a CM's, won when one of your three finishes first. RunShape is
+ * the one place the two differ.
  */
 
 import { parseApiDate } from "./dateFormat"
@@ -42,6 +48,20 @@ export const CM_RUN_TICKETS = 4
 export const RUN_RACES = 5
 /** Round 1 is days 1-2, Round 2 days 3-4. */
 export const CM_DAYS_PER_ROUND = 2
+export const LOH_TOP_PLACEMENTS = 96
+
+/** What an event kind's runs look like. `rounds`: a CM's two rounds and its one final race. */
+export interface RunShape {
+	days: number
+	tickets: number
+	rounds: boolean
+}
+export const CM_SHAPE: RunShape = { days: CM_RUN_DAYS, tickets: CM_RUN_TICKETS, rounds: true }
+const LOH_SHAPE: RunShape = { days: 6, tickets: 5, rounds: false }
+
+export function runShape(event: Pick<RaceEvent, "event_type">): RunShape {
+	return event.event_type === "champions_meeting" ? CM_SHAPE : LOH_SHAPE
+}
 
 const DAY_MS = 86_400_000
 
@@ -100,11 +120,42 @@ export function cmDayAt(event: RaceEvent, constants: CalculationConstants, now: 
 	return Math.min(CM_RUN_DAYS, Math.floor(elapsed / DAY_MS) + 1)
 }
 
+/**
+ * The event day `now` falls on, for either kind. A LoH has no round times yet
+ * (its `loh_*` constants are unset until known), so it counts 24 hours a day
+ * from its start date, like a CM, and is over after day 6.
+ */
+export function runDayAt(event: RaceEvent, constants: CalculationConstants, now: Date, shape: RunShape): number | null {
+	if (shape.rounds) return cmDayAt(event, constants, now)
+	const start = parseApiDate(event.start_date)
+	if (!start) return 1
+	const elapsed = now.getTime() - start.getTime()
+	if (elapsed < 0) return CM_NOT_STARTED
+	const day = Math.floor(elapsed / DAY_MS) + 1
+	return day > shape.days ? null : day
+}
+
 /** A team's members as a ticket's lineup: the uma, style and veteran per spot, no deck. */
 export function lineupFromTeam(members: PvpTeamMember[]): PvpRunRunner[] {
 	return [...members]
 		.sort((a, b) => a.position - b.position)
 		.map(({ position, uma, style, trained_uma }) => ({ position, uma, style, trained_uma: trained_uma ?? null }))
+}
+
+/**
+ * The tickets that show each different lineup logged on the days, latest
+ * first: the teams a player registered, which is what a LoH's Top 96 allows
+ * (Daptrius, 2026-10-30).
+ */
+export function registeredLineups(runs: PvpRun[]): PvpRun[] {
+	const found: PvpRun[] = []
+	const latestFirst = runs
+		.filter((run) => run.stage === "day" && run.runners.length > 0)
+		.sort((a, b) => (b.day ?? 0) - (a.day ?? 0) || (b.ticket ?? 0) - (a.ticket ?? 0))
+	for (const run of latestFirst) {
+		if (!found.some((kept) => sameLineup(kept.runners, run.runners))) found.push(run)
+	}
+	return found
 }
 
 /** Two lineups with the same uma, style and veteran in every spot. */
@@ -199,8 +250,8 @@ export function ticketCounts(runs: PvpRun[]): { used: number; skipped: number } 
 }
 
 /** The tickets of `day` with no row at all: what "Mark the rest skipped" marks. */
-export function unloggedTickets(runs: PvpRun[], day: number): number[] {
-	return Array.from({ length: CM_RUN_TICKETS }, (_, index) => index + 1).filter(
+export function unloggedTickets(runs: PvpRun[], day: number, tickets = CM_RUN_TICKETS): number[] {
+	return Array.from({ length: tickets }, (_, index) => index + 1).filter(
 		(ticket) => !findRun(runs, { stage: "day", day, ticket })
 	)
 }
@@ -222,23 +273,23 @@ export function isPastDay(day: number, today: number | null): boolean {
  * day that isn't over, then the Finals if it has none. A lineup with no races
  * reads "started" (ticketState), so a past day's unplayed tickets are left
  * for "Mark the rest skipped", and a ticket that is skipped or already has a
- * lineup is never touched.
+ * lineup is never touched. A LoH's Top 96 has no lineup to fill.
  */
-export function slotsWithoutLineup(runs: PvpRun[], today: number | null): PvpRunSlot[] {
+export function slotsWithoutLineup(runs: PvpRun[], today: number | null, shape: RunShape = CM_SHAPE): PvpRunSlot[] {
 	const empty = (slot: PvpRunSlot) => {
 		const run = findRun(runs, slot)
 		return !run || (run.runners.length === 0 && run.races.length === 0 && !run.skipped)
 	}
 	const slots: PvpRunSlot[] = []
-	for (let day = 1; day <= CM_RUN_DAYS; day++) {
+	for (let day = 1; day <= shape.days; day++) {
 		if (isPastDay(day, today)) continue
-		for (let ticket = 1; ticket <= CM_RUN_TICKETS; ticket++) {
+		for (let ticket = 1; ticket <= shape.tickets; ticket++) {
 			const slot: PvpRunSlot = { stage: "day", day, ticket }
 			if (empty(slot)) slots.push(slot)
 		}
 	}
 	const final: PvpRunSlot = { stage: "final" }
-	if (empty(final)) slots.push(final)
+	if (shape.rounds && empty(final)) slots.push(final)
 	return slots
 }
 
@@ -302,10 +353,10 @@ export function runsOf(runs: PvpRun[], filter: { round?: number; day?: number })
 
 /**
  * The most wins on one ticket in a round: the game counts a round's best
- * attempt, so this is the number the round's result came from. null when
- * nothing in the round was raced.
+ * attempt, so this is the number the round's result came from. No round: the
+ * whole event (a LoH). null when nothing there was raced.
  */
-export function bestTicketWins(runs: PvpRun[], round: number): number | null {
+export function bestTicketWins(runs: PvpRun[], round?: number): number | null {
 	const raced = runsOf(runs, { round }).filter((run) => run.races.length > 0)
 	return raced.length ? Math.max(...raced.map((run) => tallyRun(run).wins)) : null
 }
@@ -383,7 +434,9 @@ export function formatRate({ wins, raced }: Tally): string {
 	return raced ? `${Math.round((wins / raced) * 100)}%` : "–"
 }
 
-/** "1st", "2nd", "3rd". */
+/** "1st", "2nd", "3rd", "11th", "22nd". */
 export function ordinal(place: number): string {
-	return place === 1 ? "1st" : place === 2 ? "2nd" : place === 3 ? "3rd" : `${place}th`
+	const lastTwo = place % 100
+	if (lastTwo >= 11 && lastTwo <= 13) return `${place}th`
+	return `${place}${["th", "st", "nd", "rd"][place % 10] ?? "th"}`
 }
