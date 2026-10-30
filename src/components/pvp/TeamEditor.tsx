@@ -13,6 +13,7 @@
  */
 
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useCardReleases } from "../../hooks/useCardReleases"
@@ -20,6 +21,7 @@ import { releaseBlockReason, releaseNote } from "../../utils/cardRelease"
 import {
 	MEMBER_STYLES,
 	PVP_BORROW_SLOT,
+	addCardToEveryDeck,
 	cardBlockReason,
 	clearCard,
 	clearMember,
@@ -59,6 +61,9 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 	onChange: (members: PvpTeamMember[]) => void
 }) {
 	const [picker, setPicker] = useState<PlaceTarget | null>(null)
+	// The card picker's "Add to every deck" box. Off each time the picker
+	// opens, so a pick never lands in three decks by surprise.
+	const [addToEveryDeck, setAddToEveryDeck] = useState(false)
 	// The account's favorite umas, every outfit of each, get the rainbow
 	// frame: the same set every other page frames (useOshiIds).
 	const oshiIds = useOshiIds()
@@ -101,7 +106,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 				isFavorite={isFavorite}
 				isRecommended={isRecommended}
 				onPickUma={(position) => setPicker({ pool: "uma", position })}
-				onPickCard={(position, slot) => setPicker({ pool: "support", position, slot })}
+				onPickCard={(position, slot) => {
+					setAddToEveryDeck(false)
+					setPicker({ pool: "support", position, slot })
+				}}
 				onStyleChange={(position, style) => onChange(setMemberStyle(members, position, style))}
 				onClearUma={(position) => onChange(clearMember(members, position))}
 				onClearCard={(position, slot) => onChange(clearCard(members, position, slot))}
@@ -154,7 +162,25 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					}
 					noteFor={(id) => releaseNote(releaseFor("support", id))}
 					selectedId={pickerMember?.cards.find((card) => card.slot === picker.slot)?.support_card ?? null}
-					onPick={(id) => apply(setCard(members, picker.position, picker.slot, id))}
+					tabs={
+						members.length > 1 ? (
+							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
+								<input type="checkbox" checked={addToEveryDeck} onChange={(change) => setAddToEveryDeck(change.target.checked)} />
+								Add to every deck on this team
+							</label>
+						) : undefined
+					}
+					onPick={(id) => {
+						if (!addToEveryDeck) {
+							apply(setCard(members, picker.position, picker.slot, id))
+							return
+						}
+						const added = addCardToEveryDeck(members, picker.position, picker.slot, id, index)
+						apply(added.members)
+						if (added.skipped.length > 0) {
+							toast(`Not added to every deck. ${added.skipped.map((skip) => `${umaName(skip.position)}: ${skip.reason}`).join(". ")}.`)
+						}
+					}}
 					onRemove={
 						pickerMember?.cards.some((card) => card.slot === picker.slot)
 							? () => apply(clearCard(members, picker.position, picker.slot))

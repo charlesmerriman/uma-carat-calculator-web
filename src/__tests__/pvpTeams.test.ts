@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+	addCardToEveryDeck,
 	cardBlockReason,
 	placeholderName,
 	placeholderOrder,
@@ -387,5 +388,44 @@ describe("deckToMemberCards", () => {
 		expect(deckRequestId(null)).toBeNull()
 		expect(deckRequestId({ useDeck: { deckId: "7" } })).toBeNull()
 		expect(deckRequestId("x")).toBeNull()
+	})
+})
+
+describe("addCardToEveryDeck", () => {
+	const member = (position: number, uma: number, cards: PvpTeamMember["cards"] = []): PvpTeamMember =>
+		({ position, uma, style: "pace", cards }) as PvpTeamMember
+	const filled = (slots: number[], first = 400) => slots.map((slot) => ({ slot, support_card: first + slot }))
+
+	it("fills each other deck's first open slot, whatever slot was picked", () => {
+		const team = [member(0, OGURI.id), member(1, MARU.id, filled([1, 2])), member(2, RICE.id)]
+		const { members, skipped } = addCardToEveryDeck(team, 0, 3, 304, LOOKUPS)
+		expect(members.map((m) => m.cards.find((card) => card.support_card === 304)?.slot)).toEqual([3, 3, 1])
+		expect(skipped).toEqual([])
+	})
+
+	it("keeps a borrowed card in the borrow slot and never replaces one", () => {
+		const team = [member(0, OGURI.id), member(1, MARU.id), member(2, RICE.id, filled([6]))]
+		const { members, skipped } = addCardToEveryDeck(team, 0, 6, 304, LOOKUPS)
+		expect(members[1].cards).toEqual([{ slot: 6, support_card: 304 }])
+		expect(members[2].cards).toEqual(filled([6]))
+		expect(skipped).toEqual([{ position: 2, reason: "deck is full" }])
+	})
+
+	it("skips a full deck and one the rules refuse, and says why", () => {
+		const team = [member(0, MARU.id), member(1, RICE.id, filled([1, 2, 3, 4, 5])), member(2, OGURI.id)]
+		const { members, skipped } = addCardToEveryDeck(team, 0, 1, 308, LOOKUPS)
+		expect(members[1].cards.some((card) => card.support_card === 308)).toBe(false)
+		expect(members[2].cards).toEqual([])
+		expect(skipped).toEqual([
+			{ position: 1, reason: "deck is full" },
+			{ position: 2, reason: "Oguri Cap can't support herself" },
+		])
+	})
+
+	it("leaves a deck alone when it already holds the card", () => {
+		const team = [member(0, OGURI.id), member(1, MARU.id, [{ slot: 4, support_card: 304 }])]
+		const { members, skipped } = addCardToEveryDeck(team, 0, 1, 304, LOOKUPS)
+		expect(members[1].cards).toEqual([{ slot: 4, support_card: 304 }])
+		expect(skipped).toEqual([])
 	})
 })
