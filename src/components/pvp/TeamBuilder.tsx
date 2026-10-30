@@ -552,6 +552,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 					pool="uma"
 					items={index.catalogue.umas}
 					owned={ownedForPicker(mode === "account" ? roster : undefined, "uma")}
+					place="uma"
 					recommended={recommendedIds(guide, deckStyle ?? "front").umas}
 					noteFor={(id) => releaseNote(releaseFor("uma", id))}
 					blockReason={(id) => {

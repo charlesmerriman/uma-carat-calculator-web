@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { PvpCardPicker } from "../components/pvp/PvpCardPicker"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
@@ -257,6 +257,44 @@ describe("the Owned filter (the player's Collection)", () => {
 	it("is absent without a collection (a guest)", () => {
 		renderSupportPicker()
 		expect(screen.queryByRole("checkbox", { name: /Owned only/ })).toBeNull()
+	})
+
+	describe("in a team slot", () => {
+		const owned = { ids: new Set([10]), limitBreaks: new Map() }
+		const ownedOnly = () => screen.getByRole("checkbox", { name: /Owned only/ })
+
+		it("starts the borrow slot on the full list, with its own choice", () => {
+			renderSupportPicker({ owned, place: "borrow" })
+			expect(ownedOnly()).not.toBeChecked()
+			fireEvent.click(ownedOnly())
+			cleanup()
+			renderSupportPicker({ owned, place: "borrow" })
+			expect(ownedOnly()).toBeChecked()
+			fireEvent.click(ownedOnly())
+			cleanup()
+			// The other slots never took that choice.
+			renderSupportPicker({ owned, place: "card" })
+			expect(ownedOnly()).toBeChecked()
+		})
+
+		it("remembers the switch, the type and the rarity across openings", () => {
+			renderSupportPicker({ owned, place: "card" })
+			fireEvent.click(ownedOnly())
+			fireEvent.click(screen.getByRole("button", { name: "SSR" }))
+			fireEvent.click(screen.getByRole("button", { name: "Wit" }))
+			cleanup()
+
+			renderSupportPicker({ owned, place: "card" })
+			expect(ownedOnly()).not.toBeChecked()
+			expect(screen.getByRole("button", { name: "SSR" })).toHaveAttribute("aria-pressed", "true")
+			expect(screen.getByRole("button", { name: "Wit" })).toHaveAttribute("aria-pressed", "true")
+		})
+
+		it("leaves a picker with no place alone", () => {
+			renderSupportPicker({ owned })
+			expect(ownedOnly()).toBeChecked()
+			expect(screen.getByRole("button", { name: "Wit" })).toHaveAttribute("aria-pressed", "false")
+		})
 	})
 })
 
