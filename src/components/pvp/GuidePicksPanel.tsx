@@ -23,6 +23,7 @@ import { STYLE_LABELS, guidePicks } from "../../utils/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
 import type { PvpStyle } from "../../types/pvpGuide"
 import type { PvpTeamMember } from "../../types/pvpTeam"
+import { DraggableCard } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
@@ -56,13 +57,15 @@ interface GuidePicksProps {
 	/** The selected team's members, to tick picks already on it. */
 	members: PvpTeamMember[]
 	actions: GuidePickActions
+	/** The docked panel: its cards drag into the slots beside it (CardDrag.tsx). */
+	dragCards?: boolean
 }
 
 /** A grid row is four tiles; the action row follows the clicked tile's row. */
 const COLUMNS = 4
 
 /** The panel's contents. TeamBuilder wraps it in a DockedPanel or a SideDrawer (SidePanel.tsx). */
-export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps) {
+export function GuidePicksBody({ guideState, members, actions, dragCards = false }: GuidePicksProps) {
 	const picks = useMemo(() => (guideState.status === "ready" ? guidePicks(guideState.guide) : null), [guideState])
 	// The one pick whose action row is open, as "uma-41" / "card-302".
 	const [openKey, setOpenKey] = useState<string | null>(null)
@@ -119,6 +122,7 @@ export function GuidePicksBody({ guideState, members, actions }: GuidePicksProps
 					<PickGrid
 						items={picks.cards.map((pick) => ({
 							key: `card-${pick.ref.id}`,
+							cardId: dragCards ? pick.ref.id : undefined,
 							name: pick.ref.name,
 							image: pick.ref.image,
 							uma: null,
@@ -150,6 +154,8 @@ function describe(styles: PvpStyle[], notes: string[]): string {
 
 interface PickItem {
 	key: string
+	/** Set on a card that can be dragged into a slot. */
+	cardId?: number
 	name: string
 	image: string | null
 	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
@@ -203,44 +209,46 @@ function PickTile({ item, shape, open, onClick }: {
 	const ring = open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : ""
 	return (
 		<li className="min-w-0">
-			<button
-				type="button"
-				aria-expanded={open}
-				title={item.detail ? `${item.name}: ${item.detail}` : item.name}
-				onClick={onClick}
-				className="group block w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
-			>
-				<span
-					className={
-						item.uma
-							? `relative block rounded-[10.75%] transition ${ring}`
-							: `relative block overflow-hidden rounded-md bg-gray-700 transition ${ring || "ring-1 ring-gray-600 group-hover:ring-gray-400"}`
-					}
+			<DraggableCard id={`pick-${item.key}`} drag={item.cardId === undefined ? null : { from: "pick", cardId: item.cardId }}>
+				<button
+					type="button"
+					aria-expanded={open}
+					title={item.detail ? `${item.name}: ${item.detail}` : item.name}
+					onClick={onClick}
+					className="group block w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
-					{item.uma ? (
-						<FramedUma src={item.uma.portrait} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
-					) : item.image ? (
-						<img src={item.image} alt={item.name} loading="lazy" decoding="async" className={`${aspect} block w-full object-cover`} />
-					) : (
-						<span className={`${aspect} block w-full`} aria-hidden="true" />
-					)}
-					{item.onTeam && (
-						<span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-black" title="On your team">
-							<Check className="h-3 w-3" aria-label="On your team" />
+					<span
+						className={
+							item.uma
+								? `relative block rounded-[10.75%] transition ${ring}`
+								: `relative block overflow-hidden rounded-md bg-gray-700 transition ${ring || "ring-1 ring-gray-600 group-hover:ring-gray-400"}`
+						}
+					>
+						{item.uma ? (
+							<FramedUma src={item.uma.portrait} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
+						) : item.image ? (
+							<img src={item.image} alt={item.name} loading="lazy" decoding="async" className={`${aspect} block w-full object-cover`} />
+						) : (
+							<span className={`${aspect} block w-full`} aria-hidden="true" />
+						)}
+						{item.onTeam && (
+							<span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-black" title="On your team">
+								<Check className="h-3 w-3" aria-label="On your team" />
+							</span>
+						)}
+					</span>
+					{item.stars > 0 && (
+						<span className="mt-0.5 flex justify-center gap-px text-highlight" aria-label={`${item.stars} of 5 stars`}>
+							{Array.from({ length: item.stars }, (_, index) => (
+								<Star key={index} className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+							))}
 						</span>
 					)}
-				</span>
-				{item.stars > 0 && (
-					<span className="mt-0.5 flex justify-center gap-px text-highlight" aria-label={`${item.stars} of 5 stars`}>
-						{Array.from({ length: item.stars }, (_, index) => (
-							<Star key={index} className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
-						))}
+					<span className={`mt-0.5 block truncate text-center text-[10px] leading-tight ${open ? "text-brand" : "text-gray-300"}`}>
+						{item.name}
 					</span>
-				)}
-				<span className={`mt-0.5 block truncate text-center text-[10px] leading-tight ${open ? "text-brand" : "text-gray-300"}`}>
-					{item.name}
-				</span>
-			</button>
+				</button>
+			</DraggableCard>
 		</li>
 	)
 }

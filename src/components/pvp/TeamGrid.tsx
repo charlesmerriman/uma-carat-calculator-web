@@ -22,6 +22,7 @@ import type { RaceEvent } from "../../types"
 import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils/cardRelease"
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
+import { CardDropSlot, DraggableCard } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
@@ -164,7 +165,7 @@ function MemberPanel({
 		// cell (absolute, against this relative box) so the two share its place.
 		// initial: on a panel that appears mid-deal, the cards deal in too.
 		return (
-			<div key={slot} className="relative min-w-0">
+			<CardDropSlot key={slot} position={position} slot={slot} className="relative min-w-0">
 				<AnimatePresence mode="popLayout" initial={dealtNow}>
 					<motion.div
 						key={`${dealCount}-${slot}`}
@@ -172,10 +173,15 @@ function MemberPanel({
 						animate={{ opacity: 1, y: 0, transition: { duration: seconds(0.26), delay: seconds(order * DEAL_STEP + 0.14), ease: "easeOut" } }}
 						exit={{ opacity: 0, y: -DEAL_RISE, transition: { duration: seconds(0.2), delay: seconds(order * DEAL_STEP), ease: "easeIn" } }}
 					>
-						{tile}
+						<DraggableCard
+							id={`slot-card-${position}-${slot}`}
+							drag={entry ? { from: "slot", position, slot, cardId: entry.support_card } : null}
+						>
+							{tile}
+						</DraggableCard>
 					</motion.div>
 				</AnimatePresence>
-			</div>
+			</CardDropSlot>
 		)
 	}
 

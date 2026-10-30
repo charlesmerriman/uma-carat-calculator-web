@@ -132,6 +132,45 @@ export function firstOpenCardSlot(member: PvpTeamMember): number | null {
 	return null
 }
 
+/** A card being dragged on My team: from the Guide picks, or from a slot. */
+export type CardDrag =
+	| { from: "pick"; cardId: number }
+	| { from: "slot"; position: number; slot: number; cardId: number }
+
+export type CardDropTarget = { position: number; slot: number }
+
+/**
+ * Where a dragged card lands. From the Guide picks it takes the slot, replacing
+ * what's there. From a slot it moves, and a filled target swaps places with it,
+ * so a drag never loses a card. Either deck's rules can refuse: `reason` says
+ * why and nothing changes.
+ */
+export function dropCard(
+	members: PvpTeamMember[],
+	drag: CardDrag,
+	target: CardDropTarget,
+	lookups: TeamRuleLookups
+): { members: PvpTeamMember[] } | { reason: string } {
+	const into = memberAt(members, target.position)
+	if (!into) return { reason: "Add an uma to this spot first" }
+	if (drag.from === "pick") {
+		const reason = cardBlockReason(into, target.slot, drag.cardId, lookups)
+		return reason ? { reason } : { members: setCard(members, target.position, target.slot, drag.cardId) }
+	}
+	if (drag.position === target.position && drag.slot === target.slot) return { members }
+	const displaced = into.cards.find((card) => card.slot === target.slot)?.support_card
+	if (drag.position !== target.position) {
+		// Each deck is checked as it would be with the other card gone.
+		const reason =
+			cardBlockReason(into, target.slot, drag.cardId, lookups) ??
+			(displaced === undefined ? null : cardBlockReason(memberAt(members, drag.position), drag.slot, displaced, lookups))
+		if (reason) return { reason }
+	}
+	const cleared = clearCard(members, drag.position, drag.slot)
+	const moved = setCard(cleared, target.position, target.slot, drag.cardId)
+	return { members: displaced === undefined ? moved : setCard(moved, drag.position, drag.slot, displaced) }
+}
+
 /**
  * The picker's "Add to every deck on this team": the card goes in the chosen
  * slot, then into each other deck's first open slot, a borrowed card into the
