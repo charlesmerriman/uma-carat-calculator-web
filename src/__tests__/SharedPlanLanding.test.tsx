@@ -87,6 +87,7 @@ const renderCard = (overrides: Partial<CalculatorContextType> = {}) => {
 		userPlannedPurchaseData: [],
 		userStatsData: { ...DEFAULT_GUEST_STATS },
 		copySharedPlan: vi.fn().mockResolvedValue(true),
+		deletePlan: vi.fn().mockResolvedValue(true),
 		switchPlan: vi.fn().mockResolvedValue(true),
 		...ACCOUNT,
 		...overrides,
@@ -173,6 +174,18 @@ describe('SharedPlanLanding', () => {
 
 			expect(await screen.findByRole('button', { name: 'Copy to my plans' })).toBeDisabled()
 			expect(screen.getByText(/5-plan limit/)).toBeInTheDocument()
+		})
+
+		it('deletes a plan from the card at the cap, asking first', async () => {
+			const value = renderCard({
+				plans: Array.from({ length: PLAN_CAP }, (_, i) => plan(i + 1, `Plan000${i}`)),
+			})
+
+			await userEvent.click(await screen.findByRole('button', { name: 'Delete Plan 3' }))
+			expect(value.deletePlan).not.toHaveBeenCalled()
+
+			await userEvent.click(screen.getByRole('button', { name: 'Yes, delete' }))
+			expect(value.deletePlan).toHaveBeenCalledWith(3)
 		})
 
 		it("offers to open the owner's own plan instead", async () => {
