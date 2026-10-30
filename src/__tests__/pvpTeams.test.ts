@@ -8,6 +8,7 @@ import {
 	deckRequestId,
 	deckToMemberCards,
 	drawerTeam,
+	dropCard,
 	firstOpenCardSlot,
 	memberStyleFrom,
 	recommendedIds,
@@ -427,5 +428,52 @@ describe("addCardToEveryDeck", () => {
 		const { members, skipped } = addCardToEveryDeck(team, 0, 1, 304, LOOKUPS)
 		expect(members[1].cards).toEqual([{ slot: 4, support_card: 304 }])
 		expect(skipped).toEqual([])
+	})
+})
+
+describe("dropCard", () => {
+	const member = (position: number, uma: number, cards: PvpTeamMember["cards"] = []): PvpTeamMember =>
+		({ position, uma, style: "pace", cards }) as PvpTeamMember
+	const slotOf = (m: PvpTeamMember, card: number) => m.cards.find((entry) => entry.support_card === card)?.slot
+
+	it("puts a guide pick in the slot, replacing what's there", () => {
+		const team = [member(0, MARU.id, [{ slot: 2, support_card: 302 }])]
+		const dropped = dropCard(team, { from: "pick", cardId: 304 }, { position: 0, slot: 2 }, LOOKUPS)
+		expect(dropped).toEqual({ members: [member(0, MARU.id, [{ slot: 2, support_card: 304 }])] })
+	})
+
+	it("refuses a pick the deck rules refuse", () => {
+		const team = [member(0, OGURI.id)]
+		expect(dropCard(team, { from: "pick", cardId: 308 }, { position: 0, slot: 1 }, LOOKUPS)).toEqual({ reason: "Oguri Cap can't support herself" })
+	})
+
+	it("swaps two slots of one deck, and moves into an empty one", () => {
+		const team = [member(0, MARU.id, [{ slot: 1, support_card: 302 }, { slot: 2, support_card: 304 }])]
+		const swapped = dropCard(team, { from: "slot", position: 0, slot: 1, cardId: 302 }, { position: 0, slot: 2 }, LOOKUPS)
+		if (!("members" in swapped)) throw new Error("refused")
+		expect([slotOf(swapped.members[0], 302), slotOf(swapped.members[0], 304)]).toEqual([2, 1])
+		const moved = dropCard(team, { from: "slot", position: 0, slot: 1, cardId: 302 }, { position: 0, slot: 6 }, LOOKUPS)
+		if (!("members" in moved)) throw new Error("refused")
+		expect(moved.members[0].cards).toEqual([{ slot: 2, support_card: 304 }, { slot: 6, support_card: 302 }])
+	})
+
+	it("moves across decks, and swaps there too", () => {
+		const team = [member(0, MARU.id, [{ slot: 1, support_card: 302 }]), member(1, RICE.id, [{ slot: 3, support_card: 304 }])]
+		const swapped = dropCard(team, { from: "slot", position: 0, slot: 1, cardId: 302 }, { position: 1, slot: 3 }, LOOKUPS)
+		if (!("members" in swapped)) throw new Error("refused")
+		expect(swapped.members[0].cards).toEqual([{ slot: 1, support_card: 304 }])
+		expect(swapped.members[1].cards).toEqual([{ slot: 3, support_card: 302 }])
+	})
+
+	it("refuses a swap when the card coming back breaks the other deck", () => {
+		// Oguri's own card can't come back to her deck.
+		const team = [member(0, OGURI.id, [{ slot: 1, support_card: 302 }]), member(1, MARU.id, [{ slot: 1, support_card: 308 }])]
+		expect(dropCard(team, { from: "slot", position: 0, slot: 1, cardId: 302 }, { position: 1, slot: 1 }, LOOKUPS)).toEqual({ reason: "Oguri Cap can't support herself" })
+	})
+
+	it("leaves everything alone when a card lands on its own slot", () => {
+		const team = [member(0, MARU.id, [{ slot: 1, support_card: 302 }])]
+		const dropped = dropCard(team, { from: "slot", position: 0, slot: 1, cardId: 302 }, { position: 0, slot: 1 }, LOOKUPS)
+		expect(dropped).toEqual({ members: team })
 	})
 })

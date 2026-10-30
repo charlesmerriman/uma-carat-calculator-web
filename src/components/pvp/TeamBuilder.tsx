@@ -35,16 +35,20 @@ import {
 	teamSkillSources,
 	recommendedIds,
 	setCard,
+	dropCard,
 	setMemberUma,
 	cardBlockReason,
 	deckRequestId,
 	deckToMemberCards,
 	umaBlockReason,
+	type CardDrag,
+	type CardDropTarget,
 } from "../../utils/pvpTeams"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { DECK_STAT_LABELS, noteOnlyType } from "../../utils/deckNotes"
 import { plainNoteText } from "../../utils/remarkHighlight"
 import { UseDeckBanner, type DeckSpot } from "./UseDeckBanner"
+import { CardDragProvider } from "./CardDrag"
 import { GuidePicksBody, type GuidePickActions } from "./GuidePicksPanel"
 import { SaveStatus } from "./SaveStatus"
 import { useCardReleases, type ReleaseCheck } from "../../hooks/useCardReleases"
@@ -351,7 +355,13 @@ function ReadyBuilder({ event, teamsState, index }: {
 	// A few dozen links, so worked out on every render.
 	const skillSources = teamSkillSources(members, index.umasById, index.cardsById)
 
-	const picksBody = <GuidePicksBody guideState={guideState} members={members} actions={pickActions} />
+	const picksBody = (dragCards: boolean) => <GuidePicksBody guideState={guideState} members={members} actions={pickActions} dragCards={dragCards} />
+	const dropCardOnSlot = (drag: CardDrag, target: CardDropTarget) => {
+		const late = drag.from === "pick" ? releaseBlockReason(releaseFor("support", drag.cardId)) : null
+		const dropped = late ? { reason: late } : dropCard(members, drag, target, index)
+		if ("reason" in dropped) toast(dropped.reason)
+		else if (dropped.members !== members) applyMembers(dropped.members)
+	}
 	const skillSpots = [0, 1, 2].map((position) => {
 		const member = memberAt(members, position)
 		const name = member ? (index.umasById.get(member.uma)?.name ?? "an uma") : "empty"
@@ -377,223 +387,226 @@ function ReadyBuilder({ event, teamsState, index }: {
 	return (
 		// Guide picks docks on the left from xl, Recommended skills on the
 		// right from 2xl; below those, each retracts behind a toolbar button.
-		<div className={`mx-auto grid w-full max-w-4xl items-start gap-4 ${gridLayout(picksDocked, skillsDocked)}`}>
-			{picksDocked && (
-				<DockedPanel side="left" title="Guide picks" icon={picksIcon} onCollapse={() => dockPicks(false)}>
-					{picksBody}
-				</DockedPanel>
-			)}
-			<SideDrawer side="left" title="Guide picks" icon={picksIcon} open={picksDrawer} onClose={closePicks}>
-				{picksBody}
-			</SideDrawer>
-			<SideDrawer side="right" title="Recommended skills" icon={skillsIcon} open={skillsDrawer} onClose={closeSkills}>
-				{skillsBody}
-			</SideDrawer>
-
-			<div className="flex min-w-0 flex-col gap-3">
-				{deck && (
-					<UseDeckBanner
-						// Per team: a pending "Replace?" never follows a switch to another
-						// team. Prefixed: TeamNotes below is keyed by the bare team key, and
-						// two siblings sharing a key left a dismissed banner on screen.
-						key={`deck-${team?.key ?? "none"}`}
-						deckName={deckName}
-						spots={deckSpots}
-						newTeamBlocked={eventTeams.length >= PVP_TEAM_CAP_PER_EVENT ? `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.` : null}
-						onUse={(position) => putDeck(members, position)}
-						onPickUma={setDeckUmaSpot}
-						onNewTeam={() => {
-							const key = createTeam(ref)
-							if (!key) return
-							setSelectedKey(key)
-							setDeckUmaSpot(0)
-						}}
-						onCancel={() => setDeckId(null)}
-					/>
+		<CardDragProvider cardsById={index.cardsById} onDrop={dropCardOnSlot}>
+			<div className={`mx-auto grid w-full max-w-4xl items-start gap-4 ${gridLayout(picksDocked, skillsDocked)}`}>
+				{picksDocked && (
+					<DockedPanel side="left" title="Guide picks" icon={picksIcon} onCollapse={() => dockPicks(false)}>
+						{picksBody(true)}
+					</DockedPanel>
 				)}
-				<TeamToolbar
-					leading={
-						<>
-							{/* Below xl: opens the drawer. From xl: only while the column is collapsed. */}
-							<button type="button" aria-expanded={picksDrawer} onClick={() => setPicksDrawer(true)} className={`${PICKS_BUTTON} xl:hidden`}>
-								<PanelLeftOpen className="h-4 w-4" />
-								Guide picks
-							</button>
-							{!picksDocked && (
-								<button type="button" onClick={() => dockPicks(true)} className={`${PICKS_BUTTON} hidden xl:flex`}>
+				<SideDrawer side="left" title="Guide picks" icon={picksIcon} open={picksDrawer} onClose={closePicks}>
+					{/* No dragging here: the drawer covers the slots a card would land on. */}
+					{picksBody(false)}
+				</SideDrawer>
+				<SideDrawer side="right" title="Recommended skills" icon={skillsIcon} open={skillsDrawer} onClose={closeSkills}>
+					{skillsBody}
+				</SideDrawer>
+
+				<div className="flex min-w-0 flex-col gap-3">
+					{deck && (
+						<UseDeckBanner
+							// Per team: a pending "Replace?" never follows a switch to another
+							// team. Prefixed: TeamNotes below is keyed by the bare team key, and
+							// two siblings sharing a key left a dismissed banner on screen.
+							key={`deck-${team?.key ?? "none"}`}
+							deckName={deckName}
+							spots={deckSpots}
+							newTeamBlocked={eventTeams.length >= PVP_TEAM_CAP_PER_EVENT ? `You can keep up to ${PVP_TEAM_CAP_PER_EVENT} teams for one event.` : null}
+							onUse={(position) => putDeck(members, position)}
+							onPickUma={setDeckUmaSpot}
+							onNewTeam={() => {
+								const key = createTeam(ref)
+								if (!key) return
+								setSelectedKey(key)
+								setDeckUmaSpot(0)
+							}}
+							onCancel={() => setDeckId(null)}
+						/>
+					)}
+					<TeamToolbar
+						leading={
+							<>
+								{/* Below xl: opens the drawer. From xl: only while the column is collapsed. */}
+								<button type="button" aria-expanded={picksDrawer} onClick={() => setPicksDrawer(true)} className={`${PICKS_BUTTON} xl:hidden`}>
 									<PanelLeftOpen className="h-4 w-4" />
 									Guide picks
 								</button>
-							)}
-						</>
-					}
-					trailing={
-						<>
-							{/* The same pair for the skills panel, at 2xl. */}
-							<button type="button" aria-expanded={skillsDrawer} onClick={() => setSkillsDrawer(true)} className={`${PICKS_BUTTON} 2xl:hidden`}>
-								Skills
-								<PanelRightOpen className="h-4 w-4" />
-							</button>
-							{!skillsDocked && (
-								<button type="button" onClick={() => dockSkills(true)} className={`${PICKS_BUTTON} hidden 2xl:flex`}>
+								{!picksDocked && (
+									<button type="button" onClick={() => dockPicks(true)} className={`${PICKS_BUTTON} hidden xl:flex`}>
+										<PanelLeftOpen className="h-4 w-4" />
+										Guide picks
+									</button>
+								)}
+							</>
+						}
+						trailing={
+							<>
+								{/* The same pair for the skills panel, at 2xl. */}
+								<button type="button" aria-expanded={skillsDrawer} onClick={() => setSkillsDrawer(true)} className={`${PICKS_BUTTON} 2xl:hidden`}>
 									Skills
 									<PanelRightOpen className="h-4 w-4" />
 								</button>
-							)}
-						</>
-					}
-					share={
-						// Once the team has an uma: an empty team has nothing to draw.
-						team && team.members.length > 0 ? (
-							<ShareTeamButton
-								event={event}
-								team={team}
-								umasById={index.umasById}
-								cardsById={index.cardsById}
-								veterans={mode === "account" ? veterans : undefined}
-							/>
-						) : null
-					}
-					teams={eventTeams}
-					selected={team}
-					mode={mode}
-					saveState={saveState}
-					onSelect={setSelectedKey}
-					onCreate={() => {
-						const key = createTeam(ref)
-						if (key) setSelectedKey(key)
-					}}
-					onDuplicate={() => {
-						if (!team) return
-						// The content only: the copy starts unpinned and with no gallery
-						// post, and createTeam applies the per-event cap.
-						const key = createTeam(ref, {
-							name: copyName(team, eventTeams.indexOf(team)),
-							notes: team.notes,
-							members: team.members,
-						})
-						if (key) setSelectedKey(key)
-					}}
-					onRename={(name) => team && renameTeam(team.key, name)}
-					onDelete={() => {
-						if (!team) return
-						deleteTeam(team.key)
-						setSelectedKey(null)
-					}}
-				/>
+								{!skillsDocked && (
+									<button type="button" onClick={() => dockSkills(true)} className={`${PICKS_BUTTON} hidden 2xl:flex`}>
+										Skills
+										<PanelRightOpen className="h-4 w-4" />
+									</button>
+								)}
+							</>
+						}
+						share={
+							// Once the team has an uma: an empty team has nothing to draw.
+							team && team.members.length > 0 ? (
+								<ShareTeamButton
+									event={event}
+									team={team}
+									umasById={index.umasById}
+									cardsById={index.cardsById}
+									veterans={mode === "account" ? veterans : undefined}
+								/>
+							) : null
+						}
+						teams={eventTeams}
+						selected={team}
+						mode={mode}
+						saveState={saveState}
+						onSelect={setSelectedKey}
+						onCreate={() => {
+							const key = createTeam(ref)
+							if (key) setSelectedKey(key)
+						}}
+						onDuplicate={() => {
+							if (!team) return
+							// The content only: the copy starts unpinned and with no gallery
+							// post, and createTeam applies the per-event cap.
+							const key = createTeam(ref, {
+								name: copyName(team, eventTeams.indexOf(team)),
+								notes: team.notes,
+								members: team.members,
+							})
+							if (key) setSelectedKey(key)
+						}}
+						onRename={(name) => team && renameTeam(team.key, name)}
+						onDelete={() => {
+							if (!team) return
+							deleteTeam(team.key)
+							setSelectedKey(null)
+						}}
+					/>
 
-				<TeamEditor
-					event={event}
-					members={members}
-					index={index}
-					guide={guide}
-					deal={deal}
-					veterans={mode === "account" ? veterans : undefined}
-					roster={mode === "account" ? roster : undefined}
-					onChange={applyMembers}
-				/>
-				<TeamNotes
-					// Per team, so an open note never follows a switch to another team.
-					key={team?.key ?? "none"}
-					notes={team?.notes ?? []}
-					onChange={(notes) => team && editTeam(team.key, { notes })}
-					disabledReason={team ? null : "Pick an uma first to start a team"}
-				/>
+					<TeamEditor
+						event={event}
+						members={members}
+						index={index}
+						guide={guide}
+						deal={deal}
+						veterans={mode === "account" ? veterans : undefined}
+						roster={mode === "account" ? roster : undefined}
+						onChange={applyMembers}
+					/>
+					<TeamNotes
+						// Per team, so an open note never follows a switch to another team.
+						key={team?.key ?? "none"}
+						notes={team?.notes ?? []}
+						onChange={(notes) => team && editTeam(team.key, { notes })}
+						disabledReason={team ? null : "Pick an uma first to start a team"}
+					/>
 
-				{team && mode === "account" && (
-					<GalleryPostBar
-						team={team}
-						eventHref={pvpEventHref(ref)}
-						saving={saveState === "pending" || saveState === "saving"}
-						onPublish={() => setPublishing(true)}
+					{team && mode === "account" && (
+						<GalleryPostBar
+							team={team}
+							eventHref={pvpEventHref(ref)}
+							saving={saveState === "pending" || saveState === "saving"}
+							onPublish={() => setPublishing(true)}
+						/>
+					)}
+					{publishing && team?.id != null && (
+						<PublishDialog
+							teamId={team.id}
+							displayName={account?.display_name ?? ""}
+							replacing={eventTeams.some((candidate) => candidate.post)}
+							ownPost={team.post ?? null}
+							onPosted={(post) => setTeamPost(team.key, post.public_id)}
+							onClose={() => setPublishing(false)}
+						/>
+					)}
+
+					{guide && (
+						<p className="flex items-center gap-1.5 text-xs text-gray-500">
+							<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
+							Recommended by this event's guide for that running style.
+						</p>
+					)}
+					{mode === "guest" && (
+						<p className="text-xs text-gray-400">
+							Your teams are saved on this device.{" "}
+							<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
+								Sign in
+							</Link>{" "}
+							to keep them on every device.
+						</p>
+					)}
+				</div>
+
+				{skillsDocked && (
+					<DockedPanel side="right" title="Recommended skills" icon={skillsIcon} onCollapse={() => dockSkills(false)}>
+						{skillsBody}
+					</DockedPanel>
+				)}
+
+				{deck && deckUmaSpot !== null && (
+					<PvpCardPicker
+						title={`An uma for the ${deckName}, spot ${deckUmaSpot + 1}`}
+						skillsById={index.skillsById}
+						event={event}
+						style={deckStyle ?? null}
+						selectedId={null}
+						pool="uma"
+						items={index.catalogue.umas}
+						owned={ownedForPicker(mode === "account" ? roster : undefined, "uma")}
+						place="uma"
+						recommended={recommendedIds(guide, deckStyle ?? "front").umas}
+						noteFor={(id) => releaseNote(releaseFor("uma", id))}
+						blockReason={(id) => {
+							const candidate = index.umasById.get(id)
+							if (!candidate) return null
+							return releaseBlockReason(releaseFor("uma", id)) ?? umaBlockReason(members, deckUmaSpot, candidate, index)
+						}}
+						onPick={(id) => {
+							const uma = index.umasById.get(id)
+							if (!uma) return
+							const position = deckUmaSpot
+							setDeckUmaSpot(null)
+							putDeck(setMemberUma(members, position, uma, deckStyle), position)
+						}}
+						onClose={() => setDeckUmaSpot(null)}
 					/>
 				)}
-				{publishing && team?.id != null && (
-					<PublishDialog
-						teamId={team.id}
-						displayName={account?.display_name ?? ""}
-						replacing={eventTeams.some((candidate) => candidate.post)}
-						ownPost={team.post ?? null}
-						onPosted={(post) => setTeamPost(team.key, post.public_id)}
-						onClose={() => setPublishing(false)}
-					/>
-				)}
 
-				{guide && (
-					<p className="flex items-center gap-1.5 text-xs text-gray-500">
-						<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
-						Recommended by this event's guide for that running style.
-					</p>
-				)}
-				{mode === "guest" && (
-					<p className="text-xs text-gray-400">
-						Your teams are saved on this device.{" "}
-						<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
-							Sign in
-						</Link>{" "}
-						to keep them on every device.
-					</p>
+				{skillSearch && (
+					<SkillSearchPicker
+						target={skillSearch}
+						onTab={(tab) => setSkillSearch({ ...skillSearch, tab })}
+						index={index}
+						event={event}
+						member={searchMember}
+						releaseFor={releaseFor}
+						members={members}
+						style={searchStyle}
+						recommended={recommendedIds(guide, searchStyle ?? "front")}
+						onPickUma={(uma) => {
+							applyMembers(setMemberUma(members, skillSearch.position, uma))
+							setSkillSearch(null)
+						}}
+						onPickCard={(slot, id) => {
+							applyMembers(setCard(members, skillSearch.position, slot, id))
+							setSkillSearch(null)
+						}}
+						onClose={() => setSkillSearch(null)}
+					/>
 				)}
 			</div>
-
-			{skillsDocked && (
-				<DockedPanel side="right" title="Recommended skills" icon={skillsIcon} onCollapse={() => dockSkills(false)}>
-					{skillsBody}
-				</DockedPanel>
-			)}
-
-			{deck && deckUmaSpot !== null && (
-				<PvpCardPicker
-					title={`An uma for the ${deckName}, spot ${deckUmaSpot + 1}`}
-					skillsById={index.skillsById}
-					event={event}
-					style={deckStyle ?? null}
-					selectedId={null}
-					pool="uma"
-					items={index.catalogue.umas}
-					owned={ownedForPicker(mode === "account" ? roster : undefined, "uma")}
-					place="uma"
-					recommended={recommendedIds(guide, deckStyle ?? "front").umas}
-					noteFor={(id) => releaseNote(releaseFor("uma", id))}
-					blockReason={(id) => {
-						const candidate = index.umasById.get(id)
-						if (!candidate) return null
-						return releaseBlockReason(releaseFor("uma", id)) ?? umaBlockReason(members, deckUmaSpot, candidate, index)
-					}}
-					onPick={(id) => {
-						const uma = index.umasById.get(id)
-						if (!uma) return
-						const position = deckUmaSpot
-						setDeckUmaSpot(null)
-						putDeck(setMemberUma(members, position, uma, deckStyle), position)
-					}}
-					onClose={() => setDeckUmaSpot(null)}
-				/>
-			)}
-
-			{skillSearch && (
-				<SkillSearchPicker
-					target={skillSearch}
-					onTab={(tab) => setSkillSearch({ ...skillSearch, tab })}
-					index={index}
-					event={event}
-					member={searchMember}
-					releaseFor={releaseFor}
-					members={members}
-					style={searchStyle}
-					recommended={recommendedIds(guide, searchStyle ?? "front")}
-					onPickUma={(uma) => {
-						applyMembers(setMemberUma(members, skillSearch.position, uma))
-						setSkillSearch(null)
-					}}
-					onPickCard={(slot, id) => {
-						applyMembers(setCard(members, skillSearch.position, slot, id))
-						setSkillSearch(null)
-					}}
-					onClose={() => setSkillSearch(null)}
-				/>
-			)}
-		</div>
+		</CardDragProvider>
 	)
 }
 
