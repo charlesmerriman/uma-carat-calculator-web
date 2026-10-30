@@ -1,4 +1,6 @@
-import { useState, type ReactNode } from "react"
+import type { ReactNode } from "react"
+import { useRememberedOpen } from "../../hooks/useRememberedOpen"
+import { incomeStartsOpenOnPhone } from "../../utils/incomePanel"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import NumberFlow from "@number-flow/react"
@@ -325,13 +327,18 @@ export const IncomeForm = () => {
 
 	// Open by default on desktop, collapsed on mobile — this panel is roughly a
 	// screen and a half tall on a phone, and the banner sheet below it is what
-	// most visits are actually for.
+	// most visits are actually for. The exception is a player who has picked no
+	// ranks yet: the numbers below mean little until they do, so it starts open.
+	// Once toggled it stays that way until a reload (useRememberedOpen).
 	//
 	// The breakpoint is read ONCE in the lazy initializer rather than subscribed
 	// to with a matchMedia listener: the default is a first-paint concern only.
 	// A live listener would re-force open/closed on every crossing of 767px,
 	// overriding whatever the user had toggled mid-session.
-	const [isOpen, setIsOpen] = useState(() => (typeof window !== "undefined" ? !window.matchMedia("(max-width: 767px)").matches : true))
+	const [isOpen, setIsOpen] = useRememberedOpen("income-panel", () => {
+		if (typeof window === "undefined" || !window.matchMedia("(max-width: 767px)").matches) return true
+		return incomeStartsOpenOnPhone(userStatsData)
+	})
 
 	if (!userStatsData) return null
 

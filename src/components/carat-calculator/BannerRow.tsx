@@ -9,7 +9,8 @@ import type {
 	BannerStepUp,
 	UserStepUpSelection
 } from "../../types"
-import React, { useState } from "react"
+import React from "react"
+import { useRememberedOpen } from "../../hooks/useRememberedOpen"
 import { Link } from "react-router-dom"
 import { BannerNoteButton, BannerNoteEditor } from "./BannerNote"
 import { RowOptionsPanel } from "./RowOptionsPanel"
@@ -387,8 +388,10 @@ export const BannerRow = ({
 						)
 
 	// Open/closed is view state, like the note's: it is not part of the plan and
-	// must not trigger a save. One flag drives both form factors.
-	const [oddsPanelOpen, setOddsPanelOpen] = useState(false)
+	// must not trigger a save. One flag drives both form factors. Remembered per
+	// banner until a reload, so a trip to another page doesn't fold it away.
+	const viewKey = hasBanner ? `${target.type}-${target.banner.id}` : null
+	const [oddsPanelOpen, setOddsPanelOpen] = useRememberedOpen(viewKey && `odds-${viewKey}`)
 
 	// Only a banner with a choice to make gets the control. On a one-card
 	// banner the strip stays exactly as it always was.
@@ -650,10 +653,10 @@ export const BannerRow = ({
 	const countLabel = isStepUp ? "Number of steps" : "Number of pulls"
 
 	// --- Note ---
-	// Open/closed is view state and stays local: it is not part of the plan and
-	// must not trigger a save. One flag drives both form factors, since only one
-	// of the card and the table row is ever visible.
-	const [noteOpen, setNoteOpen] = useState(false)
+	// Open/closed is view state: it is not part of the plan and must not trigger
+	// a save. One flag drives both form factors, since only one of the card and
+	// the table row is ever visible.
+	const [noteOpen, setNoteOpen] = useRememberedOpen(viewKey && `note-${viewKey}`)
 	const note = plannedBanner.note ?? ""
 
 	const handleNoteCommit = (nextNote: string): void => {

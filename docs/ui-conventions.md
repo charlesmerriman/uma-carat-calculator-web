@@ -2309,6 +2309,16 @@ Campaign chrome is keyed off the backend's `event_type` tag (`anniversary` / `ne
 USD deliberately: the sheet's prices are US store prices, and rendering them as €70 would
 present a converted figure nobody computed.
 
+## What survives a page change
+
+Until a reload, on purpose: a reload is the quick way back to the defaults (Daptrius, 2026-10-30).
+`hooks/useRememberedOpen.ts` keeps panels open or closed: the Income panel, a row's odds and note
+panels (per banner, in both layouts), and a planner band's "Show N more". The team pickers keep
+their filters the same way. `hooks/useScrollReset.ts` keeps each page's scroll: a link back to a page
+restores its place, unless the link names something else on it (another event, `?focus=`), which
+starts fresh. A restore retries for about a second and a half while the page lays out, and any
+reader input ends it. The Income panel starts closed on a phone unless no rank is picked yet.
+
 ## Testing note
 
 `Timeline.test.tsx` installs a fake `IntersectionObserver` via `vi.hoisted` — it has to

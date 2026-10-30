@@ -37,6 +37,17 @@ function tones(container: HTMLElement): string[] {
 	})
 }
 
+describe('PlannerSectionBand after a page change', () => {
+	it('stays unfolded until a reload', () => {
+		const markers = [1, 2, 3, 4].map((n) => marker(`s${n}`, 'scenario', `S${n}`, `2026-0${n}-01T00:00:00Z`))
+		const band = () => render(<MemoryRouter><PlannerSectionBand markers={markers} /></MemoryRouter>)
+		const first = band()
+		fireEvent.click(first.getByRole('button', { name: /Show 3 more/ }))
+		first.unmount()
+		expect(band().getByRole('button', { name: /Show fewer/ })).toBeTruthy()
+	})
+})
+
 describe('PlannerSectionBand strip fills', () => {
 	it('gives two markers on the same date the same fill', () => {
 		const { container } = render(
