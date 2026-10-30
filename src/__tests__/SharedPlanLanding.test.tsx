@@ -145,6 +145,16 @@ describe('SharedPlanLanding', () => {
 		expect(screen.getByText('Spark her')).toBeInTheDocument()
 	})
 
+	it('counts a step-up row in steps', async () => {
+		const stepUp = { id: 500, name: 'Step-up banner', image: null, banner_timeline: { start_date: '2099-01-01T12:00:00Z', end_date: '2099-01-10T12:00:00Z' } }
+		mockedSummary.mockResolvedValue(
+			json({ ...SUMMARY, rows: [{ banner_uma: null, banner_support: null, banner_step_up: 500, number_of_pulls: 4, reserved_copies: 0 }] })
+		)
+		renderCard({ stepUpBannerData: [stepUp] } as unknown as Partial<CalculatorContextType>)
+
+		expect(await screen.findByText('4 steps · your max 0')).toBeInTheDocument()
+	})
+
 	it('leaves the counts off on an API that sends ids alone', async () => {
 		mockedSummary.mockResolvedValue(
 			new Response(JSON.stringify({ ...SUMMARY, rows: [{ banner_uma: 100, banner_support: null, banner_step_up: null }] }))
