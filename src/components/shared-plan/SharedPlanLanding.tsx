@@ -12,6 +12,7 @@ import { plannedBannerTarget, plannedPulls, plannedSteps } from "../../utils/ban
 import type { BannerRowType, PlannedBannerTarget } from "../../utils/bannerHelpers"
 import { bannerRowFigures } from "../../utils/bannerRowFigures"
 import { formatDate } from "../../utils/dateFormat"
+import { planTotalsLine, plural } from "../../utils/planTotals"
 import { BannerTypeIcon } from "../carat-calculator/BannerTypeBadge"
 import { OguriSpinner } from "../OguriSpinner"
 import { FramedUma } from "../FramedUma"
@@ -66,20 +67,6 @@ type SummaryState =
 	| { status: "notFound" }
 	| { status: "error" }
 	| { status: "ready"; summary: SharedPlanSummary }
-
-const plural = (count: number, one: string, many: string): string =>
-	`${count.toLocaleString()} ${count === 1 ? one : many}`
-
-/** "230 pulls", "230 pulls, 6 steps", or "6 steps" for a plan of only
- * step-ups. A step-up row counts steps, never pulls (plannedSteps()), and the
- * server sums the two apart. */
-const totalsLine = (pulls: number, steps: number): string =>
-	[
-		(pulls > 0 || steps === 0) && plural(pulls, "pull", "pulls"),
-		steps > 0 && plural(steps, "step", "steps")
-	]
-		.filter(Boolean)
-		.join(", ")
 
 const copiedLine = (count: number): string =>
 	count === 0 ? "Not copied yet" : count === 1 ? "Copied once" : `Copied ${count} times`
@@ -529,7 +516,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 						plural(summary.row_count, "banner", "banners"),
 						// Absent from an API older than the link preview (dev:live
 						// against prod before the release), so the line just skips them.
-						summary.pull_count !== undefined && totalsLine(summary.pull_count, summary.step_count ?? 0),
+						summary.pull_count !== undefined && planTotalsLine(summary.pull_count, summary.step_count ?? 0),
 						`Updated ${formatDate(summary.updated_at.slice(0, 10))}`,
 						copiedLine(summary.copy_count),
 						includes

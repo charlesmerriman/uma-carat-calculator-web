@@ -8,7 +8,7 @@
  * {"error": "<one sentence>"}, written for the player; refusalText reads it.
  */
 import { authHeaders } from "./authToken"
-import type { GalleryReportReason, GallerySort, VoteChoice } from "../types/gallery"
+import type { GalleryReportReason, GallerySort, ProfileCardTarget, VoteChoice } from "../types/gallery"
 import type { PvpEventRef } from "../utils/pvpEvent"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -45,6 +45,11 @@ export async function refusal(response: Response, fallback: string): Promise<{ t
 	} catch {
 		return { text: fallback, field: null }
 	}
+}
+
+/** A person's card, from a post of theirs or a comment. */
+export function profileCardFetch(target: ProfileCardTarget): Promise<Response> {
+	return fetch(`${API_URL}/profile-cards/${target.kind}/${target.id}`, { method: "GET", headers: jsonHeaders() })
 }
 
 export function pvpTeamPublish(teamId: number, caption: string, strategy: string): Promise<Response> {

@@ -1955,6 +1955,12 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
 
 ### Gallery view (`components/pvp/gallery/`)
 
+**The profile card** (`ProfileCard.tsx`, on `GalleryModal`): `PosterLine` takes a `card` target, and
+the picture and name then open it. The open post and comments pass one; the feed doesn't, because
+its whole row is a link to the post. It's reached through a post or comment, since a person has no
+public address, and it shows their favorites, other teams and (if they opted in) shared plans. The
+name and tier come from the line it opened on.
+
 Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gallery/<kind>/<id>`
 (`backend/docs/api-reference.md`, "Gallery").
 
