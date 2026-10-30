@@ -108,8 +108,8 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							A display name, if you choose one on your account page. It is shown to you,
-							and to everyone else only next to a team or comment you post in the PvP
-							gallery, or a comment you leave on a PvP guide (see below). You can change it whenever you like, and clear it once
+							and to everyone else next to a team or comment you post in the PvP gallery, on a
+							comment you leave on a PvP guide, and on your profile card (see below). You can change it whenever you like, and clear it once
 							you have no team posted.
 						</li>
 						<li>
@@ -165,6 +165,11 @@ export const PrivacyPolicy: React.FC = () => {
 						leave it switched on, your tier. The same shows next to any comment you write, on a
 						team or on a PvP guide. A thumbs-up you give a comment only adds to its count: nobody
 						can see who gave it.
+					</p>
+					<p className={paragraph}>
+						Anyone who can see your post or comment can open your profile card. It shows the same
+						name, picture and tier, your favorite characters and your other gallery posts. It lists
+						your shared plans only if you turn that on in your account.
 					</p>
 					<ul className={list}>
 						<li>
@@ -251,7 +256,7 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							<strong>Showing what you post in the gallery</strong> (your team, caption, strategy,
-							comments, display name, picture and tier). Basis: <strong>your consent</strong>,
+							comments, display name, picture and tier, and your profile card). Basis: <strong>your consent</strong>,
 							Article 6(1)(a), given when you post. You withdraw it by taking the post down or
 							deleting the comment.
 						</li>

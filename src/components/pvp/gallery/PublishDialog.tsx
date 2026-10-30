@@ -132,7 +132,8 @@ function PublishForm({ teamId, displayName, replacing, onPosted, onClose, initia
 			<p>
 				Everyone who opens the gallery will see this team with your display name,{" "}
 				<span className="font-semibold text-gray-100">{displayName}</span>, your favorite uma picture and,
-				if you support us on Patreon, your tier. You can take it down any time.
+				if you support us on Patreon, your tier. Your name opens your profile card, with your favorites
+				and other teams. You can take it down any time.
 			</p>
 			{replacing && (
 				<p className="rounded-lg border border-gray-600 bg-gray-900/60 p-3">

@@ -408,6 +408,20 @@ const AccountDetails: React.FC<DetailsProps> = ({ account, refresh, signOut }) =
 						{savingName ? "Saving…" : "Save"}
 					</button>
 				</form>
+				{/* Here rather than with the tier's switch: that card is supporters' only. */}
+				<div className="mt-4 flex items-center justify-between gap-3">
+					<span className="text-sm text-gray-300">Show my shared plans on my profile card</span>
+					<ToggleSwitch
+						checked={account.show_shared_plans_on_card ?? false}
+						ariaLabel="Show my shared plans on my profile card"
+						onChange={(checked) =>
+							void savePreferences(
+								{ show_shared_plans_on_card: checked },
+								checked ? "Your shared plans show on your profile card." : "Your shared plans are off your profile card."
+							)
+						}
+					/>
+				</div>
 			</section>
 
 			{/* Favorites: one tile per covered slot (everyone has at least one),

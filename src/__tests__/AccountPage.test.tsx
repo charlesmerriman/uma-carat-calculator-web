@@ -593,6 +593,16 @@ describe('AccountPage gallery', () => {
 		expect(mockedTakeDown).toHaveBeenCalledWith('k3Df8aQ2')
 	})
 
+	it('offers every account the shared plans switch, off to start', async () => {
+		mockedPatch.mockResolvedValue(response(200, {}))
+		signedIn(account())
+		renderPage()
+		const toggle = screen.getByRole('checkbox', { name: 'Show my shared plans on my profile card' })
+		expect(toggle).not.toBeChecked()
+		fireEvent.click(toggle)
+		await waitFor(() => expect(mockedPatch).toHaveBeenCalledWith({ show_shared_plans_on_card: true }))
+	})
+
 	it('lets a supporter hide their tier in the gallery', async () => {
 		mockedPatch.mockResolvedValue(response(200, {}))
 		signedIn(account({ supporter: { is_supporter: true, tier: 'Junior Class', benefits: [] } }))

@@ -76,6 +76,11 @@ export interface Account {
 	 */
 	show_supporter_badge: boolean
 	/**
+	 * Whether their shared plans are listed on their profile card. Their own
+	 * switch, off until they turn it on. Absent from an older API.
+	 */
+	show_shared_plans_on_card?: boolean
+	/**
 	 * The picture for the navbar, chosen by the server: the first oshi's art,
 	 * or `null` until they have picked one. Null rather than "" so a component
 	 * branches to its default instead of trying to load an empty `src`. No
@@ -137,6 +142,7 @@ export interface AccountPreferencesPatch {
 	display_name?: string
 	oshis?: number[]
 	show_supporter_badge?: boolean
+	show_shared_plans_on_card?: boolean
 }
 
 /**
