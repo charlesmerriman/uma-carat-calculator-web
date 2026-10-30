@@ -1000,7 +1000,7 @@ describe("PvpGuidePage comments", () => {
 		count: 1, page: 1, has_more: false,
 		results: [{
 			id: 5, state: "visible", body: "Why Seiun first?", created_at: "2026-10-11T00:00:00Z", edited: false,
-			earlier_version: false, is_author: false, is_mine: false, upvotes: 2, my_vote: false, replies: [],
+			earlier_version: false, is_author: false, is_mine: false, score: 2, my_vote: null, replies: [],
 			poster: { display_name: "Trainer", portrait: null, tier_name: null, gallery_style: null },
 		}],
 	}
@@ -1023,8 +1023,8 @@ describe("PvpGuidePage comments", () => {
 		expect(await screen.findByText("Why Seiun first?")).toBeInTheDocument()
 		const asked = fetchMock.mock.calls.map(([url]) => String(url)).find((url) => url.includes("/comments"))
 		expect(asked).toContain(`/pvp-guides/cm/${NEXT.id}/comments?section=front`)
-		// The thumbs-up count shows; a guest has nothing to press.
-		expect(screen.getByLabelText("2 thumbs-up")).toBeInTheDocument()
+		// The score shows; a guest has nothing to press.
+		expect(screen.getByLabelText("Score 2")).toBeInTheDocument()
 	})
 
 	it("keeps a thread for the whole guide in the side column", async () => {
