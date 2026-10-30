@@ -5,7 +5,7 @@ import { useCalculatorData } from "../../services/CalculatorContext"
 import { sharedPlanSummaryFetch } from "../../services/planFetchCalls"
 import { statsAreDirty } from "../../services/guestMigration"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
-import type { SharedPlanSummary } from "../../types"
+import type { Plan, SharedPlanSummary } from "../../types"
 import { plannedBannerTarget } from "../../utils/bannerHelpers"
 import type { BannerRowType, PlannedBannerTarget } from "../../utils/bannerHelpers"
 import { formatDate } from "../../utils/dateFormat"
@@ -136,6 +136,49 @@ const BannerLine = ({ target }: { target: Exclude<PlannedBannerTarget, { type: "
 	)
 }
 
+/**
+ * At the plan cap, the plans themselves with a delete on each, so making room
+ * for a copy doesn't mean leaving the link (and finding it again). A delete
+ * can't be undone, so each asks once. Buttons are type="button": this sits
+ * inside the copy form.
+ */
+const MakeRoom = ({ plans, disabled, onDelete }: { plans: Plan[]; disabled: boolean; onDelete: (planId: number) => void }) => {
+	const [confirmingId, setConfirmingId] = useState<number | null>(null)
+	return (
+		<div className="mt-3">
+			<p className="text-sm text-gray-400">You're at the {PLAN_CAP}-plan limit. Delete one to make room.</p>
+			<ul className="mt-2 flex flex-col gap-1.5" aria-label="Your plans">
+				{plans.map((plan) => (
+					<li key={plan.id} className="flex items-center justify-between gap-3 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-1.5">
+						<span className="min-w-0 truncate text-sm text-gray-100">{plan.name}</span>
+						{confirmingId === plan.id ? (
+							<span className="flex shrink-0 items-center gap-2">
+								<span className="text-xs text-gray-400">Delete for good?</span>
+								<button type="button" disabled={disabled} onClick={() => onDelete(plan.id)} className="text-sm font-semibold text-red-400 transition hover:text-red-300 disabled:opacity-50">
+									Yes, delete
+								</button>
+								<button type="button" onClick={() => setConfirmingId(null)} className="text-sm text-gray-400 transition hover:text-gray-100">
+									Keep
+								</button>
+							</span>
+						) : (
+							<button
+								type="button"
+								aria-label={`Delete ${plan.name}`}
+								disabled={disabled}
+								onClick={() => setConfirmingId(plan.id)}
+								className="shrink-0 text-sm text-gray-400 transition hover:text-gray-100 disabled:opacity-50"
+							>
+								Delete
+							</button>
+						)}
+					</li>
+				))}
+			</ul>
+		</div>
+	)
+}
+
 export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	const {
 		umaBannerData,
@@ -148,6 +191,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 		userPlannedPurchaseData,
 		userStatsData,
 		copySharedPlan,
+		deletePlan,
 		switchPlan
 	} = useCalculatorData()
 	const navigate = useNavigate()
@@ -338,11 +382,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 					</label>
 				)}
 
-				{atCap && (
-					<p className="mt-3 text-sm text-gray-400">
-						You're at the {PLAN_CAP}-plan limit. Delete one first.
-					</p>
-				)}
+				{atCap && <MakeRoom plans={plans} disabled={isPlanBusy} onDelete={(planId) => void deletePlan(planId)} />}
 
 				{confirmingReplace ? (
 					<div className="mt-4 rounded-lg border border-gray-700 bg-gray-800/50 p-4">
