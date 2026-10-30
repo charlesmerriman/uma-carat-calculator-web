@@ -164,6 +164,15 @@ describe('buildEligibleCardCatalogue', () => {
     expect(cards).toEqual([])
   })
 
+  it("never reads a card's Global release date, only its JP date", () => {
+    // The Collection's sort dates welfare cards from the game (released_at).
+    // Their unknown JP date is what keeps them out of selectors.
+    const welfare = { ...makeSupport('Welfare SSR', null), released_at: '2025-08-01T00:00:00Z' }
+    const known = makeSupport('Known', '2025-08-01T22:00:00Z')
+    const cards = build('support', '2026-01-01', [], [supportBanner('Debut', [welfare, known])])
+    expect(cards.map((c) => c.label)).toEqual(['Known'])
+  })
+
   it('admits everything, unknown dates included, when the cutoff is null', () => {
     const cards = build('uma', null, [
       umaBanner('Debut', [makeUma('Unknown', null), makeUma('Known', '2024-01-01')]),

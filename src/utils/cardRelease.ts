@@ -25,6 +25,7 @@
  */
 
 import type { BannerSupport, BannerUma, RaceEvent } from "../types"
+import type { CatalogueSupportCard } from "../types/pvpTeam"
 import { formatDate, parseApiDate } from "./dateFormat"
 
 export type ReleaseStatus =
@@ -60,6 +61,31 @@ export function cardReleases(umaBanners: BannerUma[], supportBanners: BannerSupp
 			supportBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.support_cards }))
 		),
 	}
+}
+
+/**
+ * A support card's date for the Collection's Release date sort: its first
+ * banner, else the game's own date, which is how a welfare SSR, SR or R gets one.
+ *
+ * ONLY THE COLLECTION'S SORT. A selector judges cards on `first_jp_date`, and a
+ * card on no banner being unknown there keeps it out of every selector
+ * (.claude/rules/selectors.md). `cardReleases` above feeds the PvP picker's
+ * release check, and stays banners only too (owner, 2026-10-30).
+ */
+export function collectionCardRelease(
+	card: Pick<CatalogueSupportCard, "id" | "released_at">,
+	releases: ReadonlyMap<number, number>
+): number | undefined {
+	return releases.get(card.id) ?? (card.released_at ? parseApiDate(card.released_at)?.getTime() : undefined)
+}
+
+/**
+ * The first banner of all, Global's launch. The game gives umas no date, and the
+ * Global umas on no banner are the launch roster (owner, 2026-10-30), so the
+ * Collection's sort dates them here.
+ */
+export function earliestRelease(releases: ReadonlyMap<number, number>): number | undefined {
+	return releases.size ? Math.min(...releases.values()) : undefined
 }
 
 /**
