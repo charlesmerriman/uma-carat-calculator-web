@@ -32,6 +32,7 @@
  */
 
 import { parseApiDate } from "./dateFormat"
+import { refForRaceEvent } from "./pvpEvent"
 import type { CalculationConstants, RaceEvent } from "../types"
 import type { PvpRun, PvpRunContent, PvpRunRace, PvpRunRunner, PvpRunSlot } from "../types/pvpRun"
 import type { PvpTeamMember } from "../types/pvpTeam"
@@ -307,6 +308,74 @@ export function runsOf(runs: PvpRun[], filter: { round?: number; day?: number })
 export function bestTicketWins(runs: PvpRun[], round: number): number | null {
 	const raced = runsOf(runs, { round }).filter((run) => run.races.length > 0)
 	return raced.length ? Math.max(...raced.map((run) => tallyRun(run).wins)) : null
+}
+
+// ── History (the Collection's CM history tab) ───────────────────────────
+
+/** One event's line in the history. The counting is the CM Runs view's. */
+export interface EventHistory {
+	event: RaceEvent
+	runs: PvpRun[]
+	/** Days 1 to 4 (every day, for LoH), as the CM Runs view counts them. */
+	total: Tally
+	/** Each uma (each veteran) that raced, most races first. */
+	umas: UmaTally[]
+	final: PvpRun | undefined
+}
+
+/**
+ * The runs grouped by event, newest event first. `events` is every event in
+ * date order (raceEventsInOrder); a run whose event isn't in it (removed in
+ * the admin) is left out. An event shows once anything was logged, even a
+ * skipped ticket.
+ */
+export function eventHistory(runs: PvpRun[], events: RaceEvent[]): EventHistory[] {
+	const byEvent = new Map<string, PvpRun[]>()
+	for (const run of runs) {
+		const key = `${run.kind}-${run.event}`
+		byEvent.set(key, [...(byEvent.get(key) ?? []), run])
+	}
+	const history: EventHistory[] = []
+	for (const event of [...events].reverse()) {
+		const ref = refForRaceEvent(event)
+		const own = byEvent.get(`${ref.kind}-${ref.id}`)
+		if (!own) continue
+		const { total, umas } = summarizeRuns(runsOf(own, {}))
+		history.push({ event, runs: own, total, umas: umas.filter((tally) => tally.raced > 0), final: findRun(own, { stage: "final" }) })
+	}
+	return history
+}
+
+export interface VeteranRecord extends Tally {
+	trained_uma: number
+	uma: number
+	/** How many events she raced in. */
+	events: number
+}
+
+/**
+ * Each linked veteran's record across every event ("which of my Oguris wins
+ * most"): the same counting as one event's, over every day ticket. Best win
+ * rate first, then most races. Runners with no veteran linked are left out:
+ * the event rows already count them.
+ */
+export function veteranRecords(runs: PvpRun[]): VeteranRecord[] {
+	const dayRuns = runsOf(runs, {})
+	const events = new Map<number, Set<string>>()
+	for (const run of dayRuns) {
+		if (!run.races.length) continue
+		for (const runner of run.runners) {
+			if (runner.trained_uma == null) continue
+			const seen = events.get(runner.trained_uma) ?? new Set<string>()
+			seen.add(`${run.kind}-${run.event}`)
+			events.set(runner.trained_uma, seen)
+		}
+	}
+	const rate = (tally: Tally) => (tally.raced ? tally.wins / tally.raced : 0)
+	return summarizeRuns(dayRuns)
+		.umas.filter((tally): tally is UmaTally & { trained_uma: number } => tally.trained_uma !== null && tally.raced > 0)
+		.map((tally) => ({ ...tally, events: events.get(tally.trained_uma)?.size ?? 0 }))
+		.sort((a, b) => rate(b) - rate(a) || b.raced - a.raced)
 }
 
 /** "75%", or an en dash when nothing was raced. Whole percent, rounded. */

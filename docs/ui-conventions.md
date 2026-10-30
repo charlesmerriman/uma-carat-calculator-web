@@ -819,13 +819,21 @@ with the server's reason toasted ("Your tier covers 3 favorites.").
 ## Collection page (`components/collection/`)
 
 `/app/collection`: everything confirmed about the player's own game account (owner,
-2026-10-26; `notes/pvp-planner-plan.md`, R2, "The Collection"). Three tabs, `?tab=`
-(`veterans` by default, `umas`, `cards`): **Veterans** (umas they finished training),
-**Umas** and **Support cards** (what they own, `RosterGrids.tsx`). Each tab is a card with
-its count (veterans; owned of the Global umas or cards, with a bar). "Import from the game"
+2026-10-26; `notes/pvp-planner-plan.md`, R2, "The Collection"). Four tabs, `?tab=`
+(`veterans` by default, `umas`, `cards`, `history`): **Veterans** (umas they finished
+training), **Umas** and **Support cards** (what they own, `RosterGrids.tsx`), and **CM
+history** (`CmHistoryTab.tsx`). Each tab is a card with its count (veterans; owned of the
+Global umas or cards, with a bar; events with runs logged). "Import from the game"
 sits in the header: one import fills all three. The page is `max-w-7xl` (1280px) since the
 redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mockup's link).
 
+- **CM history** (`CmHistoryTab.tsx`, `GET /pvp-runs`): read only. One card per event with
+  runs logged, newest first (win rate, tickets used, each round's best ticket and the Finals
+  on a CM, the umas that raced), linking to its CM Runs tab; beside it, each linked veteran's
+  record across every event, best rate first, linking to her card. The counting is CM
+  Runs' own (`eventHistory` / `veteranRecords` in `utils/pvpRuns.ts`, over `summarizeRuns`),
+  so the numbers match: days make the win rate, the Finals race counts on its own. A save in
+  CM Runs marks the history stale (`useSaveRun`).
 - **The Umas and Support cards grids** (`RosterGrids.tsx`): every Global uma or card as a
   tile (JP-only ones are not offered), its state ON the art: an uma's stars and potential, a
   card's limit break pips (MLB) and spare copies (`.art-badge`, fixed colours over the art).

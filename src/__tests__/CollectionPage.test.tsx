@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
+import type { PvpRun } from "../types/pvpRun"
 import type { Roster } from "../types/roster"
 import type { TrainedUma, VeteranDetail } from "../types/trainedUma"
 
@@ -58,6 +59,10 @@ vi.mock("../services/CalculatorContext", () => ({
 			{ banner_timeline: { start_date: "2026-01-01T00:00:00Z" }, umas: [{ id: 42 }] },
 		],
 		supportBannerData: [],
+		championsMeetingData: [
+			{ id: 21, event_type: "champions_meeting", name: "Champions Meeting 21 Capricorn Cup", start_date: "2026-10-31T22:00:00Z", end_date: "2026-11-05T22:00:00Z" },
+		],
+		leagueOfHeroesData: [],
 	}),
 }))
 
@@ -68,6 +73,7 @@ let stored: TrainedUma[] = []
 /** What GET /trained-umas/<id> adds to a stored veteran: her raw game data and spark names. */
 let details: Record<number, Partial<Pick<VeteranDetail, "game_data" | "sparks">>> = {}
 let roster: Roster = { umas: [], support_cards: [] }
+let runs: PvpRun[] = []
 
 /** Every request as the mock received it, bodies parsed (and unzipped). */
 let sent: Array<{ method: string; path: string; body: unknown }> = []
@@ -104,12 +110,14 @@ beforeEach(() => {
 	stored = []
 	details = {}
 	roster = { umas: [], support_cards: [] }
+	runs = []
 	sent = []
 	fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET"
 		const path = new URL(String(url), "http://api").pathname
 		const body = await readBody(init)
 		sent.push({ method, path, body })
+		if (path === "/pvp-runs") return new Response(JSON.stringify(runs), { status: 200 })
 		if (path === "/roster" && method === "GET") return new Response(JSON.stringify(roster), { status: 200 })
 		if (path === "/roster" && method === "PATCH") return new Response(JSON.stringify(roster), { status: 200 })
 		if (path.startsWith("/roster/") && method === "DELETE") {
@@ -170,6 +178,33 @@ describe("who sees what", () => {
 		expect(card.getByRole("heading", { name: "Oguri Cap" })).toBeInTheDocument()
 		expect(card.getByText("From the game")).toBeInTheDocument()
 		expect(card.getByText("Main Oguri")).toBeInTheDocument()
+	})
+})
+
+describe("the CM history tab", () => {
+	const day = (ticket: number, winners: Array<number | null>): PvpRun => ({
+		kind: "cm", event: 21, stage: "day", day: 1, ticket, finals_group: "", placement: null, note: "", skipped: false,
+		updated_at: "2026-11-01T00:00:00Z",
+		runners: [{ position: 0, uma: 41, style: "pace", trained_uma: 1 }, { position: 1, uma: 42, style: "front" }],
+		races: winners.map((winner, index) => ({ race: index + 1, winner })),
+	})
+
+	it("shows each event's numbers and each veteran's record, linked to her", async () => {
+		stored = [veteran(1, { label: "Main Oguri" })]
+		runs = [day(1, [0, 0, 1, null]), { ...day(1, [0]), stage: "final", day: null, ticket: null, placement: 1, finals_group: "A" }]
+		show("/app/collection?tab=history")
+		expect(await screen.findByRole("heading", { name: "Capricorn Cup" })).toBeInTheDocument()
+		expect(screen.getByText("3 of 4 races")).toBeInTheDocument()
+		expect(screen.getByText("1st")).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "Open in CM Runs" })).toHaveAttribute("href", "/app/pvp?event=cm-21&view=runs")
+		expect(screen.getByRole("link", { name: /Main Oguri/ })).toHaveAttribute("href", "/app/collection?veteran=1")
+		expect(screen.getByText("2 of 4 races in 1 event")).toBeInTheDocument()
+		expect(screen.getByRole("tab", { name: /CM history/ })).toHaveTextContent("1")
+	})
+
+	it("points to CM Runs when nothing is logged", async () => {
+		show("/app/collection?tab=history")
+		expect(await screen.findByText(/Nothing logged yet/)).toBeInTheDocument()
 	})
 })
 

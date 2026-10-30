@@ -23,7 +23,7 @@
 
 import { useCallback } from "react"
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { pvpRunDelete, pvpRunPut, pvpRunsFetch } from "./pvpRunFetchCalls"
+import { pvpRunDelete, pvpRunHistoryFetch, pvpRunPut, pvpRunsFetch } from "./pvpRunFetchCalls"
 import { refusalText } from "./galleryFetchCalls"
 import { HttpError } from "./queryClient"
 import { contentOf, emptyContent, sameSlot, slotOf } from "../utils/pvpRuns"
@@ -33,6 +33,8 @@ import type { PvpEventRef } from "../utils/pvpEvent"
 export const pvpRunKeys = {
 	all: ["pvpRuns"] as const,
 	event: (ref: PvpEventRef) => ["pvpRuns", ref.kind, ref.id] as const,
+	/** Every event's runs at once (the Collection's CM history). */
+	history: ["pvpRuns", "history"] as const,
 }
 
 /** Every run the player logged for the event. Only asks while `enabled` (signed in). */
@@ -43,6 +45,23 @@ export function usePvpRuns(ref: PvpEventRef, enabled: boolean) {
 		queryFn: async (): Promise<PvpRun[]> => {
 			const response = await pvpRunsFetch(ref)
 			if (!response.ok) throw new HttpError(response.status, await refusalText(response, "Your runs didn't load."))
+			return (await response.json()) as PvpRun[]
+		},
+	})
+}
+
+/**
+ * Every run the player logged, in every event, for the Collection's CM
+ * history. A save in CM Runs marks it stale (useSaveRun), so the tab reads
+ * fresh numbers the next time it opens.
+ */
+export function usePvpRunHistory(enabled: boolean) {
+	return useQuery({
+		queryKey: pvpRunKeys.history,
+		enabled,
+		queryFn: async (): Promise<PvpRun[]> => {
+			const response = await pvpRunHistoryFetch()
+			if (!response.ok) throw new HttpError(response.status, await refusalText(response, "Your CM history didn't load."))
 			return (await response.json()) as PvpRun[]
 		},
 	})
@@ -94,6 +113,8 @@ export function useSaveRun(ref: PvpEventRef, onError: (message: string) => void)
 				: await pvpRunDelete({ kind, id }, write.slot)
 			if (!response.ok) throw new HttpError(response.status, await refusalText(response, "That run wasn't saved."))
 		},
+		// Stale, not refetched: the history isn't on screen while CM Runs is.
+		onSuccess: () => void client.invalidateQueries({ queryKey: pvpRunKeys.history, refetchType: "none" }),
 		onError: (error) => {
 			onError(error instanceof Error && error.message ? error.message : "That run wasn't saved.")
 			void client.invalidateQueries({ queryKey: pvpRunKeys.event({ kind, id }) })
