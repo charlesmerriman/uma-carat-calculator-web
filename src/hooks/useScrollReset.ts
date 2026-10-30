@@ -16,8 +16,12 @@ import { SELECTORS_CAMPAIGN_PARAM } from "../utils/selectorsFocus"
  * views/ApplicationViews.tsx, which never remounts when the outlet swaps), so
  * the three pages shared one scrollport object and one `scrollTop`.
  *
- * The rule this implements is the ordinary one: a new navigation starts at the
- * top, back and forward return you to where that history entry was left.
+ * The rule: back and forward return you to where that history entry was left,
+ * and a page you've already been on keeps your place when you come back to it
+ * by a link (Daptrius, 2026-10-30: "scroll position on all pages"). A link that
+ * names something else on the page (another event, a deep link) starts fresh, at
+ * the top or its target, and so does a page you haven't seen. A reload forgets
+ * it all, which is the quick way back to the top.
  *
  * TWO SCROLLERS, AND WHICH IS LIVE DEPENDS ON THE VIEWPORT. Below the
  * `app-shell` breakpoint (>=64rem wide AND >=32rem tall) every page scrolls the
@@ -74,6 +78,13 @@ const TOP: Offsets = { doc: 0, app: 0 }
 const positions = new Map<string, Offsets>()
 
 /**
+ * Where each PAGE was left, for coming back by a link, and the query string it
+ * had then. A link back with none (the navbar) or the same one means "that
+ * page". One with another means "something else on it".
+ */
+const pages = new Map<string, { offsets: Offsets; search: string }>()
+
+/**
  * Query params that mean "a deep link chose where this page opens".
  *
  * Both are stripped from the URL once their target is on screen (see
@@ -91,6 +102,39 @@ function applyOffsets(offsets: Offsets): void {
 	window.scrollTo(0, offsets.doc)
 	const app = document.querySelector<HTMLElement>(APP_SCROLLER_SELECTOR)
 	if (app) app.scrollTop = offsets.app
+}
+
+// About a second and a half of frames: long enough for a page to fetch and lay
+// out what the saved offset sits in.
+const SETTLE_FRAMES = 90
+
+const READER_INPUT = ["wheel", "touchstart", "pointerdown", "keydown"] as const
+
+const reached = (now: number, goal: number): boolean => Math.abs(now - goal) <= 1
+
+/**
+ * Apply `offsets` now and keep trying until they stick: a page lays out late
+ * (the Timeline grows window by window, the PvP page waits on a fetch), so the
+ * first try gets clamped against a page still shorter than it's about to be.
+ * Anything the reader does ends it: it must never pull them back. Returns stop.
+ */
+function settle(offsets: Offsets): () => void {
+	let frame = 0
+	let frames = 0
+	const stop = (): void => {
+		cancelAnimationFrame(frame)
+		READER_INPUT.forEach((type) => window.removeEventListener(type, stop, { capture: true }))
+	}
+	const attempt = (): void => {
+		applyOffsets(offsets)
+		const now = readOffsets()
+		frames += 1
+		if (frames >= SETTLE_FRAMES || (reached(now.doc, offsets.doc) && reached(now.app, offsets.app))) stop()
+		else frame = requestAnimationFrame(attempt)
+	}
+	READER_INPUT.forEach((type) => window.addEventListener(type, stop, { capture: true, passive: true }))
+	attempt()
+	return stop
 }
 
 function hasFocusTarget(search: string): boolean {
@@ -116,6 +160,10 @@ export function useScrollReset(): void {
 	// page being LEFT rather than the one arriving.
 	const liveKey = useRef(key)
 	const livePathname = useRef(pathname)
+	const liveSearch = useRef(search)
+	// A restore still settling. In a ref, not the effect's cleanup: a page
+	// rewriting its own URL mid-restore re-runs the effect, and must not end it.
+	const stopSettling = useRef<(() => void) | null>(null)
 
 	useEffect(() => {
 		// Writes a ref, never state, so there is nothing to throttle: this costs a
@@ -142,8 +190,13 @@ export function useScrollReset(): void {
 			positions.set(liveKey.current, latest.current)
 		}
 		const previousPathname = livePathname.current
+		if (previousPathname !== pathname) {
+			pages.set(previousPathname, { offsets: latest.current, search: liveSearch.current })
+			stopSettling.current?.()
+		}
 		liveKey.current = key
 		livePathname.current = pathname
+		liveSearch.current = search
 
 		// The page has this one (see claimScrollRestore). The outgoing entry is
 		// still filed above, so Forward and Back elsewhere keep working.
@@ -157,12 +210,8 @@ export function useScrollReset(): void {
 			const saved = positions.get(key)
 			if (!saved) return
 			latest.current = saved
-			applyOffsets(saved)
-			// Re-applied one frame later for content that lays out late: the
-			// Timeline renders a single window of rows first, so the first attempt
-			// gets clamped against a page still shorter than it is about to be.
-			const frame = requestAnimationFrame(() => applyOffsets(saved))
-			return () => cancelAnimationFrame(frame)
+			stopSettling.current = settle(saved)
+			return
 		}
 
 		// A deep link owns its own landing — #hash anchors on /faq,
@@ -174,6 +223,14 @@ export function useScrollReset(): void {
 		// focus-param strip) is not a navigation the reader made. This is also
 		// what makes the first render a no-op, since there is no previous page.
 		if (pathname === previousPathname) return
+
+		// Back on a page by a link that doesn't name anything else on it.
+		const page = pages.get(pathname)
+		if (page && (search === "" || search === page.search)) {
+			latest.current = page.offsets
+			stopSettling.current = settle(page.offsets)
+			return
+		}
 
 		// Kept in step with the DOM so the next stash records the top rather than
 		// the offset of whatever page was open before this one.

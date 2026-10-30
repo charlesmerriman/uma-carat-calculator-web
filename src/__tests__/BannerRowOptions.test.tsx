@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 import { BannerRow } from '../components/carat-calculator/BannerRow'
@@ -40,7 +40,7 @@ const umaBanner: BannerUma = {
   is_recommended: false,
 }
 
-function renderRow(extra: Partial<UserPlannedBanner> = {}, ticketsSpent = 0) {
+function renderRow(extra: Partial<UserPlannedBanner> = {}, ticketsSpent = 0, openPanel = true) {
   const planned = {
     tempId: 1,
     number_of_pulls: 0,
@@ -70,11 +70,20 @@ function renderRow(extra: Partial<UserPlannedBanner> = {}, ticketsSpent = 0) {
     { wrapper: MemoryRouter }
   )
   // Mobile card and desktop row are both in the DOM under jsdom; open one.
-  fireEvent.click(screen.getAllByRole('button', { name: /row options and note/i })[0])
+  if (openPanel) fireEvent.click(screen.getAllByRole('button', { name: /row options and note/i })[0])
   const lastRow = (): UserPlannedBanner =>
     setUserPlannedBannerData.mock.calls.at(-1)?.[0][0]
   return { lastRow }
 }
+
+describe('the note panel after a page change', () => {
+  it('stays open until a reload', () => {
+    renderRow()
+    cleanup()
+    renderRow({}, 0, false)
+    expect(screen.getAllByRole('button', { name: /row options and note/i })[0]).toHaveAttribute('aria-expanded', 'true')
+  })
+})
 
 describe('row options panel', () => {
   it('shows the automatic ticket figure, and typing over it sets a limit', () => {

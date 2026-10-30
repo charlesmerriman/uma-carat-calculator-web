@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRememberedOpen } from "../../hooks/useRememberedOpen"
 import { Link } from "react-router-dom"
 import { ChevronDown, Sparkles } from "lucide-react"
 import { timelineFocusHref } from "../../utils/timelineFocus"
@@ -110,7 +110,9 @@ function moreLabel(hidden: PlannerMarker[]): string {
 }
 
 export const PlannerSectionBand = ({ markers }: { markers: PlannerMarker[] }) => {
-	const [expanded, setExpanded] = useState(false)
+	// By its first line, which stays the same if the plan around it changes.
+	const first = markers.at(0)
+	const [expanded, setExpanded] = useRememberedOpen(first ? `band-${first.key}` : null)
 	// Markers arrive sorted by date (see compareMarkers), which is what lets the
 	// tone walk be a single pass over neighbours rather than a grouping pass.
 	// Computed over ALL markers, so a line keeps its fill whether the band is
