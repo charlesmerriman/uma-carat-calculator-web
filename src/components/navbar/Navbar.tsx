@@ -123,7 +123,11 @@ export const Navbar = () => {
 			className={NAV_BUTTON}
 		>
 			<LogIn className="w-4 h-4" />
-			Sign in to sync
+			{/* Shorter on a phone and just the icon on a small one, or the search
+			    button squeezes the wordmark. */}
+			<span className="max-[379px]:sr-only">
+				Sign in<span className="hidden sm:inline"> to sync</span>
+			</span>
 		</Link>
 	)
 
