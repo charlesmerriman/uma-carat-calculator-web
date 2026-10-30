@@ -139,17 +139,21 @@ describe("who can log runs", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("logs a League of Heroes: six days, five tickets, then the Top 96", async () => {
+	it("logs a League of Heroes in tickets, never days, then the Top 96", async () => {
 		runs.list = [logged(1, RACES_DONE, { kind: "loh", day: 2 })]
 		show(LOH)
-		expect(await screen.findByRole("tab", { name: /^Day 6/ })).toBeTruthy()
-		expect(screen.queryByRole("tab", { name: /^Day 7/ })).toBeNull()
+		expect(await screen.findByRole("tab", { name: /Tickets\s*26-30/ })).toBeTruthy()
+		expect(screen.queryByRole("tab", { name: /^Day/ })).toBeNull()
+		// The first five have nothing logged, so that's where it opens.
 		expect(screen.getByText("Ticket 5")).toBeTruthy()
 		expect(screen.queryByText("Ticket 6")).toBeNull()
 
+		fireEvent.click(screen.getByRole("tab", { name: /Tickets\s*6-10/ }))
+		expect(screen.getByText("Ticket 6")).toBeTruthy()
+
 		fireEvent.click(screen.getByRole("tab", { name: /Top 96/ }))
 		// The team has to be one registered on the days, so that's what's offered.
-		fireEvent.click(screen.getByRole("button", { name: "Same three as Day 2, Ticket 1" }))
+		fireEvent.click(screen.getByRole("button", { name: "Same three as Ticket 6" }))
 		await waitFor(() => expect(puts().at(-1)?.path).toMatch(/\/pvp-runs\/loh\/10\/final$/))
 		expect(puts().at(-1)?.body.runners).toHaveLength(3)
 

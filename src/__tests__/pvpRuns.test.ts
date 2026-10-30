@@ -3,6 +3,10 @@ import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import {
 	CM_NOT_STARTED,
 	bestTicketWins,
+	CM_SHAPE,
+	dayLabel,
+	openingTab,
+	ticketNumber,
 	ordinal,
 	registeredLineups,
 	runDayAt,
@@ -310,15 +314,33 @@ describe("a League of Heroes", () => {
 	const shape = runShape(loh)
 	const at = (iso: string) => runDayAt(loh, DEFAULT_CONSTANTS, new Date(iso), shape)
 
-	it("is six days of five tickets, with no rounds", () => {
+	it("is thirty tickets in fives, with no rounds", () => {
 		expect(shape).toEqual({ days: 6, tickets: 5, rounds: false })
 	})
 
-	it("counts its days from the start and is over after day 6", () => {
+	it("only says whether it's on: a saved ticket can run on any later day", () => {
 		expect(at("2027-01-25T21:59:00Z")).toBe(0)
 		expect(at("2027-01-25T22:00:00Z")).toBe(1)
-		expect(at("2027-01-31T21:59:00Z")).toBe(6)
+		expect(at("2027-01-30T12:00:00Z")).toBe(1)
+		expect(at("2027-01-31T21:59:00Z")).toBe(1)
 		expect(at("2027-01-31T22:00:00Z")).toBeNull()
+		// So nothing is called over until the whole event is.
+		expect(isPastDay(1, at("2027-01-30T12:00:00Z"))).toBe(false)
+		expect(isPastDay(1, at("2027-01-31T22:00:00Z"))).toBe(true)
+	})
+
+	it("numbers tickets straight through and names tabs by them", () => {
+		expect([ticketNumber(1, 5, shape), ticketNumber(2, 1, shape), ticketNumber(6, 5, shape)]).toEqual([5, 6, 30])
+		expect(dayLabel(2, shape)).toBe("Tickets 6-10")
+		expect(dayLabel(2, CM_SHAPE)).toBe("Day 2")
+		expect(ticketNumber(2, 1, CM_SHAPE)).toBe(1)
+	})
+
+	it("opens on the first tickets with something left to log", () => {
+		const firstFive = [1, 2, 3, 4, 5].map((number) => ticket(1, number, races(0, 0, 0, 0, 0)))
+		expect(openingTab([], 1, shape)).toBe(1)
+		expect(openingTab(firstFive, 1, shape)).toBe(2)
+		expect(openingTab(firstFive, null, shape)).toBe("final")
 	})
 
 	it("fills every ticket left and leaves the Top 96 out", () => {
