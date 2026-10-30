@@ -87,6 +87,19 @@ interface PickerItem {
 	apt: CatalogueUma["apt"] | null
 }
 
+type PickerPlace = "uma" | "card" | "borrow"
+
+/**
+ * The team pickers' filters, kept until the page reloads (Daptrius, 2026-10-30:
+ * re-setting them on every slot was the clunky part). In module scope because
+ * the picker is rebuilt on each opening. Only reachable behind the /app gate,
+ * so prerendering never writes it. Owned only is per place: the borrow slot
+ * holds a friend's card, so it starts on the full list and keeps its own
+ * choice. The type and rarity carry across every support slot.
+ */
+const rememberedOwnedOnly: Partial<Record<PickerPlace, boolean>> = {}
+const rememberedCardFilters: { cardType: string | null; rarity: RarityFilter } = { cardType: null, rarity: null }
+
 type PvpCardPickerProps = {
 	/** What the dialog is for: "Uma 2", "Card 3 for Maruzensky". */
 	title: string
@@ -112,6 +125,8 @@ type PvpCardPickerProps = {
 	 * Never a rule: an unowned card is still pickable with the switch off.
 	 */
 	owned?: OwnedForPicker | null
+	/** A team slot: remembers the filters for that place. Omitted: they start fresh. */
+	place?: PickerPlace
 	/**
 	 * Drawn under the header: the Umas / Support cards switch of a skill
 	 * search. Switching changes `pool` and `items` on this same mounted
@@ -151,14 +166,28 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned } = props
+	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
-	const [cardType, setCardType] = useState<string | null>(null)
-	const [rarity, setRarity] = useState<RarityFilter>(null)
-	const [ownedOnly, setOwnedOnly] = useState(() => Boolean(owned && owned.ids.size > 0))
+	const [cardType, setCardType] = useState<string | null>(place ? rememberedCardFilters.cardType : null)
+	const [rarity, setRarity] = useState<RarityFilter>(place ? rememberedCardFilters.rarity : null)
+	const [ownedOnly, setOwnedOnly] = useState(
+		() => (place && rememberedOwnedOnly[place]) ?? (place !== "borrow" && Boolean(owned && owned.ids.size > 0))
+	)
+	const chooseCardType = (next: string | null) => {
+		setCardType(next)
+		if (place) rememberedCardFilters.cardType = next
+	}
+	const chooseRarity = (next: RarityFilter) => {
+		setRarity(next)
+		if (place) rememberedCardFilters.rarity = next
+	}
+	const chooseOwnedOnly = (next: boolean) => {
+		setOwnedOnly(next)
+		if (place) rememberedOwnedOnly[place] = next
+	}
 
 	useEffect(() => {
 		const closeOnEscape = (keydown: KeyboardEvent) => {
@@ -291,7 +320,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 					<div className="flex flex-col gap-2 border-b border-gray-700 bg-gray-900/35 px-4 py-2">
 						{owned && (
 							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
-								<input type="checkbox" checked={ownedOnly} onChange={(change) => setOwnedOnly(change.target.checked)} />
+								<input type="checkbox" checked={ownedOnly} onChange={(change) => chooseOwnedOnly(change.target.checked)} />
 								Owned only
 								<span className="text-gray-500">({owned.ids.size} in your collection)</span>
 							</label>
@@ -308,7 +337,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 											key={option.label}
 											type="button"
 											aria-pressed={rarity === option.id}
-											onClick={() => setRarity(option.id)}
+											onClick={() => chooseRarity(option.id)}
 											className={`rounded-md px-2.5 py-0.5 text-xs font-medium transition ${
 												rarity === option.id ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
 											}`}
@@ -323,7 +352,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 									<button
 										type="button"
 										aria-pressed={rarity === "placeholder"}
-										onClick={() => setRarity(rarity === "placeholder" ? null : "placeholder")}
+										onClick={() => chooseRarity(rarity === "placeholder" ? null : "placeholder")}
 										className={`rounded-md px-2.5 py-0.5 text-xs font-medium transition ${
 											rarity === "placeholder" ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
 										}`}
@@ -339,7 +368,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 											key={type}
 											type="button"
 											aria-pressed={cardType === type}
-											onClick={() => setCardType(cardType === type ? null : type)}
+											onClick={() => chooseCardType(cardType === type ? null : type)}
 											className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
 												cardType === type
 													? "border-brand bg-brand/15 text-brand"
