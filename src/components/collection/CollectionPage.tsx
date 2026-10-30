@@ -1,8 +1,9 @@
 /**
  * The Collection page (/app/collection): everything confirmed about the
- * player's own game account, kept on their site account, in three tabs:
+ * player's own game account, kept on their site account, in four tabs:
  * Veterans (the umas they finished training), Umas and Support cards (what
- * they own; RosterGrids.tsx). notes/pvp-planner-plan.md, R2, "The Collection".
+ * they own; RosterGrids.tsx), and CM history (every event logged in CM Runs,
+ * CmHistoryTab.tsx). notes/pvp-planner-plan.md, R2, "The Collection".
  *
  * The tab is `?tab=` (veterans by default), so a link can open one, and each
  * tab is a card with its count (owner, 2026-10-27, the redesign:
@@ -35,6 +36,8 @@ import { ACTION_BUTTON, PRIMARY_BUTTON } from "../pvp/gallery/galleryStyles"
 import { ImportPanel } from "./ImportPanel"
 import { OwnedCardsGrid, OwnedUmasGrid } from "./RosterGrids"
 import { VeteransTab, type Editing } from "./VeteransTab"
+import { CmHistoryTab } from "./CmHistoryTab"
+import { usePvpRunHistory } from "../../services/pvpRunQueries"
 import { SaveStatus } from "../pvp/SaveStatus"
 import { useClearRoster, useEditRoster, useRoster, useRosterSaving } from "../../services/rosterQueries"
 import { useCalculatorData } from "../../services/CalculatorContext"
@@ -78,8 +81,8 @@ export function CollectionPage() {
 	)
 }
 
-type CollectionTab = "veterans" | "umas" | "cards"
-const TAB_IDS: CollectionTab[] = ["veterans", "umas", "cards"]
+type CollectionTab = "veterans" | "umas" | "cards" | "history"
+const TAB_IDS: CollectionTab[] = ["veterans", "umas", "cards", "history"]
 
 function SignedInCollection() {
 	const [params, setParams] = useSearchParams()
@@ -123,6 +126,8 @@ function SignedInCollection() {
 			<div role="tabpanel" aria-labelledby={`collection-tab-${tab}`}>
 				{tab === "veterans" ? (
 					<VeteransTab editing={editing} onEditing={setEditing} onImport={openImport} />
+				) : tab === "history" ? (
+					<CmHistoryTab />
 				) : (
 					<RosterTab tab={tab} />
 				)}
@@ -132,15 +137,18 @@ function SignedInCollection() {
 }
 
 /**
- * The three tabs as cards, each with its count: how many veterans, and how
- * many of the umas and cards on Global the player owns, with a bar. The counts
+ * The four tabs as cards, each with its count: how many veterans, how
+ * many of the umas and cards on Global the player owns, with a bar, and how
+ * many events have runs logged. The counts
  * fill in as the lists load (one cached request each, shared with the tabs).
- * Three across at every width; on a phone they drop the hints, so the list
+ * Four across at every width; on a phone they drop the hints, so the list
  * starts on the first screen.
  */
 function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: CollectionTab) => void }) {
 	const veterans = useTrainedUmas(true).data
 	const roster = useRoster(true).data
+	const runs = usePvpRunHistory(true).data
+	const loggedEvents = runs ? new Set(runs.map((run) => `${run.kind}-${run.event}`)).size : undefined
 	const catalogue = usePvpCatalogue()
 	const ready = catalogue.status === "ready" ? catalogue.catalogue : null
 	const owned = (ids: Set<number>, rows: Array<{ id: number; on_global?: boolean }>) => {
@@ -152,7 +160,7 @@ function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: Colle
 	const newest = veterans?.find((veteran) => veteran.trained_at)?.trained_at
 
 	return (
-		<div role="tablist" aria-label="Collection" className="grid grid-cols-3 gap-2 sm:gap-3">
+		<div role="tablist" aria-label="Collection" className="grid grid-cols-4 gap-2 sm:gap-3">
 			<TabCard id="veterans" tab={tab} onChoose={onChoose} label="Veterans" hint="umas you trained" count={veterans?.length}>
 				{newest && <span className="hidden text-xs text-gray-300 sm:block">Newest trained {formatDate(newest)}</span>}
 			</TabCard>
@@ -171,6 +179,19 @@ function TabCards({ tab, onChoose }: { tab: CollectionTab; onChoose: (tab: Colle
 				hint="owned, with limit breaks"
 				count={cards?.count}
 				total={cards?.total}
+			/>
+			<TabCard
+				id="history"
+				tab={tab}
+				onChoose={onChoose}
+				label={
+					<>
+						<span className="sm:hidden">History</span>
+						<span className="hidden sm:inline">CM history</span>
+					</>
+				}
+				hint="events you logged"
+				count={loggedEvents}
 			/>
 		</div>
 	)

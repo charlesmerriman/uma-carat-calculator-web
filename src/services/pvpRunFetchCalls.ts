@@ -28,6 +28,11 @@ function slotPath(ref: PvpEventRef, slot: PvpRunSlot): string {
 		: `${eventPath(ref)}/day/${slot.day}/ticket/${slot.ticket}`
 }
 
+/** Every run the player logged, in every event: the Collection's CM history. */
+export function pvpRunHistoryFetch(): Promise<Response> {
+	return fetch(`${API_URL}/pvp-runs`, { method: "GET", headers: jsonHeaders() })
+}
+
 export function pvpRunsFetch(ref: PvpEventRef): Promise<Response> {
 	return fetch(eventPath(ref), { method: "GET", headers: jsonHeaders() })
 }

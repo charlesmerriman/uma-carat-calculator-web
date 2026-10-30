@@ -5,6 +5,7 @@ import {
 	bestTicketWins,
 	cmDayAt,
 	emptyContent,
+	eventHistory,
 	formatRate,
 	isPastDay,
 	lineupFromTeam,
@@ -20,6 +21,7 @@ import {
 	slotsWithoutLineup,
 	ticketState,
 	unloggedTickets,
+	veteranRecords,
 } from "../utils/pvpRuns"
 import type { RaceEvent } from "../types"
 import type { PvpRun, PvpRunRace, PvpRunRunner } from "../types/pvpRun"
@@ -252,5 +254,49 @@ describe("the day a CM is on", () => {
 		expect(at("2026-11-05T09:59:00Z")).toBeNull()
 		expect(at("2026-11-05T22:00:00Z")).toBeNull()
 		expect(isPastDay(4, null)).toBe(true)
+	})
+})
+
+describe("the CM history", () => {
+	const cm = (id: number, start: string) =>
+		({ id, event_type: "champions_meeting", name: `Champions Meeting ${id} Cup`, start_date: start, end_date: start }) as RaceEvent
+	const events = [cm(20, "2026-10-01T22:00:00Z"), cm(21, "2026-10-31T22:00:00Z")]
+	const VETERAN_A: PvpRunRunner[] = [{ position: 0, uma: OGURI, style: "pace", trained_uma: 7 }, ...LINEUP.slice(1)]
+	const VETERAN_B: PvpRunRunner[] = [{ position: 0, uma: OGURI, style: "pace", trained_uma: 8 }, ...LINEUP.slice(1)]
+	const inEvent = (event: number, run: PvpRun): PvpRun => ({ ...run, event })
+
+	it("groups by event, newest first, with CM Runs' own numbers", () => {
+		const runs = [
+			inEvent(20, ticket(1, 1, races(0, null, 1))),
+			inEvent(21, ticket(1, 1, races(0, 0, 0, 0, null))),
+			inEvent(21, ticket(3, 2, races(1, 1))),
+			{ ...inEvent(21, ticket(1, 1, races(0))), stage: "final" as const, day: null, ticket: null, placement: 2, finals_group: "A" as const },
+		]
+		const [newest, older] = eventHistory(runs, events)
+		expect(newest.event.id).toBe(21)
+		// Days only: 6 wins of 7 races, the Finals race apart.
+		expect(newest.total).toEqual({ wins: 6, raced: 7 })
+		expect(bestTicketWins(newest.runs, 1)).toBe(4)
+		expect(newest.final?.placement).toBe(2)
+		expect(older.total).toEqual({ wins: 2, raced: 3 })
+	})
+
+	it("leaves out an event that isn't in the list, and an uma that never raced", () => {
+		const runs = [inEvent(99, ticket(1, 1, races(0))), inEvent(20, ticket(1, 1, []))]
+		const history = eventHistory(runs, events)
+		expect(history.map((row) => row.event.id)).toEqual([20])
+		expect(history[0].umas).toEqual([])
+	})
+
+	it("adds each veteran up across events, best rate first", () => {
+		const runs = [
+			inEvent(20, ticket(1, 1, races(0, 0, null), VETERAN_A)),
+			inEvent(21, ticket(1, 1, races(0, null), VETERAN_A)),
+			inEvent(21, ticket(2, 1, races(0, 0), VETERAN_B)),
+		]
+		expect(veteranRecords(runs)).toEqual([
+			{ uma: OGURI, trained_uma: 8, wins: 2, raced: 2, events: 1 },
+			{ uma: OGURI, trained_uma: 7, wins: 3, raced: 5, events: 2 },
+		])
 	})
 })
