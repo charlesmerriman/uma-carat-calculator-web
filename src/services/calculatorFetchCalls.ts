@@ -21,6 +21,7 @@
 import { plannedBannerTarget } from "../utils/bannerHelpers"
 import { authHeaders, getAuthToken } from "./authToken"
 import type {
+	CalculatorData,
 	UserStats,
 	PaidCaratUse,
 	UserPlannedBanner,
@@ -383,6 +384,17 @@ function takePrefetchedCalculatorData(): Promise<Response> | null {
 		return null
 	}
 	return prefetched.promise.then((response) => response.clone())
+}
+
+/**
+ * The payload for something that only reads its catalogue outside /app (the
+ * site search), through the same prefetch, so the provider can reuse the
+ * request if the person goes on to the calculator. null when it fails.
+ */
+export async function readCalculatorCatalogue(): Promise<CalculatorData | null> {
+	prefetchCalculatorData()
+	const response = await takePrefetchedCalculatorData()
+	return response?.ok ? ((await response.json()) as CalculatorData) : null
 }
 
 /**
