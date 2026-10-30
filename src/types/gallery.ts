@@ -34,10 +34,20 @@ export interface GalleryPoster {
 	gallery_style: GalleryStyle | null
 }
 
+/** The viewer's vote on a post or a comment. A guest's is null: they can't vote. */
+export type VoteChoice = "up" | "down" | "none"
+
+/** Staff only: how many each way, never who. */
+export interface VoteSplit {
+	up: number
+	down: number
+}
+
 export interface GalleryStats {
 	views: number
-	/** People who upvoted. The weighted points that rank the feed stay on the server. */
-	upvotes: number
+	/** Ups minus downs, never below 0 here (the ranking uses the real number). */
+	score: number
+	split?: VoteSplit
 	comments: number
 }
 
@@ -51,7 +61,7 @@ export interface GalleryRow {
 	umas: Array<{ uma: number; style: MemberStyle }>
 	stats: GalleryStats
 	/** null for a guest: "not voted" and "can't vote" are drawn differently. */
-	my_vote: boolean | null
+	my_vote: VoteChoice | null
 	poster: GalleryPoster
 }
 
@@ -110,10 +120,11 @@ export interface GalleryComment {
 	is_author: boolean
 	is_mine: boolean
 	poster: GalleryPoster | null
-	/** Thumbs-up count (people, blocked accounts not counted); who voted is never sent. */
-	upvotes: number
-	/** The viewer gave it a thumbs-up. */
-	my_vote: boolean
+	/** Thumbs up minus thumbs down, never below 0; who voted is never sent. */
+	score: number
+	/** The viewer's vote; null for a guest. */
+	my_vote: VoteChoice | null
+	split?: VoteSplit
 	replies: GalleryComment[]
 }
 

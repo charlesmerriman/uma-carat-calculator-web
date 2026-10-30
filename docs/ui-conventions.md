@@ -1576,7 +1576,7 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   so nothing is fetched for a section nobody opens; the All tab's box header shows each
   style's count beside "Open Pace", the way to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
-  `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up (`useCommentWrites().vote`).
+  `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up and a thumbs-down with the score between (`useCommentWrites().vote`; staff see the split in the score's title).
 - **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
   shell) or the navbar (phone, document scrolling); the running-style tabs, the guide's side
   column, the gallery's open post and the team builder's docked panels stick under them.
@@ -1988,7 +1988,7 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   breakpoints, so a `desktop-nav:` column would beat the `xl:` one that widens it.
 - **Sort, filter and open post are URL parameters**: `?sort=top|new` (Hot has no
   parameter), `?uma=<id>` and `?post=<public_id>`. Every row is a real link (an empty
-  `<Link>` stretched over the row, the upvote above it; never a button or link wrapped around
+  `<Link>` stretched over the row, the vote control above it; never a button or link wrapped around
   the row's lists). Opening from the list PUSHES an entry marked `galleryFromFeed`, and
   closing it then goes Back, so Back and Close agree and the list's scroll comes back
   (`useScrollReset` below two panes, `KeepRowInPlace` from two panes up); moving between posts (the arrows, or another row), sorting and
@@ -2005,16 +2005,18 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   (dimmed) while a new sort, filter or longer list loads, within one event only. A sign-in or
   sign-out resets the whole cache (`QueryProvider`), because `my_vote` and `is_mine` describe
   whoever asked.
-- **Rows** (`GalleryRow`): vertical upvote, picture, name, tier chip, "You" on your own, how
-  long ago, caption (two lines), the three umas with names and styles, views and comments.
+- **Rows** (`GalleryRow`): the vote control (`GalleryVote`: up, the score, down; the arrow you
+  chose takes it back; the score never shows below 0, `notes/thumbs-down-plan.md`), picture,
+  name, tier chip, "You" on your own, how long ago it was first posted (", edited" when its
+  team changed since), caption (two lines), the three umas with names and styles, views and comments.
   The poster's longer **strategy** (`GalleryPost.strategy`, 2,000 characters, plain text with
   its line breaks) is never on a row: the open post shows it under the team, and
   `PublishDialog` has a box for it under the caption's. Re-posting the team that is up starts
   the dialog from its current words, so updating cards can't wipe a strategy.
   Decks are left to the panel on purpose: they made each row half again as tall, and from `lg`
   up the full team is one click away beside the list. Above the list sit the sort buttons, a
-  line saying what the sort means (Hot and Top add that supporters count a bit extra, since
-  the counts are people and the order is points), the uma filter (`GalleryUmaFilter`: a field
+  line saying what the sort means (Top adds that a downvoted team sinks though its score
+  shows 0), the uma filter (`GalleryUmaFilter`: a field
   showing the framed uma, opening a search-and-grid picker over the API's `umas` tally, so it
   only offers umas that find something), and `YourPostBar`: your post's numbers, a "Post a
   team" button to My team, or Sign in for a guest.

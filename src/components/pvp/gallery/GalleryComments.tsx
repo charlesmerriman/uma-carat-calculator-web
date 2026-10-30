@@ -21,10 +21,11 @@
 
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Flag, Loader2, Pencil, Reply, ThumbsUp, Trash2 } from "lucide-react"
+import { Flag, Loader2, Pencil, Reply, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar } from "../../account/Avatar"
 import { PosterLine, YouChip } from "./GalleryBits"
+import { splitText } from "../../../utils/galleryText"
 import { ReportDialog } from "./ReportDialog"
 import { DANGER_BUTTON_SMALL, FIELD, PRIMARY_BUTTON_SMALL, SECONDARY_BUTTON, SECONDARY_BUTTON_SMALL, SMALL_BUTTON } from "./galleryStyles"
 import { useAccount } from "../../../services/AuthContext"
@@ -209,7 +210,7 @@ function CommentItem({ comment, canWrite, signedIn, writes, onReply, onReport }:
 			)}
 			{!editing && (
 				<div className="flex flex-wrap items-center gap-1">
-					<ThumbsUpButton comment={comment} signedIn={signedIn} writes={writes} />
+					<CommentVotes comment={comment} signedIn={signedIn} writes={writes} />
 					{canWrite && (
 						<button type="button" className={SMALL_BUTTON} onClick={onReply}>
 							<Reply className="h-3.5 w-3.5" aria-hidden="true" />
@@ -254,37 +255,52 @@ function CommentItem({ comment, canWrite, signedIn, writes, onReply, onReport }:
 }
 
 /**
- * A comment's thumbs-up: the count, pressed when you gave one. Just the count
- * on your own comment and for a guest, who has nothing to press.
+ * A comment's thumbs-up and thumbs-down, with the score between them.
+ * Pressing the one you chose takes it back; the other switches. Just the
+ * score on your own comment and for a guest, who has nothing to press.
+ * Staff see the real split in the score's title.
  */
-function ThumbsUpButton({ comment, signedIn, writes }: { comment: GalleryComment; signedIn: boolean; writes: Writes }) {
-	const count = comment.upvotes
-	const label = `${count} thumbs-up`
+function CommentVotes({ comment, signedIn, writes }: { comment: GalleryComment; signedIn: boolean; writes: Writes }) {
+	const score = comment.score
+	const split = splitText(comment.split)
 	if (!signedIn || comment.is_mine) {
-		if (count === 0) return null
+		if (score === 0 && !split) return null
 		return (
-			<span className="flex items-center gap-1 px-1.5 text-xs tabular-nums text-gray-400" aria-label={label} title={label}>
+			<span className="flex items-center gap-1 px-1.5 text-xs tabular-nums text-gray-400" aria-label={`Score ${score}`} title={split}>
 				<ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
-				{count}
+				{score}
 			</span>
 		)
 	}
+	const button = (choice: "up" | "down") => {
+		const chosen = comment.my_vote === choice
+		const Icon = choice === "up" ? ThumbsUp : ThumbsDown
+		const word = choice === "up" ? "thumbs-up" : "thumbs-down"
+		return (
+			<button
+				type="button"
+				className={`${SMALL_BUTTON} ${chosen ? (choice === "up" ? "text-brand" : "text-gray-100") : ""}`}
+				aria-pressed={chosen}
+				aria-label={chosen ? `Take back your ${word} (score ${score})` : `Give a ${word} (score ${score})`}
+				onClick={() =>
+					writes.vote.mutate(
+						{ id: comment.id, choice: chosen ? "none" : choice },
+						{ onError: (error) => toast.error(failureText(error, "That didn't go through. Try again in a moment.")) }
+					)
+				}
+			>
+				<Icon className={`h-3.5 w-3.5 ${chosen ? "fill-current" : ""}`} aria-hidden="true" />
+			</button>
+		)
+	}
 	return (
-		<button
-			type="button"
-			className={`${SMALL_BUTTON} tabular-nums ${comment.my_vote ? "text-brand" : ""}`}
-			aria-pressed={comment.my_vote}
-			aria-label={comment.my_vote ? `Take back your thumbs-up (${count})` : `Give a thumbs-up (${count})`}
-			onClick={() =>
-				writes.vote.mutate(
-					{ id: comment.id, on: !comment.my_vote },
-					{ onError: (error) => toast.error(failureText(error, "That didn't go through. Try again in a moment.")) }
-				)
-			}
-		>
-			<ThumbsUp className={`h-3.5 w-3.5 ${comment.my_vote ? "fill-current" : ""}`} aria-hidden="true" />
-			{count > 0 && count}
-		</button>
+		<span className="flex items-center">
+			{button("up")}
+			<span className="min-w-4 text-center text-xs tabular-nums text-gray-300" title={split}>
+				{score}
+			</span>
+			{button("down")}
+		</span>
 	)
 }
 

@@ -571,7 +571,7 @@ describe('AccountPage gallery', () => {
 		public_id: 'k3Df8aQ2', caption: 'Runaway blocker', published_at: '2026-10-10T00:00:00Z',
 		content_updated_at: '2026-10-10T00:00:00Z', is_mine: true, umas: [], my_vote: null,
 		poster: { display_name: 'Rhondal', portrait: null, tier_name: null, gallery_style: null },
-		stats: { views: 212, upvotes: 14, comments: 5, copies: 3 },
+		stats: { views: 212, score: 14, comments: 5, copies: 3 },
 		team: [], event: { kind: 'cm', id: 19, label: 'Libra Cup' }, hidden: true,
 	}
 

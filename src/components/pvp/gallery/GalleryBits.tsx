@@ -5,12 +5,12 @@
  */
 
 import type { ReactNode } from "react"
-import { ArrowBigUp, Heart } from "lucide-react"
+import { ArrowBigDown, ArrowBigUp, Heart } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar } from "../../account/Avatar"
 import { STYLE_LABELS } from "../../../utils/pvpGuide"
 import { PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../../utils/pvpTeams"
-import { posterName } from "../../../utils/galleryText"
+import { posterName, splitText } from "../../../utils/galleryText"
 import { failureText, useGalleryVote } from "../../../services/galleryQueries"
 import { useSignInPrompt } from "../../../hooks/useSignInPrompt"
 import { useOshiIds } from "../../../hooks/useOshiIds"
@@ -105,63 +105,75 @@ export function StyleChip({ style }: { style: MemberStyle }) {
 }
 
 /**
- * A post's upvote: the arrow and the count, which a guest presses to be
- * asked to sign in, and which your own post shows without a button (it
- * already carries your vote).
+ * A post's vote: an up arrow, the score and a down arrow (Henry, 2026-10-26).
+ * Pressing the arrow you already chose takes the vote back; pressing the
+ * other one switches. A guest is asked to sign in; your own post shows the
+ * score alone. Staff see the real split under the score (row) or in its
+ * title (column), since the score never shows below 0.
  *
- *   column  the feed: arrow over count, a tall target at the row's edge
+ *   column  the feed: up, score, down, stacked at the row's edge
  *   row     the post panel, beside the other numbers
  */
-export function GalleryUpvote({ post, layout }: { post: GalleryRow; layout: "column" | "row" }) {
+export function GalleryVote({ post, layout }: { post: GalleryRow; layout: "column" | "row" }) {
 	const vote = useGalleryVote()
 	const { prompt } = useSignInPrompt()
-	const count = post.stats.upvotes
-	const voted = post.my_vote === true
-	const shape =
-		layout === "column"
-			? "min-h-14 w-12 flex-col justify-center gap-0.5 py-1.5"
-			: "gap-1 px-2.5 py-1.5"
+	const score = post.stats.score
+	const split = splitText(post.stats.split)
+	const shape = layout === "column" ? "w-12 flex-col py-1" : "gap-0.5 px-1"
+	const box = `flex shrink-0 items-center rounded-lg border text-sm font-semibold tabular-nums ${shape}`
+	const number = (
+		<span className="flex flex-col items-center px-1 leading-tight" title={split}>
+			{score}
+			{split && layout === "row" && <span className="text-[10px] font-medium text-gray-400">{split}</span>}
+		</span>
+	)
 
 	if (post.is_mine) {
 		return (
-			<span
-				title="Your own team"
-				aria-label={`${count} upvotes on your team`}
-				className={`flex shrink-0 items-center rounded-lg border border-gray-700 text-sm font-semibold tabular-nums text-gray-400 ${shape}`}
-			>
+			<span title={split ?? "Your own team"} aria-label={`Score ${score} on your team`} className={`${box} border-gray-700 text-gray-400`}>
 				<ArrowBigUp className="h-5 w-5" aria-hidden="true" />
-				{count}
+				{number}
 			</span>
 		)
 	}
 
-	const press = () => {
+	const press = (choice: "up" | "down") => {
 		if (post.my_vote === null) {
-			prompt("Sign in to upvote teams.")
+			prompt("Sign in to vote on teams.")
 			return
 		}
+		const next = post.my_vote === choice ? "none" : choice
 		vote.mutate(
-			{ publicId: post.public_id, on: !voted },
-			{ onError: (error) => toast.error(failureText(error, "Your upvote didn't go through. Try again in a moment.")) }
+			{ publicId: post.public_id, choice: next, previous: post.my_vote },
+			{ onError: (error) => toast.error(failureText(error, "Your vote didn't go through. Try again in a moment.")) }
+		)
+	}
+	const arrow = (choice: "up" | "down") => {
+		const chosen = post.my_vote === choice
+		const Icon = choice === "up" ? ArrowBigUp : ArrowBigDown
+		const word = choice === "up" ? "upvote" : "downvote"
+		return (
+			<button
+				type="button"
+				aria-pressed={chosen}
+				aria-label={chosen ? `Take back your ${word} (score ${score})` : `${choice === "up" ? "Upvote" : "Downvote"} (score ${score})`}
+				disabled={vote.isPending}
+				onClick={() => press(choice)}
+				className={`rounded-md p-0.5 transition disabled:cursor-wait ${
+					chosen ? (choice === "up" ? "text-brand" : "text-gray-100") : "text-gray-400 enabled:hover:text-gray-100"
+				}`}
+			>
+				<Icon className={`h-5 w-5 ${chosen ? "fill-current" : ""}`} aria-hidden="true" />
+			</button>
 		)
 	}
 
 	return (
-		<button
-			type="button"
-			aria-pressed={voted}
-			aria-label={voted ? `Remove your upvote (${count} upvotes)` : `Upvote (${count} upvotes)`}
-			disabled={vote.isPending}
-			onClick={press}
-			className={`flex shrink-0 items-center rounded-md border text-sm font-semibold tabular-nums transition disabled:cursor-wait ${shape} ${
-				voted
-					? "border-brand bg-brand/15 text-brand"
-					: "border-gray-600 text-gray-300 enabled:hover:border-brand enabled:hover:text-brand"
-			}`}
-		>
-			<ArrowBigUp className={`h-5 w-5 ${voted ? "fill-current" : ""}`} aria-hidden="true" />
-			{count}
-		</button>
+		<span className={`${box} ${post.my_vote === "up" ? "border-brand bg-brand/10" : "border-gray-600"} text-gray-200`}>
+			{arrow("up")}
+			{number}
+			{arrow("down")}
+		</span>
 	)
 }
 

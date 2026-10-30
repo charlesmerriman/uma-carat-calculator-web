@@ -19,7 +19,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react"
 import { ArrowLeft, ChevronDown, ChevronUp, Copy, Eye, Flag, Link2, Loader2, MessageSquare, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { GalleryComments } from "./GalleryComments"
-import { GalleryTeam, GalleryUpvote, PosterLine, YouChip } from "./GalleryBits"
+import { GalleryTeam, GalleryVote, PosterLine, YouChip } from "./GalleryBits"
 import { ReportDialog } from "./ReportDialog"
 import { ACTION_BUTTON, DANGER_BUTTON, SECONDARY_BUTTON } from "./galleryStyles"
 import { useAccount } from "../../../services/AuthContext"
@@ -272,7 +272,7 @@ function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 						</time>
 						{updated && (
 							<time dateTime={post.content_updated_at} title={formatDate(post.content_updated_at)}>
-								, updated {formatTimeAgo(post.content_updated_at)}
+								, edited {formatTimeAgo(post.content_updated_at)}
 							</time>
 						)}
 					</p>
@@ -294,7 +294,7 @@ function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 			)}
 
 			<div className="flex flex-wrap items-center gap-3">
-				<GalleryUpvote post={post} layout="row" />
+				<GalleryVote post={post} layout="row" />
 				<span className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
 					<span className="flex items-center gap-1">
 						<Eye className="h-3.5 w-3.5" aria-hidden="true" />

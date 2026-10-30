@@ -8,7 +8,7 @@
  * {"error": "<one sentence>"}, written for the player; refusalText reads it.
  */
 import { authHeaders } from "./authToken"
-import type { GalleryReportReason, GallerySort } from "../types/gallery"
+import type { GalleryReportReason, GallerySort, VoteChoice } from "../types/gallery"
 import type { PvpEventRef } from "../utils/pvpEvent"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -73,9 +73,13 @@ export function galleryMyPosts(): Promise<Response> {
 	return fetch(`${API_URL}/gallery/my-posts`, { headers: jsonHeaders() })
 }
 
-/** Upvote (`true`) or take the upvote back. */
-export function galleryVote(publicId: string, on: boolean): Promise<Response> {
-	return post(`/gallery/posts/${encodeURIComponent(publicId)}/vote`, undefined, on ? "PUT" : "DELETE")
+/** Vote up or down (PUT), or take the vote back ("none", a DELETE). */
+export function galleryVote(publicId: string, choice: VoteChoice): Promise<Response> {
+	return voteRequest(`/gallery/posts/${encodeURIComponent(publicId)}/vote`, choice)
+}
+
+function voteRequest(path: string, choice: VoteChoice): Promise<Response> {
+	return choice === "none" ? post(path, undefined, "DELETE") : post(path, { value: choice }, "PUT")
 }
 
 /** Count one view. Fire and forget: the answer is always 204. */
@@ -109,9 +113,9 @@ export function galleryCommentDelete(id: number): Promise<Response> {
 	return post(`/gallery/comments/${id}`, undefined, "DELETE")
 }
 
-/** A thumbs-up on a comment (PUT) or taking it back (DELETE); answers `{upvotes, my_vote}`. */
-export function galleryCommentVote(id: number, on: boolean): Promise<Response> {
-	return post(`/gallery/comments/${id}/vote`, undefined, on ? "PUT" : "DELETE")
+/** A thumbs-up or thumbs-down on a comment, or taking it back; answers `{score, my_vote, split?}`. */
+export function galleryCommentVote(id: number, choice: VoteChoice): Promise<Response> {
+	return voteRequest(`/gallery/comments/${id}/vote`, choice)
 }
 
 /** One section of a PvP guide's comments: "" for the whole guide, else a running style. */

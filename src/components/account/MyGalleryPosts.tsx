@@ -105,7 +105,7 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 							<p className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
 								<span className="flex items-center gap-1">
 									<ArrowBigUp className="h-3.5 w-3.5" aria-hidden="true" />
-									{countLabel(post.stats.upvotes, "upvote")}
+									{`Score ${post.stats.score}`}
 								</span>
 								<span className="flex items-center gap-1">
 									<MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />

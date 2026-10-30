@@ -43,6 +43,8 @@ import type {
 	GalleryRow,
 	GallerySort,
 	GalleryThread,
+	VoteChoice,
+	VoteSplit,
 } from "../types/gallery"
 
 /** Throws the API's sentence (or `fallback`) for anything but a 2xx. */
@@ -157,20 +159,41 @@ export function useMyGalleryPosts() {
  * said (a vote's answer).
  */
 interface PostPatch {
-	my_vote?: boolean
-	upvotes?: number
-	upvotesDelta?: number
+	my_vote?: VoteChoice
+	/** The server's answer: the score, and the split when the viewer is staff. */
+	votes?: VoteAnswer
+	scoreDelta?: number
 	commentsDelta?: number
 }
 
+/** What a vote PUT or DELETE answers, on a post or a comment. */
+interface VoteAnswer {
+	score: number
+	my_vote: VoteChoice
+	split?: VoteSplit
+}
+
+const VOTE_VALUE: Record<VoteChoice, number> = { up: 1, none: 0, down: -1 }
+
+/**
+ * How far the score moves going from one vote to another: up to down is -2.
+ * The shown score is floored at 0, so near 0 this is a guess that the
+ * server's answer corrects a moment later.
+ */
+export function voteDelta(from: VoteChoice | null, to: VoteChoice): number {
+	return VOTE_VALUE[to] - VOTE_VALUE[from ?? "none"]
+}
+
 function patched<T extends GalleryRow>(row: T, patch: PostPatch): T {
-	const upvotes = patch.upvotes ?? row.stats.upvotes + (patch.upvotesDelta ?? 0)
+	const score = patch.votes?.score ?? row.stats.score + (patch.scoreDelta ?? 0)
+	const split = patch.votes ? patch.votes.split : row.stats.split
 	return {
 		...row,
-		my_vote: patch.my_vote ?? row.my_vote,
+		my_vote: patch.votes?.my_vote ?? patch.my_vote ?? row.my_vote,
 		stats: {
 			...row.stats,
-			upvotes: Math.max(upvotes, 0),
+			score: Math.max(score, 0),
+			...(split ? { split } : {}),
 			comments: Math.max(row.stats.comments + (patch.commentsDelta ?? 0), 0),
 		},
 	}
@@ -192,24 +215,29 @@ function patchPost(client: QueryClient, publicId: string, patch: PostPatch): voi
 
 // ── Writes ───────────────────────────────────────────────────────────────
 
+/** A vote to send: the choice, and the one it replaces (to step back on a refusal). */
+export interface VoteWrite {
+	choice: VoteChoice
+	previous: VoteChoice | null
+}
+
 /**
- * Upvote or take it back. Optimistic: the arrow and the count move at once
- * everywhere, step back if the server refuses, and settle on the server's
- * count when it answers (other people may have voted meanwhile).
+ * Vote up, down, or take it back. Optimistic: the arrows and the score move
+ * at once everywhere, step back if the server refuses, and settle on the
+ * server's score when it answers (other people may have voted meanwhile).
  *
- * One hook per button, so each row has its own pending state.
+ * One hook per button pair, so each row has its own pending state.
  */
 export function useGalleryVote() {
 	const client = useQueryClient()
 	return useMutation({
-		mutationFn: async ({ publicId, on }: { publicId: string; on: boolean }) =>
-			readJson<{ upvotes: number; my_vote: boolean }>(
-				await galleryVote(publicId, on),
-				"Your upvote didn't go through. Try again in a moment."
-			),
-		onMutate: ({ publicId, on }) => patchPost(client, publicId, { my_vote: on, upvotesDelta: on ? 1 : -1 }),
-		onError: (_error, { publicId, on }) => patchPost(client, publicId, { my_vote: !on, upvotesDelta: on ? -1 : 1 }),
-		onSuccess: (body, { publicId }) => patchPost(client, publicId, { my_vote: body.my_vote, upvotes: body.upvotes }),
+		mutationFn: async ({ publicId, choice }: VoteWrite & { publicId: string }) =>
+			readJson<VoteAnswer>(await galleryVote(publicId, choice), "Your vote didn't go through. Try again in a moment."),
+		onMutate: ({ publicId, choice, previous }) =>
+			patchPost(client, publicId, { my_vote: choice, scoreDelta: voteDelta(previous, choice) }),
+		onError: (_error, { publicId, choice, previous }) =>
+			patchPost(client, publicId, { my_vote: previous ?? "none", scoreDelta: -voteDelta(previous, choice) }),
+		onSuccess: (votes, { publicId }) => patchPost(client, publicId, { votes }),
 	})
 }
 
@@ -332,16 +360,15 @@ export function useCommentWrites(source: CommentThreadSource) {
 	})
 
 	const vote = useMutation({
-		mutationFn: async ({ id, on }: { id: number; on: boolean }) =>
-			readJson<{ upvotes: number; my_vote: boolean }>(
-				await galleryCommentVote(id, on),
-				"That didn't go through. Try again in a moment."
-			),
-		onMutate: ({ id, on }) =>
+		mutationFn: async ({ id, choice }: { id: number; choice: VoteChoice }) =>
+			readJson<VoteAnswer>(await galleryCommentVote(id, choice), "That didn't go through. Try again in a moment."),
+		onMutate: ({ id, choice }) =>
 			client.setQueryData<Thread>(key, (thread) =>
 				thread &&
 				withPatch(thread, id, (comment) =>
-					comment.my_vote === on ? comment : { ...comment, my_vote: on, upvotes: Math.max(comment.upvotes + (on ? 1 : -1), 0) }
+					comment.my_vote === choice
+						? comment
+						: { ...comment, my_vote: choice, score: Math.max(comment.score + voteDelta(comment.my_vote, choice), 0) }
 				)
 			),
 		onSuccess: (answer, { id }) =>
