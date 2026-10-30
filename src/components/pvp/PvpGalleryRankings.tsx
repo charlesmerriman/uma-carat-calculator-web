@@ -93,7 +93,7 @@ function GalleryBody({ event, payload, catalogue, guide }: {
 				{payload.posts === 0
 					? "Nobody has posted a team for this event yet. "
 					: `Counting the ${payload.posts === 1 ? "team" : `${payload.posts.toLocaleString()} teams`} posted to this event's gallery. `}
-				Every saved team, posted or not, is on the{" "}
+				Every saved team of three, posted or not, is on the{" "}
 				<Link to={rankingsHref} className="text-brand transition hover:text-brand/75">
 					Rankings page
 				</Link>

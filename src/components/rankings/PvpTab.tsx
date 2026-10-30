@@ -1,6 +1,6 @@
 /**
  * The Rankings page's PvP tab (`?view=pvp`), one event at a time: what
- * players build (every saved team, posted or not; the PvP page's own
+ * players build (every finished saved team, posted or not; the PvP page's own
  * Rankings view counts only the gallery) and what wins (CM Runs' win rate
  * per uma and strategy, utils/runResults.ts).
  *
@@ -176,7 +176,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 						: [{ label: "Posted to the gallery", value: posted ? posted.posts.toLocaleString() : "…" }]),
 				]}
 			>
-				Every team saved for {short} on the site, posted or not, and every ticket logged in CM Runs.
+				Every team of three saved for {short} on the site, posted or not, and every ticket logged in CM Runs. Cards count from full decks.
 			</StatBand>
 
 			{built.umas.length === 0 ? (
