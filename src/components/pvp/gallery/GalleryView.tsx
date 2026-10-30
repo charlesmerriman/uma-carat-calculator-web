@@ -42,7 +42,7 @@ import { Link, useLocation, useNavigate, useNavigationType, useSearchParams } fr
 import { AnimatePresence, MotionConfig, animate, motion, useReducedMotion, type MotionProps } from "framer-motion"
 import { Eye, Loader2, MessageSquare, Send, Users } from "lucide-react"
 import { GalleryPostPanel } from "./GalleryPostPanel"
-import { GalleryUpvote, PosterLine, StyleChip, UmaPortrait, YouChip } from "./GalleryBits"
+import { GalleryVote, PosterLine, StyleChip, UmaPortrait, YouChip } from "./GalleryBits"
 import { GalleryUmaFilter } from "./GalleryUmaFilter"
 import { ACTION_BUTTON, SECONDARY_BUTTON } from "./galleryStyles"
 import { useAccount } from "../../../services/AuthContext"
@@ -100,11 +100,10 @@ type Glide = Pick<MotionProps, "layout" | "layoutDependency">
  * order is points, and without the sentence a 5 above a 7 looks like a bug.
  */
 const SORT_NOTES: Record<GallerySort, string> = {
-	hot: "Upvoted teams rise to the top and sink as they age.",
-	top: "The most upvoted teams first.",
+	hot: "Well-voted teams rise to the top and sink as they age.",
+	top: "The best-voted teams first. A score never shows below 0, but a downvoted team still sinks.",
 	new: "The newest teams first.",
 }
-const WEIGHT_NOTE = "Upvotes from supporters, and supporters' own posts, count a bit extra, so the order won't always match the numbers."
 
 function parseSort(value: string | null): GallerySort {
 	return GALLERY_SORTS.some((sort) => sort.id === value) ? (value as GallerySort) : "hot"
@@ -539,7 +538,7 @@ function FeedToolbar({ sort, uma, feed, index, glide, onSort, onFilter }: {
 				)}
 			</div>
 			<motion.p {...glide} className="text-xs leading-relaxed text-gray-400 @2xl/feed:order-3 @2xl/feed:basis-full">
-				{SORT_NOTES[sort]} {sort !== "new" && WEIGHT_NOTE}
+				{SORT_NOTES[sort]}
 			</motion.p>
 			{options.length > 0 && index && (
 				<motion.div {...glide} className="flex items-center gap-2 text-sm text-gray-300 @2xl/feed:order-1 @2xl/feed:w-80">
@@ -594,7 +593,7 @@ function YourPostBar({ eventRef, eventName, postHref, onOpenMyTeam, glide = {} }
 						<span className="text-highlight">Hidden while we review it</span>
 					) : (
 						<>
-							<span>{countLabel(post.data.stats.upvotes, "upvote")}</span>
+							<span>{`Score ${post.data.stats.score}`}</span>
 							<span>{countLabel(post.data.stats.comments, "comment")}</span>
 						</>
 					)}
@@ -695,7 +694,7 @@ export function GalleryRow({ row, index, selected, link, glide = {} }: {
 			<div className="relative flex gap-3 p-3">
 				{link}
 				<motion.div {...glide} className="relative z-[2] self-start @4xl/feed:self-center">
-					<GalleryUpvote post={row} layout="column" />
+					<GalleryVote post={row} layout="column" />
 				</motion.div>
 				<div className="flex min-w-0 flex-1 flex-col gap-2 @4xl/feed:flex-row @4xl/feed:items-center @4xl/feed:gap-6">
 					<div className="contents @4xl/feed:flex @4xl/feed:min-w-0 @4xl/feed:flex-1 @4xl/feed:flex-col @4xl/feed:gap-2">
@@ -710,12 +709,12 @@ export function GalleryRow({ row, index, selected, link, glide = {} }: {
 								/>
 							</div>
 							<time
-								dateTime={row.content_updated_at}
-								title={`${updated ? "Updated" : "Posted"} ${formatDate(row.content_updated_at)}`}
+								dateTime={row.published_at}
+								title={`Posted ${formatDate(row.published_at)}${updated ? `, edited ${formatDate(row.content_updated_at)}` : ""}`}
 								className="shrink-0 text-xs text-gray-500"
 							>
-								{updated ? "updated " : ""}
-								{formatTimeAgo(row.content_updated_at)}
+								{formatTimeAgo(row.published_at)}
+								{updated ? ", edited" : ""}
 							</time>
 						</motion.div>
 						{row.caption && (

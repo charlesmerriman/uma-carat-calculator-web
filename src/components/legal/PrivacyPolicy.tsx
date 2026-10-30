@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 28, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: October 30, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -192,8 +192,8 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 					</ul>
 					<p className={paragraph}>
-						Taking a post down deletes it with its upvotes and comments. Deleting your account
-						deletes your posts, your upvotes and thumbs-ups, and your comments, except that a comment someone
+						Taking a post down deletes it with its votes and comments. Deleting your account
+						deletes your posts, your votes, and your comments, except that a comment someone
 						has replied to stays in its thread as &quot;[deleted]&quot;, with no text and no
 						name.
 					</p>

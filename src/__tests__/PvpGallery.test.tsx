@@ -101,8 +101,8 @@ function row(publicId: string, extra: Partial<GalleryRow> = {}): GalleryRow {
 		content_updated_at: "2026-10-10T00:00:00Z",
 		is_mine: false,
 		umas: [{ uma: 41, style: "front" }, { uma: 12, style: "pace" }, { uma: 77, style: "late" }],
-		stats: { views: 212, upvotes: 14, comments: 5 },
-		my_vote: false,
+		stats: { views: 212, score: 14, comments: 5 },
+		my_vote: "none",
 		poster: poster(null),
 		...extra,
 	}
@@ -119,7 +119,7 @@ function fullPost(publicId: string, extra: Partial<GalleryPost> = {}): GalleryPo
 		team: TEAM,
 		event: { kind: "cm", id: 19, label: "Libra Cup" },
 		hidden: false,
-		stats: { views: 212, upvotes: 14, comments: 5, copies: 3 },
+		stats: { views: 212, score: 14, comments: 5, copies: 3 },
 		...extra,
 	}
 }
@@ -172,7 +172,7 @@ beforeEach(() => {
 			[
 				row("aaaaaaa1", { poster: poster("ssr", "Senior Class") }),
 				row("bbbbbbb2", { poster: poster("sr", "Classic Class") }),
-				row("ccccccc3", { poster: poster("rose", "Junior Class"), stats: { views: 1, upvotes: 2, comments: 1 } }),
+				row("ccccccc3", { poster: poster("rose", "Junior Class"), stats: { views: 1, score: 2, comments: 1 } }),
 			],
 			{ sort }
 		)
@@ -219,7 +219,7 @@ describe("the feed", () => {
 			expect(galleryFeedFetch).toHaveBeenLastCalledWith({ kind: "cm", id: 19 }, { sort: "top", uma: null, limit: 20 })
 		)
 		expect(screen.getByRole("button", { name: "Top" })).toHaveAttribute("aria-pressed", "true")
-		expect(screen.getByText(/supporters' own posts, count a bit extra/)).toBeInTheDocument()
+		expect(screen.getByText(/a downvoted team still sinks/)).toBeInTheDocument()
 	})
 
 	it("filters by an uma the event's posts use", async () => {
@@ -265,10 +265,24 @@ describe("the feed", () => {
 		renderGallery()
 		const [first] = await screen.findAllByRole("article")
 		fireEvent.click(within(first).getByRole("button", { name: /^Upvote/ }))
-		expect(await within(first).findByRole("button", { name: /Remove your upvote \(15/ })).toBeInTheDocument()
+		expect(await within(first).findByRole("button", { name: /Take back your upvote \(score 15/ })).toBeInTheDocument()
 		answer(new Response(JSON.stringify({ error: "Your account can't vote in the gallery." }), { status: 403 }))
-		await waitFor(() => expect(within(first).getByRole("button", { name: /^Upvote \(14/ })).toBeInTheDocument())
+		await waitFor(() => expect(within(first).getByRole("button", { name: /^Upvote \(score 14/ })).toBeInTheDocument())
 		expect(toast.error).toHaveBeenCalledWith("Your account can't vote in the gallery.")
+	})
+
+	it("downvotes a post, then takes it back with the same arrow", async () => {
+		vi.mocked(galleryVote).mockImplementation((_id, choice) =>
+			json(choice === "down" ? { score: 13, my_vote: "down" } : { score: 14, my_vote: "none" })
+		)
+		renderGallery()
+		const [first] = await screen.findAllByRole("article")
+		fireEvent.click(within(first).getByRole("button", { name: /^Downvote/ }))
+		const pressed = await within(first).findByRole("button", { name: /Take back your downvote \(score 13/ })
+		expect(vi.mocked(galleryVote)).toHaveBeenCalledWith("aaaaaaa1", "down")
+		fireEvent.click(pressed)
+		await waitFor(() => expect(vi.mocked(galleryVote)).toHaveBeenLastCalledWith("aaaaaaa1", "none"))
+		expect(await within(first).findByRole("button", { name: /^Downvote \(score 14/ })).toBeInTheDocument()
 	})
 
 	it("asks a guest to sign in instead of voting, with a way to do it", async () => {
@@ -278,7 +292,7 @@ describe("the feed", () => {
 		const [first] = await screen.findAllByRole("article")
 		fireEvent.click(within(first).getByRole("button", { name: /^Upvote/ }))
 		expect(toast).toHaveBeenCalledWith(
-			"Sign in to upvote teams.",
+			"Sign in to vote on teams.",
 			expect.objectContaining({ action: expect.objectContaining({ label: "Sign in" }) })
 		)
 		expect(galleryVote).not.toHaveBeenCalled()
@@ -287,7 +301,7 @@ describe("the feed", () => {
 
 	it("marks your own post and shows it above the list", async () => {
 		vi.mocked(galleryFeedFetch).mockImplementation(() =>
-			feed([row("mine0001", { is_mine: true, my_vote: true }), row("bbbbbbb2")])
+			feed([row("mine0001", { is_mine: true, my_vote: "none" }), row("bbbbbbb2")])
 		)
 		vi.mocked(galleryPostFetch).mockImplementation((id) => json(fullPost(id, { is_mine: true })))
 		renderGallery(undefined, teamsValue({
@@ -295,9 +309,9 @@ describe("the feed", () => {
 		}))
 		const [mine] = await screen.findAllByRole("article")
 		expect(within(mine).getByText("You")).toBeInTheDocument()
-		expect(within(mine).queryByRole("button", { name: /upvote/i })).not.toBeInTheDocument()
+		expect(within(mine).queryByRole("button", { name: /vote/i })).not.toBeInTheDocument()
 		expect(await screen.findByText("Your post")).toBeInTheDocument()
-		expect(screen.getByText("14 upvotes")).toBeInTheDocument()
+		expect(screen.getByText("Score 14")).toBeInTheDocument()
 	})
 
 	it("offers to post when you have not", async () => {
@@ -420,7 +434,7 @@ describe("the post panel", () => {
 	it("draws each comment state", async () => {
 		const comment = (id: number, extra: Partial<GalleryComment>): GalleryComment => ({
 			id, state: "visible", body: `Body ${id}`, created_at: "2026-10-11T00:00:00Z", edited: false,
-			earlier_version: false, is_author: false, is_mine: false, poster: poster(null), upvotes: 0, my_vote: false, replies: [], ...extra,
+			earlier_version: false, is_author: false, is_mine: false, poster: poster(null), score: 0, my_vote: "none", replies: [], ...extra,
 		})
 		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
 			json({
@@ -447,7 +461,7 @@ describe("the post panel", () => {
 				count: 1, page: 1, has_more: false,
 				results: [{
 					id: 1, state: "visible", body: "Nice", created_at: "2026-10-11T00:00:00Z", edited: false,
-					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), upvotes: 0, my_vote: false, replies: [],
+					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), score: 0, my_vote: "none", replies: [],
 				}],
 			})
 		)
@@ -457,22 +471,39 @@ describe("the post panel", () => {
 		expect(screen.getByRole("link", { name: "Set a display name" })).toHaveAttribute("href", "/account")
 	})
 
-	it("gives a comment a thumbs-up at once, then keeps the server's count", async () => {
+	it("gives a comment a thumbs-up at once, then keeps the server's score", async () => {
 		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
 			json({
 				count: 1, page: 1, has_more: false,
 				results: [{
 					id: 7, state: "visible", body: "Strong pick", created_at: "2026-10-11T00:00:00Z", edited: false,
-					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), upvotes: 1, my_vote: false, replies: [],
+					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), score: 1, my_vote: "none", replies: [],
 				}],
 			})
 		)
-		vi.mocked(galleryCommentVote).mockImplementation(() => json({ upvotes: 5, my_vote: true }))
+		vi.mocked(galleryCommentVote).mockImplementation(() => json({ score: 5, my_vote: "up" }))
 		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
-		fireEvent.click(await screen.findByRole("button", { name: "Give a thumbs-up (1)" }))
-		await waitFor(() => expect(vi.mocked(galleryCommentVote)).toHaveBeenCalledWith(7, true))
-		const pressed = await screen.findByRole("button", { name: "Take back your thumbs-up (5)" })
+		fireEvent.click(await screen.findByRole("button", { name: "Give a thumbs-up (score 1)" }))
+		await waitFor(() => expect(vi.mocked(galleryCommentVote)).toHaveBeenCalledWith(7, "up"))
+		const pressed = await screen.findByRole("button", { name: "Take back your thumbs-up (score 5)" })
 		expect(pressed).toHaveAttribute("aria-pressed", "true")
+	})
+
+	it("switches a thumbs-up to a thumbs-down", async () => {
+		vi.mocked(galleryCommentsFetch).mockImplementation(() =>
+			json({
+				count: 1, page: 1, has_more: false,
+				results: [{
+					id: 7, state: "visible", body: "Strong pick", created_at: "2026-10-11T00:00:00Z", edited: false,
+					earlier_version: false, is_author: false, is_mine: false, poster: poster(null), score: 3, my_vote: "up", replies: [],
+				}],
+			})
+		)
+		vi.mocked(galleryCommentVote).mockImplementation(() => json({ score: 1, my_vote: "down" }))
+		renderGallery("/app/pvp?event=cm-19&view=gallery&post=aaaaaaa1")
+		fireEvent.click(await screen.findByRole("button", { name: "Give a thumbs-down (score 3)" }))
+		await waitFor(() => expect(vi.mocked(galleryCommentVote)).toHaveBeenCalledWith(7, "down"))
+		expect(await screen.findByRole("button", { name: "Take back your thumbs-down (score 1)" })).toHaveAttribute("aria-pressed", "true")
 	})
 })
 
