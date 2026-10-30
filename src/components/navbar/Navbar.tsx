@@ -41,11 +41,13 @@ export const Navbar = () => {
 	// while it loads, so the item appears after load and never flashes.
 	const showRankings = Boolean(account?.early_access)
 
-	// Team drawer + settings gear + theme picker, grouped so every nav cluster
-	// renders the same controls. TeamDrawerButton and SettingsMenu render
-	// nothing outside app mode.
+	// Search + team drawer + settings gear + theme picker, grouped so every nav
+	// cluster renders the same controls. TeamDrawerButton and SettingsMenu
+	// render nothing outside app mode.
+	const searchButton = <SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 	const navControls = (
 		<>
+			{searchButton}
 			<TeamDrawerButton />
 			<SettingsMenu />
 			<ThemePicker />
@@ -159,7 +161,6 @@ export const Navbar = () => {
 					</div>
 
 					<div className="flex shrink-0 items-center gap-1.5">
-						<SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>
@@ -185,7 +186,10 @@ export const Navbar = () => {
 								</>
 							)
 						) : (
-							authButton
+							<>
+								{searchButton}
+								{authButton}
+							</>
 						)}
 					</div>
 				</div>
@@ -284,7 +288,6 @@ export const Navbar = () => {
 
 					{/* Right: Save indicator + settings + theme picker + avatar menu / Login */}
 					<div className="flex items-center justify-end gap-2">
-						<SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>
