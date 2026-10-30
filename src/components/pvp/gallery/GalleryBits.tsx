@@ -4,7 +4,7 @@
  * and a read-only team.
  */
 
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { ArrowBigDown, ArrowBigUp, Heart } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar } from "../../account/Avatar"
@@ -15,8 +15,9 @@ import { failureText, useGalleryVote } from "../../../services/galleryQueries"
 import { useSignInPrompt } from "../../../hooks/useSignInPrompt"
 import { useOshiIds } from "../../../hooks/useOshiIds"
 import { FramedUma } from "../../FramedUma"
+import { ProfileCard } from "./ProfileCard"
 import type { PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
-import type { GalleryPoster, GalleryRow } from "../../../types/gallery"
+import type { GalleryPoster, GalleryRow, ProfileCardTarget } from "../../../types/gallery"
 import type { CatalogueUma, MemberStyle, PvpTeamMember } from "../../../types/pvpTeam"
 
 /**
@@ -50,24 +51,46 @@ export function YouChip() {
  * `avatarClassName` and `nameClassName` add to the small defaults, for a
  * caller that draws the line bigger somewhere (the feed's wide row does, by
  * container query).
+ *
+ * `card` makes the picture and name open the person's card. The feed passes
+ * none: its whole row is already a link to the post.
  */
-export function PosterLine({ poster, extra, mine = false, avatarClassName = "", nameClassName = "" }: {
+export function PosterLine({ poster, extra, mine = false, card, avatarClassName = "", nameClassName = "" }: {
 	poster: GalleryPoster
 	extra?: ReactNode
 	mine?: boolean
+	card?: ProfileCardTarget
 	avatarClassName?: string
 	nameClassName?: string
 }) {
+	const [cardOpen, setCardOpen] = useState(false)
+	const who = (
+		<>
+			<Avatar src={poster.portrait} size="sm" oshi={mine} className={avatarClassName} />
+			<span className={`min-w-0 truncate text-sm font-semibold text-gray-100 ${nameClassName}`}>{posterName(poster)}</span>
+		</>
+	)
 	return (
 		<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
 			{/* Picture and name never part: as one group they wrap together, and
 			    the name truncates only when the pair is wider than the line. */}
-			<span className="flex min-w-0 max-w-full items-center gap-2">
-				<Avatar src={poster.portrait} size="sm" oshi={mine} className={avatarClassName} />
-				<span className={`min-w-0 truncate text-sm font-semibold text-gray-100 ${nameClassName}`}>{posterName(poster)}</span>
-			</span>
+			{card ? (
+				<button
+					type="button"
+					aria-haspopup="dialog"
+					onClick={() => setCardOpen(true)}
+					className="flex min-w-0 max-w-full items-center gap-2 rounded text-left outline-none decoration-gray-400 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-brand"
+				>
+					{who}
+				</button>
+			) : (
+				<span className="flex min-w-0 max-w-full items-center gap-2">{who}</span>
+			)}
 			<TierChip poster={poster} />
 			{extra}
+			{card && cardOpen && (
+				<ProfileCard target={card} name={posterName(poster)} tier={poster.tier_name ? <TierChip poster={poster} /> : null} onClose={() => setCardOpen(false)} />
+			)}
 		</div>
 	)
 }

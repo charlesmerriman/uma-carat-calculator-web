@@ -196,7 +196,12 @@ function CommentItem({ comment, canWrite, signedIn, writes, onReply, onReport }:
 
 	return (
 		<div className="flex flex-col gap-1">
-			<PosterLine poster={comment.poster} mine={comment.is_mine} extra={meta} />
+			<PosterLine
+				poster={comment.poster}
+				mine={comment.is_mine}
+				card={comment.state === "visible" ? { kind: "comment", id: comment.id } : undefined}
+				extra={meta}
+			/>
 			{comment.earlier_version && (
 				<p className="text-xs text-gray-500">On an earlier version of this team</p>
 			)}

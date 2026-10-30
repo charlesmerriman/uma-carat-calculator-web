@@ -34,6 +34,28 @@ export interface GalleryPoster {
 	gallery_style: GalleryStyle | null
 }
 
+/** What a name opens: a person is reached through something they posted. */
+export type ProfileCardTarget = { kind: "post"; id: string } | { kind: "comment"; id: number }
+
+/**
+ * A person's card (backend views/profile_card.py). No name, picture or tier:
+ * the post or comment it opens from already has them. "label", never "name":
+ * the gallery's guard against a team's private name reaching a payload.
+ */
+export interface ProfileCardData {
+	/** Every favorite their tier covers, in their order. */
+	favorites: { uma: number; label: string; image: string }[]
+	/** Their visible posts, newest first, ten at most. */
+	posts: {
+		public_id: string
+		caption: string
+		score: number
+		event: { kind: PvpEventKind; id: number; label: string }
+	}[]
+	/** Their shared plans' totals. Empty unless they turned that on. */
+	plans: { public_id: string; row_count: number; pull_count: number; step_count: number }[]
+}
+
 /** The viewer's vote on a post or a comment. A guest's is null: they can't vote. */
 export type VoteChoice = "up" | "down" | "none"
 

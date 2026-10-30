@@ -265,7 +265,7 @@ function PostBody({ post, event, index, onOpenMyTeam, onTakenDown }: {
 				className={`flex flex-col gap-2 ${look === "ssr" ? "ssr-panel ssr-panel--quiet rounded-xl border p-3" : look ? "card-panel p-3" : ""}`}
 			>
 				<div className="flex flex-col gap-2">
-					<PosterLine poster={post.poster} mine={post.is_mine} extra={post.is_mine && <YouChip />} />
+					<PosterLine poster={post.poster} mine={post.is_mine} card={{ kind: "post", id: post.public_id }} extra={post.is_mine && <YouChip />} />
 					<p className="text-xs text-gray-400">
 						<time dateTime={post.published_at} title={formatDate(post.published_at)}>
 							Posted {formatTimeAgo(post.published_at)}
