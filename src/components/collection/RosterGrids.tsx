@@ -24,6 +24,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { Link } from "react-router-dom"
 import { ArrowDown, ArrowUp, Minus, MoreHorizontal, Plus, Search, X } from "lucide-react"
 import { FramedUma } from "../FramedUma"
+import { FramedCard } from "../FramedCard"
 import { LIMIT_BREAKS, STAR_LEVELS, cardSummary, limitBreakLabel, umaSummary, type RosterView } from "../../utils/roster"
 import {
 	CARD_SORTS,
@@ -597,36 +598,22 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 				onClick={() => (row ? onToggle(!open) : onEdit({ support_cards: [{ support_card: card.id, owned: true }] }))}
 				className={`relative block w-full rounded-md transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
-				{card.image ? (
-					<img
-						src={card.image}
-						alt=""
-						loading="lazy"
-						decoding="async"
-						className={`aspect-[3/4] w-full rounded-md object-cover transition ${row ? "" : "opacity-40 grayscale hover:opacity-70"}`}
-					/>
-				) : (
-					<span className="block aspect-[3/4] w-full rounded-md bg-gray-700" aria-hidden="true" />
-				)}
+				{/* An owned card wears the game's limit-break diamonds, bottom left
+				    (Daptrius's overlays, owner 2026-11-02); the words are for a
+				    screen reader. A card not owned is greyed, with no diamonds. */}
+				<FramedCard
+					card={card}
+					limitBreaks={row ? row.limit_break : null}
+					className={`w-full transition ${row ? "" : "opacity-40 grayscale hover:opacity-70"}`}
+				/>
 				{row ? (
 					<>
-						<span
-							className="art-badge absolute inset-x-[6%] bottom-[5%] flex items-center justify-center gap-1.5 rounded-md py-1"
-							data-testid="limit-break-badge"
-						>
-							<span className="flex gap-1" aria-hidden="true">
-								{[0, 1, 2, 3].map((pip) => (
-									<span key={pip} className={`h-1.5 w-1.5 rotate-45 ${pip < row.limit_break ? "art-pip-on" : "art-pip-off"}`} />
-								))}
-							</span>
-							{row.limit_break >= 4 ? (
-								<span className="art-on text-[10.5px] font-extrabold leading-none">MLB</span>
-							) : (
-								<span className="sr-only">{limitBreakLabel(row.limit_break)}</span>
-							)}
+						<span className="sr-only" data-testid="limit-break-badge">
+							{limitBreakLabel(row.limit_break)}
 						</span>
 						{row.spare_copies > 0 && (
-							<span className="art-badge absolute right-[6%] top-[5%] rounded-md px-1.5 text-[10.5px] font-bold leading-[17px]" title="Spare copies">
+							// Top left: the type icon has the top right corner.
+							<span className="art-badge absolute left-[6%] top-[5%] rounded-md px-1.5 text-[10.5px] font-bold leading-[17px]" title="Spare copies">
 								+{row.spare_copies}
 							</span>
 						)}

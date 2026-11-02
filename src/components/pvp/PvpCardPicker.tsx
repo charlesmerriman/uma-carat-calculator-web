@@ -42,6 +42,7 @@ import type {
 	MemberStyle,
 } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
+import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { limitBreakLabel, type OwnedForPicker } from "../../utils/roster"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { whiteSkillPairs } from "../../utils/pvpTeams"
@@ -78,6 +79,8 @@ interface PickerItem {
 	image: string | null
 	/** An uma's borderless art, drawn in the site's frame (FramedUma); null for a support card. */
 	portrait: string | null
+	/** A support card, drawn as the game draws it (FramedCard); null for an uma. */
+	card: FramedCardArt | null
 	skills: CatalogueSkillLink[]
 	cardType: string | null
 	/** A support card's 1 / 2 / 3 (R / SR / SSR); null for an uma. */
@@ -144,6 +147,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 			alias: "",
 			image: uma.image,
 			portrait: uma.portrait ?? uma.image,
+			card: null,
 			skills: uma.skills,
 			cardType: null,
 			rarity: null,
@@ -157,6 +161,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 		alias: card.title,
 		image: card.image,
 		portrait: null,
+		card,
 		skills: card.skills,
 		cardType: card.card_type,
 		rarity: card.rarity,
@@ -445,6 +450,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 											<span className="relative block w-full">
 												{item.portrait ? (
 													<FramedUma src={item.portrait} oshi={oshiIds.has(item.id)} className="w-full" />
+												) : item.card ? (
+													<FramedCard card={item.card} className="w-full" />
 												) : item.image ? (
 													<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
 												) : (

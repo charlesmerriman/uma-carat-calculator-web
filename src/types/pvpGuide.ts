@@ -43,6 +43,8 @@ export interface PvpSupportCardRef {
 	id: number
 	name: string
 	image: string | null
+	/** The frameless texture the deck frames itself (FramedCard); null until uploaded, absent from an older API. */
+	image_borderless?: string | null
 	card_type: string | null
 	rarity: number | null
 }

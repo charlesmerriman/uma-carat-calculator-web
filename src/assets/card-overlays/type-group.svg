@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com" viewBox="0 0 762 1000" preserveAspectRatio="none"><g transform="translate(125.11 0) scale(0.83581 0.81197)">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="684" y1="0" x2="684" y2="156" id="gradient-3" gradientTransform="matrix(0.935088, -0.250071, 0.259229, 0.969334, 36.467817, 172.981508)">
+      <stop offset="0" style="stop-color: rgb(252, 255, 243);"/>
+      <stop offset="1" style="stop-color: rgb(251, 255, 241);"/>
+    </linearGradient>
+    <clipPath id="insideBorder">
+      <rect x="3" y="3" width="119" height="119" rx="22"/>
+    </clipPath>
+    <clipPath id="clip-1">
+      <rect x="13" y="15" width="121" height="121" rx="22"/>
+    </clipPath>
+    <clipPath id="clip-2">
+      <rect x="3" y="3" width="119" height="119" rx="22"/>
+    </clipPath>
+    <clipPath id="clip-3">
+      <rect x="3" y="3" width="119" height="119" rx="22"/>
+    </clipPath>
+  </defs>
+  <rect x="608.5" width="151" height="151" style="stroke-width: 5; fill: url(&quot;#gradient-3&quot;); stroke: rgb(116, 176, 50);" rx="31" ry="31" y="2.5"/>
+  <g clip-path="url(#insideBorder)" transform="matrix(1.275, 0, 0, 1.275, 614.032837, -3.433875)">
+    <g fill="#9de83a"/>
+    <g clip-path="url(#clip-1)" transform="matrix(1, 0, 0, 1, -19.123785, -12.85381)"/>
+  </g>
+  <ellipse style="fill: rgb(177, 230, 87);" cx="723.312" cy="72.345" rx="27" ry="27"/>
+  <rect x="893.472" y="61.849" width="36.797" height="47.313" style="fill: rgb(176, 230, 87); transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.920505, -0.390731, 0.390731, 0.920505, -188.416056, 26.411617)"/>
+  <ellipse style="fill: rgb(177, 230, 87); stroke-width: 1;" cx="-645" cy="72.3" rx="27" ry="27" transform="matrix(-1, 0, 0, 1, 0, 0)"/>
+  <rect x="893.47" y="61.849" width="36.797" height="47.313" style="fill: rgb(176, 230, 87); stroke-width: 1; transform-origin: 911.866px 85.506px;" transform="matrix(-0.920505, -0.390731, -0.390731, 0.920505, -267.684642, 26.460264)"/>
+  <ellipse style="stroke-width: 1; fill: rgb(252, 255, 242);" cx="684" cy="60" rx="45" ry="45"/>
+  <g clip-path="url(#clip-3)" transform="matrix(1.594355, 0, 0, 1.485587, 584.387207, -22.200178)" style="">
+    <g transform="translate(125 0) scale(-1 1)"/>
+    <path d="M 51.985 74.754 C 53.985 70.754 70.043 68.811 72.043 72.811 L 88 111 L 37 111 L 51.985 74.754 Z" style="fill: rgb(252, 254, 242);"/>
+  </g>
+  <ellipse style="fill: rgb(116, 206, 56);" cx="684" cy="60" rx="40" ry="40"/>
+  <rect x="616.967" y="125.552" width="133.943" height="13.594" style="fill: rgb(252, 255, 243);"/>
+  <g clip-path="url(#clip-2)" transform="matrix(1.238938, 0, 0, 1.238938, 606.566345, 0.176992)">
+    <g transform="translate(125 0) scale(-1 1)"/>
+    <path d="M 51.985 74.754 C 53.985 70.754 70.043 68.811 72.043 72.811 L 88 111 L 37 111 L 51.985 74.754 Z" style="fill: rgb(117, 206, 56);"/>
+    <circle cx="50" cy="42" r="4.5" fill="#fff"/>
+    <circle cx="75" cy="42" r="4.5" fill="#fff"/>
+    <path d="M50 58 C54 63 58 65 62.5 65 C67 65 71 63 75 58" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+  </g>
+</g></svg>

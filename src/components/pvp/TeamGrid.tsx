@@ -24,6 +24,7 @@ import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { CardDropSlot, DraggableCard } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
+import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 
@@ -141,6 +142,7 @@ function MemberPanel({
 		const tile = (
 			<Tile
 				art={entry ? (card?.image ?? null) : undefined}
+				card={card}
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
 				disabled={!member}
 				disabledHint="Pick an uma first"
@@ -294,6 +296,7 @@ function Tile({
 	empty,
 	caption,
 	shape = "square",
+	card,
 	framed = false,
 	large = false,
 	disabled = false,
@@ -313,6 +316,8 @@ function Tile({
 	caption?: string
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
+	/** A support card: drawn as the game draws it (FramedCard), its art from the card itself. */
+	card?: FramedCardArt
 	/** An uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
 	framed?: boolean
 	large?: boolean
@@ -329,6 +334,8 @@ function Tile({
 	className?: string
 }) {
 	const filled = art !== undefined
+	// A card is its own frame, like a framed uma: no box of ours round it.
+	const ownFrame = filled && (framed || card !== undefined)
 	return (
 		<div className={`min-w-0 ${className}`}>
 			<div className="group relative">
@@ -339,9 +346,9 @@ function Tile({
 					disabled={disabled}
 					onClick={onClick}
 					className={`${shape === "card" ? "aspect-[3/4]" : "aspect-square"} w-full outline-none transition focus-visible:ring-2 focus-visible:ring-brand ${
-						filled && framed
+						ownFrame
 							? // The frame is the tile's edge, so the focus ring follows its corner.
-								"block rounded-[10.75%] hover:brightness-110"
+								`block ${framed ? "rounded-[10.75%]" : "rounded-[6%/4.5%]"} hover:brightness-110`
 							: filled
 								? "block overflow-hidden rounded-lg bg-gray-700 ring-1 ring-gray-600 hover:ring-2 hover:ring-brand/70"
 								: `flex items-center justify-center overflow-hidden rounded-lg border border-dashed text-gray-500 ${
@@ -353,6 +360,8 @@ function Tile({
 				>
 					{filled && framed ? (
 						<FramedUma src={art} oshi={favorite} className="w-full" />
+					) : filled && card ? (
+						<FramedCard card={card} className="h-full w-full" />
 					) : filled ? (
 						art ? (
 							<img src={art} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />

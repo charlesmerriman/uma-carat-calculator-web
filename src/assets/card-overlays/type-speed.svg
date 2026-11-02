@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com" viewBox="0 0 762 1000" preserveAspectRatio="none"><g transform="translate(125.11 0) scale(0.83581 0.81197)">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="684" y1="0" x2="684" y2="156" id="gradient-3" gradientTransform="matrix(0.934905, -0.250753, 0.260265, 0.97037, 36.592834, 173.448303)">
+      <stop offset="0" style="stop-color: rgb(62, 192, 255);"/>
+      <stop offset="1" style="stop-color: rgb(34, 170, 255);"/>
+    </linearGradient>
+  </defs>
+  <rect x="608.5" width="151" height="151" style="stroke-width: 5; fill: url(&quot;#gradient-3&quot;); stroke: rgb(4, 73, 129);" rx="31" ry="31" y="2.5"/>
+  <g fill="#fff" transform="matrix(0.344214, 0, 0, 0.344214, 596.741821, -8.077188)">
+    <path d=" M 255 99 L 422 149 L 409 193 L 242 145 Z" style=""/>
+    <path d=" M 214 245 L 234 172 L 400 220 L 363 353 L 123 284 L 117 307 L 356 377 L 348 405 L 85 328 C 90 302, 99 270, 113 252 C 125 237, 146 238, 166 239 C 184 240, 199 242, 214 245 Z" style=""/>
+  </g>
+</g></svg>

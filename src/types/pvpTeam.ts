@@ -50,6 +50,8 @@ export interface CatalogueSupportCard {
 	/** The game's five-digit card id ("30086 Narita Top Road" in the sheet). Absent from an older API. */
 	game_id?: number | null
 	image: string | null
+	/** The frameless texture the site frames itself (FramedCard); null until uploaded, absent from an older API. */
+	image_borderless?: string | null
 	card_type: string | null
 	rarity: number | null
 	title: string

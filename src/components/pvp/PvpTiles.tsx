@@ -35,6 +35,7 @@ import { GOLD_SKILL_RARITY, type UmaAptitude } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
+import { FramedCard } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { splitOutfit } from "../../utils/umaName"
 import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
@@ -537,15 +538,15 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null }:
 	const linked = parseSlotNote(note).scenarioLink
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1">
-			{/* A card's art bakes in its own border, so no box of ours round it:
-			    only a slot with no art yet gets the grey square. The art (3:4) is
+			{/* The card is its own frame (FramedCard), so no box of ours round it:
+			    only a slot with no art yet gets the grey square. The card (3:4) is
 			    drawn full height in a square, centred, and the borrow tab wraps the
-			    image itself, not the square, so it is as wide as the card. */}
-			{card.image ? (
+			    card itself, not the square, so it is as wide as the card. */}
+			{card.image || card.image_borderless ? (
 				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
 						<span className="relative block h-full">
-							<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-full w-auto" />
+							<FramedCard card={card} alt={card.name} className="h-full" />
 							{linked && <LinkBadge scenarioName={scenarioName} />}
 						</span>
 					</BorrowTab>
@@ -583,8 +584,8 @@ export function SwapInCard({ card, note, scenarioName }: { card: PvpSupportCardR
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1 text-center">
 			<span className="relative block w-16">
-				{card.image ? (
-					<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-auto w-full" />
+				{card.image || card.image_borderless ? (
+					<FramedCard card={card} alt={card.name} className="w-full" />
 				) : (
 					<span className="block aspect-[3/4] w-full rounded-lg border border-gray-600 bg-gray-700" aria-hidden="true" />
 				)}
@@ -622,7 +623,7 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 						label={card.name}
 						detail={
 							<>
-								<TileArt src={card.image} alt="" />
+								<FramedCard card={card} className="mx-auto w-3/4" />
 								<span className="mt-1 block text-center font-medium text-gray-100">{card.name}</span>
 							</>
 						}
@@ -712,8 +713,8 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 		<WithDetail label={card.name} detail={detail} className="w-full" detailClassName="w-44">
 			<BorrowTab borrow={borrow}>
 				<span className="relative block">
-					{card.image ? (
-						<img src={card.image} alt={card.name} loading="lazy" decoding="async" className="block h-auto w-full" />
+					{card.image || card.image_borderless ? (
+						<FramedCard card={card} alt={card.name} className="w-full" />
 					) : (
 						<span className="block aspect-[3/4] w-full rounded-md border border-gray-600 bg-gray-700" aria-hidden="true" />
 					)}
@@ -757,6 +758,11 @@ export function MiniNoteSlot({ note, borrow = false }: { note: string; borrow?: 
  * 2026-10-16). The card's own bottom edge stays free for the limit-break
  * diamonds.
  *
+ * The part behind the card is a share of its height (12%), not a fixed
+ * depth: FramedCard's corners grow with the card (about 6% of its height), so
+ * a depth that covered them on a small card would leave a gap on a big one
+ * (the canvas's version 5, owner 2026-11-02).
+ *
  * The tab can't live inside the tile: the art box clips its overflow, and the
  * note tile's own background would paint over a tab put behind it. So it wraps
  * the tile from outside. `isolate` opens a stacking context, which keeps the
@@ -768,10 +774,10 @@ function BorrowTab({ borrow, className = "", children }: { borrow: boolean; clas
 	return (
 		<div className={`relative isolate ${className}`}>
 			{/* As wide as the card (owner, 2026-10-23), showing 14px above it.
-			    The rest (pb-2.5) runs behind the card, deeper than the card's
-			    rounded corners, so the grey fills in behind those corners and
-			    no square tab corner shows where the two meet. */}
-			<span className="absolute inset-x-0 -top-3.5 -z-10 rounded-t-lg bg-gray-600 pb-2.5 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
+			    The rest (down to 12% of the card) runs behind the card, deeper
+			    than its rounded corners, so the grey fills in behind those
+			    corners and no square tab corner shows where the two meet. */}
+			<span className="absolute inset-x-0 -top-3.5 bottom-[88%] -z-10 rounded-t-lg bg-gray-600 pt-px text-center text-[10px] font-bold uppercase leading-3 tracking-wide text-gray-200">
 				Borrow
 			</span>
 			{children}

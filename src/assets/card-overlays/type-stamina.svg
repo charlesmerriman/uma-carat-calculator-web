@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com" viewBox="0 0 762 1000" preserveAspectRatio="none"><g transform="translate(125.11 0) scale(0.83581 0.81197)">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="684" y1="0" x2="684" y2="156" id="gradient-3" gradientTransform="matrix(0.934905, -0.250753, 0.260265, 0.97037, 36.592834, 173.448303)">
+      <stop offset="0" style="stop-color: rgb(255, 136, 119);"/>
+      <stop offset="1" style="stop-color: rgb(255, 106, 86);"/>
+    </linearGradient>
+    <clipPath id="insideBorder">
+      <rect x="3" y="3" width="119" height="119" rx="22"/>
+    </clipPath>
+    <clipPath id="clip-1">
+      <rect x="13" y="15" width="121" height="121" rx="22"/>
+    </clipPath>
+  </defs>
+  <rect x="608.5" width="151" height="151" style="stroke-width: 5; fill: url(&quot;#gradient-3&quot;); stroke: rgb(226, 68, 47);" rx="31" ry="31" y="2.5"/>
+  <g clip-path="url(#insideBorder)" transform="matrix(1.275, 0, 0, 1.275, 614.032837, -3.433875)">
+    <g fill="#9de83a"/>
+    <g clip-path="url(#clip-1)" transform="matrix(1, 0, 0, 1, -19.123785, -12.85381)"/>
+  </g>
+  <path fill="#fff" d="M 684 128.204 C 677.918 122.994 666.973 113.876 656.027 103.455 C 645.081 93.034 636.568 83.917 632.919 76.1 C 628.054 65.679 629.27 53.957 636.568 46.141 C 642.649 39.629 651.163 37.022 659.675 38.327 C 669.405 39.629 677.918 47.443 684 57.864 C 690.081 47.443 698.594 39.629 708.324 38.327 C 716.837 37.022 725.351 39.629 731.432 46.141 C 738.73 53.957 739.946 65.679 735.081 76.1 C 731.432 83.917 722.919 93.034 711.973 103.455 C 701.027 113.876 690.081 122.994 684 128.204 Z" style="stroke-width: 1;"/>
+</g></svg>

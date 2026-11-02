@@ -25,6 +25,7 @@ import type { PvpStyle } from "../../types/pvpGuide"
 import type { PvpTeamMember } from "../../types/pvpTeam"
 import { DraggableCard } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
+import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
 /** One button in a pick's action row. A disabled one says why. */
@@ -100,6 +101,7 @@ export function GuidePicksBody({ guideState, members, actions, dragCards = false
 							name: pick.ref.name,
 							image: pick.ref.image,
 							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image },
+							card: null,
 							detail: describe(pick.styles, pick.notes),
 							stars: pick.stars,
 							onTeam: onTeamUmas.has(pick.ref.id),
@@ -126,6 +128,7 @@ export function GuidePicksBody({ guideState, members, actions, dragCards = false
 							name: pick.ref.name,
 							image: pick.ref.image,
 							uma: null,
+							card: pick.ref,
 							detail: describe(pick.styles, pick.notes),
 							stars: 0,
 							onTeam: onTeamCards.has(pick.ref.id),
@@ -160,6 +163,8 @@ interface PickItem {
 	image: string | null
 	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
 	uma: { id: number; portrait: string | null } | null
+	/** Set for a support card: drawn as the game draws it (FramedCard). */
+	card: FramedCardArt | null
 	detail: string
 	stars: number
 	onTeam: boolean
@@ -205,7 +210,8 @@ function PickTile({ item, shape, open, onClick }: {
 	const aspect = shape === "card" ? "aspect-[3/4]" : "aspect-square"
 	const oshiIds = useOshiIds()
 	// The open / on-team ring is a state, drawn round whatever the art is;
-	// on an uma it follows the frame's corner (App.css "Uma frames").
+	// on an uma or a card it follows the frame's corner (App.css "Uma frames",
+	// "Card frames").
 	const ring = open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : ""
 	return (
 		<li className="min-w-0">
@@ -221,11 +227,15 @@ function PickTile({ item, shape, open, onClick }: {
 						className={
 							item.uma
 								? `relative block rounded-[10.75%] transition ${ring}`
-								: `relative block overflow-hidden rounded-md bg-gray-700 transition ${ring || "ring-1 ring-gray-600 group-hover:ring-gray-400"}`
+								: item.card
+									? `relative block rounded-[6%/4.5%] transition ${ring}`
+									: `relative block overflow-hidden rounded-md bg-gray-700 transition ${ring || "ring-1 ring-gray-600 group-hover:ring-gray-400"}`
 						}
 					>
 						{item.uma ? (
 							<FramedUma src={item.uma.portrait} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
+						) : item.card ? (
+							<FramedCard card={item.card} alt={item.name} className="w-full" />
 						) : item.image ? (
 							<img src={item.image} alt={item.name} loading="lazy" decoding="async" className={`${aspect} block w-full object-cover`} />
 						) : (

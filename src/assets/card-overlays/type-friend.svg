@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com" viewBox="0 0 762 1000" preserveAspectRatio="none"><g transform="translate(125.11 0) scale(0.83581 0.81197)">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="684" y1="0" x2="684" y2="156" id="gradient-3" gradientTransform="matrix(0.934905, -0.250753, 0.260265, 0.97037, 36.592834, 173.448303)">
+      <stop offset="0" style="stop-color: rgb(255, 252, 235);"/>
+      <stop offset="1" style="stop-color: rgb(255, 252, 233);"/>
+    </linearGradient>
+    <clipPath id="insideBorder">
+      <rect x="3" y="3" width="119" height="119" rx="22"/>
+    </clipPath>
+    <clipPath id="clip-1">
+      <rect x="13" y="15" width="121" height="121" rx="22"/>
+    </clipPath>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="74" y1="84.038" x2="74" y2="137" id="gradient-0">
+      <stop offset="0" style="stop-color: rgb(247, 190, 62);"/>
+      <stop offset="1" style="stop-color: rgb(240, 184, 78);"/>
+    </linearGradient>
+  </defs>
+  <rect x="608.5" width="151" height="151" style="stroke-width: 5; fill: url(&quot;#gradient-3&quot;); stroke: rgb(247, 182, 58);" rx="31" ry="31" y="2.5"/>
+  <ellipse style="fill: rgb(247, 187, 61);" cx="684" cy="73.3" rx="51" ry="51"/>
+  <g clip-path="url(#insideBorder)" transform="matrix(1.275, 0, 0, 1.275, 614.032837, -3.433875)">
+    <g fill="#9de83a"/>
+    <g clip-path="url(#clip-1)" transform="matrix(1, 0, 0, 1, -19.123785, -12.85381)">
+      <path d="M 73.562 84.038 C 84.882 84.038 86.258 91.023 89.19 98 C 91.956 104.582 90.332 99.677 91.788 102.59 L 110 137 L 38 137 L 56.973 100.182 C 58.561 97.005 55.01 104.473 58.247 97.449 C 61.124 91.206 63.21 84.038 73.562 84.038 Z" style="fill: url(&quot;#gradient-0&quot;);"/>
+      <circle cx="59" cy="62" r="6" fill="#fff"/>
+      <circle cx="89" cy="62" r="6" fill="#fff"/>
+      <path d="M59 80 C63 86 68 89 74 89 C80 89 85 86 89 80" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+</g></svg>
