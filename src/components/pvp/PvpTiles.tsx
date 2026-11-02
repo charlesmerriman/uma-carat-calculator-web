@@ -6,10 +6,11 @@
  * Hover detail (an uma's note, a skill's description) uses the same three
  * triggers as the Timeline's FeaturedTileArt: hover, keyboard focus, and a tap
  * on touch screens. Written fresh here rather than shared, so the Timeline's
- * tile stays untouched by guide work.
+ * tile stays untouched by guide work. Nothing inside a tile with a detail
+ * opens a detail of its own (InsideHoverContext).
  */
 
-import { useId, useState, type ReactNode } from "react"
+import { createContext, useContext, useId, useState, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
@@ -60,9 +61,72 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
 }
 
 /**
+ * True inside a tile or chip that has a hover detail (WithDetail), on its face
+ * and in its detail alike. Tailwind's `group-hover:` answers to ANY hovered
+ * `.group` above it, not the nearest, so a [[mention]] in a tile's note opened
+ * its own popup the moment the tile was hovered, drawn over the tile's: two
+ * at once for "Activate [[A]] with [[B]]" (2026-11-02). A mention on a chip's
+ * face did the same. Inside one, a mention draws its pill alone, and the
+ * detail lists what the note names at its bottom (MentionedSkills).
+ */
+const InsideHoverContext = createContext(false)
+
+// The skills a note's pieces mention that the guide's map holds, each once,
+// in the order the note names them. Walks into ==highlights==, which can hold
+// a mention of their own.
+function mentionedSkills(pieces: NotePiece[], mentions: Record<string, PvpSkillRef>, found = new Map<number, PvpSkillRef>()): PvpSkillRef[] {
+	for (const piece of pieces) {
+		if (piece.kind === "highlight") mentionedSkills(piece.pieces, mentions, found)
+		else if (piece.kind === "skill") {
+			const skill = mentions[piece.name.toLowerCase()]
+			if (skill && !found.has(skill.id)) found.set(skill.id, skill)
+		}
+	}
+	return [...found.values()]
+}
+
+/**
+ * The skills a note mentions, listed at the bottom of the detail the note sits
+ * in: icon, name, whose unique it is, the description. Inside a hover a
+ * mention is a bare pill, so this is where the reader learns what it does (the
+ * owner's pick, 2026-11-02: one box, never a popup on a popup). Drawn like
+ * SkillDetail's versions list. `skip` leaves out the skill the detail is
+ * already about, when a skill's note names itself.
+ */
+function MentionedSkills({ text, skip }: { text: string; skip?: number }) {
+	const mentions = useSkillMentions()
+	const skills = mentionedSkills(splitNoteText(text), mentions).filter((skill) => skill.id !== skip)
+	if (skills.length === 0) return null
+	return (
+		<span className="mt-1 block border-t border-gray-700/70 pt-1 text-gray-300">
+			{skills.map((skill) => (
+				<span key={skill.id} className="mt-0.5 flex items-start gap-1">
+					{skill.image ? (
+						<img src={skill.image} alt="" className="mt-px h-3.5 w-3.5 shrink-0" loading="lazy" decoding="async" />
+					) : (
+						<span className="mt-px h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+					)}
+					<span>
+						<span className="font-medium text-gray-100">{skill.name}</span>
+						{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
+						{skill.description && <span className="block text-gray-400">{skill.description}</span>}
+					</span>
+				</span>
+			))}
+			{/* UmaTL's text is credited wherever it shows (.claude/rules/backend-models.md). */}
+			{skills.some((skill) => skill.uses_translation) && (
+				<span className="mt-1 block text-[0.9em] text-gray-500">English text: UmaTL fan translation.</span>
+			)}
+		</span>
+	)
+}
+
+/**
  * A `[[Skill name]]` mention inside text: the skill's icon and name, with its
  * description on hover, focus or tap. Inline (a span), so it sits in a
  * sentence. A name the guide's map does not hold renders as plain text.
+ * Inside a tile or chip with a detail of its own it is the pill alone
+ * (InsideHoverContext).
  *
  * Sized to the text it sits in, because it sits in very different lines: a
  * deck note is 11px at leading-tight (a 13.75px line) in a column about 120px
@@ -80,11 +144,25 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
  */
 export function SkillMention({ name, scenarioLink = false }: { name: string; scenarioLink?: boolean }) {
 	const skill = useSkillMentions()[name.toLowerCase()]
+	const insideHover = useContext(InsideHoverContext)
 	const detailId = useId()
 	const [tapped, setTapped] = useState(false)
 	if (!skill) return <>{name}</>
 	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
+	const pill = `inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none ${surface} ${ring}`
+	const face = (
+		<>
+			{skill.image ? (
+				<img src={skill.image} alt="" className="h-[1.1em] w-[1.1em] shrink-0" loading="lazy" decoding="async" />
+			) : (
+				<span className="h-[1.1em] w-[1.1em] shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+			)}
+			{keepMarkWithName(skill.name)}
+		</>
+	)
+	// Not focusable either: there is nothing for focus to open.
+	if (insideHover) return <span className={pill}>{face}</span>
 	return (
 		<span
 			role="group"
@@ -95,14 +173,9 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 				if (event.pointerType === "touch") setTapped((open) => !open)
 			}}
 			onBlur={() => setTapped(false)}
-			className={`group relative inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none outline-none focus-visible:ring-2 focus-visible:ring-brand ${surface} ${ring}`}
+			className={`group relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${pill}`}
 		>
-			{skill.image ? (
-				<img src={skill.image} alt="" className="h-[1.1em] w-[1.1em] shrink-0" loading="lazy" decoding="async" />
-			) : (
-				<span className="h-[1.1em] w-[1.1em] shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-			)}
-			{keepMarkWithName(skill.name)}
+			{face}
 			<span
 				id={detailId}
 				role="tooltip"
@@ -143,7 +216,7 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 			onBlur={() => setTapped(false)}
 			className={`group relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${className}`}
 		>
-			{children}
+			<InsideHoverContext.Provider value={true}>{children}</InsideHoverContext.Provider>
 			{/* Always in the DOM so a screen reader gets it through
 			    aria-describedby; faded in on hover, focus or tap. */}
 			<div
@@ -153,7 +226,7 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 					tapped ? "opacity-100" : "opacity-0"
 				}`}
 			>
-				{detail}
+				<InsideHoverContext.Provider value={true}>{detail}</InsideHoverContext.Provider>
 			</div>
 		</div>
 	)
@@ -250,7 +323,11 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	const mentioned = FIRST_MENTION.exec(note)?.[1]
 	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
 	return (
-		<WithDetail label={uma.name} detail={note ? <InlineNote text={note} /> : null} className={className}>
+		<WithDetail
+			label={uma.name}
+			detail={note ? <><InlineNote text={note} /><MentionedSkills text={note} /></> : null}
+			className={className}
+		>
 			{/* h-full: in a grid the tile fills its row, so when one tile's
 			    letters wrap the others grow with it and every note slot, pinned
 			    to the bottom (mt-auto), stays level. */}
@@ -529,6 +606,7 @@ export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: nu
 			)}
 			{role && <div className="font-semibold text-brand">{role}</div>}
 			{note && <InlineNote text={note} />}
+			{note && <MentionedSkills text={note} />}
 		</div>
 	)
 	return (
@@ -598,7 +676,7 @@ export function MiniNoteSlot({ note, borrow = false }: { note: string; borrow?: 
 	)
 	if (!note) return <span aria-hidden="true">{box}</span>
 	return (
-		<WithDetail label={plainNoteText(note)} detail={<InlineNote text={note.replace(/==/g, "")} />} className="w-full" detailClassName="w-40">
+		<WithDetail label={plainNoteText(note)} detail={<><InlineNote text={note.replace(/==/g, "")} /><MentionedSkills text={note} /></>} className="w-full" detailClassName="w-40">
 			{box}
 		</WithDetail>
 	)
@@ -698,7 +776,12 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 }
 
 export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRef; note: string; size?: "regular" | "small" }) {
-	const detail = <SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
+	const detail = (
+		<>
+			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
+			<MentionedSkills text={note} skip={skill.id} />
+		</>
+	)
 	// A small cell (under a deck card) has no room for a caption.
 	const sub = size === "small" ? "" : skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
 	return (
@@ -711,7 +794,12 @@ export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRe
 /** A recommended skill: icon, name, whose unique it is, the full detail on hover. */
 export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string }) {
 	const preview = useSkillsPreview()
-	const detail = <SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
+	const detail = (
+		<>
+			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
+			<MentionedSkills text={note} skip={skill.id} />
+		</>
+	)
 	// On the gold the text is the gradient's own dark brown (.skill-gold), so
 	// the grey text classes step aside and the note dims with opacity instead.
 	const gold = skill.rarity === GOLD_SKILL_RARITY
