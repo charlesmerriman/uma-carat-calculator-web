@@ -43,7 +43,9 @@ const SLOT_NUMBERS = Array.from({ length: DECK_SLOTS }, (_, i) => i + 1)
 // A slot's limit break: "" is "the guide doesn't say" (null in the document).
 // "+" reads "or better", the way the sheet wrote it.
 const LIMIT_BREAK_CHOICES: Array<[string, string]> = [
-	["", "Limit break: not said"],
+	// Short: a slot column is about 120px, and "Limit break: not said" was
+	// cut to "Limit break: no", which reads as a value.
+	["", "LB: not said"],
 	["0", "0 LB+"],
 	["1", "1 LB+"],
 	["2", "2 LB+"],
