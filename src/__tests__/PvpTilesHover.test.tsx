@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { describe, expect, it } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -10,9 +11,13 @@ import type { PvpSkillRef } from "../types/pvpGuide"
  * A [[mention]] inside a tile or chip that has a hover detail opens no popup
  * of its own: Tailwind's group-hover opened every popup nested in a hovered
  * tile at once (2026-11-02). The detail lists the mentioned skills at its
- * bottom instead. jsdom has no hover, so the tests count the popups in the
- * DOM: each is always there, faded out until hovered.
+ * bottom instead. The first block counts the screen reader's copies (one
+ * per tile, always in the DOM); the second drives the drawn popup, which is
+ * a portal on <body> mounted only while open.
  */
+
+/** The drawn popup: Floating UI's portal node on <body>, or null while closed. */
+const drawnPopup = () => document.querySelector("[data-floating-ui-portal]")
 
 const skill = (overrides: Partial<PvpSkillRef> = {}): PvpSkillRef => ({
 	id: 1, name: "Dominator", description: "Decrease velocity of runners ahead.", image: null, rarity: 1, unique_of: null,
@@ -60,5 +65,34 @@ describe("hover details in a guide", () => {
 	it("leaves out the skill a chip is about when its note names itself", () => {
 		render(inGuide(<SkillChip skill={MOXIE} note="Take [[Moxie]] early" />))
 		expect(screen.getByRole("tooltip").textContent?.match(/Slightly reduce fatigue/g)).toHaveLength(1)
+	})
+})
+
+describe("the drawn popup", () => {
+	it("opens on <body> on hover, outside the tile's own box, and closes when the pointer leaves", async () => {
+		const user = userEvent.setup()
+		render(inGuide(<SkillChip skill={skill()} note="" />))
+		const chip = screen.getByRole("group", { name: "Dominator" })
+		expect(drawnPopup()).toBeNull()
+
+		await user.hover(chip)
+		await waitFor(() => expect(drawnPopup()).toHaveTextContent("Decrease velocity of runners ahead."))
+		// Outside the chip, so no column or card box above it can clip or cover it.
+		expect(chip.contains(drawnPopup())).toBe(false)
+
+		await user.unhover(chip)
+		await waitFor(() => expect(drawnPopup()).toBeNull())
+	})
+
+	it("opens on a tap on a touch screen, and Escape closes it", async () => {
+		const user = userEvent.setup()
+		render(inGuide(<InlineNote text="Pair it with [[Moxie]]." />))
+		const mention = screen.getByRole("group", { name: "Moxie" })
+
+		await user.pointer({ keys: "[TouchA]", target: mention })
+		await waitFor(() => expect(drawnPopup()).toHaveTextContent("Slightly reduce fatigue on an uphill."))
+
+		await user.keyboard("{Escape}")
+		await waitFor(() => expect(drawnPopup()).toBeNull())
 	})
 })

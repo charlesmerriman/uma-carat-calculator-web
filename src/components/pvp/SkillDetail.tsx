@@ -150,23 +150,27 @@ export function JpOnlyTag({ className = "" }: { className?: string }) {
 /** The other versions of a skill (white, gold, evolved). Nothing when it has none.
  *
  * No heading: an "Also as" heading read as unclear (Daptrius, 2026-10-17).
- * The rule above the list and each line's colour word say what they are. */
+ * A bar down the left ties the list to the skill above it, and each version
+ * carries its colour as a small tag. A guide's popup can also list the skills
+ * its note names (MentionedSkills in PvpTiles.tsx), under a rule with the icon
+ * hanging; the two lists read the same until the versions took the bar
+ * (owner, 2026-11-02). */
 function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 	if (skill.versions.length === 0) return null
 	return (
-		<span className="mt-1 block border-t border-gray-700/70 pt-1 text-gray-300">
+		<span className="mt-1.5 block space-y-1 border-l-2 border-gray-600 pl-2 text-gray-300">
 			{skill.versions.map((version) => (
-				<span key={version.id} className="mt-0.5 flex items-start gap-1">
-					{version.image ? (
-						<img src={version.image} alt="" className="mt-px h-3.5 w-3.5 shrink-0" loading="lazy" decoding="async" />
-					) : (
-						<span className="mt-px h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-					)}
-					<span>
-						<span className="font-medium text-gray-100">{version.name}</span>
-						<span className="text-gray-400"> {skillColour(version)}</span>
-						{version.description && <span className="block text-gray-400">{version.description}</span>}
+				<span key={version.id} className="block">
+					<span className="flex items-center gap-1">
+						{version.image ? (
+							<img src={version.image} alt="" className="h-3.5 w-3.5 shrink-0" loading="lazy" decoding="async" />
+						) : (
+							<span className="h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+						)}
+						<span className="font-medium text-gray-100">{version.name}</span>{" "}
+						<span className="shrink-0 rounded bg-gray-700 px-1 text-[0.85em] leading-snug text-gray-200">{skillColour(version)}</span>
 					</span>
+					{version.description && <span className="block text-gray-400">{version.description}</span>}
 				</span>
 			))}
 		</span>
