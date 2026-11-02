@@ -664,16 +664,6 @@ export function topTierSkills(rows: PvpSkillRecommendation[], style: PvpStyle): 
 	return { tier, skills: own.filter((row) => row.tier === tier) }
 }
 
-/** Styles in the guide's ranking order, any it doesn't rank after them in their own order. */
-export function stylesByRank<S extends PvpStyle>(styles: S[], ranking: RankingStep[]): S[] {
-	const ranks = styleRanks(ranking)
-	const rank = (style: S) => ranks.get(style) ?? Number.MAX_SAFE_INTEGER
-	return styles
-		.map((style, index) => ({ style, index }))
-		.sort((a, b) => rank(a.style) - rank(b.style) || a.index - b.index)
-		.map(({ style }) => style)
-}
-
 /** A deck's own cards, main rows only, in slot order, each once. */
 function deckCards(deck: PvpDeck): PvpSupportCardRef[] {
 	const cards = new Map<number, PvpSupportCardRef>()

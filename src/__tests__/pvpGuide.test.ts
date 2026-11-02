@@ -24,7 +24,6 @@ import {
 	styleForWord,
 	styleRanks,
 	styleTabs,
-	stylesByRank,
 	tierLabel,
 	packStarRows,
 	layoutStarRows,
@@ -483,11 +482,6 @@ describe("the All tab's lines", () => {
 		expect(topTierSkills([skill(6, "pace", null), skill(7, "pace", null)], "pace")).toMatchObject({ tier: null })
 		expect(topTierSkills([skill(6, "pace", null), skill(7, "pace", null)], "pace").skills).toHaveLength(2)
 		expect(topTierSkills(rows, "end")).toEqual({ tier: null, skills: [] })
-	})
-
-	it("orders styles by the ranking, unranked ones after in their own order", () => {
-		expect(stylesByRank(["front", "pace", "late", "end"], parseStyleRanking("Pace >> End > Late"))).toEqual(["pace", "end", "late", "front"])
-		expect(stylesByRank(["front", "end"], [])).toEqual(["front", "end"])
 	})
 })
 

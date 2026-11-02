@@ -1728,8 +1728,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   each other.
 - **The All tab is a quick preview** (owner, 2026-10-24; release B of
   `guide-visuals-plan-2.md`), its own component (`AllStylesPreview.tsx`), not `StylePane`
-  with a compact switch. A box per style, two abreast from `lg`, in the guide's ranking
-  order (`stylesByRank`); a header with the rank, the comment count and "Open Pace →"; then
+  with a compact switch. A box per style, two abreast from `lg`, in the tabs' fixed order
+  (`STYLE_ORDER`; Daptrius, 2026-10-31, it was the ranking's); a header with the rank, the comment count and "Open Pace →"; then
   one line apiece, a label beside it (above it on a phone): the top six faces (`topUmas`,
   `FaceTile`, faces only), the best tier's first two skills (`topTierSkills`; three were
   85px and cut), every ladder deck's six cards as art (`MiniCard`, Link badge and borrow tab

@@ -648,7 +648,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 			</div>
 			{shown === ALL_STYLES_TAB ? (
 				// Every style at a glance (owner, 2026-10-24): a box per style in
-				// rank order, faces, top skills and every deck one line each.
+				// the tabs' order, faces, top skills and every deck one line each.
 				<AllStylesPreview guide={guide} styles={styles} onStyleChange={onStyleChange} scenarioName={guide.scenario?.name ?? null} />
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>

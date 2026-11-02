@@ -1,7 +1,9 @@
 /**
  * The guide's All tab: a quick preview of every style (owner, 2026-10-24,
  * `guide-visuals-plan-2.md` release B). One box per style, two abreast from
- * lg, in the guide's ranking order; in each, one line apiece:
+ * lg, in the tabs' fixed order (Runaway, Front, Pace, Late, End; Daptrius,
+ * 2026-10-31), the guide's rank only a label on each box; in each, one line
+ * apiece:
  *
  *   Umas      the top six faces (stars, then the guide's order)
  *   Skills    the style's best tier, its first two cells
@@ -34,7 +36,6 @@ import {
 	parseStyleRanking,
 	styleColor,
 	styleRanks,
-	stylesByRank,
 	tierLabel,
 	topTierSkills,
 	topUmas,
@@ -61,7 +62,7 @@ export function AllStylesPreview({ guide, styles, onStyleChange, scenarioName }:
 	return (
 		// Stretched rows (a grid's default): two boxes side by side end level.
 		<div role="tabpanel" aria-label={ALL_STYLES_LABEL} className="grid gap-3 lg:grid-cols-2">
-			{stylesByRank(styles, ranking).map((style) => (
+			{styles.map((style) => (
 				<StylePreview
 					key={style}
 					guide={guide}
