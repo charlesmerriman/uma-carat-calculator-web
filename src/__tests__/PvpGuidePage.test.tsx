@@ -619,9 +619,10 @@ describe("PvpGuidePage All tab", () => {
 
 	beforeEach(() => respond(200, PREVIEW))
 
-	it("puts a box per style in the guide's ranking order", async () => {
+	it("puts a box per style in the tabs' fixed order, whatever the ranking", async () => {
 		const panel = await openAll()
-		expect(panel.getAllByRole("region").map((region) => region.getAttribute("aria-label"))).toEqual(["End", "Front"])
+		// The guide ranks End over Front; the boxes still go Front, then End.
+		expect(panel.getAllByRole("region").map((region) => region.getAttribute("aria-label"))).toEqual(["Front", "End"])
 	})
 
 	it("shows six faces, most stars first, and a +N that opens the style", async () => {
