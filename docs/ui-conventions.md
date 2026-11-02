@@ -1530,24 +1530,28 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 `/app/pvp`: one Champions Meeting or League of Heroes event at a time, with its guide
 (`GET /pvp-guides/<kind>/<id>`, `backend/docs/api-reference.md`, "PvP guides").
 
-- **Early access (owner, 2026-10-14): supporters and staff, plus one free guide.**
-  `usePvpAccess()` (`hooks/usePvpAccess.ts`) gives `open`, `pending` (the account is still
-  loading, so a supporter never sees the gate flash; `PvpGuidePage` draws only a "checking"
-  line) or `locked`. Locked, the page still renders, and the guide of `defaultPvpEvent`
-  (the event running now, else the next) is free (owner, 2026-10-22, so the ad review lands
-  on a real guide). One CM is open in full, My team and Gallery too
-  (`PVP_OPEN_CM_NUMBER` / `isOpenPvpEvent`, CM 21; null closes it). Locked, the event list
-  offers only those two events (`lockedPvpEvents`, plus whichever event a link opened) and
-  hides "Show past events" when none of them is past; the team window knows only the open CM
-  (`lockedTeamEvents`) and its Team button shows only while that CM is on. Every other guide, My team and the Gallery draw `PvpEarlyAccess` in
-  their panel (a link to the free guide, sign in, Patreon, or "link your Patreon on your
-  account page"), and a locked guide is never fetched. A bare `/app/pvp` skips the
-  tab's remembered address while locked, so the navbar link opens on the free guide. The server says WHO
-  (`account.early_access`, `benefits.early_access_for`: any paid tier, or staff); the
-  `PVP_EARLY_ACCESS` constant says the page is still early. The team window and the
-  navbar's Team button follow the same answer (`TeamDrawerProvider`'s `available`). A
-  client gate only: the PvP API stays open. Opening to everyone is that one constant set
-  to `false`.
+- **Early access (owner, 2026-10-14): supporters and staff; each guide says what else is
+  open (owner, 2026-11-02, `notes/guide-visibility-plan.md`).** `usePvpAccess()`
+  (`hooks/usePvpAccess.ts`) says WHO: `open`, `pending` (the account is still loading, so a
+  supporter never sees the gate flash; `PvpGuidePage` draws only a "checking" line) or
+  `locked` (`account.early_access`, `benefits.early_access_for`: any paid tier, staff, or the
+  admin's grant). Each event's guide says WHAT, from `/calculator-data`: `guide_visibility`
+  (`"supporters"`, `"public"`, null for none or Private) and `guide_tools_public`. Locked,
+  the page still renders and opens a Public guide's Recommendations
+  (`guideOpenToEveryone`), and its My team, CM Runs and Gallery only with the switch
+  (`toolsOpenToEveryone`); nothing in code opens a guide any more (the rolling free guide
+  and `PVP_OPEN_CM_NUMBER` are gone). The event list offers only Public guides' events
+  (`lockedPvpEvents`, plus whichever event a link opened) and hides "Show past events" when
+  none of them is past; the team window knows only events with My team opened
+  (`lockedTeamEvents`) and its Team button shows only while one is on. Everything else
+  draws `PvpEarlyAccess` in its panel (a link to the nearest Public guide, sign in,
+  Patreon, or "link your Patreon on your account page"), and a locked guide is never
+  fetched. A bare `/app/pvp` skips the tab's remembered address while locked and lands on
+  `lockedLandingEvent` (the Public guide running now, else the next, else the latest). The
+  API refuses a Supporters guide and its comments itself (a 403 `supporters_only`, which
+  `usePvpGuide` reads as `locked` and the page draws as the card); My team and the Gallery
+  are page-only gates. The team window and the navbar's Team button follow the same
+  answer (`TeamDrawerProvider`'s `available`).
 
 - **The event lives in the URL**: `?event=cm-12` / `loh-7`, the event's database id
   (`utils/pvpEvent.ts`). `refForRaceEvent` is the ONE place that maps `event_type` to the
@@ -1880,8 +1884,11 @@ event, so switching events starts a fresh editor.
   `MentionField`: `[[` offers catalogue names; a markdown box has a toolbar and a Preview.
 - **Drag is dnd-kit** (`Sortable.tsx`): umas within a star group, chips within a tier
   group, decks in a list; every row's dialog also has Move earlier / later for the keyboard.
-- **Dialogs are `GalleryModal`** (publish with the checklist, the three actions with a
-  preview step, the revision history with Restore, delete for drafts only, the conflict).
+- **Dialogs are `GalleryModal`** (`VisibilityDialog`: Private, Supporters or Public, the My
+  team and Gallery switch shown only under Public, the checklist on the way out of Private;
+  the three actions with a preview step, the revision history with Restore, delete for
+  Private guides only, the conflict). The header's chip names the setting
+  (`visibilityLabel`), and its button reads "Publish" on a Private guide, "Visibility" after.
   Actions run on the SAVED guide: the hook flushes the autosave first and takes the
   document the action answers with.
 - Tests: `GuideEditor.test.tsx` (the flows), `guideDocument.test.ts` (the pure rules),

@@ -64,7 +64,8 @@ function document(): GuideDocument {
 		version: 3,
 		event_type: "champions_meeting",
 		event: 10,
-		is_published: false,
+		visibility: "private",
+		tools_public: false,
 		updated_at: "2099-01-01T00:00:00Z",
 		scenario: 1,
 		style_ranking: "Front >> End",
@@ -212,7 +213,8 @@ describe("missingSummary and payload", () => {
 	it("strips what the server owns from a save", () => {
 		const body = toPayload(document())
 		expect(Object.keys(body)).not.toContain("id")
-		expect(Object.keys(body)).not.toContain("is_published")
+		expect(Object.keys(body)).not.toContain("visibility")
+		expect(Object.keys(body)).not.toContain("tools_public")
 		expect(body.version).toBe(3)
 		expect(mentionsIn("Take [[Groundwork]] and [[ Left-Handed ○ ]]")).toEqual(["Groundwork", "Left-Handed ○"])
 	})

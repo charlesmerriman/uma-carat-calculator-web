@@ -727,10 +727,10 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 	return (
 		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
 		<div className="flex flex-col gap-4">
-			{!guide.is_published && (
+			{guide.visibility === "private" && (
 				<div className="flex items-center gap-2 rounded-lg border border-staging/60 bg-staging/10 px-3 py-2 text-sm font-semibold text-gray-100">
 					<Eye className="h-4 w-4 shrink-0" />
-					Draft, visible to staff only.
+					Private, visible to staff only.
 				</div>
 			)}
 			{/* The editors' switch (Henry, 2026-10-24): above everything, so it is

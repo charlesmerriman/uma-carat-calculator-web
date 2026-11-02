@@ -4,8 +4,12 @@
  * States, the OshiPicker shape:
  *   idle     no event selected
  *   loading  the request is out
- *   ready    a guide came back (a draft only reaches staff)
- *   none     404: no guide, or a draft the caller may not see
+ *   ready    a guide came back (a Private one only reaches staff)
+ *   none     404: no guide, or a Private one the caller may not see
+ *   locked   403: a Supporters guide and no early access. The page knows
+ *            this from the payload and fetches nothing, so this only meets
+ *            a page loaded before the guide was closed. Never cached: it
+ *            depends on who is signed in.
  *   error    anything else (network, 5xx)
  *
  * Results are kept in a module-level Map for the life of the tab, so Previous
@@ -28,6 +32,7 @@ export type PvpGuideState =
 	| { status: "loading" }
 	| { status: "ready"; guide: PvpGuide }
 	| { status: "none" }
+	| { status: "locked" }
 	| { status: "error" }
 
 type Settled = Extract<PvpGuideState, { status: "ready" } | { status: "none" }>
@@ -100,6 +105,10 @@ export function usePvpGuide(ref: PvpEventRef | null): PvpGuideState {
 					const state: Settled = { status: "none" }
 					cache.set(key, state)
 					setFetched({ key, state })
+					return
+				}
+				if (response.status === 403) {
+					setFetched({ key, state: { status: "locked" } })
 					return
 				}
 				if (!response.ok) throw new Error(`GET /pvp-guides failed: ${response.status}`)

@@ -24,9 +24,10 @@
  * selector at the top IS the pin: "Next event (auto)" clears it.
  *
  * EARLY ACCESS. For someone the PvP page is locked to (hooks/usePvpAccess.ts)
- * the window only knows the open CM (lockedTeamEvents), so it never shows or
- * offers a team for an event whose My team is closed to them. The provider
- * hides the Team button for them once that CM has ended.
+ * the window only knows the events whose guide opened My team to everyone
+ * (lockedTeamEvents, the guide's setting), so it never shows or offers a team
+ * for an event whose My team is closed to them. The provider hides the Team
+ * button for them once every such event has ended.
  *
  * NOT A DIALOG. No backdrop, no focus trap: the page behind stays usable.
  * Opening moves focus to the heading; Escape inside closes it and hands

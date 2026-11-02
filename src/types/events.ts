@@ -77,11 +77,20 @@ export interface ChampionsMeeting {
 	weather: string
 	direction: string
 	/**
-	 * Whether the event has a PUBLISHED PvP guide (GET /pvp-guides/<kind>/<id>).
-	 * Drives the Timeline card's "PvP guide" link and the PvP page's star.
-	 * Optional: an older API omits it, which reads as "no guide".
+	 * Whether the event has a PvP guide out of draft, Supporters or Public
+	 * (GET /pvp-guides/<kind>/<id>). Drives the Timeline card's "PvP guide"
+	 * link and the PvP page's star. Optional: an older API omits it, which
+	 * reads as "no guide".
 	 */
 	has_guide?: boolean
+	/**
+	 * Who may read that guide: "supporters", "public", or null for no guide or
+	 * a Private one. With `guide_tools_public`, what the PvP page opens to a
+	 * reader without early access (hooks/usePvpAccess.ts). Optional, as above.
+	 */
+	guide_visibility?: "supporters" | "public" | null
+	/** Whether My team and the Gallery open to everyone with it (Public only). */
+	guide_tools_public?: boolean
 }
 
 /**
@@ -121,11 +130,20 @@ export interface LeagueOfHeroes {
 	weather: string
 	direction: string
 	/**
-	 * Whether the event has a PUBLISHED PvP guide (GET /pvp-guides/<kind>/<id>).
-	 * Drives the Timeline card's "PvP guide" link and the PvP page's star.
-	 * Optional: an older API omits it, which reads as "no guide".
+	 * Whether the event has a PvP guide out of draft, Supporters or Public
+	 * (GET /pvp-guides/<kind>/<id>). Drives the Timeline card's "PvP guide"
+	 * link and the PvP page's star. Optional: an older API omits it, which
+	 * reads as "no guide".
 	 */
 	has_guide?: boolean
+	/**
+	 * Who may read that guide: "supporters", "public", or null for no guide or
+	 * a Private one. With `guide_tools_public`, what the PvP page opens to a
+	 * reader without early access (hooks/usePvpAccess.ts). Optional, as above.
+	 */
+	guide_visibility?: "supporters" | "public" | null
+	/** Whether My team and the Gallery open to everyone with it (Public only). */
+	guide_tools_public?: boolean
 }
 
 /**

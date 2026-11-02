@@ -23,9 +23,13 @@ const LIBRA = {
 // Card 302's first banner lands in the middle of Libra Cup.
 const SUPPORT_BANNERS = [{ banner_timeline: { start_date: "2050-01-01T12:00:00Z" }, support_cards: [{ id: 302 }] }]
 
-// The open CM (usePvpAccess.ts), the one a locked reader may build a team
-// for; listed only by the tests that need it.
-const OPEN = { ...LIBRA, id: 21, cm_number: 21, name: "Capricorn Cup" } as RaceEvent
+// An event whose Public guide opened My team and the Gallery to everyone
+// (usePvpAccess.ts lockedTeamEvents), the one a locked reader may build a
+// team for; listed only by the tests that need it.
+const OPEN = {
+	...LIBRA, id: 21, cm_number: 21, name: "Capricorn Cup",
+	has_guide: true, guide_visibility: "public", guide_tools_public: true,
+} as RaceEvent
 let cmEvents: RaceEvent[] = [LIBRA]
 
 vi.mock("../services/CalculatorContext", () => ({
@@ -129,13 +133,13 @@ describe("TeamDrawerButton, locked (early access)", () => {
 			</MemoryRouter>
 		)
 
-	it("is hidden while no open CM is on", () => {
+	it("is hidden while no event with My team open is on", () => {
 		access.value = "locked"
 		const { container } = renderButton()
 		expect(container).toBeEmptyDOMElement()
 	})
 
-	it("shows while the open CM is on", () => {
+	it("shows while an event with My team open is on", () => {
 		access.value = "locked"
 		cmEvents = [LIBRA, OPEN]
 		renderButton()
@@ -144,7 +148,7 @@ describe("TeamDrawerButton, locked (early access)", () => {
 })
 
 describe("TeamDrawer", () => {
-	it("shows and offers only the open CM while locked", () => {
+	it("shows and offers only events with My team open while locked", () => {
 		access.value = "locked"
 		cmEvents = [LIBRA, OPEN]
 		renderDrawer(teamsValue([team("a", { name: "Libra team" }), team("b", { event: 21, name: "Capricorn team" })]))

@@ -31,10 +31,18 @@ import { EditorTabs } from "./EditorTabs"
 import { GuideTab } from "./GuideTab"
 import { StartGuide } from "./StartGuide"
 import { StyleTab } from "./StyleTab"
-import { ConflictDialog, CopyFromDialog, DeleteDialog, PublishDialog, RevisionsDialog, SheetDialog, TrackGreensDialog } from "./EditorDialogs"
+import { ConflictDialog, CopyFromDialog, DeleteDialog, RevisionsDialog, SheetDialog, TrackGreensDialog, VisibilityDialog } from "./EditorDialogs"
 import { errorsByTab, hydrateGuide, missingSummary, rowsByTab, validateDocument, type ChecklistItem, type EditorTab } from "../../../utils/guideDocument"
 import type { EditorError } from "../../../types/guideDocument"
 import type { RaceEvent } from "../../../types"
+import type { GuideVisibility } from "../../../types/pvpGuide"
+
+/** What the editor is told once a new setting is saved. */
+const VISIBILITY_TOASTS: Record<GuideVisibility, string> = {
+	private: "Guide is private: only staff can see it.",
+	supporters: "Guide is out for supporters.",
+	public: "Guide is public.",
+}
 
 function Notice({ children }: { children: string }) {
 	return <p className="rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300">{children}</p>
@@ -157,7 +165,8 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 			<SkillMentionsContext.Provider value={hydrated.skill_mentions ?? {}}>
 				<div className="flex flex-col gap-3">
 					<EditorHeader
-						isPublished={document.is_published}
+						visibility={document.visibility}
+						toolsPublic={document.tools_public}
 						saveState={editor.saveState}
 						saveError={editor.saveError}
 						problems={errors.length}
@@ -180,14 +189,15 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 				</div>
 
 				{editor.conflict && <ConflictDialog onLoadTheirs={editor.loadTheirs} onKeepMine={editor.keepMine} />}
-				{dialog === "publish" && (
-					<PublishDialog
-						isPublished={document.is_published}
+				{dialog === "visibility" && (
+					<VisibilityDialog
+						visibility={document.visibility}
+						toolsPublic={document.tools_public}
 						missing={missing}
 						errors={problemsByTab}
-						onConfirm={async () => {
-							const refused = await editor.publish(!document.is_published)
-							if (!refused) toast.success(document.is_published ? "Guide unpublished." : "Guide published.")
+						onConfirm={async (visibility, toolsPublic) => {
+							const refused = await editor.setVisibility(visibility, toolsPublic)
+							if (!refused) toast.success(VISIBILITY_TOASTS[visibility])
 							return refused
 						}}
 						onClose={closeDialog}
@@ -208,7 +218,7 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 				)}
 				{dialog === "delete" && (
 					<DeleteDialog
-						isPublished={document.is_published}
+						isPublished={document.visibility !== "private"}
 						onConfirm={async () => {
 							const refused = await editor.remove()
 							if (!refused) toast.success("Guide deleted.")

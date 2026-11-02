@@ -8,6 +8,7 @@ import { Loader2, PenLine } from "lucide-react"
 import { useCalculatorData } from "../../../services/CalculatorContext"
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION, SELECT } from "./editorStyles"
 import type { EditableGuideRow } from "../../../types/guideDocument"
+import { visibilityNote } from "../../../utils/guideDocument"
 import type { RaceEvent } from "../../../types"
 
 export function StartGuide({ event, guides, onCreate }: {
@@ -62,7 +63,7 @@ export function StartGuide({ event, guides, onCreate }: {
 								{guides.map((guide) => (
 									<option key={guide.id} value={guide.id}>
 										{guide.name}
-										{guide.is_published ? "" : " (draft)"}
+										{visibilityNote(guide.visibility)}
 									</option>
 								))}
 							</select>

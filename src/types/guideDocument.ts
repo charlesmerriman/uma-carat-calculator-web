@@ -11,7 +11,7 @@
  */
 
 import type { PvpEventKind } from "../utils/pvpEvent"
-import type { PvpSkillCategory, PvpStyle } from "./pvpGuide"
+import type { GuideVisibility, PvpSkillCategory, PvpStyle } from "./pvpGuide"
 
 export interface GuideStatRow {
 	style: PvpStyle
@@ -92,7 +92,9 @@ export interface GuideDocument {
 	version: number
 	event_type: "champions_meeting" | "league_of_heroes"
 	event: number
-	is_published: boolean
+	/** Shown, never saved with the document: PATCH /pvp-guides/<id> sets them. */
+	visibility: GuideVisibility
+	tools_public: boolean
 	updated_at: string
 	scenario: number | null
 	style_ranking: string
@@ -110,7 +112,7 @@ export interface GuideDocument {
 }
 
 /** The body of a save: the document minus what the server owns. */
-export type GuideDocumentPut = Omit<GuideDocument, "id" | "event_type" | "event" | "is_published" | "updated_at">
+export type GuideDocumentPut = Omit<GuideDocument, "id" | "event_type" | "event" | "visibility" | "tools_public" | "updated_at">
 
 /** One problem with a document, where it is ("decks[2].slots[5].note", "" for the whole). */
 export interface EditorError {
@@ -123,7 +125,8 @@ export interface EditableGuideRow {
 	kind: PvpEventKind
 	event: number
 	name: string
-	is_published: boolean
+	visibility: GuideVisibility
+	tools_public: boolean
 	version: number
 	updated_at: string
 	filled: PvpStyle[]

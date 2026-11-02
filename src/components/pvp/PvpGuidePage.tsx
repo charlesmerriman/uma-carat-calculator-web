@@ -28,12 +28,12 @@
  * with no guide; only the guide is fetched (hooks/usePvpGuide.ts).
  *
  * In early access (hooks/usePvpAccess.ts) the page still renders for everyone,
- * but someone it is locked to can read one guide: the event running now, else
- * the next (`defaultPvpEvent`, the event a bare /app/pvp opens on), so the
- * free guide moves with the calendar (owner, 2026-10-22: the ad review should
- * land on a real guide, not a lock card). One CM is open in full, its My team
- * and Gallery too (`isOpenPvpEvent`, CM 21). Every other guide, My team and
- * Gallery draw the early-access card in their panel instead.
+ * but someone it is locked to opens only what each event's guide setting
+ * allows (owner, 2026-11-02, notes/guide-visibility-plan.md): a Public guide's
+ * Recommendations, and its My team, CM Runs and Gallery too when the editor
+ * opened them (`guide_tools_public`). A bare /app/pvp lands on the Public
+ * guide running now, else the next (`lockedLandingEvent`). Everything else
+ * draws the early-access card in its panel instead.
  *
  * Inside the /app loading gate, so it is never prerendered and may read the
  * clock freely. Its head tags come from AppRouteMeta.
@@ -109,7 +109,7 @@ import {
 } from "../../utils/pvpGuide"
 import { PvpGuideView } from "./PvpGuideView"
 import { PvpEarlyAccess } from "./PvpEarlyAccess"
-import { isOpenPvpEvent, lockedPvpEvents, usePvpAccess } from "../../hooks/usePvpAccess"
+import { guideOpenToEveryone, lockedLandingEvent, lockedPvpEvents, toolsOpenToEveryone, usePvpAccess } from "../../hooks/usePvpAccess"
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { RunsView } from "./RunsView"
@@ -242,30 +242,34 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 		[championsMeetingData, leagueOfHeroesData]
 	)
 
-	// The event a bare address opens on is also the one guide that is free
-	// while the page is locked (see the header).
-	const freeEvent = defaultPvpEvent(events, now)
+	// Where a bare address opens: the event running now, else the next; while
+	// locked, the nearest Public guide instead, so the navbar link lands on
+	// something readable (the plain default, with its card, when none is).
+	const landing = (locked ? lockedLandingEvent(events, now) : null) ?? defaultPvpEvent(events, now)
 	const requested = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
-	const event = requested ?? freeEvent
+	const event = requested ?? landing
 	const reader = { isEditor, earlyAccess }
 	const view = parseView(searchParams.get(VIEW_PARAM), reader)
 	// Whether the view on screen is closed to this reader: while locked,
-	// anything but the free event's guide and the open CM's guide, My team and
-	// Gallery. An editor is staff, so never locked. Rankings never gets here
-	// locked: parseView gives it to early access only, who are never locked.
+	// Recommendations on anything but a Public guide, and My team, CM Runs and
+	// Gallery unless its editor opened them. An editor is staff, so never
+	// locked. Rankings never gets here locked: parseView gives it to early
+	// access only, who are never locked.
 	const viewLocked =
 		locked &&
-		!(view === "recommendations" && event === freeEvent) &&
-		!(view !== "editor" && event !== null && isOpenPvpEvent(event))
+		!(
+			event !== null &&
+			(view === "recommendations" ? guideOpenToEveryone(event) : view !== "editor" && toolsOpenToEveryone(event))
+		)
 	// Whether My team would be closed to this reader on this event: then the
 	// guide's "Use this deck" is not offered (it would land on a lock card).
-	const teamLocked = locked && !(event !== null && isOpenPvpEvent(event))
+	const teamLocked = locked && !(event !== null && toolsOpenToEveryone(event))
 
 	// The events this reader can open: all of them, or while locked only the
-	// free guide's and the open CM's (lockedPvpEvents), so the list never
-	// offers a lock card. The event on screen is always listed, so a link to a
-	// locked one still shows it selected (with its card).
-	const reachable = locked ? lockedPvpEvents(events, now) : events
+	// Public guides' (lockedPvpEvents), so the list never offers a lock card.
+	// The event on screen is always listed, so a link to a locked one still
+	// shows it selected (with its card).
+	const reachable = locked ? lockedPvpEvents(events) : events
 	// Past events stay out of the dropdown unless asked for, or unless the
 	// event on screen is itself past (a link to an old guide).
 	const [showPastChoice, setShowPastChoice] = useState(false)
@@ -433,7 +437,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 						<div role="tabpanel" aria-label={viewLabel(VIEWS.find((entry) => entry.id === view) ?? VIEWS[0], event.event_type !== "champions_meeting")}>
 							{/* A locked guide fetches nothing (guideState stays idle), so
 							    only the card and the event's new cards show under it. */}
-							{viewLocked && <PvpEarlyAccess pending={false} freeEvent={freeEvent} />}
+							{(viewLocked || (view === "recommendations" && guideState.status === "locked")) && (
+								<PvpEarlyAccess pending={false} freeEvent={locked ? lockedLandingEvent(events, now) : null} />
+							)}
 							{view === "recommendations" && (
 								<div className="flex flex-col gap-4">
 									{guideState.status === "loading" && (
