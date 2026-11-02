@@ -1822,6 +1822,18 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `GET /skills` (`withShownSkills`, `utils/skillList.ts`) so a writer can pick and
   `[[mention]]` a JP-only skill by any of its names; the builder's own catalogue stays
   global-only.
+- **A guide's hover popups are drawn on `<body>`** (`useHoverPopup` in
+  `components/pvp/PvpTiles.tsx`, Floating UI, 2026-11-02). Drawn inside its tile, a popup rose
+  only as high as the tile's stacking context, and the sticky General skills column and the
+  deck's `layout` cells each make one, so popups slid under their neighbours. It opens after a
+  120 ms hover, on `:focus-visible` or a tap, flips above when there's no room below and stays
+  on screen. It is `aria-hidden` and mounted only while open; the screen reader's copy is an
+  `sr-only` `role="tooltip"` inside the tile, named by `aria-describedby`. **Nothing inside a
+  tile with a popup opens one of its own** (`InsideHoverContext`; Tailwind's `group-hover`
+  answers to any hovered ancestor, which once opened three at a time): a `[[mention]]` there is
+  a plain pill, and the popup lists the skills its note names at the bottom (`MentionedSkills`,
+  under a rule, crediting UmaTL whenever their text is theirs). A skill's other versions sit on
+  a bar down the left with a colour tag, so the two lists read apart.
 - **SHELVED (owner, 2026-10-23): everything about skills below is guide-editor only.**
   `useSkillsPreview()` (`hooks/useSkillsPreview.ts`) and the API's
   `pvp_guide_editing.sees_skills_preview` decide it: the Skills page says "not here" to

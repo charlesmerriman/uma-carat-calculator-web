@@ -6,11 +6,27 @@
  * Hover detail (an uma's note, a skill's description) uses the same three
  * triggers as the Timeline's FeaturedTileArt: hover, keyboard focus, and a tap
  * on touch screens. Written fresh here rather than shared, so the Timeline's
- * tile stays untouched by guide work. Nothing inside a tile with a detail
- * opens a detail of its own (InsideHoverContext).
+ * tile stays untouched by guide work. The popup is drawn on <body>
+ * (useHoverPopup), and nothing inside a tile with a detail opens a detail of
+ * its own (InsideHoverContext).
  */
 
 import { createContext, useContext, useId, useState, type ReactNode } from "react"
+import {
+	autoUpdate,
+	flip,
+	FloatingPortal,
+	offset,
+	shift,
+	useDismiss,
+	useFloating,
+	useFocus,
+	useHover,
+	useInteractions,
+	useTransitionStyles,
+	type Placement,
+} from "@floating-ui/react"
+import { useReducedMotion } from "framer-motion"
 import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
@@ -71,6 +87,73 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
  */
 const InsideHoverContext = createContext(false)
 
+// How long the pointer rests on a tile before its popup opens, so a mouse
+// crossing a grid of skills doesn't flash a popup per cell. Focus and a tap
+// open it at once.
+const HOVER_OPEN_DELAY_MS = 120
+
+/**
+ * The popup of a hover detail (WithDetail, SkillMention): opened by hover,
+ * keyboard focus (`:focus-visible` only, as before) or a tap on a touch
+ * screen, and drawn in a portal on <body> by Floating UI (2026-11-02).
+ *
+ * Why a portal: drawn inside its tile, a popup could rise only as high as the
+ * tile's stacking context, and the guide makes several. The General skills
+ * column is `position: sticky` and each deck cell is a framer-motion `layout`
+ * box, so a popup from that column slid under the cards beside it (the
+ * owner's "Perfect Spot!" screenshot). On <body> nothing covers it. Floating
+ * UI also opens it above when there's no room below (`flip`), keeps it on
+ * screen (`shift`) and follows the tile while the page scrolls (`autoUpdate`,
+ * only while it's open).
+ *
+ * The popup is in the DOM only while open, so it is `aria-hidden`: the
+ * screen reader's copy is the caller's `sr-only` element, always in the DOM
+ * and named by `aria-describedby`, as the old in-place popup was.
+ */
+function useHoverPopup(placement: Placement) {
+	const [open, setOpen] = useState(false)
+	const reducedMotion = useReducedMotion()
+	const { refs, floatingStyles, context } = useFloating({
+		open,
+		onOpenChange: setOpen,
+		placement,
+		middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+		whileElementsMounted: autoUpdate,
+	})
+	const { getReferenceProps } = useInteractions([
+		useHover(context, { mouseOnly: true, delay: { open: HOVER_OPEN_DELAY_MS } }),
+		useFocus(context, { visibleOnly: true }),
+		// Escape, or a tap anywhere else, closes it.
+		useDismiss(context),
+	])
+	// A short fade in and out; none for a reader who asked for less motion.
+	const { isMounted, styles } = useTransitionStyles(context, { duration: reducedMotion ? 0 : 150 })
+	const referenceProps = {
+		ref: refs.setReference,
+		...getReferenceProps({
+			// A touch screen has no hover, and a tap's focus isn't
+			// :focus-visible, so a tap toggles it.
+			onPointerUp(event) {
+				if (event.pointerType === "touch") setOpen((was) => !was)
+			},
+		}),
+	}
+	const popup = (content: ReactNode, widthClassName: string) =>
+		isMounted && (
+			<FloatingPortal>
+				<div
+					ref={refs.setFloating}
+					aria-hidden="true"
+					style={{ ...floatingStyles, ...styles }}
+					className={`pointer-events-none z-50 max-w-[80vw] rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${widthClassName}`}
+				>
+					<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>
+				</div>
+			</FloatingPortal>
+		)
+	return { referenceProps, popup }
+}
+
 // The skills a note's pieces mention that the guide's map holds, each once,
 // in the order the note names them. Walks into ==highlights==, which can hold
 // a mention of their own.
@@ -89,9 +172,10 @@ function mentionedSkills(pieces: NotePiece[], mentions: Record<string, PvpSkillR
  * The skills a note mentions, listed at the bottom of the detail the note sits
  * in: icon, name, whose unique it is, the description. Inside a hover a
  * mention is a bare pill, so this is where the reader learns what it does (the
- * owner's pick, 2026-11-02: one box, never a popup on a popup). Drawn like
- * SkillDetail's versions list. `skip` leaves out the skill the detail is
- * already about, when a skill's note names itself.
+ * owner's pick, 2026-11-02: one box, never a popup on a popup). Under a rule,
+ * each icon hanging; a skill's other versions (SkillDetail) take a bar down
+ * the left instead, so the two lists read apart. `skip` leaves out the skill
+ * the detail is already about, when a skill's note names itself.
  */
 function MentionedSkills({ text, skip }: { text: string; skip?: number }) {
 	const mentions = useSkillMentions()
@@ -146,7 +230,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 	const skill = useSkillMentions()[name.toLowerCase()]
 	const insideHover = useContext(InsideHoverContext)
 	const detailId = useId()
-	const [tapped, setTapped] = useState(false)
+	const { referenceProps, popup } = useHoverPopup("bottom-start")
 	if (!skill) return <>{name}</>
 	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
@@ -165,26 +249,18 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 	if (insideHover) return <span className={pill}>{face}</span>
 	return (
 		<span
+			{...referenceProps}
 			role="group"
 			aria-label={skill.name}
 			aria-describedby={detailId}
 			tabIndex={0}
-			onPointerUp={(event) => {
-				if (event.pointerType === "touch") setTapped((open) => !open)
-			}}
-			onBlur={() => setTapped(false)}
-			className={`group relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${pill}`}
+			className={`outline-none focus-visible:ring-2 focus-visible:ring-brand ${pill}`}
 		>
 			{face}
-			<span
-				id={detailId}
-				role="tooltip"
-				className={`pointer-events-none absolute left-0 top-full z-40 mt-1 w-72 max-w-[80vw] whitespace-normal rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs font-normal leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
-					tapped ? "opacity-100" : "opacity-0"
-				}`}
-			>
+			<span id={detailId} role="tooltip" className="sr-only">
 				<SkillDetail skill={skill} />
 			</span>
+			{popup(<SkillDetail skill={skill} />, "w-72")}
 		</span>
 	)
 }
@@ -202,32 +278,24 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 	detailClassName?: string
 }) {
 	const detailId = useId()
-	const [tapped, setTapped] = useState(false)
+	const { referenceProps, popup } = useHoverPopup("bottom")
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
+			{...referenceProps}
 			role="group"
 			aria-label={label}
 			aria-describedby={detailId}
 			tabIndex={0}
-			onPointerUp={(event) => {
-				if (event.pointerType === "touch") setTapped((open) => !open)
-			}}
-			onBlur={() => setTapped(false)}
-			className={`group relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${className}`}
+			className={`relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${className}`}
 		>
 			<InsideHoverContext.Provider value={true}>{children}</InsideHoverContext.Provider>
-			{/* Always in the DOM so a screen reader gets it through
-			    aria-describedby; faded in on hover, focus or tap. */}
-			<div
-				id={detailId}
-				role="tooltip"
-				className={`pointer-events-none absolute left-1/2 top-full z-40 mt-1 ${detailClassName} max-w-[80vw] -translate-x-1/2 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
-					tapped ? "opacity-100" : "opacity-0"
-				}`}
-			>
+			{/* The screen reader's copy, always in the DOM; the popup
+			    draws its own while open (useHoverPopup). */}
+			<div id={detailId} role="tooltip" className="sr-only">
 				<InsideHoverContext.Provider value={true}>{detail}</InsideHoverContext.Provider>
 			</div>
+			{popup(detail, detailClassName)}
 		</div>
 	)
 }
