@@ -1009,17 +1009,16 @@
 .place-square[data-place="3"] { background: #d29a6b; color: #1c1008; }
 
 /* A label laid over game art on the Collection's Umas and Support cards
-   tiles (stars, potential, limit break pips, spare copies): a dark band with
-   light ink, and gold for what is earned. Fixed colours: the art under it is
-   the same on every theme, so the band is too. */
+   tiles (stars, potential, spare copies): a dark band with light ink, and
+   gold for what is earned. Fixed colours: the art under it is the same on
+   every theme, so the band is too. A card's limit break is the game's own
+   diamonds now (FramedCard), no band. */
 .art-badge {
 	background: rgb(16 16 20 / 84%);
 	color: #e4e4ea;
 }
 .art-on { color: #f2c94c; }
 .art-off { color: rgb(255 255 255 / 28%); }
-.art-pip-on { background: #f2c94c; }
-.art-pip-off { background: rgb(255 255 255 / 28%); }
 
 /* A running style's name in its colour (--style-color, set on the element from
    the --color-style-* tokens, index.css), on the dark themes only: Hakuraku's
@@ -1172,6 +1171,57 @@
    the favorites card): the same borderless art and corner, no frame. */
 .uma-frame--bare::after {
 	content: none;
+}
+
+/* ===== CARD FRAMES =====
+   components/FramedCard.tsx: a support card built the way Daptrius's pipeline
+   builds it. His overlays are drawn on a 762 x 1000 canvas: the 1536 x 2048
+   art padded 50 px on every side (1636 x 2148), its corners rounded at
+   120 px. So on our 3:4 card the art sits inset by that padding, as
+   percentages of the card (50/1636 across, 50/2148 down; the art's 1536/1636
+   and 2048/2148), its corners 120/1536 by 120/2048 of the art's own box. Every
+   overlay (frame, type icon, limit breaks) stretches over the whole card, as
+   his output does. Checked against his own 450 x 600 render: a mean
+   difference of 2/255 (notes/support-card-art-plan.md). */
+.card-frame {
+	position: relative;
+	display: block;
+	aspect-ratio: 3 / 4;
+	flex-shrink: 0;
+}
+
+.card-frame > img {
+	position: absolute;
+	display: block;
+}
+
+.card-frame__art {
+	left: 3.0562%;
+	top: 2.3277%;
+	width: 93.8875%;
+	height: 95.3445%;
+	object-fit: cover;
+	border-radius: 7.8125% / 5.8594%;
+}
+
+.card-frame__layer,
+.card-frame__whole {
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.card-frame__layer {
+	pointer-events: none;
+}
+
+/* A card with no picture at all: a grey card, about the frame's corner. */
+.card-frame__empty {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: 6% / 4.5%;
+	background-color: var(--color-gray-700);
 }
 
 /* ===== SHARE PICTURE =====

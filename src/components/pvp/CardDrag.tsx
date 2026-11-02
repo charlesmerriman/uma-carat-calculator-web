@@ -23,6 +23,7 @@ import {
 	type DragEndEvent,
 	type DragStartEvent,
 } from "@dnd-kit/core"
+import { FramedCard } from "../FramedCard"
 import type { CatalogueSupportCard } from "../../types/pvpTeam"
 import type { CardDrag, CardDropTarget } from "../../utils/pvpTeams"
 
@@ -47,16 +48,19 @@ export function CardDragProvider({ cardsById, onDrop, children }: {
 		const target = over?.data.current?.target as CardDropTarget | undefined
 		if (drag && target) onDrop(drag, target)
 	}
-	const image = active ? cardsById.get(active.cardId)?.image : null
+	const card = active ? cardsById.get(active.cardId) : undefined
 	return (
 		<DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
 			{children}
 			<DragOverlay dropAnimation={null}>
-				{active && (
-					<div className="aspect-[3/4] w-20 overflow-hidden rounded-lg bg-gray-700 shadow-2xl ring-2 ring-brand">
-						{image && <img src={image} alt="" className="h-full w-full object-cover" />}
-					</div>
-				)}
+				{/* The card in hand is the card in the slot: the same FramedCard,
+				    lifted with a shadow (drop-shadow follows the frame's corners). */}
+				{active &&
+					(card ? (
+						<FramedCard card={card} className="w-20 drop-shadow-2xl" />
+					) : (
+						<div className="aspect-[3/4] w-20 rounded-lg bg-gray-700 shadow-2xl ring-2 ring-brand" />
+					))}
 			</DragOverlay>
 		</DndContext>
 	)

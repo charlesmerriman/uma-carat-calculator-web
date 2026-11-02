@@ -6,8 +6,8 @@
  * site no way to mark an uma itself. The borderless cut (the API's
  * `portrait`) plus a frame drawn here makes the frame ours. Used by the
  * calculator's rows, the Timeline's featured tiles, the Daily Legend Races
- * tab and the PvP gallery. Support cards keep their own art: there is no
- * borderless set for them.
+ * tab and the PvP gallery. A support card has its own twin, FramedCard, in
+ * the guide's decks, the team builder and the Collection.
  *
  * The frames are SVGs in src/assets, laid over the art by App.css
  * ("Uma frames"); `className` sizes the square. With no picture the frame

@@ -22,6 +22,7 @@ import { useId, useMemo, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { ArrowLeft, ChevronUp, FileUp, Link2, Loader2, Pencil, Trash2 } from "lucide-react"
 import { FramedUma } from "../FramedUma"
+import { FramedCard } from "../FramedCard"
 import { ACTION_BUTTON } from "../pvp/gallery/galleryStyles"
 import { FlagChip, GradeBadge } from "./veteranBadges"
 import { STAT_COLORS, cardFlags, gradeTier } from "../../utils/veteranLook"
@@ -456,24 +457,19 @@ function Training({ veteran, game, byGameId }: { veteran: TrainedUma; game: Vete
 							const label = limitBreakLabel(slot.limitBreak)
 							return (
 								<li key={slot.position} className="flex min-w-0 flex-col items-center gap-1">
-									{card?.image ? (
-										<img
-											src={card.image}
+									{/* The deck's limit breaks as the game draws them, on the card. */}
+									{card?.image || card?.image_borderless ? (
+										<FramedCard
+											card={card}
+											limitBreaks={slot.limitBreak}
 											alt={`${card.name}${card.title ? ` (${card.title})` : ""}, ${label}`}
-											loading="lazy"
-											decoding="async"
-											className="aspect-[3/4] w-full rounded object-cover"
+											className="w-full"
 										/>
 									) : (
 										<span className="flex aspect-[3/4] w-full items-center justify-center rounded bg-gray-700 p-1 text-center text-[10px] text-gray-400">
 											{card?.name ?? "Unknown card"}
 										</span>
 									)}
-									<span className="flex gap-1 py-0.5" aria-hidden="true">
-										{[0, 1, 2, 3].map((pip) => (
-											<span key={pip} className={`h-1.5 w-1.5 rotate-45 ${pip < slot.limitBreak ? "bg-brand" : "bg-gray-600"}`} />
-										))}
-									</span>
 									<span className={`text-[11px] font-bold ${slot.limitBreak >= 4 ? "text-brand" : "text-gray-400"}`} aria-hidden="true">
 										{label}
 									</span>

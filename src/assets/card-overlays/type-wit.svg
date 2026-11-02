@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com" viewBox="0 0 762 1000" preserveAspectRatio="none"><g transform="translate(125.11 0) scale(0.83581 0.81197)">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="684" y1="0" x2="684" y2="156" id="gradient-3" gradientTransform="matrix(0.934905, -0.250753, 0.260265, 0.97037, 36.592834, 173.448303)">
+      <stop offset="0" style="stop-color: rgb(29, 213, 160);"/>
+      <stop offset="1" style="stop-color: rgb(1, 183, 123);"/>
+    </linearGradient>
+  </defs>
+  <rect x="608.5" width="151" height="151" style="stroke-width: 5; fill: url(&quot;#gradient-3&quot;); stroke: rgb(7, 93, 66);" rx="31" ry="31" y="2.5"/>
+  <g fill="#fff" transform="matrix(1.307356, 0, 0, 1.307356, 617.77948, 18.333464)">
+    <path d="M 4.812 28.933 C 5.812 25.933 10.085 24.612 14.085 22.612 L 42 12 C 48 10 53 10 59 12 L 93 24 C 97 25 98 28 94 30 L 58.764 42.424 C 53.764 44.424 49 44 44 43 L 12 35 C 7 34 4.339 32.272 4.812 28.933 Z"/>
+    <path d="M 18.576 39.424 L 43.236 45.849 C 49.236 47.849 55 47 61 45 L 69 42 L 69.207 54.06 C 66.737 57.079 62.181 57.117 60.97 77.491 C 54.97 81.491 45 81 39 79 L 13 72 C 11 71 11 69 12 66 L 18.576 39.424 Z"/>
+    <path d="M 73.69 35.03 L 77.739 33.455 L 78.43 53.975 L 75.296 54.042 L 73.69 35.03 Z"/>
+    <path d="M 76.103 56.915 C 80.103 56.915 82 59 83 63 L 86 80 C 87 84 84 87 80 87 L 72 87 C 68 87 66 84 67 80 L 69 63 C 70 59 73.103 56.915 76.103 56.915 Z"/>
+    <path d="M 80.798 37.181 L 86.798 35.181 L 90.798 59.181 L 85.798 60.181 L 80.798 37.181 Z" style="stroke-width: 1;"/>
+  </g>
+</g></svg>

@@ -687,10 +687,12 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
   frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
   pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
-- **Support cards keep their own art**: there is no borderless set for them. A list that can
+- **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
+  frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's
-  `portrait` is set only for umas (`EligibleCard`, `PvpCardPicker`'s items), a step 5 pick
-  carries `uma` (`SelectedCardArt`), a planner row narrows on `target.type`.
+  `portrait` is set only for umas (`EligibleCard`, `PvpCardPicker`'s items carry `card`
+  for a support card), a step 5 pick carries `uma` (`SelectedCardArt`), a planner row
+  narrows on `target.type`.
 - **`useOshiIds` reads `AuthContext` directly**, so a row or picker rendered on its own (in
   a test) draws silver frames instead of throwing for want of an AuthProvider.
 - **Whose favorite.** The rainbow frame means "one of YOUR favorites": `useOshiIds`
@@ -702,8 +704,36 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
 - **A state rings the frame, never replaces it.** The guide picks panel's open and
   on-the-team rings follow the frame's corner (`rounded-[10.75%]`); the old turning
   `.oshi-frame` and the gold rings are gone.
-- **Not framed:** support cards, and banner, campaign and event art. The `/post/<id>` link
-  preview picture is drawn by the API (`gallery_preview.py`) and does not use the frames.
+- **Not framed:** banner, campaign and event art, and support cards outside the places
+  below. The `/post/<id>` link preview picture is drawn by the API (`gallery_preview.py`)
+  and does not use the frames.
+
+### Card frames (`components/FramedCard.tsx`)
+
+**A support card in the PvP guide's decks (every deck tile, the All tab, swap-ins, an "or"
+card's hover), the team builder (its slots, the card picker, the guide picks panel, the
+drag preview) and the Collection (the Support cards tab, a veteran's training deck) is
+built from layers the way the game draws it** (owner, 2026-11-02; first places only,
+`notes/support-card-art-plan.md`). Everywhere else (the planner, the Timeline, the
+selectors, Rankings, the gallery, search, the share picture) keeps the bordered `image`.
+
+- **The layers**: the API's `image_borderless` (the game's own texture, no frame, no type
+  icon) under Daptrius's SVG overlays in `src/assets/card-overlays/`: the rarity frame
+  (`frame-r|sr|ssr`), the type icon (`type-<card_type>`; his "Pal" is our `friend`) and, on
+  an owned card, the limit-break diamonds (`lb-0` to `lb-4`, from `limitBreaks`). Frames and
+  diamonds are his files untouched; the icons are his, shrunk to today's size with a darker
+  outline (the owner's pick, canvas version 7).
+- **The geometry is his pipeline's** (App.css "Card frames"): the art inset by his 50 px
+  padding with his 120 px corners, every overlay stretched over the whole 3:4 card
+  (`preserveAspectRatio="none"` in the files). Each overlay is its own `<img>`, so the
+  files' gradient ids never meet.
+- **No texture, no frame**: a card whose `image_borderless` is null (a placeholder, or a new
+  card before its texture is uploaded) draws its bordered `image` as it is, with the
+  diamonds still on top. Never the bordered picture inside the frame.
+- **States sit on or round the card**, never replace it: the Link badge, the borrow tab
+  (behind the card, down to 12% of its height so it clears the corners at every size), the
+  picker's owned badge, the guide picks panel's ring (`rounded-[6%/4.5%]`). The Collection's
+  spare copies badge is top LEFT: the icon has the top right.
 
 ### Portaled `react-select` menus need `menuPosition="fixed"`
 
