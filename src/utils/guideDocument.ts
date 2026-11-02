@@ -18,6 +18,7 @@ import type {
 	GuideSection,
 } from "../types/guideDocument"
 import type {
+	GuideVisibility,
 	PvpGuide,
 	PvpSkillCategory,
 	PvpSkillRecommendation,
@@ -70,10 +71,36 @@ export function mentionsIn(text: string): string[] {
 const STYLE_RANK = new Map(STYLE_ORDER.map((style, index) => [style, index]))
 const styleRank = (style: PvpStyle): number => STYLE_RANK.get(style) ?? STYLE_ORDER.length
 
-/** The body of a save: the document minus what the server owns. */
+/** The body of a save: the document minus what the server owns. Who may
+ * read the guide is never saved with it: PATCH /pvp-guides/<id> sets that. */
 export function toPayload(document: GuideDocument): GuideDocumentPut {
-	const { id: _id, event_type: _type, event: _event, is_published: _published, updated_at: _updated, ...rest } = document
+	const {
+		id: _id,
+		event_type: _type,
+		event: _event,
+		visibility: _visibility,
+		tools_public: _tools,
+		updated_at: _updated,
+		...rest
+	} = document
 	return rest
+}
+
+/** Who may read a guide, as the editor names it (guide-visibility-plan.md). */
+export const GUIDE_VISIBILITY_LABELS: Record<GuideVisibility, string> = {
+	private: "Private",
+	supporters: "Supporters",
+	public: "Public",
+}
+
+/** The editor header's chip: the setting, and the switch on a Public guide. */
+export function visibilityLabel(visibility: GuideVisibility, toolsPublic: boolean): string {
+	return visibility === "public" && toolsPublic ? "Public, My team and Gallery open" : GUIDE_VISIBILITY_LABELS[visibility]
+}
+
+/** " (private)" / " (supporters)" after a guide's name in a list; nothing for Public. */
+export function visibilityNote(visibility: GuideVisibility): string {
+	return visibility === "public" ? "" : ` (${GUIDE_VISIBILITY_LABELS[visibility].toLowerCase()})`
 }
 
 /** Every text an editor wrote, as (path, text): where [[mentions]] live. */
@@ -250,7 +277,8 @@ export function hydrateGuide(
 	return {
 		event_type: document.event_type,
 		event: document.event,
-		is_published: document.is_published,
+		visibility: document.visibility,
+		tools_public: document.tools_public,
 		updated_at: document.updated_at,
 		scenario: scenario ? { id: scenario.id, name: scenario.name, image: scenario.image } : null,
 		style_ranking: document.style_ranking,

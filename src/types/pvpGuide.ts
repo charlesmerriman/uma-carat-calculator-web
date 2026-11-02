@@ -212,12 +212,20 @@ export interface PvpTeamComp {
 	note: string
 }
 
+/**
+ * Who may read a guide (owner, 2026-11-02, notes/guide-visibility-plan.md):
+ * staff only, early access, or everyone. The API's PvpGuide.visibility.
+ */
+export type GuideVisibility = "private" | "supporters" | "public"
+
 export interface PvpGuide {
 	event_type: "champions_meeting" | "league_of_heroes"
 	/** The event's id (the `id` in champions_meeting_data / league_of_heroes_event_data). */
 	event: number
-	/** False only for staff previewing a draft; visitors never receive one. */
-	is_published: boolean
+	/** "private" only for staff previewing a draft; nobody else receives one. */
+	visibility: GuideVisibility
+	/** My team and the Gallery open to everyone with it; only ever on "public". */
+	tools_public: boolean
 	updated_at: string
 	scenario: { id: number; name: string; image: string | null } | null
 	style_ranking: string

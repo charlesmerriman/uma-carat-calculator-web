@@ -1,6 +1,6 @@
 /**
  * The editor's dialogs, all on the gallery's native <dialog> (GalleryModal):
- * publish and unpublish, the three actions (copy from another guide, load
+ * who may read the guide, the three actions (copy from another guide, load
  * from the sheet, fill track greens), the revision history, delete, and the
  * choice when a save collided with someone else's.
  *
@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Globe, Heart, Loader2, Lock, type LucideIcon } from "lucide-react"
 import { GalleryModal } from "../gallery/GalleryModal"
 import { Checklist } from "./Checklist"
 import { DANGER_BUTTON, FIELD_ERROR, PRIMARY_BUTTON, SECONDARY_BUTTON, SELECT, SUBTLE } from "./editorStyles"
@@ -19,7 +19,8 @@ import { formatDate } from "../../../utils/dateFormat"
 import { formatTimeAgo } from "../../../utils/relativeDate"
 import type { GuideActionResult, GuideEditor } from "../../../hooks/useGuideDocument"
 import type { EditableGuideRow, GuideDocument, RevisionRow, RevisionSource } from "../../../types/guideDocument"
-import type { ChecklistItem, EditorTab } from "../../../utils/guideDocument"
+import type { GuideVisibility } from "../../../types/pvpGuide"
+import { GUIDE_VISIBILITY_LABELS, visibilityNote, type ChecklistItem, type EditorTab } from "../../../utils/guideDocument"
 
 const SECTION_LABELS: Array<[string, string]> = [
 	["overview", "Overview text and style ranking"],
@@ -46,33 +47,90 @@ function errorOf(result: GuideActionResult, fallback: string): string {
 	return typeof result.body.error === "string" ? result.body.error : fallback
 }
 
-// ── Publish ──────────────────────────────────────────────────────────────────
+// ── Who can see it ───────────────────────────────────────────────────────────
 
-export function PublishDialog({ isPublished, missing, errors, onConfirm, onClose }: {
-	isPublished: boolean
+/** The three settings, in the order the dialog lists them (owner, 2026-11-02,
+ * notes/guide-visibility-plan.md). */
+const VISIBILITY_CHOICES: Array<{ value: GuideVisibility; icon: LucideIcon; text: string }> = [
+	{ value: "private", icon: Lock, text: "Only staff can see it. Use this while it's a draft." },
+	{
+		value: "supporters",
+		icon: Heart,
+		text: "Patreon supporters and anyone with early access. Everyone else sees an invite to support us.",
+	},
+	{ value: "public", icon: Globe, text: "Everyone, signed in or not." },
+]
+
+/**
+ * Who may read the guide, and on a Public guide whether My team and the
+ * Gallery open to everyone with it. The switch shows only under Public:
+ * supporters have both anyway, and the API refuses it anywhere else. Opened
+ * on a Private guide (the header's Publish), Supporters is picked to start,
+ * the step every published guide took before. Leaving Private shows the
+ * checklist and refuses while the last save was refused, as publishing did.
+ */
+export function VisibilityDialog({ visibility, toolsPublic, missing, errors, onConfirm, onClose }: {
+	visibility: GuideVisibility
+	toolsPublic: boolean
 	missing: ChecklistItem[]
 	errors: Map<EditorTab, number>
-	onConfirm: () => Promise<string | null>
+	onConfirm: (visibility: GuideVisibility, toolsPublic: boolean) => Promise<string | null>
 	onClose: () => void
 }) {
+	const [choice, setChoice] = useState<GuideVisibility>(visibility === "private" ? "supporters" : visibility)
+	const [tools, setTools] = useState(toolsPublic)
 	const [busy, setBusy] = useState(false)
 	const [problem, setProblem] = useState<string | null>(null)
 	const hasErrors = [...errors.values()].some((count) => count > 0)
+	const leavingPrivate = visibility === "private" && choice !== "private"
+	const toolsChosen = choice === "public" && tools
+	const unchanged = choice === visibility && toolsChosen === toolsPublic
 	const confirm = async () => {
 		setBusy(true)
-		const refused = await onConfirm()
+		const refused = await onConfirm(choice, toolsChosen)
 		setBusy(false)
 		if (refused) setProblem(refused)
 		else onClose()
 	}
 	return (
-		<GalleryModal title={isPublished ? "Unpublish this guide?" : "Publish this guide?"} onClose={onClose}>
+		<GalleryModal title="Who can see this guide?" onClose={onClose}>
 			<div className="flex flex-col gap-4 text-sm text-gray-300">
-				{isPublished ? (
-					<p>Visitors stop seeing it at once. The Timeline card loses its guide link. Editors still see it as a draft.</p>
-				) : (
+				<fieldset className="flex flex-col gap-2">
+					<legend className="sr-only">Who can see this guide</legend>
+					{VISIBILITY_CHOICES.map(({ value, icon: Icon, text }) => (
+						<div
+							key={value}
+							className={`rounded-lg border p-3 ${choice === value ? "border-brand bg-brand/5" : "border-gray-700 bg-gray-900/40"}`}
+						>
+							<label className="flex cursor-pointer items-start gap-2.5">
+								<input
+									type="radio"
+									name="guide-visibility"
+									value={value}
+									checked={choice === value}
+									onChange={() => setChoice(value)}
+									className="mt-1"
+								/>
+								<Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+								<span className="flex flex-col">
+									<span className="font-semibold text-gray-100">{GUIDE_VISIBILITY_LABELS[value]}</span>
+									<span className={SUBTLE}>{text}</span>
+								</span>
+							</label>
+							{value === "public" && choice === "public" && (
+								<label className="mt-2.5 ml-6 flex cursor-pointer items-start gap-2 border-t border-dashed border-gray-700 pt-2.5 text-gray-200">
+									<input type="checkbox" checked={tools} onChange={(change) => setTools(change.target.checked)} className="mt-1" />
+									<span className="flex flex-col">
+										Also open My team and the Gallery for this event to everyone.
+										<span className={SUBTLE}>Supporters always have them.</span>
+									</span>
+								</label>
+							)}
+						</div>
+					))}
+				</fieldset>
+				{leavingPrivate && (
 					<>
-						<p>Everyone sees it at once, and the event's Timeline card gets a guide link. Edits after this go live as you make them.</p>
 						<Checklist missing={missing} errors={errors} onJump={onClose} />
 						{hasErrors && <p className={FIELD_ERROR}>The last save was refused. Fix the problems first, or the guide stays as it was last saved.</p>}
 					</>
@@ -86,9 +144,9 @@ export function PublishDialog({ isPublished, missing, errors, onConfirm, onClose
 					<button type="button" className={SECONDARY_BUTTON} onClick={onClose}>
 						Not now
 					</button>
-					<button type="button" className={PRIMARY_BUTTON} disabled={busy || hasErrors} onClick={confirm}>
+					<button type="button" className={PRIMARY_BUTTON} disabled={busy || unchanged || (leavingPrivate && hasErrors)} onClick={confirm}>
 						{busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-						{isPublished ? "Unpublish" : "Publish"}
+						Save
 					</button>
 				</div>
 			</div>
@@ -166,7 +224,7 @@ export function CopyFromDialog({ guides, currentId, runAction, onClose }: {
 						{choices.map((guide) => (
 							<option key={guide.id} value={guide.id}>
 								{guide.name}
-								{guide.is_published ? "" : " (draft)"}
+								{visibilityNote(guide.visibility)}
 							</option>
 						))}
 					</select>
@@ -501,14 +559,19 @@ export function RevisionsDialog({ guideId, onRestore, onClose }: {
 
 // ── Delete ───────────────────────────────────────────────────────────────────
 
-export function DeleteDialog({ isPublished, onConfirm, onClose }: { isPublished: boolean; onConfirm: () => Promise<string | null>; onClose: () => void }) {
+export function DeleteDialog({ isPublished, onConfirm, onClose }: {
+	/** Out of Private: someone besides staff can read it. */
+	isPublished: boolean
+	onConfirm: () => Promise<string | null>
+	onClose: () => void
+}) {
 	const [busy, setBusy] = useState(false)
 	const [problem, setProblem] = useState<string | null>(null)
 	return (
 		<GalleryModal title="Delete this guide?" onClose={onClose}>
 			<div className="flex flex-col gap-4 text-sm text-gray-300">
 				{isPublished ? (
-					<p>A published guide can't be deleted. Unpublish it first.</p>
+					<p>A guide readers can see can't be deleted. Make it Private first.</p>
 				) : (
 					<p>Every section and its history go. There is no undo past this point.</p>
 				)}

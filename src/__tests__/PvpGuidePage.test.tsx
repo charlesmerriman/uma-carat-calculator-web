@@ -38,7 +38,11 @@ const event = (id: number, name: string, start: string, extra: Partial<RaceEvent
 	}) as RaceEvent
 
 const OLD = event(5, "Virgo Cup", "2020-01-01T00:00:00Z")
-const NEXT = event(10, "Aquarius Cup", "2099-03-06T00:00:00Z", { has_guide: true })
+// The next event's guide is Public; the page's lock rules read only this
+// (guide-visibility-plan.md).
+const NEXT = event(10, "Aquarius Cup", "2099-03-06T00:00:00Z", { has_guide: true, guide_visibility: "public" })
+// A Public guide whose editor opened My team and the Gallery too.
+const OPEN = event(21, "Capricorn Cup", "2100-06-01T00:00:00Z", { has_guide: true, guide_visibility: "public", guide_tools_public: true })
 const LATER = event(11, "Pisces Cup", "2100-03-30T00:00:00Z")
 
 const card = (id: number, name: string) => ({ id, name, image: null, card_type: "speed", rarity: 3 })
@@ -46,7 +50,8 @@ const card = (id: number, name: string) => ({ id, name, image: null, card_type: 
 const GUIDE: PvpGuide = {
 	event_type: "champions_meeting",
 	event: 10,
-	is_published: true,
+	visibility: "public",
+	tools_public: false,
 	updated_at: "2099-01-01T00:00:00Z",
 	scenario: { id: 1, name: "Trackblazer", image: null },
 	style_ranking: "Front >> End",
@@ -140,7 +145,6 @@ vi.mock("../components/pvp/gallery/GalleryView", () => ({
 }))
 
 const { PvpGuidePage } = await import("../components/pvp/PvpGuidePage")
-const { PVP_OPEN_CM_NUMBER } = await import("../hooks/usePvpAccess")
 const { clearPvpGuideCache } = await import("../hooks/usePvpGuide")
 
 function LocationProbe() {
@@ -194,7 +198,7 @@ describe("PvpGuidePage", () => {
 		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
 	})
 
-	it("opens a bare address on the free guide while locked, not where the tab left the page", () => {
+	it("opens a bare address on the nearest Public guide while locked, not where the tab left the page", () => {
 		access.value = "locked"
 		sessionStorage.setItem("pvp-page", "?event=cm-11&view=gallery")
 		respond(200, GUIDE)
@@ -213,7 +217,7 @@ describe("PvpGuidePage", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("keeps My team and the Gallery closed while locked, even on the free event", () => {
+	it("keeps My team and the Gallery closed while locked on a Public guide without the switch", () => {
 		access.value = "locked"
 		renderPage("/app/pvp?event=cm-10&view=team")
 		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
@@ -223,11 +227,11 @@ describe("PvpGuidePage", () => {
 		expect(screen.queryByTestId("gallery-view")).not.toBeInTheDocument()
 	})
 
-	it("opens all of the open CM to everyone, guide, My team and Gallery", async () => {
+	it("opens a Public guide's My team and Gallery when its editor opened them", async () => {
 		access.value = "locked"
-		events = [OLD, NEXT, LATER, event(PVP_OPEN_CM_NUMBER ?? 0, "Capricorn Cup", "2100-06-01T00:00:00Z")]
+		events = [OLD, NEXT, LATER, OPEN]
 		respond(200, GUIDE)
-		renderPage(`/app/pvp?event=cm-${PVP_OPEN_CM_NUMBER}&view=team`)
+		renderPage(`/app/pvp?event=cm-${OPEN.id}&view=team`)
 		expect(screen.getByTestId("team-builder")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("tab", { name: "Gallery" }))
 		expect(await screen.findByTestId("gallery-view")).toBeInTheDocument()
@@ -236,9 +240,9 @@ describe("PvpGuidePage", () => {
 		expect(screen.queryByRole("heading", { name: "This part is in early access" })).not.toBeInTheDocument()
 	})
 
-	it("lists only the free guide's event and the open CM while locked, with no past toggle", () => {
+	it("lists only the Public guides' events while locked, with no past toggle", () => {
 		access.value = "locked"
-		events = [OLD, NEXT, LATER, event(PVP_OPEN_CM_NUMBER ?? 0, "Capricorn Cup", "2100-06-01T00:00:00Z")]
+		events = [OLD, NEXT, LATER, OPEN]
 		respond(200, GUIDE)
 		renderPage()
 		const options = within(screen.getByRole("combobox", { name: "Event" })).getAllByRole("option")
@@ -247,6 +251,24 @@ describe("PvpGuidePage", () => {
 			expect.stringContaining("Capricorn Cup"),
 		])
 		expect(screen.queryByRole("button", { name: "Show past events" })).not.toBeInTheDocument()
+	})
+
+	it("draws the card on a Supporters guide while locked, and fetches nothing", () => {
+		access.value = "locked"
+		events = [OLD, NEXT, event(11, "Pisces Cup", "2100-03-30T00:00:00Z", { has_guide: true, guide_visibility: "supporters" })]
+		renderPage("/app/pvp?event=cm-11")
+		expect(screen.getByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.getByText(/Some guides are free for everyone/)).toBeInTheDocument()
+		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("draws the card when the API says a guide the page thought open is for supporters", async () => {
+		// The payload was loaded before an editor closed the guide.
+		access.value = "locked"
+		respond(403, { error: "This guide is for supporters for now.", supporters_only: true })
+		renderPage("/app/pvp?event=cm-10")
+		expect(await screen.findByRole("heading", { name: "This part is in early access" })).toBeInTheDocument()
+		expect(screen.queryByText("The guide didn't load. Try another event, or reload the page.")).not.toBeInTheDocument()
 	})
 
 	it("still lists a locked event a link opened, so the list shows what is on screen", () => {
@@ -349,10 +371,10 @@ describe("PvpGuidePage", () => {
 		expect(screen.getByRole("heading", { name: "Pisces Cup" })).toBeInTheDocument()
 	})
 
-	it("flags a draft for staff", async () => {
-		respond(200, { ...GUIDE, is_published: false })
+	it("flags a Private guide for staff", async () => {
+		respond(200, { ...GUIDE, visibility: "private" })
 		renderPage()
-		expect(await screen.findByText("Draft, visible to staff only.")).toBeInTheDocument()
+		expect(await screen.findByText("Private, visible to staff only.")).toBeInTheDocument()
 	})
 
 	it("Previous and Next write ?event=", async () => {
@@ -724,7 +746,7 @@ describe("PvpGuidePage decks", () => {
 		expect(screen.queryByRole("button", { name: /Use this deck/ })).not.toBeInTheDocument()
 		first.unmount()
 
-		// Locked, this reader still has the free guide, but not My team.
+		// Locked, this reader still has the Public guide, but not My team.
 		access.value = "locked"
 		try {
 			renderPage()

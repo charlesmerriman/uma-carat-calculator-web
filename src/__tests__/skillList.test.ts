@@ -34,7 +34,7 @@ const ROWS = [
 
 function document(text: string): GuideDocument {
 	return {
-		id: 7, version: 1, event_type: "champions_meeting", event: 10, is_published: false, updated_at: "2099-01-01T00:00:00Z",
+		id: 7, version: 1, event_type: "champions_meeting", event: 10, visibility: "private", tools_public: false, updated_at: "2099-01-01T00:00:00Z",
 		scenario: null, style_ranking: "", short_description: text, meta_analysis: "", admin_comments: "",
 		stat_configs: [], team_comps: [], uma_recommendations: [],
 		skill_recommendations: [{ style: "front", category: "speed", tier: null, skill: 9, note: "" }],

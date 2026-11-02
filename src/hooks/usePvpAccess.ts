@@ -4,65 +4,72 @@ import type { RaceEvent } from "../types"
 
 /**
  * The PvP page (guides, My team, the gallery) opens to Patreon supporters and
- * staff first: the owner's call on 2026-10-14. Since 2026-10-22 one guide is
- * free for everyone while it is early, the event running now or the next one
- * (components/pvp/PvpGuidePage.tsx). Set this to false to open it all to
- * everyone; nothing else needs to change.
+ * staff first: the owner's call on 2026-10-14. What else a reader without
+ * early access may open is each guide's own setting since 2026-11-02
+ * (notes/guide-visibility-plan.md), chosen in the guide editor:
+ *
+ *   Private     staff only; the payload says no guide
+ *   Supporters  early access only; everyone else gets the early-access card
+ *   Public      everyone may read the guide
+ *   Public + `guide_tools_public`   My team and the Gallery (and the event's
+ *               CM Runs) open to everyone too
  *
  * The server says WHO is early (`account.early_access`: a supporter, staff,
- * or an account granted it in the admin; backend benefits.early_access_for);
- * this says WHAT is still early. A client
- * gate: it decides what is drawn, and the PvP API itself stays open.
- *
- * The API keeps a COPY of this rule (backend calculatorapi/pvp_gate.py, with
- * PVP_OPEN_CM_NUMBER below), only to decide what a guide's link preview
- * (/guide/cm-21) may show. Flip both together.
+ * or an account granted it in the admin; backend benefits.early_access_for)
+ * and, per event, WHAT is open (`guide_visibility`, `guide_tools_public` on
+ * the race arrays). Nothing here is a constant any more: the rolling free
+ * guide and the one open CM were replaced by the setting (owner, 2026-11-02).
+ * The API refuses a Supporters guide and its comments itself
+ * (guide_access.py); My team and the Gallery are drawn or not here only.
  */
-export const PVP_EARLY_ACCESS = true
 
-/**
- * The one Champions Meeting open in full while the page is early: its guide,
- * My team and the Gallery, for everyone (owner, 2026-10-22). From CM 22 on,
- * only the rolling free guide is open (components/pvp/PvpGuidePage.tsx).
- * Matched on the CM's number, never its database id. Null closes it again.
- */
-export const PVP_OPEN_CM_NUMBER: number | null = 21
+/** Whether everyone may read `event`'s guide: it is Public. */
+export function guideOpenToEveryone(event: RaceEvent): boolean {
+	return event.guide_visibility === "public"
+}
 
-/** Whether `event` is the CM that is open in full while the page is early. */
-export function isOpenPvpEvent(event: RaceEvent): boolean {
-	return event.event_type === "champions_meeting" && event.cm_number === PVP_OPEN_CM_NUMBER
+/** Whether My team, the Gallery and CM Runs for `event` are open to everyone. */
+export function toolsOpenToEveryone(event: RaceEvent): boolean {
+	return guideOpenToEveryone(event) && event.guide_tools_public === true
 }
 
 /**
  * The events someone the page is locked to can open at all, for the PvP
- * page's event list: the free guide's (the event running now, else the next,
- * `defaultPvpEvent`) and the open CM. `events` in start order.
+ * page's event list: those with a Public guide.
  */
-export function lockedPvpEvents(events: RaceEvent[], now: Date): RaceEvent[] {
-	const free = defaultPvpEvent(events, now)
-	return events.filter((event) => event === free || isOpenPvpEvent(event))
+export function lockedPvpEvents(events: RaceEvent[]): RaceEvent[] {
+	return events.filter(guideOpenToEveryone)
 }
 
 /**
  * The events someone the page is locked to can build a team for (My team and
- * the team window): the open CM only. The free guide is a guide, not a team.
+ * the team window): a Public guide with My team and the Gallery opened.
  */
 export function lockedTeamEvents(events: RaceEvent[]): RaceEvent[] {
-	return events.filter(isOpenPvpEvent)
+	return events.filter(toolsOpenToEveryone)
+}
+
+/**
+ * Where a bare /app/pvp lands for someone the page is locked to: the Public
+ * guide running now, else the next, else the latest (`defaultPvpEvent` over
+ * the Public ones), so the navbar link lands somewhere readable. Null when no
+ * guide is Public. `events` in start order.
+ */
+export function lockedLandingEvent(events: RaceEvent[], now: Date): RaceEvent | null {
+	return defaultPvpEvent(lockedPvpEvents(events), now)
 }
 
 /**
  * Whether this visitor may use the PvP page right now. `pending` while the
  * account is still loading, so a supporter never sees the gate flash up.
  * Fails closed otherwise: a guest, an account that didn't load, or one
- * without early access is `locked`, which the page reads as "the free guide
- * only".
+ * without early access is `locked`, which the page reads as "what each
+ * event's setting opens to everyone".
  */
 export type PvpAccess = "open" | "pending" | "locked"
 
 export function usePvpAccess(): PvpAccess {
 	const { account, status } = useAccount()
-	if (!PVP_EARLY_ACCESS) return "open"
 	if (status === "loading") return "pending"
 	return account?.early_access ? "open" : "locked"
 }

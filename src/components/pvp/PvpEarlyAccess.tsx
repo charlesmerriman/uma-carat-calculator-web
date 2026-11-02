@@ -2,8 +2,10 @@
  * What the PvP page shows while it is in early access (hooks/usePvpAccess.ts)
  * to anyone who isn't a supporter or staff, in place of a part of the page
  * they can't open yet: what it is, who has it, the way in, and a link to the
- * one guide that is free for everyone (the event running now, else the next). A guest is asked to sign in first, since a supporter has to be
- * signed in for the site to know; a signed-in account without a pledge gets
+ * nearest Public guide (the one running now, else the next, else the latest;
+ * hooks/usePvpAccess.ts lockedLandingEvent). A guest is asked to sign in
+ * first, since a supporter has to be signed in for the site to know; a
+ * signed-in account without a pledge gets
  * the Patreon link, and a pointer to linking Patreon on the account page for
  * someone who already supports us.
  *
@@ -16,13 +18,12 @@ import { useAccount } from "../../services/AuthContext"
 import { useSignInPrompt } from "../../hooks/useSignInPrompt"
 import { PATREON_URL } from "../../constants/links"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
-import { PVP_OPEN_CM_NUMBER } from "../../hooks/usePvpAccess"
 import type { RaceEvent } from "../../types"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "./gallery/galleryStyles"
 
 /**
- * `freeEvent` is the event whose guide is open to everyone; null hides the
- * link (no event listed, or the reader is already on that guide's page).
+ * `freeEvent` is the nearest Public guide's event; null hides the link (no
+ * guide is Public, or the reader can already read every guide).
  */
 export function PvpEarlyAccess({ pending, freeEvent = null }: { pending: boolean; freeEvent?: RaceEvent | null }) {
 	const { isLoggedIn } = useAccount()
@@ -42,9 +43,8 @@ export function PvpEarlyAccess({ pending, freeEvent = null }: { pending: boolean
 						This part is in early access
 					</h2>
 					<p className="text-sm leading-relaxed text-gray-300">
-						Our Patreon supporters get every PvP guide, the team builder and the team gallery first. The guide
-						for the current or next event is free for everyone
-						{PVP_OPEN_CM_NUMBER !== null && `, and so is all of Champions Meeting ${PVP_OPEN_CM_NUMBER}`}.
+						Our Patreon supporters get every PvP guide, the team builder and the team gallery first. Some guides
+						are free for everyone.
 					</p>
 					<div className="flex flex-wrap justify-center gap-2">
 						{freeEvent && (

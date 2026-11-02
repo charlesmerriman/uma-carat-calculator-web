@@ -55,7 +55,7 @@ vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), err
 const slot = (number: number, extra: Record<string, unknown>) => ({ slot: number, order: 0, is_borrow: false, note: "", support_card: null, ...extra })
 const ref = (id: number, name: string) => ({ id, name, image: null, card_type: "speed", rarity: 3 })
 const GUIDE = {
-	event_type: "champions_meeting", event: 10, is_published: true, updated_at: "2099-01-01T00:00:00Z", scenario: null,
+	event_type: "champions_meeting", event: 10, visibility: "public", tools_public: false, updated_at: "2099-01-01T00:00:00Z", scenario: null,
 	style_ranking: "", short_description: "", meta_analysis: "", team_comps: [], stat_configs: [],
 	uma_recommendations: [], skill_recommendations: [], style_notes: [], skill_mentions: {}, comment_counts: {},
 	decks: [

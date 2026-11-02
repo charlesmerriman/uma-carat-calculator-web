@@ -6,6 +6,7 @@
  */
 import { authHeaders } from "./authToken"
 import type { GuideDocumentPut } from "../types/guideDocument"
+import type { GuideVisibility } from "../types/pvpGuide"
 import type { PvpEventKind } from "../utils/pvpEvent"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -45,8 +46,9 @@ export function guideDocumentPut(guideId: number, body: GuideDocumentPut): Promi
 	return send("PUT", `/pvp-guides/${guideId}/document`, body)
 }
 
-export function guidePublish(guideId: number, isPublished: boolean): Promise<Response> {
-	return send("PATCH", `/pvp-guides/${guideId}`, { is_published: isPublished })
+/** Who may read the guide; `toolsPublic` only with "public" (the API refuses it otherwise). */
+export function guideSetVisibility(guideId: number, visibility: GuideVisibility, toolsPublic: boolean): Promise<Response> {
+	return send("PATCH", `/pvp-guides/${guideId}`, { visibility, tools_public: toolsPublic })
 }
 
 export function guideDelete(guideId: number): Promise<Response> {

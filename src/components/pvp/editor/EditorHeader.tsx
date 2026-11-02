@@ -6,11 +6,15 @@
  */
 
 import { useRef } from "react"
-import { CloudAlert, CloudCheck, Eye, Loader2, MoreHorizontal, Redo2, TriangleAlert, Undo2 } from "lucide-react"
+import { CloudAlert, CloudCheck, Eye, Globe, Heart, Loader2, Lock, MoreHorizontal, Redo2, TriangleAlert, Undo2 } from "lucide-react"
 import type { GuideSaveState } from "../../../hooks/useGuideDocument"
+import type { GuideVisibility } from "../../../types/pvpGuide"
+import { visibilityLabel } from "../../../utils/guideDocument"
 import { ACTION_BUTTON, ICON_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./editorStyles"
 
-export type EditorDialog = "publish" | "copy" | "sheet" | "greens" | "revisions" | "delete"
+export type EditorDialog = "visibility" | "copy" | "sheet" | "greens" | "revisions" | "delete"
+
+const VISIBILITY_ICONS = { private: Lock, supporters: Heart, public: Globe } as const
 
 export function SaveLine({ saveState, saveError, problems }: { saveState: GuideSaveState; saveError: string | null; problems: number }) {
 	let icon = <CloudCheck className="h-4 w-4" />
@@ -43,8 +47,9 @@ export function SaveLine({ saveState, saveError, problems }: { saveState: GuideS
 	)
 }
 
-export function EditorHeader({ isPublished, saveState, saveError, problems, canUndo, canRedo, onUndo, onRedo, onSaveNow, onViewAsVisitor, onOpen }: {
-	isPublished: boolean
+export function EditorHeader({ visibility, toolsPublic, saveState, saveError, problems, canUndo, canRedo, onUndo, onRedo, onSaveNow, onViewAsVisitor, onOpen }: {
+	visibility: GuideVisibility
+	toolsPublic: boolean
 	saveState: GuideSaveState
 	saveError: string | null
 	problems: number
@@ -57,18 +62,23 @@ export function EditorHeader({ isPublished, saveState, saveError, problems, canU
 	onOpen: (dialog: EditorDialog) => void
 }) {
 	const menu = useRef<HTMLDetailsElement>(null)
+	const isPrivate = visibility === "private"
+	const VisibilityIcon = VISIBILITY_ICONS[visibility]
 	const choose = (dialog: EditorDialog) => {
 		if (menu.current) menu.current.open = false
 		onOpen(dialog)
 	}
 	return (
 		<div className="flex flex-wrap items-center gap-2 rounded-xl border border-edge bg-gray-800/60 px-3 py-2">
+			{/* Who may read the guide (guide-visibility-plan.md): amber while
+			    it is a staff-only draft, the brand colour once anyone else can. */}
 			<span
-				className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-					isPublished ? "border-brand/50 bg-brand/10 text-brand" : "border-staging/60 bg-staging/10 text-gray-100"
+				className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+					isPrivate ? "border-staging/60 bg-staging/10 text-gray-100" : "border-brand/50 bg-brand/10 text-brand"
 				}`}
 			>
-				{isPublished ? "Published" : "Draft"}
+				<VisibilityIcon className="h-3.5 w-3.5" aria-hidden="true" />
+				{visibilityLabel(visibility, toolsPublic)}
 			</span>
 			<SaveLine saveState={saveState} saveError={saveError} problems={problems} />
 			<span className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -87,8 +97,10 @@ export function EditorHeader({ isPublished, saveState, saveError, problems, canU
 					<Eye className="h-4 w-4" aria-hidden="true" />
 					View as visitor
 				</button>
-				<button type="button" className={isPublished ? SECONDARY_BUTTON : PRIMARY_BUTTON} onClick={() => onOpen("publish")}>
-					{isPublished ? "Unpublish" : "Publish"}
+				{/* One dialog either way: "Publish" while it's a draft, then
+				    "Visibility" to change who sees it. */}
+				<button type="button" className={isPrivate ? PRIMARY_BUTTON : SECONDARY_BUTTON} onClick={() => onOpen("visibility")}>
+					{isPrivate ? "Publish" : "Visibility"}
 				</button>
 				<details ref={menu} className="relative">
 					<summary className={`${ACTION_BUTTON} cursor-pointer list-none [&::-webkit-details-marker]:hidden`} aria-label="More actions">

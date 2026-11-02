@@ -42,7 +42,7 @@ const EVENT = {
 
 function document(): GuideDocument {
 	return {
-		id: 7, version: 3, event_type: "champions_meeting", event: 10, is_published: false, updated_at: "2099-01-01T00:00:00Z",
+		id: 7, version: 3, event_type: "champions_meeting", event: 10, visibility: "private", tools_public: false, updated_at: "2099-01-01T00:00:00Z",
 		scenario: null, style_ranking: "Front >> End", short_description: "Mile on turf.", meta_analysis: "", under_construction: false, admin_comments: "",
 		stat_configs: [{ style: "everyone", label: "", speed: "1100+", stamina: "", power: "", guts: "", wit: "", footnote: "" }],
 		team_comps: [],
@@ -53,11 +53,11 @@ function document(): GuideDocument {
 	}
 }
 const READER: PvpGuide = {
-	event_type: "champions_meeting", event: 10, is_published: false, updated_at: "2099-01-01T00:00:00Z", scenario: null,
+	event_type: "champions_meeting", event: 10, visibility: "private", tools_public: false, updated_at: "2099-01-01T00:00:00Z", scenario: null,
 	style_ranking: "Front >> End", short_description: "Mile on turf.", meta_analysis: "", under_construction: false, team_comps: [], stat_configs: [],
 	uma_recommendations: [], skill_recommendations: [], style_notes: [], decks: [], skill_mentions: {},
 }
-const EDITABLE = { guides: [{ id: 7, kind: "cm", event: 10, name: "Aquarius Cup", is_published: false, version: 3, updated_at: "x", filled: ["front"] }], events: [] }
+const EDITABLE = { guides: [{ id: 7, kind: "cm", event: 10, name: "Aquarius Cup", visibility: "private", tools_public: false, version: 3, updated_at: "x", filled: ["front"] }], events: [] }
 
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({ scenarioData: [{ id: 1, name: "Grand Live", image: null }], umaBannerData: [], supportBannerData: [] }),
@@ -85,7 +85,7 @@ beforeEach(() => {
 		"GET /pvp-guides/7/document": respond(200, document()),
 		"PUT /pvp-guides/7/document": (body) => ({
 			status: 200,
-			body: { document: { ...(body as GuideDocument), id: 7, event_type: "champions_meeting", event: 10, is_published: false, updated_at: "x", version: 4 }, guide: READER },
+			body: { document: { ...(body as GuideDocument), id: 7, event_type: "champions_meeting", event: 10, visibility: "private", tools_public: false, updated_at: "x", version: 4 }, guide: READER },
 		}),
 	}
 	vi.stubGlobal(
@@ -131,7 +131,7 @@ describe("GuideEditor", () => {
 		expect(tabs.getByRole("tab", { name: /Front/ }).textContent).toBe("Front4")
 		expect(tabs.getByRole("tab", { name: /^Guide/ }).textContent).toBe("Guide1")
 		expect(screen.getByLabelText("Style ranking")).toHaveValue("Front >> End")
-		expect(screen.getByText("Draft")).toBeInTheDocument()
+		expect(screen.getByText("Private")).toBeInTheDocument()
 		expect(screen.getByText("Saved")).toBeInTheDocument()
 		expect(screen.getByText("Nothing yet for Runaway, Pace, Late, End.")).toBeInTheDocument()
 	})
@@ -225,15 +225,37 @@ describe("GuideEditor", () => {
 		expect(body.decks[0].slots.map((slot) => [slot.slot, slot.support_card])).toEqual([[6, 303], [2, 304]])
 	})
 
-	it("publishes from the dialog", async () => {
-		answers["PATCH /pvp-guides/7"] = (body) => ({ status: 200, body: { ...document(), is_published: (body as { is_published: boolean }).is_published, version: 5 } })
+	it("publishes to supporters from the dialog, Supporters picked to start", async () => {
+		answers["PATCH /pvp-guides/7"] = (body) => ({ status: 200, body: { ...document(), ...(body as object), version: 5 } })
 		renderEditor()
 		fireEvent.click(await screen.findByRole("button", { name: "Publish" }))
-		const dialog = within(screen.getByRole("dialog", { name: "Publish this guide?" }))
-		fireEvent.click(dialog.getByRole("button", { name: "Publish" }))
-		expect(await screen.findByText("Published")).toBeInTheDocument()
-		expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({ is_published: true })
-		expect(screen.getByRole("button", { name: "Unpublish" })).toBeInTheDocument()
+		const dialog = within(screen.getByRole("dialog", { name: "Who can see this guide?" }))
+		expect(dialog.getByRole("radio", { name: /Supporters/ })).toBeChecked()
+		// The checklist shows on the way out of Private.
+		expect(dialog.getByText("Nothing yet for Runaway, Pace, Late, End.")).toBeInTheDocument()
+		fireEvent.click(dialog.getByRole("button", { name: "Save" }))
+		// The dialog closes, and the header names the new setting.
+		expect(await screen.findByRole("button", { name: "Visibility" })).toBeInTheDocument()
+		expect(screen.getByText("Supporters")).toBeInTheDocument()
+		expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({ visibility: "supporters", tools_public: false })
+	})
+
+	it("offers My team and the Gallery only under Public", async () => {
+		answers["PATCH /pvp-guides/7"] = (body) => ({ status: 200, body: { ...document(), ...(body as object), version: 5 } })
+		renderEditor()
+		fireEvent.click(await screen.findByRole("button", { name: "Publish" }))
+		const dialog = within(screen.getByRole("dialog", { name: "Who can see this guide?" }))
+		const toolsBox = /Also open My team and the Gallery/
+		expect(dialog.queryByRole("checkbox", { name: toolsBox })).not.toBeInTheDocument()
+		fireEvent.click(dialog.getByRole("radio", { name: /Public/ }))
+		fireEvent.click(dialog.getByRole("checkbox", { name: toolsBox }))
+		// Ticked, then Supporters again: the switch goes with Public.
+		fireEvent.click(dialog.getByRole("radio", { name: /Supporters/ }))
+		expect(dialog.queryByRole("checkbox", { name: toolsBox })).not.toBeInTheDocument()
+		fireEvent.click(dialog.getByRole("radio", { name: /Public/ }))
+		fireEvent.click(dialog.getByRole("button", { name: "Save" }))
+		expect(await screen.findByText("Public, My team and Gallery open")).toBeInTheDocument()
+		expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({ visibility: "public", tools_public: true })
 	})
 
 	it("starts a guide for an event that has none", async () => {

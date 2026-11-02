@@ -10,11 +10,11 @@
  * `available` is false on the PvP page's My team view (?view=team), where the
  * builder already shows the team; the open state is kept, so the drawer comes
  * back on the next page. For anyone the PvP page is still locked to (early
- * access, hooks/usePvpAccess.ts) it is true only while the open CM, the one
- * event they can build a team for (lockedTeamEvents), has not ended; the
- * window then shows that event alone. Never while the account or the
- * calculator data is loading, which is also how the prerendered page has it,
- * so the clock is read only after load.
+ * access, hooks/usePvpAccess.ts) it is true only while an event they can
+ * build a team for (lockedTeamEvents: a Public guide with My team opened) has
+ * not ended; the window then shows those events alone. Never while the
+ * account or the calculator data is loading, which is also how the
+ * prerendered page has it, so the clock is read only after load.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"

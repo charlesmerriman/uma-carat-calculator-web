@@ -33,14 +33,14 @@ import {
 	guideDocumentFetch,
 	guideDocumentPut,
 	guideEditableFetch,
-	guidePublish,
+	guideSetVisibility,
 	guideRefusalText,
 	type GuideActionName,
 } from "../services/guideEditorFetchCalls"
 import { toPayload } from "../utils/guideDocument"
 import { refForRaceEvent, sameEvent, type PvpEventRef } from "../utils/pvpEvent"
 import type { EditableGuideRow, EditableList, EditorError, GuideDocument } from "../types/guideDocument"
-import type { PvpGuide } from "../types/pvpGuide"
+import type { GuideVisibility, PvpGuide } from "../types/pvpGuide"
 import type { RaceEvent } from "../types"
 
 /** How long after the last edit the document is saved. */
@@ -88,7 +88,8 @@ export interface GuideEditor {
 	/** 409: save mine over theirs. */
 	keepMine: () => Promise<void>
 	create: (options: { scenario: number | null; copyFrom: number | null }) => Promise<string | null>
-	publish: (isPublished: boolean) => Promise<string | null>
+	/** Who may read the guide, and whether My team and the Gallery open with it. */
+	setVisibility: (visibility: GuideVisibility, toolsPublic: boolean) => Promise<string | null>
 	remove: () => Promise<string | null>
 	/** Flushes the autosave, runs the action, and takes the document it answers with. */
 	runAction: (name: GuideActionName, body: Record<string, unknown>) => Promise<GuideActionResult>
@@ -339,19 +340,19 @@ export function useGuideDocument(event: RaceEvent, options: { autosaveMs?: numbe
 		[adopt, ref, refreshList]
 	)
 
-	const publish = useCallback(
-		async (isPublished: boolean) => {
+	const setVisibility = useCallback(
+		async (visibility: GuideVisibility, toolsPublic: boolean) => {
 			const current = documentRef.current
 			if (!current) return null
 			await saveNow()
 			try {
-				const response = await guidePublish(current.id, isPublished)
+				const response = await guideSetVisibility(current.id, visibility, toolsPublic)
 				if (!response.ok) return guideRefusalText(response, "That didn't go through. Try again in a moment.")
 				const loaded = (await response.json()) as GuideDocument
-				// Keep local edits that landed meanwhile; take the switch and the version.
+				// Keep local edits that landed meanwhile; take the setting and the version.
 				const latest = documentRef.current ?? loaded
-				place({ ...latest, is_published: loaded.is_published, version: loaded.version })
-				// The reader's copy carries is_published: let it refetch.
+				place({ ...latest, visibility: loaded.visibility, tools_public: loaded.tools_public, version: loaded.version })
+				// The reader's copy carries the setting: let it refetch.
 				forgetPvpGuide(refOf(loaded))
 				void refreshList()
 				return null
@@ -413,7 +414,8 @@ export function useGuideDocument(event: RaceEvent, options: { autosaveMs?: numbe
 				version: current.version,
 				event_type: current.event_type,
 				event: current.event,
-				is_published: current.is_published,
+				visibility: current.visibility,
+				tools_public: current.tools_public,
 				updated_at: current.updated_at,
 			}))
 		},
@@ -438,7 +440,7 @@ export function useGuideDocument(event: RaceEvent, options: { autosaveMs?: numbe
 		loadTheirs,
 		keepMine,
 		create,
-		publish,
+		setVisibility,
 		remove,
 		runAction,
 		restore,
