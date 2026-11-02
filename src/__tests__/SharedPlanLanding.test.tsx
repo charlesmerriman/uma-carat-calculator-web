@@ -10,7 +10,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SharedPlanLanding } from '../components/shared-plan/SharedPlanLanding'
 import { CalculatorContext } from '../services/CalculatorContext'
 import { DEFAULT_GUEST_STATS } from '../services/guestMigration'
@@ -117,6 +117,16 @@ const renderCard = (overrides: Partial<CalculatorContextType> = {}) => {
 beforeEach(() => {
 	vi.clearAllMocks()
 	mockedSummary.mockResolvedValue(json(SUMMARY))
+	// A fixed "today" between the two banners' ends, so the Kitasan row stays
+	// "Passed" and the Satono row stays open. Unpinned, the Satono row passed
+	// on 2026-11-01 and its "your max 301" became "Passed". Only Date is faked:
+	// findBy's polling needs the real timers.
+	vi.useFakeTimers({ toFake: ['Date'] })
+	vi.setSystemTime(new Date('2026-10-27T12:00:00Z'))
+})
+
+afterEach(() => {
+	vi.useRealTimers()
 })
 
 describe('SharedPlanLanding', () => {
