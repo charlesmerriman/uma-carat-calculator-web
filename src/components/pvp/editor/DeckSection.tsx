@@ -40,6 +40,16 @@ const EMPTY_SET = new Set<number>()
 const SWAP_IN_BOX = "border-gray-600 bg-gray-900"
 const DECK_BOX = "border-gray-700 bg-gray-900/30"
 const SLOT_NUMBERS = Array.from({ length: DECK_SLOTS }, (_, i) => i + 1)
+// A slot's limit break: "" is "the guide doesn't say" (null in the document).
+// "+" reads "or better", the way the sheet wrote it.
+const LIMIT_BREAK_CHOICES: Array<[string, string]> = [
+	["", "Limit break: not said"],
+	["0", "0 LB+"],
+	["1", "1 LB+"],
+	["2", "2 LB+"],
+	["3", "3 LB+"],
+	["4", "MLB"],
+]
 
 /** Which slot row a picker is for: the main card, or a new or existing alternative. */
 type Target = { deck: number; slot: number; order: number | "new" }
@@ -222,7 +232,12 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 			<div className="relative">
 				{main ? (
 					card ? (
-						<SupportTile card={{ id: card.id, name: card.name, image: card.image, card_type: card.card_type, rarity: card.rarity }} note="" borrow={isBorrow} />
+						<SupportTile
+							card={{ id: card.id, name: card.name, image: card.image, image_borderless: card.image_borderless ?? null, card_type: card.card_type, rarity: card.rarity }}
+							note=""
+							borrow={isBorrow}
+							limitBreak={main.limit_break ?? null}
+						/>
 					) : main.support_card !== null ? (
 						<NoteOnlyTile note={`Card ${main.support_card}`} borrow={isBorrow} />
 					) : (
@@ -261,6 +276,25 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 					</button>
 				)}
 			</div>
+			{/* The least limit break the guide recommends: the reader draws it as
+			    the game's diamonds on the card ("1 LB+" is the sheet's "◆◇◇◇ +").
+			    Only a card has one. */}
+			{main?.support_card != null && (
+				<select
+					aria-label={`Limit break for slot ${slot}`}
+					value={main.limit_break ?? ""}
+					onChange={(change) =>
+						update((doc) => updateSlot(doc, deckIndex, slot, 0, { limit_break: change.target.value === "" ? null : Number(change.target.value) }))
+					}
+					className={`${INPUT} w-full px-1 py-0.5 text-[11px] ${main.limit_break == null ? "text-gray-400" : ""}`}
+				>
+					{LIMIT_BREAK_CHOICES.map(([value, label]) => (
+						<option key={label} value={value}>
+							{label}
+						</option>
+					))}
+				</select>
+			)}
 			{(noting || (main && main.support_card === null)) && (
 				<MentionField
 					label={`Slot ${slot} note`}
@@ -323,10 +357,11 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 	)
 }
 
-/** The messages on one slot row: the row itself, its card, its note. */
+/** The messages on one slot row: the row itself, its card, its note, its limit break. */
 function useFieldErrorsFor(deckIndex: number, rowIndex: number): string[] {
 	const { errors } = useGuideEditor()
 	if (rowIndex < 0) return []
 	const base = `decks[${deckIndex}].slots[${rowIndex}]`
-	return errors.filter((error) => error.path === base || error.path === `${base}.support_card` || error.path === `${base}.note`).map((error) => error.message)
+	const paths = new Set([base, `${base}.support_card`, `${base}.note`, `${base}.limit_break`])
+	return errors.filter((error) => paths.has(error.path)).map((error) => error.message)
 }

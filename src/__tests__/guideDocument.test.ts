@@ -5,6 +5,7 @@ import type { PvpGuide } from "../types/pvpGuide"
 import type { Scenario } from "../types"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 import {
+	LIMIT_BREAK_NEEDS_CARD,
 	errorsByTab,
 	hydrateGuide,
 	mentionsIn,
@@ -28,6 +29,7 @@ import {
 	setBorrowSlot,
 	setSlotCard,
 	setStyleNote,
+	updateSlot,
 	updateUma,
 } from "../utils/guideDocumentEdits"
 
@@ -156,6 +158,13 @@ describe("hydrateGuide", () => {
 		expect(guide.decks.map((deck) => deck.id)).toEqual([90, -2])
 	})
 
+	it("carries a slot's limit break, none when the document predates it", () => {
+		const doc = document()
+		doc.decks[0].slots[2].limit_break = 3
+		const guide = hydrateGuide(doc, INDEX, SCENARIOS, null)
+		expect(guide.decks[0].slots.map((slot) => slot.limit_break)).toEqual([3, null, null])
+	})
+
 	it("reads a deck's gold box, unboxed when the document predates it", () => {
 		const doc = document()
 		doc.decks.push({ id: null, style: "pace", label: "Honorable Mentions", note: "", is_highlighted: true, slots: [] })
@@ -182,6 +191,17 @@ describe("validateDocument", () => {
 		expect(paths).toContainEqual(["decks[0]", "Only one slot can be the borrowed card."])
 		expect(paths).toContainEqual(["short_description", "No skill has this name: [[Groundwrk]]"])
 		expect(paths).toContainEqual(["team_comps[1].text", "Write the team comp, like 2 Front + 1 Pace."])
+	})
+
+	it("takes a limit break of 0 to 4, and only on a card", () => {
+		const doc = document()
+		doc.decks[0].slots[2].limit_break = 4
+		expect(validateDocument(doc, INDEX)).toEqual([])
+		doc.decks[0].slots[1].limit_break = 2
+		doc.decks[0].slots[0].limit_break = 5
+		const paths = validateDocument(doc, INDEX).map((error) => [error.path, error.message])
+		expect(paths).toContainEqual(["decks[0].slots[1].limit_break", LIMIT_BREAK_NEEDS_CARD])
+		expect(paths).toContainEqual(["decks[0].slots[0].limit_break", "Pick 0 to 4."])
 	})
 
 	it("counts problems and rows per tab", () => {
@@ -254,7 +274,12 @@ describe("edits", () => {
 		let doc = addDeck(document(), "front", "Whale")
 		expect(doc.decks[1]).toMatchObject({ id: null, style: "front", label: "Whale", slots: [] })
 		doc = setSlotCard(doc, 1, 3, 302)
-		expect(doc.decks[1].slots).toEqual([{ slot: 3, order: 0, is_borrow: false, support_card: 302, note: "" }])
+		expect(doc.decks[1].slots).toEqual([{ slot: 3, order: 0, is_borrow: false, support_card: 302, note: "", limit_break: null }])
+		// A limit break goes with the card: taking the card away drops it.
+		doc = updateSlot(doc, 1, 3, 0, { limit_break: 2 })
+		expect(doc.decks[1].slots[0].limit_break).toBe(2)
+		expect(setSlotCard(doc, 1, 3, 303).decks[1].slots[0].limit_break).toBe(2)
+		expect(setSlotCard(doc, 1, 3, null).decks[1].slots[0]).toMatchObject({ support_card: null, limit_break: null })
 		doc = addAlternative(doc, 1, 3, null, "or any speed")
 		expect(doc.decks[1].slots[1]).toMatchObject({ slot: 3, order: 1, support_card: null, note: "or any speed" })
 		doc = setBorrowSlot(doc, 1, 3)

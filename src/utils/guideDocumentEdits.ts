@@ -197,7 +197,7 @@ export function deckFromCards(style: PvpStyle, label: string, cards: Array<{ slo
 		note: "",
 		slots: cards
 			.filter((card) => card.slot >= 1 && card.slot <= DECK_SLOTS)
-			.map((card) => ({ slot: card.slot, order: 0, is_borrow: card.slot === DECK_SLOTS, support_card: card.support_card, note: "" })),
+			.map((card) => ({ slot: card.slot, order: 0, is_borrow: card.slot === DECK_SLOTS, support_card: card.support_card, note: "", limit_break: null })),
 	}
 }
 
@@ -209,14 +209,18 @@ function withSlots(doc: Doc, index: number, slots: GuideSlotRow[]): Doc {
 	return { ...doc, decks: replaceAt(doc.decks, index, { ...doc.decks[index], slots }) }
 }
 
-/** Put a card in a slot's main row (order 0), creating the row if the slot is empty. */
+/**
+ * Put a card in a slot's main row (order 0), creating the row if the slot is
+ * empty. Taking the card away drops its limit break too: only a card has one.
+ */
 export function setSlotCard(doc: Doc, deckIndex: number, slot: number, cardId: number | null): Doc {
 	const deck = doc.decks[deckIndex]
 	const main = deck.slots.find((row) => row.slot === slot && row.order === 0)
 	if (main) {
-		return withSlots(doc, deckIndex, deck.slots.map((row) => (row === main ? { ...row, support_card: cardId } : row)))
+		const changed = cardId === null ? { support_card: null, limit_break: null } : { support_card: cardId }
+		return withSlots(doc, deckIndex, deck.slots.map((row) => (row === main ? { ...row, ...changed } : row)))
 	}
-	const row: GuideSlotRow = { slot, order: 0, is_borrow: false, support_card: cardId, note: "" }
+	const row: GuideSlotRow = { slot, order: 0, is_borrow: false, support_card: cardId, note: "", limit_break: null }
 	return withSlots(doc, deckIndex, [...deck.slots, row])
 }
 
@@ -252,7 +256,7 @@ export function addAlternative(doc: Doc, deckIndex: number, slot: number, cardId
 	const rows = slotRows(deck, slot)
 	const order = rows.length === 0 ? 1 : Math.max(...rows.map((row) => row.order)) + 1
 	const main = rows.find((row) => row.order === 0)
-	const row: GuideSlotRow = { slot, order, is_borrow: main?.is_borrow ?? false, support_card: cardId, note }
+	const row: GuideSlotRow = { slot, order, is_borrow: main?.is_borrow ?? false, support_card: cardId, note, limit_break: null }
 	return withSlots(doc, deckIndex, [...deck.slots, row])
 }
 

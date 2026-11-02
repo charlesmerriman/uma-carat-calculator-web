@@ -245,7 +245,7 @@ function DeckGrid({ deck, showLabel, change, scenarioName, onUse }: {
 						>
 							{main ? (
 								main.support_card ? (
-									<SupportTile card={main.support_card} note={main.note} borrow={main.is_borrow} scenarioName={scenarioName} />
+									<SupportTile card={main.support_card} note={main.note} borrow={main.is_borrow} scenarioName={scenarioName} limitBreak={main.limit_break ?? null} />
 								) : (
 									<NoteOnlyTile note={main.note} borrow={main.is_borrow} />
 								)
@@ -304,7 +304,7 @@ function SwapInRow({ deck, scenarioName }: { deck: PvpDeck; scenarioName: string
 			<div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-x-2.5 gap-y-3">
 				{rows.map((row, index) =>
 					row.support_card ? (
-						<SwapInCard key={index} card={row.support_card} note={row.note} scenarioName={scenarioName} />
+						<SwapInCard key={index} card={row.support_card} note={row.note} scenarioName={scenarioName} limitBreak={row.limit_break ?? null} />
 					) : (
 						<div key={index} className="flex items-center justify-center rounded-lg border border-dashed border-gray-600 p-1 text-center text-[11px] text-gray-300">
 							<InlineNote text={row.note.replace(/==/g, "")} />

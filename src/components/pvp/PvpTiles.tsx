@@ -527,13 +527,15 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 /**
  * A support card in a deck slot: art (with the Link badge when the note says
  * "Scenario Link"), name, then the note's reasons (SlotReasons). `scenarioName`
- * is the guide's scenario, for the badge's words.
+ * is the guide's scenario, for the badge's words. `limitBreak` is the least the
+ * guide recommends, drawn as the game's diamonds on the card.
  */
-export function SupportTile({ card, note, borrow = false, scenarioName = null }: {
+export function SupportTile({ card, note, borrow = false, scenarioName = null, limitBreak = null }: {
 	card: PvpSupportCardRef
 	note: string
 	borrow?: boolean
 	scenarioName?: string | null
+	limitBreak?: number | null
 }) {
 	const linked = parseSlotNote(note).scenarioLink
 	return (
@@ -546,7 +548,7 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null }:
 				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
 						<span className="relative block h-full">
-							<FramedCard card={card} alt={card.name} className="h-full" />
+							<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
 							{linked && <LinkBadge scenarioName={scenarioName} />}
 						</span>
 					</BorrowTab>
@@ -579,13 +581,18 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null }:
  * One card of a swap-in row (a deck the editor marks "Swap-ins", the guide's
  * Honorable Mentions): smaller art, the name, the reasons. No slot, no borrow.
  */
-export function SwapInCard({ card, note, scenarioName }: { card: PvpSupportCardRef; note: string; scenarioName: string | null }) {
+export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
+	card: PvpSupportCardRef
+	note: string
+	scenarioName: string | null
+	limitBreak?: number | null
+}) {
 	const linked = parseSlotNote(note).scenarioLink
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1 text-center">
 			<span className="relative block w-16">
 				{card.image || card.image_borderless ? (
-					<FramedCard card={card} alt={card.name} className="w-full" />
+					<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
 				) : (
 					<span className="block aspect-[3/4] w-full rounded-lg border border-gray-600 bg-gray-700" aria-hidden="true" />
 				)}
@@ -690,12 +697,13 @@ export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: nu
  * since they say something about the card itself; its name, rarity and the
  * slot's reasons (and any "or" the slot offers, `extra`) move to the hover.
  */
-export function MiniCard({ card, note, borrow = false, scenarioName, extra = null }: {
+export function MiniCard({ card, note, borrow = false, scenarioName, extra = null, limitBreak = null }: {
 	card: PvpSupportCardRef
 	note: string
 	borrow?: boolean
 	scenarioName: string | null
 	extra?: ReactNode
+	limitBreak?: number | null
 }) {
 	const linked = parseSlotNote(note).scenarioLink
 	const rarity = rarityLabel(card.rarity)
@@ -714,7 +722,7 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 			<BorrowTab borrow={borrow}>
 				<span className="relative block">
 					{card.image || card.image_borderless ? (
-						<FramedCard card={card} alt={card.name} className="w-full" />
+						<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
 					) : (
 						<span className="block aspect-[3/4] w-full rounded-md border border-gray-600 bg-gray-700" aria-hidden="true" />
 					)}
