@@ -727,6 +727,10 @@ selectors, Rankings, the gallery, search, the share picture) keeps the bordered 
   padding with his 120 px corners, every overlay stretched over the whole 3:4 card
   (`preserveAspectRatio="none"` in the files). Each overlay is its own `<img>`, so the
   files' gradient ids never meet.
+- **The diamonds mean two things by place**: on an owned Collection card, the card's own
+  limit breaks; on a guide's deck card, the LEAST the guide recommends (`PvpDeckSlot.limit_break`,
+  none when it doesn't say), which the editor sets per card ("Limit break: not said", 0 LB+ to
+  MLB, under each slot in `DeckSection`). The sheet's "◆◆◆◇ +" notes became that field.
 - **No texture, no frame**: a card whose `image_borderless` is null (a placeholder, or a new
   card before its texture is uploaded) draws its bordered `image` as it is, with the
   diamonds still on top. Never the bordered picture inside the frame.

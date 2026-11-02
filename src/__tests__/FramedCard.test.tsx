@@ -7,6 +7,7 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { FramedCard, type FramedCardArt } from "../components/FramedCard"
+import { SupportTile } from "../components/pvp/PvpTiles"
 import frameSsr from "../assets/card-overlays/frame-ssr.svg"
 import typePower from "../assets/card-overlays/type-power.svg"
 import typeFriend from "../assets/card-overlays/type-friend.svg"
@@ -68,5 +69,17 @@ describe("FramedCard", () => {
 		const { container } = render(<FramedCard card={{ image: null, image_borderless: null, card_type: null, rarity: null }} />)
 		expect(container.querySelector(".card-frame__empty")).not.toBeNull()
 		expect(container.querySelector("img")).toBeNull()
+	})
+})
+
+describe("a guide deck's card", () => {
+	it("wears the diamonds for the limit break the guide recommends, none when it says nothing", () => {
+		const card = { id: 1, name: "Kitasan Black", ...OGURI }
+		const said = render(<SupportTile card={card} note="" limitBreak={2} />)
+		expect(layers(said.container).at(-1)).toBe(limitBreak2)
+		said.unmount()
+
+		const unsaid = render(<SupportTile card={card} note="" />)
+		expect(layers(unsaid.container)).toEqual([frameSsr, typePower])
 	})
 })

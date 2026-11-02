@@ -61,6 +61,12 @@ export interface GuideSlotRow {
 	is_borrow: boolean
 	support_card: number | null
 	note: string
+	/**
+	 * The least limit break the guide recommends, 0 to 4 (4 is MLB); null when
+	 * it doesn't say. Only on a row with a card. Optional: a document from
+	 * before the field (an older draft) has none.
+	 */
+	limit_break?: number | null
 }
 
 export interface GuideDeckRow {

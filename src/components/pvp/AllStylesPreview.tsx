@@ -190,6 +190,7 @@ function DeckLine({ deck, scenarioName }: { deck: PvpDeck; scenarioName: string 
 						note={main.note}
 						borrow={main.is_borrow}
 						scenarioName={scenarioName}
+						limitBreak={main.limit_break ?? null}
 						extra={<SlotOrs alternates={alternates} anyType={parseSlotNote(main.note).anyType} />}
 					/>
 				)
@@ -233,7 +234,7 @@ function SwapInLine({ deck, scenarioName, more }: { deck: PvpDeck; scenarioName:
 		<div className={LINE}>
 			{cards.slice(0, CELLS).map((row, index) =>
 				row.support_card ? (
-					<MiniCard key={index} card={row.support_card} note={row.note} scenarioName={scenarioName} />
+					<MiniCard key={index} card={row.support_card} note={row.note} scenarioName={scenarioName} limitBreak={row.limit_break ?? null} />
 				) : (
 					<MiniNoteSlot key={index} note={row.note} />
 				)

@@ -60,6 +60,7 @@ export const NOT_IN_CATALOGUE = "Pick one from the list."
 export const SKILL_NOT_ON_GLOBAL = "That skill is not on global yet."
 export const SLOT_NEEDS_SOMETHING = 'Pick a card, or write a note like "or any speed".'
 export const ONE_BORROW = "Only one slot can be the borrowed card."
+export const LIMIT_BREAK_NEEDS_CARD = "A limit break needs a card."
 
 const MENTION = /\[\[([^[\]\n]+)\]\]/g
 
@@ -132,7 +133,16 @@ function umaRef(uma: CatalogueUma): PvpUmaRef {
 }
 
 function cardRef(card: CatalogueSupportCard): PvpSupportCardRef {
-	return { id: card.id, name: card.name, image: card.image, card_type: card.card_type, rarity: card.rarity }
+	// image_borderless too, so a guide primed from a save draws the same
+	// framed card (FramedCard) the server's guide does.
+	return {
+		id: card.id,
+		name: card.name,
+		image: card.image,
+		image_borderless: card.image_borderless ?? null,
+		card_type: card.card_type,
+		rarity: card.rarity,
+	}
 }
 
 /**
@@ -251,6 +261,7 @@ export function hydrateGuide(
 					order: slot.order,
 					is_borrow: slot.is_borrow,
 					note: slot.note,
+					limit_break: slot.limit_break ?? null,
 					support_card: slot.support_card === null ? null : cardRef(index.cardsById.get(slot.support_card) ?? placeholderCard(slot.support_card)),
 				})),
 		}))
@@ -393,6 +404,12 @@ function deckErrors(deck: GuideDeckRow, i: number, index: PvpCatalogueIndex, add
 		const path = `decks[${i}].slots[${j}]`
 		if (slot.support_card !== null && !index.cardsById.has(slot.support_card)) add(`${path}.support_card`, NOT_IN_CATALOGUE)
 		if (slot.support_card === null && !slot.note.trim()) add(path, SLOT_NEEDS_SOMETHING)
+		// The server's rules: 0 to 4, and only on a row with a card.
+		const limitBreak = slot.limit_break ?? null
+		if (limitBreak !== null && slot.support_card === null) add(`${path}.limit_break`, LIMIT_BREAK_NEEDS_CARD)
+		if (limitBreak !== null && !(Number.isInteger(limitBreak) && limitBreak >= 0 && limitBreak <= 4)) {
+			add(`${path}.limit_break`, "Pick 0 to 4.")
+		}
 		if (slot.note.length > MAX_LENGTH.slot_note) add(`${path}.note`, tooLong(MAX_LENGTH.slot_note))
 		const key = `${slot.slot}:${slot.order}`
 		seen.set(key, (seen.get(key) ?? 0) + 1)

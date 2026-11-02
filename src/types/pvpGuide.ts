@@ -194,6 +194,12 @@ export interface PvpDeckSlot {
 	order: number
 	is_borrow: boolean
 	note: string
+	/**
+	 * The least limit break the guide recommends for the card, 0 to 4; null
+	 * when it doesn't say. Drawn as the game's diamonds on the card
+	 * (FramedCard). Absent from an API older than the field.
+	 */
+	limit_break?: number | null
 	/** Null on a note-only row ("or any speed"). */
 	support_card: PvpSupportCardRef | null
 }
