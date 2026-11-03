@@ -377,7 +377,7 @@ export const PrivacyPolicy: React.FC = () => {
 						</a>
 					</p>
 					<p className={paragraph}>
-						The ads pay for hosting. An advertising partner uses cookies to serve ads, and
+						Ads help pay for the Site&apos;s hosting. An advertising partner uses cookies to serve ads, and
 						with your consent may use them to show ads based on your visits to this and
 						other websites. Without that consent, in the regions listed above, any ads shown
 						are not personalized.
