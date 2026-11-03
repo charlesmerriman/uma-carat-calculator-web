@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: October 30, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: November 3, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -297,9 +297,9 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 					</ul>
 					<p className={paragraph}>
-						We do not sell your personal information, and we send no marketing of any kind.
-						The only contact details we hold are supporters&apos; email addresses, used only
-						as described in &quot;Patreon Supporters&quot;.
+						We send no marketing of any kind. The only contact details we hold are
+						supporters&apos; email addresses, used only as described in &quot;Patreon
+						Supporters&quot;.
 					</p>
 
 					<h2 className={heading}>Traffic Measurement</h2>
@@ -363,12 +363,24 @@ export const PrivacyPolicy: React.FC = () => {
 					</p>
 
 					<h2 className={heading}>Advertising</h2>
+					{/* Raptive's required wording, verbatim (their "Advertising Privacy Policy
+					    Snippet", 2026-11-03). The link text is the URL on purpose, as they give
+					    it. Add no other Raptive link or contact detail anywhere in this policy:
+					    their install checklist refuses a policy that carries one. */}
 					<p className={paragraph}>
-						The Site may show ads from a third-party advertising partner, which may include
-						Google, to help pay for hosting. An advertising partner uses cookies to serve
-						ads, and with your consent may use them to show ads based on your visits to this
-						and other websites. Without that consent, in the regions listed above, any ads
-						shown are not personalized. We will name the partner here when ads start.
+						CMI Marketing, Inc., d/b/a Raptive (&quot;Raptive&quot;) is a service provider of
+						this Site for the purposes of placing advertising on the Site, and Raptive will
+						collect and use certain data for advertising purposes. To learn more about
+						Raptive&apos;s data usage, click here:{" "}
+						<a href="https://raptive.com/creator-advertising-privacy-statement/" target="_blank" rel="noopener noreferrer" className={link}>
+							https://raptive.com/creator-advertising-privacy-statement/
+						</a>
+					</p>
+					<p className={paragraph}>
+						The ads pay for hosting. An advertising partner uses cookies to serve ads, and
+						with your consent may use them to show ads based on your visits to this and
+						other websites. Without that consent, in the regions listed above, any ads shown
+						are not personalized.
 					</p>
 					<p className={paragraph}>
 						You can opt out of personalized advertising from Google at{" "}
