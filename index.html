@@ -43,12 +43,15 @@
       EEA, the UK and Switzerland every storage type starts DENIED, so for those
       visitors GA writes no cookie and sends only cookieless pings until
       something grants consent. Everywhere else the defaults are granted and
-      behaviour is unchanged. Nothing on the site grants consent yet: that is
-      the job of a consent management platform, which arrives with the ad
-      network (Google's and Raptive's CMPs both speak Consent Mode and flip
-      these flags themselves), so this block is the network-agnostic half of
-      EU compliance. wait_for_update gives a CMP that loads later 500ms to set
-      the real value before the first hit goes out.
+      behaviour is unchanged. What grants consent is Raptive's consent dialog
+      (an IAB TCF v2 platform that arrives with the ad script and shows only in
+      those regions): it speaks Consent Mode itself, and the listener after
+      'config' mirrors its answer as well, in case its own push never reaches
+      this gtag. The site has no cookie prompt of its own since 2026-11: Raptive
+      forbids a second one beside theirs (notes/raptive-install-plan.md).
+      wait_for_update holds the first hits for up to 2 s so a dialog answer or a
+      stored TCF choice is applied before they go out; a visitor who answers
+      later is covered by the 'update' when it comes.
 
       Google resolves the visitor's region server-side from the request;
       nothing here reads the visitor's location.
@@ -68,31 +71,41 @@
         'ad_user_data': 'denied',
         'ad_personalization': 'denied',
         'analytics_storage': 'denied',
-        'wait_for_update': 500,
+        'wait_for_update': 2000,
         'region': [
           'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR',
           'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK',
           'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'
         ]
       });
-      // A choice the visitor already made (the site's cookie prompt writes it;
-      // see src/services/consentStore.ts, which owns the key). Pushed as an
-      // 'update' so it overrides the regional defaults above in either
-      // direction, and before 'config' so the first page_view respects it.
-      try {
-        var consent = localStorage.getItem("uma-planner-cookie-consent");
-        if (consent === "granted" || consent === "denied") {
-          gtag('consent', 'update', {
-            'ad_storage': consent,
-            'ad_user_data': consent,
-            'ad_personalization': consent,
-            'analytics_storage': consent
-          });
-        }
-      } catch (e) {}
       gtag('js', new Date());
 
       gtag('config', 'G-2J27T3ZME9');
+
+      // Raptive's consent dialog (EEA, UK and Switzerland only) is a TCF v2
+      // platform: when the visitor answers, mirror purpose 1 ("store and/or
+      // access information on a device") into every Consent Mode flag, the way
+      // Raptive's own Site Kit snippet does. Outside those regions __tcfapi
+      // never exists, the polling stops after 30 s, and the granted defaults
+      // above stand. A 'tcloaded' event is an earlier answer being restored.
+      (function waitForTcf(tries) {
+        if (typeof window.__tcfapi !== 'function') {
+          if (tries < 120) setTimeout(function () { waitForTcf(tries + 1); }, 250);
+          return;
+        }
+        window.__tcfapi('addEventListener', 2, function (tc, ok) {
+          if (!ok || !tc) return;
+          if (tc.eventStatus !== 'tcloaded' && tc.eventStatus !== 'useractioncomplete') return;
+          var granted = !!(tc.purpose && tc.purpose.consents && tc.purpose.consents['1']);
+          var value = granted ? 'granted' : 'denied';
+          gtag('consent', 'update', {
+            'ad_storage': value,
+            'ad_user_data': value,
+            'ad_personalization': value,
+            'analytics_storage': value
+          });
+        });
+      })(0);
     </script>
     <!--
       Umagon face icon set. favicon.ico carries 16/24/32/48/64 for browsers that

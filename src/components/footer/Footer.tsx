@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { openConsentPrompt } from "../../services/consentStore"
 
 /**
  * Compact, reusable site footer shown on every page.
@@ -47,15 +46,6 @@ export const Footer = () => {
 				<Link to="/privacy-policy" className="text-gray-400 transition hover:text-brand">
 					Privacy Policy
 				</Link>
-				{/* A button, not a route: it reopens the consent prompt in place. The
-				    privacy policy promises this link, so it stays in the footer. */}
-				<button
-					type="button"
-					onClick={openConsentPrompt}
-					className="cursor-pointer text-gray-400 transition hover:text-brand"
-				>
-					Cookie settings
-				</button>
 				<Link to="/terms" className="text-gray-400 transition hover:text-brand">
 					Terms
 				</Link>
