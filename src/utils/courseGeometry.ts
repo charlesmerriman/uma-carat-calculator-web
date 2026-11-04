@@ -48,7 +48,7 @@ export interface CourseSpan {
 	detail?: string
 }
 
-export type MarkerKind = "spurt-start" | "phase-divider" | "position-keep-end" | "heal-check"
+export type MarkerKind = "spurt-start" | "position-keep-end" | "midpoint" | "heal-check"
 export interface CourseMarker {
 	at: number
 	kind: MarkerKind
@@ -99,16 +99,18 @@ export function phaseStarts(distance: number, geometry: RaceGeometry = GAME_GEOM
 }
 
 /**
- * The three phases in the game's words (owner, 2026-11-02). Late-race runs to
- * the finish: in the game's text "late-race" is the 2/3 point onward, and "last
- * spurt" is the sprint, which can start there (a marker, not a band).
+ * The four phases. Phase 3 (5/6 to the finish, sections 21 to 24) gets its own
+ * band (Daptrius, 2026-11-03: the diagrams were "missing phase 3"), named Last
+ * spurt (owner, 2026-11-03). The last spurt itself can start at the 2/3 point,
+ * section 17 (Daptrius, the same day): that is the "Last spurt" marker.
  */
 export function phaseBands(distance: number, geometry: RaceGeometry = GAME_GEOMETRY): CourseSpan[] {
-	const { mid, late } = phaseStarts(distance, geometry)
+	const { mid, late, finalSixth } = phaseStarts(distance, geometry)
 	return [
 		{ start: 0, end: mid, kind: "phase", label: "Early-race" },
 		{ start: mid, end: late, kind: "phase", label: "Mid-race" },
-		{ start: late, end: distance, kind: "phase", label: "Late-race" },
+		{ start: late, end: finalSixth, kind: "phase", label: "Late-race" },
+		{ start: finalSixth, end: distance, kind: "phase", label: "Last spurt" },
 	]
 }
 
@@ -261,15 +263,19 @@ export function elevationProfile(course: RaceCourse): ElevationPoint[] {
 
 // ── What the strip says about the course ────────────────────────────────────
 
-/** The course's own overlay: the phases, the 5/6 divider and the two markers. */
+/** The course's own overlay: the phases and the three markers. */
 export function courseFacts(course: RaceCourse, geometry: RaceGeometry = GAME_GEOMETRY): CourseOverlays {
-	const { late, finalSixth } = phaseStarts(course.distance, geometry)
+	const { late } = phaseStarts(course.distance, geometry)
 	return {
 		spans: phaseBands(course.distance, geometry),
 		markers: [
 			{ at: positionKeepEnd(course.distance, geometry), kind: "position-keep-end", label: "Position keep ends" },
-			{ at: late, kind: "spurt-start", label: "Last spurt can start here" },
-			{ at: finalSixth, kind: "phase-divider", label: "" },
+			// Halfway: the point "the second half" and "from half the race" skills
+			// wait for (Daptrius's render's midpoint, owner 2026-11-03).
+			{ at: course.distance / 2, kind: "midpoint", label: "Halfway" },
+			// Section 17, the 2/3 point, where the last spurt can start
+			// (Daptrius, 2026-11-03).
+			{ at: late, kind: "spurt-start", label: "Last spurt" },
 		],
 	}
 }
@@ -323,17 +329,21 @@ function partName(part: TrackPart): string {
 	return part.label === "Final straight" ? "the final straight" : "a straight"
 }
 
-/** The spurt chip: what the start falls on and how far the next part is. */
-function spurtChip(spurt: SpurtStart, distance: number): string | null {
+/**
+ * The spurt chip: what the start falls on and how far the next part is.
+ * "Late race starts": the 2/3 point, under the "Last spurt" marker; on the
+ * final straight it counts into the straight, not to the goal.
+ */
+function spurtChip(spurt: SpurtStart): string | null {
 	const { on, next } = spurt
 	const ahead = next ? `, ${formatMetres(next.in)} before ${partName(next)}` : ""
-	if (on.kind === "corner") return `Last spurt can start in ${partName(on)}${ahead}`
+	if (on.kind === "corner") return `Late race starts in ${partName(on)}${ahead}`
 	if (on.kind === "straight") {
 		return on.label === "Final straight"
-			? `Last spurt can start on the final straight, ${formatMetres(distance - spurt.at)} from the goal`
-			: `Last spurt can start on a straight${ahead}`
+			? `Late race starts on the final straight, ${formatMetres(spurt.at - on.start)} into it`
+			: `Late race starts on a straight${ahead}`
 	}
-	return next ? `Last spurt can start ${formatMetres(next.in)} before ${partName(next)}` : null
+	return next ? `Late race starts ${formatMetres(next.in)} before ${partName(next)}` : null
 }
 
 /**
@@ -350,12 +360,12 @@ export function derivedFacts(course: RaceCourse, geometry: RaceGeometry = GAME_G
 	if (straight) facts.push(`Final straight ${formatMetres(straight.length)}`)
 
 	const spurt = spurtStart(course, geometry)
-	const chip = spurtChip(spurt, course.distance)
+	const chip = spurtChip(spurt)
 	if (chip) facts.push(chip)
-	if (spurt.uphill) facts.push("Uphill at the spurt start: Power helps")
+	if (spurt.uphill) facts.push("Uphill at the late-race start: Power helps")
 	const slopes = slopeParts(course)
 	const downhillMetres = slopes.filter((slope) => slope.kind === "downhill").reduce((sum, slope) => sum + slope.end - slope.start, 0)
-	if (spurt.downhill) facts.push("Downhill into the spurt: Wit helps")
+	if (spurt.downhill) facts.push("Downhill into the late race: Wit helps")
 	else if (downhillMetres >= course.distance / 2) facts.push("Mostly downhill: Wit helps")
 
 	// The steepest climb that reaches into the last 400 m.

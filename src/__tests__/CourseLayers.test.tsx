@@ -3,10 +3,11 @@
  * the open skill row lights its zones, the zones are fetched only once a layer
  * needs them, the Layers menu is off by default and asks a guest to sign in.
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import CourseLayersMenu from "../components/course/CourseLayersMenu"
 import CourseSection from "../components/course/CourseSection"
-import { setCourseFocus } from "../services/courseMapStore"
+import { setCourseFocus, setCourseLayers, useVeteranPicks } from "../services/courseMapStore"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { SkillZoneMap } from "../utils/courseLayers"
 import { CHUKYO_1200 } from "./courseFixtures"
@@ -37,33 +38,66 @@ describe("the course map's layers", () => {
 		expect(screen.getByRole("list", { name: "Layer legend" })).toBeInTheDocument()
 	})
 
-	it("lists the accels that can fire here, nearest the spurt start first, and lights one on a tap", async () => {
+	it("lists the accels useful at the spurt start, most useful first, and lights one on a tap", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			if (String(input).includes("/skill-zones")) {
 				return new Response(JSON.stringify({
-					"88": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: null,
-						effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12 } },
+					"88": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: ["front"],
+						effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12, useful: 0.096 } },
 					"89": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
-						effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0 } },
+						effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2 } },
+					"90": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
+						effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 0.6 } },
+					// Fires 250 m early: no use at the spurt start, so not listed.
+					"91": { kind: "place", zones: [{ start: 550, end: 1200, kind: "fixed" }], styles: null,
+						effects: ["accel"], fires_at: 550, spurt: { from: -250, to: -250, useful: 0 } },
 				}))
 			}
-			const skill = (id: number, name: string) => ({ id, name, description: "", image: null, rarity: 1, tier: 1, group_id: id, cost: 100 })
+			const skill = (id: number, name: string, rarity = 1) => ({ id, name, description: "", image: null, rarity, tier: 1, group_id: id, cost: 100 })
 			return new Response(JSON.stringify({
-				umas: [{ id: 1, name: "Seiun Sky", skills: [{ skill: 89, source: "unique", level: 1 }] }],
+				umas: [{ id: 1, name: "Seiun Sky", portrait: null, skills: [{ skill: 89, source: "unique", level: 1 }] }],
 				support_cards: [],
-				skills: [skill(88, "Final Push"), skill(89, "Angling and Scheming")],
+				// 90 is the unique's inherited white: the same name.
+				skills: [skill(88, "Final Push"), skill(89, "Angling and Scheming", 5), skill(90, "Angling and Scheming"), skill(91, "Red Shift")],
 			}))
 		})
 		const { container } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
 		fireEvent.click(screen.getByRole("button", { name: "Accels on this course" }))
 		const list = within(await screen.findByRole("list", { name: "Accels on this course" }))
 		const rows = list.getAllByRole("button")
+		expect(rows).toHaveLength(3)
 		expect(rows[0]).toHaveTextContent("Angling and Scheming · unique of Seiun Sky")
-		expect(rows[0]).toHaveTextContent("Fires as the last spurt starts")
-		expect(rows[1]).toHaveTextContent("At a random point 12m to 250m before the last spurt starts")
-		fireEvent.click(rows[1])
+		expect(rows[0]).toHaveTextContent("Fires as the late race starts")
+		expect(rows[1]).toHaveTextContent("Angling and Scheming · inherited from Seiun Sky")
+		// "All" says whose style a style-gated accel is.
+		expect(rows[2]).toHaveTextContent("Final Push · Front")
+		expect(rows[2]).toHaveTextContent("At a random point 12m to 250m before the late race starts")
+		fireEvent.click(screen.getByRole("button", { name: "Pace" }))
+		await waitFor(() => expect(list.getAllByRole("button")).toHaveLength(2))
+		fireEvent.click(screen.getByRole("button", { name: "All" }))
+		await waitFor(() => expect(list.getAllByRole("button")).toHaveLength(3))
+		fireEvent.click(list.getAllByRole("button")[2])
 		await waitFor(() => expect(container.querySelector('[data-band="layers"]')).not.toBeNull())
 		expect(within(container.querySelector('[data-band="layers"]') as HTMLElement).getAllByText("Final Push").length).toBeGreaterThan(0)
+	})
+
+	it("ticks each veteran and each of her skills that can fire here", () => {
+		act(() => setCourseLayers({ veterans: true }))
+		render(
+			<CourseLayersMenu signedIn veteransNote={null} veterans={[{
+				veteranId: 7, name: "Oguri Cap (Christmas)", head: null, shown: true,
+				skills: [{ skillId: 1, name: "Swinging Maestro", shown: false }, { skillId: 2, name: "Encroaching Shadow", shown: true }],
+			}]} />,
+		)
+		fireEvent.click(screen.getByRole("button", { name: "Layers" }))
+		expect(screen.getByRole("checkbox", { name: "Oguri Cap (Christmas)" })).toBeChecked()
+		const skills = within(screen.getByRole("list", { name: "Oguri Cap (Christmas)'s skills" }))
+		expect(skills.getByRole("checkbox", { name: "Encroaching Shadow" })).toBeChecked()
+		fireEvent.click(skills.getByRole("checkbox", { name: "Swinging Maestro" }))
+		fireEvent.click(screen.getByRole("checkbox", { name: "Oguri Cap (Christmas)" }))
+		const { result } = renderHook(() => useVeteranPicks())
+		expect(result.current).toEqual({ veterans: { 7: false }, skills: { "7:1": true } })
+		act(() => setCourseLayers({ veterans: false }))
 	})
 
 	it("offers the veterans' layer off by default, and asks a guest to sign in", () => {

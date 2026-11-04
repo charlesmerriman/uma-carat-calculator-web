@@ -1,8 +1,8 @@
 /**
  * The track view (components/course/CourseTrack.tsx) and the switches that
  * reach it (CourseSection): callouts in words beside the track, one per spot,
- * and Strip | Track, Real shape | Schematic (the real shape fetched once Track
- * is chosen), Walk the course.
+ * and Strip | Track | Both, Real shape | Schematic (the real shape fetched
+ * once a track is shown), Walk the course.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe("CourseTrack", () => {
 	it("calls out the corners, the final straight, the markers, the hills, the start and the goal", () => {
 		render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} />)
-		for (const words of ["Corner 3", "Corner 4", "Final straight", "Last spurt can start here", "Position keep ends", "Downhill 1%", "Uphill 2%", "Start", "Goal"]) {
+		for (const words of ["Corner 3", "Corner 4", "Final straight", "Last spurt", "Position keep ends", "Halfway", "Downhill 1%", "Uphill 2%", "Start", "Goal"]) {
 			expect(screen.getByText(words)).toBeInTheDocument()
 		}
 	})
@@ -42,6 +42,15 @@ describe("CourseTrack", () => {
 		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} />)
 		expect(screen.getAllByText("Corner 1")).toHaveLength(1)
 		expect(screen.getByText("290m, 1,975m")).toBeInTheDocument()
+	})
+
+	it("gives each straight one callout with every lap's start metres (Nakayama 3600)", () => {
+		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} />)
+		// The back straight on both laps; the first lap's home straight; the
+		// final straight keeps its own callout, at where it starts.
+		expect(screen.getByText("790m, 2,475m")).toBeInTheDocument()
+		expect(screen.getByText("1,615m")).toBeInTheDocument()
+		expect(screen.getByText("3,290m")).toBeInTheDocument()
 	})
 })
 
@@ -74,6 +83,24 @@ describe("CourseSection's switches", () => {
 		await waitFor(() => expect(fetchMock).toHaveBeenCalled())
 		await waitFor(() => expect(container.querySelector("svg polyline")).not.toBeNull())
 		expect(screen.queryByRole("group", { name: "Track shape" })).toBeNull()
+	})
+
+	it("shows the track and the strip together under Both", async () => {
+		serveShape(null)
+		const { container } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		const strips = () => container.querySelectorAll('[data-band="track"]').length
+		// The phone's strip is always in the page (CSS hides it), so the
+		// desktop strip makes it two.
+		expect(strips()).toBe(2)
+		fireEvent.click(screen.getByRole("button", { name: "Track" }))
+		await waitFor(() => expect(strips()).toBe(1))
+		fireEvent.click(screen.getByRole("button", { name: "Both" }))
+		await waitFor(() => expect(container.querySelector("svg polyline")).not.toBeNull())
+		await waitFor(() => expect(strips()).toBe(2))
+		// A drawn track brings its legend; the strip alone doesn't need one.
+		expect(screen.getByRole("list", { name: "Track legend" })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Strip" }))
+		await waitFor(() => expect(screen.queryByRole("list", { name: "Track legend" })).toBeNull())
 	})
 
 	it("has a Walk the course button that turns into Stop", () => {

@@ -11,6 +11,7 @@
  * against the late-race start (skill_verdicts.py); this module only words it.
  */
 import type { MemberStyle } from "../types/pvpTeam"
+import type { VeteranPicks } from "../services/courseMapStore"
 import { formatMetres, phaseStarts, type CourseMarker, type CourseSpan, type SpanKind } from "./courseGeometry"
 
 export interface SkillZone {
@@ -31,8 +32,11 @@ export interface SkillZoneEntry {
 	fires_at?: number
 	/** The first and last metre a random trigger can land on. */
 	spread?: [number, number]
-	/** Metres from the late-race start (negative is before); odds once the window is confirmed. */
-	spurt?: { from: number; to: number; odds?: number }
+	/**
+	 * Metres from the late-race start (negative is before); odds once the
+	 * window is confirmed; for an accel, `useful`, a ranking score never shown.
+	 */
+	spurt?: { from: number; to: number; odds?: number; useful?: number }
 	/** A heal's share landing before the late-race HP check. */
 	before_spurt?: number
 	/** A speed skill's share still running at the late-race start, and where it must fire for that. */
@@ -100,19 +104,19 @@ function spurtWords(entry: SkillZoneEntry, hasNeeds: boolean): string | null {
 		// Rule 1: a fixed zone fires at its start, or from there once its other
 		// clauses hold.
 		const d = spurt.from
-		if (Math.abs(d) < 1) return hasNeeds ? "From the moment the last spurt starts" : "Fires as the last spurt starts"
-		const where = d < 0 ? `${away(d)} before the last spurt starts` : `${away(d)} into the last spurt`
+		if (Math.abs(d) < 1) return hasNeeds ? "From the moment the late race starts" : "Fires as the late race starts"
+		const where = d < 0 ? `${away(d)} before the late race starts` : `${away(d)} into the late race`
 		return hasNeeds ? `From ${where}` : `Fires ${where}`
 	}
 	const { from, to } = spurt
-	if (Math.abs(to) < 1) return `At a random point in the ${away(from)} before the last spurt starts`
-	if (to <= 0) return `At a random point ${away(to)} to ${away(from)} before the last spurt starts`
+	if (Math.abs(to) < 1) return `At a random point in the ${away(from)} before the late race starts`
+	if (to <= 0) return `At a random point ${away(to)} to ${away(from)} before the late race starts`
 	if (from >= 0) {
 		return from === 0
-			? `At a random point in the first ${away(to)} of the last spurt`
-			: `At a random point ${away(from)} to ${away(to)} into the last spurt`
+			? `At a random point in the first ${away(to)} of the late race`
+			: `At a random point ${away(from)} to ${away(to)} into the late race`
 	}
-	return `At a random point from ${away(from)} before to ${away(to)} into the last spurt`
+	return `At a random point from ${away(from)} before to ${away(to)} into the late race`
 }
 
 /** Where on the course, in plain metres, for anything but an accel. */
@@ -141,9 +145,9 @@ function healWords(entry: SkillZoneEntry, distance: number): string[] {
 function carryWords(entry: SkillZoneEntry): string | null {
 	const share = entry.carry
 	if (share === undefined) return null
-	if (share === 1) return "Carries into the last spurt"
-	if (share === 0) return "Ends before the last spurt"
-	return `${percent(share)} chance to carry into the last spurt`
+	if (share === 1) return "Carries into the late race"
+	if (share === 0) return "Ends before the late race"
+	return `${percent(share)} chance to carry into the late race`
 }
 
 /** What else must hold, as one line (section 3). */
@@ -176,7 +180,7 @@ export function verdictLines(entry: SkillZoneEntry | undefined, distance: number
 		const accel = entry.effects?.includes("accel") ?? false
 		const where = (accel ? spurtWords(entry, hasNeeds) : null) ?? placeWords(entry, hasNeeds)
 		if (where) lines.push(where)
-		if (accel && entry.spurt?.odds !== undefined) lines.push(`${percent(entry.spurt.odds)} chance to land at the spurt start`)
+		if (accel && entry.spurt?.odds !== undefined) lines.push(`${percent(entry.spurt.odds)} chance to land at the late-race start`)
 		if (entry.effects?.includes("heal")) lines.push(...healWords(entry, distance))
 		const carry = entry.effects?.includes("speed") ? carryWords(entry) : null
 		if (carry) lines.push(carry)
@@ -234,38 +238,30 @@ function chainWords(result: { from: number; to: number }, chain: NonNullable<Ski
 	return `Set off by her ${chain.at_least} ${COUNT_WORDS[chain.counts]}: ${where}`
 }
 
-/**
- * How near the last spurt's start a skill's trigger lands, in metres, for
- * ordering: 0 when it fires at the start or can land on it, else the nearest
- * metre's distance; Infinity with no timing (unreadable, never, anywhere).
- */
-export function spurtDistance(entry: SkillZoneEntry): number {
-	if (entry.unreadable || !entry.spurt || entry.kind !== "place") return Infinity
-	const { from, to } = entry.spurt
-	if (from <= 0 && to >= 0) return 0
-	return Math.min(Math.abs(from), Math.abs(to))
-}
-
 export interface AccelRow {
 	skillId: number
 	entry: SkillZoneEntry
-	/** How near the spurt start it lands (spurtDistance). */
-	distance: number
+	/** The API's ranking score: the share landing at the spurt start times the speed it adds. */
+	useful: number
 }
 
 /**
- * "Accels on this course" (notes/course-map-plan-2.md, section 8): every skill
- * with an acceleration effect that can fire here for this style, nearest the
- * last spurt's start first (the owner's rule: the game rewards accels that
- * fire just as the spurt starts), ties by `rank` (uniques first), then id.
+ * "Accels on this course" (notes/course-map-plan-2.md, section 8; owner,
+ * 2026-11-03: only the accels "actually useful on the track", "ranked by
+ * usefulness", by position with an "all"): every accel that can land at the
+ * last spurt's start for this style, most useful first (the API's `useful`),
+ * ties by `rank` (uniques first), then id. An accel that can only fire before
+ * or after the start, or whose timing can't be read, is left out.
  */
-export function accelRows(zones: SkillZoneMap, style: MemberStyle, rank: (skillId: number) => number = () => 0): AccelRow[] {
+export function accelRows(zones: SkillZoneMap, style: MemberStyle | "all", rank: (skillId: number) => number = () => 0): AccelRow[] {
 	const rows: AccelRow[] = []
 	for (const [key, entry] of Object.entries(zones)) {
-		if (!entry.effects?.includes("accel") || entry.kind === "never" || !firesForStyle(entry, style)) continue
-		rows.push({ skillId: Number(key), entry, distance: spurtDistance(entry) })
+		if (!entry.effects?.includes("accel") || entry.kind !== "place" || entry.unreadable) continue
+		if (style !== "all" && !firesForStyle(entry, style)) continue
+		const useful = entry.spurt?.useful ?? 0
+		if (useful > 0) rows.push({ skillId: Number(key), entry, useful })
 	}
-	return rows.sort((a, b) => a.distance - b.distance || rank(a.skillId) - rank(b.skillId) || a.skillId - b.skillId)
+	return rows.sort((a, b) => b.useful - a.useful || rank(a.skillId) - rank(b.skillId) || a.skillId - b.skillId)
 }
 
 /**
@@ -316,9 +312,44 @@ export function packLabels(spans: { start: number; end: number; labelShare: numb
 export interface VeteranInLayer {
 	/** The team member's position, for keys. */
 	key: string
+	/** Her trained uma's id: the reader's picks for her follow it (courseMapStore). */
+	veteranId: number
 	umaId: number
 	style: MemberStyle
 	skillIds: number[]
+}
+
+/** Whether the reader shows this veteran: yes unless they unticked her. */
+export function veteranShown(picks: VeteranPicks, veteran: VeteranInLayer): boolean {
+	return picks.veterans[veteran.veteranId] ?? true
+}
+
+/**
+ * Whether the reader shows one of her skills: their tick if they made one,
+ * else her accels only, the skills that decide races (owner, 2026-11-03), so
+ * the layer starts legible on the track.
+ */
+export function skillShown(picks: VeteranPicks, veteran: VeteranInLayer, skillId: number, entry: SkillZoneEntry | undefined): boolean {
+	return picks.skills[`${veteran.veteranId}:${skillId}`] ?? (entry?.effects?.includes("accel") ?? false)
+}
+
+/** Where a skill first fires here, for listing in race order. */
+function firstMetre(entry: SkillZoneEntry): number {
+	return entry.fires_at ?? entry.spread?.[0] ?? entry.zones[0]?.start ?? Infinity
+}
+
+/**
+ * The skills of hers that can fire at a place on this course for her style
+ * (what the Layers menu lists under her), in race order, filtered by the
+ * "Only the guide's" choice when it is on.
+ */
+export function veteranSkillChoices(veteran: VeteranInLayer, zones: SkillZoneMap, keep: (skillId: number) => boolean): number[] {
+	return veteran.skillIds
+		.filter((skillId) => {
+			const entry = zones[String(skillId)]
+			return entry !== undefined && entry.kind === "place" && firesForStyle(entry, veteran.style) && keep(skillId)
+		})
+		.sort((a, b) => firstMetre(zones[String(a)]) - firstMetre(zones[String(b)]))
 }
 
 export interface VeteranLane {

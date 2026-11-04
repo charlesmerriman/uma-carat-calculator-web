@@ -98,6 +98,59 @@ export function setCourseLayers(changes: Partial<CourseLayers>) {
 	notify()
 }
 
+/**
+ * Which veterans, and which of their skills, the veterans' layer draws (owner,
+ * 2026-11-03: "a checkbox for each veteran, with a checkbox for each veteran's
+ * skills that are capable of proccing"). Only the reader's own choices are
+ * kept, by the veteran's id (her trained uma), so they follow her across events;
+ * anything not chosen takes its default (courseLayers.veteranShown /
+ * skillShown). Remembered on the device, like the layer ticks.
+ */
+export interface VeteranPicks {
+	/** Veteran id -> shown. */
+	veterans: Record<string, boolean>
+	/** "veteranId:skillId" -> shown. */
+	skills: Record<string, boolean>
+}
+
+const PICKS_KEY = "uma-course-map-veteran-picks"
+const NO_PICKS: VeteranPicks = { veterans: {}, skills: {} }
+let picks: VeteranPicks | null = null
+
+function readPicks(): VeteranPicks {
+	try {
+		const stored = JSON.parse(localStorage.getItem(PICKS_KEY) ?? "null") as Partial<VeteranPicks> | null
+		return { veterans: { ...stored?.veterans }, skills: { ...stored?.skills } }
+	} catch {
+		// Storage blocked or garbled: every default.
+		return NO_PICKS
+	}
+}
+
+function savePicks(next: VeteranPicks) {
+	picks = next
+	try {
+		localStorage.setItem(PICKS_KEY, JSON.stringify(next))
+	} catch {
+		// Storage blocked: the picks last this page's life.
+	}
+	notify()
+}
+
+export function useVeteranPicks(): VeteranPicks {
+	return useSyncExternalStore(subscribe, () => (picks ??= readPicks()), () => NO_PICKS)
+}
+
+export function setVeteranShown(veteranId: number, shown: boolean) {
+	const current = picks ?? readPicks()
+	savePicks({ ...current, veterans: { ...current.veterans, [veteranId]: shown } })
+}
+
+export function setVeteranSkillShown(veteranId: number, skillId: number, shown: boolean) {
+	const current = picks ?? readPicks()
+	savePicks({ ...current, skills: { ...current.skills, [`${veteranId}:${skillId}`]: shown } })
+}
+
 /** The guide's course block (CourseSection): one per page. */
 export const COURSE_MAP_ID = "course-map"
 

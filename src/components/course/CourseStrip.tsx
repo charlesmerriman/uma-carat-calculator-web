@@ -138,8 +138,8 @@ function LayersBand({ spans, laneHeads, distance, vertical }: {
 // Light ink on the darker fills, dark ink on the light ones (the mock's).
 const LIGHT_INK = "#f8fafc"
 const DARK_INK = "#2b2708"
-const PHASE_FILLS = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)"]
-const PHASE_INKS = [LIGHT_INK, DARK_INK, LIGHT_INK]
+const PHASE_FILLS = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-final)"]
+const PHASE_INKS = [LIGHT_INK, DARK_INK, LIGHT_INK, LIGHT_INK]
 
 // A part narrower than this share of the race swaps its words for the short
 // form ("Down 2%"), and below the second keeps only its colour: the words
@@ -147,6 +147,14 @@ const PHASE_INKS = [LIGHT_INK, DARK_INK, LIGHT_INK]
 const MIN_LABEL_SHARE = 0.06
 const MIN_SHORT_LABEL_SHARE = 0.025
 const MIN_END_LABEL_SHARE = 0.1
+// Wide enough for its start and end metres ("290–540m", Daptrius's render)
+// in place of the end metre alone.
+const MIN_RANGE_SHARE = 0.12
+
+/** "290–540m": a stretch's metres, as Daptrius's render writes them. */
+function rangeText(start: number, end: number): string {
+	return `${Math.round(start).toLocaleString("en-US")}–${formatMetres(end)}`
+}
 
 /** Where a stretch sits along the strip, as percentages: across or down. */
 function place(start: number, end: number, distance: number, vertical: boolean): CSSProperties {
@@ -160,8 +168,11 @@ function at(metre: number, distance: number, vertical: boolean): CSSProperties {
 	return vertical ? { top: position } : { left: position }
 }
 
-/** One stretch of a band: its colour, its words, and the metre where it ends. */
-function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, endLabel }: {
+/**
+ * One stretch of a band: its colour, its words, and its metres: start to end
+ * when it is wide enough (`ranged`), else the metre where it ends.
+ */
+function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, endLabel, ranged = false }: {
 	start: number
 	end: number
 	distance: number
@@ -171,9 +182,11 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 	label?: string
 	shortLabel?: string
 	endLabel?: string
+	ranged?: boolean
 }) {
 	const share = metreToFraction(end, distance) - metreToFraction(start, distance)
 	const words = share >= MIN_LABEL_SHARE ? label : share >= MIN_SHORT_LABEL_SHARE ? shortLabel : undefined
+	const metres = ranged && share >= MIN_RANGE_SHARE ? rangeText(start, end) : share >= MIN_END_LABEL_SHARE ? endLabel : undefined
 	return (
 		<div
 			className={`absolute flex items-center justify-center overflow-hidden ${vertical ? "inset-x-0" : "inset-y-0"}`}
@@ -193,9 +206,9 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 					{words}
 				</span>
 			)}
-			{endLabel && share >= MIN_END_LABEL_SHARE && (
+			{metres && (
 				<span className={`absolute z-10 text-[9px] leading-none opacity-80 ${vertical ? "bottom-0.5 left-1" : "bottom-0.5 right-1"}`}>
-					{endLabel}
+					{metres}
 				</span>
 			)}
 		</div>
@@ -346,7 +359,6 @@ export default function CourseStrip({
 	const ground = surfaceParts(course)
 	const phases = spans.filter((span) => span.kind === "phase")
 	const layerSpans = overlays?.spans.filter((span) => span.kind !== "phase") ?? []
-	const dividers = markers.filter((marker) => marker.kind === "phase-divider")
 	// Corners alternate between two shades, so corners 3 and 4 read as two.
 	let cornerIndex = 0
 
@@ -375,6 +387,7 @@ export default function CourseStrip({
 							// Too narrow for the words: the colour says up or down.
 							shortLabel={`${hill.percent}%`}
 							endLabel={formatMetres(hill.end)}
+							ranged
 						/>
 					))}
 				</Band>
@@ -413,6 +426,7 @@ export default function CourseStrip({
 							ink={shade ? DARK_INK : LIGHT_INK}
 							label={part.label}
 							endLabel={part.end < distance ? formatMetres(part.end) : undefined}
+							ranged
 						/>
 					)
 				})}
@@ -429,14 +443,7 @@ export default function CourseStrip({
 						ink={PHASE_INKS[index % PHASE_INKS.length]}
 						label={phase.label}
 						endLabel={phase.end < distance ? formatMetres(phase.end) : undefined}
-					/>
-				))}
-				{/* The final sixth: a thin line inside Late-race, no words (owner, 2026-11-02). */}
-				{dividers.map((divider) => (
-					<div
-						key={divider.at}
-						className={`absolute bg-gray-100/60 ${vertical ? "inset-x-0 h-px" : "inset-y-0 w-px"}`}
-						style={at(divider.at, distance, vertical)}
+						ranged
 					/>
 				))}
 			</Band>
@@ -511,8 +518,10 @@ export default function CourseStrip({
 				{markerLines}
 				{cursor !== undefined && <Cursor cursor={cursor} distance={distance} vertical={false} />}
 			</motion.div>
-			{markerLabels}
+			{/* The metres right under the section numbers, a ruler for both
+			    (Daptrius's render), then the markers' words. */}
 			<MetreRuler distance={distance} vertical={false} size="16px" />
+			{markerLabels}
 		</div>
 	)
 }

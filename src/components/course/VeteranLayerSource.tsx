@@ -25,8 +25,10 @@ export interface VeteranLayerData {
 	veterans: VeteranInLayer[]
 	/** Skill id -> its name, for the labels. */
 	names: Map<number, string>
-	/** Veteran key -> her avatar, for the head of her lanes. */
+	/** Veteran key -> her avatar, for the head of her lanes and her row in the Layers menu. */
 	heads: Map<string, ReactNode>
+	/** Veteran key -> her uma's name, for her row in the Layers menu. */
+	umaNames: Map<string, string>
 	/** Why nothing is drawn, when nothing is ("Make a team..."). */
 	note: string | null
 }
@@ -48,17 +50,19 @@ export default function VeteranLayerSource({ event, onData }: {
 		if (!teams || teams.status !== "ready" || !trained.data || catalogue.status !== "ready") return null
 		const ref = refForRaceEvent(event)
 		const team = preferredTeam(teams.teams.filter((candidate) => candidate.kind === ref.kind && candidate.event === ref.id))
-		const empty = (note: string): VeteranLayerData => ({ veterans: [], names: new Map(), heads: new Map(), note })
+		const empty = (note: string): VeteranLayerData => ({ veterans: [], names: new Map(), heads: new Map(), umaNames: new Map(), note })
 		if (!team) return empty("Make a team for this event in My team, then link your veterans to its spots.")
 		const byId = new Map(trained.data.map((veteran) => [veteran.id, veteran]))
 		const veterans: VeteranInLayer[] = []
 		const heads = new Map<string, ReactNode>()
+		const umaNames = new Map<string, string>()
 		for (const member of [...team.members].sort((a, b) => a.position - b.position)) {
 			const veteran = member.trained_uma ? byId.get(member.trained_uma) : undefined
 			if (!veteran) continue
 			const key = `spot-${member.position}`
 			const uma = catalogue.umasById.get(member.uma)
-			veterans.push({ key, umaId: member.uma, style: member.style, skillIds: veteran.skills.map((skill) => skill.skill) })
+			veterans.push({ key, veteranId: veteran.id, umaId: member.uma, style: member.style, skillIds: veteran.skills.map((skill) => skill.skill) })
+			umaNames.set(key, uma?.name ?? veteran.label)
 			heads.set(key, (
 				<FramedUma
 					src={uma?.portrait ?? null}
@@ -71,7 +75,7 @@ export default function VeteranLayerSource({ event, onData }: {
 		}
 		if (veterans.length === 0) return empty("Link a veteran to a spot on your team in My team to see her skills here.")
 		const names = new Map([...catalogue.skillsById].map(([id, skill]) => [id, skill.name]))
-		return { veterans, names, heads, note: null }
+		return { veterans, names, heads, umaNames, note: null }
 	}, [teams, trained.data, catalogue, event, oshiIds])
 
 	useEffect(() => {

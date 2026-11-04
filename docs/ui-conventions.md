@@ -1906,12 +1906,16 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   phases, sections, position keep end, hill heights and chips are derived. The game's
   fractions are `GAME_GEOMETRY`, a parameter with defaults. Never compute a position in a
   component.
-- **The phases are Early-race, Mid-race and Late-race, Late-race to the finish**, with a
-  thin unlabelled line at 5/6 and a "Last spurt can start here" marker at 2/3 (owner,
-  2026-11-02): in the game's text "late-race" is 2/3 onward and "last spurt" the sprint.
+- **Four phase bands: Early-race, Mid-race, Late-race, and Last spurt (phase 3: 5/6 to the
+  finish, sections 21 to 24)**, with the "Last spurt" marker at 2/3, section 17, where the
+  last spurt can start, and a "Halfway" marker at 1/2 (owner and Daptrius, 2026-11-03).
+  The chips, the verdicts and the accel list measure from the 2/3 point and call it "the late
+  race". Corner, straight and final-straight callouts point at their start metre, each spot
+  once with every lap's metres; a segment wide enough shows its start and end metres. The
+  track view (Track or Both) carries a legend; the strip writes its words on the segments.
 - **The spurt start is the map's first job** (owner, 2026-11-03; `notes/course-map-plan-2.md`):
   `spurtStart(course)` says what 2/3 falls on, how much of it is left and what comes next,
-  and the chip says it exactly ("Last spurt can start in corner 4, 8m before the final
+  and the chip says it exactly ("Late race starts in corner 4, 8m before the final
   straight"). Slope chips name the stat a hill near it rewards ("Uphill at the spurt start:
   Power helps"; within 100 m, a presentation choice). Its marker is placed first and kept on
   a phone's compact track; its strip line is solid. A flat course draws no profile or hills.
@@ -1963,8 +1967,18 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   only if it is still the one lit) and shows its verdict (`CourseVerdict`, reading only the
   cached map through `useCachedCourseZones` and the block's `usePageCourse`, so a page of
   chips costs no request). "Accels on this course" (`CourseAccelList`, under the chips,
-  closed until opened) lists every accel that can fire for a style, nearest the spurt start
-  first (`accelRows`), uniques named from the catalogue; a tap lights one.
+  closed until opened; owner, 2026-11-03) lists only the accels that can land at the spurt
+  start, most useful first (`accelRows` on the API's `spurt.useful`, never shown as a
+  number), by style with "All" first; a unique, or its inherited white (the same name), shows
+  the uma's `FramedUma`; a tap lights one.
+- **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
+  track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
+  her a tick per skill of hers that can fire at a place here (`veteranSkillChoices`). Only
+  the reader's ticks are stored (`useVeteranPicks`, by her trained uma's id, on the device);
+  the defaults are every veteran shown and, of her skills, her accels only
+  (`veteranShown` / `skillShown`).
+- **The spurt start on the track** has a tick across the track and its label inside the
+  curve; with layers on, every other label sits past the outermost layer line.
 - **Skills set off by other skills** (section 6): the Layers menu's "Skills set off by other
   skills" (`layers.chains`, off by default, shown with the veterans' layer) draws a chained
   skill where her own skills set it off (`resolveChain`: the N-th of them by earliest and by
