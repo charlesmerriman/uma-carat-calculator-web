@@ -14,19 +14,26 @@
  * shown, CSS picking: the page is prerendered and render-time code may not
  * read the screen's width.
  */
-import { useMemo, useState } from "react"
+import { useContext, useMemo, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import type { RaceCourse } from "../../types"
 import { Loader2, Pause, Play } from "lucide-react"
-import { useCourseShape } from "../../services/courseQueries"
+import type { RaceCourse, RaceEvent } from "../../types"
+import type { PvpGuide } from "../../types/pvpGuide"
+import { AuthContext } from "../../services/AuthContext"
+import { useCourseShape, useCourseZones } from "../../services/courseQueries"
 import { setCourseShapeChoice, useCourseShapeChoice, type CourseShapeChoice } from "../../services/courseShapeStore"
+import { useCourseFocus, useCourseLayers } from "../../services/courseMapStore"
+import { skillSpans, veteranLayer, type LayerSpan, type VeteranInLayer } from "../../utils/courseLayers"
 import { schematicShape } from "../../utils/courseSchematic"
+import { heldSkillMeetsPick } from "../../utils/pvpGuide"
 import CourseChips from "./CourseChips"
 import CourseFactsList from "./CourseFactsList"
+import CourseLayersMenu from "./CourseLayersMenu"
 import CourseStrip from "./CourseStrip"
 import CourseTrack from "./CourseTrack"
 import { courseName } from "./courseName"
 import { useWalk } from "./useWalk"
+import VeteranLayerSource, { type VeteranLayerData } from "./VeteranLayerSource"
 
 type View = "strip" | "track"
 type ShapeChoice = CourseShapeChoice
@@ -56,12 +63,19 @@ function Segmented<T extends string>({ label, value, options, onChange }: {
 	)
 }
 
-export default function CourseSection({ course }: { course: RaceCourse }) {
+export default function CourseSection({ course, event = null, guide = null }: {
+	course: RaceCourse
+	/** The event, for the veterans' layer to find the reader's team for it. */
+	event?: RaceEvent | null
+	/** The guide once loaded, for "Only the guide's" skills. */
+	guide?: PvpGuide | null
+}) {
 	const reduceMotion = useReducedMotion()
 	const [view, setView] = useState<View>("strip")
 	// Remembered per device, through a store: the page is prerendered.
 	const shapeChoice = useCourseShapeChoice()
 	const walk = useWalk(course.distance)
+	const signedIn = useContext(AuthContext)?.isLoggedIn ?? false
 	// The real shape, fetched the first time Track is chosen (most readers stay
 	// on the strip, and a phone never shows the track).
 	const real = useCourseShape(view === "track" ? course.id : null)
@@ -74,6 +88,38 @@ export default function CourseSection({ course }: { course: RaceCourse }) {
 	const shape = showing === "real" && realShape ? realShape : schematic
 	const fade = { duration: reduceMotion ? 0 : 0.2 }
 
+	// The layers (notes/course-map-plan.md, "The layer menu"): the skill row
+	// open in the Guide skills panel lights its zones, and "My veterans'
+	// skills" draws the team's veterans. The zones map is fetched only once one
+	// of them needs it.
+	const focus = useCourseFocus()
+	const layers = useCourseLayers()
+	const veteransOn = signedIn && layers.veterans && event !== null
+	const [veteranData, setVeteranData] = useState<VeteranLayerData | null>(null)
+	const zones = useCourseZones(focus !== null || veteransOn ? course.id : null).data
+
+	const layer = useMemo(() => {
+		const spans: LayerSpan[] = []
+		if (zones && focus) spans.push(...skillSpans(zones[String(focus.skillId)], course.distance, focus.name, 0, `focus-${focus.skillId}`))
+		const heads: NonNullable<Parameters<typeof CourseStrip>[0]["laneHeads"]> = []
+		if (zones && veteransOn && veteranData) {
+			const picks = guide?.skill_recommendations ?? []
+			// "Only the guide's": the guide's skills for her style plus its
+			// general ones, a gold covering its white (heldSkillMeetsPick).
+			const keep = (skillId: number, veteran: VeteranInLayer) => layers.scope === "all" || picks.some((pick) =>
+				(pick.style === "everyone" || pick.style === veteran.style || (pick.style === "front" && veteran.style === "runaway"))
+				&& heldSkillMeetsPick(pick.skill, skillId))
+			const offset = spans.length > 0 ? 1 : 0
+			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep)
+			spans.push(...veterans.spans.map((span) => ({ ...span, lane: (span.lane ?? 0) + offset })))
+			for (const lane of veterans.lanes) {
+				heads.push({ key: lane.key, firstLane: lane.firstLane + offset, lanes: lane.lanes, head: veteranData.heads.get(lane.key) })
+			}
+		}
+		return { overlays: { spans, markers: [] }, heads }
+	}, [zones, focus, veteransOn, veteranData, guide, layers.scope, course.distance])
+	const hasLayer = layer.overlays.spans.length > 0
+
 	return (
 		<div className="border-t border-gray-700/70 p-3 sm:p-4">
 			<div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -81,6 +127,7 @@ export default function CourseSection({ course }: { course: RaceCourse }) {
 				<h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Course map</h3>
 				<span className="text-sm text-gray-300">{courseName(course)}</span>
 				<div className="ml-auto hidden flex-wrap items-center gap-2 sm:flex">
+					<CourseLayersMenu signedIn={signedIn} veteransNote={veteranData?.note ?? null} />
 					<button
 						type="button"
 						onClick={walk.walking ? walk.stop : walk.play}
@@ -115,20 +162,29 @@ export default function CourseSection({ course }: { course: RaceCourse }) {
 						transition={fade}
 					>
 						{view === "strip"
-							? <CourseStrip course={course} orientation="horizontal" cursor={walk.cursor} />
+							? <CourseStrip course={course} orientation="horizontal" cursor={walk.cursor} overlays={layer.overlays} laneHeads={layer.heads} />
 							: waiting
 								? (
 									<div className="mx-auto flex aspect-[2/1] w-full max-w-[900px] items-center justify-center">
 										<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 									</div>
 								)
-								: <CourseTrack course={course} shape={shape} cursor={walk.cursor} />}
+								: <CourseTrack course={course} shape={shape} cursor={walk.cursor} overlays={layer.overlays} />}
 					</motion.div>
 				</AnimatePresence>
+				{hasLayer && (
+					// The legend from the mock: what a layer's marks mean.
+					<ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400" aria-label="Layer legend">
+						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "color-mix(in srgb, var(--color-brand) 75%, transparent)" }} />Fires here</li>
+						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 70%, transparent) 0 4px, color-mix(in srgb, var(--color-brand) 30%, transparent) 4px 8px)" }} />At a random point here</li>
+						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm border border-dashed border-brand" />Anywhere in the race</li>
+					</ul>
+				)}
 			</div>
-			<CourseStrip course={course} orientation="vertical" className="sm:hidden" />
+			<CourseStrip course={course} orientation="vertical" className="sm:hidden" overlays={layer.overlays} />
 			<CourseChips course={course} className="mt-3" />
 			<CourseFactsList course={course} />
+			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}
 		</div>
 	)
 }

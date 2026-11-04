@@ -21,7 +21,7 @@
  * re-render per frame), and reduced motion skips it.
  */
 import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
-import { motion, useMotionTemplate, useMotionValue, useTransform, type MotionValue } from "framer-motion"
+import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
 	courseFacts,
@@ -42,12 +42,93 @@ type Orientation = "horizontal" | "vertical"
 
 interface CourseStripProps {
 	course: RaceCourse
-	/** Layers on top of the course's own facts (none yet: the skill zones are PR 7). */
+	/**
+	 * Layers on top of the course's own facts: a skill's zones, the veterans'
+	 * skills (utils/courseLayers.ts). Spans other than phases go in the layers
+	 * band, one row per `lane`; a span with a `key` pops in and out by it.
+	 */
 	overlays?: CourseOverlays
-	/** A metre to mark, still or moving (Walk the course, later). */
+	/** What heads a group of layer rows: a veteran's avatar (CourseSection). */
+	laneHeads?: { key: string; firstLane: number; lanes: number; head: ReactNode }[]
+	/** A metre to mark, still or moving (Walk the course). */
 	cursor?: number | MotionValue<number>
 	orientation?: Orientation
 	className?: string
+}
+
+const LAYER_ROW_PX = 18
+const LAYER_HEAD_PX = 24
+// The layer kinds' looks: a fixed stretch solid, a random point striped, an
+// "anywhere" a dashed outline over the whole course, a passive a quiet band.
+const LAYER_LOOKS: Record<string, CSSProperties> = {
+	fixed: { background: "color-mix(in srgb, var(--color-brand) 75%, transparent)" },
+	random: {
+		background: "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 70%, transparent) 0 6px, color-mix(in srgb, var(--color-brand) 30%, transparent) 6px 12px)",
+	},
+	point: { background: "var(--color-brand)" },
+	anywhere: { border: "1px dashed var(--color-brand)" },
+	passive: { background: "color-mix(in srgb, var(--color-brand) 18%, transparent)" },
+}
+
+/**
+ * The layers band: each layer span in its row, its label on it, popping in
+ * along the race (a short stagger by where it starts) and fading out
+ * together. Under reduced motion a plain fade.
+ */
+function LayersBand({ spans, laneHeads, distance, vertical }: {
+	spans: (CourseOverlays["spans"][number] & { key?: string })[]
+	laneHeads: NonNullable<CourseStripProps["laneHeads"]>
+	distance: number
+	vertical: boolean
+}) {
+	const reduceMotion = useReducedMotion()
+	const rows = Math.max(1, ...spans.map((span) => (span.lane ?? 0) + 1), ...laneHeads.map((head) => head.firstLane + head.lanes))
+	const headed = laneHeads.length > 0 && !vertical
+	return (
+		<div className={vertical ? "flex h-full shrink-0" : "flex w-full shrink-0"} data-band="layers">
+			{headed && (
+				<div className="relative shrink-0" style={{ width: LAYER_HEAD_PX, height: rows * LAYER_ROW_PX }}>
+					{laneHeads.map((head) => (
+						<div key={head.key} className="absolute left-0.5" style={{ top: head.firstLane * LAYER_ROW_PX + 1, width: LAYER_HEAD_PX - 4 }}>
+							{head.head}
+						</div>
+					))}
+				</div>
+			)}
+			<div
+				className="relative min-w-0 flex-1 bg-gray-900/40"
+				style={vertical ? { width: rows * 14 } : { height: rows * LAYER_ROW_PX }}
+			>
+				<AnimatePresence>
+					{spans.map((span) => {
+						const lane = span.lane ?? 0
+						const point = span.kind === "point" || span.start === span.end
+						const from = metreToFraction(span.start, distance) * 100
+						const size = Math.max(point ? 0.6 : 0.4, metreToFraction(span.end, distance) * 100 - from)
+						const place: CSSProperties = vertical
+							? { top: `${from}%`, height: `${size}%`, left: lane * 14 + 1, width: 12 }
+							: { left: `${from}%`, width: `${size}%`, top: lane * LAYER_ROW_PX + 1, height: LAYER_ROW_PX - 2 }
+						return (
+							<motion.div
+								key={span.key ?? `${span.kind}-${span.start}-${lane}`}
+								className="absolute flex items-center overflow-visible rounded-sm"
+								style={{ ...place, ...LAYER_LOOKS[span.kind] }}
+								initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.85 }}
+								animate={{ opacity: 1, scale: 1, transition: { delay: reduceMotion ? 0 : (span.start / distance) * 0.35, duration: 0.2 } }}
+								exit={{ opacity: 0, transition: { duration: 0.15 } }}
+							>
+								{span.label && !vertical && (
+									<span className="relative z-10 ml-1 whitespace-nowrap rounded-sm bg-gray-900/80 px-1 text-[10px] font-semibold leading-tight text-gray-100">
+										{span.label}
+									</span>
+								)}
+							</motion.div>
+						)
+					})}
+				</AnimatePresence>
+			</div>
+		</div>
+	)
 }
 
 // Light ink on the darker fills, dark ink on the light ones (the mock's).
@@ -240,6 +321,7 @@ function useStripDrawIn(vertical: boolean) {
 export default function CourseStrip({
 	course,
 	overlays,
+	laneHeads = [],
 	cursor,
 	orientation = "horizontal",
 	className = "",
@@ -259,6 +341,7 @@ export default function CourseStrip({
 	const hills = slopeParts(course)
 	const ground = surfaceParts(course)
 	const phases = spans.filter((span) => span.kind === "phase")
+	const layerSpans = overlays?.spans.filter((span) => span.kind !== "phase") ?? []
 	const dividers = markers.filter((marker) => marker.kind === "phase-divider")
 	// Corners alternate between two shades, so corners 3 and 4 read as two.
 	let cornerIndex = 0
@@ -350,6 +433,9 @@ export default function CourseStrip({
 					/>
 				))}
 			</Band>
+			{(layerSpans.length > 0 || laneHeads.length > 0) && (
+				<LayersBand spans={layerSpans} laneHeads={laneHeads} distance={distance} vertical={vertical} />
+			)}
 			<SectionsBand distance={distance} vertical={vertical} size={vertical ? "18px" : "20px"} />
 		</>
 	)

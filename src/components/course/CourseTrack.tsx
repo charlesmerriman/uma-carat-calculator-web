@@ -305,6 +305,36 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 						<line {...tick(hill.bracket[hill.bracket.length - 1], pointAtMetre(shape, hill.end, distance))} />
 					</g>
 				))}
+				{/* The layers (a skill's zones, the veterans' skills): a line just
+				    outside the track per lane, solid where it fires, dashed for a
+				    random point, a dot for a spot. Their words are on the strip. */}
+				{(overlays?.spans ?? []).filter((span) => span.kind !== "phase" && span.kind !== "anywhere" && span.kind !== "passive").map((span, index) => {
+					const lane = span.lane ?? 0
+					const outside = clockwise ? 1 : -1
+					const offset = track * (1.3 + lane * 0.9)
+					const section = slice(shape, span.start, Math.max(span.end, span.start + distance / 400), distance)
+					if (span.kind === "point" || span.start === span.end) {
+						const [x, y] = pointAtMetre(shape, span.start, distance)
+						return <circle key={`layer-${index}`} cx={x} cy={y} r={track * 0.55} fill="var(--color-brand)" />
+					}
+					const line = section.map(([x, y], i) => {
+						const [ax, ay] = section[Math.max(0, i - 1)]
+						const [bx, by] = section[Math.min(section.length - 1, i + 1)]
+						const length = Math.hypot(bx - ax, by - ay) || 1
+						return [x + ((by - ay) / length) * offset * outside, y - ((bx - ax) / length) * offset * outside] as [number, number]
+					})
+					return (
+						<polyline
+							key={`layer-${index}`}
+							points={points(line)}
+							fill="none"
+							stroke="var(--color-brand)"
+							strokeWidth={track * 0.45}
+							strokeDasharray={span.kind === "random" ? `${track * 0.8} ${track * 0.5}` : undefined}
+							strokeLinecap="round"
+						/>
+					)
+				})}
 				{/* Leader lines from the track to each callout. */}
 				{callouts.map((callout) => (
 					<line
