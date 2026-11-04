@@ -1999,9 +1999,12 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   portrait, a grade, the verdict lines, the zone bar; a close button clears the focus),
   built from what came with the focus (`CourseFocus.image`, `.owner`), never a fetch.
   **The grade** (`grade()` in `courseLayers.ts`, owner 2026-11-03: a word with the odds
-  beside it): "At the spurt", "Ready before it" (a fixed zone that opens early and waits on
-  a placing), "Early", "Late", or by odds "Usually lands", "Sometimes lands", "Rarely
-  lands". **"Accels that land at the spurt"** (`CourseAccelList`, a column beside the map
+  beside it): "At the spurt" (a fixed point the API's `odds` says lands in the window, a
+  few metres either side of the start included), "Ready before it" (a fixed zone that opens
+  early and waits on a placing), "Early", "Late" (a fixed point outside the window, or a
+  random point that can't reach it), or by odds "Usually lands", "Sometimes lands", "Rarely
+  lands". A speed skill reads "Ends before the late race" only when its whole trigger is
+  before the carry window; one that fires in the late race says nothing about carry. **"Accels that land at the spurt"** (`CourseAccelList`, a column beside the map
   from `lg` up and under it below, opened by the bar's Accels button and remembered on the
   device through `useAccelsOpen`; closed it fetches nothing, since its names cost the
   catalogue; owner, 2026-11-03) lists only the accels that can land at the spurt start,

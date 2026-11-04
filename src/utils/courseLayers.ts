@@ -133,8 +133,11 @@ function placeWords(entry: SkillZoneEntry, hasNeeds: boolean): string | null {
 function healWords(entry: SkillZoneEntry, distance: number): string[] {
 	const share = entry.before_spurt
 	const lines: string[] = []
-	const last = entry.fires_at ?? entry.spread?.[1]
-	if (last !== undefined && last < phaseStarts(distance).mid) lines.push("Fires in the early race, while HP is still high")
+	// The trigger's last metre: a fixed zone's end (it fires anywhere in it once its
+	// other clauses hold), a random point's last metre. A zone ending at the mid-race
+	// boundary fires in the early race, so the comparison is inclusive.
+	const last = entry.fires_at !== undefined ? entry.zones.at(-1)?.end : entry.spread?.[1]
+	if (last !== undefined && last <= phaseStarts(distance).mid) lines.push("Fires in the early race, while HP is still high")
 	if (share === 1) lines.push("Heals in time, before the late-race HP check")
 	else if (share === 0) lines.push("Heals after the late-race HP check")
 	else if (share !== undefined) lines.push(`${percent(share)} chance to heal in time, before the late-race HP check`)
@@ -146,8 +149,12 @@ function carryWords(entry: SkillZoneEntry): string | null {
 	const share = entry.carry
 	if (share === undefined) return null
 	if (share === 1) return "Carries into the late race"
-	if (share === 0) return "Ends before the late race"
-	return `${percent(share)} chance to carry into the late race`
+	if (share > 0) return `${percent(share)} chance to carry into the late race`
+	// A zero share: "ends before" only when the whole trigger is before the carry
+	// window. One that reaches the late race fires in it, and the place words say so.
+	const last = entry.fires_at ?? entry.spread?.[1]
+	const windowStart = entry.carry_window?.[0]
+	return last !== undefined && windowStart !== undefined && last < windowStart ? "Ends before the late race" : null
 }
 
 /** What else must hold, as one line (section 3). */
@@ -180,7 +187,8 @@ export function verdictLines(entry: SkillZoneEntry | undefined, distance: number
 		const accel = entry.effects?.includes("accel") ?? false
 		const where = (accel ? spurtWords(entry, hasNeeds) : null) ?? placeWords(entry, hasNeeds)
 		if (where) lines.push(where)
-		if (accel && entry.spurt?.odds !== undefined) lines.push(`${percent(entry.spurt.odds)} chance to land at the late-race start`)
+		// No "0% chance" line: the metres already say it can't reach the start.
+		if (accel && entry.spurt?.odds) lines.push(`${percent(entry.spurt.odds)} chance to land at the late-race start`)
 		if (entry.effects?.includes("heal")) lines.push(...healWords(entry, distance))
 		const carry = entry.effects?.includes("speed") ? carryWords(entry) : null
 		if (carry) lines.push(carry)
@@ -214,12 +222,21 @@ export function grade(entry: SkillZoneEntry | undefined): Grade | null {
 	if (!entry?.spurt || !entry.effects?.includes("accel") || entry.unreadable) return null
 	const { spurt } = entry
 	if (entry.fires_at !== undefined) {
-		if (Math.abs(spurt.from) < 1) return { word: "At the spurt", tone: "great" }
-		if (spurt.from < 0) return (entry.needs?.length ?? 0) > 0 ? { word: "Ready before it", tone: "good" } : { word: "Early", tone: "poor" }
+		// The API's odds say whether the fixed point lands in the window (1 or 0);
+		// the sign of `from` alone misgraded a point a few metres either side of
+		// the start (the skill pass, bug A1). One that opens early and waits on a
+		// placing can still land at the start, so it is "ready" rather than early.
+		const waits = (entry.needs?.length ?? 0) > 0
+		const lands = spurt.odds === undefined ? Math.abs(spurt.from) < 1 : spurt.odds === 1
+		if (lands && !(waits && spurt.from < 0)) return { word: "At the spurt", tone: "great" }
+		if (spurt.from < 0) return waits ? { word: "Ready before it", tone: "good" } : { word: "Early", tone: "poor" }
 		return { word: "Late", tone: "poor" }
 	}
 	if (spurt.odds === undefined) return null
 	const odds = spurt.odds
+	// A random point that can't reach the window: say which side it lies on.
+	if (odds === 0 && spurt.to <= 0) return { word: "Early", tone: "poor" }
+	if (odds === 0 && spurt.from >= 0) return { word: "Late", tone: "poor" }
 	if (odds >= 0.9) return { word: "At the spurt", tone: "great", odds }
 	if (odds >= 0.5) return { word: "Usually lands", tone: "good", odds }
 	if (odds >= 0.2) return { word: "Sometimes lands", tone: "ok", odds }
