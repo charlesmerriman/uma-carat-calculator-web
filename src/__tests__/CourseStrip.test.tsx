@@ -57,6 +57,13 @@ describe("CourseStrip, across the page", () => {
 		expect(band(chukyo.container, "ground")).toBeNull()
 	})
 
+	it("draws no profile and no hills on a flat course (Funabashi dirt 1600)", () => {
+		const { container } = render(<CourseStrip course={{ ...CHUKYO_1200, slopes: [] }} />)
+		expect(band(container, "elevation")).toBeNull()
+		expect(band(container, "hills")).toBeNull()
+		expect(band(container, "track")).not.toBeNull()
+	})
+
 	it("calls corner -1 plain Corner and draws nothing in the gap before it (Santa Anita 2400)", () => {
 		const { container } = render(<CourseStrip course={SANTA_ANITA_2400} />)
 		expect(parseFloat(segment("Corner").style.left)).toBeCloseTo(8.333, 2)

@@ -1909,6 +1909,12 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
 - **The phases are Early-race, Mid-race and Late-race, Late-race to the finish**, with a
   thin unlabelled line at 5/6 and a "Last spurt can start here" marker at 2/3 (owner,
   2026-11-02): in the game's text "late-race" is 2/3 onward and "last spurt" the sprint.
+- **The spurt start is the map's first job** (owner, 2026-11-03; `notes/course-map-plan-2.md`):
+  `spurtStart(course)` says what 2/3 falls on, how much of it is left and what comes next,
+  and the chip says it exactly ("Last spurt can start in corner 4, 8m before the final
+  straight"). Slope chips name the stat a hill near it rewards ("Uphill at the spurt start:
+  Power helps"; within 100 m, a presentation choice). Its marker is placed first and kept on
+  a phone's compact track; its strip line is solid. A flat course draws no profile or hills.
 - **One `CourseStrip`, two orientations.** `CourseSection` renders a horizontal strip
   (`hidden sm:block`) and a vertical one (`sm:hidden`) and lets CSS pick, because the page
   is prerendered. Down the page the word columns share the width (a `Band` without a
@@ -1930,7 +1936,10 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   callouts beside it, one per spot (a corner or hill a course passes twice lists both
   laps' metres), placed by `placeLabels` from size estimates; hills are brackets outside
   the track. Later laps are rings (`withLapRings`): ring k blends in over the half turn
-  before the course has turned k full circles, inside or outside per `later_laps`.
+  before the course has turned k full circles, inside or outside per `later_laps`. A full
+  circle has 10 degrees of slack (`TURN_SLACK`): real shapes that finish on the straight they
+  started on turn a little under (Nakayama 2000: 357; Nakayama 3600: 717 for two). A ground
+  change gets a callout ("Dirt from here").
 - **Layers** (`utils/courseLayers.ts`, `services/courseMapStore.ts`): the skill row open
   in the team builder's Guide skills panel lights its zones (the panel sets the store's
   `focus`, and clears it on unmount), and the Layers menu (`CourseLayersMenu`, off by

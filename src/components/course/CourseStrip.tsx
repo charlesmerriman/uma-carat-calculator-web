@@ -354,24 +354,27 @@ export default function CourseStrip({
 
 	const bands = (
 		<>
-			<ElevationBand course={course} vertical={vertical} size={vertical ? "34px" : "40px"} />
-			<Band vertical={vertical} size={band} label="hills">
-				{hills.map((hill) => (
-					<Segment
-						key={hill.start}
-						start={hill.start}
-						end={hill.end}
-						distance={distance}
-						vertical={vertical}
-						fill={hill.kind === "uphill" ? "var(--color-course-uphill)" : "var(--color-course-downhill)"}
-						ink={LIGHT_INK}
-						label={hill.label}
-						// Too narrow for the words: the colour says up or down.
-						shortLabel={`${hill.percent}%`}
-						endLabel={formatMetres(hill.end)}
-					/>
-				))}
-			</Band>
+			{/* A flat course (Funabashi dirt 1600) has no profile and no hills to draw. */}
+			{hills.length > 0 && <ElevationBand course={course} vertical={vertical} size={vertical ? "34px" : "40px"} />}
+			{hills.length > 0 && (
+				<Band vertical={vertical} size={band} label="hills">
+					{hills.map((hill) => (
+						<Segment
+							key={hill.start}
+							start={hill.start}
+							end={hill.end}
+							distance={distance}
+							vertical={vertical}
+							fill={hill.kind === "uphill" ? "var(--color-course-uphill)" : "var(--color-course-downhill)"}
+							ink={LIGHT_INK}
+							label={hill.label}
+							// Too narrow for the words: the colour says up or down.
+							shortLabel={`${hill.percent}%`}
+							endLabel={formatMetres(hill.end)}
+						/>
+					))}
+				</Band>
+			)}
 			{ground.length > 0 && (
 				<Band vertical={vertical} size={vertical ? band : "22px"} label="ground">
 					{ground.map((part) => (
@@ -443,7 +446,9 @@ export default function CourseStrip({
 	const markerLines = labelled.map((marker) => (
 		<div
 			key={`line-${marker.kind}-${marker.at}`}
-			className={`pointer-events-none absolute border-dashed border-gray-100/70 ${vertical ? "inset-x-0 border-t" : "inset-y-0 border-l"}`}
+			// The spurt start's line is solid: the course's most important point
+			// (notes/course-map-plan-2.md, section 1; its look is the overhaul's).
+			className={`pointer-events-none absolute ${marker.kind === "spurt-start" ? "border-solid border-gray-100" : "border-dashed border-gray-100/70"} ${vertical ? "inset-x-0 border-t" : "inset-y-0 border-l"}`}
 			style={at(marker.at, distance, vertical)}
 		/>
 	))

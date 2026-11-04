@@ -18,6 +18,7 @@ import {
 	rulerTicks,
 	sectionBoundaries,
 	slopeParts,
+	spurtStart,
 	surfaceParts,
 	trackParts,
 	withLapRings,
@@ -67,13 +68,25 @@ describe("Chukyo turf 1200 m, the worked example", () => {
 		])
 	})
 
-	it("reads off the chips", () => {
+	it("reads off the chips: the spurt start exactly, and the stat each hill near it rewards", () => {
 		expect(derivedFacts(CHUKYO_1200)).toEqual([
 			"Final corner from 550m",
 			"Final straight 412m",
+			"Last spurt can start on the final straight, 400m from the goal",
+			// The uphill begins 75 m into the spurt; the downhill runs over it.
+			"Uphill at the spurt start: Power helps",
+			"Downhill into the spurt: Wit helps",
 			"2% climb in the last 400m",
-			"Last spurt can start on the final straight",
 		])
+	})
+
+	it("says what the late race starts on, how much of it is left and what comes next", () => {
+		const spurt = spurtStart(CHUKYO_1200)
+		expect(spurt.at).toBe(800)
+		expect(spurt.on).toMatchObject({ kind: "straight", label: "Final straight", left: 400 })
+		expect(spurt.next).toBeUndefined()
+		expect(spurt.uphill?.start).toBe(875)
+		expect(spurt.downhill?.start).toBe(100)
 	})
 
 	it("hands the strip its own overlay: three phases and three markers", () => {
@@ -95,7 +108,8 @@ describe("courses that aren't the worked example", () => {
 		expect(derivedFacts(SANTA_ANITA_2400)).toEqual([
 			"Final corner from 1,950m",
 			"Final straight 300m",
-			"Last spurt can start on a straight",
+			// 1,600 m is on the straight to 1,800 m, where corner 3 starts.
+			"Last spurt can start on a straight, 200m before corner 3",
 		])
 	})
 
@@ -104,7 +118,26 @@ describe("courses that aren't the worked example", () => {
 		expect(corners).toEqual(["Corner 1", "Corner 2", "Corner 3", "Corner 4", "Corner 1", "Corner 2", "Corner 3", "Corner 4"])
 		expect(trackParts(NAKAYAMA_3600).some((part) => part.kind === "gap")).toBe(false)
 		// 2/3 of 3600 is 2400, on lap two's corner 2 (2225 to 2475).
-		expect(derivedFacts(NAKAYAMA_3600)).toContain("Last spurt can start on corner 2")
+		expect(derivedFacts(NAKAYAMA_3600)).toContain("Last spurt can start in corner 2, 75m before a straight")
+	})
+
+	it("says how little of the final corner is left at the spurt (CM 22, Tokyo dirt 1600)", () => {
+		// 2/3 of 1600 is 1,066.7 m: corner 4 ends at 1,099 m, and the uphill
+		// starts at 1,100 m, 33 m into the spurt.
+		expect(derivedFacts(TOKYO_DIRT_1600)).toEqual([
+			"Final corner from 875m",
+			"Final straight 501m",
+			"Last spurt can start in corner 4, 32m before the final straight",
+			"Uphill at the spurt start: Power helps",
+			"1.5% climb in the last 400m",
+		])
+	})
+
+	it("calls a course mostly downhill when no hill sits at the spurt", () => {
+		// 650 of 1,200 m downhill, ending 150 m before the spurt.
+		const mostlyDown = { ...CHUKYO_1200, slopes: [{ start: 0, length: 650, slope: -10000 }] }
+		expect(derivedFacts(mostlyDown)).toContain("Mostly downhill: Wit helps")
+		expect(derivedFacts(mostlyDown)).not.toContain("Downhill into the spurt: Wit helps")
 	})
 
 	it("marks where the ground changes, and only then", () => {
@@ -171,6 +204,21 @@ describe("metres to positions", () => {
 		expect(moved(1365)).toBeLessThan(20)
 		const chukyo = schematicShape(CHUKYO_1200)
 		expect(withLapRings(chukyo, CHUKYO_1200, 20)).toBe(chukyo)
+	})
+
+	it("rings a course that turns a little under a full circle (Nakayama 2000's real shape: 357 degrees)", () => {
+		// A circle run 357 degrees: the finish runs back over the start.
+		const circle = Array.from({ length: 1001 }, (_, i) => {
+			const angle = ((357 * i) / 1000) * (Math.PI / 180)
+			return [500 * Math.cos(angle), 500 * Math.sin(angle)] as const
+		})
+		const course = { ...CHUKYO_1200, distance: 2000 }
+		const ringed = withLapRings(circle, course, 20)
+		expect(ringed).not.toBe(circle)
+		const [x, y] = circle[1000]
+		expect(Math.hypot(ringed[1000][0] - x, ringed[1000][1] - y)).toBeCloseTo(20, 0)
+		// The start stays where it is.
+		expect(ringed[0]).toEqual(circle[0])
 	})
 
 	it("stacks marker labels that would touch into a second lane, in the caller's order", () => {

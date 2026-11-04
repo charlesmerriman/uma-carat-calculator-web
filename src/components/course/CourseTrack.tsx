@@ -31,6 +31,7 @@ import {
 	pointAtMetre,
 	shapeBounds,
 	slopeParts,
+	surfaceParts,
 	withLapRings,
 	type CourseOverlays,
 	type Shape,
@@ -54,7 +55,7 @@ interface Callout {
 	point: [number, number]
 	label: string
 	detail?: string
-	tone: "start" | "goal" | "corner" | "marker" | "hill"
+	tone: "start" | "goal" | "spurt" | "corner" | "marker" | "hill"
 }
 
 /** The slice of the shape between two metres. */
@@ -97,6 +98,8 @@ function PhaseLine({ shape, start, end, distance, stroke, width, progress }: {
 const TONES: Record<Callout["tone"], string> = {
 	start: "border-gray-500 bg-gray-900/90 font-semibold text-gray-100",
 	goal: "border-gray-500 bg-gray-900/90 font-semibold text-gray-100",
+	// A placeholder: its look is the visual overhaul's (notes/course-map-plan-2.md, "Handoff").
+	spurt: "border-brand/70 bg-gray-900/95 font-semibold text-gray-100",
 	corner: "border-gray-700 bg-gray-900/85 text-gray-200",
 	marker: "border-gray-700 bg-gray-900/85 text-gray-200",
 	hill: "border-transparent bg-gray-900/70 font-semibold text-gray-200",
@@ -199,10 +202,23 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 	}
 
 	// One callout per spot, most important first (they're placed in order).
+	// The spurt start right after the ends: the most important point on the
+	// course (notes/course-map-plan-2.md, section 1), so it is never crowded out.
+	const spurt = markers.find((marker) => marker.kind === "spurt-start")
 	const allCallouts: Callout[] = [
 		{ key: "start", at: 0, point: pointAtMetre(shape, 0, distance), label: "Start", tone: "start" },
 		{ key: "goal", at: distance, point: pointAtMetre(shape, distance, distance), label: "Goal", tone: "goal" },
 	]
+	if (spurt) {
+		allCallouts.push({
+			key: "marker-spurt-start",
+			at: spurt.at,
+			point: pointAtMetre(shape, spurt.at, distance),
+			label: compact ? "Last spurt" : spurt.label,
+			detail: formatMetres(spurt.at),
+			tone: "spurt",
+		})
+	}
 	const cornerGroups = new Map<number, { at: number[]; middle: number }>()
 	for (const corner of [...course.corners].sort((a, b) => a.start - b.start)) {
 		const group = cornerGroups.get(corner.number) ?? { at: [], middle: corner.start + corner.length / 2 }
@@ -230,7 +246,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 			tone: "corner",
 		})
 	}
-	for (const marker of markers) {
+	for (const marker of markers.filter((other) => other !== spurt)) {
 		allCallouts.push({
 			key: `marker-${marker.kind}`,
 			at: marker.at,
@@ -250,9 +266,21 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 			tone: "hill",
 		})
 	}
-	// A phone-sized box has room for the start, the goal and the corners'
-	// names; the chips under it say the rest (the final corner's metre, the
-	// final straight, the climbs, the spurt).
+	// Where the ground changes (Tokyo dirt 1600 starts on turf), as the strip's
+	// ground band says.
+	for (const part of surfaceParts(course).slice(1)) {
+		allCallouts.push({
+			key: `ground-${part.start}`,
+			at: part.start,
+			point: pointAtMetre(shape, part.start, distance),
+			label: part.surface === "dirt" ? "Dirt from here" : "Turf from here",
+			detail: formatMetres(part.start),
+			tone: "marker",
+		})
+	}
+	// A phone-sized box has room for the start, the goal, the spurt and the
+	// corners' names; the chips under it say the rest (the final corner's
+	// metre, the final straight, the climbs, what's around the spurt).
 	const callouts = compact
 		? allCallouts
 			.filter((callout) => callout.tone !== "marker" && callout.tone !== "hill" && callout.key !== "final-straight")
