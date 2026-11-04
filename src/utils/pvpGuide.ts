@@ -406,6 +406,17 @@ function versionCovers(skill: PvpSkillRef, version: PvpSkillVersion): boolean {
 }
 
 /**
+ * Whether holding the skill with id `heldId` meets a guide's pick: the pick
+ * itself, or a version that covers it (a gold covers its white, the owner's
+ * game fact). The course map's "Only the guide's" veterans layer reads it.
+ */
+export function heldSkillMeetsPick(pick: PvpSkillRef, heldId: number): boolean {
+	if (pick.id === heldId) return true
+	const version = pick.versions.find((candidate) => candidate.id === heldId)
+	return version !== undefined && versionCovers(pick, version)
+}
+
+/**
  * Where a team gets a recommended skill, from the team's skill sources
  * (`teamSkillSources` in utils/pvpTeams): the pick itself, or a version that
  * covers it (`versionCovers`). A source that gives another version says

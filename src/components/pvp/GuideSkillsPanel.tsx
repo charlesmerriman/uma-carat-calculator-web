@@ -19,7 +19,7 @@
  * (components/pvp/SidePanel.tsx has both placements).
  */
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Check, ChevronDown, Loader2, Search } from "lucide-react"
 import {
 	SKILL_CATEGORY_LABELS,
@@ -32,6 +32,7 @@ import {
 } from "../../utils/pvpGuide"
 import type { PvpSkillCategory, PvpStyle } from "../../types/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
+import { setCourseFocus } from "../../services/courseMapStore"
 
 /** One team spot a skill can be searched for: "Spot 1 · Daiwa Scarlet". */
 export interface SkillSearchSpot {
@@ -60,6 +61,8 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 		[guide, position]
 	)
 	const [openId, setOpenId] = useState<number | null>(null)
+	// The map lights the open row; leaving the panel closes it there too.
+	useEffect(() => () => setCourseFocus(null), [])
 	// A category the chosen position has nothing in reads as "all", so
 	// switching position never leaves the list empty behind a stale filter.
 	const activeCategory = groups.some((group) => group.category === category) ? category : "all"
@@ -154,7 +157,12 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 									pick={pick}
 									sources={familySources(teamSkillSources, pick.skill)}
 									open={openId === pick.skill.id}
-									onToggle={() => setOpenId(openId === pick.skill.id ? null : pick.skill.id)}
+									onToggle={() => {
+										const opening = openId !== pick.skill.id
+										setOpenId(opening ? pick.skill.id : null)
+										// The course map lights the open row's zones (CourseSection).
+										setCourseFocus(opening ? { skillId: pick.skill.id, name: pick.skill.name } : null)
+									}}
 									spots={spots}
 									onSearch={(position) => onSearch(position, pick.skill.name)}
 								/>

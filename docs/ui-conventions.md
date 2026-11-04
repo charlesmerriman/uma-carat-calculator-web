@@ -1931,6 +1931,17 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   laps' metres), placed by `placeLabels` from size estimates; hills are brackets outside
   the track. Later laps are rings (`withLapRings`): ring k blends in over the half turn
   before the course has turned k full circles, inside or outside per `later_laps`.
+- **Layers** (`utils/courseLayers.ts`, `services/courseMapStore.ts`): the skill row open
+  in the team builder's Guide skills panel lights its zones (the panel sets the store's
+  `focus`, and clears it on unmount), and the Layers menu (`CourseLayersMenu`, off by
+  default, ticks remembered per device) holds "My veterans' skills": the preferred team's
+  linked veterans (`VeteranLayerSource`, mounted only while the layer is on, so the
+  catalogue and veterans are fetched only then), their skills that fire at a place for
+  their style, all or only the guide's (`heldSkillMeetsPick`), one group of lanes each
+  headed by her `FramedUma`. Zones come from `GET /race-courses/<id>/skill-zones`
+  (`services/courseQueries.ts`), fetched only once a layer needs them. On the strip a
+  layer is the layers band (labels pop in along the race); on the track, lines just
+  outside it, without words.
 - **Walk the course** (`useWalk`): one motion value, -1 when idle, read by both views; under
   reduced motion it steps phase by phase.
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
