@@ -74,11 +74,13 @@ interface CourseStripProps {
 	/** The span (by `key`) the pointer is over elsewhere (the track, the legend): drawn lit, the rest quieter. */
 	preview?: string | null
 	/**
-	 * A phone's strip across the page (~300px for the race): fewer section
-	 * numbers and metres, and the marks' words given more room so none run
-	 * into each other or off the right edge (Henry, 2026-11-04).
+	 * About how wide the race is across the page, in px (the label column not
+	 * counted). Nothing on a prerendered page is measured, so the caller says:
+	 * the words, the metres, the section numbers, the ruler and the marks' rows
+	 * are all spaced against it. A desktop's is STRIP_PX; a phone's scroller
+	 * sets its own (CourseSection).
 	 */
-	compact?: boolean
+	widthPx?: number
 }
 
 // The label column across the page, and the marks' margin down it.
@@ -92,8 +94,13 @@ const MARK_ROW_PX = 15
 // About how wide the strip is on a desktop: the words and the metres are
 // sized against it, since nothing on a prerendered page is measured.
 const STRIP_PX = 1000
-// A phone's strip: 390px less the gutters and the 60px label column.
-const PHONE_STRIP_PX = 300
+// What the strip's numbers and words need, in px, so any width spaces them alike:
+// a section number, a ruler number, a mark's words before the next may share
+// its row, and how far from the finish words start hanging left of their line.
+const SECTION_NUMBER_PX = 18
+const RULER_STEP_PX = 80
+const MARK_WORDS_PX = 160
+const HANG_LEFT_PX = 280
 const LIT = "var(--color-course-lit)"
 
 // Light ink on the darker fills, dark on the light ones.
@@ -326,7 +333,7 @@ export default function CourseStrip({
 	className = "",
 	onPreview,
 	preview = null,
-	compact = false,
+	widthPx = STRIP_PX,
 }: CourseStripProps) {
 	const vertical = orientation === "vertical"
 	const distance = course.distance
@@ -338,7 +345,20 @@ export default function CourseStrip({
 	const labelled = markers.filter((marker) => marker.label)
 	// The gap (a share of the race) two marks' words need to share a row. On a
 	// phone the words are the same size but the race is a third as wide.
-	const lanes = markerLanes(labelled, distance, compact ? 0.34 : 0.16)
+	// The share of the race past which a mark's words hang left of their line.
+	const hangLeftFrom = Math.max(0.5, 1 - HANG_LEFT_PX / widthPx)
+	const wordsShare = Math.min(0.5, MARK_WORDS_PX / widthPx)
+	const hangs = labelled.map((marker) => metreToFraction(marker.at, distance) > hangLeftFrom)
+	// Rows are shared by where the words START: a hanging mark's words begin a
+	// words' width before its line, so it can't share a row with the mark its
+	// words would run over (Spurt starts over Position keep ends, 2026-11-04).
+	const lanes = markerLanes(
+		labelled.map((marker, index) => (hangs[index] ? { ...marker, at: Math.max(0, marker.at - wordsShare * distance) } : marker)),
+		distance,
+		wordsShare,
+	)
+	// Every section numbered when 24 of them fit, else section 1 and every fourth.
+	const everySection = widthPx / 24 >= SECTION_NUMBER_PX
 	const laneCount = labelled.length > 0 ? Math.max(...lanes) + 1 : 0
 
 	const track = trackParts(course)
@@ -388,7 +408,7 @@ export default function CourseStrip({
 			<Row vertical={vertical} label="Phase" band="phases" grow={0.8}>
 				{phases.map((phase, index) => (
 					<Segment
-						stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
+						stripPx={widthPx}
 						key={phase.start}
 						start={phase.start}
 						end={phase.end}
@@ -409,7 +429,7 @@ export default function CourseStrip({
 					const shade = isCorner && cornerIndex++ % 2 === 1
 					return (
 						<Segment
-							stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
+							stripPx={widthPx}
 							key={`${part.kind}-${part.start}`}
 							start={part.start}
 							end={part.end}
@@ -430,7 +450,7 @@ export default function CourseStrip({
 				<Row vertical={vertical} label="Slope" band="hills">
 					{hills.map((hill) => (
 						<Segment
-							stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
+							stripPx={widthPx}
 							key={hill.start}
 							start={hill.start}
 							end={hill.end}
@@ -452,7 +472,7 @@ export default function CourseStrip({
 				<Row vertical={vertical} label="Ground" band="ground" size={vertical ? 36 : 20}>
 					{ground.map((part) => (
 						<Segment
-							stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
+							stripPx={widthPx}
 							key={part.start}
 							start={part.start}
 							end={part.end}
@@ -501,8 +521,8 @@ export default function CourseStrip({
 						className={`absolute flex items-center justify-center border-gray-700/60 text-[9px] leading-none text-gray-500 ${vertical ? "inset-x-0 border-b" : "inset-y-0 border-r"}`}
 						style={place(index === 0 ? 0 : bounds[index - 1], end, distance, vertical)}
 					>
-						{/* A phone names section 1 and every fourth; 24 numbers don't fit. */}
-						{!compact || index === 0 || (index + 1) % 4 === 0 ? index + 1 : null}
+						{/* A narrow strip names section 1 and every fourth; 24 numbers don't fit. */}
+						{everySection || index === 0 || (index + 1) % 4 === 0 ? index + 1 : null}
 					</div>
 				))}
 			</Row>
@@ -555,9 +575,9 @@ export default function CourseStrip({
 								style={{
 									left: `${fraction * 100}%`,
 									top: lanes[index] * MARK_ROW_PX,
-									// Near the finish the words hang to the left of the line; on a
-									// phone, anywhere past halfway, or they run off the edge.
-									transform: fraction > (compact ? 0.5 : 0.72) ? "translateX(-100%)" : undefined,
+									// Near the finish the words hang to the left of the line, or
+									// they run off the edge.
+									transform: hangs[index] ? "translateX(-100%)" : undefined,
 								}}
 							>
 								<MarkWords marker={marker} />
@@ -572,7 +592,7 @@ export default function CourseStrip({
 			</motion.div>
 			{/* The metres right under the section numbers. */}
 			<div className="relative h-4" style={{ marginLeft: LABEL_PX }}>
-				{rulerTicks(distance, compact ? 6 : 12).map((tick, index, ticks) => (
+				{rulerTicks(distance, Math.floor(widthPx / RULER_STEP_PX)).map((tick, index, ticks) => (
 					<span
 						key={tick}
 						className="absolute top-0.5 whitespace-nowrap text-[10px] leading-none text-gray-500"

@@ -1950,8 +1950,12 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   a phone's compact track; its strip line is solid. A flat course draws no profile or hills.
 - **One `CourseStrip`, two orientations.** `CourseSection` renders the desktop block
   (`hidden sm:block`) and the phone block (`sm:hidden`) and lets CSS pick, because the page
-  is prerendered. Both draw the strip ACROSS the page (Henry, 2026-11-04: the phone's
-  vertical strip read badly); `orientation="vertical"` is kept but unused. Down the page the word columns share the width (a `Band` without a
+  is prerendered. A phone's strip is ACROSS by default, at full size in its own sideways
+  scroller (`PHONE_STRIP_PX`), with an Across / Down switch for the vertical one, remembered
+  until a reload (Henry, 2026-11-04: squeezed to the screen it was illegible). The strip's
+  `widthPx` is what spaces its words, metres, section numbers, ruler and mark rows, so
+  every width spaces them alike. The phone's compact track is bare until tapped
+  (`showWords`). Down the page the word columns share the width (a `Band` without a
   `size`) and the words wrap; across, they truncate, and a part too narrow for its words
   shows a short form (a hill's percent) or only its colour.
 - **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any
