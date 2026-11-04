@@ -172,8 +172,12 @@ describe("CourseSection's switches", () => {
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
 		await waitFor(() => expect(fetchMock).toHaveBeenCalled())
 		// Each strip has a "Spurt starts" mark, the desktop one and the phone
-		// one both being in the page; the compact track's chip makes three once
-		// the shape is in. The phase band is the other name, "Last spurt".
+		// one both being in the page. The compact track is bare until tapped
+		// (Henry, 2026-11-04); its chip then makes three. The phase band is the
+		// other name, "Last spurt".
+		const tap = await screen.findByRole("button", { name: "Show the track's labels" })
+		expect(screen.getAllByText("Spurt starts")).toHaveLength(2)
+		fireEvent.click(tap)
 		await waitFor(() => expect(screen.getAllByText("Spurt starts")).toHaveLength(3))
 		expect(screen.getAllByText("Last spurt")).toHaveLength(2)
 		expect(screen.queryByText("Position keep ends", { selector: "b" })).toBeNull()

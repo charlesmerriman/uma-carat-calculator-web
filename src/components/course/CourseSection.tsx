@@ -48,6 +48,7 @@ import {
 import type { CourseMarker } from "../../utils/courseGeometry"
 import { schematicShape } from "../../utils/courseSchematic"
 import { heldSkillMeetsPick } from "../../utils/pvpGuide"
+import { useRememberedOpen } from "../../hooks/useRememberedOpen"
 import CourseAccelList from "./CourseAccelList"
 import CourseFactsList from "./CourseFactsList"
 import CourseHeadline from "./CourseHeadline"
@@ -66,6 +67,9 @@ type ShapeChoice = CourseShapeChoice
 const VETERAN_COLOURS = ["var(--color-course-vet-1)", "var(--color-course-vet-2)", "var(--color-course-vet-3)"]
 // A phone's block, less its padding (below Tailwind's sm, 640px).
 const PHONE_TRACK_PX = 358
+// The phone strip's race width inside its sideways scroller: a 720px strip less
+// the 60px label column. Wide enough for every section number and the words.
+const PHONE_STRIP_PX = 660
 
 function Segmented<T extends string>({ label, value, options, onChange }: {
 	label: string
@@ -121,6 +125,11 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	// A phone shows the compact track above its strip (owner, 2026-11-03). The
 	// screen is read in an effect, never at render: the page is prerendered.
 	const [narrow, setNarrow] = useState(false)
+	// The phone strip's direction: across (scrolling sideways) unless the reader
+	// picks Down. Remembered until a reload, like the page's panels.
+	const [stripDown, setStripDown] = useRememberedOpen("course-strip-down")
+	// The phone track's words, hidden until a tap.
+	const [trackWords, setTrackWords] = useState(false)
 	useEffect(() => {
 		if (typeof window.matchMedia !== "function") return
 		const query = window.matchMedia("(max-width: 639px)")
@@ -412,14 +421,58 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					</ul>
 				)}
 			</div>
-			{/* A phone: the compact track, then the strip across the page like the
-			    desktop's (Henry, 2026-11-04: down the page read badly). Too-narrow
-			    segments fall back to short words or colour alone. */}
+			{/* A phone: the compact track, then the strip. Across the page by default
+			    at full size in its own sideways scroller, since squeezed to the
+			    screen it was illegible (Henry, 2026-11-04); "Down" turns it to run
+			    down the page instead. */}
 			<div className="sm:hidden">
 				{narrow && phoneShape && (
-					<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact overlays={layer.overlays} className="mb-3" />
+					// Bare on a phone, the words over a small track crowd it (Henry,
+					// 2026-11-04); a tap shows them, another hides them. The box keeps
+					// its size either way, so nothing below it moves.
+					<button
+						type="button"
+						aria-pressed={trackWords}
+						aria-label={trackWords ? "Hide the track's labels" : "Show the track's labels"}
+						onClick={() => setTrackWords(!trackWords)}
+						className="mb-3 block w-full"
+					>
+						<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact showWords={trackWords} overlays={layer.overlays} />
+						<span className="mt-1 block text-center text-[11px] text-gray-500">{trackWords ? "Tap the track to hide labels" : "Tap the track for labels"}</span>
+					</button>
 				)}
-				<CourseStrip course={course} orientation="horizontal" compact overlays={layer.overlays} laneHeads={layer.heads} />
+				<div className="mb-2 flex items-center justify-between gap-2">
+					<span className="text-[11px] text-gray-500">{stripDown ? "" : "Scroll sideways for the whole race"}</span>
+					<div role="group" aria-label="Strip direction" className="flex rounded-lg border border-gray-600 p-0.5 text-xs font-semibold">
+						{([false, true] as const).map((down) => (
+							<button
+								key={String(down)}
+								type="button"
+								aria-pressed={stripDown === down}
+								onClick={() => setStripDown(down)}
+								className={`rounded-md px-2.5 py-0.5 transition ${stripDown === down ? "bg-brand/20 text-gray-100" : "text-gray-400"}`}
+							>
+								{down ? "Down" : "Across"}
+							</button>
+						))}
+					</div>
+				</div>
+				{stripDown ? (
+					<CourseStrip course={course} orientation="vertical" overlays={layer.overlays} laneHeads={layer.heads} />
+				) : (
+					// overscroll-x-contain: a swipe that reaches the strip's end stops
+					// there, never turning into the browser's back gesture.
+					<div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 pb-1" data-strip-scroller="">
+						<CourseStrip
+							course={course}
+							orientation="horizontal"
+							className="w-[720px]"
+							widthPx={PHONE_STRIP_PX}
+							overlays={layer.overlays}
+							laneHeads={layer.heads}
+						/>
+					</div>
+				)}
 			</div>
 			</div>
 			{/* Beside the map from lg up, under it below; mounted only while open. */}

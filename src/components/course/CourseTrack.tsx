@@ -194,7 +194,7 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, className = "", preview = null, onPreview }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, showWords = true, className = "", preview = null, onPreview }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
@@ -203,6 +203,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	widthPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
+	/** False draws the track bare, no callouts or leaders (a phone's, until it's tapped). */
+	showWords?: boolean
 	className?: string
 	/** A layer span's `key` the strip's pointer is over: drawn bolder, the other arcs quietened. */
 	preview?: string | null
@@ -418,7 +420,9 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// course that passes its corners twice has no room for them either: the
 	// strip under the track names them.
 	const twoLaps = course.corners.length > 4
-	const callouts = compact
+	const callouts = !showWords
+		? []
+		: compact
 		? allCallouts
 			.filter((callout) => ["start", "goal", "spurt"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.
