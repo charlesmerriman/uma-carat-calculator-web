@@ -9,6 +9,17 @@ import { ArrowUp } from "lucide-react"
  * floating one is positioned against the viewport and has to be a child of the
  * page root. A single component could not be rendered in both places at once,
  * which is exactly what a page with a bar that only pins on desktop needs.
+ *
+ * BOTH carry `mb-0!` (Tailwind 4's !important). Raptive's site stylesheet
+ * (ads.min.css, served by their script and edited on their side, not in this
+ * repo) has
+ * `body.adthrive-device-desktop [aria-label="Back to top"] { margin-bottom: 250px }`,
+ * with 200px on tablets and 30px on phones, meant to lift the floating arrow
+ * over their sticky footer ad. It matches by our aria-label, so it also hit the
+ * Timeline toolbar's arrow: 250px under a 30px button made the toolbar row
+ * 280px tall and stretched every button beside it (owner, 2026-11-04). The
+ * floating arrow already clears the ad itself (`bottom-28`), so their margin
+ * only stacked on top of that. Their rule is not !important; ours is, so it wins.
  */
 
 const LABEL = "Back to top"
@@ -35,7 +46,7 @@ type BackToTopButtonProps = {
 export const BackToTopButton = ({ onClick, disabled, className = "" }: BackToTopButtonProps) => (
 	<button
 		type="button"
-		className={className}
+		className={`mb-0! ${className}`}
 		onClick={onClick}
 		disabled={disabled}
 		aria-label={LABEL}
@@ -106,7 +117,7 @@ type FloatingBackToTopProps = {
 export const FloatingBackToTop = ({ onClick, visible, column, className = "" }: FloatingBackToTopProps) => (
 	<button
 		type="button"
-		className={`fixed bottom-28 [.ad-free-member_&]:bottom-6 ${FLOATING_POSITION[column]} z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-600 bg-gray-800/95 text-gray-100 shadow-lg backdrop-blur-sm transition hover:border-gray-500 hover:bg-gray-700 ${
+		className={`fixed bottom-28 mb-0! [.ad-free-member_&]:bottom-6 ${FLOATING_POSITION[column]} z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-600 bg-gray-800/95 text-gray-100 shadow-lg backdrop-blur-sm transition hover:border-gray-500 hover:bg-gray-700 ${
 			visible ? "opacity-100" : "pointer-events-none opacity-0"
 		} ${className}`}
 		onClick={onClick}
