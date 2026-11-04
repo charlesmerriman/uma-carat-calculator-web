@@ -291,7 +291,7 @@ export default function CourseStrip({
 	// Across: rows of these heights. Down: the race is distance / 4 px long
 	// (300 to 900), so a 3600 m course scrolls with the page.
 	// Down the page the word columns share the width (no size).
-	const band = mini ? "10px" : vertical ? undefined : "32px"
+	const band = mini ? "12px" : vertical ? undefined : "32px"
 	const stripLength = `${Math.min(900, Math.max(300, distance / 4))}px`
 
 	const bands = (

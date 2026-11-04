@@ -29,6 +29,7 @@ import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
 import { useRaceParticipation } from "../../hooks/useRaceParticipation"
 import { useRaceRewards } from "../../hooks/useRaceRewards"
 import { ToggleSwitch } from "../ToggleSwitch"
+import CourseDrawer from "../course/CourseDrawer"
 import type { RefObject } from "react"
 import type { RaceEvent } from "../../types"
 
@@ -167,6 +168,10 @@ export function RaceEventCard({
 						</div>
 					)}
 				</div>
+
+				{/* The course map's drawer (notes/course-map-plan.md, PR 5): only
+				    for an event with a course, closed until opened. */}
+				{event.course && <CourseDrawer course={event.course} guideHref={pvpEventHref(refForRaceEvent(event))} />}
 			</div>
 		</div>
 	)
