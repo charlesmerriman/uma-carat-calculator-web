@@ -71,9 +71,11 @@ describe("the course map's layers", () => {
 		const list = within(await screen.findByRole("list", { name: "Accels on this course" }))
 		const rows = list.getAllByRole("button")
 		expect(rows).toHaveLength(3)
-		expect(rows[0]).toHaveTextContent("Angling and Scheming · unique of Seiun Sky")
+		expect(screen.getByText("3 here")).toBeInTheDocument()
+		expect(rows[0]).toHaveTextContent("Angling and Scheming")
+		expect(rows[0]).toHaveTextContent("unique of Seiun Sky")
 		expect(rows[0]).toHaveTextContent("Fires as the late race starts")
-		expect(rows[1]).toHaveTextContent("Angling and Scheming · inherited from Seiun Sky")
+		expect(rows[1]).toHaveTextContent("inherited from Seiun Sky")
 		// "All" says whose style a style-gated accel is.
 		expect(rows[2]).toHaveTextContent("Final Push · Front")
 		expect(rows[2]).toHaveTextContent("At a random point 12m to 250m before the late race starts")
@@ -95,12 +97,14 @@ describe("the course map's layers", () => {
 		act(() => setCourseLayers({ veterans: true }))
 		render(
 			<CourseLayersMenu signedIn veteransNote={null} veterans={[{
-				veteranId: 7, name: "Oguri Cap (Christmas)", head: null, shown: true,
+				veteranId: 7, name: "Oguri Cap (Christmas)", head: null, shown: true, colour: "var(--color-course-vet-3)",
 				skills: [{ skillId: 1, name: "Swinging Maestro", shown: false }, { skillId: 2, name: "Encroaching Shadow", shown: true }],
 			}]} />,
 		)
 		fireEvent.click(screen.getByRole("button", { name: "Layers" }))
 		expect(screen.getByRole("checkbox", { name: "Oguri Cap (Christmas)" })).toBeChecked()
+		// Her colour on the map, as a swatch beside her name.
+		expect((document.querySelector("[data-swatch]") as HTMLElement).style.background).toBe("var(--color-course-vet-3)")
 		const skills = within(screen.getByRole("list", { name: "Oguri Cap (Christmas)'s skills" }))
 		expect(skills.getByRole("checkbox", { name: "Encroaching Shadow" })).toBeChecked()
 		fireEvent.click(skills.getByRole("checkbox", { name: "Swinging Maestro" }))

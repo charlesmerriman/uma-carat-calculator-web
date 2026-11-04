@@ -2008,22 +2008,28 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   most useful first (`accelRows` on the API's `spurt.useful`, never shown as a number),
   eight then "Show all", by style with the guide tab's style first (`useStyleTab`, a store
   snapshot of the address); a unique, or its inherited white (the same name), shows the
-  uma's `FramedUma`; a tap lights one and opens the card. The button carries the count only
-  once the map is already cached.
+  uma's `FramedUma` and names her on a quieter line; a tap lights one and opens the card.
+  Beside the map the column scrolls within itself past the screen's height, so "Show all"
+  never strands the map at the top of a long page. The button carries the count only once
+  the map is already cached; the column's title carries it once loaded.
 - **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
   track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
   her a tick per skill of hers that can fire at a place here (`veteranSkillChoices`). Only
   the reader's ticks are stored (`useVeteranPicks`, by her trained uma's id, on the device);
   the defaults are every veteran shown and, of her skills, her accels only
-  (`veteranShown` / `skillShown`).
+  (`veteranShown` / `skillShown`). **Each veteran has a colour by team spot**
+  (`--color-course-vet-1/2/3`, assigned in `CourseSection`): her spans on the strip, her arc
+  on the track, a ring round her avatar at the head of her rows (`.course-ring`) and a swatch
+  beside her name in the menu; the lit skill keeps `--color-course-lit`.
 - **The spurt start on the track** has a tick across the track and its label inside the
   curve; with layers on, every other label sits past the outermost layer line.
 - **Skills set off by other skills** (section 6): the Layers menu's "Skills set off by other
   skills" (`layers.chains`, off by default, shown with the veterans' layer) draws a chained
   skill where her own skills set it off (`resolveChain`: the N-th of them by earliest and by
   latest point, then her skill's own zone start), and not at all when she has too few.
-- **Walk the course** (`useWalk`): one motion value, -1 when idle, read by both views; under
-  reduced motion it steps phase by phase.
+- **Walk the course is shelved** (owner, 2026-11-03: a runner on the course without the race
+  logic was a simulator in name only). The hook, the runner and the strip's cursor line are
+  gone; a runner belongs to the run view (`notes/course-map-later.md`), with the race logic.
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
   foot, closed by default, opening (a height animation under `useReducedMotion`) to the
   name, the course's REAL shape as a track (owner, 2026-11-03: never the strip or the
@@ -2035,7 +2041,10 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
 - **The draw-in**: the first paint is the finished strip (the motion value starts at 1);
   after mount an `IntersectionObserver` sweeps it in once, on a motion value through a
   `clip-path`, never a React state per frame. Reduced motion, or no observer (the test
-  DOM), keeps it still.
+  DOM), keeps it still. **Two quiet touches** (the visual plan's "Motion"): the spurt glow
+  on the track breathes on a looping motion value (still under reduced motion), and the
+  verdict card slides in from the headline's side through `AnimatePresence` (a fade under
+  reduced motion). Nothing loops that the reader can see change state, and nothing autoplays.
 
 ### Guide editor view (`components/pvp/editor/`)
 

@@ -2,7 +2,7 @@
  * The track view (components/course/CourseTrack.tsx) and the switches that
  * reach it (CourseSection): callouts in words beside the track, one per spot,
  * and Strip | Track | Both, Real shape | Schematic (the real shape fetched
- * once a track is shown), Walk the course.
+ * once a track is shown).
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -106,11 +106,17 @@ describe("CourseSection's switches", () => {
 		expect(screen.queryByRole("list", { name: "Track legend" })).toBeNull()
 	})
 
-	it("has a Walk the course button that turns into Stop", () => {
+	it("has no Walk the course button (shelved, owner 2026-11-03)", () => {
 		serveShape(null)
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-		fireEvent.click(screen.getByRole("button", { name: "Walk the course" }))
-		expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "Walk the course" })).toBeNull()
+	})
+
+	it("drops the corner chips from a two-lap course's compact track (Nakayama 3600)", () => {
+		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} widthPx={340} compact />)
+		expect(screen.getByText("Last spurt")).toBeInTheDocument()
+		expect(screen.getByText("Final straight")).toBeInTheDocument()
+		expect(screen.queryByText("Corner 1")).toBeNull()
 	})
 
 	it("draws the compact track over the strip on a phone, fetching the shape right away", async () => {

@@ -17,16 +17,15 @@
  * bands are percentages of the race, and whether a segment's metres fit beside
  * its words is an estimate from the text. On top of the record it draws the
  * course's own facts (courseFacts) plus any `overlays` a later layer hands it,
- * each span in its own colour (a veteran's, or the lit skill's gold), and an
- * optional `cursor` (a metre).
+ * each span in its own colour (a veteran's, or the lit skill's).
  *
  * Motion (owner, 2026-11-02): the first time it scrolls into view, the strip
  * sweeps in from the gate to the finish. The first paint is the finished strip
  * (the prerender's), the sweep runs after mount on a motion value (no React
  * re-render per frame), and reduced motion skips it.
  */
-import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
-import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion"
+import { useMemo, type CSSProperties, type ReactNode } from "react"
+import { AnimatePresence, motion, useMotionTemplate, useReducedMotion, useTransform } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
 	courseFacts,
@@ -68,15 +67,13 @@ interface CourseStripProps {
 	overlays?: CourseOverlays
 	/** What heads a group of layer rows: a veteran's avatar (CourseSection). */
 	laneHeads?: LaneHead[]
-	/** A metre to mark, still or moving (Walk the course). */
-	cursor?: number | MotionValue<number>
 	orientation?: Orientation
 	className?: string
 }
 
 // The label column across the page, and the marks' margin down it.
 const LABEL_PX = 60
-const MARGIN_PX = 96
+const MARGIN_PX = 88
 // Row heights across the page; down the page the columns share the width.
 const ROW_PX = 24
 const HEIGHT_PX = 40
@@ -136,7 +133,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 	} else {
 		words = share >= 0.06 ? label : share >= 0.025 ? shortLabel : undefined
 		const px = share * STRIP_PX
-		const wordsPx = (words?.length ?? 0) * 6.6 + 8 + (icon ? 14 : 0)
+		const wordsPx = (words?.length ?? 0) * 7 + 8 + (icon ? 14 : 0)
 		const fits = (text: string) => wordsPx + text.length * 5.2 + 22 < px
 		const long = rangeText(start, end)
 		const short = formatMetres(end)
@@ -150,7 +147,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 			{words && icon}
 			{words && (
 				<span
-					className={`relative z-10 font-bold ${vertical ? "px-0.5 text-center text-[10px] leading-[1.1] [overflow-wrap:anywhere]" : "truncate px-0.5 text-[11px] leading-none"}`}
+					className={`relative z-10 font-bold ${vertical ? "max-w-full overflow-hidden px-0.5 text-center text-[10px] leading-[1.1] break-words" : "truncate px-0.5 text-[11px] leading-none"}`}
 				>
 					{words}
 				</span>
@@ -169,7 +166,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
  * its segments in the track cell (the `data-band`), which is what the
  * marker lines run through.
  */
-function Row({ vertical, label, vlabel, band, size, children, className = "" }: {
+function Row({ vertical, label, vlabel, band, size, grow = 1, children, className = "" }: {
 	vertical: boolean
 	label: ReactNode
 	/** The column's name down the page, when the row's name won't fit a narrow column. */
@@ -177,12 +174,14 @@ function Row({ vertical, label, vlabel, band, size, children, className = "" }: 
 	band: string
 	/** The row's height across the page, or the column's width down it (flexible without one). */
 	size?: number
+	/** A flexible column's share of the width (the Course column takes more, its words are longer). */
+	grow?: number
 	children: ReactNode
 	className?: string
 }) {
 	if (vertical) {
 		return (
-			<div className={`flex min-w-0 flex-col ${size === undefined ? "flex-1" : "shrink-0"}`} style={size === undefined ? undefined : { width: size }}>
+			<div className={`flex min-w-0 flex-col ${size === undefined ? "" : "shrink-0"}`} style={size === undefined ? { flex: `${grow} 1 0%` } : { width: size }}>
 				<div className="flex h-4 items-center justify-center overflow-hidden text-[9px] uppercase leading-none tracking-[0.06em] text-gray-500">{vlabel ?? label}</div>
 				<div className={`relative flex-1 overflow-hidden rounded bg-gray-900/40 ${className}`} data-band={band}>{children}</div>
 			</div>
@@ -286,25 +285,6 @@ function MarkWords({ marker, inline = false }: { marker: CourseMarker; inline?: 
 	)
 }
 
-function Cursor({ cursor, distance, vertical }: { cursor: number | MotionValue<number>; distance: number; vertical: boolean }) {
-	// A still metre rides the same motion value as a moving one, so the line
-	// is placed one way whichever it is.
-	const still = useMotionValue(typeof cursor === "number" ? cursor : 0)
-	useEffect(() => {
-		if (typeof cursor === "number") still.set(cursor)
-	}, [cursor, still])
-	const source = typeof cursor === "number" ? still : cursor
-	const position = useTransform(source, (metre) => `${metreToFraction(metre, distance) * 100}%`)
-	// A negative metre is "no walk running" (useWalk): the line hides.
-	const opacity = useTransform(source, (metre) => (metre < 0 ? 0 : 1))
-	return (
-		<motion.div
-			className={`pointer-events-none absolute z-20 ${vertical ? "inset-x-0 h-0.5" : "inset-y-0 w-0.5"}`}
-			style={{ ...(vertical ? { top: position } : { left: position }), opacity, background: "var(--color-course-runner)" }}
-		/>
-	)
-}
-
 /** The draw-in as a clip that opens from the gate towards the finish (useDrawIn). */
 function useStripDrawIn(vertical: boolean) {
 	const { ref, progress } = useDrawIn<HTMLDivElement>()
@@ -317,7 +297,6 @@ export default function CourseStrip({
 	course,
 	overlays,
 	laneHeads = [],
-	cursor,
 	orientation = "horizontal",
 	className = "",
 }: CourseStripProps) {
@@ -345,11 +324,27 @@ export default function CourseStrip({
 	let litNamed = false
 	const layerLabel = (lane: number): ReactNode => {
 		const head = laneHeads.find((candidate) => candidate.firstLane === lane)
-		if (head) return <span className="inline-flex" style={{ "--course-ring": head.colour ?? LIT } as CSSProperties}>{head.head}</span>
+		// Her ring takes her colour (App.css, "Uma frames": .course-ring).
+		if (head) return <span className="course-ring inline-flex" style={{ "--course-ring": head.colour ?? LIT } as CSSProperties}>{head.head}</span>
 		if (laneHeads.some((candidate) => lane > candidate.firstLane && lane < candidate.firstLane + candidate.lanes)) return ""
 		if (litNamed) return ""
 		litNamed = true
 		return <span className="font-bold normal-case tracking-normal" style={{ color: LIT }}>Lit</span>
+	}
+
+	// Which group a layer row belongs to: the veteran whose rows cover it, else the lit skill's.
+	const groupOf = (lane: number): string => laneHeads.find((head) => lane >= head.firstLane && lane < head.firstLane + head.lanes)?.key ?? "lit"
+	const layerGroups: { key: string; label: ReactNode }[] = []
+	for (let lane = 0; lane < layerRows; lane++) {
+		const key = groupOf(lane)
+		if (layerGroups.some((group) => group.key === key)) continue
+		const head = laneHeads.find((candidate) => candidate.key === key)
+		layerGroups.push({
+			key,
+			label: head
+				? <span className="course-ring inline-flex [&_.uma-frame]:h-4 [&_.uma-frame]:w-4" style={{ "--course-ring": head.colour ?? LIT } as CSSProperties}>{head.head}</span>
+				: <span className="font-bold normal-case tracking-normal" style={{ color: LIT }}>Lit</span>,
+		})
 	}
 
 	// Down the page the race is distance / 2.4 px long (360 to 900), so a
@@ -360,7 +355,7 @@ export default function CourseStrip({
 		<>
 			{/* A flat course (Funabashi dirt 1600) has no profile and no hills to draw. */}
 			{hills.length > 0 && <HeightRow course={course} vertical={vertical} />}
-			<Row vertical={vertical} label="Phase" band="phases">
+			<Row vertical={vertical} label="Phase" band="phases" grow={0.8}>
 				{phases.map((phase, index) => (
 					<Segment
 						key={phase.start}
@@ -376,7 +371,7 @@ export default function CourseStrip({
 					/>
 				))}
 			</Row>
-			<Row vertical={vertical} label="Course" band="track" size={vertical ? undefined : ROW_PX} className={vertical ? "" : ""}>
+			<Row vertical={vertical} label="Course" band="track" size={vertical ? undefined : ROW_PX} grow={1.6}>
 				{track.map((part) => {
 					if (part.kind === "gap") return null
 					const isCorner = part.kind === "corner"
@@ -437,13 +432,28 @@ export default function CourseStrip({
 					))}
 				</Row>
 			)}
-			{layerRows > 0 && (
-				<div className={vertical ? "contents" : "flex flex-col gap-0.5"} data-band="layers">
+			{layerRows > 0 && !vertical && (
+				<div className="flex flex-col gap-0.5" data-band="layers">
 					{Array.from({ length: layerRows }, (_, lane) => (
-						<Row key={lane} vertical={vertical} label={layerLabel(lane)} band={`layer-${lane}`} size={vertical ? 26 : ROW_PX} className="bg-gray-900/25">
+						<Row key={lane} vertical={false} label={layerLabel(lane)} band={`layer-${lane}`} size={ROW_PX} className="bg-gray-900/25">
 							<AnimatePresence>
 								{layerSpans.filter((span) => (span.lane ?? 0) === lane).map((span) => (
-									<LayerSpan key={span.key ?? `${span.kind}-${span.start}-${lane}`} span={span} distance={distance} vertical={vertical} />
+									<LayerSpan key={span.key ?? `${span.kind}-${span.start}-${lane}`} span={span} distance={distance} vertical={false} />
+								))}
+							</AnimatePresence>
+						</Row>
+					))}
+				</div>
+			)}
+			{/* Down the page there is no room for a column per row: one narrow
+			    column per GROUP (the lit skill, each veteran), her spans sharing it. */}
+			{layerRows > 0 && vertical && (
+				<div className="contents" data-band="layers">
+					{layerGroups.map((group) => (
+						<Row key={group.key} vertical label={group.label} band={`layer-${group.key}`} size={16} className="bg-gray-900/25">
+							<AnimatePresence>
+								{layerSpans.filter((span) => groupOf(span.lane ?? 0) === group.key).map((span) => (
+									<LayerSpan key={span.key ?? `${span.kind}-${span.start}-${span.lane ?? 0}`} span={span} distance={distance} vertical />
 								))}
 							</AnimatePresence>
 						</Row>
@@ -469,7 +479,6 @@ export default function CourseStrip({
 			{labelled.map((marker) => (
 				<MarkLine key={`line-${marker.kind}-${marker.at}`} marker={marker} distance={distance} vertical={vertical} />
 			))}
-			{cursor !== undefined && <Cursor cursor={cursor} distance={distance} vertical={vertical} />}
 		</div>
 	)
 
