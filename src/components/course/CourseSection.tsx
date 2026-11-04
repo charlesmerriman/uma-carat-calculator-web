@@ -412,12 +412,14 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					</ul>
 				)}
 			</div>
-			{/* A phone: the compact track, then the strip down the page. */}
+			{/* A phone: the compact track, then the strip across the page like the
+			    desktop's (Henry, 2026-11-04: down the page read badly). Too-narrow
+			    segments fall back to short words or colour alone. */}
 			<div className="sm:hidden">
 				{narrow && phoneShape && (
 					<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact overlays={layer.overlays} className="mb-3" />
 				)}
-				<CourseStrip course={course} orientation="vertical" overlays={layer.overlays} laneHeads={layer.heads} />
+				<CourseStrip course={course} orientation="horizontal" overlays={layer.overlays} laneHeads={layer.heads} />
 			</div>
 			</div>
 			{/* Beside the map from lg up, under it below; mounted only while open. */}

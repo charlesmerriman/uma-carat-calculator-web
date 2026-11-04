@@ -1939,9 +1939,10 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   straight"). Slope chips name the stat a hill near it rewards ("Uphill at the spurt start:
   Power helps"; within 100 m, a presentation choice). Its marker is placed first and kept on
   a phone's compact track; its strip line is solid. A flat course draws no profile or hills.
-- **One `CourseStrip`, two orientations.** `CourseSection` renders a horizontal strip
-  (`hidden sm:block`) and a vertical one (`sm:hidden`) and lets CSS pick, because the page
-  is prerendered. Down the page the word columns share the width (a `Band` without a
+- **One `CourseStrip`, two orientations.** `CourseSection` renders the desktop block
+  (`hidden sm:block`) and the phone block (`sm:hidden`) and lets CSS pick, because the page
+  is prerendered. Both draw the strip ACROSS the page (Henry, 2026-11-04: the phone's
+  vertical strip read badly); `orientation="vertical"` is kept but unused. Down the page the word columns share the width (a `Band` without a
   `size`) and the words wrap; across, they truncate, and a part too narrow for its words
   shows a short form (a hill's percent) or only its colour.
 - **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any
