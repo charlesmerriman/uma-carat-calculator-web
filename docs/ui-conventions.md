@@ -1895,6 +1895,37 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
+### The course map (`components/course/`)
+
+The plan is `notes/course-map-plan.md`. A CM or LoH with a `course` (the API's nested
+record, `types/events.ts` `RaceCourse`) gets a **Course map** block at the foot of the
+guide's `EventHeader` (`CourseSection`): the course's name, the strip, the chips, and the
+same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidden`).
+
+- **`utils/courseGeometry.ts` is the one place a metre becomes a position**, and where the
+  phases, sections, position keep end, hill heights and chips are derived. The game's
+  fractions are `GAME_GEOMETRY`, a parameter with defaults. Never compute a position in a
+  component.
+- **The phases are Early-race, Mid-race and Late-race, Late-race to the finish**, with a
+  thin unlabelled line at 5/6 and a "Last spurt can start here" marker at 2/3 (owner,
+  2026-11-02): in the game's text "late-race" is 2/3 onward and "last spurt" the sprint.
+- **One `CourseStrip`, two orientations.** `CourseSection` renders a horizontal strip
+  (`hidden sm:block`) and a vertical one (`sm:hidden`) and lets CSS pick, because the page
+  is prerendered. Down the page the word columns share the width (a `Band` without a
+  `size`) and the words wrap; across, they truncate, and a part too narrow for its words
+  shows a short form (a hill's percent) or only its colour.
+- **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any
+  `overlays` (`{spans, markers}` in metres) and an optional `cursor` (a metre or a motion
+  value). A later layer is a pure function to that shape; it never changes the strip.
+- **Words sit above the lines**: a segment's label has its band's fill as a background and
+  `z-10`, so a marker line through the middle never cuts it.
+- **Colours** are `--color-course-*` in `index.css`'s `:root` (fills only; the component
+  picks a light or dark ink per fill).
+- **The draw-in**: the first paint is the finished strip (the motion value starts at 1);
+  after mount an `IntersectionObserver` sweeps it in once, on a motion value through a
+  `clip-path`, never a React state per frame. Reduced motion, or no observer (the test
+  DOM), keeps it still.
+
 ### Guide editor view (`components/pvp/editor/`)
 
 `?view=editor`, the fourth tab, drawn only when `account.guide_editor` is true (staff
