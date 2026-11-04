@@ -69,16 +69,23 @@ describe("Chukyo turf 1200 m, the worked example", () => {
 		])
 	})
 
-	it("reads off the chips: the spurt start exactly, and the stat each hill near it rewards", () => {
+	it("reads off the facts: the spurt start exactly, and the stat each hill near it rewards", () => {
 		expect(derivedFacts(CHUKYO_1200)).toEqual([
 			"Final corner from 550m",
 			"Final straight 412m",
-			"Late race starts on the final straight, 12m into it",
+			"Last spurt can start on the final straight, 12m into it",
 			// The uphill begins 75 m into the spurt; the downhill runs over it.
+			// That uphill is also the climb in the last 400 m, said once.
 			"Uphill at the late-race start: Power helps",
 			"Downhill into the late race: Wit helps",
-			"2% climb in the last 400m",
 		])
+	})
+
+	it("names a climb in the last 400 m only when it isn't the spurt's own uphill", () => {
+		// The uphill moved to the last 200 m: too far from the spurt to be its hill.
+		const lateClimb = { ...CHUKYO_1200, slopes: [{ start: 1000, length: 150, slope: 20000 }] }
+		expect(derivedFacts(lateClimb)).toContain("2% climb in the last 400m")
+		expect(derivedFacts(lateClimb)).not.toContain("Uphill at the late-race start: Power helps")
 	})
 
 	it("says what the late race starts on, how much of it is left and what comes next", () => {
@@ -110,7 +117,7 @@ describe("courses that aren't the worked example", () => {
 			"Final corner from 1,950m",
 			"Final straight 300m",
 			// 1,600 m is on the straight to 1,800 m, where corner 3 starts.
-			"Late race starts on a straight, 200m before corner 3",
+			"Last spurt can start on a straight, 200m before corner 3",
 		])
 	})
 
@@ -119,7 +126,7 @@ describe("courses that aren't the worked example", () => {
 		expect(corners).toEqual(["Corner 1", "Corner 2", "Corner 3", "Corner 4", "Corner 1", "Corner 2", "Corner 3", "Corner 4"])
 		expect(trackParts(NAKAYAMA_3600).some((part) => part.kind === "gap")).toBe(false)
 		// 2/3 of 3600 is 2400, on lap two's corner 2 (2225 to 2475).
-		expect(derivedFacts(NAKAYAMA_3600)).toContain("Late race starts in corner 2, 75m before a straight")
+		expect(derivedFacts(NAKAYAMA_3600)).toContain("Last spurt can start in corner 2, 75m before a straight")
 	})
 
 	it("says how little of the final corner is left at the spurt (CM 22, Tokyo dirt 1600)", () => {
@@ -128,9 +135,9 @@ describe("courses that aren't the worked example", () => {
 		expect(derivedFacts(TOKYO_DIRT_1600)).toEqual([
 			"Final corner from 875m",
 			"Final straight 501m",
-			"Late race starts in corner 4, 32m before the final straight",
+			"Last spurt can start in corner 4, 32m before the final straight",
+			// Its uphill runs to 1,350 m, into the last 400 m: named once.
 			"Uphill at the late-race start: Power helps",
-			"1.5% climb in the last 400m",
 		])
 	})
 

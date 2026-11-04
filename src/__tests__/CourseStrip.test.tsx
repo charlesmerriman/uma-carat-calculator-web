@@ -1,8 +1,8 @@
 /**
  * The course strip (components/course/CourseStrip.tsx) and the block that
- * holds it in a guide's header (CourseSection): bands at the right places,
- * words on the segments, the markers, the phone's vertical
- * strip, and the same course in words for screen readers.
+ * holds it in a guide's header (CourseSection): rows at the right places,
+ * words on the segments, the marks, the phone's vertical strip, the headline
+ * that reads the course off, and the same course in words for screen readers.
  */
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
@@ -11,11 +11,12 @@ import CourseStrip from "../components/course/CourseStrip"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import { CHUKYO_1200, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
 
-/** The band's box: the segment that holds a label. */
+/** The segment that holds a label. */
 function segment(label: string) {
 	return screen.getByText(label).parentElement as HTMLElement
 }
 
+/** A row's track cell (the segments' box), by its band name. */
 function band(container: HTMLElement, name: string) {
 	return container.querySelector(`[data-band="${name}"]`) as HTMLElement
 }
@@ -38,25 +39,31 @@ describe("CourseStrip, across the page", () => {
 		])
 	})
 
-	it("keeps the end metre alone on a stretch too narrow for both", () => {
-		// Chukyo's corner 4 is 238 of 1,200 m wide (20%): both. Its corner 3,
-		// 250 m: both. A 1,200 m course's 100 m uphill (8%): no metres at all.
+	it("shows a stretch's metres only where they fit beside its words", () => {
+		// Chukyo's corner 3, 250 of 1,200 m: both metres. Its 100 m uphill
+		// (8%): the triangle and the words leave no room for metres at all.
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
 		const hills = within(band(container, "hills"))
 		expect(hills.queryByText("875–975m")).toBeNull()
+		expect(hills.queryByText("975m")).toBeNull()
 		expect(within(band(container, "track")).getByText("300–550m")).toBeInTheDocument()
 	})
 
-	it("labels the markers with their metres", () => {
+	it("names each row in the label column", () => {
+		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
+		for (const name of ["Height", "Phase", "Course", "Slope", "Section"]) expect(within(container).getByText(name)).toBeInTheDocument()
+	})
+
+	it("labels the marks with their metres, the spurt first in the brand colour", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
 		const markers = within(band(container, "markers"))
-		expect(markers.getByText("Last spurt")).toBeInTheDocument()
+		expect(markers.getByText("Last spurt")).toHaveClass("font-extrabold")
 		expect(markers.getByText("Position keep ends")).toBeInTheDocument()
 		expect(markers.getByText("800m")).toBeInTheDocument()
 		expect(markers.getByText("Halfway")).toBeInTheDocument()
 	})
 
-	it("shows the ground band only where the ground changes (Tokyo dirt 1600's turf start)", () => {
+	it("shows the ground row only where the ground changes (Tokyo dirt 1600's turf start)", () => {
 		const { container, unmount } = render(<CourseStrip course={TOKYO_DIRT_1600} />)
 		expect(band(container, "ground")).not.toBeNull()
 		expect(within(band(container, "ground")).getByText("Dirt")).toBeInTheDocument()
@@ -79,9 +86,30 @@ describe("CourseStrip, across the page", () => {
 		expect([...track.children].some((child) => (child as HTMLElement).style.left === "0%")).toBe(false)
 	})
 
+	it("colours a layer's spans in their own colour, the lit skill's by default", () => {
+		const { container } = render(
+			<CourseStrip
+				course={CHUKYO_1200}
+				overlays={{
+					spans: [
+						{ start: 550, end: 788, kind: "random", label: "Final Push", lane: 0 },
+						{ start: 300, end: 550, kind: "fixed", label: "Swinging Maestro", lane: 1, colour: "var(--color-course-vet-1)" },
+					],
+					markers: [],
+				}}
+				laneHeads={[{ key: "spot-1", firstLane: 1, lanes: 1, head: <span>avatar</span>, colour: "var(--color-course-vet-1)" }]}
+			/>,
+		)
+		const layers = band(container, "layers")
+		expect(within(layers).getByText("Lit")).toBeInTheDocument()
+		expect(within(layers).getByText("avatar")).toBeInTheDocument()
+		const maestro = within(layers).getByText("Swinging Maestro").parentElement as HTMLElement
+		expect(maestro.style.background).toBe("var(--color-course-vet-1)")
+	})
+
 	it("paints the finished strip first: the draw-in only ever runs after mount", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
-		const reveal = band(container, "elevation").parentElement as HTMLElement
+		const reveal = container.querySelector("[data-strip-rows]") as HTMLElement
 		expect(reveal.style.clipPath).toBe("inset(0 0% 0 0)")
 	})
 
@@ -92,19 +120,21 @@ describe("CourseStrip, across the page", () => {
 })
 
 describe("CourseStrip variants", () => {
-	it("vertical: the race runs down the page", () => {
-		render(<CourseStrip course={CHUKYO_1200} orientation="vertical" />)
+	it("vertical: the race runs down the page, the marks named in the margin", () => {
+		const { container } = render(<CourseStrip course={CHUKYO_1200} orientation="vertical" />)
 		expect(segment("Corner 3").style.top).toBe("25%")
 		expect(segment("Corner 3").style.left).toBe("")
+		expect(within(band(container, "markers")).getByText("Halfway")).toBeInTheDocument()
 	})
 })
 
 describe("CourseSection", () => {
-	it("names the course, reads off the chips and says it all in words", () => {
+	it("names the course, leads with the spurt and says it all in words", () => {
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
 		expect(screen.getByText("Chukyo turf 1,200m, left-handed")).toBeInTheDocument()
-		const chips = within(screen.getByRole("list", { name: "Read off the course" }))
-		expect(chips.getByText("Final straight 412m")).toBeInTheDocument()
+		const headline = screen.getByLabelText("Read off the course")
+		expect(headline).toHaveTextContent("Last spurt can start on the final straight, 12m into it")
+		expect(headline).toHaveTextContent("Final straight 412m")
 		expect(screen.getByText("Corner 3 from 300m to 550m")).toBeInTheDocument()
 		expect(screen.getByText("Late-race from 800m to 1,000m")).toBeInTheDocument()
 		expect(screen.getByText("Last spurt from 1,000m to the finish")).toBeInTheDocument()

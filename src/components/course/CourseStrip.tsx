@@ -1,19 +1,24 @@
 /**
- * The course as a strip: the race from the gate to the finish, read in bands
- * (the hill profile, the hills, the ground where it changes, the straights and
- * corners, the phases, the 24 sections, the metres). After the mock
- * (notes/course-map/mocks/01-guide-desktop-strip.png) and the team's input: the
- * words go on the segments, never symbols (Henry, 2026-11-01).
+ * The course as a strip: the race from the gate to the finish, read in rows
+ * (the height profile, the phases, the straights and corners, the hills, the
+ * ground where it changes, the layers, the 24 sections, the metres), each row
+ * named in a label column, the marks' words above. The look is the overhaul's
+ * ruler (notes/course-map-visual-plan.md, "The ruler"); the words go on the
+ * segments, never symbols (Henry, 2026-11-01), with Daptrius's triangles on
+ * the hills.
  *
  * One component, two orientations (owner, 2026-10-29): across the page, or,
- * on a phone, DOWN it, the bands becoming columns and the words staying
- * horizontal. The caller renders one of each and lets CSS pick, because
- * /app/pvp is prerendered and nothing at render time may read the screen.
+ * on a phone, DOWN it, the rows becoming columns and the words staying
+ * horizontal, the marks' words in a margin at the right. The caller renders
+ * one of each and lets CSS pick, because /app/pvp is prerendered and nothing
+ * at render time may read the screen.
  *
  * Every position comes from utils/courseGeometry.ts, and nothing is measured:
- * bands are percentages of the race. On top of the record it draws the
+ * bands are percentages of the race, and whether a segment's metres fit beside
+ * its words is an estimate from the text. On top of the record it draws the
  * course's own facts (courseFacts) plus any `overlays` a later layer hands it,
- * and an optional `cursor` (a metre). See "Groundwork" in the plan.
+ * each span in its own colour (a veteran's, or the lit skill's gold), and an
+ * optional `cursor` (a metre).
  *
  * Motion (owner, 2026-11-02): the first time it scrolls into view, the strip
  * sweeps in from the gate to the finish. The first paint is the finished strip
@@ -34,122 +39,58 @@ import {
 	slopeParts,
 	surfaceParts,
 	trackParts,
+	type CourseMarker,
 	type CourseOverlays,
+	type CourseSpan,
 } from "../../utils/courseGeometry"
+import CourseIcon from "./CourseIcon"
 import { useDrawIn } from "./useDrawIn"
 
 type Orientation = "horizontal" | "vertical"
+
+export interface LaneHead {
+	key: string
+	firstLane: number
+	lanes: number
+	/** The veteran's avatar (FramedUma). */
+	head: ReactNode
+	/** Her colour, on her rows (CourseSection assigns one per team spot). */
+	colour?: string
+}
 
 interface CourseStripProps {
 	course: RaceCourse
 	/**
 	 * Layers on top of the course's own facts: a skill's zones, the veterans'
-	 * skills (utils/courseLayers.ts). Spans other than phases go in the layers
-	 * band, one row per `lane`; a span with a `key` pops in and out by it.
+	 * skills (utils/courseLayers.ts). Spans other than phases go in the layer
+	 * rows, one row per `lane`; a span with a `key` pops in and out by it.
 	 */
 	overlays?: CourseOverlays
 	/** What heads a group of layer rows: a veteran's avatar (CourseSection). */
-	laneHeads?: { key: string; firstLane: number; lanes: number; head: ReactNode }[]
+	laneHeads?: LaneHead[]
 	/** A metre to mark, still or moving (Walk the course). */
 	cursor?: number | MotionValue<number>
 	orientation?: Orientation
 	className?: string
 }
 
-const LAYER_ROW_PX = 18
-const LAYER_HEAD_PX = 24
-// The layer kinds' looks: a fixed stretch solid, a random point striped, an
-// "anywhere" a dashed outline over the whole course, a passive a quiet band.
-const LAYER_LOOKS: Record<string, CSSProperties> = {
-	fixed: { background: "color-mix(in srgb, var(--color-brand) 75%, transparent)" },
-	random: {
-		background: "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 70%, transparent) 0 6px, color-mix(in srgb, var(--color-brand) 30%, transparent) 6px 12px)",
-	},
-	point: { background: "var(--color-brand)" },
-	anywhere: { border: "1px dashed var(--color-brand)" },
-	passive: { background: "color-mix(in srgb, var(--color-brand) 18%, transparent)" },
-	// The carry-over window: where a speed skill must fire to run into the spurt.
-	window: { background: "color-mix(in srgb, var(--color-gray-300) 20%, transparent)", border: "1px dashed var(--color-gray-300)" },
-}
+// The label column across the page, and the marks' margin down it.
+const LABEL_PX = 60
+const MARGIN_PX = 96
+// Row heights across the page; down the page the columns share the width.
+const ROW_PX = 24
+const HEIGHT_PX = 40
+const SECTIONS_PX = 16
+const MARK_ROW_PX = 15
+// About how wide the strip is on a desktop: the words and the metres are
+// sized against it, since nothing on a prerendered page is measured.
+const STRIP_PX = 1000
+const LIT = "var(--color-course-lit)"
 
-/**
- * The layers band: each layer span in its row, its label on it, popping in
- * along the race (a short stagger by where it starts) and fading out
- * together. Under reduced motion a plain fade.
- */
-function LayersBand({ spans, laneHeads, distance, vertical }: {
-	spans: (CourseOverlays["spans"][number] & { key?: string })[]
-	laneHeads: NonNullable<CourseStripProps["laneHeads"]>
-	distance: number
-	vertical: boolean
-}) {
-	const reduceMotion = useReducedMotion()
-	const rows = Math.max(1, ...spans.map((span) => (span.lane ?? 0) + 1), ...laneHeads.map((head) => head.firstLane + head.lanes))
-	const headed = laneHeads.length > 0 && !vertical
-	return (
-		<div className={vertical ? "flex h-full shrink-0" : "flex w-full shrink-0"} data-band="layers">
-			{headed && (
-				<div className="relative shrink-0" style={{ width: LAYER_HEAD_PX, height: rows * LAYER_ROW_PX }}>
-					{laneHeads.map((head) => (
-						<div key={head.key} className="absolute left-0.5" style={{ top: head.firstLane * LAYER_ROW_PX + 1, width: LAYER_HEAD_PX - 4 }}>
-							{head.head}
-						</div>
-					))}
-				</div>
-			)}
-			<div
-				className="relative min-w-0 flex-1 bg-gray-900/40"
-				style={vertical ? { width: rows * 14 } : { height: rows * LAYER_ROW_PX }}
-			>
-				<AnimatePresence>
-					{spans.map((span) => {
-						const lane = span.lane ?? 0
-						const point = span.kind === "point" || span.start === span.end
-						const from = metreToFraction(span.start, distance) * 100
-						const size = Math.max(point ? 0.6 : 0.4, metreToFraction(span.end, distance) * 100 - from)
-						const place: CSSProperties = vertical
-							? { top: `${from}%`, height: `${size}%`, left: lane * 14 + 1, width: 12 }
-							: { left: `${from}%`, width: `${size}%`, top: lane * LAYER_ROW_PX + 1, height: LAYER_ROW_PX - 2 }
-						return (
-							<motion.div
-								key={span.key ?? `${span.kind}-${span.start}-${lane}`}
-								className="absolute flex items-center overflow-visible rounded-sm"
-								style={{ ...place, ...LAYER_LOOKS[span.kind] }}
-								// The skill's verdict on hover; the overhaul may give it a card.
-								title={span.detail || undefined}
-								initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.85 }}
-								animate={{ opacity: 1, scale: 1, transition: { delay: reduceMotion ? 0 : (span.start / distance) * 0.35, duration: 0.2 } }}
-								exit={{ opacity: 0, transition: { duration: 0.15 } }}
-							>
-								{span.label && !vertical && (
-									<span className="relative z-10 ml-1 whitespace-nowrap rounded-sm bg-gray-900/80 px-1 text-[10px] font-semibold leading-tight text-gray-100">
-										{span.label}
-									</span>
-								)}
-							</motion.div>
-						)
-					})}
-				</AnimatePresence>
-			</div>
-		</div>
-	)
-}
-
-// Light ink on the darker fills, dark ink on the light ones (the mock's).
+// Light ink on the darker fills, dark on the light ones.
 const LIGHT_INK = "#f8fafc"
-const DARK_INK = "#2b2708"
-const PHASE_FILLS = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-final)"]
-const PHASE_INKS = [LIGHT_INK, DARK_INK, LIGHT_INK, LIGHT_INK]
-
-// A part narrower than this share of the race swaps its words for the short
-// form ("Down 2%"), and below the second keeps only its colour: the words
-// would only be cut off.
-const MIN_LABEL_SHARE = 0.06
-const MIN_SHORT_LABEL_SHARE = 0.025
-const MIN_END_LABEL_SHARE = 0.1
-// Wide enough for its start and end metres ("290–540m", Daptrius's render)
-// in place of the end metre alone.
-const MIN_RANGE_SHARE = 0.12
+const PHASE_FILLS = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-spurt)"]
+const PHASE_INKS = ["var(--color-course-ink-early)", "var(--color-course-ink-mid)", "var(--color-course-ink-late)", "var(--color-course-ink-spurt)"]
 
 /** "290–540m": a stretch's metres, as Daptrius's render writes them. */
 function rangeText(start: number, end: number): string {
@@ -169,45 +110,53 @@ function at(metre: number, distance: number, vertical: boolean): CSSProperties {
 }
 
 /**
- * One stretch of a band: its colour, its words, and its metres: start to end
- * when it is wide enough (`ranged`), else the metre where it ends.
+ * One stretch of a band: its colour, its words, and its metres (start to end
+ * when both fit beside the words, else the end metre, else nothing). Down
+ * the page the words wrap and the end metre shows on a tall enough stretch.
  */
-function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, endLabel, ranged = false }: {
+function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, icon, ranged = false }: {
 	start: number
 	end: number
 	distance: number
 	vertical: boolean
 	fill: string
 	ink: string
-	label?: string
+	label: string
 	shortLabel?: string
-	endLabel?: string
+	icon?: ReactNode
+	/** Show the start and end metres where they fit, not only the end. */
 	ranged?: boolean
 }) {
 	const share = metreToFraction(end, distance) - metreToFraction(start, distance)
-	const words = share >= MIN_LABEL_SHARE ? label : share >= MIN_SHORT_LABEL_SHARE ? shortLabel : undefined
-	const metres = ranged && share >= MIN_RANGE_SHARE ? rangeText(start, end) : share >= MIN_END_LABEL_SHARE ? endLabel : undefined
+	let words: string | undefined
+	let metres: string | undefined
+	if (vertical) {
+		words = share >= 0.035 ? label : undefined
+		metres = share >= 0.08 && end < distance ? formatMetres(end) : undefined
+	} else {
+		words = share >= 0.06 ? label : share >= 0.025 ? shortLabel : undefined
+		const px = share * STRIP_PX
+		const wordsPx = (words?.length ?? 0) * 6.6 + 8 + (icon ? 14 : 0)
+		const fits = (text: string) => wordsPx + text.length * 5.2 + 22 < px
+		const long = rangeText(start, end)
+		const short = formatMetres(end)
+		metres = ranged && fits(long) ? long : end < distance && fits(short) ? short : undefined
+	}
 	return (
 		<div
-			className={`absolute flex items-center justify-center overflow-hidden ${vertical ? "inset-x-0" : "inset-y-0"}`}
+			className={`absolute flex items-center justify-center gap-0.5 overflow-hidden ${vertical ? "inset-x-0" : "inset-y-0"}`}
 			style={{ ...place(start, end, distance, vertical), background: fill, color: ink }}
 		>
-			{/* On the band's own colour and above the marker lines, so a line
-			    passing through the middle never cuts the words. */}
+			{words && icon}
 			{words && (
 				<span
-					className={`relative z-10 rounded-sm px-1 font-semibold ${
-						// Down the page a column is ~60px wide: the words wrap
-						// onto a second line instead of being cut off.
-						vertical ? "break-words text-center text-[10px] leading-tight" : "truncate text-[11px] leading-none"
-					}`}
-					style={{ background: fill }}
+					className={`relative z-10 font-bold ${vertical ? "px-0.5 text-center text-[10px] leading-[1.1] [overflow-wrap:anywhere]" : "truncate px-0.5 text-[11px] leading-none"}`}
 				>
 					{words}
 				</span>
 			)}
 			{metres && (
-				<span className={`absolute z-10 text-[9px] leading-none opacity-80 ${vertical ? "bottom-0.5 left-1" : "bottom-0.5 right-1"}`}>
+				<span className={`absolute z-10 text-[9px] leading-none opacity-80 ${vertical ? "bottom-0.5 right-1" : "bottom-px right-1"}`}>
 					{metres}
 				</span>
 			)}
@@ -216,95 +165,124 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 }
 
 /**
- * A band of the strip: a row across, or a column down. Without a `size` a
- * column shares the width left over with the other flexible ones.
+ * A row of the strip, or a column down the page: its name in the label cell,
+ * its segments in the track cell (the `data-band`), which is what the
+ * marker lines run through.
  */
-function Band({ vertical, size, label, children }: { vertical: boolean; size?: string; label: string; children: ReactNode }) {
-	const flexible = size === undefined
+function Row({ vertical, label, vlabel, band, size, children, className = "" }: {
+	vertical: boolean
+	label: ReactNode
+	/** The column's name down the page, when the row's name won't fit a narrow column. */
+	vlabel?: ReactNode
+	band: string
+	/** The row's height across the page, or the column's width down it (flexible without one). */
+	size?: number
+	children: ReactNode
+	className?: string
+}) {
+	if (vertical) {
+		return (
+			<div className={`flex min-w-0 flex-col ${size === undefined ? "flex-1" : "shrink-0"}`} style={size === undefined ? undefined : { width: size }}>
+				<div className="flex h-4 items-center justify-center overflow-hidden text-[9px] uppercase leading-none tracking-[0.06em] text-gray-500">{vlabel ?? label}</div>
+				<div className={`relative flex-1 overflow-hidden rounded bg-gray-900/40 ${className}`} data-band={band}>{children}</div>
+			</div>
+		)
+	}
 	return (
-		<div
-			className={`relative overflow-hidden bg-gray-900/40 ${
-				vertical ? (flexible ? "h-full min-w-0 flex-1" : "h-full shrink-0") : "w-full shrink-0"
-			}`}
-			style={flexible ? undefined : vertical ? { width: size } : { height: size }}
-			data-band={label}
-		>
-			{children}
+		<div className="flex w-full shrink-0" style={{ height: size ?? ROW_PX }}>
+			<div className="flex shrink-0 items-center justify-end pr-2 text-[10px] uppercase leading-none tracking-[0.06em] text-gray-500" style={{ width: LABEL_PX }}>{label}</div>
+			<div className={`relative min-w-0 flex-1 overflow-hidden rounded-sm bg-gray-900/40 ${className}`} data-band={band}>{children}</div>
 		</div>
 	)
 }
 
-function ElevationBand({ course, vertical, size }: { course: RaceCourse; vertical: boolean; size: string }) {
+/** The height profile: the course's climbs and drops, relative to the start. */
+function HeightRow({ course, vertical }: { course: RaceCourse; vertical: boolean }) {
 	const profile = elevationProfile(course)
 	const heights = profile.map((point) => point.height)
 	const low = Math.min(...heights)
 	const range = Math.max(...heights) - low
-	// Height as 15 to 85 across the band's depth; a flat course sits mid-way.
+	// Height as 15 to 85 across the row's depth; a flat course sits mid-way.
 	const depth = (height: number) => (range === 0 ? 50 : 15 + ((height - low) / range) * 70)
-	const line = profile.map((point) =>
-		vertical ? `${depth(point.height)},${point.at}` : `${point.at},${100 - depth(point.height)}`,
-	)
-	const fill = vertical
-		? `0,0 ${line.join(" ")} 0,${course.distance}`
-		: `${line.join(" ")} ${course.distance},100 0,100`
+	const line = profile.map((point) => (vertical ? `${depth(point.height)},${point.at}` : `${point.at},${100 - depth(point.height)}`))
+	const fill = vertical ? `0,0 ${line.join(" ")} 0,${course.distance}` : `${line.join(" ")} ${course.distance},100 0,100`
 	return (
-		<Band vertical={vertical} size={size} label="elevation">
-			<svg
-				viewBox={vertical ? `0 0 100 ${course.distance}` : `0 0 ${course.distance} 100`}
-				preserveAspectRatio="none"
-				className="block h-full w-full"
-			>
-				<polygon points={fill} fill="var(--color-course-elevation)" />
-				<polyline
-					points={line.join(" ")}
-					fill="none"
-					stroke="var(--color-course-elevation-line)"
-					strokeWidth="2"
-					vectorEffect="non-scaling-stroke"
-				/>
+		<Row vertical={vertical} label="Height" vlabel="" band="elevation" size={vertical ? 30 : HEIGHT_PX}>
+			<svg viewBox={vertical ? `0 0 100 ${course.distance}` : `0 0 ${course.distance} 100`} preserveAspectRatio="none" className="block h-full w-full">
+				<polygon points={fill} fill="var(--color-course-height)" />
+				<polyline points={line.join(" ")} fill="none" stroke="var(--color-course-height-line)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
 			</svg>
-		</Band>
+		</Row>
 	)
 }
 
-function SectionsBand({ distance, vertical, size }: { distance: number; vertical: boolean; size: string }) {
-	const bounds = sectionBoundaries(distance)
+/** One layer span: solid where it fires, striped for a random point, a dot for a spot, dashed for a window. */
+function LayerSpan({ span, distance, vertical }: { span: CourseSpan & { key?: string }; distance: number; vertical: boolean }) {
+	const reduceMotion = useReducedMotion()
+	const colour = span.colour ?? LIT
+	const point = span.kind === "point" || span.start === span.end
+	const from = metreToFraction(span.start, distance) * 100
+	const size = Math.max(point ? 0.6 : 0.4, metreToFraction(span.end, distance) * 100 - from)
+	const box: CSSProperties = vertical
+		? { top: `${from}%`, height: `${size}%`, left: 4, right: 4 }
+		: { left: `${from}%`, width: `${size}%`, top: 3, bottom: 3 }
+	const look: CSSProperties = span.kind === "random"
+		? { background: `repeating-linear-gradient(135deg, ${colour} 0 5px, color-mix(in srgb, ${colour} 35%, transparent) 5px 10px)` }
+		: span.kind === "window"
+			? { border: "1px dashed var(--color-gray-300)" }
+			: span.kind === "anywhere"
+				? { border: `1px dashed ${colour}` }
+				: span.kind === "passive"
+					? { background: `color-mix(in srgb, ${colour} 18%, transparent)` }
+					: { background: colour }
 	return (
-		<Band vertical={vertical} size={size} label="sections">
-			{bounds.slice(1).map((end, index) => (
-				<div
-					key={end}
-					className={`absolute flex items-center justify-center border-gray-700/60 text-[9px] leading-none text-gray-400 ${vertical ? "inset-x-0 border-b" : "inset-y-0 border-r"}`}
-					style={place(bounds[index], end, distance, vertical)}
-				>
-					{index + 1}
-				</div>
-			))}
-		</Band>
-	)
-}
-
-function MetreRuler({ distance, vertical, size }: { distance: number; vertical: boolean; size: string }) {
-	const ticks = rulerTicks(distance)
-	return (
-		<div className={`relative ${vertical ? "h-full" : "w-full"}`} style={vertical ? { width: size } : { height: size }}>
-			{ticks.map((tick, index) => (
+		<motion.div
+			className={`absolute flex items-center overflow-visible ${point ? "rounded-full" : "rounded-[3px]"}`}
+			style={{ ...box, ...look }}
+			// The skill's verdict on hover; the card says it in full (CourseSection).
+			title={span.detail || undefined}
+			initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.85 }}
+			animate={{ opacity: 1, scale: 1, transition: { delay: reduceMotion ? 0 : (span.start / distance) * 0.35, duration: 0.2 } }}
+			exit={{ opacity: 0, transition: { duration: 0.15 } }}
+		>
+			{span.label && !vertical && !point && (
 				<span
-					key={tick}
-					className="absolute whitespace-nowrap text-[10px] leading-none text-gray-400"
-					style={{
-						...at(tick, distance, vertical),
-						// The first and last labels hug the ends; the rest centre on their tick.
-						transform: vertical
-							? index === 0 ? undefined : index === ticks.length - 1 ? "translateY(-100%)" : "translateY(-50%)"
-							: index === 0 ? undefined : index === ticks.length - 1 ? "translateX(-100%)" : "translateX(-50%)",
-						...(vertical ? { right: 4 } : { top: 3 }),
-					}}
+					className="relative z-10 ml-1 whitespace-nowrap rounded-[3px] px-1 text-[10px] font-bold leading-tight"
+					style={span.kind === "window"
+						? { color: "var(--color-gray-300)", background: "var(--color-gray-900)" }
+						: { color: "#0b0b0f", background: `color-mix(in srgb, ${colour} 85%, #fff)` }}
 				>
-					{tick.toLocaleString("en-US")}
+					{span.label}
 				</span>
-			))}
-		</div>
+			)}
+		</motion.div>
+	)
+}
+
+/** The marks' lines through every row (the spurt solid in gold, the heal check dashed green, the rest dashed). */
+function MarkLine({ marker, distance, vertical }: { marker: CourseMarker; distance: number; vertical: boolean }) {
+	const spurt = marker.kind === "spurt-start"
+	const heal = marker.kind === "heal-check"
+	return (
+		<div
+			className={`pointer-events-none absolute ${vertical ? "inset-x-0 border-t" : "inset-y-0 border-l"} ${
+				spurt ? "border-2 border-brand" : heal ? "border-dashed border-[color:var(--color-course-heal)]" : "border-dashed border-gray-100/55"
+			} ${spurt ? (vertical ? "border-x-0 border-b-0" : "border-y-0 border-r-0") : ""}`}
+			style={at(marker.at, distance, vertical)}
+		/>
+	)
+}
+
+function MarkWords({ marker, inline = false }: { marker: CourseMarker; inline?: boolean }) {
+	const spurt = marker.kind === "spurt-start"
+	const heal = marker.kind === "heal-check"
+	return (
+		// In the phone's margin (`inline`) the words may wrap onto a second line.
+		<span className={`inline-flex items-center gap-x-1 ${inline ? "flex-wrap leading-tight" : "whitespace-nowrap leading-none px-1"} ${spurt ? "text-[11px] text-brand" : heal ? "text-[10px] text-[color:var(--color-course-heal)]" : "text-[10px] text-gray-400"}`}>
+			{spurt && <CourseIcon name="flag" className="h-3 w-3" />}
+			<span className={spurt ? "font-extrabold" : "font-semibold"}>{spurt ? "Last spurt" : marker.label}</span>
+			<span className="opacity-80">{formatMetres(marker.at)}</span>
+		</span>
 	)
 }
 
@@ -321,8 +299,8 @@ function Cursor({ cursor, distance, vertical }: { cursor: number | MotionValue<n
 	const opacity = useTransform(source, (metre) => (metre < 0 ? 0 : 1))
 	return (
 		<motion.div
-			className={`pointer-events-none absolute z-20 bg-gray-100 ${vertical ? "inset-x-0 h-0.5" : "inset-y-0 w-0.5"}`}
-			style={vertical ? { top: position, opacity } : { left: position, opacity }}
+			className={`pointer-events-none absolute z-20 ${vertical ? "inset-x-0 h-0.5" : "inset-y-0 w-0.5"}`}
+			style={{ ...(vertical ? { top: position } : { left: position }), opacity, background: "var(--color-course-runner)" }}
 		/>
 	)
 }
@@ -351,64 +329,54 @@ export default function CourseStrip({
 	const spans = [...facts.spans, ...(overlays?.spans ?? [])]
 	const markers = [...facts.markers, ...(overlays?.markers ?? [])]
 	const labelled = markers.filter((marker) => marker.label)
-	const lanes = markerLanes(labelled, distance)
+	const lanes = markerLanes(labelled, distance, 0.16)
 	const laneCount = labelled.length > 0 ? Math.max(...lanes) + 1 : 0
 
 	const track = trackParts(course)
 	const hills = slopeParts(course)
 	const ground = surfaceParts(course)
 	const phases = spans.filter((span) => span.kind === "phase")
-	const layerSpans = overlays?.spans.filter((span) => span.kind !== "phase") ?? []
+	const layerSpans = (overlays?.spans.filter((span) => span.kind !== "phase") ?? []) as (CourseSpan & { key?: string })[]
+	const layerRows = Math.max(0, ...layerSpans.map((span) => (span.lane ?? 0) + 1), ...laneHeads.map((head) => head.firstLane + head.lanes))
 	// Corners alternate between two shades, so corners 3 and 4 read as two.
 	let cornerIndex = 0
+	// A layer row's name: the veteran's avatar on her first row, "Lit" on the
+	// first row no veteran owns (the open skill's), nothing on the rest.
+	let litNamed = false
+	const layerLabel = (lane: number): ReactNode => {
+		const head = laneHeads.find((candidate) => candidate.firstLane === lane)
+		if (head) return <span className="inline-flex" style={{ "--course-ring": head.colour ?? LIT } as CSSProperties}>{head.head}</span>
+		if (laneHeads.some((candidate) => lane > candidate.firstLane && lane < candidate.firstLane + candidate.lanes)) return ""
+		if (litNamed) return ""
+		litNamed = true
+		return <span className="font-bold normal-case tracking-normal" style={{ color: LIT }}>Lit</span>
+	}
 
-	// Across: rows of these heights. Down: the race is distance / 4 px long
-	// (300 to 900), so a 3600 m course scrolls with the page.
-	// Down the page the word columns share the width (no size).
-	const band = vertical ? undefined : "32px"
-	const stripLength = `${Math.min(900, Math.max(300, distance / 4))}px`
+	// Down the page the race is distance / 2.4 px long (360 to 900), so a
+	// 3600 m course scrolls with the page.
+	const stripLength = `${Math.min(900, Math.max(360, distance / 2.4))}px`
 
-	const bands = (
+	const rows = (
 		<>
 			{/* A flat course (Funabashi dirt 1600) has no profile and no hills to draw. */}
-			{hills.length > 0 && <ElevationBand course={course} vertical={vertical} size={vertical ? "34px" : "40px"} />}
-			{hills.length > 0 && (
-				<Band vertical={vertical} size={band} label="hills">
-					{hills.map((hill) => (
-						<Segment
-							key={hill.start}
-							start={hill.start}
-							end={hill.end}
-							distance={distance}
-							vertical={vertical}
-							fill={hill.kind === "uphill" ? "var(--color-course-uphill)" : "var(--color-course-downhill)"}
-							ink={LIGHT_INK}
-							label={hill.label}
-							// Too narrow for the words: the colour says up or down.
-							shortLabel={`${hill.percent}%`}
-							endLabel={formatMetres(hill.end)}
-							ranged
-						/>
-					))}
-				</Band>
-			)}
-			{ground.length > 0 && (
-				<Band vertical={vertical} size={vertical ? band : "22px"} label="ground">
-					{ground.map((part) => (
-						<Segment
-							key={part.start}
-							start={part.start}
-							end={part.end}
-							distance={distance}
-							vertical={vertical}
-							fill={part.surface === "turf" ? "var(--color-course-turf)" : "var(--color-course-dirt)"}
-							ink={LIGHT_INK}
-							label={part.surface === "turf" ? (part.start === 0 ? "Turf start" : "Turf") : "Dirt"}
-						/>
-					))}
-				</Band>
-			)}
-			<Band vertical={vertical} size={band} label="track">
+			{hills.length > 0 && <HeightRow course={course} vertical={vertical} />}
+			<Row vertical={vertical} label="Phase" band="phases">
+				{phases.map((phase, index) => (
+					<Segment
+						key={phase.start}
+						start={phase.start}
+						end={phase.end}
+						distance={distance}
+						vertical={vertical}
+						fill={PHASE_FILLS[index % PHASE_FILLS.length]}
+						ink={PHASE_INKS[index % PHASE_INKS.length]}
+						label={phase.label ?? ""}
+						shortLabel={(phase.label ?? "").split("-")[0]}
+						ranged
+					/>
+				))}
+			</Row>
+			<Row vertical={vertical} label="Course" band="track" size={vertical ? undefined : ROW_PX} className={vertical ? "" : ""}>
 				{track.map((part) => {
 					if (part.kind === "gap") return null
 					const isCorner = part.kind === "corner"
@@ -422,106 +390,157 @@ export default function CourseStrip({
 							vertical={vertical}
 							fill={isCorner
 								? shade ? "var(--color-course-corner-alt)" : "var(--color-course-corner)"
-								: "var(--color-course-straight)"}
-							ink={shade ? DARK_INK : LIGHT_INK}
+								: part.label === "Final straight" ? "var(--color-course-straight-final)" : "var(--color-course-straight)"}
+							ink="var(--color-course-ink-course)"
 							label={part.label}
-							endLabel={part.end < distance ? formatMetres(part.end) : undefined}
+							shortLabel={isCorner ? `C${part.number && part.number > 0 ? part.number : ""}` : "Str."}
 							ranged
 						/>
 					)
 				})}
-			</Band>
-			<Band vertical={vertical} size={band} label="phases">
-				{phases.map((phase, index) => (
-					<Segment
-						key={phase.start}
-						start={phase.start}
-						end={phase.end}
-						distance={distance}
-						vertical={vertical}
-						fill={PHASE_FILLS[index % PHASE_FILLS.length]}
-						ink={PHASE_INKS[index % PHASE_INKS.length]}
-						label={phase.label}
-						endLabel={phase.end < distance ? formatMetres(phase.end) : undefined}
-						ranged
-					/>
-				))}
-			</Band>
-			{(layerSpans.length > 0 || laneHeads.length > 0) && (
-				<LayersBand spans={layerSpans} laneHeads={laneHeads} distance={distance} vertical={vertical} />
+			</Row>
+			{hills.length > 0 && (
+				<Row vertical={vertical} label="Slope" band="hills">
+					{hills.map((hill) => (
+						<Segment
+							key={hill.start}
+							start={hill.start}
+							end={hill.end}
+							distance={distance}
+							vertical={vertical}
+							fill={hill.kind === "uphill" ? "var(--color-course-up)" : "var(--color-course-down)"}
+							ink="var(--color-course-ink-hill)"
+							// Down the page the column is narrow: the triangle and the percent say it.
+							label={vertical ? `${hill.percent}%` : hill.label}
+							// Too narrow for the words: the triangle and the percent.
+							shortLabel={`${hill.percent}%`}
+							icon={<CourseIcon name={hill.kind} className="relative z-10 h-[11px] w-[11px] shrink-0" />}
+							ranged
+						/>
+					))}
+				</Row>
 			)}
-			<SectionsBand distance={distance} vertical={vertical} size={vertical ? "18px" : "20px"} />
+			{ground.length > 0 && (
+				<Row vertical={vertical} label="Ground" band="ground" size={vertical ? 36 : 20}>
+					{ground.map((part) => (
+						<Segment
+							key={part.start}
+							start={part.start}
+							end={part.end}
+							distance={distance}
+							vertical={vertical}
+							fill={part.surface === "turf" ? "var(--color-course-turf)" : "var(--color-course-dirt)"}
+							ink={LIGHT_INK}
+							label={part.surface === "turf" ? (part.start === 0 ? "Turf start" : "Turf") : "Dirt"}
+							shortLabel={part.surface === "turf" ? "Turf" : "Dirt"}
+						/>
+					))}
+				</Row>
+			)}
+			{layerRows > 0 && (
+				<div className={vertical ? "contents" : "flex flex-col gap-0.5"} data-band="layers">
+					{Array.from({ length: layerRows }, (_, lane) => (
+						<Row key={lane} vertical={vertical} label={layerLabel(lane)} band={`layer-${lane}`} size={vertical ? 26 : ROW_PX} className="bg-gray-900/25">
+							<AnimatePresence>
+								{layerSpans.filter((span) => (span.lane ?? 0) === lane).map((span) => (
+									<LayerSpan key={span.key ?? `${span.kind}-${span.start}-${lane}`} span={span} distance={distance} vertical={vertical} />
+								))}
+							</AnimatePresence>
+						</Row>
+					))}
+				</div>
+			)}
+			<Row vertical={vertical} label="Section" vlabel="Sec" band="sections" size={vertical ? 18 : SECTIONS_PX} className="!bg-transparent">
+				{sectionBoundaries(distance).slice(1).map((end, index, bounds) => (
+					<div
+						key={end}
+						className={`absolute flex items-center justify-center border-gray-700/60 text-[9px] leading-none text-gray-500 ${vertical ? "inset-x-0 border-b" : "inset-y-0 border-r"}`}
+						style={place(index === 0 ? 0 : bounds[index - 1], end, distance, vertical)}
+					>
+						{index + 1}
+					</div>
+				))}
+			</Row>
 		</>
 	)
 
-	const markerLines = labelled.map((marker) => (
-		<div
-			key={`line-${marker.kind}-${marker.at}`}
-			// The spurt start's line is solid: the course's most important point
-			// (notes/course-map-plan-2.md, section 1; its look is the overhaul's).
-			className={`pointer-events-none absolute ${marker.kind === "spurt-start" ? "border-solid border-gray-100" : "border-dashed border-gray-100/70"} ${vertical ? "inset-x-0 border-t" : "inset-y-0 border-l"}`}
-			style={at(marker.at, distance, vertical)}
-		/>
-	))
-
-	const markerLabels = laneCount > 0 && (
-		<div
-			className="relative"
-			style={vertical ? { width: "80px" } : { height: `${laneCount * 16 + 2}px` }}
-			data-band="markers"
-		>
-			{labelled.map((marker, index) => {
-				const fraction = metreToFraction(marker.at, distance)
-				const lane = lanes[index]
-				// Down the page the labels are far enough apart to need no lanes.
-				const style: CSSProperties = vertical
-					? { top: `${fraction * 100}%`, left: 4, right: 0, transform: "translateY(-50%)" }
-					: {
-						left: `${fraction * 100}%`,
-						top: lane * 16 + 2,
-						// Near the finish the words hang to the left of the line.
-						transform: fraction > 0.7 ? "translateX(-100%)" : undefined,
-					}
-				return (
-					<span
-						key={`label-${marker.kind}-${marker.at}`}
-						className={`absolute text-[10px] font-semibold text-gray-200 ${
-							vertical ? "leading-tight" : "whitespace-nowrap leading-none"
-						} ${!vertical && fraction > 0.7 ? "pr-1" : "pl-1"}`}
-						style={style}
-					>
-						{marker.label} <span className="font-normal text-gray-400">{formatMetres(marker.at)}</span>
-					</span>
-				)
-			})}
+	const markLines = (
+		<div className={`pointer-events-none absolute ${vertical ? "inset-x-0 inset-y-0" : "inset-y-0 right-0"}`} style={vertical ? undefined : { left: LABEL_PX }}>
+			{labelled.map((marker) => (
+				<MarkLine key={`line-${marker.kind}-${marker.at}`} marker={marker} distance={distance} vertical={vertical} />
+			))}
+			{cursor !== undefined && <Cursor cursor={cursor} distance={distance} vertical={vertical} />}
 		</div>
 	)
 
 	if (vertical) {
 		return (
-			<div className={`flex gap-1 ${className}`} style={{ height: stripLength }} aria-hidden="true">
-				<MetreRuler distance={distance} vertical size="34px" />
-				<motion.div ref={ref} className="relative flex min-w-0 flex-1 gap-px overflow-hidden rounded-md" style={{ clipPath }}>
-					{bands}
-					{markerLines}
-					{cursor !== undefined && <Cursor cursor={cursor} distance={distance} vertical />}
+			<div className={`grid gap-x-2 ${className}`} style={{ height: stripLength, gridTemplateColumns: `minmax(0, 1fr) ${MARGIN_PX}px` }} aria-hidden="true">
+				<motion.div ref={ref} className="relative flex h-full gap-0.5" style={{ clipPath }} data-strip-rows="">
+					{rows}
+					{markLines}
 				</motion.div>
-				{markerLabels}
+				{/* The marks' words in the margin, each on its line. */}
+				<div className="relative mt-4" data-band="markers">
+					{labelled.map((marker) => (
+						<div
+							key={`label-${marker.kind}-${marker.at}`}
+							className="absolute left-0 right-0 flex -translate-y-1/2 items-center"
+							style={{ top: `${metreToFraction(marker.at, distance) * 100}%` }}
+						>
+							<span className={`-ml-5 w-5 shrink-0 ${marker.kind === "spurt-start" ? "border-t-2 border-brand" : "border-t border-dashed border-gray-400"}`} />
+							<MarkWords marker={marker} inline />
+						</div>
+					))}
+				</div>
 			</div>
 		)
 	}
 
 	return (
 		<div className={className} aria-hidden="true">
-			<motion.div ref={ref} className="relative flex flex-col gap-px overflow-hidden rounded-md" style={{ clipPath }}>
-				{bands}
-				{markerLines}
-				{cursor !== undefined && <Cursor cursor={cursor} distance={distance} vertical={false} />}
+			{/* The marks' words above the rows, in lanes so none overlap. */}
+			{laneCount > 0 && (
+				<div className="relative" style={{ marginLeft: LABEL_PX, height: laneCount * MARK_ROW_PX + 4 }} data-band="markers">
+					{labelled.map((marker, index) => {
+						const fraction = metreToFraction(marker.at, distance)
+						return (
+							<span
+								key={`label-${marker.kind}-${marker.at}`}
+								className="absolute"
+								style={{
+									left: `${fraction * 100}%`,
+									top: lanes[index] * MARK_ROW_PX,
+									// Near the finish the words hang to the left of the line.
+									transform: fraction > 0.72 ? "translateX(-100%)" : undefined,
+								}}
+							>
+								<MarkWords marker={marker} />
+							</span>
+						)
+					})}
+				</div>
+			)}
+			<motion.div ref={ref} className="relative flex flex-col gap-0.5" style={{ clipPath }} data-strip-rows="">
+				{rows}
+				{markLines}
 			</motion.div>
-			{/* The metres right under the section numbers, a ruler for both
-			    (Daptrius's render), then the markers' words. */}
-			<MetreRuler distance={distance} vertical={false} size="16px" />
-			{markerLabels}
+			{/* The metres right under the section numbers. */}
+			<div className="relative h-4" style={{ marginLeft: LABEL_PX }}>
+				{rulerTicks(distance).map((tick, index, ticks) => (
+					<span
+						key={tick}
+						className="absolute top-0.5 whitespace-nowrap text-[10px] leading-none text-gray-500"
+						style={{
+							...at(tick, distance, false),
+							// The first and last labels hug the ends; the rest centre on their tick.
+							transform: index === 0 ? undefined : index === ticks.length - 1 ? "translateX(-100%)" : "translateX(-50%)",
+						}}
+					>
+						{tick.toLocaleString("en-US")}
+					</span>
+				))}
+			</div>
 		</div>
 	)
 }

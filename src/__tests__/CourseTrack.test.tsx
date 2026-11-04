@@ -94,13 +94,16 @@ describe("CourseSection's switches", () => {
 		expect(strips()).toBe(2)
 		fireEvent.click(screen.getByRole("button", { name: "Track" }))
 		await waitFor(() => expect(strips()).toBe(1))
+		// The track alone brings its legend (owner, 2026-11-03); with the strip
+		// under it, the strip's words name every colour.
+		expect(screen.getByRole("list", { name: "Track legend" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Both" }))
 		await waitFor(() => expect(container.querySelector("svg polyline")).not.toBeNull())
 		await waitFor(() => expect(strips()).toBe(2))
-		// A drawn track brings its legend; the strip alone doesn't need one.
-		expect(screen.getByRole("list", { name: "Track legend" })).toBeInTheDocument()
+		expect(screen.queryByRole("list", { name: "Track legend" })).toBeNull()
 		fireEvent.click(screen.getByRole("button", { name: "Strip" }))
-		await waitFor(() => expect(screen.queryByRole("list", { name: "Track legend" })).toBeNull())
+		await waitFor(() => expect(strips()).toBe(2))
+		expect(screen.queryByRole("list", { name: "Track legend" })).toBeNull()
 	})
 
 	it("has a Walk the course button that turns into Stop", () => {

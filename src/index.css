@@ -403,26 +403,55 @@ html {
 	--color-style-late: #fdde34;
 	--color-style-end: #ffb231;
 
-	/* THE COURSE MAP'S BANDS (components/course/CourseStrip.tsx), after the
-	   mock (notes/course-map/mocks/01-guide-desktop-strip.png), which follows
-	   the strip players already read on umalator, re-toned for the dark theme.
-	   Fills only: each band picks a light or dark ink for its own fill in the
-	   component, so the words stay readable on every theme. :root for the
-	   style colours' reason above (read through inline var()). A theme can
-	   restyle the map by setting these. */
-	--color-course-elevation: #5f8f36;
-	--color-course-elevation-line: #b9e27e;
-	--color-course-downhill: #3f8f88;
-	--color-course-uphill: #b8955a;
-	--color-course-straight: #5b8fdc;
-	--color-course-corner: #d9905a;
-	--color-course-corner-alt: #e8ad7e;
-	--color-course-early: #2f8a5c;
-	--color-course-mid: #e2d35c;
-	--color-course-late: #c46fa8;
-	--color-course-final: #8e4a78;
+	/* THE COURSE MAP (components/course/*; notes/course-map-visual-plan.md,
+	   "Tokens"). The four phases are one heat ramp, the race warming up: blue,
+	   green, amber, then coral for the last sixth. The brand gold is kept for
+	   the last-spurt mark and whatever is lit; the course row is quiet because
+	   its words carry it; hills follow the game's own sense (warm up, cool
+	   down). Each fill has its ink beside it, so the words stay readable on
+	   every theme; the light themes redraw the set below. :root for the style
+	   colours' reason above (read through inline var()). The owner may revisit
+	   the shades (2026-11-03): change them here, nothing else. */
+	--color-course-early: #4b86c6;
+	--color-course-mid: #3aa17e;
+	--color-course-late: #e0a93c;
+	--color-course-spurt: #e25d45;
+	--color-course-ink-early: #f8fafc;
+	--color-course-ink-mid: #f8fafc;
+	--color-course-ink-late: #2b2208;
+	--color-course-ink-spurt: #fff5f2;
+	--color-course-straight: #4a5668;
+	--color-course-straight-final: #5a6a82;
+	--color-course-corner: #6d5f93;
+	--color-course-corner-alt: #7f70a8;
+	--color-course-ink-course: #f1f1f4;
+	--color-course-up: #c9873a;
+	--color-course-down: #4c9bc0;
+	--color-course-ink-hill: #0d0d12;
 	--color-course-turf: #4f8a3c;
 	--color-course-dirt: #9a7046;
+	--color-course-height: #263743;
+	--color-course-height-line: #8fb8c9;
+	/* The track view's bed, ticks and marks (components/course/CourseTrack.tsx). */
+	--color-course-bed: #08080c;
+	--color-course-tick: rgb(255 255 255 / 55%);
+	--color-course-mark: rgb(255 255 255 / 40%);
+	--color-course-gate: #f8fafc;
+	--color-course-beacon: #fff6d6;
+	--color-course-beacon-glow: #E6D28A;
+	--color-course-heal: #7fe4b0;
+	--color-course-runner: #ffffff;
+	/* The layers: the lit skill, and one colour per team spot for the veterans
+	   (kept apart from the phases and the running-style colours). */
+	--color-course-lit: #E6D28A;
+	--color-course-vet-1: #f472b6;
+	--color-course-vet-2: #a78bfa;
+	--color-course-vet-3: #22d3ee;
+	/* A callout's leader line, by what it points at. */
+	--color-course-leader-start: #c7c7cf;
+	--color-course-leader-corner: #a897d4;
+	--color-course-leader-straight: #9fb0c8;
+	--color-course-leader-mark: #6f6f7a;
 
 	/* A VETERAN'S CARD (the Collection, components/collection/VeteranCard.tsx):
 	   the five stats and the three coloured spark kinds, in the hues the game
@@ -442,6 +471,40 @@ html {
 	   stat hues above, plus these two. Dots and bars only, like the rest. */
 	--color-card-friend: #b48cff;
 	--color-card-group: #3fbfc6;
+}
+
+/* THE COURSE MAP on the light themes: deeper fills for white cards, the
+   theme's blue brand for the lit skill and the spurt chip, a navy beacon. */
+[data-theme-mode="light"] {
+	--color-course-early: #2f6db3;
+	--color-course-mid: #1f8a66;
+	--color-course-late: #d08f12;
+	--color-course-spurt: #d1432c;
+	--color-course-ink-late: #fff8e6;
+	--color-course-straight: #8795ab;
+	--color-course-straight-final: #7686a0;
+	--color-course-corner: #9b8cc6;
+	--color-course-corner-alt: #ad9fd4;
+	--color-course-ink-course: #0f172a;
+	--color-course-up: #d4973f;
+	--color-course-down: #5aa7cc;
+	--color-course-height: #dbe7ee;
+	--color-course-height-line: #4c7f9a;
+	--color-course-bed: #94a3b8;
+	--color-course-tick: rgb(255 255 255 / 75%);
+	--color-course-mark: rgb(15 23 42 / 45%);
+	--color-course-gate: #0f172a;
+	--color-course-beacon: #0f172a;
+	--color-course-beacon-glow: #d08f12;
+	--color-course-runner: #0f172a;
+	--color-course-lit: #1d4ed8;
+	--color-course-vet-1: #db2777;
+	--color-course-vet-2: #7c3aed;
+	--color-course-vet-3: #0891b2;
+	--color-course-leader-start: #475569;
+	--color-course-leader-corner: #7c6fa8;
+	--color-course-leader-straight: #64748b;
+	--color-course-leader-mark: #94a3b8;
 }
 
 /* ===== THEME OVERRIDES =====
