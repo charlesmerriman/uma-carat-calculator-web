@@ -131,12 +131,40 @@ describe("the verdict in words", () => {
 		])
 	})
 
+	it("says a speed skill ends before the late race only when its whole trigger does", () => {
+		const speed = (extra: Partial<SkillZoneEntry>): SkillZoneEntry => ({
+			kind: "place", zones: [{ start: 200, end: 500, kind: "random" }], styles: null, effects: ["speed"], ...extra,
+		})
+		expect(verdictLines(speed({ spread: [200, 500], carry: 0, carry_window: [726, 789] }), 1200))
+			.toEqual(["At a random point from 200m to 500m", "Ends before the late race"])
+		// A straight-random point reaching the late race misses the window too, but fires in the late race.
+		expect(verdictLines(speed({ zones: [{ start: 0, end: 300, kind: "random" }, { start: 788, end: 1200, kind: "random" }], spread: [0, 1200], carry: 0, carry_window: [726, 789] }), 1200))
+			.toEqual(["At a random point from 0m to 1,200m"])
+		// A final-straight unique on Tokyo turf 1600 fires 32 m into the late race: the API sends no share.
+		expect(verdictLines(speed({ zones: [{ start: 1099, end: 1600, kind: "fixed" }], fires_at: 1099, carry_window: [969, 1056] }), 1600))
+			.toEqual(["Fires at 1,099m"])
+	})
+
+	it("drops the odds line for an accel that can't reach the late-race start", () => {
+		expect(verdictLines({ ...FINAL_PUSH, zones: [{ start: 1450, end: 1690, kind: "random" }], spread: [1450, 1690], spurt: { from: 117, to: 357, odds: 0 } }, 2000))
+			.toEqual(["At a random point 117m to 357m into the late race", "Also needs: in the lead"])
+	})
+
 	it("judges a heal against the late-race HP check, and an early one by its HP", () => {
 		expect(verdictLines(MAESTRO, 1200)).toEqual([
 			"At a random point from 300m to 550m",
 			"Heals in time, before the late-race HP check",
 		])
 		expect(verdictLines({ ...MAESTRO, spread: [100, 180], before_spurt: 1 }, 1200)).toContain("Fires in the early race, while HP is still high")
+		// A fixed zone fires anywhere in it once its other clauses hold: Iron Will's
+		// 0 to 800 m on Chukyo reaches deep into the mid race, so no "early race" claim.
+		const ironWill: SkillZoneEntry = {
+			kind: "place", zones: [{ start: 0, end: 800, kind: "fixed" }], styles: null, effects: ["heal"],
+			fires_at: 0, before_spurt: 1, needs: ["After 5 s of racing", "Blocked in front for 1 s or more"],
+		}
+		expect(verdictLines(ironWill, 1200)).not.toContain("Fires in the early race, while HP is still high")
+		// One whose zone ends at the mid-race boundary is an early-race heal.
+		expect(verdictLines({ ...ironWill, zones: [{ start: 0, end: 200, kind: "fixed" }] }, 1200)).toContain("Fires in the early race, while HP is still high")
 		expect(verdictLines({ ...MAESTRO, spread: [600, 1200], before_spurt: 0.33 }, 1200))
 			.toContain("33% chance to heal in time, before the late-race HP check")
 	})
