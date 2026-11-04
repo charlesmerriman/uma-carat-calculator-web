@@ -746,6 +746,15 @@ The portal attaches to `<body>`, but the control can live inside the app shell's
 scroller; with the default absolute positioning the menu is placed against the body and
 visibly detaches from its control as soon as that container scrolls.
 
+### Text fields and selects on iOS
+
+iOS Safari zooms the page into any field under 16px, and nearly all of ours are 12 to 14px.
+An inline script in `index.html` adds `maximum-scale=1` to the viewport tag **on iOS only**
+(iOS still allows pinch-zoom; Android would lose it). A plain list on a touch screen is the
+platform's own `<select>` (`useCoarsePointer`; the income panel's `RankSelect`), never
+react-select's portaled menu. Lists that need art, colour or search (the banner pickers)
+stay react-select everywhere.
+
 ### Animation
 
 Framer Motion handles UI animations: the collapsible income section at the top of the

@@ -155,6 +155,23 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      iOS Safari zooms the page into any text field or select whose font is
+      under 16px, and nearly all of ours are 12 to 14px. The zoom broke every
+      dropdown and popup on iPhones (owner, 2026-11-04). maximum-scale=1 stops
+      that zoom; iOS still lets people pinch-zoom by hand, since it ignores the
+      cap for gestures. iOS only: Android honours the cap and would lose pinch
+      zoom, an accessibility regression. iPadOS reports itself as a Mac, so a
+      touch-capable "MacIntel" counts too.
+    -->
+    <script>
+      (function () {
+        var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+        if (!ios) return
+        var meta = document.querySelector('meta[name="viewport"]')
+        if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1")
+      })()
+    </script>
     <title>Uma Musume Carat Calculator</title>
     <meta name="description" content="A carat planner and banner timeline for Uma Musume. See every upcoming banner and how many carats and tickets you will have when it arrives." />
 
