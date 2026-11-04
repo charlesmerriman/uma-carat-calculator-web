@@ -3,7 +3,7 @@
  * zones as spans, the style gate, label rows, and the veterans' layer.
  */
 import { describe, expect, it } from "vitest"
-import { firesForStyle, focusLayer, packLabels, skillSpans, verdictLines, veteranLayer, type SkillZoneEntry, type SkillZoneMap } from "../utils/courseLayers"
+import { accelRows, firesForStyle, focusLayer, packLabels, skillSpans, verdictLines, veteranLayer, type SkillZoneEntry, type SkillZoneMap } from "../utils/courseLayers"
 
 const ZONES: SkillZoneMap = {
 	"1": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: ["front"] },
@@ -136,6 +136,29 @@ describe("the verdict in words", () => {
 	it("keeps an unreadable clause as a plain note after the words it can read", () => {
 		expect(verdictLines({ ...FINAL_PUSH, needs: ["In the lead", "Plus a condition we can't read yet"] }, 1200).at(-1))
 			.toBe("Also needs: in the lead. Plus a condition we can't read yet")
+	})
+})
+
+describe("accels on this course", () => {
+	const accel = (spurt: { from: number; to: number }, extra: Partial<SkillZoneEntry> = {}): SkillZoneEntry => ({
+		kind: "place", zones: [{ start: 800 + spurt.from, end: 800 + spurt.to, kind: "random" }], styles: null,
+		effects: ["accel"], spurt, ...extra,
+	})
+
+	it("puts the accels that can land on the spurt start first, then the nearest", () => {
+		const zones: SkillZoneMap = {
+			"1": accel({ from: -250, to: -12 }),
+			"2": accel({ from: 0, to: 100 }),
+			"3": accel({ from: 0, to: 0 }, { fires_at: 800, styles: ["front"] }),
+			"4": accel({ from: -50, to: 50 }, { styles: ["late"] }),
+			"5": accel({ from: 0, to: 0 }, { unreadable: true }),
+			"6": { kind: "never", zones: [], styles: null, effects: ["accel"] },
+			"7": { kind: "place", zones: [], styles: null, effects: ["heal"], before_spurt: 1 },
+		}
+		// Front: 4 is a Late Surger's, 6 can't fire, 7 isn't an accel; 3 is a
+		// unique (ranked first among the ties).
+		expect(accelRows(zones, "front", (id) => (id === 3 ? 0 : 1)).map((row) => row.skillId)).toEqual([3, 2, 1, 5])
+		expect(accelRows(zones, "late").map((row) => row.skillId)).toEqual([2, 4, 1, 5])
 	})
 })
 

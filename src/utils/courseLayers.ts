@@ -187,6 +187,40 @@ export function verdictLines(entry: SkillZoneEntry | undefined, distance: number
 }
 
 /**
+ * How near the last spurt's start a skill's trigger lands, in metres, for
+ * ordering: 0 when it fires at the start or can land on it, else the nearest
+ * metre's distance; Infinity with no timing (unreadable, never, anywhere).
+ */
+export function spurtDistance(entry: SkillZoneEntry): number {
+	if (entry.unreadable || !entry.spurt || entry.kind !== "place") return Infinity
+	const { from, to } = entry.spurt
+	if (from <= 0 && to >= 0) return 0
+	return Math.min(Math.abs(from), Math.abs(to))
+}
+
+export interface AccelRow {
+	skillId: number
+	entry: SkillZoneEntry
+	/** How near the spurt start it lands (spurtDistance). */
+	distance: number
+}
+
+/**
+ * "Accels on this course" (notes/course-map-plan-2.md, section 8): every skill
+ * with an acceleration effect that can fire here for this style, nearest the
+ * last spurt's start first (the owner's rule: the game rewards accels that
+ * fire just as the spurt starts), ties by `rank` (uniques first), then id.
+ */
+export function accelRows(zones: SkillZoneMap, style: MemberStyle, rank: (skillId: number) => number = () => 0): AccelRow[] {
+	const rows: AccelRow[] = []
+	for (const [key, entry] of Object.entries(zones)) {
+		if (!entry.effects?.includes("accel") || entry.kind === "never" || !firesForStyle(entry, style)) continue
+		rows.push({ skillId: Number(key), entry, distance: spurtDistance(entry) })
+	}
+	return rows.sort((a, b) => a.distance - b.distance || rank(a.skillId) - rank(b.skillId) || a.skillId - b.skillId)
+}
+
+/**
  * The open skill's layer: its zones (lane 0), the carry-over band when the API
  * has one (lane 1), and a "Heal before here" mark at the late-race start while
  * a heal is lit (section 4; opt-in like every layer).

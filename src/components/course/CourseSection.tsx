@@ -14,7 +14,7 @@
  * shown, CSS picking: the page is prerendered and render-time code may not
  * read the screen's width.
  */
-import { useContext, useMemo, useState } from "react"
+import { useContext, useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Loader2, Pause, Play } from "lucide-react"
 import type { RaceCourse, RaceEvent } from "../../types"
@@ -22,11 +22,12 @@ import type { PvpGuide } from "../../types/pvpGuide"
 import { AuthContext } from "../../services/AuthContext"
 import { useCourseShape, useCourseZones } from "../../services/courseQueries"
 import { setCourseShapeChoice, useCourseShapeChoice, type CourseShapeChoice } from "../../services/courseShapeStore"
-import { COURSE_MAP_ID, useCourseFocus, useCourseLayers } from "../../services/courseMapStore"
+import { COURSE_MAP_ID, setPageCourse, useCourseFocus, useCourseLayers } from "../../services/courseMapStore"
 import { focusLayer, veteranLayer, type LayerSpan, type VeteranInLayer } from "../../utils/courseLayers"
 import type { CourseMarker } from "../../utils/courseGeometry"
 import { schematicShape } from "../../utils/courseSchematic"
 import { heldSkillMeetsPick } from "../../utils/pvpGuide"
+import CourseAccelList from "./CourseAccelList"
 import CourseChips from "./CourseChips"
 import CourseFactsList from "./CourseFactsList"
 import CourseLayersMenu from "./CourseLayersMenu"
@@ -76,6 +77,11 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	// Remembered per device, through a store: the page is prerendered.
 	const shapeChoice = useCourseShapeChoice()
 	const walk = useWalk(course.distance)
+	// The page's course, for skill cards far from the map (CourseVerdict).
+	useEffect(() => {
+		setPageCourse(course)
+		return () => setPageCourse(null)
+	}, [course])
 	const signedIn = useContext(AuthContext)?.isLoggedIn ?? false
 	// The real shape, fetched the first time Track is chosen (most readers stay
 	// on the strip, and a phone never shows the track).
@@ -193,6 +199,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			</div>
 			<CourseStrip course={course} orientation="vertical" className="sm:hidden" overlays={layer.overlays} />
 			<CourseChips course={course} className="mt-3" />
+			<CourseAccelList course={course} />
 			<CourseFactsList course={course} />
 			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}
 		</div>
