@@ -1054,6 +1054,26 @@ html {
 	margin: 0.375rem 0 0;
 }
 
+/* Their pieces are nested: the US block is a <div> holding two <p>s (the
+   "Information from your device" sentence and the link), the terms link sits
+   in a <div> of its own. As flex items those boxes stacked beside each other
+   and the line fell apart (owner, 2026-11-04: "that looks stupid"). `display:
+   contents` dissolves the wrappers so every sentence and link is one item in
+   the same wrapping line. The US block carries an inline `display` that
+   Raptive sets to block or none per page, so it needs `!important`, guarded
+   so a block they hid stays hidden. */
+#root footer .adthrive-footer-message > div:not(.adthrive-ccpa-link) {
+	display: contents;
+}
+
+#root footer .adthrive-footer-message .adthrive-ccpa-link:not([style*="none"]) {
+	display: contents !important;
+}
+
+#root footer .adthrive-footer-message p {
+	display: inline;
+}
+
 body:has(.adthrive-sticky.adthrive-footer) #root footer .adthrive-footer-message {
 	margin-bottom: 100px;
 }
