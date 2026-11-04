@@ -10,10 +10,10 @@
  * the first time Track is chosen, services/courseQueries.ts), the choice
  * remembered per device. A switch cross-fades. "Walk the course" runs a marker along whichever is showing.
  *
- * On a phone it is always the strip, running down the page (owner,
- * 2026-10-29: an oval folds the same words into less room). Two strips, one
- * shown, CSS picking: the page is prerendered and render-time code may not
- * read the screen's width.
+ * On a phone it is the compact track over the strip running down the page
+ * (owner, 2026-10-29 and 2026-11-03). Two strips, one shown, CSS picking: the
+ * page is prerendered and render-time code may not read the screen's width;
+ * the phone's track waits for an effect to read it, since it costs a fetch.
  */
 import { useContext, useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
@@ -52,6 +52,8 @@ type View = "strip" | "track" | "both"
 type ShapeChoice = CourseShapeChoice
 // One colour per team spot for the veterans' layer (notes/course-map-visual-plan.md).
 const VETERAN_COLOURS = ["var(--color-course-vet-1)", "var(--color-course-vet-2)", "var(--color-course-vet-3)"]
+// A phone's block, less its padding (below Tailwind's sm, 640px).
+const PHONE_TRACK_PX = 358
 
 function Segmented<T extends string>({ label, value, options, onChange }: {
 	label: string
@@ -96,9 +98,20 @@ export default function CourseSection({ course, event = null, guide = null }: {
 		return () => setPageCourse(null)
 	}, [course])
 	const signedIn = useContext(AuthContext)?.isLoggedIn ?? false
-	// The real shape, fetched the first time Track is chosen (most readers stay
-	// on the strip, and a phone never shows the track).
-	const real = useCourseShape(view !== "strip" ? course.id : null)
+	// A phone shows the compact track above its strip (owner, 2026-11-03). The
+	// screen is read in an effect, never at render: the page is prerendered.
+	const [narrow, setNarrow] = useState(false)
+	useEffect(() => {
+		if (typeof window.matchMedia !== "function") return
+		const query = window.matchMedia("(max-width: 639px)")
+		const update = () => setNarrow(query.matches)
+		update()
+		query.addEventListener("change", update)
+		return () => query.removeEventListener("change", update)
+	}, [])
+	// The real shape, fetched the first time Track is chosen on a desktop (most
+	// readers stay on the strip) and right away on a phone.
+	const real = useCourseShape(view !== "strip" || narrow ? course.id : null)
 	const realShape = real.data ?? null
 	// Waiting for it holds the box, rather than flash the schematic first.
 	const waiting = view !== "strip" && shapeChoice === "real" && real.isPending
@@ -106,6 +119,9 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	const schematic = useMemo(() => schematicShape(course), [course])
 	const showing: ShapeChoice = shapeChoice === "real" && realShape ? "real" : "schematic"
 	const shape = showing === "real" && realShape ? realShape : schematic
+	// The phone's track: the real shape once it is in, the schematic for a
+	// course with no path file, nothing while the fetch is out.
+	const phoneShape = realShape ?? (real.data === null ? schematic : null)
 	const fade = { duration: reduceMotion ? 0 : 0.2 }
 
 	// The layers (notes/course-map-plan.md, "The layer menu"): the skill row
@@ -253,7 +269,13 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					</ul>
 				)}
 			</div>
-			<CourseStrip course={course} orientation="vertical" className="sm:hidden" overlays={layer.overlays} laneHeads={layer.heads} />
+			{/* A phone: the compact track, then the strip down the page. */}
+			<div className="sm:hidden">
+				{narrow && phoneShape && (
+					<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact overlays={layer.overlays} className="mb-3" />
+				)}
+				<CourseStrip course={course} orientation="vertical" overlays={layer.overlays} laneHeads={layer.heads} />
+			</div>
 			<CourseAccelList course={course} />
 			<CourseFactsList course={course} />
 			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}

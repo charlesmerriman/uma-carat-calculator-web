@@ -6,7 +6,7 @@
  * right column is already full, so the course gets a drawer under the art and
  * the panels instead of a third panel. Inside: the course's name, its real
  * shape as a track (owner, 2026-11-03: the actual course map, never the strip
- * or the schematic), the chips, and the way to the full map in the event's
+ * or the schematic), the headline, and the way to the full map in the event's
  * guide. The shape is fetched when the drawer opens, and earlier when a
  * pointer or focus reaches the button. The open and close are a height
  * animation, so they check useReducedMotion themselves (MotionConfig only
@@ -18,7 +18,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { ChevronDown, Loader2, Map as MapIcon } from "lucide-react"
 import type { RaceCourse } from "../../types"
 import { useCourseShape, usePrefetchCourseShape } from "../../services/courseQueries"
-import CourseChips from "./CourseChips"
+import CourseHeadline from "./CourseHeadline"
 import CourseFactsList from "./CourseFactsList"
 import CourseTrack from "./CourseTrack"
 import { courseName } from "./courseName"
@@ -91,7 +91,7 @@ export default function CourseDrawer({ course, guideHref }: { course: RaceCourse
 						<div className="px-2 pb-1 pt-2">
 							<p className="mb-2 text-sm text-gray-300">{courseName(course)}</p>
 							<DrawerTrack course={course} />
-							<CourseChips course={course} className="mt-2" />
+							<CourseHeadline course={course} className="mt-2" />
 							<CourseFactsList course={course} />
 							<Link to={guideHref} className="mt-2 inline-block text-sm text-brand transition hover:text-brand/75">
 								See the full course map in the guide

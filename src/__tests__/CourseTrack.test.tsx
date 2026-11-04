@@ -112,4 +112,17 @@ describe("CourseSection's switches", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Walk the course" }))
 		expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument()
 	})
+
+	it("draws the compact track over the strip on a phone, fetching the shape right away", async () => {
+		// A phone-wide screen, read in an effect (owner, 2026-11-03).
+		vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+		const fetchMock = serveShape(schematicShape(CHUKYO_1200))
+		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+		// Each strip says "Last spurt" twice (the phase band and the mark), the
+		// desktop one and the phone one both being in the page; the compact
+		// track's chip makes five once the shape is in.
+		await waitFor(() => expect(screen.getAllByText("Last spurt")).toHaveLength(5))
+		expect(screen.queryByText("Position keep ends", { selector: "b" })).toBeNull()
+	})
 })
