@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest"
 import {
-	accelRows, firesForStyle, focusLayer, packLabels, resolveChain, skillShown, skillSpans, verdictLines, veteranLayer, veteranShown,
+	accelRows, firesForStyle, focusLayer, grade, packLabels, resolveChain, skillShown, skillSpans, verdictLines, veteranLayer, veteranShown,
 	veteranSkillChoices, type SkillZoneEntry, type SkillZoneMap,
 } from "../utils/courseLayers"
 
@@ -169,6 +169,35 @@ describe("the verdict in words", () => {
 			.toContain("33% chance to heal in time, before the late-race HP check")
 	})
 
+	it("words each way of firing on its own, the most useful first", () => {
+		// Tamamo on CM 21: both ways open 12 m before the late race; the placing-only
+		// way carries less than the way that also needs a pass, so it comes second.
+		const tamamo: SkillZoneEntry = {
+			kind: "place", zones: [{ start: 788, end: 1200, kind: "fixed" }], styles: null, effects: ["accel", "speed"],
+			spread: [788, 788], spurt: { from: -12, to: -12, useful: 0.95 },
+			needs: ["Between 20% and 30% back in the field"],
+			paths: [
+				{ zones: [{ start: 788, end: 1200, kind: "fixed" }], fires_at: 788, spurt: { from: -12, to: -12, odds: 1, useful: 0.95 }, carry: 1, carry_window: [726, 800], needs: ["Between 20% and 30% back in the field"] },
+				{ zones: [{ start: 788, end: 1200, kind: "fixed" }], fires_at: 788, spurt: { from: -12, to: -12, odds: 1, useful: 0.6 }, carry: 1, carry_window: [726, 800], needs: ["Between 70% and 75% back in the field", "While trying to pass another runner"] },
+			],
+		}
+		expect(verdictLines(tamamo, 1200)).toEqual([
+			"Fires 12m before the late race starts, once between 20% and 30% back in the field (carries into the late race)",
+			"Or fires 12m before the late race starts, once between 70% and 75% back in the field and while trying to pass another runner (carries into the late race)",
+		])
+		expect(grade(tamamo)).toEqual({ word: "Ready before it", tone: "good" })
+		const oneUnread: SkillZoneEntry = { ...tamamo, paths: [tamamo.paths![0], { zones: [], unreadable: true }] }
+		expect(verdictLines(oneUnread, 1200).at(-1)).toBe("Or one way can't be read yet")
+	})
+
+	it("keeps the odds line off a fixed zone that waits on something", () => {
+		// No Stopping Me!: it lands perfectly if a runner is close ahead, which the "Also needs" says.
+		expect(verdictLines({
+			kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null, effects: ["accel"],
+			fires_at: 800, spurt: { from: 0, to: 0, odds: 1, useful: 1.2 }, needs: ["A runner close ahead in your lane for 1 s or more"],
+		}, 1200)).toEqual(["From the moment the late race starts", "Also needs: a runner close ahead in your lane for 1 s or more"])
+	})
+
 	it("keeps an unreadable clause as a plain note after the words it can read", () => {
 		expect(verdictLines({ ...FINAL_PUSH, needs: ["In the lead", "Plus a condition we can't read yet"] }, 1200).at(-1))
 			.toBe("Also needs: in the lead. Plus a condition we can't read yet")
@@ -205,6 +234,13 @@ describe("skills set off by other skills", () => {
 		const middle: SkillZoneEntry = { ...FESTIVE, fires_at: 0, chain: { counts: "middle", at_least: 2 } }
 		// Mid race is 200 to 800 m: Go-Home Specialist at 100 m is early.
 		expect(resolveChain(middle, [goHome, breath, maestro], 1200)).toEqual({ from: 300, to: 550 })
+		// Late-race and second-half counts, the skill pass's two new kinds.
+		const lateOne: SkillZoneEntry = { ...goHome, fires_at: 900, zones: [{ start: 900, end: 1200, kind: "fixed" }] }
+		const endAfter: SkillZoneEntry = { ...FESTIVE, fires_at: 800, chain: { counts: "end_after", at_least: 1 } }
+		expect(resolveChain(endAfter, [goHome, breath, lateOne], 1200)).toEqual({ from: 900, to: 900 })
+		const laterHalf: SkillZoneEntry = { ...FESTIVE, fires_at: 600, chain: { counts: "later_half", at_least: 1 } }
+		expect(resolveChain(laterHalf, [goHome, breath, lateOne], 1200)).toEqual({ from: 900, to: 900 })
+		expect(resolveChain(laterHalf, [goHome, breath], 1200)).toEqual({ missing: 1, have: 0 })
 	})
 
 	it("draws it there in the veterans' layer only while the tick is on", () => {

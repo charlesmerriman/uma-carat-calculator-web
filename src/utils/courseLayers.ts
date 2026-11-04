@@ -49,8 +49,18 @@ export interface SkillZoneEntry {
 	/** A clause the map can't read yet: no timing fields at all. */
 	unreadable?: boolean
 	/** Set off by other skills: "after using 3 or more recovery skills". */
-	chain?: { counts: "heal" | "all" | "start" | "middle"; at_least: number }
+	chain?: { counts: ChainCount; at_least: number }
+	/**
+	 * One entry per way the skill can fire here, when its ways need different
+	 * things (api-reference.md); the fields above then summarise them.
+	 */
+	paths?: VerdictPath[]
 }
+
+export type ChainCount = "heal" | "all" | "start" | "middle" | "end_after" | "later_half"
+
+/** One way of firing: the verdict fields for that way alone. */
+export type VerdictPath = Pick<SkillZoneEntry, "zones" | "fires_at" | "spread" | "spurt" | "before_spurt" | "carry" | "carry_window" | "needs" | "unreadable">
 
 /** Skill id (as a string, JSON's key) -> where it fires on the course. */
 export type SkillZoneMap = Record<string, SkillZoneEntry>
@@ -185,18 +195,50 @@ export function verdictLines(entry: SkillZoneEntry | undefined, distance: number
 		lines.push("Not tied to a place on the course")
 	} else {
 		const accel = entry.effects?.includes("accel") ?? false
-		const where = (accel ? spurtWords(entry, hasNeeds) : null) ?? placeWords(entry, hasNeeds)
-		if (where) lines.push(where)
-		// No "0% chance" line: the metres already say it can't reach the start.
-		if (accel && entry.spurt?.odds) lines.push(`${percent(entry.spurt.odds)} chance to land at the late-race start`)
-		if (entry.effects?.includes("heal")) lines.push(...healWords(entry, distance))
-		const carry = entry.effects?.includes("speed") ? carryWords(entry) : null
-		if (carry) lines.push(carry)
+		if (entry.paths) {
+			// One line per way of firing, the best way first: its place words and
+			// what it needs in one sentence, then "Or ..." for the rest.
+			const [best, ...rest] = pathsByRank(entry)
+			lines.push(pathWords(best, entry, distance))
+			lines.push(...rest.map((path) => `Or ${lowerFirst(pathWords(path, entry, distance))}`))
+		} else {
+			const where = (accel ? spurtWords(entry, hasNeeds) : null) ?? placeWords(entry, hasNeeds)
+			if (where) lines.push(where)
+			// No "0% chance" line: the metres already say it can't reach the start.
+			// None for a fixed zone that waits on something either: "Also needs" says it.
+			if (accel && entry.spurt?.odds && !(entry.fires_at !== undefined && hasNeeds)) {
+				lines.push(`${percent(entry.spurt.odds)} chance to land at the late-race start`)
+			}
+			if (entry.effects?.includes("heal")) lines.push(...healWords(entry, distance))
+			const carry = entry.effects?.includes("speed") ? carryWords(entry) : null
+			if (carry) lines.push(carry)
+		}
 	}
 	if (entry.repeats && entry.repeats > 1) lines.push(`Can fire up to ${entry.repeats} times here`)
-	const needs = needsWords(entry.needs)
+	const needs = entry.paths ? null : needsWords(entry.needs)
 	if (needs) lines.push(needs)
 	return lines
+}
+
+/** A skill's ways of firing, the most useful at the spurt first. */
+function pathsByRank(entry: SkillZoneEntry): VerdictPath[] {
+	return [...(entry.paths ?? [])].sort((a, b) => (b.spurt?.useful ?? 0) - (a.spurt?.useful ?? 0))
+}
+
+/** One way of firing as one sentence: where, then "once ..." what it needs. */
+function pathWords(path: VerdictPath, entry: SkillZoneEntry, distance: number): string {
+	const asEntry: SkillZoneEntry = { ...entry, ...path, paths: undefined, kind: "place" }
+	if (path.unreadable) return "One way can't be read yet"
+	const accel = entry.effects?.includes("accel") ?? false
+	const where = ((accel ? spurtWords(asEntry, false) : null) ?? placeWords(asEntry, false)) ?? "Fires here"
+	const extras = [
+		...(entry.effects?.includes("heal") ? healWords(asEntry, distance) : []),
+		...(entry.effects?.includes("speed") ? [carryWords(asEntry)].filter((line): line is string => line !== null) : []),
+	]
+	const readable = (path.needs ?? []).filter((need) => need !== UNREADABLE_NOTE)
+	const once = readable.length > 0 ? `, once ${readable.map(lowerFirst).join(" and ")}` : ""
+	const tail = extras.length > 0 ? ` (${extras.map(lowerFirst).join("; ")})` : ""
+	return `${where}${once}${tail}`
 }
 
 // ── An accel's grade (notes/course-map-visual-plan.md, "The verdict card") ──
@@ -220,6 +262,11 @@ export interface Grade {
  */
 export function grade(entry: SkillZoneEntry | undefined): Grade | null {
 	if (!entry?.spurt || !entry.effects?.includes("accel") || entry.unreadable) return null
+	// A skill with several ways of firing is graded by its best way.
+	if (entry.paths) {
+		const [best] = pathsByRank(entry)
+		return best ? grade({ ...entry, ...best, paths: undefined }) : null
+	}
 	const { spurt } = entry
 	if (entry.fires_at !== undefined) {
 		// The API's odds say whether the fixed point lands in the window (1 or 0);
@@ -247,11 +294,13 @@ export function grade(entry: SkillZoneEntry | undefined): Grade | null {
 
 export type ChainResult = { from: number; to: number } | { missing: number; have: number }
 
-const COUNT_WORDS: Record<NonNullable<SkillZoneEntry["chain"]>["counts"], string> = {
+const COUNT_WORDS: Record<ChainCount, string> = {
 	heal: "recovery skills",
 	all: "skills",
 	start: "early-race skills",
 	middle: "mid-race skills",
+	end_after: "late-race skills",
+	later_half: "second-half skills",
 }
 
 /**
@@ -275,7 +324,9 @@ export function resolveChain(entry: SkillZoneEntry, members: (SkillZoneEntry | u
 		const counts = chain.counts === "heal" ? (member.effects?.includes("heal") ?? false)
 			: chain.counts === "start" ? first < mid
 				: chain.counts === "middle" ? first >= mid && first < late
-					: true
+					: chain.counts === "end_after" ? first >= late
+						: chain.counts === "later_half" ? first >= distance / 2
+							: true
 		return counts ? [{ first, last }] : []
 	})
 	if (points.length < chain.at_least) return { missing: chain.at_least - points.length, have: points.length }
