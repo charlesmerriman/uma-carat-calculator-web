@@ -194,7 +194,7 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, className = "", preview = null }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, className = "", preview = null, onPreview }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
@@ -206,6 +206,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	className?: string
 	/** A layer span's `key` the strip's pointer is over: drawn bolder, the other arcs quietened. */
 	preview?: string | null
+	/** Hears which arc (by span `key`) the pointer is over, null when it leaves: the strip lights it. */
+	onPreview?: (key: string | null) => void
 }) {
 	const distance = course.distance
 	const { ref, progress } = useDrawIn<HTMLDivElement>(1.4)
@@ -380,16 +382,36 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	for (const marker of overlays?.markers ?? []) {
 		if (marker.kind === "heal-check") allCallouts.push({ key: "heal-check", at: marker.at, point: P(marker.at), label: marker.label, detail: formatMetres(marker.at), tone: "heal" })
 	}
-	// A layer's name at its zone's start, past the arcs, in its colour
-	// (owner, 2026-11-03); one per name per group.
+	// A layer's skill is marked by its ICON at its zone's start, on its arc
+	// (owner, 2026-11-04: name chips for several skills on one line were
+	// unreadable; the legend under the track names them); one per skill per
+	// group. A span with no icon keeps a name chip.
 	const named = new Set<string>()
+	const icons: { key: string; span: CourseSpan & { key?: string }; x: number; y: number; colour: string }[] = []
+	// Several skills often start at one metre (the late-race start): an icon
+	// that would sit on another slides forward along its own arc until clear.
+	const iconR = track * 0.48
 	for (const span of layerSpans) {
 		if (!span.label || named.has(`${span.group}:${span.label}`)) continue
 		named.add(`${span.group}:${span.label}`)
-		const { n } = frameAt(shape, span.start, distance)
 		const offset = laneOffset(laneOf(span))
-		const [x, y] = P(span.start)
-		allCallouts.push({ key: `layer-${span.group ?? "lit"}-${span.label}`, at: span.start, point: [x + n[0] * offset, y + n[1] * offset], label: span.label, tone: "layer", colour: span.colour ?? LIT })
+		const place = (metre: number): [number, number] => {
+			const { n } = frameAt(shape, metre, distance)
+			const [x, y] = P(metre)
+			return [x + n[0] * offset, y + n[1] * offset]
+		}
+		if (!span.image) {
+			allCallouts.push({ key: `layer-${span.group ?? "lit"}-${span.label}`, at: span.start, point: place(span.start), label: span.label, tone: "layer", colour: span.colour ?? LIT })
+			continue
+		}
+		let metre = span.start
+		let [x, y] = place(metre)
+		for (let step = 0; step < 12 && icons.some((other) => Math.hypot(other.x - x, other.y - y) < iconR * 2.2); step++) {
+			metre = Math.min(span.end, metre + distance * 0.014)
+			;[x, y] = place(metre)
+			if (metre >= span.end) break
+		}
+		icons.push({ key: `icon-${span.group ?? "lit"}-${span.label}`, span, x, y, colour: span.colour ?? LIT })
 	}
 	// A phone-sized box has room for the start, the goal, the spurt, the
 	// corners and the final straight; the headline under it says the rest. A
@@ -528,7 +550,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 					if (span.kind === "point" || span.start === span.end) {
 						const { n } = frameAt(shape, span.start, distance)
 						const [x, y] = P(span.start)
-						return <circle key={`layer-${index}`} cx={x + n[0] * offset} cy={y + n[1] * offset} r={track * 0.28 * Math.max(1, emphasis(span))} fill={colour} opacity={quiet(span, 1)} data-preview={span.key === preview || undefined} />
+						return <circle key={`layer-${index}`} cx={x + n[0] * offset} cy={y + n[1] * offset} r={track * 0.28 * Math.max(1, emphasis(span))} fill={colour} opacity={quiet(span, 1)} data-preview={span.key === preview || undefined} onMouseEnter={onPreview && span.key ? () => onPreview(span.key ?? null) : undefined} onMouseLeave={onPreview ? () => onPreview(null) : undefined} />
 					}
 					const section = slice(shape, span.start, Math.max(span.end, span.start + distance / 400), distance)
 					return (
@@ -542,7 +564,29 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 							strokeLinecap="round"
 							opacity={quiet(span, span.kind === "window" ? 0.8 : 1)}
 							data-preview={span.key === preview || undefined}
-						/>
+							onMouseEnter={onPreview && span.key ? () => onPreview(span.key ?? null) : undefined}
+							onMouseLeave={onPreview ? () => onPreview(null) : undefined}
+						>
+							{span.label && <title>{span.detail ? `${span.label}. ${span.detail}` : span.label}</title>}
+						</polyline>
+					)
+				})}
+				{/* Each lit skill's icon at its arc's start, ringed in its colour; a
+				    hover target like the arc. */}
+				{icons.map((icon) => {
+					const r = iconR * Math.max(1, emphasis(icon.span) * 0.8)
+					return (
+						<g
+							key={icon.key}
+							opacity={quiet(icon.span, 1)}
+							data-layer-icon={icon.span.label}
+							onMouseEnter={onPreview && icon.span.key ? () => onPreview(icon.span.key ?? null) : undefined}
+							onMouseLeave={onPreview ? () => onPreview(null) : undefined}
+						>
+							<title>{icon.span.detail ? `${icon.span.label}. ${icon.span.detail}` : icon.span.label}</title>
+							<circle cx={icon.x} cy={icon.y} r={r} fill="var(--color-gray-900)" stroke={icon.colour} strokeWidth={track * 0.14} />
+							<image href={icon.span.image ?? undefined} x={icon.x - r * 0.78} y={icon.y - r * 0.78} width={r * 1.56} height={r * 1.56} style={{ clipPath: "circle(50%)" }} />
+						</g>
 					)
 				})}
 				{/* The last-spurt line across the track, a dot at its outer end. */}

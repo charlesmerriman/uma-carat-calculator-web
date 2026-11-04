@@ -34,12 +34,20 @@ export function GradePill({ grade: given, className = "" }: { grade: Grade; clas
 	)
 }
 
-/** A skill's zone against the race in one bar, with the last-spurt line at 2/3. */
+/**
+ * A skill's zone against the race in one bar: the four phases underneath,
+ * quietly, the zone over them, the last-spurt line at 2/3. The one-lane strip
+ * a popup far from the map shows (owner, 2026-11-04).
+ */
 export function ZoneBar({ entry, distance, className = "" }: { entry: SkillZoneEntry; distance: number; className?: string }) {
-	const { late } = phaseStarts(distance)
+	const { mid, late, finalSixth } = phaseStarts(distance)
 	const at = (metre: number) => `${metreToFraction(metre, distance) * 100}%`
+	const phases = [[0, mid, "early"], [mid, late, "mid"], [late, finalSixth, "late"], [finalSixth, distance, "spurt"]] as const
 	return (
-		<span className={`relative block h-1.5 w-full rounded-full bg-gray-700 ${className}`} aria-hidden="true">
+		<span className={`relative block h-1.5 w-full overflow-hidden rounded-full bg-gray-700 ${className}`} aria-hidden="true">
+			{phases.map(([from, to, name]) => (
+				<span key={name} className="absolute inset-y-0 opacity-40" style={{ left: at(from), width: `${(metreToFraction(to, distance) - metreToFraction(from, distance)) * 100}%`, background: `var(--color-course-${name})` }} />
+			))}
 			{(entry.zones ?? []).map((zone, index) => {
 				const from = metreToFraction(zone.start, distance) * 100
 				const width = Math.max(0.8, metreToFraction(zone.end, distance) * 100 - from)

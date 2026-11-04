@@ -25,6 +25,8 @@ export interface VeteranLayerData {
 	veterans: VeteranInLayer[]
 	/** Skill id -> its name, for the labels. */
 	names: Map<number, string>
+	/** Skill id -> its icon, for the spans. */
+	images: Map<number, string | null>
 	/** Veteran key -> her avatar, for the head of her lanes and her row in the Layers menu. */
 	heads: Map<string, ReactNode>
 	/** Veteran key -> her uma's name, for her row in the Layers menu. */
@@ -50,7 +52,7 @@ export default function VeteranLayerSource({ event, onData }: {
 		if (!teams || teams.status !== "ready" || !trained.data || catalogue.status !== "ready") return null
 		const ref = refForRaceEvent(event)
 		const team = preferredTeam(teams.teams.filter((candidate) => candidate.kind === ref.kind && candidate.event === ref.id))
-		const empty = (note: string): VeteranLayerData => ({ veterans: [], names: new Map(), heads: new Map(), umaNames: new Map(), note })
+		const empty = (note: string): VeteranLayerData => ({ veterans: [], names: new Map(), images: new Map(), heads: new Map(), umaNames: new Map(), note })
 		if (!team) return empty("Make a team for this event in My team, then link your veterans to its spots.")
 		const byId = new Map(trained.data.map((veteran) => [veteran.id, veteran]))
 		const veterans: VeteranInLayer[] = []
@@ -75,7 +77,8 @@ export default function VeteranLayerSource({ event, onData }: {
 		}
 		if (veterans.length === 0) return empty("Link a veteran to a spot on your team in My team to see her skills here.")
 		const names = new Map([...catalogue.skillsById].map(([id, skill]) => [id, skill.name]))
-		return { veterans, names, heads, umaNames, note: null }
+		const images = new Map([...catalogue.skillsById].map(([id, skill]) => [id, skill.image ?? null]))
+		return { veterans, names, images, heads, umaNames, note: null }
 	}, [teams, trained.data, catalogue, event, oshiIds])
 
 	useEffect(() => {

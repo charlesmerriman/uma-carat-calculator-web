@@ -44,6 +44,30 @@ interface Owner {
 	inherited: boolean
 }
 
+/**
+ * Why a row ranks where it does (owner, 2026-11-04): the rank's two parts
+ * as chips, Accel (the share landing well times the speed its acceleration
+ * adds) and Carry (the share carrying speed into the late race times that
+ * speed), and the carry in the game's terms. A part of zero is left out.
+ */
+function RankParts({ entry }: { entry: AccelRow["entry"] }) {
+	const accel = entry.spurt?.accel ?? 0
+	const carry = entry.spurt?.carry ?? 0
+	const carries = carry > 0 && entry.carry_speed !== undefined
+	if (accel <= 0 && !carries) return null
+	return (
+		<span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-semibold tabular-nums">
+			{accel > 0 && <span className="rounded-full bg-gray-700 px-1.5 py-px text-gray-200">Accel {accel.toFixed(2)}</span>}
+			{carries && <span className="rounded-full bg-brand/20 px-1.5 py-px text-brand">Carry {carry.toFixed(2)}</span>}
+			{carries && (
+				<span className="font-normal text-gray-400">
+					+{entry.carry_speed?.toFixed(2)} m/s into the late race{entry.carry_seconds ? ` for ${entry.carry_seconds} s` : ""}
+				</span>
+			)}
+		</span>
+	)
+}
+
 function AccelRows({ course, rows, style, owners, skillsById }: {
 	course: RaceCourse
 	rows: AccelRow[]
@@ -102,6 +126,7 @@ function AccelRows({ course, rows, style, owners, skillsById }: {
 										</span>
 									)}
 									{first && <span className="mt-0.5 block text-[11px] leading-snug text-gray-300">{first}</span>}
+									<RankParts entry={entry} />
 									<ZoneBar entry={entry} distance={course.distance} className="mt-1.5" />
 								</span>
 								{given && <GradePill grade={given} className="mt-px shrink-0" />}

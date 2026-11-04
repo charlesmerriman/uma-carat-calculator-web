@@ -37,6 +37,28 @@ describe("CourseTrack", () => {
 		expect(container.querySelectorAll("g[stroke] > circle")).toHaveLength(0)
 	})
 
+	it("marks each lit skill with its icon at its arc's start and reports the arc under the pointer", () => {
+		const onPreview = vi.fn()
+		const overlays = {
+			spans: [
+				{ key: "a", start: 300, end: 500, kind: "fixed" as const, label: "Final Push", group: "lit", image: "/skills/push.png" },
+				{ key: "b", start: 700, end: 900, kind: "random" as const, label: "No name chip", group: "lit" },
+			],
+			markers: [],
+		}
+		const { container } = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} overlays={overlays} onPreview={onPreview} />)
+		// An icon for the span with one; a name chip for the span without.
+		expect(container.querySelector('[data-layer-icon="Final Push"] image')).toHaveAttribute("href", "/skills/push.png")
+		expect(screen.queryByText("Final Push", { selector: "b" })).toBeNull()
+		expect(screen.getByText("No name chip", { selector: "b" })).toBeInTheDocument()
+		fireEvent.mouseEnter(container.querySelector('[data-layer-icon="Final Push"]') as Element)
+		expect(onPreview).toHaveBeenLastCalledWith("a")
+		fireEvent.mouseEnter(container.querySelectorAll("polyline[stroke]")[container.querySelectorAll("polyline[stroke]").length - 1] as Element)
+		expect(onPreview).toHaveBeenLastCalledWith("b")
+		fireEvent.mouseLeave(container.querySelector('[data-layer-icon="Final Push"]') as Element)
+		expect(onPreview).toHaveBeenLastCalledWith(null)
+	})
+
 	it("draws the previewed layer span bolder and quietens the rest (the strip's hover, Both view)", () => {
 		const overlays = {
 			spans: [

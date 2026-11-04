@@ -434,10 +434,18 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	return (
 		<WithDetail
 			label={uma.name}
-			// With no note, her unique's name is the detail: the hover that lights it needs one.
-			detail={note
-				? <><InlineNote text={note} /><MentionedSkills text={note} /></>
-				: uma.unique ? <p className="text-xs text-gray-300">Unique: {uma.unique.name}</p> : null}
+			// Her unique's verdict rides in the popup, with its zone bar, so the
+			// answer is at the pointer when the map is scrolled away (owner,
+			// 2026-11-04); with no note, the unique's name is the detail.
+			detail={note || uma.unique
+				? (
+					<>
+						{note && <><InlineNote text={note} /><MentionedSkills text={note} /></>}
+						{uma.unique && <p className={`text-xs text-gray-300 ${note ? "mt-1.5" : ""}`}>Unique: {uma.unique.name}</p>}
+						{uma.unique && <CourseVerdict skillId={uma.unique.id} />}
+					</>
+				)
+				: null}
 			className={className}
 			onOpenChange={(open) => lightUniqueOnCourseMap(uma, open)}
 		>

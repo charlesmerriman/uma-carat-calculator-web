@@ -20,10 +20,10 @@ describe("skillSpans", () => {
 	it("turns zones into labelled spans, anywhere into one span over the course, never into none", () => {
 		// An entry without verdict fields has no words for its hover.
 		expect(skillSpans(ZONES["1"], 1200, "Final Push")).toEqual([
-			{ key: "Final Push-0", start: 550, end: 788, kind: "random", label: "Final Push", lane: 0, detail: "" },
+			{ key: "Final Push-0", start: 550, end: 788, kind: "random", label: "Final Push", lane: 0, detail: "", image: null },
 		])
 		expect(skillSpans(ZONES["3"], 1200, "Groundwork")).toEqual([
-			{ key: "Groundwork-all", start: 0, end: 1200, kind: "anywhere", label: "Groundwork", lane: 0, detail: "Not tied to a place on the course" },
+			{ key: "Groundwork-all", start: 0, end: 1200, kind: "anywhere", label: "Groundwork", lane: 0, detail: "Not tied to a place on the course", image: null },
 		])
 		expect(skillSpans(ZONES["4"], 1200, "Tokyo")).toEqual([])
 		expect(skillSpans(undefined, 1200, "Missing")).toEqual([])
@@ -327,6 +327,11 @@ describe("the open skill's layer", () => {
 		expect(spans).toHaveLength(1)
 		expect(spans[0].detail).toBe("At a random point 12m to 250m before the late race starts. Also needs: in the lead")
 		expect(markers).toEqual([])
+	})
+
+	it("carries the skill's icon on every span, for the track's markers and the strip's labels", () => {
+		expect(focusLayer(FINAL_PUSH, 1200, "Final Push", 88, undefined, "/skills/push.png").spans[0].image).toBe("/skills/push.png")
+		expect(skillSpans(FINAL_PUSH, 1200, "Final Push", 0, "k").every((span) => span.image === null)).toBe(true)
 	})
 
 	it("marks the HP check while a heal is lit, and draws a carry-over band when there is one", () => {

@@ -54,6 +54,20 @@ describe("CourseStrip, across the page", () => {
 		for (const name of ["Height", "Phase", "Course", "Slope", "Section"]) expect(within(container).getByText(name)).toBeInTheDocument()
 	})
 
+	it("lights the bar previewed elsewhere, quietens the rest, and draws a span's icon before its name", () => {
+		const overlays = {
+			spans: [
+				{ key: "a", start: 300, end: 500, kind: "fixed" as const, label: "Final Push", lane: 0, image: "/skills/push.png" },
+				{ key: "b", start: 700, end: 900, kind: "random" as const, label: "Neck and Neck", lane: 1 },
+			],
+			markers: [],
+		}
+		const { container } = render(<CourseStrip course={CHUKYO_1200} overlays={overlays} preview="a" />)
+		expect(container.querySelectorAll('[data-previewed="true"]')).toHaveLength(1)
+		expect(container.querySelectorAll('[data-previewed="false"]')).toHaveLength(1)
+		expect(within(band(container, "layers")).getByText("Final Push").querySelector("img")).toHaveAttribute("src", "/skills/push.png")
+	})
+
 	it("labels the marks with their metres, the spurt first in the brand colour", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
 		const markers = within(band(container, "markers"))
