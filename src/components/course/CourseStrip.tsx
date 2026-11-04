@@ -279,7 +279,7 @@ function MarkWords({ marker, inline = false }: { marker: CourseMarker; inline?: 
 		// In the phone's margin (`inline`) the words may wrap onto a second line.
 		<span className={`inline-flex items-center gap-x-1 ${inline ? "flex-wrap leading-tight" : "whitespace-nowrap leading-none px-1"} ${spurt ? "text-[11px] text-brand" : heal ? "text-[10px] text-[color:var(--color-course-heal)]" : "text-[10px] text-gray-400"}`}>
 			{spurt && <CourseIcon name="flag" className="h-3 w-3" />}
-			<span className={spurt ? "font-extrabold" : "font-semibold"}>{spurt ? "Last spurt" : marker.label}</span>
+			<span className={spurt ? "font-extrabold" : "font-semibold"}>{spurt ? "Spurt starts" : marker.label}</span>
 			<span className="opacity-80">{formatMetres(marker.at)}</span>
 		</span>
 	)

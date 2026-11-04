@@ -1922,13 +1922,17 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   fractions are `GAME_GEOMETRY`, a parameter with defaults. Never compute a position in a
   component.
 - **Four phase bands: Early-race, Mid-race, Late-race, and Last spurt (phase 3: 5/6 to the
-  finish, sections 21 to 24)**, with the "Last spurt" marker at 2/3, section 17, where the
-  last spurt can start, and a "Halfway" marker at 1/2 (owner and Daptrius, 2026-11-03).
-  The headline says "Last spurt can start ..."; the hill facts, the verdicts and the accel
-  list measure from the 2/3 point and call it "the late race". Corner, straight and
-  final-straight callouts point at their start metre, each spot once with every lap's
-  metres; a segment wide enough shows its start and end metres. The Track view alone
-  carries a legend (`CourseLegend`); under Strip and Both the strip's words name every colour.
+  finish, sections 21 to 24)**, with the "Spurt starts" marker at 2/3, section 17, where the
+  last spurt can start, and a "Halfway" marker at 1/2 (owner and Daptrius, 2026-11-03; the
+  marker's name follows gametora's, Henry, 2026-11-03). The headline says "Last spurt can
+  start ..."; the hill facts, the verdicts and the accel list measure from the 2/3 point and
+  call it "the late race". Corner, straight and final-straight callouts point at their start
+  metre, each spot once with every lap's metres; a segment wide enough shows its start and
+  end metres. A hill's chip sits where the hill begins. Every leader starts at the kerb's
+  edge and nothing is drawn on the track itself (Henry, 2026-11-03); the spurt chip's leader
+  runs from its line, a hill's from its bracket, a layer's from its arc. An arrow just inside
+  the kerb past the gate points the way the race runs. The Track view alone carries a legend
+  (`CourseLegend`); under Strip and Both the strip's words name every colour.
 - **The spurt start is the map's first job** (owner, 2026-11-03; `notes/course-map-plan-2.md`):
   `spurtStart(course)` says what 2/3 falls on, how much of it is left and what comes next,
   and the chip says it exactly ("Late race starts in corner 4, 8m before the final

@@ -57,7 +57,7 @@ describe("CourseStrip, across the page", () => {
 	it("labels the marks with their metres, the spurt first in the brand colour", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
 		const markers = within(band(container, "markers"))
-		expect(markers.getByText("Last spurt")).toHaveClass("font-extrabold")
+		expect(markers.getByText("Spurt starts")).toHaveClass("font-extrabold")
 		expect(markers.getByText("Position keep ends")).toBeInTheDocument()
 		expect(markers.getByText("800m")).toBeInTheDocument()
 		expect(markers.getByText("Halfway")).toBeInTheDocument()

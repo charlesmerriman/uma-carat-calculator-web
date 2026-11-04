@@ -296,7 +296,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			// Anchored a track and a half inside the curve, so the chip clears the track.
 			point: [x - ox * track * 1.6, y - oy * track * 1.6],
 			leaderFrom: [x, y],
-			label: "Last spurt",
+			// "Spurt starts" (Henry, 2026-11-03, after gametora); the phase band keeps "Last spurt".
+			label: "Spurt starts",
 			detail: formatMetres(late),
 			tone: "spurt",
 			icon: "flag",
@@ -352,7 +353,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		allCallouts.push({
 			key: `hill-${hill.start}`,
 			at: hill.start,
-			point: hill.bracket[Math.floor(hill.bracket.length / 2)],
+			// Anchored where the hill begins, not its middle (Henry, 2026-11-03).
+			point: hill.bracket[0],
 			label: hill.label,
 			detail: hill.starts.length > 1 ? hill.starts.map(formatMetres).join(", ") : `${Math.round(hill.start).toLocaleString("en-US")}–${formatMetres(hill.end)}`,
 			tone: hill.kind,
@@ -433,6 +435,13 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		top: `${((y - box.y) / box.height) * 100}%`,
 		transform: "translate(-50%, -50%)",
 	})
+	/** The point a kerb's half-width out from `spot`, towards `chip`: where a leader starts. */
+	const edgeTowards = (spot: readonly [number, number], chip: readonly [number, number]): [number, number] => {
+		const dx = chip[0] - spot[0]
+		const dy = chip[1] - spot[1]
+		const length = Math.hypot(dx, dy) || 1
+		return [spot[0] + (dx / length) * track * 0.8, spot[1] + (dy / length) * track * 0.8]
+	}
 	const halfTick = (from: [number, number], to: readonly [number, number]) => ({ x1: from[0], y1: from[1], x2: (from[0] + to[0]) / 2, y2: (from[1] + to[1]) / 2 })
 
 	// The chequer at the goal: four by four squares along the last track-width.
@@ -450,6 +459,35 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			}
 		}
 	}
+	// The arrow beside the gate that says which way the race runs (Henry,
+	// 2026-11-03, after gametora): a little past the start, pointing the way of
+	// travel, on the first side with nothing drawn: inside the kerb, then outside
+	// (where the hill brackets live), then further out either way (a two-lap
+	// course's other lap runs just inside). A gate boxed in on every side, like
+	// Nakayama 3600's, gets no arrow: the corner icons already turn its way.
+	const directionArrow = (() => {
+		const last = shape.length - 1
+		const drawn = [...shape, ...hills.flatMap((hill) => hill.bracket)]
+		for (const metre of [Math.min(distance * 0.04, 90), Math.min(distance * 0.02, 40)]) {
+			const { t, n } = frameAt(shape, metre, distance)
+			const [px, py] = P(metre)
+			const here = metreToFraction(metre, distance) * last
+			// Everything drawn but this stretch of the track itself.
+			const others = drawn.filter((_, index) => index > last || Math.abs(index - here) > (last * 150) / distance)
+			const clear = (x: number, y: number) => others.every(([ox, oy]) => Math.hypot(ox - x, oy - y) > track * 1.1)
+			const side = [-1.35, 1.35, -2.9, 2.9].map((k) => k * outside).find((k) => clear(px + n[0] * track * k, py + n[1] * track * k))
+			if (side === undefined) continue
+			const cx = px + n[0] * track * side
+			const cy = py + n[1] * track * side
+			const tip = [cx + t[0] * track * 0.7, cy + t[1] * track * 0.7]
+			const back = [cx - t[0] * track * 0.35, cy - t[1] * track * 0.35]
+			const wing = track * 0.42
+			return [tip, [back[0] + n[0] * wing, back[1] + n[1] * wing], [back[0] - n[0] * wing, back[1] - n[1] * wing]]
+				.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`)
+				.join(" ")
+		}
+		return null
+	})()
 	const beaconEnd = (() => {
 		const { n } = frameAt(shape, late, distance)
 		const [x, y] = P(late)
@@ -512,13 +550,18 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 				{/* The gate and the finish. */}
 				<line {...across(0, track * 0.6)} stroke="var(--color-course-gate)" strokeWidth={track * 0.28} />
 				{chequer.map((square, index) => <polygon key={index} points={square.points} fill={square.dark ? "#0b0b0f" : "#f8fafc"} />)}
-				{/* Leaders from the track to each callout, in the callout's own colour. */}
+				{directionArrow && <polygon points={directionArrow} fill="var(--color-course-gate)" data-course="direction" />}
+				{/* Leaders from the kerb's edge to each callout, in the callout's own
+				    colour. Nothing is drawn on the track itself (Henry, 2026-11-03): a
+				    leader starts a kerb's half-width out from its spot, towards its chip.
+				    The spurt chip's runs from its line; a layer's from its arc; a
+				    hill's from its bracket. */}
 				{shown.map((callout) => {
-					const from = callout.leaderFrom ?? callout.point
+					const offTrack = ["layer", "uphill", "downhill"].includes(callout.tone)
+					const from = callout.leaderFrom ?? (offTrack ? callout.point : edgeTowards(callout.point, positions[callout.key]))
 					return (
 						<g key={`leader-${callout.key}`} stroke={LEADERS[callout.tone]} fill={LEADERS[callout.tone]}>
 							<line x1={from[0]} y1={from[1]} x2={positions[callout.key][0]} y2={positions[callout.key][1]} strokeWidth={track * 0.09} opacity={0.9} />
-							{!["start", "goal", "spurt", "layer"].includes(callout.tone) && <circle cx={callout.point[0]} cy={callout.point[1]} r={track * 0.16} stroke="none" />}
 						</g>
 					)
 				})}

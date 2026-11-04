@@ -24,9 +24,17 @@ afterEach(() => vi.unstubAllGlobals())
 describe("CourseTrack", () => {
 	it("calls out the corners, the final straight, the markers, the hills, the start and the goal", () => {
 		render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} />)
-		for (const words of ["Corner 3", "Corner 4", "Final straight", "Last spurt", "Position keep ends", "Halfway", "Downhill 1%", "Uphill 2%", "Start", "Goal"]) {
+		for (const words of ["Corner 3", "Corner 4", "Final straight", "Spurt starts", "Position keep ends", "Halfway", "Downhill 1%", "Uphill 2%", "Start", "Goal"]) {
 			expect(screen.getByText(words)).toBeInTheDocument()
 		}
+	})
+
+	it("draws the direction arrow beside the gate and keeps the track clean of leader dots (Henry, 2026-11-03)", () => {
+		const { container } = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} />)
+		expect(container.querySelector('polygon[data-course="direction"]')).not.toBeNull()
+		// Leaders used to put a dot on the track at each spot; now they start a
+		// kerb's half-width out and nothing sits on the track.
+		expect(container.querySelectorAll("g[stroke] > circle")).toHaveLength(0)
 	})
 
 	it("calls out where the ground changes, and keeps the spurt on a phone's compact track", () => {
@@ -34,7 +42,7 @@ describe("CourseTrack", () => {
 		expect(screen.getByText("Dirt from here")).toBeInTheDocument()
 		unmount()
 		render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} widthPx={340} compact />)
-		expect(screen.getByText("Last spurt")).toBeInTheDocument()
+		expect(screen.getByText("Spurt starts")).toBeInTheDocument()
 		expect(screen.queryByText("Position keep ends")).toBeNull()
 	})
 
@@ -114,7 +122,7 @@ describe("CourseSection's switches", () => {
 
 	it("drops the corner chips from a two-lap course's compact track (Nakayama 3600)", () => {
 		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} widthPx={340} compact />)
-		expect(screen.getByText("Last spurt")).toBeInTheDocument()
+		expect(screen.getByText("Spurt starts")).toBeInTheDocument()
 		expect(screen.getByText("Final straight")).toBeInTheDocument()
 		expect(screen.queryByText("Corner 1")).toBeNull()
 	})
@@ -125,10 +133,11 @@ describe("CourseSection's switches", () => {
 		const fetchMock = serveShape(schematicShape(CHUKYO_1200))
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
 		await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-		// Each strip says "Last spurt" twice (the phase band and the mark), the
-		// desktop one and the phone one both being in the page; the compact
-		// track's chip makes five once the shape is in.
-		await waitFor(() => expect(screen.getAllByText("Last spurt")).toHaveLength(5))
+		// Each strip has a "Spurt starts" mark, the desktop one and the phone
+		// one both being in the page; the compact track's chip makes three once
+		// the shape is in. The phase band is the other name, "Last spurt".
+		await waitFor(() => expect(screen.getAllByText("Spurt starts")).toHaveLength(3))
+		expect(screen.getAllByText("Last spurt")).toHaveLength(2)
 		expect(screen.queryByText("Position keep ends", { selector: "b" })).toBeNull()
 	})
 })
