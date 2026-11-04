@@ -175,6 +175,9 @@ describe("metres to positions", () => {
 		expect(rulerTicks(3600)).toEqual([0, 400, 800, 1200, 1600, 2000, 2400, 2800, 3200, 3600])
 		expect(rulerTicks(2500).at(-1)).toBe(2500)
 		expect(rulerTicks(2100).at(-1)).toBe(2100)
+		// A phone's strip asks for half as many steps.
+		expect(rulerTicks(1200, 6)).toEqual([0, 200, 400, 600, 800, 1000, 1200])
+		expect(rulerTicks(3600, 6)).toEqual([0, 1000, 2000, 3000, 3600])
 	})
 
 	it("puts a metre on a path by its share of the race, between two points", () => {

@@ -12,6 +12,7 @@ import { useAverageMonthlyIncome } from "../../hooks/useAverageMonthlyIncome"
 import { UncapCrystalsPanel } from "./UncapCrystalsPanel"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { NumberField } from "../NumberField"
+import { useCoarsePointer } from "../../hooks/useCoarsePointer"
 import { shopTicketsPerMonth } from "../../utils/cumulativeIncome"
 import { upcomingSkipCount } from "../../utils/raceParticipation"
 import { upcomingRaceRewardRange } from "../../utils/incomeLedger"
@@ -94,6 +95,59 @@ const selectStyles: StylesConfig<any, false> = {
 const numInputClass =
 	"border border-gray-600 rounded-md py-1 px-1 text-xs text-center bg-gray-700 text-gray-100 outline-none focus:border-gray-500 @income-wide:px-2 @income-wide:text-sm"
 
+
+/**
+ * One rank list (Team Trials, Club, Champions Meeting, League of Heroes).
+ *
+ * On a touch screen it is the platform's own <select>: iOS's picker wheel
+ * never opens the keyboard, never zooms the page and never leaves a menu
+ * pinned over a scrolling page, which react-select's portaled menu did (owner,
+ * 2026-11-04). These lists are plain names, so nothing is lost. Elsewhere it
+ * stays react-select, styled like the rest of the panel.
+ *
+ * Controlled, never defaultValue: userStatsData can be replaced from outside
+ * this component (guest to account migration, a save round-trip), and an
+ * uncontrolled select would keep showing the rank it mounted with.
+ */
+function RankSelect<T extends { id: number; name: string }>({ ranks, value, onPick }: {
+	ranks: T[]
+	value: T | null | undefined
+	onPick: (id: number) => void
+}) {
+	const touch = useCoarsePointer()
+	const className = "order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
+	if (touch) {
+		return (
+			<select
+				// text-align-last centres the chosen name in WebKit's closed select.
+				className={`${className} h-8 rounded border border-gray-600 bg-gray-700 px-2 text-xs text-gray-100 [text-align-last:center]`}
+				value={value?.id ?? ""}
+				onChange={(event) => {
+					if (event.target.value !== "") onPick(Number(event.target.value))
+				}}
+			>
+				<option value="" disabled>{RANK_PLACEHOLDER}</option>
+				{ranks.map((rank) => (
+					<option key={rank.id} value={rank.id}>{rank.name}</option>
+				))}
+			</select>
+		)
+	}
+	return (
+		<Select<RankOption<T>>
+			className={className}
+			styles={selectStyles}
+			placeholder={RANK_PLACEHOLDER}
+			menuPortalTarget={document.body}
+			menuPosition="fixed"
+			value={value ? { value, label: value.name, key: value.id } : null}
+			onChange={(option: SingleValue<RankOption<T>>) => {
+				if (option) onPick(option.value.id)
+			}}
+			options={ranks.map((rank) => ({ value: rank, label: rank.name, key: rank.id }))}
+		/>
+	)
+}
 // ── ResourceRow ───────────────────────────────────────────────────────
 
 // Eight of these stacked in one column ran to ~355px on a phone, the single
@@ -465,37 +519,10 @@ export const IncomeForm = () => {
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<Sword className={iconCls} />
 											<span className="min-w-0 text-xs text-gray-400 text-left leading-tight @income-wide:pr-2 @income-wide:text-sm @income-wide:text-right @income-wide:whitespace-nowrap">Team Trials:</span>
-											<Select
-												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
-												styles={selectStyles}
-												placeholder={RANK_PLACEHOLDER}
-												menuPortalTarget={document.body}
-												menuPosition="fixed"
-												// Controlled, not defaultValue: userStatsData can be replaced
-												// from outside this component (guest→account migration, a save
-												// round-trip), and an uncontrolled select would keep showing the
-												// rank it mounted with.
-												value={
-													teamTrialsRank
-														? {
-																value: teamTrialsRank,
-																label: teamTrialsRank.name,
-																key: teamTrialsRank.id,
-															}
-														: null
-												}
-												onChange={(o: SingleValue<RankOption<TeamTrialsRank>>) => {
-													if (!o) return
-													setUserStatsData({
-														...userStatsData,
-														team_trials_rank: o.value.id,
-													})
-												}}
-												options={teamTrialsRankData.map((r) => ({
-													value: r,
-													label: r.name,
-													key: r.id,
-												}))}
+											<RankSelect<TeamTrialsRank>
+												ranks={teamTrialsRankData}
+												value={teamTrialsRank}
+												onPick={(id) => setUserStatsData({ ...userStatsData, team_trials_rank: id })}
 											/>
 											<div className="ml-auto w-20 @income-wide:ml-0 @income-wide:w-20 @income-wide:col-span-1 @income-wide:justify-self-end">
 												{teamTrialsRank && (
@@ -509,33 +536,10 @@ export const IncomeForm = () => {
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<ClubRankIcon className={iconCls} />
 											<span className="min-w-0 text-xs text-gray-400 text-left leading-tight @income-wide:pr-2 @income-wide:text-sm @income-wide:text-right @income-wide:whitespace-nowrap">Club Rank:</span>
-											<Select
-												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
-												styles={selectStyles}
-												placeholder={RANK_PLACEHOLDER}
-												menuPortalTarget={document.body}
-												menuPosition="fixed"
-												value={
-													clubRank
-														? {
-																value: clubRank,
-																label: clubRank.name,
-																key: clubRank.id,
-															}
-														: null
-												}
-												onChange={(o: SingleValue<RankOption<ClubRank>>) => {
-													if (!o) return
-													setUserStatsData({
-														...userStatsData,
-														club_rank: o.value.id,
-													})
-												}}
-												options={clubRankData.map((r) => ({
-													value: r,
-													label: r.name,
-													key: r.id,
-												}))}
+											<RankSelect<ClubRank>
+												ranks={clubRankData}
+												value={clubRank}
+												onPick={(id) => setUserStatsData({ ...userStatsData, club_rank: id })}
 											/>
 											<div className="ml-auto w-20 @income-wide:ml-0 @income-wide:w-20 @income-wide:col-span-1 @income-wide:justify-self-end">
 												{clubRank && (
@@ -549,33 +553,10 @@ export const IncomeForm = () => {
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<ChampionsMeetingIcon className={iconCls} />
 											<span className="min-w-0 text-xs text-gray-400 text-left leading-tight @income-wide:pr-2 @income-wide:text-sm @income-wide:text-right @income-wide:whitespace-nowrap">Champion's Meeting:</span>
-											<Select
-												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
-												styles={selectStyles}
-												placeholder={RANK_PLACEHOLDER}
-												menuPortalTarget={document.body}
-												menuPosition="fixed"
-												value={
-													championsMeetingRank
-														? {
-																value: championsMeetingRank,
-																label: championsMeetingRank.name,
-																key: championsMeetingRank.id,
-															}
-														: null
-												}
-												onChange={(o: SingleValue<RankOption<ChampionsMeetingRank>>) => {
-													if (!o) return
-													setUserStatsData({
-														...userStatsData,
-														champions_meeting_rank: o.value.id,
-													})
-												}}
-												options={championsMeetingRankData.map((r) => ({
-													value: r,
-													label: r.name,
-													key: r.id,
-												}))}
+											<RankSelect<ChampionsMeetingRank>
+												ranks={championsMeetingRankData}
+												value={championsMeetingRank}
+												onPick={(id) => setUserStatsData({ ...userStatsData, champions_meeting_rank: id })}
 											/>
 											<div className="ml-auto w-20 @income-wide:ml-0 @income-wide:w-20 @income-wide:col-span-1 @income-wide:justify-self-end">
 												{championsMeetingRank && (
@@ -587,33 +568,10 @@ export const IncomeForm = () => {
 										<div className="flex flex-wrap items-center gap-x-2 gap-y-1 @income-wide:contents">
 											<Crown className={iconCls} />
 											<span className="min-w-0 text-xs text-gray-400 text-left leading-tight @income-wide:pr-2 @income-wide:text-sm @income-wide:text-right @income-wide:whitespace-nowrap">League of Heroes:</span>
-											<Select
-												className="order-last w-full min-w-0 @income-wide:order-none @income-wide:col-span-1 @income-wide:w-auto"
-												styles={selectStyles}
-												placeholder={RANK_PLACEHOLDER}
-												menuPortalTarget={document.body}
-												menuPosition="fixed"
-												value={
-													leagueOfHeroesRank
-														? {
-																value: leagueOfHeroesRank,
-																label: leagueOfHeroesRank.name,
-																key: leagueOfHeroesRank.id,
-															}
-														: null
-												}
-												onChange={(o: SingleValue<RankOption<LeagueOfHeroesRank>>) => {
-													if (!o) return
-													setUserStatsData({
-														...userStatsData,
-														league_of_heroes_rank: o.value.id,
-													})
-												}}
-												options={leagueOfHeroesRankData.map((r) => ({
-													value: r,
-													label: r.name,
-													key: r.id,
-												}))}
+											<RankSelect<LeagueOfHeroesRank>
+												ranks={leagueOfHeroesRankData}
+												value={leagueOfHeroesRank}
+												onPick={(id) => setUserStatsData({ ...userStatsData, league_of_heroes_rank: id })}
 											/>
 											<div className="ml-auto w-20 @income-wide:ml-0 @income-wide:w-20 @income-wide:col-span-1 @income-wide:justify-self-end">
 												{leagueOfHeroesRank && (

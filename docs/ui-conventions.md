@@ -746,6 +746,15 @@ The portal attaches to `<body>`, but the control can live inside the app shell's
 scroller; with the default absolute positioning the menu is placed against the body and
 visibly detaches from its control as soon as that container scrolls.
 
+### Text fields and selects on iOS
+
+iOS Safari zooms the page into any field under 16px, and nearly all of ours are 12 to 14px.
+An inline script in `index.html` adds `maximum-scale=1` to the viewport tag **on iOS only**
+(iOS still allows pinch-zoom; Android would lose it). A plain list on a touch screen is the
+platform's own `<select>` (`useCoarsePointer`; the income panel's `RankSelect`), never
+react-select's portaled menu. Lists that need art, colour or search (the banner pickers)
+stay react-select everywhere.
+
 ### Animation
 
 Framer Motion handles UI animations: the collapsible income section at the top of the
@@ -1939,9 +1948,10 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   straight"). Slope chips name the stat a hill near it rewards ("Uphill at the spurt start:
   Power helps"; within 100 m, a presentation choice). Its marker is placed first and kept on
   a phone's compact track; its strip line is solid. A flat course draws no profile or hills.
-- **One `CourseStrip`, two orientations.** `CourseSection` renders a horizontal strip
-  (`hidden sm:block`) and a vertical one (`sm:hidden`) and lets CSS pick, because the page
-  is prerendered. Down the page the word columns share the width (a `Band` without a
+- **One `CourseStrip`, two orientations.** `CourseSection` renders the desktop block
+  (`hidden sm:block`) and the phone block (`sm:hidden`) and lets CSS pick, because the page
+  is prerendered. Both draw the strip ACROSS the page (Henry, 2026-11-04: the phone's
+  vertical strip read badly); `orientation="vertical"` is kept but unused. Down the page the word columns share the width (a `Band` without a
   `size`) and the words wrap; across, they truncate, and a part too narrow for its words
   shows a short form (a hill's percent) or only its colour.
 - **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any

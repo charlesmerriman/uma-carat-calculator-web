@@ -328,15 +328,20 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				</div>
 			</div>
 			{/* The map's first job, in words, before the drawing (owner, 2026-11-03),
-			    and the lit skill's verdict card beside it. */}
-			<div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+			    and the lit skill's verdict card beside it. The row is `relative` for
+			    popLayout: the card leaving a swap is lifted out of flow while it fades,
+			    or the row holds two cards for 200 ms, wraps, and the track jumps. */}
+			<div className="relative mb-3 flex flex-wrap items-start justify-between gap-3">
 				<CourseHeadline course={course} className="flex-1 basis-[22rem]" />
-				<AnimatePresence initial={false}>
+				<AnimatePresence initial={false} mode="popLayout">
 					{focus && (
 						// Slides in from the headline's side; a plain fade under reduced motion.
+						// The slot keeps the height of a three-line verdict with its zone bar,
+						// so swapping a short verdict for a long one doesn't move the track
+						// (Thorin, Discord, 2026-11-04); a rarer five-line card still grows.
 						<motion.div
 							key={focus.skillId}
-							className="w-full max-w-[380px]"
+							className="flex w-full max-w-[380px] min-h-[7rem]"
 							initial={{ opacity: 0, x: reduceMotion ? 0 : 16 }}
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: reduceMotion ? 0 : 16 }}
@@ -407,12 +412,14 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					</ul>
 				)}
 			</div>
-			{/* A phone: the compact track, then the strip down the page. */}
+			{/* A phone: the compact track, then the strip across the page like the
+			    desktop's (Henry, 2026-11-04: down the page read badly). Too-narrow
+			    segments fall back to short words or colour alone. */}
 			<div className="sm:hidden">
 				{narrow && phoneShape && (
 					<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact overlays={layer.overlays} className="mb-3" />
 				)}
-				<CourseStrip course={course} orientation="vertical" overlays={layer.overlays} laneHeads={layer.heads} />
+				<CourseStrip course={course} orientation="horizontal" compact overlays={layer.overlays} laneHeads={layer.heads} />
 			</div>
 			</div>
 			{/* Beside the map from lg up, under it below; mounted only while open. */}
