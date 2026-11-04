@@ -2052,9 +2052,25 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   inner column). `CourseSection` measures the block's bottom the moment the store changes
   (`subscribeCourseMap`) and again after the render, and scrolls the block's scroller by the
   move when the pointer was below the block. Measured, never assumed.
-- **The strip previews on the track** under Both: the layer span under the pointer
-  (`onPreview`, by span key) draws its arc bolder and quietens the others (`preview` on
-  `CourseTrack`, `data-preview` on the lit arc).
+- **The strip and the track preview each other** (owner, 2026-11-04): the layer span under the
+  pointer on either (`onPreview`, by span key) draws its arc bolder on the track and quietens
+  the others (`preview` on `CourseTrack`, `data-preview` on the lit arc), and its bar on the
+  strip ringed in white with the others at 0.45 (`preview` on `CourseStrip`, `data-previewed`).
+  The arcs and the icons carry `<title>` with the name and the verdict.
+- **A lit skill is marked by its ICON on the track**, at its arc's start, ringed in its layer's
+  colour, one per skill per group, sliding forward along its arc when another icon sits there
+  (several skills start at the late-race start); a span with no icon keeps a name chip. The
+  strip's bars draw the icon before the name. Under the track (Track and Both), a "Lit skills"
+  legend names every lit skill by icon and name in its colour, each a hover target for its arc
+  and bar; on a phone it is the names alone. Every span carries `image` for this
+  (`skillSpans`, `focusLayer`, `veteranLayer`'s `images` from the catalogue).
+- **The accels column says why a row ranks where it does**: two chips, Accel (the share landing
+  well times the speed its acceleration adds) and Carry (the share carrying speed into the late
+  race times that speed), the API's `spurt.accel` and `spurt.carry`, a zero left out; and the
+  carry in the game's terms, "+0.35 m/s into the late race for 3.2 s" (`carry_speed`,
+  `carry_seconds`). `ZoneBar` draws the four phases under the zone, so a popup far from the map
+  (a skill chip's, an uma tile's, which now carries `CourseVerdict` for her unique) reads as a
+  one-lane strip.
 - **Walk the course is shelved** (owner, 2026-11-03: a runner on the course without the race
   logic was a simulator in name only). The hook, the runner and the strip's cursor line are
   gone; a runner belongs to the run view (`notes/course-map-later.md`), with the race logic.

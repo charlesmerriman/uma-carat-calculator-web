@@ -36,12 +36,15 @@ export interface SkillZoneEntry {
 	 * Metres from the late-race start (negative is before); odds once the
 	 * window is confirmed; for an accel, `useful`, a ranking score never shown.
 	 */
-	spurt?: { from: number; to: number; odds?: number; useful?: number }
+	spurt?: { from: number; to: number; odds?: number; useful?: number; accel?: number; carry?: number }
 	/** A heal's share landing before the late-race HP check. */
 	before_spurt?: number
 	/** A speed skill's share still running at the late-race start, and where it must fire for that. */
 	carry?: number
 	carry_window?: [number, number]
+	/** What a speed skill carries: the target speed it adds (m/s) and its run here (s), with the window. */
+	carry_speed?: number
+	carry_seconds?: number
 	/** How many times a short-cooldown skill can fire here. */
 	repeats?: number
 	/** What else must hold, in verified words. */
@@ -75,11 +78,11 @@ export interface LayerSpan extends CourseSpan {
  * fire anywhere (or always, a passive), one span over the whole course says
  * so; never, nothing.
  */
-export function skillSpans(entry: SkillZoneEntry | undefined, distance: number, label: string, lane = 0, key = label): LayerSpan[] {
+export function skillSpans(entry: SkillZoneEntry | undefined, distance: number, label: string, lane = 0, key = label, image: string | null = null): LayerSpan[] {
 	if (!entry || entry.kind === "never") return []
 	const detail = verdictLines(entry, distance).join(". ")
 	if (entry.kind === "anywhere" || entry.kind === "passive") {
-		return [{ key: `${key}-all`, start: 0, end: distance, kind: entry.kind as SpanKind, label, lane, detail }]
+		return [{ key: `${key}-all`, start: 0, end: distance, kind: entry.kind as SpanKind, label, lane, detail, image }]
 	}
 	return entry.zones.map((zone, index) => ({
 		key: `${key}-${index}`,
@@ -89,6 +92,7 @@ export function skillSpans(entry: SkillZoneEntry | undefined, distance: number, 
 		label,
 		lane,
 		detail,
+		image,
 	}))
 }
 
@@ -378,6 +382,7 @@ export function focusLayer(
 	name: string,
 	skillId: number,
 	chainSet?: (SkillZoneEntry | undefined)[],
+	image: string | null = null,
 ): { spans: LayerSpan[]; markers: CourseMarker[] } {
 	const spans: LayerSpan[] = []
 	const markers: CourseMarker[] = []
@@ -388,9 +393,9 @@ export function focusLayer(
 	const chain = entry?.chain && chainSet ? resolveChain(entry, chainSet, distance) : null
 	if (entry?.chain && chain && "from" in chain) {
 		const kind = chain.from === chain.to ? "fixed" : "random"
-		spans.push({ key: `focus-${skillId}`, start: chain.from, end: chain.to, kind, label: name, lane: 0, detail: chainWords(chain, entry.chain) })
+		spans.push({ key: `focus-${skillId}`, start: chain.from, end: chain.to, kind, label: name, lane: 0, detail: chainWords(chain, entry.chain), image })
 	} else {
-		spans.push(...skillSpans(entry, distance, name, 0, `focus-${skillId}`))
+		spans.push(...skillSpans(entry, distance, name, 0, `focus-${skillId}`, image))
 	}
 	if (entry?.carry_window) {
 		const [start, end] = entry.carry_window
@@ -501,7 +506,7 @@ export function veteranLayer(
 	distance: number,
 	names: ReadonlyMap<number, string>,
 	keep: (skillId: number, veteran: VeteranInLayer) => boolean,
-	options: { chains?: boolean } = {},
+	options: { chains?: boolean; images?: ReadonlyMap<number, string | null> } = {},
 ): { spans: LayerSpan[]; lanes: VeteranLane[] } {
 	const spans: LayerSpan[] = []
 	const lanes: VeteranLane[] = []
@@ -512,6 +517,7 @@ export function veteranLayer(
 			const entry = zones[String(skillId)]
 			if (!entry || entry.kind !== "place" || !firesForStyle(entry, veteran.style) || !keep(skillId, veteran)) continue
 			const label = names.get(skillId) ?? `Skill ${skillId}`
+			const image = options.images?.get(skillId) ?? null
 			const key = `${veteran.key}-${skillId}`
 			if (options.chains && entry.chain) {
 				const others = veteran.skillIds.filter((other) => other !== skillId).map((other) => zones[String(other)])
@@ -519,11 +525,11 @@ export function veteranLayer(
 				if (result && "missing" in result) continue
 				if (result) {
 					const kind = result.from === result.to ? "fixed" : "random"
-					own.push({ key: `${key}-chain`, start: result.from, end: result.to, kind, label, lane: 0, detail: chainWords(result, entry.chain) })
+					own.push({ key: `${key}-chain`, start: result.from, end: result.to, kind, label, lane: 0, detail: chainWords(result, entry.chain), image })
 					continue
 				}
 			}
-			own.push(...skillSpans(entry, distance, label, 0, key))
+			own.push(...skillSpans(entry, distance, label, 0, key, image))
 		}
 		if (own.length === 0) continue
 		const rows = packLabels(own.map((span) => ({ start: span.start, end: span.end, labelShare: labelShareOf(span.label ?? "") })), distance)

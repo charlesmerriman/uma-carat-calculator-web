@@ -41,6 +41,21 @@ describe("the course map's layers", () => {
 		expect(screen.getByRole("list", { name: "Layer legend" })).toBeInTheDocument()
 	})
 
+	it("names each lit skill under the track, a hover target that lights its bar on the strip", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+			new Response(JSON.stringify(String(input).includes("/skill-zones") ? ZONES : { shape: null })))
+		const { container } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		fireEvent.click(screen.getByRole("button", { name: "Both" }))
+		act(() => setCourseFocus({ skillId: 88, name: "Final Push", image: "/skills/push.png" }))
+		const legend = within(await screen.findByRole("list", { name: "Lit skills" }))
+		const item = legend.getByText("Final Push")
+		expect(item.querySelector("img")).toHaveAttribute("src", "/skills/push.png")
+		fireEvent.mouseEnter(item)
+		await waitFor(() => expect(container.querySelectorAll('[data-band="layers"] [data-previewed="true"]')).toHaveLength(1))
+		fireEvent.mouseLeave(item)
+		await waitFor(() => expect(container.querySelectorAll('[data-band="layers"] [data-previewed]')).toHaveLength(0))
+	})
+
 	it("keeps what the pointer is on in place when lighting from below grows the block (the hover loop, 2026-11-04)", async () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(ZONES)))
 		// The block's bottom: 300 when the store changes, 400 once the lit rows are in.
@@ -73,7 +88,8 @@ describe("the course map's layers", () => {
 					"88": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: ["front"],
 						effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12, useful: 0.096 } },
 					"89": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
-						effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2 } },
+						effects: ["accel", "speed"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2, accel: 0.85, carry: 0.35 },
+						carry_window: [740, 791], carry_speed: 0.35, carry_seconds: 3.2 },
 					"90": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
 						effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 0.6 } },
 					// Fires 250 m early: no use at the spurt start, so not listed.
@@ -100,6 +116,11 @@ describe("the course map's layers", () => {
 		expect(rows[0]).toHaveTextContent("Angling and Scheming")
 		expect(rows[0]).toHaveTextContent("unique of Seiun Sky")
 		expect(rows[0]).toHaveTextContent("Fires as the late race starts")
+		// The rank's two parts, and the carry in the game's terms (owner, 2026-11-04).
+		expect(rows[0]).toHaveTextContent("Accel 0.85")
+		expect(rows[0]).toHaveTextContent("Carry 0.35")
+		expect(rows[0]).toHaveTextContent("+0.35 m/s into the late race for 3.2 s")
+		expect(rows[1]).not.toHaveTextContent("Carry")
 		expect(rows[1]).toHaveTextContent("inherited from Seiun Sky")
 		// "All" says whose style a style-gated accel is.
 		expect(rows[2]).toHaveTextContent("Final Push · Front")

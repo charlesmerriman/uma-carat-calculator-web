@@ -50,6 +50,8 @@ export interface CourseSpan {
 	colour?: string
 	/** Which group of spans this belongs to (the lit skill, one veteran): the track draws one arc per group. */
 	group?: string
+	/** The skill's icon, drawn at the span's start on the track and before its name on the strip. */
+	image?: string | null
 }
 
 export type MarkerKind = "spurt-start" | "position-keep-end" | "midpoint" | "heal-check"

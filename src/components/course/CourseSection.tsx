@@ -198,7 +198,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					.filter((skillId, index, ids) => skillId !== focus.skillId && ids.indexOf(skillId) === index)
 					.map((skillId) => zones[String(skillId)])
 				: undefined
-			const lit = focusLayer(zones[String(focus.skillId)], course.distance, focus.name, focus.skillId, chainSet)
+			const lit = focusLayer(zones[String(focus.skillId)], course.distance, focus.name, focus.skillId, chainSet, focus.image ?? null)
 			spans.push(...lit.spans)
 			markers.push(...lit.markers)
 		}
@@ -216,7 +216,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				&& skillShown(veteranPicks, veteran, skillId, zones[String(skillId)])
 			// Below whatever lanes the open skill used.
 			const offset = spans.length > 0 ? Math.max(...spans.map((span) => span.lane ?? 0)) + 1 : 0
-			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep, { chains: layers.chains })
+			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep, { chains: layers.chains, images: veteranData.images })
 			// Her colour follows her team spot, on her spans and at the head of her rows.
 			const colourOf = (lane: number) => {
 				const index = veterans.lanes.findIndex((group) => lane >= group.firstLane && lane < group.firstLane + group.lanes)
@@ -249,6 +249,18 @@ export default function CourseSection({ course, event = null, guide = null }: {
 		return { overlays: { spans, markers }, heads, menu }
 	}, [zones, focus, veteransOn, veteranData, veteranPicks, guide, layers.scope, layers.chains, styleTab, course.distance])
 	const hasLayer = layer.overlays.spans.length > 0
+	// The lit skills, one entry each, for the legend under the track: hovering
+	// one bolds its arc (owner, 2026-11-04: several skills on one line were
+	// unreadable). Keyed by its first span.
+	const litSkills = useMemo(() => {
+		const seen = new Map<string, { key: string; label: string; colour: string; image: string | null }>()
+		for (const span of layer.overlays.spans) {
+			if (!span.label || span.kind === "window" || span.kind === "phase") continue
+			const id = `${span.group ?? "lit"}:${span.label}`
+			if (!seen.has(id)) seen.set(id, { key: span.key, label: span.label, colour: span.colour ?? "var(--color-course-lit)", image: span.image ?? null })
+		}
+		return [...seen.values()]
+	}, [layer.overlays.spans])
 
 	// Lighting a skill from a chip or a tile BELOW the map grows the map (the
 	// verdict card, the lit rows); the chip slides away from the pointer, its
@@ -353,7 +365,24 @@ export default function CourseSection({ course, event = null, guide = null }: {
 									<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 								</div>
 							)
-							: <CourseTrack course={course} shape={shape} overlays={layer.overlays} preview={view === "both" ? preview : null} />)}
+							: <CourseTrack course={course} shape={shape} overlays={layer.overlays} preview={preview} onPreview={setPreview} />)}
+						{view !== "strip" && litSkills.length > 0 && (
+							// The lit skills by icon and name, each a hover target for its arc.
+							<ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px]" aria-label="Lit skills">
+								{litSkills.map((skill) => (
+									<li
+										key={skill.key}
+										className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-semibold transition ${preview === skill.key ? "text-gray-100" : "text-gray-300"}`}
+										style={{ borderColor: skill.colour, background: preview === skill.key ? `color-mix(in srgb, ${skill.colour} 30%, transparent)` : undefined }}
+										onMouseEnter={() => setPreview(skill.key)}
+										onMouseLeave={() => setPreview(null)}
+									>
+										{skill.image ? <img src={skill.image} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" /> : <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: skill.colour }} />}
+										{skill.label}
+									</li>
+								))}
+							</ul>
+						)}
 						{view !== "track" && (
 							<CourseStrip
 								course={course}
@@ -361,7 +390,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 								className={view === "both" ? "mt-4" : ""}
 								overlays={layer.overlays}
 								laneHeads={layer.heads}
-								onPreview={view === "both" ? setPreview : undefined}
+								preview={preview}
+								onPreview={setPreview}
 							/>
 						)}
 					</motion.div>

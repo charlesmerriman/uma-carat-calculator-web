@@ -71,6 +71,8 @@ interface CourseStripProps {
 	className?: string
 	/** Hears which layer span (by `key`) the pointer is over, null when it leaves: the track lights it. */
 	onPreview?: (key: string | null) => void
+	/** The span (by `key`) the pointer is over elsewhere (the track, the legend): drawn lit, the rest quieter. */
+	preview?: string | null
 }
 
 // The label column across the page, and the marks' margin down it.
@@ -218,11 +220,13 @@ function HeightRow({ course, vertical }: { course: RaceCourse; vertical: boolean
 }
 
 /** One layer span: solid where it fires, striped for a random point, a dot for a spot, dashed for a window. */
-function LayerSpan({ span, distance, vertical, onPreview }: {
+function LayerSpan({ span, distance, vertical, onPreview, previewed = null }: {
 	span: CourseSpan & { key?: string }
 	distance: number
 	vertical: boolean
 	onPreview?: (key: string | null) => void
+	/** True when this span is the one under a pointer elsewhere, false when another is, null when none. */
+	previewed?: boolean | null
 }) {
 	const reduceMotion = useReducedMotion()
 	const colour = span.colour ?? LIT
@@ -244,13 +248,14 @@ function LayerSpan({ span, distance, vertical, onPreview }: {
 	return (
 		<motion.div
 			className={`absolute flex items-center overflow-visible ${point ? "rounded-full" : "rounded-[3px]"}`}
-			style={{ ...box, ...look }}
+			style={{ ...box, ...look, ...(previewed ? { boxShadow: "0 0 0 2px var(--color-gray-100)", zIndex: 2 } : {}) }}
+			data-previewed={previewed === null ? undefined : previewed}
 			// The skill's verdict on hover; the card says it in full (CourseSection).
 			title={span.detail || undefined}
 			onMouseEnter={onPreview && span.key ? () => onPreview(span.key ?? null) : undefined}
 			onMouseLeave={onPreview ? () => onPreview(null) : undefined}
 			initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.85 }}
-			animate={{ opacity: 1, scale: 1, transition: { delay: reduceMotion ? 0 : (span.start / distance) * 0.35, duration: 0.2 } }}
+			animate={{ opacity: previewed === false ? 0.45 : 1, scale: 1, transition: { delay: reduceMotion ? 0 : (span.start / distance) * 0.35, duration: 0.2 } }}
 			exit={{ opacity: 0, transition: { duration: 0.15 } }}
 		>
 			{span.label && !vertical && !point && (
@@ -260,6 +265,7 @@ function LayerSpan({ span, distance, vertical, onPreview }: {
 						? { color: "var(--color-gray-300)", background: "var(--color-gray-900)" }
 						: { color: "#0b0b0f", background: `color-mix(in srgb, ${colour} 85%, #fff)` }}
 				>
+					{span.image && <img src={span.image} alt="" className="mr-1 inline-block h-3 w-3 align-[-2px]" loading="lazy" decoding="async" />}
 					{span.label}
 				</span>
 			)}
@@ -309,6 +315,7 @@ export default function CourseStrip({
 	orientation = "horizontal",
 	className = "",
 	onPreview,
+	preview = null,
 }: CourseStripProps) {
 	const vertical = orientation === "vertical"
 	const distance = course.distance
@@ -448,7 +455,7 @@ export default function CourseStrip({
 						<Row key={lane} vertical={false} label={layerLabel(lane)} band={`layer-${lane}`} size={ROW_PX} className="bg-gray-900/25">
 							<AnimatePresence>
 								{layerSpans.filter((span) => (span.lane ?? 0) === lane).map((span) => (
-									<LayerSpan key={span.key ?? `${span.kind}-${span.start}-${lane}`} span={span} distance={distance} vertical={false} onPreview={onPreview} />
+									<LayerSpan key={span.key ?? `${span.kind}-${span.start}-${lane}`} span={span} distance={distance} vertical={false} onPreview={onPreview} previewed={preview === null ? null : span.key === preview} />
 								))}
 							</AnimatePresence>
 						</Row>
