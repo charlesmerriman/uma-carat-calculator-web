@@ -51,6 +51,35 @@ export interface GameEvent {
  * ChampionsMeeting and LeagueOfHeroes are otherwise field-identical bar the
  * number, so nothing structural can tell them apart.
  */
+/**
+ * The course an event runs on, from the game's own files (the API's RaceCourse,
+ * views/race_course.py; notes/course-map-plan.md). Every number is metres from
+ * the gate, and a stretch in none of the lists is a gap the game leaves, drawn
+ * as one. Read it through utils/courseGeometry.ts, the one place a metre
+ * becomes a position.
+ */
+export interface RaceCourse {
+	id: number
+	region: "jp" | "global"
+	/** The game's course set id, e.g. 10701 for Chukyo turf 1200 m. */
+	game_id: number
+	racecourse: string
+	surface: "turf" | "dirt"
+	distance: number
+	variant: "" | "inner" | "outer" | "outer_inner"
+	direction: "right" | "left" | "straight"
+	/** The game's number: counted back from the finish in fours (the final corner is 4); -1 is a normal corner. */
+	corners: { start: number; length: number; number: number }[]
+	/** `front` is the game's straight type. */
+	straights: { start: number; length: number; front: number }[]
+	/** `slope` is percent times 10,000: 20000 is a 2% climb, negative is downhill. */
+	slopes: { start: number; length: number; slope: number }[]
+	/** Where the ground changes, e.g. a dirt course that starts on turf. */
+	surface_changes: { start: number; surface: "turf" | "dirt" }[]
+	/** How a course over one lap draws its later laps (the track view). */
+	later_laps: "inside" | "outside"
+}
+
 export interface ChampionsMeeting {
 	id: number
 	name: string
@@ -91,6 +120,12 @@ export interface ChampionsMeeting {
 	guide_visibility?: "supporters" | "public" | null
 	/** Whether My team and the Gallery open to everyone with it (Public only). */
 	guide_tools_public?: boolean
+	/**
+	 * The course the map draws, or null when the event has none yet (or an
+	 * editor hid its map). Optional: an older API and older fixtures omit it,
+	 * which reads as "no course".
+	 */
+	course?: RaceCourse | null
 }
 
 /**
@@ -144,6 +179,12 @@ export interface LeagueOfHeroes {
 	guide_visibility?: "supporters" | "public" | null
 	/** Whether My team and the Gallery open to everyone with it (Public only). */
 	guide_tools_public?: boolean
+	/**
+	 * The course the map draws, or null when the event has none yet (or an
+	 * editor hid its map). Optional: an older API and older fixtures omit it,
+	 * which reads as "no course".
+	 */
+	course?: RaceCourse | null
 }
 
 /**

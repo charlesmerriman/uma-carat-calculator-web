@@ -45,6 +45,7 @@ export type {
 	GameEvent,
 	ChampionsMeeting,
 	LeagueOfHeroes,
+	RaceCourse,
 	RaceEvent
 } from "./events"
 

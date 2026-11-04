@@ -403,6 +403,26 @@ html {
 	--color-style-late: #fdde34;
 	--color-style-end: #ffb231;
 
+	/* THE COURSE MAP'S BANDS (components/course/CourseStrip.tsx), after the
+	   mock (notes/course-map/mocks/01-guide-desktop-strip.png), which follows
+	   the strip players already read on umalator, re-toned for the dark theme.
+	   Fills only: each band picks a light or dark ink for its own fill in the
+	   component, so the words stay readable on every theme. :root for the
+	   style colours' reason above (read through inline var()). A theme can
+	   restyle the map by setting these. */
+	--color-course-elevation: #5f8f36;
+	--color-course-elevation-line: #b9e27e;
+	--color-course-downhill: #3f8f88;
+	--color-course-uphill: #b8955a;
+	--color-course-straight: #5b8fdc;
+	--color-course-corner: #d9905a;
+	--color-course-corner-alt: #e8ad7e;
+	--color-course-early: #2f8a5c;
+	--color-course-mid: #e2d35c;
+	--color-course-late: #c46fa8;
+	--color-course-turf: #4f8a3c;
+	--color-course-dirt: #9a7046;
+
 	/* A VETERAN'S CARD (the Collection, components/collection/VeteranCard.tsx):
 	   the five stats and the three coloured spark kinds, in the hues the game
 	   gives them (blue stat sparks, pink aptitude ones, green uniques). Fills,

@@ -83,6 +83,7 @@ import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { announcedCoursePairs } from "../../utils/courseDetails"
 import { CoursePairs } from "../timeline/CourseDetails"
+import CourseSection from "../course/CourseSection"
 import { formatDate, formatTime, localZoneName } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { guideLinkPath } from "../../utils/appRoutes"
@@ -795,6 +796,10 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 					</div>
 				)}
 			</div>
+
+			{/* The course map (notes/course-map-plan.md): only for an event the
+			    admin's "Link courses" has given a course. */}
+			{event.course && <CourseSection course={event.course} />}
 		</section>
 	)
 }
