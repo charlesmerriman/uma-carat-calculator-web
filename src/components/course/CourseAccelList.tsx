@@ -12,7 +12,9 @@
  * guide visit doesn't otherwise fetch), so closed it fetches nothing. Open,
  * it reads the course's skill zones (the map the layers share) and the
  * catalogue for names, and for whose unique a skill is, drawn with her avatar
- * (FramedUma). The pills open on the guide tab's style.
+ * (FramedUma). The pills open on the guide tab's style. Beside the map it
+ * scrolls within itself past the screen's height, so "Show all" never
+ * strands the map at the top of a long page.
  */
 import { useMemo, useState, useSyncExternalStore } from "react"
 import { FramedUma } from "../FramedUma"
@@ -22,7 +24,7 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useCourseZones } from "../../services/courseQueries"
 import { setCourseFocus, useCourseFocus } from "../../services/courseMapStore"
-import { accelRows, grade, verdictLines } from "../../utils/courseLayers"
+import { accelRows, grade, verdictLines, type AccelRow } from "../../utils/courseLayers"
 import { GradePill, ZoneBar } from "./CourseVerdictCard"
 
 type StyleChoice = MemberStyle | "all"
@@ -62,48 +64,23 @@ function useStyleTab(): StyleChoice {
 	return useSyncExternalStore(onNavigation, () => styleFromTab(new URLSearchParams(window.location.search).get("style")), () => "all")
 }
 
-function AccelRows({ course, style }: { course: RaceCourse; style: StyleChoice }) {
-	const zones = useCourseZones(course.id)
-	const catalogue = usePvpCatalogue()
+function AccelRows({ course, rows, style, owners, skillsById }: {
+	course: RaceCourse
+	rows: AccelRow[]
+	style: StyleChoice
+	owners: Map<number, Owner>
+	skillsById: Map<number, { name: string; image: string | null }>
+}) {
 	const oshiIds = useOshiIds()
 	const focus = useCourseFocus()
 	const [all, setAll] = useState(false)
-
-	const ready = catalogue.status === "ready" ? catalogue : null
-	// Whose unique a skill is: her own (the umas' "unique" links), or its
-	// inherited white, which carries the same name.
-	const owners = useMemo(() => {
-		const found = new Map<number, Owner>()
-		const byName = new Map<string, CatalogueUma>()
-		for (const uma of ready?.catalogue.umas ?? []) {
-			for (const link of uma.skills ?? []) {
-				if (link.source !== "unique") continue
-				found.set(link.skill, { uma, inherited: false })
-				const name = ready?.skillsById.get(link.skill)?.name
-				if (name && !byName.has(name)) byName.set(name, uma)
-			}
-		}
-		for (const skill of ready?.catalogue.skills ?? []) {
-			const uma = byName.get(skill.name)
-			if (uma && !found.has(skill.id)) found.set(skill.id, { uma, inherited: true })
-		}
-		return found
-	}, [ready])
-	const rows = useMemo(
-		() => (zones.data ? accelRows(zones.data, style, (skillId) => (owners.has(skillId) ? 0 : 1)) : []),
-		[zones.data, style, owners],
-	)
-
-	if (zones.isError || catalogue.status === "error") return <p className="text-xs text-gray-400">The list didn't load.</p>
-	if (!zones.data || !ready) return <p className="text-xs text-gray-400" role="status">Loading the accels…</p>
 	if (rows.length === 0) return <p className="text-xs text-gray-400">No accel lands at the late-race start here for this style.</p>
-
 	const shown = all ? rows : rows.slice(0, FIRST_ROWS)
 	return (
 		<>
 			<ul className="flex flex-col gap-1" aria-label="Accels on this course">
 				{shown.map(({ skillId, entry }) => {
-					const skill = ready.skillsById.get(skillId)
+					const skill = skillsById.get(skillId)
 					const name = skill?.name ?? `Skill ${skillId}`
 					const owner = owners.get(skillId)
 					const given = grade(entry)
@@ -134,15 +111,16 @@ function AccelRows({ course, style }: { course: RaceCourse; style: StyleChoice }
 								<span className="min-w-0 flex-1">
 									<span className="block text-[12.5px] font-bold leading-tight text-gray-100">
 										{name}
-										{owner && (
-											<span className="font-normal text-gray-400">
-												{owner.inherited ? ` · inherited from ${owner.uma.name}` : ` · unique of ${owner.uma.name}`}
-											</span>
-										)}
 										{style === "all" && entry.styles && (
 											<span className="font-normal text-gray-500"> · {entry.styles.map((key) => STYLE_NAMES[key] ?? key).join(", ")}</span>
 										)}
 									</span>
+									{/* Whose unique it is, on its own quieter line. */}
+									{owner && (
+										<span className="block text-[10.5px] leading-tight text-gray-400">
+											{owner.inherited ? `inherited from ${owner.uma.name}` : `unique of ${owner.uma.name}`}
+										</span>
+									)}
 									{first && <span className="mt-0.5 block text-[11px] leading-snug text-gray-300">{first}</span>}
 									<ZoneBar entry={entry} distance={course.distance} className="mt-1.5" />
 								</span>
@@ -161,23 +139,56 @@ function AccelRows({ course, style }: { course: RaceCourse; style: StyleChoice }
 	)
 }
 
-/** The column: its title, the style pills and the rows. Mounted only while open. */
+/** The column: its title with the count, the style pills and the rows. Mounted only while open. */
 export default function CourseAccelList({ course, className = "" }: { course: RaceCourse; className?: string }) {
 	// The guide tab's style until the reader picks a pill.
 	const tab = useStyleTab()
 	const [picked, setPicked] = useState<StyleChoice | null>(null)
 	const style = picked ?? tab
-	const setStyle = setPicked
+	const zones = useCourseZones(course.id)
+	const catalogue = usePvpCatalogue()
+	const ready = catalogue.status === "ready" ? catalogue : null
+	// Whose unique a skill is: her own (the umas' "unique" links), or its
+	// inherited white, which carries the same name.
+	const owners = useMemo(() => {
+		const found = new Map<number, Owner>()
+		const byName = new Map<string, CatalogueUma>()
+		for (const uma of ready?.catalogue.umas ?? []) {
+			for (const link of uma.skills ?? []) {
+				if (link.source !== "unique") continue
+				found.set(link.skill, { uma, inherited: false })
+				const name = ready?.skillsById.get(link.skill)?.name
+				if (name && !byName.has(name)) byName.set(name, uma)
+			}
+		}
+		for (const skill of ready?.catalogue.skills ?? []) {
+			const uma = byName.get(skill.name)
+			if (uma && !found.has(skill.id)) found.set(skill.id, { uma, inherited: true })
+		}
+		return found
+	}, [ready])
+	const rows = useMemo(
+		() => (zones.data ? accelRows(zones.data, style, (skillId) => (owners.has(skillId) ? 0 : 1)) : []),
+		[zones.data, style, owners],
+	)
+	const loaded = zones.data !== undefined && ready !== null
+
 	return (
-		<aside className={`rounded-xl border border-gray-700 bg-gray-900/40 p-3 ${className}`} aria-label="Accels that land at the spurt">
-			<h4 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-300">Accels that land at the spurt</h4>
+		<aside
+			className={`rounded-xl border border-gray-700 bg-gray-900/40 p-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${className}`}
+			aria-label="Accels that land at the spurt"
+		>
+			<div className="flex items-baseline justify-between gap-2">
+				<h4 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-300">Accels that land at the spurt</h4>
+				{loaded && <span className="shrink-0 text-[11px] text-gray-500">{rows.length} here</span>}
+			</div>
 			<div role="group" aria-label="Running style" className="my-2 flex flex-wrap gap-1">
 				{STYLES.map((option) => (
 					<button
 						key={option.value}
 						type="button"
 						aria-pressed={style === option.value}
-						onClick={() => setStyle(option.value)}
+						onClick={() => setPicked(option.value)}
 						className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold transition ${
 							style === option.value ? "border-brand bg-brand/15 text-gray-100" : "border-gray-600 text-gray-400 hover:text-gray-200"
 						}`}
@@ -186,7 +197,13 @@ export default function CourseAccelList({ course, className = "" }: { course: Ra
 					</button>
 				))}
 			</div>
-			<AccelRows course={course} style={style} />
+			{zones.isError || catalogue.status === "error" ? (
+				<p className="text-xs text-gray-400">The list didn't load.</p>
+			) : !loaded ? (
+				<p className="text-xs text-gray-400" role="status">Loading the accels…</p>
+			) : (
+				<AccelRows course={course} rows={rows} style={style} owners={owners} skillsById={ready.skillsById} />
+			)}
 		</aside>
 	)
 }

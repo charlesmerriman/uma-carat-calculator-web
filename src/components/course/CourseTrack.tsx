@@ -20,12 +20,12 @@
  * the edge slides back inside the box. The layers draw one arc per group
  * (the lit skill, each veteran) just outside the hills, in the group's
  * colour, with the skill's name at its start. The draw-in traces the track
- * gate to finish once; a `cursor` (Walk the course) runs a dot with a short
- * trail along it and lights each callout as it passes. All on motion values:
- * no React render per frame.
+ * gate to finish once, and the spurt glow breathes, both on motion values:
+ * no React render per frame. (Walk the course was shelved, owner 2026-11-03;
+ * a runner on the course belongs to the run view, notes/course-map-later.md.)
  */
-import { useMemo, type CSSProperties, type ReactNode } from "react"
-import { motion, useMotionValue, useTransform, type MotionValue } from "framer-motion"
+import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
+import { animate, motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
 	courseFacts,
@@ -67,7 +67,7 @@ type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "dow
 
 interface Callout {
 	key: string
-	/** The metre the callout lights at during a walk. */
+	/** The metre it belongs to, for ordering. */
 	at: number
 	/** Where it points, on the track (or on a hill's bracket). */
 	point: [number, number]
@@ -149,7 +149,8 @@ const TONES: Record<Tone, string> = {
 	straight: "border-gray-600 bg-gray-800 text-gray-100",
 	uphill: "border-[color:var(--color-course-up)] bg-gray-800 text-gray-100",
 	downhill: "border-[color:var(--color-course-down)] bg-gray-800 text-gray-100",
-	mark: "border-transparent bg-transparent text-[10px] text-gray-400 shadow-none",
+	// Quiet, but on the card's fill so a leader passing behind never strikes the words.
+	mark: "border-transparent bg-gray-800 text-[10px] text-gray-400",
 	heal: "border-[color:var(--color-course-heal)] bg-gray-800 text-[color:var(--color-course-heal)]",
 	ground: "border-[color:var(--color-course-dirt)] bg-gray-800 text-gray-100",
 	layer: "border-transparent text-[10.5px] font-bold text-[#0b0b0f] shadow-none",
@@ -174,57 +175,30 @@ const LEADERS: Record<Tone, string> = {
 	layer: "transparent",
 }
 
-/** A callout's chip, dimmed until a walk reaches it. */
-function CalloutBox({ callout, style, cursor }: { callout: Callout; style: CSSProperties; cursor: MotionValue<number> }) {
-	// -1 is "no walk running": everything lit.
-	const opacity = useTransform(cursor, (metre) => (metre < 0 || metre >= callout.at ? 1 : 0.4))
+/** A callout's chip. */
+function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties }) {
 	// The spurt chip's metre takes the chip's own ink (black, or white on a
 	// light theme through the .bg-brand.text-black rule), a little quieter.
 	const detail: ReactNode = callout.detail && (
 		<span className={callout.tone === "spurt" ? "font-normal opacity-70" : "font-normal text-gray-400"}>{callout.detail}</span>
 	)
 	return (
-		<motion.div
+		<div
 			className={`pointer-events-none absolute inline-flex items-center gap-1 whitespace-nowrap rounded-[7px] border px-2 py-[3px] text-[11px] leading-tight shadow-[0_2px_8px_rgb(0_0_0/25%)] ${TONES[callout.tone]}`}
-			style={{ ...style, opacity, ...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}) }}
+			style={{ ...style, ...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}) }}
 		>
 			{callout.icon && <CourseIcon name={callout.icon} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
 			<b className={callout.tone === "mark" ? "font-semibold" : callout.tone === "spurt" ? "font-extrabold" : "font-bold"}>{callout.label}</b>
 			{detail}
-		</motion.div>
+		</div>
 	)
 }
 
-/** The walk's runner: a dot with a short trail behind it. */
-function Runner({ shape, distance, cursor, track }: { shape: Shape; distance: number; cursor: MotionValue<number>; track: number }) {
-	const cx = useTransform(cursor, (metre) => pointAtMetre(shape, Math.max(0, metre), distance)[0])
-	const cy = useTransform(cursor, (metre) => pointAtMetre(shape, Math.max(0, metre), distance)[1])
-	const opacity = useTransform(cursor, (metre) => (metre < 0 ? 0 : 1))
-	// The trail is the 6% of the path behind the dot (pathLength normalises the
-	// polyline to 1, so the offset is a fraction of the race).
-	const offset = useTransform(cursor, (metre) => Math.max(0, metreToFraction(metre, distance) - 0.06))
-	return (
-		<>
-			<motion.polyline
-				points={points(shape)}
-				fill="none"
-				stroke="var(--color-course-runner)"
-				strokeWidth={track * 0.5}
-				strokeLinecap="round"
-				style={{ pathLength: 0.06, pathOffset: offset, opacity: useTransform(opacity, (value) => value * 0.55) }}
-			/>
-			<motion.circle cx={cx} cy={cy} r={track * 0.42} fill="var(--color-course-runner)" stroke="var(--color-course-bed)" strokeWidth={track * 0.12} style={{ opacity }} />
-		</>
-	)
-}
-
-export default function CourseTrack({ course, shape: baseShape, overlays, cursor, widthPx = BOX_PX, compact = false, className = "" }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, className = "" }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
 	overlays?: CourseOverlays
-	/** The walk's metre; -1 while no walk runs. */
-	cursor?: MotionValue<number>
 	/** The box's widest, in px: the guide's 1000, the Timeline drawer's less. */
 	widthPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
@@ -232,9 +206,19 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 	className?: string
 }) {
 	const distance = course.distance
-	const idle = useMotionValue(-1)
-	const walk = cursor ?? idle
 	const { ref, progress } = useDrawIn<HTMLDivElement>(1.4)
+	// The spurt glow breathes, slowly (notes/course-map-visual-plan.md,
+	// "Motion"); still under reduced motion. A motion value, so no render per frame.
+	const reduceMotion = useReducedMotion()
+	const glow = useMotionValue(0.4)
+	useEffect(() => {
+		if (reduceMotion) {
+			glow.set(0.4)
+			return
+		}
+		const controls = animate(glow, [0.3, 0.48, 0.3], { duration: 2.4, repeat: Infinity, ease: "easeInOut" })
+		return () => controls.stop()
+	}, [reduceMotion, glow])
 
 	const drawing = useMemo(() => {
 		const base = shapeBounds(baseShape)
@@ -400,10 +384,13 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 		allCallouts.push({ key: `layer-${span.group ?? "lit"}-${span.label}`, at: span.start, point: [x + n[0] * offset, y + n[1] * offset], label: span.label, tone: "layer", colour: span.colour ?? LIT })
 	}
 	// A phone-sized box has room for the start, the goal, the spurt, the
-	// corners and the final straight; the headline under it says the rest.
+	// corners and the final straight; the headline under it says the rest. A
+	// course that passes its corners twice has no room for them either: the
+	// strip under the track names them.
+	const twoLaps = course.corners.length > 4
 	const callouts = compact
 		? allCallouts
-			.filter((callout) => ["start", "goal", "spurt", "corner"].includes(callout.tone) || callout.key === "final-straight")
+			.filter((callout) => ["start", "goal", "spurt"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.
 			.map((callout) => (callout.tone === "spurt" ? callout : { ...callout, detail: undefined }))
 		: allCallouts
@@ -430,6 +417,17 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 			Math.min(box.y + box.height - height / 2, Math.max(box.y + height / 2, y)),
 		]
 	}
+	// A layer's name chip that still sits on another chip is dropped (the
+	// strip names every span); the course's own callouts always stay.
+	const placed: { x: number; y: number; w: number; h: number }[] = []
+	const shown = callouts.filter((callout) => {
+		const { width: w, height: h } = estimate(callout)
+		const [x, y] = positions[callout.key]
+		const collides = placed.some((other) => Math.abs(other.x - x) < (other.w + w) / 2 && Math.abs(other.y - y) < (other.h + h) / 2)
+		if (callout.tone === "layer" && collides) return false
+		placed.push({ x, y, w, h })
+		return true
+	})
 	const percent = ([x, y]: [number, number]): CSSProperties => ({
 		left: `${((x - box.x) / box.width) * 100}%`,
 		top: `${((y - box.y) / box.height) * 100}%`,
@@ -467,7 +465,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 					<PhaseLine key={phase.start} shape={shape} start={phase.start} end={phase.end} distance={distance} stroke={PHASE_STROKES[index % PHASE_STROKES.length]} width={track} progress={progress} />
 				))}
 				{/* The glow over the spurt: where an accel lands on time. */}
-				<polyline points={points(slice(shape, late - GLOW_BEFORE_M, late + GLOW_AFTER_M, distance))} fill="none" stroke="var(--color-course-beacon-glow)" strokeWidth={track * 2.4} strokeLinecap="round" opacity={0.4} />
+				<motion.polyline points={points(slice(shape, late - GLOW_BEFORE_M, late + GLOW_AFTER_M, distance))} fill="none" stroke="var(--color-course-beacon-glow)" strokeWidth={track * 2.4} strokeLinecap="round" style={{ opacity: glow }} />
 				{/* Thin ticks where a phase changes. */}
 				{[mid, finalSixth].map((metre) => <line key={metre} {...across(metre, track * 0.55)} stroke="var(--color-course-tick)" strokeWidth={track * 0.12} />)}
 				{hills.map((hill) => (
@@ -515,7 +513,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 				<line {...across(0, track * 0.6)} stroke="var(--color-course-gate)" strokeWidth={track * 0.28} />
 				{chequer.map((square, index) => <polygon key={index} points={square.points} fill={square.dark ? "#0b0b0f" : "#f8fafc"} />)}
 				{/* Leaders from the track to each callout, in the callout's own colour. */}
-				{callouts.map((callout) => {
+				{shown.map((callout) => {
 					const from = callout.leaderFrom ?? callout.point
 					return (
 						<g key={`leader-${callout.key}`} stroke={LEADERS[callout.tone]} fill={LEADERS[callout.tone]}>
@@ -524,10 +522,9 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 						</g>
 					)
 				})}
-				<Runner shape={shape} distance={distance} cursor={walk} track={track} />
 			</svg>
-			{callouts.map((callout) => (
-				<CalloutBox key={callout.key} callout={callout} cursor={walk} style={percent(positions[callout.key])} />
+			{shown.map((callout) => (
+				<CalloutBox key={callout.key} callout={callout} style={percent(positions[callout.key])} />
 			))}
 		</div>
 	)

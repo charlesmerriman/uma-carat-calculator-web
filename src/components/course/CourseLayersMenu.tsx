@@ -21,6 +21,8 @@ export interface VeteranMenuRow {
 	name: string
 	/** Her avatar (FramedUma). */
 	head: ReactNode
+	/** Her colour on the map (one per team spot), shown as a swatch beside her name. */
+	colour?: string
 	shown: boolean
 	skills: { skillId: number; name: string; shown: boolean }[]
 }
@@ -106,7 +108,8 @@ export default function CourseLayersMenu({ signedIn, veteransNote, veterans = []
 											onChange={(event) => setVeteranShown(veteran.veteranId, event.target.checked)}
 										/>
 										{veteran.head}
-										{veteran.name}
+										<span className="min-w-0 flex-1 truncate">{veteran.name}</span>
+										{veteran.colour && <i className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: veteran.colour }} data-swatch="" aria-hidden="true" />}
 									</label>
 									{veteran.shown && (
 										veteran.skills.length > 0 ? (

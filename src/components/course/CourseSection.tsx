@@ -8,7 +8,7 @@
  * The map is the strip by default; Track is the switch (owner, 2026-10-29),
  * and inside it Real shape | Schematic, real when the course has one (fetched
  * the first time Track is chosen, services/courseQueries.ts), the choice
- * remembered per device. A switch cross-fades. "Walk the course" runs a marker along whichever is showing.
+ * remembered per device. A switch cross-fades.
  *
  * On a phone it is the compact track over the strip running down the page
  * (owner, 2026-10-29 and 2026-11-03). Two strips, one shown, CSS picking: the
@@ -17,7 +17,7 @@
  */
 import { useContext, useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { Loader2, Pause, Play, Zap } from "lucide-react"
+import { Loader2, Zap } from "lucide-react"
 import type { RaceCourse, RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import { AuthContext } from "../../services/AuthContext"
@@ -55,7 +55,6 @@ import CourseStrip, { type LaneHead } from "./CourseStrip"
 import CourseTrack from "./CourseTrack"
 import CourseVerdictCard from "./CourseVerdictCard"
 import { courseName } from "./courseName"
-import { useWalk } from "./useWalk"
 import VeteranLayerSource, { type VeteranLayerData } from "./VeteranLayerSource"
 
 // "both": the track with the strip under it, as in Daptrius's render (owner, 2026-11-03).
@@ -102,7 +101,6 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	const [view, setView] = useState<View>("strip")
 	// Remembered per device, through a store: the page is prerendered.
 	const shapeChoice = useCourseShapeChoice()
-	const walk = useWalk(course.distance)
 	// The page's course, for skill cards far from the map (CourseVerdict).
 	useEffect(() => {
 		setPageCourse(course)
@@ -209,11 +207,12 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			}
 			// The Layers menu's rows: each veteran, and each of her skills that
 			// can fire here, with its tick.
-			for (const veteran of veteranData.veterans) {
+			for (const [index, veteran] of veteranData.veterans.entries()) {
 				menu.push({
 					veteranId: veteran.veteranId,
 					name: veteranData.umaNames.get(veteran.key) ?? "Veteran",
 					head: veteranData.heads.get(veteran.key),
+					colour: VETERAN_COLOURS[index % VETERAN_COLOURS.length],
 					shown: veteranShown(veteranPicks, veteran),
 					skills: veteranSkillChoices(veteran, zones, (skillId) => inScope(skillId, veteran)).map((skillId) => ({
 						skillId,
@@ -238,14 +237,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				<div className="ml-auto hidden flex-wrap items-center gap-2 sm:flex">
 					{accelsButton}
 					<CourseLayersMenu signedIn={signedIn} veteransNote={veteranData?.note ?? null} veterans={layer.menu} />
-					<button
-						type="button"
-						onClick={walk.walking ? walk.stop : walk.play}
-						className="flex items-center gap-1.5 rounded-lg border border-gray-600 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:bg-gray-700/60"
-					>
-						{walk.walking ? <Pause className="h-3.5 w-3.5" aria-hidden="true" /> : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
-						{walk.walking ? "Stop" : "Walk the course"}
-					</button>
+					{/* Walk the course was shelved (owner, 2026-11-03): a runner on the
+					    course belongs to the run view, once the race logic exists. */}
 					<Segmented<View>
 						label="Map view"
 						value={view}
@@ -300,13 +293,12 @@ export default function CourseSection({ course, event = null, guide = null }: {
 									<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 								</div>
 							)
-							: <CourseTrack course={course} shape={shape} cursor={walk.cursor} overlays={layer.overlays} />)}
+							: <CourseTrack course={course} shape={shape} overlays={layer.overlays} />)}
 						{view !== "track" && (
 							<CourseStrip
 								course={course}
 								orientation="horizontal"
 								className={view === "both" ? "mt-4" : ""}
-								cursor={walk.cursor}
 								overlays={layer.overlays}
 								laneHeads={layer.heads}
 							/>
