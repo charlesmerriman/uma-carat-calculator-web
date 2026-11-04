@@ -112,6 +112,14 @@ export interface Account {
 	 */
 	oshi_variants: boolean
 	/**
+	 * Whether the ad script should show this account no ads: supporters on
+	 * any paid tier and staff (backend benefits.ad_free_for). The provider
+	 * turns it into the body class Raptive's layout honours
+	 * (services/adFreeClass.ts). Optional because an API older than the
+	 * field sends nothing, which reads as "ads".
+	 */
+	ad_free?: boolean
+	/**
 	 * Whether features still in early access are open to this account:
 	 * supporters, staff, and accounts the owner granted it in the admin
 	 * (backend benefits.early_access_for). It says who;

@@ -1027,3 +1027,56 @@ html {
 	outline: 2px solid var(--color-brand);
 	outline-offset: 2px;
 }
+
+/* ===== RAPTIVE FOOTER LINKS =====
+   Raptive's ad script appends one block to our <footer> on every page (its
+   site config says footerSelector: "footer"): a "Terms of Content Use" link,
+   "A Raptive Partner Site", and for US visitors the "Do Not Sell or Share My
+   Personal Information" link. We cannot author that markup; it is theirs, built
+   at runtime (notes/raptive-install-plan.md). It arrives with Raptive's own
+   CSS: Arial 13px in #a9a9a9, the badge in uppercase over a grey rule, and a
+   100px bottom margin that reserves room for their sticky footer ad. Next to
+   our 12px grey footer that read as a broken layout (owner, 2026-11-04).
+
+   These rules make it one more line of our footer: inherited font, our link
+   colours, no uppercase, no rule, the links on one wrapping line. Raptive's
+   stylesheet is injected after ours, so the selectors go through #root to
+   outrank it. The 100px reservation is kept ONLY while the sticky footer ad
+   exists, so the footer's last line stays reachable above the ad and an
+   ad-free or ad-closed page has no blank strip. */
+#root footer .adthrive-footer-message {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	column-gap: 1rem;
+	row-gap: 0.25rem;
+	margin: 0.375rem 0 0;
+}
+
+body:has(.adthrive-sticky.adthrive-footer) #root footer .adthrive-footer-message {
+	margin-bottom: 100px;
+}
+
+#root footer .adthrive-footer-message *,
+#root footer .adthrive-footer-message > span {
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	color: inherit;
+	text-transform: none;
+	border: 0;
+	padding: 0;
+	margin: 0;
+}
+
+#root footer .adthrive-footer-message a {
+	color: var(--color-gray-400);
+	cursor: pointer;
+	text-decoration: none;
+	transition: color 150ms;
+}
+
+#root footer .adthrive-footer-message a:hover {
+	color: var(--color-brand);
+}

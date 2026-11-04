@@ -15,6 +15,7 @@ import { AuthProvider } from '../services/AuthProvider'
 import { useAccount } from '../services/AuthContext'
 import { accountFetch } from '../services/accountFetchCalls'
 import { userLogout } from '../services/userServices'
+import { AD_FREE_BODY_CLASS, AD_FREE_STORAGE_KEY } from '../services/adFreeClass'
 import { getAuthToken, setAuthToken } from '../services/authToken'
 import type { Account } from '../types/account'
 
@@ -64,6 +65,7 @@ const renderProvider = () =>
 
 beforeEach(() => {
 	localStorage.clear()
+	document.body.className = ''
 	mockedFetch.mockReset()
 	mockedLogout.mockReset()
 	mockedLogout.mockResolvedValue({ message: 'ok' })
@@ -166,5 +168,64 @@ describe('AuthProvider', () => {
 		// strand the user signed in on a shared machine.
 		await waitFor(() => expect(screen.getByTestId('logged-in')).toHaveTextContent('false'))
 		expect(getAuthToken()).toBeNull()
+	})
+
+	// The ad-free body class: Raptive's layout loads no ads while <body> carries
+	// it, so it must track the server's answer and nothing else.
+	describe('the ad-free body class', () => {
+		it('follows ad_free on the account, and remembers it for the next load', async () => {
+			localStorage.setItem('authToken', 'a-real-token')
+			mockedFetch.mockResolvedValue(accountResponse({ ad_free: true }))
+
+			renderProvider()
+			await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('ready'))
+
+			expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(true)
+			expect(localStorage.getItem(AD_FREE_STORAGE_KEY)).toBe('true')
+		})
+
+		it('comes off on sign-out, and the memory with it', async () => {
+			localStorage.setItem('authToken', 'a-real-token')
+			mockedFetch.mockResolvedValue(accountResponse({ ad_free: true }))
+
+			renderProvider()
+			await waitFor(() => expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(true))
+
+			act(() => screen.getByRole('button', { name: 'sign out' }).click())
+
+			// The class follows `status`, which flips to anonymous one effect
+			// after the token goes, so wait on the class itself.
+			await waitFor(() => expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(false))
+			expect(screen.getByTestId('logged-in')).toHaveTextContent('false')
+			expect(localStorage.getItem(AD_FREE_STORAGE_KEY)).toBeNull()
+		})
+
+		it('comes off when the server says the entitlement lapsed', async () => {
+			// What the head-start script in index.html did from last time.
+			localStorage.setItem('authToken', 'a-real-token')
+			localStorage.setItem(AD_FREE_STORAGE_KEY, 'true')
+			document.body.classList.add(AD_FREE_BODY_CLASS)
+			mockedFetch.mockResolvedValue(accountResponse({ ad_free: false }))
+
+			renderProvider()
+			await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('ready'))
+
+			expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(false)
+			expect(localStorage.getItem(AD_FREE_STORAGE_KEY)).toBeNull()
+		})
+
+		it('stays as the head start left it while the lookup merely fails', async () => {
+			localStorage.setItem('authToken', 'a-real-token')
+			localStorage.setItem(AD_FREE_STORAGE_KEY, 'true')
+			document.body.classList.add(AD_FREE_BODY_CLASS)
+			mockedFetch.mockRejectedValue(new Error('network down'))
+
+			renderProvider()
+			await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'))
+
+			// A flaky network must not flip a supporter's page to ads.
+			expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(true)
+			expect(localStorage.getItem(AD_FREE_STORAGE_KEY)).toBe('true')
+		})
 	})
 })
