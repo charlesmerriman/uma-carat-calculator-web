@@ -41,7 +41,7 @@ describe("CourseDrawer", () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("opens to the course's name, its real shape as a track, the chips and the guide link", async () => {
+	it("opens to the course's name, its real shape as a track, the headline and the guide link", async () => {
 		const { container } = renderDrawer()
 		fireEvent.click(screen.getByRole("button", { name: "Course map" }))
 		expect(screen.getByRole("button", { name: "Course map" })).toHaveAttribute("aria-expanded", "true")
@@ -54,7 +54,7 @@ describe("CourseDrawer", () => {
 		expect(screen.getAllByText("Last spurt")).toHaveLength(2)
 		expect(container.querySelector('[data-band="track"]')).toBeNull()
 		expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`/race-courses/${CHUKYO_1200.id}/shape`), expect.anything())
-		expect(screen.getByText("Final straight 412m")).toBeInTheDocument()
+		expect(screen.getByLabelText("Read off the course")).toHaveTextContent("Final straight 412m")
 		expect(screen.getByRole("link", { name: "See the full course map in the guide" })).toHaveAttribute("href", "/app/pvp?event=cm-21")
 	})
 

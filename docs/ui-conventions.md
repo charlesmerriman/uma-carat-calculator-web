@@ -1951,14 +1951,20 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   `-corner`, `-corner-alt`), the hills (`-up`, `-down`), the ground, the height profile, the
   track's bed and marks, the beacon and its glow, and the layers (`-lit`, `-vet-1/2/3`).
   The owner may retune the shades (2026-11-03): change the tokens, nothing else.
-- **The track view** (`CourseTrack`, behind the block's Strip | Track switch, from `sm` up;
-  phones keep the strip): the course along its real shape (`GET
+- **The track view** (`CourseTrack`, behind the block's Strip | Track switch from `sm` up,
+  and compact over the strip on a phone, where `CourseSection` reads the screen in an effect
+  and fetches the shape at once): the course along its real shape (`GET
   /race-courses/<id>/shape` through `services/courseQueries.ts`, fetched the first time
   Track is chosen, the box held while it loads) or the schematic
   (`utils/courseSchematic.ts`, from the record), Real shape | Schematic remembered per
-  device in `services/courseShapeStore.ts`. The track is coloured by phase; words go in
-  callouts beside it, one per spot (a corner or hill a course passes twice lists both
-  laps' metres), placed by `placeLabels` from size estimates; hills are brackets outside
+  device in `services/courseShapeStore.ts`. The look (`notes/course-map-visual-plan.md`,
+  "The track"): a kerb under the surface in the four phase colours, thin ticks where a
+  phase changes, a gate bar at the start and a chequer at the goal, the last-spurt line
+  across the track with a glow over the metres just after it (a look, not a number), hills
+  as brackets outside the track, and callouts beside it with `CourseIcon` shapes (one per
+  spot; a corner or hill a course passes twice lists both laps' metres), placed by
+  `placeLabels` from size estimates and then clamped inside the box; the spurt chip sits
+  inside the curve. Each callout's leader is a short line in its own colour with a dot on
   the track. Later laps are rings (`withLapRings`): ring k blends in over the half turn
   before the course has turned k full circles, inside or outside per `later_laps`. A full
   circle has 10 degrees of slack (`TURN_SLACK`): real shapes that finish on the straight they
@@ -1973,8 +1979,10 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   their style, all or only the guide's (`heldSkillMeetsPick`), one group of lanes each
   headed by her `FramedUma`. Zones come from `GET /race-courses/<id>/skill-zones`
   (`services/courseQueries.ts`), fetched only once a layer needs them. On the strip a
-  layer is the layers band (labels pop in along the race); on the track, lines just
-  outside it, without words.
+  layer is a row per lane (labels pop in along the race); on the track, one arc per GROUP
+  (`CourseSpan.group`: the lit skill, each veteran) outside the hills in the group's
+  colour, solid where it fires, dashed for a random point, dotted for the carry-over
+  window, a dot for a spot, with the skill's name chip at the zone's start.
 - **A verdict per lit skill** (`verdictLines` in `courseLayers.ts`; the API's
   `skill_verdicts.py` works it out, this only words it): where it fires against the last
   spurt for an accel, a heal against the late-race HP check, carry-over and repeats once the
@@ -2008,11 +2016,11 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
   foot, closed by default, opening (a height animation under `useReducedMotion`) to the
   name, the course's REAL shape as a track (owner, 2026-11-03: never the strip or the
-  schematic), the chips and a link to the guide. The shape is fetched on open, or earlier
+  schematic), the headline and a link to the guide. The shape is fetched on open, or earlier
   when a pointer or focus reaches the button. Two tracks, CSS picking: 720 px from `sm`
-  up, and a phone's 340 px `compact` one that calls out only the start, the goal and the
-  corners' names (the chips say the rest). Only for an event with a course. The chips are
-  one component (`CourseChips`) in both.
+  up, and a phone's 340 px `compact` one that calls out only the start, the goal, the spurt,
+  the corners and the final straight (the headline says the rest). Only for an event with a
+  course. The headline is one component (`CourseHeadline`) in both.
 - **The draw-in**: the first paint is the finished strip (the motion value starts at 1);
   after mount an `IntersectionObserver` sweeps it in once, on a motion value through a
   `clip-path`, never a React state per frame. Reduced motion, or no observer (the test
