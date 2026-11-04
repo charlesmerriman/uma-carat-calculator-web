@@ -96,11 +96,17 @@ type FloatingBackToTopProps = {
  * Kept mounted and faded rather than unmounted, so the fade can play in both
  * directions; `pointer-events-none` while hidden means an invisible button can
  * never eat a click meant for the card underneath it.
+ *
+ * `bottom-28` (7rem) clears Raptive's sticky footer ad, up to 100px tall on a
+ * phone and 90px on desktop, with a gap (owner, 2026-11-04: the ad covered the
+ * arrow). On an ad-free page (the `ad-free-member` body class,
+ * services/adFreeClass.ts) there is no footer ad, so it drops back to the old
+ * `bottom-6`.
  */
 export const FloatingBackToTop = ({ onClick, visible, column, className = "" }: FloatingBackToTopProps) => (
 	<button
 		type="button"
-		className={`fixed bottom-6 ${FLOATING_POSITION[column]} z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-600 bg-gray-800/95 text-gray-100 shadow-lg backdrop-blur-sm transition hover:border-gray-500 hover:bg-gray-700 ${
+		className={`fixed bottom-28 [.ad-free-member_&]:bottom-6 ${FLOATING_POSITION[column]} z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-600 bg-gray-800/95 text-gray-100 shadow-lg backdrop-blur-sm transition hover:border-gray-500 hover:bg-gray-700 ${
 			visible ? "opacity-100" : "pointer-events-none opacity-0"
 		} ${className}`}
 		onClick={onClick}

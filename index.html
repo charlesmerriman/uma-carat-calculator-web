@@ -198,6 +198,29 @@
 
   </head>
   <body class="bg-neutral-200">
+    <!--
+      Ad-free head start for supporters and staff. Raptive's layout loads no ads
+      while <body> carries the class below (their ad-free membership setup; the
+      class name is on file with them), and the account that decides it is a
+      round trip away. So the last server answer, remembered per device by
+      src/services/adFreeClass.ts, re-adds the class here, before the ad script
+      can place anything, and only while a sign-in token is present. The class,
+      the key and the token key duplicate those modules; adFreeClass.test.ts
+      fails if they drift. First in <body> on purpose: it must run before any ad
+      slot exists.
+    -->
+    <script>
+      (function () {
+        try {
+          if (
+            localStorage.getItem("uma-planner-ad-free") === "true" &&
+            localStorage.getItem("authToken")
+          ) {
+            document.body.classList.add("ad-free-member");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!--
