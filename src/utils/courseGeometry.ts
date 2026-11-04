@@ -276,9 +276,68 @@ function partAt(parts: TrackPart[], metre: number): TrackPart | undefined {
 	return parts.find((part) => metre >= part.start && metre < part.end) ?? parts.at(-1)
 }
 
+// How near the late-race start a hill must be to count as "at the spurt
+// start" in the chips: a presentation choice, not a game rule
+// (notes/course-map-plan-2.md, section 1).
+const SPURT_HILL_REACH = 100
+
+export interface SpurtStart {
+	/** The late-race start, in metres: where the last spurt can start. */
+	at: number
+	/** The part it falls on, and the metres of that part after `at`. */
+	on: TrackPart & { left: number }
+	/** The next straight or corner after it and how far ahead it starts; none when `on` runs to the finish. */
+	next?: TrackPart & { in: number }
+	/** An uphill under the start or beginning within its first SPURT_HILL_REACH metres. */
+	uphill?: SlopePart
+	/** A downhill under the start or ending within SPURT_HILL_REACH metres before it. */
+	downhill?: SlopePart
+}
+
+/**
+ * What the late race starts on, the map's first job (owner, 2026-11-03: the
+ * game rewards acceleration that fires just as the last spurt starts, and what
+ * the start falls on decides which accels can). CM 25: corner 4 with 8 m left.
+ */
+export function spurtStart(course: RaceCourse, geometry: RaceGeometry = GAME_GEOMETRY): SpurtStart {
+	const { late: at } = phaseStarts(course.distance, geometry)
+	const parts = trackParts(course)
+	const on = partAt(parts, at) ?? { start: 0, end: course.distance, kind: "gap" as const, label: "" }
+	const next = parts.find((part) => part.kind !== "gap" && part.start >= on.end)
+	const slopes = slopeParts(course)
+	return {
+		at,
+		on: { ...on, left: on.end - at },
+		next: next && { ...next, in: next.start - at },
+		uphill: slopes.find((slope) => slope.kind === "uphill" && slope.start <= at + SPURT_HILL_REACH && slope.end > at),
+		downhill: slopes.find((slope) => slope.kind === "downhill" && slope.start <= at && slope.end >= at - SPURT_HILL_REACH),
+	}
+}
+
+/** A part as the chips name it: "corner 4", "the final straight", "a straight". */
+function partName(part: TrackPart): string {
+	if (part.kind === "corner") return part.number && part.number > 0 ? `corner ${part.number}` : "a corner"
+	return part.label === "Final straight" ? "the final straight" : "a straight"
+}
+
+/** The spurt chip: what the start falls on and how far the next part is. */
+function spurtChip(spurt: SpurtStart, distance: number): string | null {
+	const { on, next } = spurt
+	const ahead = next ? `, ${formatMetres(next.in)} before ${partName(next)}` : ""
+	if (on.kind === "corner") return `Last spurt can start in ${partName(on)}${ahead}`
+	if (on.kind === "straight") {
+		return on.label === "Final straight"
+			? `Last spurt can start on the final straight, ${formatMetres(distance - spurt.at)} from the goal`
+			: `Last spurt can start on a straight${ahead}`
+	}
+	return next ? `Last spurt can start ${formatMetres(next.in)} before ${partName(next)}` : null
+}
+
 /**
  * The chips under the strip: what a player reads off the course without
- * counting. Plain sentences in the game's words (copy.md).
+ * counting. Plain sentences in the game's words (copy.md). The slope chips
+ * name the stat a hill near the spurt rewards (owner, 2026-11-03: stat hints
+ * in the chips only): Power on an uphill, Wit on a downhill (GameTora).
  */
 export function derivedFacts(course: RaceCourse, geometry: RaceGeometry = GAME_GEOMETRY): string[] {
 	const facts: string[] = []
@@ -287,24 +346,21 @@ export function derivedFacts(course: RaceCourse, geometry: RaceGeometry = GAME_G
 	const straight = finalStraight(course)
 	if (straight) facts.push(`Final straight ${formatMetres(straight.length)}`)
 
+	const spurt = spurtStart(course, geometry)
+	const chip = spurtChip(spurt, course.distance)
+	if (chip) facts.push(chip)
+	if (spurt.uphill) facts.push("Uphill at the spurt start: Power helps")
+	const slopes = slopeParts(course)
+	const downhillMetres = slopes.filter((slope) => slope.kind === "downhill").reduce((sum, slope) => sum + slope.end - slope.start, 0)
+	if (spurt.downhill) facts.push("Downhill into the spurt: Wit helps")
+	else if (downhillMetres >= course.distance / 2) facts.push("Mostly downhill: Wit helps")
+
 	// The steepest climb that reaches into the last 400 m.
 	const lastStretch = course.distance - 400
-	const climb = slopeParts(course)
+	const climb = slopes
 		.filter((slope) => slope.kind === "uphill" && slope.end > lastStretch)
 		.sort((a, b) => b.percent - a.percent)[0]
 	if (climb) facts.push(`${climb.percent}% climb in the last 400m`)
-
-	const { late } = phaseStarts(course.distance, geometry)
-	const where = partAt(trackParts(course), late)
-	if (where?.kind === "corner") {
-		facts.push(corner && where.start === corner.start
-			? "Last spurt can start on the final corner"
-			: `Last spurt can start on ${where.label.toLowerCase()}`)
-	} else if (where?.kind === "straight") {
-		facts.push(where.label === "Final straight"
-			? "Last spurt can start on the final straight"
-			: "Last spurt can start on a straight")
-	}
 	return facts
 }
 
@@ -383,10 +439,15 @@ export function cumulativeTurn(shape: Shape): number[] {
 	return turns
 }
 
+// How far short of a full circle still counts as one. A course that starts and
+// finishes on its home straight turns a little under 360 on its real shape
+// (Nakayama 2000: 357.1; Nakayama 3600: 716.8 for two), and 10 degrees clears
+// that without reaching the next course up (540, 549.5 or 557.9).
+const TURN_SLACK = 10
+
 /** Which lap each point is on, from 0: a lap ends each time the course has turned 360 degrees. */
 export function lapOf(shape: Shape): number[] {
-	// A degree of slack, so the numerical wobble on a straight never counts.
-	return cumulativeTurn(shape).map((turn) => Math.max(0, Math.floor((Math.abs(turn) + 1) / 360)))
+	return cumulativeTurn(shape).map((turn) => Math.max(0, Math.floor((Math.abs(turn) + TURN_SLACK) / 360)))
 }
 
 /** 0 to 1, easing in and out: how far through a blend a point is. */
@@ -408,7 +469,7 @@ export function withLapRings(shape: Shape, course: RaceCourse, gap: number): Sha
 	const total = cumulativeTurn(shape).at(-1) ?? 0
 	// Each full circle the course turns past the first puts it back over
 	// ground it has run: one more ring.
-	const rings = Math.floor((Math.abs(total) + 1) / 360)
+	const rings = Math.floor((Math.abs(total) + TURN_SLACK) / 360)
 	if (rings === 0) return shape
 	const last = shape.length - 1
 	const metreOf = (index: number) => (index / last) * course.distance
@@ -424,7 +485,7 @@ export function withLapRings(shape: Shape, course: RaceCourse, gap: number): Sha
 	// straight would have to blend along the straight.
 	const blends = Array.from({ length: rings }, (_, k) => {
 		const from = firstAt(360 * (k + 1) - 180)
-		const to = firstAt(360 * (k + 1) - 1)
+		const to = firstAt(360 * (k + 1) - TURN_SLACK)
 		return { from, to: Math.max(to, from + 1) }
 	})
 

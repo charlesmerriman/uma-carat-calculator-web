@@ -10,7 +10,7 @@ import CourseSection from "../components/course/CourseSection"
 import CourseTrack from "../components/course/CourseTrack"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import { schematicShape } from "../utils/courseSchematic"
-import { CHUKYO_1200, NAKAYAMA_3600 } from "./courseFixtures"
+import { CHUKYO_1200, NAKAYAMA_3600, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 /** The shape endpoint answers with `shape` (null: a course with no path file). */
 function serveShape(shape: readonly (readonly [number, number])[] | null) {
@@ -27,6 +27,15 @@ describe("CourseTrack", () => {
 		for (const words of ["Corner 3", "Corner 4", "Final straight", "Last spurt can start here", "Position keep ends", "Downhill 1%", "Uphill 2%", "Start", "Goal"]) {
 			expect(screen.getByText(words)).toBeInTheDocument()
 		}
+	})
+
+	it("calls out where the ground changes, and keeps the spurt on a phone's compact track", () => {
+		const { unmount } = render(<CourseTrack course={TOKYO_DIRT_1600} shape={schematicShape(TOKYO_DIRT_1600)} />)
+		expect(screen.getByText("Dirt from here")).toBeInTheDocument()
+		unmount()
+		render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} widthPx={340} compact />)
+		expect(screen.getByText("Last spurt")).toBeInTheDocument()
+		expect(screen.queryByText("Position keep ends")).toBeNull()
 	})
 
 	it("gives a corner the course passes twice one callout with both laps' metres (Nakayama 3600)", () => {
