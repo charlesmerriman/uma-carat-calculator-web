@@ -14,6 +14,7 @@
  * not read localStorage. The server snapshots are "nothing open" and "all off".
  */
 import { useSyncExternalStore } from "react"
+import type { RaceCourse } from "../types"
 
 export interface CourseFocus {
 	skillId: number
@@ -55,10 +56,29 @@ export function useCourseFocus(): CourseFocus | null {
 	return useSyncExternalStore(subscribe, () => focus, () => null)
 }
 
-/** The skill row the reader opened (null when they close it). */
+/** The skill the reader lit: an open row, or a chip's card (null when they close it). */
 export function setCourseFocus(next: CourseFocus | null) {
 	if (focus?.skillId === next?.skillId) return
 	focus = next
+	notify()
+}
+
+/** Unlight a skill, but only if it is still the one lit (a chip's card closing). */
+export function clearCourseFocus(skillId: number) {
+	if (focus?.skillId === skillId) setCourseFocus(null)
+}
+
+// The guide's course while its block is on the page (CourseSection sets it),
+// so a skill chip far from the map can word its verdict (CourseVerdict).
+let pageCourse: RaceCourse | null = null
+
+export function usePageCourse(): RaceCourse | null {
+	return useSyncExternalStore(subscribe, () => pageCourse, () => null)
+}
+
+export function setPageCourse(course: RaceCourse | null) {
+	if (pageCourse === course) return
+	pageCourse = course
 	notify()
 }
 

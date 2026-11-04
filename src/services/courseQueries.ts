@@ -42,13 +42,23 @@ export function usePrefetchCourseShape(): (courseId: number) => void {
 	return (courseId) => void client.prefetchQuery(shapeQuery(courseId))
 }
 
+const zonesQuery = (courseId: number) => ({
+	queryKey: ["course-zones", courseId] as const,
+	queryFn: () => fetchCourseJson<SkillZoneMap>(courseId, "skill-zones"),
+	staleTime: Infinity,
+	gcTime: Infinity,
+})
+
 /** The zones for one course, or nothing while `courseId` is null (no layer needs them). */
 export function useCourseZones(courseId: number | null) {
-	return useQuery({
-		queryKey: ["course-zones", courseId ?? 0] as const,
-		queryFn: () => fetchCourseJson<SkillZoneMap>(courseId as number, "skill-zones"),
-		enabled: courseId !== null,
-		staleTime: Infinity,
-		gcTime: Infinity,
-	})
+	return useQuery({ ...zonesQuery(courseId ?? 0), enabled: courseId !== null })
+}
+
+/**
+ * The zones if something already fetched them, never fetching itself: a skill
+ * chip's card reads the map the course block loads when the chip lights it,
+ * so a page of chips costs no request.
+ */
+export function useCachedCourseZones(courseId: number) {
+	return useQuery({ ...zonesQuery(courseId), enabled: false })
 }

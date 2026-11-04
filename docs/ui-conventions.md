@@ -1958,6 +1958,13 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   "See it on the map" (`scrollToCourseMap`, to the block's `COURSE_MAP_ID`), a layer label
   as its hover, and `focusLayer` adds a "Heal before here" mark while a heal is lit and a
   carry-over band when one exists. Nothing promises a skill fires: each assumes its Wit check.
+- **Lighting from anywhere** (section 8 of the plan): a skill chip's or mention's hover card
+  lights its skill while open (`useHoverPopup`'s `onOpenChange`; `clearCourseFocus` unlights
+  only if it is still the one lit) and shows its verdict (`CourseVerdict`, reading only the
+  cached map through `useCachedCourseZones` and the block's `usePageCourse`, so a page of
+  chips costs no request). "Accels on this course" (`CourseAccelList`, under the chips,
+  closed until opened) lists every accel that can fire for a style, nearest the spurt start
+  first (`accelRows`), uniques named from the catalogue; a tap lights one.
 - **Walk the course** (`useWalk`): one motion value, -1 when idle, read by both views; under
   reduced motion it steps phase by phase.
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
