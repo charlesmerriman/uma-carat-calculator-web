@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: November 3, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: November 4, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -69,8 +69,9 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						What we do hold is described below: an anonymous account reference if you sign
 						in, the plan you build, anything you choose to post in the PvP gallery, an
-						anonymous visitor count, and the data that Google Analytics and (if ads run) our
-						advertising partner collect with your consent.
+						anonymous visitor count, and the data that Google Analytics and Raptive, our
+						advertising partner, collect (with your consent in the EU, the EEA, the UK and
+						Switzerland).
 					</p>
 					<p className={paragraph}>
 						Patreon supporters are the one exception. If you pledge to us on Patreon, Patreon
@@ -353,8 +354,8 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						If you are in the EU, the EEA, the UK or Switzerland, Google Analytics starts
 						in a no-cookie mode: nothing is stored on your device and nothing that
-						identifies you is sent until you accept the cookie prompt. Anywhere else it
-						starts on, and Reject on the same prompt turns it off. You can also block it
+						identifies you is sent until you accept in the consent dialog described under
+						&quot;Cookies&quot; below. Anywhere else it starts on. You can block it
 						everywhere by installing the{" "}
 						<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer" className={link}>
 							Google Analytics opt-out browser add-on
@@ -391,8 +392,12 @@ export const PrivacyPolicy: React.FC = () => {
 						<a href="https://www.aboutads.info" target="_blank" rel="noopener noreferrer" className={link}>
 							www.aboutads.info
 						</a>
-						. Residents of US states with privacy laws can treat the consent controls
-						described below as their &quot;do not sell or share&quot; choice.
+						. In the EU, the EEA, the UK and Switzerland, Raptive&apos;s consent dialog asks
+						before any advertising cookie is set, and &quot;Update Privacy Preferences&quot; at
+						the bottom of the page reopens it. In the United States and some other
+						countries, a &quot;Do not sell or share my personal information&quot; link at the
+						bottom of the page turns personalized ads off; selecting it again turns them
+						back on.
 					</p>
 
 					<h2 className={heading}>Cookies and Local Storage</h2>
@@ -419,14 +424,14 @@ export const PrivacyPolicy: React.FC = () => {
 						that area; it is never set for visitors.
 					</p>
 					<p className={paragraph}>
-						Google Analytics and our advertising partner are the only other services that
-						set cookies. On your first visit a prompt asks whether to allow them, with
-						Accept and Reject side by side. In the EU, the EEA, the UK and Switzerland
-						neither service sets a cookie until you accept; elsewhere Analytics starts on,
-						and Reject turns it off. Your choice is saved on your device so you are not
-						asked again, and &quot;Cookie settings&quot; in the footer reopens the prompt
-						whenever you want to change it. You can also clear or block cookies in your
-						browser settings; the calculator works without them.
+						Google Analytics and Raptive are the only other services that set cookies. In
+						the EU, the EEA, the UK and Switzerland neither sets one until you accept in
+						Raptive&apos;s consent dialog, which appears on your first visit and covers
+						Analytics as well as ads; &quot;Update Privacy Preferences&quot; at the bottom of
+						the page reopens it whenever you want to change your answer. Elsewhere Analytics
+						is on from the start, and Google&apos;s opt-out add-on, linked above, turns it
+						off. You can also clear or block cookies in your browser settings; the
+						calculator works without them.
 					</p>
 					<p className={paragraph}>
 						The video on the home page is embedded in YouTube&apos;s privacy-enhanced mode,
@@ -474,8 +479,9 @@ export const PrivacyPolicy: React.FC = () => {
 							<strong>Cloudflare&apos;s <code>__cf_bm</code> cookie</strong>: 30 minutes.
 						</li>
 						<li>
-							<strong>Your cookie choice</strong>: on your device, until you change or
-							clear it.
+							<strong>Your consent choice</strong> (EU, EEA, UK and Switzerland): stored
+							on your device by Raptive&apos;s consent dialog, until you change it there or
+							clear your browser&apos;s data.
 						</li>
 					</ul>
 
@@ -483,11 +489,12 @@ export const PrivacyPolicy: React.FC = () => {
 					<p className={paragraph}>
 						The Site&apos;s database is hosted by DigitalOcean in the United States (New
 						York), and it is delivered through Cloudflare&apos;s network, which handles each
-						request at the data centre nearest you. Google Analytics and Google&apos;s
-						advertising services process data in the United States as well. For visitors in the EU, the EEA, the UK and
+						request at the data centre nearest you. Google Analytics, and Raptive and its
+						advertising partners, process data in the United States as well. For visitors in the EU, the EEA, the UK and
 						Switzerland this is a transfer outside your region. Google is certified under
 						the EU-US Data Privacy Framework, and its UK and Swiss extensions, which the
-						European Commission recognizes as adequate protection. For the database, the
+						European Commission recognizes as adequate protection; Raptive&apos;s statement,
+						linked above, covers its own transfers. For the database, the
 						only personal data transferred is the anonymous account data and the supporter
 						list described above, and both are protected by Standard Contractual Clauses in DigitalOcean&apos;s data
 						processing agreement.
@@ -526,7 +533,8 @@ export const PrivacyPolicy: React.FC = () => {
 						</li>
 						<li>
 							<strong>Withdraw consent</strong>: for Analytics and advertising cookies, at
-							any time, through &quot;Cookie settings&quot; in the footer. Withdrawing does
+							any time, through &quot;Update Privacy Preferences&quot; at the bottom of the
+							page, or by clearing the Site&apos;s cookies in your browser. Withdrawing does
 							not undo processing that already happened.
 						</li>
 						<li>

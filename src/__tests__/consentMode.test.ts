@@ -7,7 +7,6 @@
 // and for the denied-by-default regions.
 import { describe, expect, it } from "vitest"
 import html from "../../index.html?raw"
-import { COOKIE_CONSENT_STORAGE_KEY } from "../services/consentStore"
 
 // The inline gtag script is the one that declares dataLayer; the first inline
 // <script> is the theme script (themeScript.test.ts owns that one).
@@ -53,15 +52,17 @@ describe("Consent Mode defaults in index.html", () => {
 		}
 	})
 
-	it("replays a stored choice as an update, after the defaults and before config", () => {
-		// The key is duplicated from consentStore because the inline script runs
-		// before any module; a rename in one place must fail here.
-		expect(gtagScript).toContain(`"${COOKIE_CONSENT_STORAGE_KEY}"`)
-		const lastDefault = gtagScript.lastIndexOf("gtag('consent', 'default'")
-		const update = gtagScript.indexOf("gtag('consent', 'update'")
+	it("mirrors Raptive's consent dialog into Consent Mode, after gtag('config')", () => {
+		// Raptive's dialog (a TCF v2 platform) shows only in the EEA, the UK and
+		// Switzerland; this listener is what turns its answer into analytics
+		// cookies, or keeps them off. The site has no prompt of its own.
+		const listener = gtagScript.indexOf("__tcfapi('addEventListener'")
 		const config = gtagScript.indexOf("gtag('config'")
-		expect(update).toBeGreaterThan(lastDefault)
-		expect(update).toBeLessThan(config)
+		expect(listener).toBeGreaterThan(config)
+		expect(gtagScript).toContain("tc.purpose.consents['1']")
+		const update = gtagScript.indexOf("gtag('consent', 'update'")
+		expect(update).toBeGreaterThan(listener)
+		expect(gtagScript).not.toContain("uma-planner-cookie-consent")
 	})
 
 	it("grants every storage type by default elsewhere", () => {
