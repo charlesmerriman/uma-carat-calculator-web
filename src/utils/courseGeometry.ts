@@ -81,9 +81,10 @@ export function formatMetres(metres: number): string {
 }
 
 /** The metre ruler's ticks: about a dozen, on round numbers, ending at the finish. */
-export function rulerTicks(distance: number): number[] {
-	// 400 is there for 3200 and 3600, which land on it exactly.
-	const step = [100, 200, 250, 400, 500, 1000].find((candidate) => distance / candidate <= 12) ?? 1000
+export function rulerTicks(distance: number, maxSteps = 12): number[] {
+	// 400 is there for 3200 and 3600, which land on it exactly. A phone's strip
+	// asks for about half as many steps (`maxSteps`), so its numbers don't touch.
+	const step = [100, 200, 250, 400, 500, 1000].find((candidate) => distance / candidate <= maxSteps) ?? 1000
 	const ticks: number[] = []
 	for (let at = 0; at <= distance; at += step) ticks.push(at)
 	// The finish always gets its number: after the last tick, or in place of

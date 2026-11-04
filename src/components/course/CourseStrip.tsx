@@ -73,6 +73,12 @@ interface CourseStripProps {
 	onPreview?: (key: string | null) => void
 	/** The span (by `key`) the pointer is over elsewhere (the track, the legend): drawn lit, the rest quieter. */
 	preview?: string | null
+	/**
+	 * A phone's strip across the page (~300px for the race): fewer section
+	 * numbers and metres, and the marks' words given more room so none run
+	 * into each other or off the right edge (Henry, 2026-11-04).
+	 */
+	compact?: boolean
 }
 
 // The label column across the page, and the marks' margin down it.
@@ -86,6 +92,8 @@ const MARK_ROW_PX = 15
 // About how wide the strip is on a desktop: the words and the metres are
 // sized against it, since nothing on a prerendered page is measured.
 const STRIP_PX = 1000
+// A phone's strip: 390px less the gutters and the 60px label column.
+const PHONE_STRIP_PX = 300
 const LIT = "var(--color-course-lit)"
 
 // Light ink on the darker fills, dark on the light ones.
@@ -115,7 +123,7 @@ function at(metre: number, distance: number, vertical: boolean): CSSProperties {
  * when both fit beside the words, else the end metre, else nothing). Down
  * the page the words wrap and the end metre shows on a tall enough stretch.
  */
-function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, icon, ranged = false }: {
+function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, icon, ranged = false, stripPx = STRIP_PX }: {
 	start: number
 	end: number
 	distance: number
@@ -127,6 +135,8 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 	icon?: ReactNode
 	/** Show the start and end metres where they fit, not only the end. */
 	ranged?: boolean
+	/** The strip's width across the page, to judge what fits (a phone's is ~300px). */
+	stripPx?: number
 }) {
 	const share = metreToFraction(end, distance) - metreToFraction(start, distance)
 	let words: string | undefined
@@ -136,7 +146,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 		metres = share >= 0.08 && end < distance ? formatMetres(end) : undefined
 	} else {
 		words = share >= 0.06 ? label : share >= 0.025 ? shortLabel : undefined
-		const px = share * STRIP_PX
+		const px = share * stripPx
 		const wordsPx = (words?.length ?? 0) * 7 + 8 + (icon ? 14 : 0)
 		const fits = (text: string) => wordsPx + text.length * 5.2 + 22 < px
 		const long = rangeText(start, end)
@@ -316,6 +326,7 @@ export default function CourseStrip({
 	className = "",
 	onPreview,
 	preview = null,
+	compact = false,
 }: CourseStripProps) {
 	const vertical = orientation === "vertical"
 	const distance = course.distance
@@ -325,7 +336,9 @@ export default function CourseStrip({
 	const spans = [...facts.spans, ...(overlays?.spans ?? [])]
 	const markers = [...facts.markers, ...(overlays?.markers ?? [])]
 	const labelled = markers.filter((marker) => marker.label)
-	const lanes = markerLanes(labelled, distance, 0.16)
+	// The gap (a share of the race) two marks' words need to share a row. On a
+	// phone the words are the same size but the race is a third as wide.
+	const lanes = markerLanes(labelled, distance, compact ? 0.34 : 0.16)
 	const laneCount = labelled.length > 0 ? Math.max(...lanes) + 1 : 0
 
 	const track = trackParts(course)
@@ -375,6 +388,7 @@ export default function CourseStrip({
 			<Row vertical={vertical} label="Phase" band="phases" grow={0.8}>
 				{phases.map((phase, index) => (
 					<Segment
+						stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
 						key={phase.start}
 						start={phase.start}
 						end={phase.end}
@@ -395,6 +409,7 @@ export default function CourseStrip({
 					const shade = isCorner && cornerIndex++ % 2 === 1
 					return (
 						<Segment
+							stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
 							key={`${part.kind}-${part.start}`}
 							start={part.start}
 							end={part.end}
@@ -415,6 +430,7 @@ export default function CourseStrip({
 				<Row vertical={vertical} label="Slope" band="hills">
 					{hills.map((hill) => (
 						<Segment
+							stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
 							key={hill.start}
 							start={hill.start}
 							end={hill.end}
@@ -436,6 +452,7 @@ export default function CourseStrip({
 				<Row vertical={vertical} label="Ground" band="ground" size={vertical ? 36 : 20}>
 					{ground.map((part) => (
 						<Segment
+							stripPx={compact ? PHONE_STRIP_PX : STRIP_PX}
 							key={part.start}
 							start={part.start}
 							end={part.end}
@@ -484,7 +501,8 @@ export default function CourseStrip({
 						className={`absolute flex items-center justify-center border-gray-700/60 text-[9px] leading-none text-gray-500 ${vertical ? "inset-x-0 border-b" : "inset-y-0 border-r"}`}
 						style={place(index === 0 ? 0 : bounds[index - 1], end, distance, vertical)}
 					>
-						{index + 1}
+						{/* A phone names section 1 and every fourth; 24 numbers don't fit. */}
+						{!compact || index === 0 || (index + 1) % 4 === 0 ? index + 1 : null}
 					</div>
 				))}
 			</Row>
@@ -537,8 +555,9 @@ export default function CourseStrip({
 								style={{
 									left: `${fraction * 100}%`,
 									top: lanes[index] * MARK_ROW_PX,
-									// Near the finish the words hang to the left of the line.
-									transform: fraction > 0.72 ? "translateX(-100%)" : undefined,
+									// Near the finish the words hang to the left of the line; on a
+									// phone, anywhere past halfway, or they run off the edge.
+									transform: fraction > (compact ? 0.5 : 0.72) ? "translateX(-100%)" : undefined,
 								}}
 							>
 								<MarkWords marker={marker} />
@@ -553,7 +572,7 @@ export default function CourseStrip({
 			</motion.div>
 			{/* The metres right under the section numbers. */}
 			<div className="relative h-4" style={{ marginLeft: LABEL_PX }}>
-				{rulerTicks(distance).map((tick, index, ticks) => (
+				{rulerTicks(distance, compact ? 6 : 12).map((tick, index, ticks) => (
 					<span
 						key={tick}
 						className="absolute top-0.5 whitespace-nowrap text-[10px] leading-none text-gray-500"

@@ -419,7 +419,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				{narrow && phoneShape && (
 					<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact overlays={layer.overlays} className="mb-3" />
 				)}
-				<CourseStrip course={course} orientation="horizontal" overlays={layer.overlays} laneHeads={layer.heads} />
+				<CourseStrip course={course} orientation="horizontal" compact overlays={layer.overlays} laneHeads={layer.heads} />
 			</div>
 			</div>
 			{/* Beside the map from lg up, under it below; mounted only while open. */}
