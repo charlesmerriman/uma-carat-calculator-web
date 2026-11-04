@@ -2038,7 +2038,16 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
 - **Skills set off by other skills** (section 6): the Layers menu's "Skills set off by other
   skills" (`layers.chains`, off by default, shown with the veterans' layer) draws a chained
   skill where her own skills set it off (`resolveChain`: the N-th of them by earliest and by
-  latest point, then her skill's own zone start), and not at all when she has too few.
+  latest point, then her skill's own zone start), and not at all when she has too few. With
+  it on, a chained GUIDE pick lights the same way, placed by the guide's other picks for the
+  tab's style (every pick under "All"; `useStyleTab`, `focusLayer`'s `chainSet`): the owner's
+  yes of 2026-11-04 to the first "Left for later" items.
+- **An uma's tile lights her unique** while its hover detail is open (`lightUniqueOnCourseMap`,
+  her as the card's owner), from `unique` on the guide's uma ref; a tile with no note shows
+  "Unique: <name>" as its detail, so the hover exists.
+- **The strip previews on the track** under Both: the layer span under the pointer
+  (`onPreview`, by span key) draws its arc bolder and quietens the others (`preview` on
+  `CourseTrack`, `data-preview` on the lit arc).
 - **Walk the course is shelved** (owner, 2026-11-03: a runner on the course without the race
   logic was a simulator in name only). The hook, the runner and the strip's cursor line are
   gone; a runner belongs to the run view (`notes/course-map-later.md`), with the race logic.

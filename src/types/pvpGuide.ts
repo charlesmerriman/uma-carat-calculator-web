@@ -37,6 +37,11 @@ export interface PvpUmaRef {
 	 * Optional: an older API answer and older fixtures have none.
 	 */
 	apt?: Partial<Record<AptitudeKey, number | null>> | null
+	/**
+	 * Her unique skill, or null: the course map lights it when her tile is
+	 * hovered, with no catalogue fetch. Optional: older fixtures have none.
+	 */
+	unique?: { id: number; name: string; image: string | null } | null
 }
 
 export interface PvpSupportCardRef {

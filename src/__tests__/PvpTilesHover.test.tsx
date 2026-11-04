@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { InlineNote, SkillChip, UmaTile } from "../components/pvp/PvpTiles"
 import { SkillMentionsContext } from "../components/pvp/skillMentionsContext"
+import { useCourseFocus } from "../services/courseMapStore"
 import type { PvpSkillRef } from "../types/pvpGuide"
 
 /**
@@ -65,6 +66,32 @@ describe("hover details in a guide", () => {
 	it("leaves out the skill a chip is about when its note names itself", () => {
 		render(inGuide(<SkillChip skill={MOXIE} note="Take [[Moxie]] early" />))
 		expect(screen.getByRole("tooltip").textContent?.match(/Slightly reduce fatigue/g)).toHaveLength(1)
+	})
+})
+
+/** What the course map would light: the focus store's skill and owner. */
+function FocusProbe() {
+	const focus = useCourseFocus()
+	return <output data-testid="focus">{focus ? `${focus.skillId}:${focus.owner?.name ?? ""}` : "none"}</output>
+}
+
+describe("an uma's tile and her unique", () => {
+	it("lights her unique on the course map while hovered, naming it as the detail when she has no note", async () => {
+		const user = userEvent.setup()
+		const uma = { id: 9, name: "Maruzensky", image: null, unique: { id: 210, name: "Lead the Pack", image: null } }
+		render(inGuide(<><UmaTile uma={uma} stars={0} role="" note="" /><FocusProbe /></>))
+		expect(screen.getByRole("tooltip")).toHaveTextContent("Unique: Lead the Pack")
+		expect(screen.getByTestId("focus")).toHaveTextContent("none")
+		const tile = screen.getByRole("group", { name: "Maruzensky" })
+		await user.hover(tile)
+		await waitFor(() => expect(screen.getByTestId("focus")).toHaveTextContent("210:Maruzensky"))
+		await user.unhover(tile)
+		await waitFor(() => expect(screen.getByTestId("focus")).toHaveTextContent("none"))
+	})
+
+	it("has no hover at all for an uma with neither a note nor a unique", () => {
+		render(inGuide(<UmaTile uma={{ id: 9, name: "Oguri Cap", image: null }} stars={0} role="" note="" />))
+		expect(screen.queryByRole("tooltip")).toBeNull()
 	})
 })
 

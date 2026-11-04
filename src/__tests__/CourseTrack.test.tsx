@@ -37,6 +37,22 @@ describe("CourseTrack", () => {
 		expect(container.querySelectorAll("g[stroke] > circle")).toHaveLength(0)
 	})
 
+	it("draws the previewed layer span bolder and quietens the rest (the strip's hover, Both view)", () => {
+		const overlays = {
+			spans: [
+				{ key: "a", start: 300, end: 500, kind: "fixed" as const, label: "A", group: "lit" },
+				{ key: "b", start: 700, end: 900, kind: "random" as const, label: "B", group: "lit" },
+			],
+			markers: [],
+		}
+		const { container, rerender } = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} overlays={overlays} preview="a" />)
+		expect(container.querySelectorAll("polyline[data-preview]")).toHaveLength(1)
+		expect(container.querySelectorAll('polyline[opacity="0.25"]')).toHaveLength(1)
+		// A key the track doesn't hold (the strip's carry-over band, say) quietens nothing.
+		rerender(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} overlays={overlays} preview="elsewhere" />)
+		expect(container.querySelectorAll('polyline[opacity="0.25"]')).toHaveLength(0)
+	})
+
 	it("calls out where the ground changes, and keeps the spurt on a phone's compact track", () => {
 		const { unmount } = render(<CourseTrack course={TOKYO_DIRT_1600} shape={schematicShape(TOKYO_DIRT_1600)} />)
 		expect(screen.getByText("Dirt from here")).toBeInTheDocument()

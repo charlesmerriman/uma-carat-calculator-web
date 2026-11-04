@@ -194,7 +194,7 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, className = "" }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, className = "", preview = null }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
@@ -204,6 +204,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
 	className?: string
+	/** A layer span's `key` the strip's pointer is over: drawn bolder, the other arcs quietened. */
+	preview?: string | null
 }) {
 	const distance = course.distance
 	const { ref, progress } = useDrawIn<HTMLDivElement>(1.4)
@@ -274,7 +276,11 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 
 	// The layers: one arc lane per GROUP (the lit skill, each veteran), since
 	// the arcs carry no words; the strip gives every label its own row.
-	const layerSpans = (overlays?.spans ?? []).filter((span) => span.kind !== "phase" && span.kind !== "anywhere" && span.kind !== "passive")
+	const layerSpans = ((overlays?.spans ?? []) as (CourseSpan & { key?: string })[]).filter((span) => span.kind !== "phase" && span.kind !== "anywhere" && span.kind !== "passive")
+	// The strip's hover, on the arcs: the one under the pointer bolder, the rest quiet.
+	const previewing = preview !== null && layerSpans.some((span) => span.key === preview)
+	const emphasis = (span: { key?: string }) => (!previewing ? 1 : span.key === preview ? 1.7 : 0)
+	const quiet = (span: { key?: string }, base: number) => (previewing && span.key !== preview ? 0.25 : base)
 	const groups = [...new Set(layerSpans.map((span) => span.group ?? "lit"))]
 	const laneOf = (span: CourseSpan) => groups.indexOf(span.group ?? "lit")
 	const laneOffset = (lane: number) => track * (1.85 + lane * 0.62) * outside
@@ -522,7 +528,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 					if (span.kind === "point" || span.start === span.end) {
 						const { n } = frameAt(shape, span.start, distance)
 						const [x, y] = P(span.start)
-						return <circle key={`layer-${index}`} cx={x + n[0] * offset} cy={y + n[1] * offset} r={track * 0.28} fill={colour} />
+						return <circle key={`layer-${index}`} cx={x + n[0] * offset} cy={y + n[1] * offset} r={track * 0.28 * Math.max(1, emphasis(span))} fill={colour} opacity={quiet(span, 1)} data-preview={span.key === preview || undefined} />
 					}
 					const section = slice(shape, span.start, Math.max(span.end, span.start + distance / 400), distance)
 					return (
@@ -531,10 +537,11 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 							points={points(parallel(section, offset))}
 							fill="none"
 							stroke={colour}
-							strokeWidth={span.kind === "window" ? track * 0.16 : track * 0.34}
+							strokeWidth={(span.kind === "window" ? track * 0.16 : track * 0.34) * Math.max(1, emphasis(span))}
 							strokeDasharray={span.kind === "random" ? `${track * 0.5} ${track * 0.32}` : span.kind === "window" ? `${track * 0.12} ${track * 0.22}` : undefined}
 							strokeLinecap="round"
-							opacity={span.kind === "window" ? 0.8 : 1}
+							opacity={quiet(span, span.kind === "window" ? 0.8 : 1)}
+							data-preview={span.key === preview || undefined}
 						/>
 					)
 				})}

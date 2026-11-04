@@ -30,6 +30,7 @@ import {
 	setPageCourse,
 	useAccelsOpen,
 	useCourseFocus,
+	useStyleTab,
 	useCourseLayers,
 	useVeteranPicks,
 } from "../../services/courseMapStore"
@@ -139,6 +140,10 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	// of them needs it.
 	const focus = useCourseFocus()
 	const layers = useCourseLayers()
+	// The guide tab's style: which of the guide's picks can set off a chained one.
+	const styleTab = useStyleTab()
+	// The strip's layer span under the pointer, lit on the track above it (Both view).
+	const [preview, setPreview] = useState<string | null>(null)
 	const veteransOn = signedIn && layers.veterans && event !== null
 	const [veteranData, setVeteranData] = useState<VeteranLayerData | null>(null)
 	const zones = useCourseZones(focus !== null || veteransOn ? course.id : null).data
@@ -174,7 +179,16 @@ export default function CourseSection({ course, event = null, guide = null }: {
 		const markers: CourseMarker[] = []
 		if (zones && focus) {
 			// Its zones, plus the carry-over band or the heal mark it calls for.
-			const lit = focusLayer(zones[String(focus.skillId)], course.distance, focus.name, focus.skillId)
+			// With chains on, a chained pick is placed by the guide's other picks
+			// for the tab's style (every pick under "All").
+			const chainSet = layers.chains && guide
+				? guide.skill_recommendations
+					.filter((pick) => styleTab === "all" || pick.style === "everyone" || pick.style === styleTab || (pick.style === "front" && styleTab === "runaway"))
+					.map((pick) => pick.skill.id)
+					.filter((skillId, index, ids) => skillId !== focus.skillId && ids.indexOf(skillId) === index)
+					.map((skillId) => zones[String(skillId)])
+				: undefined
+			const lit = focusLayer(zones[String(focus.skillId)], course.distance, focus.name, focus.skillId, chainSet)
 			spans.push(...lit.spans)
 			markers.push(...lit.markers)
 		}
@@ -223,7 +237,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			}
 		}
 		return { overlays: { spans, markers }, heads, menu }
-	}, [zones, focus, veteransOn, veteranData, veteranPicks, guide, layers.scope, layers.chains, course.distance])
+	}, [zones, focus, veteransOn, veteranData, veteranPicks, guide, layers.scope, layers.chains, styleTab, course.distance])
 	const hasLayer = layer.overlays.spans.length > 0
 
 	return (
@@ -293,7 +307,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 									<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 								</div>
 							)
-							: <CourseTrack course={course} shape={shape} overlays={layer.overlays} />)}
+							: <CourseTrack course={course} shape={shape} overlays={layer.overlays} preview={view === "both" ? preview : null} />)}
 						{view !== "track" && (
 							<CourseStrip
 								course={course}
@@ -301,6 +315,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 								className={view === "both" ? "mt-4" : ""}
 								overlays={layer.overlays}
 								laneHeads={layer.heads}
+								onPreview={view === "both" ? setPreview : undefined}
 							/>
 						)}
 					</motion.div>

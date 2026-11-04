@@ -15,6 +15,7 @@
  */
 import { useSyncExternalStore } from "react"
 import type { RaceCourse } from "../types"
+import type { MemberStyle } from "../types/pvpTeam"
 
 export interface CourseFocus {
 	skillId: number
@@ -56,6 +57,29 @@ function readLayers(): CourseLayers {
 		// Storage blocked or garbled: every layer off.
 		return OFF
 	}
+}
+
+export type StyleChoice = MemberStyle | "all"
+const TAB_STYLES = new Set(["front", "pace", "late", "end"])
+
+/** The guide tab the reader is on, as a style ("all" for anything else). */
+function styleFromTab(tab: string | null): StyleChoice {
+	return tab && TAB_STYLES.has(tab) ? (tab as StyleChoice) : "all"
+}
+
+function onNavigation(listener: () => void) {
+	window.addEventListener("popstate", listener)
+	return () => window.removeEventListener("popstate", listener)
+}
+
+/**
+ * The `style` in the address (the guide tab): a client snapshot with "all"
+ * on the server, since the block is prerendered and can sit outside a router.
+ * The accels column's first pill, and the set a chained guide pick is placed
+ * against (CourseSection).
+ */
+export function useStyleTab(): StyleChoice {
+	return useSyncExternalStore(onNavigation, () => styleFromTab(new URLSearchParams(window.location.search).get("style")), () => "all")
 }
 
 export function useCourseFocus(): CourseFocus | null {
