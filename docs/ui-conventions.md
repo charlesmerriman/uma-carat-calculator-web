@@ -1951,6 +1951,13 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   (`services/courseQueries.ts`), fetched only once a layer needs them. On the strip a
   layer is the layers band (labels pop in along the race); on the track, lines just
   outside it, without words.
+- **A verdict per lit skill** (`verdictLines` in `courseLayers.ts`; the API's
+  `skill_verdicts.py` works it out, this only words it): where it fires against the last
+  spurt for an accel, a heal against the late-race HP check, carry-over and repeats once the
+  API sends them, then "Also needs: ..." in verified words. An open skill row shows it with
+  "See it on the map" (`scrollToCourseMap`, to the block's `COURSE_MAP_ID`), a layer label
+  as its hover, and `focusLayer` adds a "Heal before here" mark while a heal is lit and a
+  carry-over band when one exists. Nothing promises a skill fires: each assumes its Wit check.
 - **Walk the course** (`useWalk`): one motion value, -1 when idle, read by both views; under
   reduced motion it steps phase by phase.
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's

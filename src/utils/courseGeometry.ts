@@ -36,16 +36,19 @@ export const GAME_GEOMETRY: RaceGeometry = {
 // (courseFacts); a later layer (skill zones, veterans, pins) is a pure
 // function to this same shape, so the map never changes for it.
 
-export type SpanKind = "phase" | "fixed" | "random" | "point" | "anywhere" | "passive"
+// "window": a band a skill must fire in for a reason (the carry-over window).
+export type SpanKind = "phase" | "fixed" | "random" | "point" | "anywhere" | "passive" | "window"
 export interface CourseSpan {
 	start: number
 	end: number
 	kind: SpanKind
 	label?: string
 	lane?: number
+	/** Words for a hover: a lit skill's verdict (courseLayers.verdictLines). */
+	detail?: string
 }
 
-export type MarkerKind = "spurt-start" | "phase-divider" | "position-keep-end"
+export type MarkerKind = "spurt-start" | "phase-divider" | "position-keep-end" | "heal-check"
 export interface CourseMarker {
 	at: number
 	kind: MarkerKind

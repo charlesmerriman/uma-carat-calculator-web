@@ -22,8 +22,9 @@ import type { PvpGuide } from "../../types/pvpGuide"
 import { AuthContext } from "../../services/AuthContext"
 import { useCourseShape, useCourseZones } from "../../services/courseQueries"
 import { setCourseShapeChoice, useCourseShapeChoice, type CourseShapeChoice } from "../../services/courseShapeStore"
-import { useCourseFocus, useCourseLayers } from "../../services/courseMapStore"
-import { skillSpans, veteranLayer, type LayerSpan, type VeteranInLayer } from "../../utils/courseLayers"
+import { COURSE_MAP_ID, useCourseFocus, useCourseLayers } from "../../services/courseMapStore"
+import { focusLayer, veteranLayer, type LayerSpan, type VeteranInLayer } from "../../utils/courseLayers"
+import type { CourseMarker } from "../../utils/courseGeometry"
 import { schematicShape } from "../../utils/courseSchematic"
 import { heldSkillMeetsPick } from "../../utils/pvpGuide"
 import CourseChips from "./CourseChips"
@@ -100,7 +101,13 @@ export default function CourseSection({ course, event = null, guide = null }: {
 
 	const layer = useMemo(() => {
 		const spans: LayerSpan[] = []
-		if (zones && focus) spans.push(...skillSpans(zones[String(focus.skillId)], course.distance, focus.name, 0, `focus-${focus.skillId}`))
+		const markers: CourseMarker[] = []
+		if (zones && focus) {
+			// Its zones, plus the carry-over band or the heal mark it calls for.
+			const lit = focusLayer(zones[String(focus.skillId)], course.distance, focus.name, focus.skillId)
+			spans.push(...lit.spans)
+			markers.push(...lit.markers)
+		}
 		const heads: NonNullable<Parameters<typeof CourseStrip>[0]["laneHeads"]> = []
 		if (zones && veteransOn && veteranData) {
 			const picks = guide?.skill_recommendations ?? []
@@ -109,19 +116,22 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			const keep = (skillId: number, veteran: VeteranInLayer) => layers.scope === "all" || picks.some((pick) =>
 				(pick.style === "everyone" || pick.style === veteran.style || (pick.style === "front" && veteran.style === "runaway"))
 				&& heldSkillMeetsPick(pick.skill, skillId))
-			const offset = spans.length > 0 ? 1 : 0
+			// Below whatever lanes the open skill used.
+			const offset = spans.length > 0 ? Math.max(...spans.map((span) => span.lane ?? 0)) + 1 : 0
 			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep)
 			spans.push(...veterans.spans.map((span) => ({ ...span, lane: (span.lane ?? 0) + offset })))
 			for (const lane of veterans.lanes) {
 				heads.push({ key: lane.key, firstLane: lane.firstLane + offset, lanes: lane.lanes, head: veteranData.heads.get(lane.key) })
 			}
 		}
-		return { overlays: { spans, markers: [] }, heads }
+		return { overlays: { spans, markers }, heads }
 	}, [zones, focus, veteransOn, veteranData, guide, layers.scope, course.distance])
 	const hasLayer = layer.overlays.spans.length > 0
 
 	return (
-		<div className="border-t border-gray-700/70 p-3 sm:p-4">
+		// The id is what "See it on the map" scrolls to (GuideSkillsPanel); one
+		// course block per page.
+		<div id={COURSE_MAP_ID} className="border-t border-gray-700/70 p-3 sm:p-4">
 			<div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
 				{/* The header's other panel labels (PANEL_LABEL), less their margin. */}
 				<h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Course map</h3>
