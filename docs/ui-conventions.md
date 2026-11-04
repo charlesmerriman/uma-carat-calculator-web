@@ -2004,7 +2004,12 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   early and waits on a placing), "Early", "Late" (a fixed point outside the window, or a
   random point that can't reach it), or by odds "Usually lands", "Sometimes lands", "Rarely
   lands". A speed skill reads "Ends before the late race" only when its whole trigger is
-  before the carry window; one that fires in the late race says nothing about carry. **"Accels that land at the spurt"** (`CourseAccelList`, a column beside the map
+  before the carry window; one that fires in the late race says nothing about carry. A fixed
+  zone that waits on something ("Also needs") gets no odds line, since the needs say it
+  depends. A skill with several ways of firing (the API's `paths`) reads one sentence per
+  way, the most useful first and the rest as "Or ...", each with its own needs, and is
+  graded by its best way; the chain kinds `end_after` and `later_half` count a member's
+  first metre against the late-race start and half-way. **"Accels that land at the spurt"** (`CourseAccelList`, a column beside the map
   from `lg` up and under it below, opened by the bar's Accels button and remembered on the
   device through `useAccelsOpen`; closed it fetches nothing, since its names cost the
   catalogue; owner, 2026-11-03) lists only the accels that can land at the spurt start,

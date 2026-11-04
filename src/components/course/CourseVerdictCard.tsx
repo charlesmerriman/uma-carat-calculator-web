@@ -98,8 +98,9 @@ export default function CourseVerdictCard({ course, focus, entry, onClear, class
 			</div>
 			{lines.length > 0 && (
 				<div className="mt-2 text-xs leading-snug text-gray-200">
-					{lines.map((line) => (
-						<p key={line} className={line.startsWith("Also needs") || line.startsWith("Plus") ? "text-gray-400" : ""}>{line}</p>
+					{lines.map((line, index) => (
+						// By index: two ways of firing can word the same.
+						<p key={index} className={line.startsWith("Also needs") || line.startsWith("Plus") ? "text-gray-400" : ""}>{line}</p>
 					))}
 				</div>
 			)}
