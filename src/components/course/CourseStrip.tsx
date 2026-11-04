@@ -20,8 +20,8 @@
  * (the prerender's), the sweep runs after mount on a motion value (no React
  * re-render per frame), and reduced motion skips it.
  */
-import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react"
-import { animate, motion, useMotionTemplate, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion"
+import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
+import { motion, useMotionTemplate, useMotionValue, useTransform, type MotionValue } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
 	courseFacts,
@@ -36,6 +36,7 @@ import {
 	trackParts,
 	type CourseOverlays,
 } from "../../utils/courseGeometry"
+import { useDrawIn } from "./useDrawIn"
 
 type Orientation = "horizontal" | "vertical"
 
@@ -45,8 +46,6 @@ interface CourseStripProps {
 	overlays?: CourseOverlays
 	/** A metre to mark, still or moving (Walk the course, later). */
 	cursor?: number | MotionValue<number>
-	/** "mini": two bands, no words, for the Timeline card's drawer. */
-	variant?: "full" | "mini"
 	orientation?: Orientation
 	className?: string
 }
@@ -77,7 +76,7 @@ function at(metre: number, distance: number, vertical: boolean): CSSProperties {
 }
 
 /** One stretch of a band: its colour, its words, and the metre where it ends. */
-function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, endLabel, bare }: {
+function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel, endLabel }: {
 	start: number
 	end: number
 	distance: number
@@ -87,7 +86,6 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 	label?: string
 	shortLabel?: string
 	endLabel?: string
-	bare?: boolean
 }) {
 	const share = metreToFraction(end, distance) - metreToFraction(start, distance)
 	const words = share >= MIN_LABEL_SHARE ? label : share >= MIN_SHORT_LABEL_SHARE ? shortLabel : undefined
@@ -98,7 +96,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 		>
 			{/* On the band's own colour and above the marker lines, so a line
 			    passing through the middle never cuts the words. */}
-			{!bare && words && (
+			{words && (
 				<span
 					className={`relative z-10 rounded-sm px-1 font-semibold ${
 						// Down the page a column is ~60px wide: the words wrap
@@ -110,7 +108,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 					{words}
 				</span>
 			)}
-			{!bare && endLabel && share >= MIN_END_LABEL_SHARE && (
+			{endLabel && share >= MIN_END_LABEL_SHARE && (
 				<span className={`absolute z-10 text-[9px] leading-none opacity-80 ${vertical ? "bottom-0.5 left-1" : "bottom-0.5 right-1"}`}>
 					{endLabel}
 				</span>
@@ -221,42 +219,21 @@ function Cursor({ cursor, distance, vertical }: { cursor: number | MotionValue<n
 	}, [cursor, still])
 	const source = typeof cursor === "number" ? still : cursor
 	const position = useTransform(source, (metre) => `${metreToFraction(metre, distance) * 100}%`)
+	// A negative metre is "no walk running" (useWalk): the line hides.
+	const opacity = useTransform(source, (metre) => (metre < 0 ? 0 : 1))
 	return (
 		<motion.div
-			className={`pointer-events-none absolute bg-gray-100 ${vertical ? "inset-x-0 h-0.5" : "inset-y-0 w-0.5"}`}
-			style={vertical ? { top: position } : { left: position }}
+			className={`pointer-events-none absolute z-20 bg-gray-100 ${vertical ? "inset-x-0 h-0.5" : "inset-y-0 w-0.5"}`}
+			style={vertical ? { top: position, opacity } : { left: position, opacity }}
 		/>
 	)
 }
 
-/** The sweep from gate to finish, once, the first time the strip is on screen. */
-function useDrawIn(vertical: boolean) {
-	const reduceMotion = useReducedMotion()
-	const ref = useRef<HTMLDivElement>(null)
-	// 1 is "fully drawn": the prerendered first paint, and where it ends.
-	const progress = useMotionValue(1)
+/** The draw-in as a clip that opens from the gate towards the finish (useDrawIn). */
+function useStripDrawIn(vertical: boolean) {
+	const { ref, progress } = useDrawIn<HTMLDivElement>()
 	const hidden = useTransform(progress, (value) => `${(1 - value) * 100}%`)
 	const clipPath = useMotionTemplate`inset(0 ${vertical ? "0" : hidden} ${vertical ? hidden : "0"} 0)`
-
-	useEffect(() => {
-		const element = ref.current
-		// No observer (an old browser, or the test DOM): the strip just stays drawn.
-		if (reduceMotion || !element || typeof IntersectionObserver === "undefined") return
-		let controls: ReturnType<typeof animate> | undefined
-		const observer = new IntersectionObserver(([entry]) => {
-			if (!entry?.isIntersecting) return
-			observer.disconnect()
-			progress.set(0)
-			controls = animate(progress, 1, { duration: 1, ease: [0.4, 0, 0.2, 1] })
-		}, { threshold: 0.3 })
-		observer.observe(element)
-		return () => {
-			observer.disconnect()
-			controls?.stop()
-			progress.set(1)
-		}
-	}, [reduceMotion, progress])
-
 	return { ref, clipPath }
 }
 
@@ -264,14 +241,12 @@ export default function CourseStrip({
 	course,
 	overlays,
 	cursor,
-	variant = "full",
 	orientation = "horizontal",
 	className = "",
 }: CourseStripProps) {
 	const vertical = orientation === "vertical"
-	const mini = variant === "mini"
 	const distance = course.distance
-	const { ref, clipPath } = useDrawIn(vertical)
+	const { ref, clipPath } = useStripDrawIn(vertical)
 
 	const facts = useMemo(() => courseFacts(course), [course])
 	const spans = [...facts.spans, ...(overlays?.spans ?? [])]
@@ -291,32 +266,30 @@ export default function CourseStrip({
 	// Across: rows of these heights. Down: the race is distance / 4 px long
 	// (300 to 900), so a 3600 m course scrolls with the page.
 	// Down the page the word columns share the width (no size).
-	const band = mini ? "12px" : vertical ? undefined : "32px"
+	const band = vertical ? undefined : "32px"
 	const stripLength = `${Math.min(900, Math.max(300, distance / 4))}px`
 
 	const bands = (
 		<>
-			{!mini && <ElevationBand course={course} vertical={vertical} size={vertical ? "34px" : "40px"} />}
-			{!mini && (
-				<Band vertical={vertical} size={band} label="hills">
-					{hills.map((hill) => (
-						<Segment
-							key={hill.start}
-							start={hill.start}
-							end={hill.end}
-							distance={distance}
-							vertical={vertical}
-							fill={hill.kind === "uphill" ? "var(--color-course-uphill)" : "var(--color-course-downhill)"}
-							ink={LIGHT_INK}
-							label={hill.label}
-							// Too narrow for the words: the colour says up or down.
-							shortLabel={`${hill.percent}%`}
-							endLabel={formatMetres(hill.end)}
-						/>
-					))}
-				</Band>
-			)}
-			{!mini && ground.length > 0 && (
+			<ElevationBand course={course} vertical={vertical} size={vertical ? "34px" : "40px"} />
+			<Band vertical={vertical} size={band} label="hills">
+				{hills.map((hill) => (
+					<Segment
+						key={hill.start}
+						start={hill.start}
+						end={hill.end}
+						distance={distance}
+						vertical={vertical}
+						fill={hill.kind === "uphill" ? "var(--color-course-uphill)" : "var(--color-course-downhill)"}
+						ink={LIGHT_INK}
+						label={hill.label}
+						// Too narrow for the words: the colour says up or down.
+						shortLabel={`${hill.percent}%`}
+						endLabel={formatMetres(hill.end)}
+					/>
+				))}
+			</Band>
+			{ground.length > 0 && (
 				<Band vertical={vertical} size={vertical ? band : "22px"} label="ground">
 					{ground.map((part) => (
 						<Segment
@@ -350,7 +323,6 @@ export default function CourseStrip({
 							ink={shade ? DARK_INK : LIGHT_INK}
 							label={part.label}
 							endLabel={part.end < distance ? formatMetres(part.end) : undefined}
-							bare={mini}
 						/>
 					)
 				})}
@@ -367,7 +339,6 @@ export default function CourseStrip({
 						ink={PHASE_INKS[index % PHASE_INKS.length]}
 						label={phase.label}
 						endLabel={phase.end < distance ? formatMetres(phase.end) : undefined}
-						bare={mini}
 					/>
 				))}
 				{/* The final sixth: a thin line inside Late-race, no words (owner, 2026-11-02). */}
@@ -379,11 +350,11 @@ export default function CourseStrip({
 					/>
 				))}
 			</Band>
-			{!mini && <SectionsBand distance={distance} vertical={vertical} size={vertical ? "18px" : "20px"} />}
+			<SectionsBand distance={distance} vertical={vertical} size={vertical ? "18px" : "20px"} />
 		</>
 	)
 
-	const markerLines = !mini && labelled.map((marker) => (
+	const markerLines = labelled.map((marker) => (
 		<div
 			key={`line-${marker.kind}-${marker.at}`}
 			className={`pointer-events-none absolute border-dashed border-gray-100/70 ${vertical ? "inset-x-0 border-t" : "inset-y-0 border-l"}`}
@@ -391,7 +362,7 @@ export default function CourseStrip({
 		/>
 	))
 
-	const markerLabels = !mini && laneCount > 0 && (
+	const markerLabels = laneCount > 0 && (
 		<div
 			className="relative"
 			style={vertical ? { width: "80px" } : { height: `${laneCount * 16 + 2}px` }}
@@ -426,8 +397,8 @@ export default function CourseStrip({
 
 	if (vertical) {
 		return (
-			<div className={`flex gap-1 ${className}`} style={{ height: mini ? undefined : stripLength }} aria-hidden="true">
-				{!mini && <MetreRuler distance={distance} vertical size="34px" />}
+			<div className={`flex gap-1 ${className}`} style={{ height: stripLength }} aria-hidden="true">
+				<MetreRuler distance={distance} vertical size="34px" />
 				<motion.div ref={ref} className="relative flex min-w-0 flex-1 gap-px overflow-hidden rounded-md" style={{ clipPath }}>
 					{bands}
 					{markerLines}
@@ -446,7 +417,7 @@ export default function CourseStrip({
 				{cursor !== undefined && <Cursor cursor={cursor} distance={distance} vertical={false} />}
 			</motion.div>
 			{markerLabels}
-			{!mini && <MetreRuler distance={distance} vertical={false} size="16px" />}
+			<MetreRuler distance={distance} vertical={false} size="16px" />
 		</div>
 	)
 }

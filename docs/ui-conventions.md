@@ -1921,10 +1921,26 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   `z-10`, so a marker line through the middle never cuts it.
 - **Colours** are `--color-course-*` in `index.css`'s `:root` (fills only; the component
   picks a light or dark ink per fill).
+- **The track view** (`CourseTrack`, behind the block's Strip | Track switch, from `sm` up;
+  phones keep the strip): the course along its real shape (`GET
+  /race-courses/<id>/shape` through `services/courseQueries.ts`, fetched the first time
+  Track is chosen, the box held while it loads) or the schematic
+  (`utils/courseSchematic.ts`, from the record), Real shape | Schematic remembered per
+  device in `services/courseShapeStore.ts`. The track is coloured by phase; words go in
+  callouts beside it, one per spot (a corner or hill a course passes twice lists both
+  laps' metres), placed by `placeLabels` from size estimates; hills are brackets outside
+  the track. Later laps are rings (`withLapRings`): ring k blends in over the half turn
+  before the course has turned k full circles, inside or outside per `later_laps`.
+- **Walk the course** (`useWalk`): one motion value, -1 when idle, read by both views; under
+  reduced motion it steps phase by phase.
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
   foot, closed by default, opening (a height animation under `useReducedMotion`) to the
-  mini strip (track and phases, no words), the name, the chips and a link to the guide.
-  Only for an event with a course. The chips are one component (`CourseChips`) in both.
+  name, the course's REAL shape as a track (owner, 2026-11-03: never the strip or the
+  schematic), the chips and a link to the guide. The shape is fetched on open, or earlier
+  when a pointer or focus reaches the button. Two tracks, CSS picking: 720 px from `sm`
+  up, and a phone's 340 px `compact` one that calls out only the start, the goal and the
+  corners' names (the chips say the rest). Only for an event with a course. The chips are
+  one component (`CourseChips`) in both.
 - **The draw-in**: the first paint is the finished strip (the motion value starts at 1);
   after mount an `IntersectionObserver` sweeps it in once, on a motion value through a
   `clip-path`, never a React state per frame. Reduced motion, or no observer (the test
