@@ -15,7 +15,7 @@
  * page is prerendered and render-time code may not read the screen's width;
  * the phone's track waits for an effect to read it, since it costs a fetch.
  */
-import { useContext, useEffect, useMemo, useState } from "react"
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Loader2, Zap } from "lucide-react"
 import type { RaceCourse, RaceEvent } from "../../types"
@@ -29,6 +29,7 @@ import {
 	setCourseFocus,
 	setPageCourse,
 	useAccelsOpen,
+	subscribeCourseMap,
 	useCourseFocus,
 	useStyleTab,
 	useCourseLayers,
@@ -89,6 +90,15 @@ function Segmented<T extends string>({ label, value, options, onChange }: {
 			))}
 		</div>
 	)
+}
+
+/** The element that scrolls `node`: the nearest scrolling ancestor, else the window. */
+function scrollerOf(node: HTMLElement): { scrollBy: (x: number, y: number) => void } {
+	for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+		const overflow = getComputedStyle(parent).overflowY
+		if ((overflow === "auto" || overflow === "scroll") && parent.scrollHeight > parent.clientHeight) return parent
+	}
+	return window
 }
 
 export default function CourseSection({ course, event = null, guide = null }: {
@@ -240,10 +250,46 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	}, [zones, focus, veteransOn, veteranData, veteranPicks, guide, layers.scope, layers.chains, styleTab, course.distance])
 	const hasLayer = layer.overlays.spans.length > 0
 
+	// Lighting a skill from a chip or a tile BELOW the map grows the map (the
+	// verdict card, the lit rows); the chip slides away from the pointer, its
+	// hover closes, the map shrinks back, and round again (seen 2026-11-04 in
+	// a capture: Chrome re-checks hover after layout; the browser's scroll
+	// anchoring did not step in, the page scrolling in an inner column). So
+	// the block's bottom is measured the moment the store changes, before
+	// React renders for it, and again right after: when the pointer was below
+	// the block and the bottom moved, the block's scroller scrolls by the
+	// move and what the pointer is on stays put. Measured, never assumed, so
+	// a browser that did anchor finds nothing to do.
+	const blockRef = useRef<HTMLDivElement>(null)
+	const pointerY = useRef<number | null>(null)
+	const mark = useRef<{ bottom: number; y: number } | null>(null)
+	useEffect(() => {
+		const track = (event: MouseEvent) => { pointerY.current = event.clientY }
+		window.addEventListener("mousemove", track, { passive: true })
+		const unsubscribe = subscribeCourseMap(() => {
+			const block = blockRef.current
+			mark.current = block && pointerY.current !== null ? { bottom: block.getBoundingClientRect().bottom, y: pointerY.current } : null
+		})
+		return () => {
+			window.removeEventListener("mousemove", track)
+			unsubscribe()
+		}
+	}, [])
+	useLayoutEffect(() => {
+		const marked = mark.current
+		const block = blockRef.current
+		if (!marked || !block) return
+		mark.current = null
+		if (marked.y <= marked.bottom) return
+		const shift = block.getBoundingClientRect().bottom - marked.bottom
+		if (Math.abs(shift) < 1) return
+		scrollerOf(block).scrollBy(0, shift)
+	})
+
 	return (
 		// The id is what "See it on the map" scrolls to (GuideSkillsPanel); one
 		// course block per page.
-		<div id={COURSE_MAP_ID} className="border-t border-gray-700/70 p-3 sm:p-4">
+		<div id={COURSE_MAP_ID} ref={blockRef} className="border-t border-gray-700/70 p-3 sm:p-4">
 			<div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
 				{/* The header's other panel labels (PANEL_LABEL), less their margin. */}
 				<h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Course map</h3>

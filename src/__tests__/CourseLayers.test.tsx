@@ -41,6 +41,31 @@ describe("the course map's layers", () => {
 		expect(screen.getByRole("list", { name: "Layer legend" })).toBeInTheDocument()
 	})
 
+	it("keeps what the pointer is on in place when lighting from below grows the block (the hover loop, 2026-11-04)", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(ZONES)))
+		// The block's bottom: 300 when the store changes, 400 once the lit rows are in.
+		let measured = 0
+		const rect = (bottom: number) => ({ x: 0, y: 0, top: 0, left: 0, right: 0, width: 0, height: bottom, bottom, toJSON: () => ({}) }) as DOMRect
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+			if (this.id !== "course-map") return rect(0)
+			measured += 1
+			return rect(measured === 1 ? 300 : 400)
+		})
+		const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => {})
+		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		// A chip under the block: the pointer sits below its bottom.
+		fireEvent.mouseMove(window, { clientY: 800 })
+		act(() => setCourseFocus({ skillId: 88, name: "Final Push" }))
+		await waitFor(() => expect(scrollBy).toHaveBeenCalledWith(0, 100))
+		// Nothing moves for a pointer above the block (the accels column, the menu).
+		scrollBy.mockClear()
+		measured = 0
+		fireEvent.mouseMove(window, { clientY: 100 })
+		act(() => setCourseFocus(null))
+		await waitFor(() => expect(screen.queryByRole("list", { name: "Layer legend" })).toBeNull())
+		expect(scrollBy).not.toHaveBeenCalled()
+	})
+
 	it("lists the accels useful at the spurt start, most useful first, and lights one on a tap", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			if (String(input).includes("/skill-zones")) {

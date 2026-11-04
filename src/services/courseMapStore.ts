@@ -45,6 +45,15 @@ function subscribe(listener: () => void) {
 	return () => listeners.delete(listener)
 }
 
+/**
+ * Hear every change to this store, synchronously, before React re-renders
+ * for it (CourseSection measures the block right then, to keep what the
+ * pointer is on in place when lighting grows the map).
+ */
+export function subscribeCourseMap(listener: () => void): () => void {
+	return subscribe(listener)
+}
+
 function notify() {
 	listeners.forEach((listener) => listener())
 }

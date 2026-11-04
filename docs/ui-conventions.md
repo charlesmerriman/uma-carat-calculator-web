@@ -2045,6 +2045,13 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
 - **An uma's tile lights her unique** while its hover detail is open (`lightUniqueOnCourseMap`,
   her as the card's owner), from `unique` on the guide's uma ref; a tile with no note shows
   "Unique: <name>" as its detail, so the hover exists.
+- **Lighting from below never moves the chip.** A chip or tile under the map that lights a
+  skill grows the map (the card, the lit rows); the chip would slide off the pointer, close,
+  and the map would shrink back, round and round (seen 2026-11-04; Chrome re-checks hover
+  after layout, and the browser's scroll anchoring did not step in, the page scrolling in an
+  inner column). `CourseSection` measures the block's bottom the moment the store changes
+  (`subscribeCourseMap`) and again after the render, and scrolls the block's scroller by the
+  move when the pointer was below the block. Measured, never assumed.
 - **The strip previews on the track** under Both: the layer span under the pointer
   (`onPreview`, by span key) draws its arc bolder and quietens the others (`preview` on
   `CourseTrack`, `data-preview` on the lit arc).
