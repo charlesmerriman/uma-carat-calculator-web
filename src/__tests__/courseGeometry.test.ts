@@ -9,17 +9,21 @@ import {
 	derivedFacts,
 	elevationProfile,
 	formatMetres,
+	lapOf,
 	markerLanes,
 	metreToFraction,
 	phaseBands,
+	pointAtMetre,
 	positionKeepEnd,
 	rulerTicks,
 	sectionBoundaries,
 	slopeParts,
 	surfaceParts,
 	trackParts,
+	withLapRings,
 	type CourseMarker,
 } from "../utils/courseGeometry"
+import { schematicShape } from "../utils/courseSchematic"
 import { CHUKYO_1200, NAKAYAMA_3600, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 describe("Chukyo turf 1200 m, the worked example", () => {
@@ -130,6 +134,43 @@ describe("metres to positions", () => {
 		expect(rulerTicks(3600)).toEqual([0, 400, 800, 1200, 1600, 2000, 2400, 2800, 3200, 3600])
 		expect(rulerTicks(2500).at(-1)).toBe(2500)
 		expect(rulerTicks(2100).at(-1)).toBe(2100)
+	})
+
+	it("puts a metre on a path by its share of the race, between two points", () => {
+		// A plain line east, 1,001 points: point i at i / 1000 of the race.
+		const line = Array.from({ length: 1001 }, (_, i) => [i, 0] as const)
+		expect(pointAtMetre(line, 550, 1000)).toEqual([550, 0])
+		// Chukyo 1200's 550 m is point 458.3, between 458 and 459 (the plan, PR 3).
+		expect(pointAtMetre(line, 550, 1200)[0]).toBeCloseTo(458.33, 2)
+	})
+
+	it("counts a lap each time the course has turned a full circle", () => {
+		// Nakayama 3600 turns two full circles: its home straight is run at the
+		// start, on lap two and at the finish.
+		const laps = lapOf(schematicShape(NAKAYAMA_3600))
+		expect(laps[0]).toBe(0)
+		expect(laps.at(-1)).toBe(2)
+		expect(lapOf(schematicShape(CHUKYO_1200)).every((lap) => lap === 0)).toBe(true)
+	})
+
+	it("moves each later pass a ring further in, blended across the corners before it", () => {
+		const shape = schematicShape(NAKAYAMA_3600)
+		const ringed = withLapRings(shape, NAKAYAMA_3600, 20)
+		const moved = (metre: number) => {
+			const index = Math.round((metre / 3600) * 1000)
+			return Math.hypot(ringed[index][0] - shape[index][0], ringed[index][1] - shape[index][1])
+		}
+		// The start is lap one: untouched.
+		expect(moved(0)).toBe(0)
+		// Lap two's home straight (1,615 to 1,975 m), after corners 3 and 4: one ring.
+		expect(moved(1800)).toBeCloseTo(20, 0)
+		// The finish, after lap two's corners 3 and 4: two rings, the innermost.
+		expect(moved(3600)).toBeCloseTo(40, 0)
+		// Mid-way through a blend, part of a ring: the step is in the bend.
+		expect(moved(1365)).toBeGreaterThan(0)
+		expect(moved(1365)).toBeLessThan(20)
+		const chukyo = schematicShape(CHUKYO_1200)
+		expect(withLapRings(chukyo, CHUKYO_1200, 20)).toBe(chukyo)
 	})
 
 	it("stacks marker labels that would touch into a second lane, in the caller's order", () => {

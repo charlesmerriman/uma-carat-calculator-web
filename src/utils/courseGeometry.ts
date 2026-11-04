@@ -328,3 +328,195 @@ export function markerLanes(markers: CourseMarker[], distance: number, minGap = 
 	}
 	return lanes
 }
+
+// ── The track view: positions on a path ────────────────────────────────────
+// A shape is the course's path in screen axes (y down, finish along the
+// bottom), metres, 1,001 points: point i at i / 1000 of the race. The real
+// one comes from the API (services/courseQueries.ts), the schematic from
+// utils/courseSchematic.ts; both read through these functions.
+
+export type ShapePoint = readonly [number, number]
+export type Shape = readonly ShapePoint[]
+
+/** Where a metre mark sits on a shape: point m / distance × 1000, interpolated. */
+export function pointAtMetre(shape: Shape, metre: number, distance: number): [number, number] {
+	const last = shape.length - 1
+	const at = metreToFraction(metre, distance) * last
+	const below = Math.floor(at)
+	const above = Math.min(last, below + 1)
+	const t = at - below
+	const [x0, y0] = shape[below]
+	const [x1, y1] = shape[above]
+	return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]
+}
+
+/** The shape's box: its size and where it starts. */
+export function shapeBounds(shape: Shape) {
+	const xs = shape.map(([x]) => x)
+	const ys = shape.map(([, y]) => y)
+	const minX = Math.min(...xs)
+	const minY = Math.min(...ys)
+	return { minX, minY, width: Math.max(...xs) - minX, height: Math.max(...ys) - minY }
+}
+
+/**
+ * The total turn up to each point, in degrees, positive clockwise on screen.
+ * A course passes the same ground again once it has turned a full circle,
+ * which is how the laps are found on any shape.
+ */
+export function cumulativeTurn(shape: Shape): number[] {
+	const turns = [0]
+	let total = 0
+	let previous: number | null = null
+	for (let i = 1; i < shape.length; i++) {
+		const [x0, y0] = shape[i - 1]
+		const [x1, y1] = shape[i]
+		if (x0 === x1 && y0 === y1) {
+			turns.push(total)
+			continue
+		}
+		const heading = Math.atan2(y1 - y0, x1 - x0)
+		if (previous !== null) total += ((heading - previous + 3 * Math.PI) % (2 * Math.PI)) - Math.PI
+		previous = heading
+		turns.push((total * 180) / Math.PI)
+	}
+	return turns
+}
+
+/** Which lap each point is on, from 0: a lap ends each time the course has turned 360 degrees. */
+export function lapOf(shape: Shape): number[] {
+	// A degree of slack, so the numerical wobble on a straight never counts.
+	return cumulativeTurn(shape).map((turn) => Math.max(0, Math.floor((Math.abs(turn) + 1) / 360)))
+}
+
+/** 0 to 1, easing in and out: how far through a blend a point is. */
+function smoothstep(t: number): number {
+	const clamped = Math.min(1, Math.max(0, t))
+	return clamped * clamped * (3 - 2 * clamped)
+}
+
+/**
+ * A course over one lap with each later lap drawn as its own ring, inside or
+ * outside lap one (`later_laps`, chosen per course; owner, 2026-11-02), so
+ * the passes don't sit on top of each other. Daptrius's method: the step to
+ * the next ring is blended across the next two corners, so it hides in a bend
+ * instead of kinking a straight. `gap` is the distance between rings, in the
+ * shape's metres. A one-lap course comes back unchanged.
+ */
+export function withLapRings(shape: Shape, course: RaceCourse, gap: number): Shape {
+	const turns = cumulativeTurn(shape).map(Math.abs)
+	const total = cumulativeTurn(shape).at(-1) ?? 0
+	// Each full circle the course turns past the first puts it back over
+	// ground it has run: one more ring.
+	const rings = Math.floor((Math.abs(total) + 1) / 360)
+	if (rings === 0) return shape
+	const last = shape.length - 1
+	const metreOf = (index: number) => (index / last) * course.distance
+	const firstAt = (turn: number) => {
+		const index = turns.findIndex((value) => value >= turn)
+		return metreOf(index === -1 ? last : index)
+	}
+
+	// Ring k blends in over the half turn (two corners) before the course has
+	// turned k full circles, so it is in place by the time the course is back
+	// over old ground, and the step hides in the bend. Measured from the lap
+	// boundary instead, the last ring of a course that finishes on its home
+	// straight would have to blend along the straight.
+	const blends = Array.from({ length: rings }, (_, k) => {
+		const from = firstAt(360 * (k + 1) - 180)
+		const to = firstAt(360 * (k + 1) - 1)
+		return { from, to: Math.max(to, from + 1) }
+	})
+
+	// Inside a clockwise course is to the right of travel; the sign of the
+	// total turn says which way this one goes.
+	const inward = total >= 0 ? 1 : -1
+	const side = course.later_laps === "outside" ? -inward : inward
+
+	return shape.map(([x, y], index) => {
+		const metre = metreOf(index)
+		const offset = blends.reduce((sum, blend) => sum + smoothstep((metre - blend.from) / (blend.to - blend.from)), 0)
+		if (offset === 0) return [x, y] as const
+		const [ax, ay] = shape[Math.max(0, index - 1)]
+		const [bx, by] = shape[Math.min(last, index + 1)]
+		const length = Math.hypot(bx - ax, by - ay) || 1
+		// The right-hand normal of travel in screen axes (y down).
+		const nx = (-(by - ay) / length) * side
+		const ny = ((bx - ax) / length) * side
+		return [x + nx * gap * offset, y + ny * gap * offset] as const
+	})
+}
+
+/**
+ * Lay a path in screen axes the way the API's shapes are (course_shapes.py
+ * to_screen): the home straight level along the bottom, the box at 0, 0.
+ * For the schematic, which is built here; the real shape arrives done.
+ */
+export function normaliseShape(points: Shape, distance: number, finalStraightStart?: number): Shape {
+	const last = points.length - 1
+	const first = finalStraightStart !== undefined && finalStraightStart < distance
+		? Math.round((finalStraightStart / distance) * last)
+		: Math.round(0.9 * last)
+	const [ax, ay] = points[first]
+	const [bx, by] = points[last]
+	const angle = -Math.atan2(by - ay, bx - ax)
+	const rotate = (turn: number) => points.map(([x, y]) => [
+		x * Math.cos(turn) - y * Math.sin(turn),
+		x * Math.sin(turn) + y * Math.cos(turn),
+	] as const)
+	const finishBelow = (candidate: Shape) =>
+		candidate[last][1] - candidate.reduce((sum, [, y]) => sum + y, 0) / candidate.length
+	const level = rotate(angle)
+	const flipped = rotate(angle + Math.PI)
+	const chosen = finishBelow(flipped) > finishBelow(level) + 1 ? flipped : level
+	const { minX, minY } = shapeBounds(chosen)
+	return chosen.map(([x, y]) => [x - minX, y - minY] as const)
+}
+
+export interface LabelRequest {
+	key: string
+	/** The point on the track the label belongs to. */
+	anchor: readonly [number, number]
+	/** Which way is "away from the track" there (a unit vector). */
+	direction: readonly [number, number]
+	/** The label's estimated box, in the shape's units. */
+	width: number
+	height: number
+}
+
+/**
+ * Where each callout goes so none overlaps another: tried in the order given
+ * (most important first), each at its preferred distance out from the track,
+ * then further out and swung a little to either side, taking the first spot
+ * that is clear. Sizes are estimates from the text, since nothing on a
+ * prerendered page may be measured. Returns the centre of each label.
+ */
+export function placeLabels(requests: LabelRequest[], distance: number): Record<string, [number, number]> {
+	const placed: { x: number; y: number; w: number; h: number }[] = []
+	const result: Record<string, [number, number]> = {}
+	const overlaps = (x: number, y: number, w: number, h: number) =>
+		placed.some((box) => Math.abs(box.x - x) < (box.w + w) / 2 && Math.abs(box.y - y) < (box.h + h) / 2)
+	for (const request of requests) {
+		const [ax, ay] = request.anchor
+		const [dx, dy] = request.direction
+		let chosen: [number, number] | null = null
+		let fallback: [number, number] = [ax + dx * distance, ay + dy * distance]
+		search: for (const reach of [1, 1.5, 2.1, 2.8, 3.6]) {
+			for (const swing of [0, 0.45, -0.45, 0.9, -0.9]) {
+				const cos = Math.cos(swing)
+				const sin = Math.sin(swing)
+				const x = ax + (dx * cos - dy * sin) * distance * reach
+				const y = ay + (dx * sin + dy * cos) * distance * reach
+				if (reach === 1 && swing === 0) fallback = [x, y]
+				if (!overlaps(x, y, request.width, request.height)) {
+					chosen = [x, y]
+					break search
+				}
+			}
+		}
+		const [x, y] = chosen ?? fallback
+		placed.push({ x, y, w: request.width, h: request.height })
+		result[request.key] = [x, y]
+	}
+	return result
+}

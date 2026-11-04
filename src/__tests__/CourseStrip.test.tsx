@@ -1,13 +1,14 @@
 /**
  * The course strip (components/course/CourseStrip.tsx) and the block that
  * holds it in a guide's header (CourseSection): bands at the right places,
- * words on the segments, the markers, the mini variant, the phone's vertical
+ * words on the segments, the markers, the phone's vertical
  * strip, and the same course in words for screen readers.
  */
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import CourseSection from "../components/course/CourseSection"
 import CourseStrip from "../components/course/CourseStrip"
+import { TestQueryProvider } from "../test/TestQueryProvider"
 import { CHUKYO_1200, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 /** The band's box: the segment that holds a label. */
@@ -76,16 +77,6 @@ describe("CourseStrip, across the page", () => {
 })
 
 describe("CourseStrip variants", () => {
-	it("mini: the track and the phases, no words, no rulers", () => {
-		const { container } = render(<CourseStrip course={CHUKYO_1200} variant="mini" />)
-		expect(screen.queryByText("Corner 3")).toBeNull()
-		expect(screen.queryByText("Late-race")).toBeNull()
-		expect(band(container, "track")).not.toBeNull()
-		expect(band(container, "phases")).not.toBeNull()
-		expect(band(container, "elevation")).toBeNull()
-		expect(band(container, "markers")).toBeNull()
-	})
-
 	it("vertical: the race runs down the page", () => {
 		render(<CourseStrip course={CHUKYO_1200} orientation="vertical" />)
 		expect(segment("Corner 3").style.top).toBe("25%")
@@ -95,7 +86,7 @@ describe("CourseStrip variants", () => {
 
 describe("CourseSection", () => {
 	it("names the course, reads off the chips and says it all in words", () => {
-		render(<CourseSection course={CHUKYO_1200} />)
+		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
 		expect(screen.getByText("Chukyo turf 1,200m, left-handed")).toBeInTheDocument()
 		const chips = within(screen.getByRole("list", { name: "Read off the course" }))
 		expect(chips.getByText("Final straight 412m")).toBeInTheDocument()
