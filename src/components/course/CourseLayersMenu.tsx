@@ -6,16 +6,31 @@
  * this menu; nothing else adds a toggle to the block.
  *
  * Today one layer, "My veterans' skills": the team's linked veterans' skills
- * that fire at a place in this race, all of them or only the guide's.
+ * that fire at a place in this race, all of them or only the guide's, with a
+ * tick for each veteran and each of her skills that can fire here (owner,
+ * 2026-11-03: all of them at once was illegible on the track), and "Skills set
+ * off by other skills".
  */
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState, type ReactNode } from "react"
 import { Layers } from "lucide-react"
-import { setCourseLayers, useCourseLayers } from "../../services/courseMapStore"
+import { setCourseLayers, setVeteranShown, setVeteranSkillShown, useCourseLayers } from "../../services/courseMapStore"
 
-export default function CourseLayersMenu({ signedIn, veteransNote }: {
+/** One veteran in the menu: her tick, and a tick per skill of hers that can fire here. */
+export interface VeteranMenuRow {
+	veteranId: number
+	name: string
+	/** Her avatar (FramedUma). */
+	head: ReactNode
+	shown: boolean
+	skills: { skillId: number; name: string; shown: boolean }[]
+}
+
+export default function CourseLayersMenu({ signedIn, veteransNote, veterans = [] }: {
 	signedIn: boolean
 	/** Why the veterans layer draws nothing, when it doesn't ("Link a veteran..."). */
 	veteransNote: string | null
+	/** The team's veterans, once the layer is on and they've loaded. */
+	veterans?: VeteranMenuRow[]
 }) {
 	const [open, setOpen] = useState(false)
 	const layers = useCourseLayers()
@@ -49,7 +64,7 @@ export default function CourseLayersMenu({ signedIn, veteransNote }: {
 				Layers
 			</button>
 			{open && (
-				<div id={panelId} className="absolute right-0 z-30 mt-1 w-64 rounded-lg border border-gray-700 bg-gray-800 p-3 text-sm shadow-lg">
+				<div id={panelId} className="absolute right-0 z-30 mt-1 max-h-[70vh] w-80 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 p-3 text-sm shadow-lg">
 					<label className={`flex items-start gap-2 ${signedIn ? "" : "opacity-60"}`}>
 						<input
 							type="checkbox"
@@ -79,6 +94,43 @@ export default function CourseLayersMenu({ signedIn, veteransNote }: {
 							</label>
 							{veteransNote && <p className="pt-1 text-gray-400">{veteransNote}</p>}
 						</div>
+					)}
+					{signedIn && layers.veterans && veterans.length > 0 && (
+						<ul className="mt-3 space-y-2 border-t border-gray-700 pt-2" aria-label="Veterans">
+							{veterans.map((veteran) => (
+								<li key={veteran.veteranId}>
+									<label className="flex items-center gap-2 text-xs font-semibold text-gray-100">
+										<input
+											type="checkbox"
+											checked={veteran.shown}
+											onChange={(event) => setVeteranShown(veteran.veteranId, event.target.checked)}
+										/>
+										{veteran.head}
+										{veteran.name}
+									</label>
+									{veteran.shown && (
+										veteran.skills.length > 0 ? (
+											<ul className="mt-1 space-y-0.5 pl-6" aria-label={`${veteran.name}'s skills`}>
+												{veteran.skills.map((skill) => (
+													<li key={skill.skillId}>
+														<label className="flex items-center gap-2 text-xs text-gray-300">
+															<input
+																type="checkbox"
+																checked={skill.shown}
+																onChange={(event) => setVeteranSkillShown(veteran.veteranId, skill.skillId, event.target.checked)}
+															/>
+															{skill.name}
+														</label>
+													</li>
+												))}
+											</ul>
+										) : (
+											<p className="mt-1 pl-6 text-xs text-gray-400">None of her skills fire at a place here.</p>
+										)
+									)}
+								</li>
+							))}
+						</ul>
 					)}
 					{signedIn && layers.veterans && (
 						// Off by default like every layer (owner, 2026-11-03: "toggleable

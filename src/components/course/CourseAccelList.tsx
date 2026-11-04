@@ -1,57 +1,82 @@
 /**
- * "Accels on this course" (notes/course-map-plan-2.md, section 8; owner,
- * 2026-11-03: "Uniques and accels together, not just gold accels"): every
- * skill with an acceleration effect that can fire on this course for a style,
- * nearest the last spurt's start first, each with its verdict; a tap lights it
- * on the map.
+ * "Accels on this course" (notes/course-map-plan-2.md, section 8): the
+ * accels that can land at the last spurt's start here, most useful first
+ * (owner, 2026-11-03: "the ones that are actually useful on the track ...
+ * ranked by usefulness", by position with an "all"), each with its verdict; a
+ * tap lights it on the map. Usefulness is the API's ranking score (the share
+ * landing at the spurt start times the speed it adds), never shown as a number
+ * until Daptrius confirms the window.
  *
  * Opt-in like every layer: closed, it fetches nothing. Open, it reads the
  * course's skill zones (the map the layers share) and the PvP catalogue for
- * names and whose unique a skill is (the team builder's, shared). It shows
- * wherever the guide's course map shows (owner, 2026-11-03), and is game data
- * plus our verdicts, so it doesn't depend on reading the guide.
+ * names, and for whose unique a skill is, drawn with her avatar (FramedUma).
+ * It shows wherever the guide's course map shows (owner, 2026-11-03).
  */
 import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
+import { FramedUma } from "../FramedUma"
 import type { RaceCourse } from "../../types"
-import type { MemberStyle } from "../../types/pvpTeam"
+import type { CatalogueUma, MemberStyle } from "../../types/pvpTeam"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import { useCourseZones } from "../../services/courseQueries"
 import { setCourseFocus, useCourseFocus } from "../../services/courseMapStore"
 import { accelRows, verdictLines } from "../../utils/courseLayers"
 
-const STYLES: { value: MemberStyle; label: string }[] = [
+type StyleChoice = MemberStyle | "all"
+
+const STYLES: { value: StyleChoice; label: string }[] = [
+	{ value: "all", label: "All" },
 	{ value: "front", label: "Front" },
 	{ value: "pace", label: "Pace" },
 	{ value: "late", label: "Late" },
 	{ value: "end", label: "End" },
 ]
+const STYLE_NAMES: Record<string, string> = { front: "Front", pace: "Pace", late: "Late", end: "End" }
 // Enough to see the best of a style; the rest behind "Show all".
 const FIRST_ROWS = 12
 
-function AccelList({ course, style }: { course: RaceCourse; style: MemberStyle }) {
+interface Owner {
+	uma: CatalogueUma
+	/** The inherited version (a white with the unique's name), not her own. */
+	inherited: boolean
+}
+
+function AccelList({ course, style }: { course: RaceCourse; style: StyleChoice }) {
 	const zones = useCourseZones(course.id)
 	const catalogue = usePvpCatalogue()
+	const oshiIds = useOshiIds()
 	const focus = useCourseFocus()
 	const [all, setAll] = useState(false)
 
 	const ready = catalogue.status === "ready" ? catalogue : null
-	// Whose unique a skill is, from the umas' skill lists.
-	const uniqueOf = useMemo(() => {
-		const owners = new Map<number, string>()
+	// Whose unique a skill is: her own (the umas' "unique" links), or its
+	// inherited white, which carries the same name.
+	const owners = useMemo(() => {
+		const found = new Map<number, Owner>()
+		const byName = new Map<string, CatalogueUma>()
 		for (const uma of ready?.catalogue.umas ?? []) {
-			for (const link of uma.skills ?? []) if (link.source === "unique") owners.set(link.skill, uma.name)
+			for (const link of uma.skills ?? []) {
+				if (link.source !== "unique") continue
+				found.set(link.skill, { uma, inherited: false })
+				const name = ready?.skillsById.get(link.skill)?.name
+				if (name && !byName.has(name)) byName.set(name, uma)
+			}
 		}
-		return owners
+		for (const skill of ready?.catalogue.skills ?? []) {
+			const uma = byName.get(skill.name)
+			if (uma && !found.has(skill.id)) found.set(skill.id, { uma, inherited: true })
+		}
+		return found
 	}, [ready])
 	const rows = useMemo(
-		() => (zones.data ? accelRows(zones.data, style, (skillId) => (uniqueOf.has(skillId) ? 0 : 1)) : []),
-		[zones.data, style, uniqueOf],
+		() => (zones.data ? accelRows(zones.data, style, (skillId) => (owners.has(skillId) ? 0 : 1)) : []),
+		[zones.data, style, owners],
 	)
 
 	if (zones.isError || catalogue.status === "error") return <p className="text-xs text-gray-400">The list didn't load.</p>
 	if (!zones.data || !ready) return <p className="text-xs text-gray-400" role="status">Loading the accels…</p>
-	if (rows.length === 0) return <p className="text-xs text-gray-400">No acceleration skill fires here for this style.</p>
+	if (rows.length === 0) return <p className="text-xs text-gray-400">No accel lands at the late-race start here for this style.</p>
 
 	const shown = all ? rows : rows.slice(0, FIRST_ROWS)
 	return (
@@ -60,7 +85,7 @@ function AccelList({ course, style }: { course: RaceCourse; style: MemberStyle }
 				{shown.map(({ skillId, entry }) => {
 					const skill = ready.skillsById.get(skillId)
 					const name = skill?.name ?? `Skill ${skillId}`
-					const owner = uniqueOf.get(skillId)
+					const owner = owners.get(skillId)
 					const [first, ...rest] = verdictLines(entry, course.distance)
 					const lit = focus?.skillId === skillId
 					return (
@@ -73,7 +98,9 @@ function AccelList({ course, style }: { course: RaceCourse; style: MemberStyle }
 									lit ? "border-brand bg-brand/10" : "border-gray-700 hover:border-gray-500"
 								}`}
 							>
-								{skill?.image ? (
+								{owner ? (
+									<FramedUma src={owner.uma.portrait} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-8 w-8 shrink-0" />
+								) : skill?.image ? (
 									<img src={skill.image} alt="" className="mt-0.5 h-5 w-5 shrink-0" loading="lazy" decoding="async" />
 								) : (
 									<span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
@@ -81,7 +108,14 @@ function AccelList({ course, style }: { course: RaceCourse; style: MemberStyle }
 								<span className="min-w-0 flex-1">
 									<span className="block font-medium text-gray-100">
 										{name}
-										{owner && <span className="font-normal text-gray-400"> · unique of {owner}</span>}
+										{owner && (
+											<span className="font-normal text-gray-400">
+												{owner.inherited ? ` · inherited from ${owner.uma.name}` : ` · unique of ${owner.uma.name}`}
+											</span>
+										)}
+										{style === "all" && entry.styles && (
+											<span className="font-normal text-gray-500"> · {entry.styles.map((key) => STYLE_NAMES[key] ?? key).join(", ")}</span>
+										)}
 									</span>
 									{first && <span className="block text-gray-300">{first}</span>}
 									{rest.map((line) => (
@@ -104,7 +138,7 @@ function AccelList({ course, style }: { course: RaceCourse; style: MemberStyle }
 
 export default function CourseAccelList({ course }: { course: RaceCourse }) {
 	const [open, setOpen] = useState(false)
-	const [style, setStyle] = useState<MemberStyle>("front")
+	const [style, setStyle] = useState<StyleChoice>("all")
 	return (
 		<div className="mt-3">
 			<button
@@ -118,7 +152,7 @@ export default function CourseAccelList({ course }: { course: RaceCourse }) {
 			</button>
 			{open && (
 				<div className="mt-2">
-					<div role="group" aria-label="Running style" className="mb-2 flex gap-1">
+					<div role="group" aria-label="Running style" className="mb-2 flex flex-wrap gap-1">
 						{STYLES.map((option) => (
 							<button
 								key={option.value}

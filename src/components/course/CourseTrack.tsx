@@ -38,7 +38,7 @@ import {
 } from "../../utils/courseGeometry"
 import { useDrawIn } from "./useDrawIn"
 
-const PHASE_STROKES = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)"]
+const PHASE_STROKES = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-final)"]
 // The box is at most this wide by default (`widthPx`); label sizes are
 // estimated at the box's own width, since nothing is measured.
 const BOX_PX = 900
@@ -214,14 +214,16 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 			key: "marker-spurt-start",
 			at: spurt.at,
 			point: pointAtMetre(shape, spurt.at, distance),
-			label: compact ? "Last spurt" : spurt.label,
+			label: spurt.label,
 			detail: formatMetres(spurt.at),
 			tone: "spurt",
 		})
 	}
-	const cornerGroups = new Map<number, { at: number[]; middle: number }>()
+	// A corner's and a straight's callout points at where it STARTS, the metre
+	// it names, like every other callout (Daptrius, 2026-11-03).
+	const cornerGroups = new Map<number, { at: number[] }>()
 	for (const corner of [...course.corners].sort((a, b) => a.start - b.start)) {
-		const group = cornerGroups.get(corner.number) ?? { at: [], middle: corner.start + corner.length / 2 }
+		const group = cornerGroups.get(corner.number) ?? { at: [] }
 		group.at.push(corner.start)
 		cornerGroups.set(corner.number, group)
 	}
@@ -229,7 +231,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 		allCallouts.push({
 			key: `corner-${number}`,
 			at: group.at[0],
-			point: pointAtMetre(shape, group.middle, distance),
+			point: pointAtMetre(shape, group.at[0], distance),
 			label: number > 0 ? `Corner ${number}` : "Corner",
 			detail: group.at.map(formatMetres).join(", "),
 			tone: "corner",
@@ -240,9 +242,31 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 		allCallouts.push({
 			key: "final-straight",
 			at: straight.start,
-			point: pointAtMetre(shape, straight.start + straight.length * 0.35, distance),
+			point: pointAtMetre(shape, straight.start, distance),
 			label: "Final straight",
-			detail: formatMetres(straight.length),
+			// Its start, not its length: every other callout counts from the gate.
+			detail: formatMetres(straight.start),
+			tone: "corner",
+		})
+	}
+	// Every other straight: one callout per spot with each lap's start metres,
+	// like the corners (Daptrius's render). Not the one leaving the gate: the
+	// Start callout is already there.
+	const straightSpots: { at: number[]; point: [number, number] }[] = []
+	for (const part of [...course.straights].sort((a, b) => a.start - b.start)) {
+		if (part.start === 0 || part.start === straight?.start) continue
+		const point = pointAtMetre(shape, part.start, distance)
+		const same = straightSpots.find((spot) => near(spot.point, point))
+		if (same) same.at.push(part.start)
+		else straightSpots.push({ at: [part.start], point })
+	}
+	for (const spot of straightSpots) {
+		allCallouts.push({
+			key: `straight-${spot.at[0]}`,
+			at: spot.at[0],
+			point: spot.point,
+			label: "Straight",
+			detail: spot.at.map(formatMetres).join(", "),
 			tone: "corner",
 		})
 	}
@@ -287,19 +311,40 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 			.map((callout) => ({ ...callout, detail: undefined }))
 		: allCallouts
 
+	// The layers draw their lines outside the track, a lane per row (below);
+	// the callouts sit past the outermost one so no word covers a zone.
+	const layerLanes = (overlays?.spans ?? []).filter((span) => span.kind !== "phase" && span.kind !== "anywhere" && span.kind !== "passive")
+	const outermostLane = layerLanes.length > 0 ? Math.max(...layerLanes.map((span) => span.lane ?? 0)) : -1
+	const labelReach = outermostLane < 0 ? size * 0.1 : Math.max(size * 0.1, track * (1.3 + outermostLane * 0.9) + track * 2.5)
+
 	const positions = placeLabels(
 		callouts.map((callout) => {
 			const text = callout.label.length + (callout.detail ? callout.detail.length + 1 : 0)
+			const [ox, oy] = awayFromMiddle(callout.point)
 			return {
 				key: callout.key,
 				anchor: callout.point,
-				direction: awayFromMiddle(callout.point),
+				// The spurt start's words go INSIDE the track (owner, 2026-11-03:
+				// outside, its long leader crossed the layers and the zones).
+				direction: callout.key === "marker-spurt-start" ? [-ox, -oy] as const : [ox, oy] as const,
 				width: (text * CHAR_PX + LABEL_PAD_PX) * unitsPerPx,
 				height: LABEL_HEIGHT_PX * unitsPerPx,
 			}
 		}),
-		size * 0.1,
+		labelReach,
 	)
+	// A tick across the track at the spurt start, so the exact spot reads
+	// without the label (its look is the visual overhaul's).
+	const spurtTick = spurt && (() => {
+		const at = metreToFraction(spurt.at, distance) * (shape.length - 1)
+		const [ax, ay] = shape[Math.max(0, Math.floor(at) - 2)]
+		const [bx, by] = shape[Math.min(shape.length - 1, Math.ceil(at) + 2)]
+		const length = Math.hypot(bx - ax, by - ay) || 1
+		const [nx, ny] = [-(by - ay) / length, (bx - ax) / length]
+		const [x, y] = pointAtMetre(shape, spurt.at, distance)
+		const half = track * 1.4
+		return { x1: x - nx * half, y1: y - ny * half, x2: x + nx * half, y2: y + ny * half }
+	})()
 	const percent = ([x, y]: [number, number]): CSSProperties => ({
 		left: `${((x - box.x) / box.width) * 100}%`,
 		top: `${((y - box.y) / box.height) * 100}%`,
@@ -363,6 +408,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 						/>
 					)
 				})}
+				{spurtTick && <line {...spurtTick} stroke="var(--color-gray-100)" strokeWidth={track * 0.35} strokeLinecap="round" />}
 				{/* Leader lines from the track to each callout. */}
 				{callouts.map((callout) => (
 					<line

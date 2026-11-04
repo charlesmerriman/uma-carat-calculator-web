@@ -28,11 +28,12 @@ import { schematicShape } from "../utils/courseSchematic"
 import { CHUKYO_1200, NAKAYAMA_3600, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 describe("Chukyo turf 1200 m, the worked example", () => {
-	it("puts the phases at 1/6 and 2/3, Late-race running to the finish", () => {
+	it("puts the phases at 1/6, 2/3 and 5/6, phase 3 a band of its own", () => {
 		expect(phaseBands(1200).map(({ start, end, label }) => [label, start, end])).toEqual([
 			["Early-race", 0, 200],
 			["Mid-race", 200, 800],
-			["Late-race", 800, 1200],
+			["Late-race", 800, 1000],
+			["Last spurt", 1000, 1200],
 		])
 	})
 
@@ -72,10 +73,10 @@ describe("Chukyo turf 1200 m, the worked example", () => {
 		expect(derivedFacts(CHUKYO_1200)).toEqual([
 			"Final corner from 550m",
 			"Final straight 412m",
-			"Last spurt can start on the final straight, 400m from the goal",
+			"Late race starts on the final straight, 12m into it",
 			// The uphill begins 75 m into the spurt; the downhill runs over it.
-			"Uphill at the spurt start: Power helps",
-			"Downhill into the spurt: Wit helps",
+			"Uphill at the late-race start: Power helps",
+			"Downhill into the late race: Wit helps",
 			"2% climb in the last 400m",
 		])
 	})
@@ -89,13 +90,13 @@ describe("Chukyo turf 1200 m, the worked example", () => {
 		expect(spurt.downhill?.start).toBe(100)
 	})
 
-	it("hands the strip its own overlay: three phases and three markers", () => {
+	it("hands the strip its own overlay: four phases and three markers", () => {
 		const facts = courseFacts(CHUKYO_1200)
-		expect(facts.spans.map((span) => span.label)).toEqual(["Early-race", "Mid-race", "Late-race"])
+		expect(facts.spans.map((span) => span.label)).toEqual(["Early-race", "Mid-race", "Late-race", "Last spurt"])
 		expect(facts.markers.map(({ kind, at }) => [kind, at])).toEqual([
 			["position-keep-end", 500],
+			["midpoint", 600],
 			["spurt-start", 800],
-			["phase-divider", 1000],
 		])
 	})
 })
@@ -109,7 +110,7 @@ describe("courses that aren't the worked example", () => {
 			"Final corner from 1,950m",
 			"Final straight 300m",
 			// 1,600 m is on the straight to 1,800 m, where corner 3 starts.
-			"Last spurt can start on a straight, 200m before corner 3",
+			"Late race starts on a straight, 200m before corner 3",
 		])
 	})
 
@@ -118,7 +119,7 @@ describe("courses that aren't the worked example", () => {
 		expect(corners).toEqual(["Corner 1", "Corner 2", "Corner 3", "Corner 4", "Corner 1", "Corner 2", "Corner 3", "Corner 4"])
 		expect(trackParts(NAKAYAMA_3600).some((part) => part.kind === "gap")).toBe(false)
 		// 2/3 of 3600 is 2400, on lap two's corner 2 (2225 to 2475).
-		expect(derivedFacts(NAKAYAMA_3600)).toContain("Last spurt can start in corner 2, 75m before a straight")
+		expect(derivedFacts(NAKAYAMA_3600)).toContain("Late race starts in corner 2, 75m before a straight")
 	})
 
 	it("says how little of the final corner is left at the spurt (CM 22, Tokyo dirt 1600)", () => {
@@ -127,8 +128,8 @@ describe("courses that aren't the worked example", () => {
 		expect(derivedFacts(TOKYO_DIRT_1600)).toEqual([
 			"Final corner from 875m",
 			"Final straight 501m",
-			"Last spurt can start in corner 4, 32m before the final straight",
-			"Uphill at the spurt start: Power helps",
+			"Late race starts in corner 4, 32m before the final straight",
+			"Uphill at the late-race start: Power helps",
 			"1.5% climb in the last 400m",
 		])
 	})
@@ -137,7 +138,7 @@ describe("courses that aren't the worked example", () => {
 		// 650 of 1,200 m downhill, ending 150 m before the spurt.
 		const mostlyDown = { ...CHUKYO_1200, slopes: [{ start: 0, length: 650, slope: -10000 }] }
 		expect(derivedFacts(mostlyDown)).toContain("Mostly downhill: Wit helps")
-		expect(derivedFacts(mostlyDown)).not.toContain("Downhill into the spurt: Wit helps")
+		expect(derivedFacts(mostlyDown)).not.toContain("Downhill into the late race: Wit helps")
 	})
 
 	it("marks where the ground changes, and only then", () => {

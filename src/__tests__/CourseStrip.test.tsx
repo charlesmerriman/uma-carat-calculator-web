@@ -30,22 +30,30 @@ describe("CourseStrip, across the page", () => {
 		expect(segment("Uphill 2%")).toBeInTheDocument()
 	})
 
-	it("draws three phases, Late-race to the finish, with a thin line at the final sixth", () => {
+	it("draws four phases, phase 3 (the final sixth) a band of its own, each with its metres", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
-		expect(parseFloat(segment("Late-race").style.left)).toBeCloseTo(66.667, 2)
-		expect(parseFloat(segment("Late-race").style.width)).toBeCloseTo(33.333, 2)
-		const phases = band(container, "phases")
-		const divider = [...phases.children].find((child) => (child as HTMLElement).style.left.startsWith("83.33")) as HTMLElement
-		expect(divider).toBeDefined()
-		expect(divider.textContent).toBe("")
+		const phases = [...band(container, "phases").children] as HTMLElement[]
+		expect(phases.map((phase) => [phase.textContent, Math.round(parseFloat(phase.style.left))])).toEqual([
+			["Early-race0–200m", 0], ["Mid-race200–800m", 17], ["Late-race800–1,000m", 67], ["Last spurt1,000–1,200m", 83],
+		])
+	})
+
+	it("keeps the end metre alone on a stretch too narrow for both", () => {
+		// Chukyo's corner 4 is 238 of 1,200 m wide (20%): both. Its corner 3,
+		// 250 m: both. A 1,200 m course's 100 m uphill (8%): no metres at all.
+		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
+		const hills = within(band(container, "hills"))
+		expect(hills.queryByText("875–975m")).toBeNull()
+		expect(within(band(container, "track")).getByText("300–550m")).toBeInTheDocument()
 	})
 
 	it("labels the markers with their metres", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
 		const markers = within(band(container, "markers"))
-		expect(markers.getByText("Last spurt can start here")).toBeInTheDocument()
+		expect(markers.getByText("Last spurt")).toBeInTheDocument()
 		expect(markers.getByText("Position keep ends")).toBeInTheDocument()
 		expect(markers.getByText("800m")).toBeInTheDocument()
+		expect(markers.getByText("Halfway")).toBeInTheDocument()
 	})
 
 	it("shows the ground band only where the ground changes (Tokyo dirt 1600's turf start)", () => {
@@ -98,7 +106,8 @@ describe("CourseSection", () => {
 		const chips = within(screen.getByRole("list", { name: "Read off the course" }))
 		expect(chips.getByText("Final straight 412m")).toBeInTheDocument()
 		expect(screen.getByText("Corner 3 from 300m to 550m")).toBeInTheDocument()
-		expect(screen.getByText("Late-race from 800m to the finish")).toBeInTheDocument()
-		expect(screen.getByText("Last spurt can start here: 800m")).toBeInTheDocument()
+		expect(screen.getByText("Late-race from 800m to 1,000m")).toBeInTheDocument()
+		expect(screen.getByText("Last spurt from 1,000m to the finish")).toBeInTheDocument()
+		expect(screen.getByText("Last spurt: 800m")).toBeInTheDocument()
 	})
 })
