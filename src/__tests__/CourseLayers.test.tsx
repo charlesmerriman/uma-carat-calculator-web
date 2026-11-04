@@ -7,7 +7,7 @@ import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@te
 import { afterEach, describe, expect, it, vi } from "vitest"
 import CourseLayersMenu from "../components/course/CourseLayersMenu"
 import CourseSection from "../components/course/CourseSection"
-import { setCourseFocus, setCourseLayers, useVeteranPicks } from "../services/courseMapStore"
+import { setAccelsOpen, setCourseFocus, setCourseLayers, useVeteranPicks } from "../services/courseMapStore"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { SkillZoneMap } from "../utils/courseLayers"
 import { CHUKYO_1200 } from "./courseFixtures"
@@ -17,7 +17,10 @@ const ZONES: SkillZoneMap = {
 }
 
 afterEach(() => {
-	act(() => setCourseFocus(null))
+	act(() => {
+		setCourseFocus(null)
+		setAccelsOpen(false)
+	})
 	vi.restoreAllMocks()
 })
 
@@ -62,7 +65,9 @@ describe("the course map's layers", () => {
 			}))
 		})
 		const { container } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-		fireEvent.click(screen.getByRole("button", { name: "Accels on this course" }))
+		// The Accels button is in the bar and, for a phone, under the headline: one column either way.
+		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		expect(screen.getAllByRole("complementary", { name: "Accels that land at the spurt" })).toHaveLength(1)
 		const list = within(await screen.findByRole("list", { name: "Accels on this course" }))
 		const rows = list.getAllByRole("button")
 		expect(rows).toHaveLength(3)
@@ -79,6 +84,11 @@ describe("the course map's layers", () => {
 		fireEvent.click(list.getAllByRole("button")[2])
 		await waitFor(() => expect(container.querySelector('[data-band="layers"]')).not.toBeNull())
 		expect(within(container.querySelector('[data-band="layers"]') as HTMLElement).getAllByText("Final Push").length).toBeGreaterThan(0)
+		// The lit skill's verdict card beside the headline, with its first line.
+		const card = within(screen.getByLabelText("Final Push on this course"))
+		expect(card.getByText("At a random point 12m to 250m before the late race starts")).toBeInTheDocument()
+		fireEvent.click(card.getByRole("button", { name: "Unlight this skill" }))
+		await waitFor(() => expect(screen.queryByLabelText("Final Push on this course")).toBeNull())
 	})
 
 	it("ticks each veteran and each of her skills that can fire here", () => {

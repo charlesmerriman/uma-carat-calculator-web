@@ -19,6 +19,10 @@ import type { RaceCourse } from "../types"
 export interface CourseFocus {
 	skillId: number
 	name: string
+	/** The skill's picture, for the verdict card (whoever lights it has it). */
+	image?: string | null
+	/** Whose unique it is, or whose unique it is inherited from (the accels column knows). */
+	owner?: { name: string; portrait: string | null; inherited: boolean }
 }
 
 export interface CourseLayers {
@@ -149,6 +153,35 @@ export function setVeteranShown(veteranId: number, shown: boolean) {
 export function setVeteranSkillShown(veteranId: number, skillId: number, shown: boolean) {
 	const current = picks ?? readPicks()
 	savePicks({ ...current, skills: { ...current.skills, [`${veteranId}:${skillId}`]: shown } })
+}
+
+/**
+ * Whether the accels column is open beside the map (owner, 2026-11-03: closed
+ * until tapped, since its names cost the catalogue; remembered on the device).
+ */
+const ACCELS_KEY = "uma-course-map-accels"
+let accelsOpen: boolean | null = null
+
+function readAccelsOpen(): boolean {
+	try {
+		return localStorage.getItem(ACCELS_KEY) === "open"
+	} catch {
+		return false
+	}
+}
+
+export function useAccelsOpen(): boolean {
+	return useSyncExternalStore(subscribe, () => (accelsOpen ??= readAccelsOpen()), () => false)
+}
+
+export function setAccelsOpen(open: boolean) {
+	accelsOpen = open
+	try {
+		localStorage.setItem(ACCELS_KEY, open ? "open" : "closed")
+	} catch {
+		// Storage blocked: the choice lasts this page's life.
+	}
+	notify()
 }
 
 /** The guide's course block (CourseSection): one per page. */

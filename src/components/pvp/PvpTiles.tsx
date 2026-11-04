@@ -281,7 +281,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
  * (notes/course-map-plan-2.md, section 8).
  */
 function lightOnCourseMap(skill: PvpSkillRef, open: boolean) {
-	if (open) setCourseFocus({ skillId: skill.id, name: skill.name })
+	if (open) setCourseFocus({ skillId: skill.id, name: skill.name, image: skill.image })
 	else clearCourseFocus(skill.id)
 }
 

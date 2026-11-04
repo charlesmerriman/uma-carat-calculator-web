@@ -17,14 +17,24 @@
  */
 import { useContext, useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { Loader2, Pause, Play } from "lucide-react"
+import { Loader2, Pause, Play, Zap } from "lucide-react"
 import type { RaceCourse, RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import { AuthContext } from "../../services/AuthContext"
-import { useCourseShape, useCourseZones } from "../../services/courseQueries"
+import { useCachedCourseZones, useCourseShape, useCourseZones } from "../../services/courseQueries"
 import { setCourseShapeChoice, useCourseShapeChoice, type CourseShapeChoice } from "../../services/courseShapeStore"
-import { COURSE_MAP_ID, setPageCourse, useCourseFocus, useCourseLayers, useVeteranPicks } from "../../services/courseMapStore"
 import {
+	COURSE_MAP_ID,
+	setAccelsOpen,
+	setCourseFocus,
+	setPageCourse,
+	useAccelsOpen,
+	useCourseFocus,
+	useCourseLayers,
+	useVeteranPicks,
+} from "../../services/courseMapStore"
+import {
+	accelRows,
 	focusLayer,
 	skillShown,
 	veteranLayer,
@@ -43,6 +53,7 @@ import CourseLegend from "./CourseLegend"
 import CourseLayersMenu, { type VeteranMenuRow } from "./CourseLayersMenu"
 import CourseStrip, { type LaneHead } from "./CourseStrip"
 import CourseTrack from "./CourseTrack"
+import CourseVerdictCard from "./CourseVerdictCard"
 import { courseName } from "./courseName"
 import { useWalk } from "./useWalk"
 import VeteranLayerSource, { type VeteranLayerData } from "./VeteranLayerSource"
@@ -133,6 +144,28 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	const veteransOn = signedIn && layers.veterans && event !== null
 	const [veteranData, setVeteranData] = useState<VeteranLayerData | null>(null)
 	const zones = useCourseZones(focus !== null || veteransOn ? course.id : null).data
+	// The accels column (owner, 2026-11-03: closed until tapped, remembered on
+	// the device). Its button carries the count only once the map is in hand,
+	// so a closed column still costs nothing.
+	const accelsOpen = useAccelsOpen()
+	const cachedZones = useCachedCourseZones(course.id).data
+	const accelCount = cachedZones ? accelRows(cachedZones, "all").length : null
+	const accelsButton = (
+		<button
+			type="button"
+			aria-pressed={accelsOpen}
+			onClick={() => setAccelsOpen(!accelsOpen)}
+			className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+				accelsOpen ? "border-brand bg-brand/15 text-gray-100" : "border-gray-600 text-gray-200 hover:bg-gray-700/60"
+			}`}
+		>
+			<Zap className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+			Accels
+			{accelCount !== null && !accelsOpen && (
+				<span className="rounded-full bg-brand px-1.5 text-[10px] font-extrabold text-black">{accelCount}</span>
+			)}
+		</button>
+	)
 
 	// The reader's veteran and skill ticks (owner, 2026-11-03: one per veteran,
 	// one per skill of hers that can fire here), remembered on the device.
@@ -203,6 +236,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				<h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Course map</h3>
 				<span className="text-sm text-gray-300">{courseName(course)}</span>
 				<div className="ml-auto hidden flex-wrap items-center gap-2 sm:flex">
+					{accelsButton}
 					<CourseLayersMenu signedIn={signedIn} veteransNote={veteranData?.note ?? null} veterans={layer.menu} />
 					<button
 						type="button"
@@ -228,8 +262,29 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					)}
 				</div>
 			</div>
-			{/* The map's first job, in words, before the drawing (owner, 2026-11-03). */}
-			<CourseHeadline course={course} className="mb-3" />
+			{/* The map's first job, in words, before the drawing (owner, 2026-11-03),
+			    and the lit skill's verdict card beside it. */}
+			<div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+				<CourseHeadline course={course} className="flex-1 basis-[22rem]" />
+				<AnimatePresence initial={false}>
+					{focus && (
+						// Slides in from the headline's side; a plain fade under reduced motion.
+						<motion.div
+							key={focus.skillId}
+							className="w-full max-w-[380px]"
+							initial={{ opacity: 0, x: reduceMotion ? 0 : 16 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: reduceMotion ? 0 : 16 }}
+							transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
+						>
+							<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</div>
+			<div className="mb-2 sm:hidden">{accelsButton}</div>
+			<div className={`grid gap-4 ${accelsOpen ? "lg:grid-cols-[minmax(0,1fr)_330px]" : ""}`}>
+			<div className="min-w-0">
 			<div className="hidden sm:block">
 				<AnimatePresence mode="wait" initial={false}>
 					<motion.div
@@ -276,7 +331,10 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				)}
 				<CourseStrip course={course} orientation="vertical" overlays={layer.overlays} laneHeads={layer.heads} />
 			</div>
-			<CourseAccelList course={course} />
+			</div>
+			{/* Beside the map from lg up, under it below; mounted only while open. */}
+			{accelsOpen && <CourseAccelList course={course} className="self-start" />}
+			</div>
 			<CourseFactsList course={course} />
 			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}
 		</div>
