@@ -1994,11 +1994,22 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   lights its skill while open (`useHoverPopup`'s `onOpenChange`; `clearCourseFocus` unlights
   only if it is still the one lit) and shows its verdict (`CourseVerdict`, reading only the
   cached map through `useCachedCourseZones` and the block's `usePageCourse`, so a page of
-  chips costs no request). "Accels on this course" (`CourseAccelList`, under the chips,
-  closed until opened; owner, 2026-11-03) lists only the accels that can land at the spurt
-  start, most useful first (`accelRows` on the API's `spurt.useful`, never shown as a
-  number), by style with "All" first; a unique, or its inherited white (the same name), shows
-  the uma's `FramedUma`; a tap lights one.
+  chips costs no request), with its grade and its zone as one bar. **A lit skill gets a
+  verdict card** beside the headline (`CourseVerdictCard`: the skill's picture or her
+  portrait, a grade, the verdict lines, the zone bar; a close button clears the focus),
+  built from what came with the focus (`CourseFocus.image`, `.owner`), never a fetch.
+  **The grade** (`grade()` in `courseLayers.ts`, owner 2026-11-03: a word with the odds
+  beside it): "At the spurt", "Ready before it" (a fixed zone that opens early and waits on
+  a placing), "Early", "Late", or by odds "Usually lands", "Sometimes lands", "Rarely
+  lands". **"Accels that land at the spurt"** (`CourseAccelList`, a column beside the map
+  from `lg` up and under it below, opened by the bar's Accels button and remembered on the
+  device through `useAccelsOpen`; closed it fetches nothing, since its names cost the
+  catalogue; owner, 2026-11-03) lists only the accels that can land at the spurt start,
+  most useful first (`accelRows` on the API's `spurt.useful`, never shown as a number),
+  eight then "Show all", by style with the guide tab's style first (`useStyleTab`, a store
+  snapshot of the address); a unique, or its inherited white (the same name), shows the
+  uma's `FramedUma`; a tap lights one and opens the card. The button carries the count only
+  once the map is already cached.
 - **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
   track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
   her a tick per skill of hers that can fire at a place here (`veteranSkillChoices`). Only

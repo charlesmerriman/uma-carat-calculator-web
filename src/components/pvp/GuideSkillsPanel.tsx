@@ -169,7 +169,7 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch,
 										const opening = openId !== pick.skill.id
 										setOpenId(opening ? pick.skill.id : null)
 										// The course map lights the open row's zones (CourseSection).
-										setCourseFocus(opening ? { skillId: pick.skill.id, name: pick.skill.name } : null)
+										setCourseFocus(opening ? { skillId: pick.skill.id, name: pick.skill.name, image: pick.skill.image } : null)
 									}}
 									spots={spots}
 									onSearch={(position) => onSearch(position, pick.skill.name)}

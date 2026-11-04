@@ -191,6 +191,41 @@ export function verdictLines(entry: SkillZoneEntry | undefined, distance: number
 	return lines
 }
 
+// ── An accel's grade (notes/course-map-visual-plan.md, "The verdict card") ──
+
+export interface Grade {
+	word: string
+	/** How good: the card and the list colour the pill by it. */
+	tone: "great" | "good" | "ok" | "poor"
+	/** A random accel's odds of landing at the late-race start, shown beside the word. */
+	odds?: number
+}
+
+/**
+ * An accel's grade against the late-race start (owner, 2026-11-03: a word
+ * with the odds beside it). A fixed zone that opens at the start is "At the
+ * spurt"; one that opens before it and waits on a placing is "Ready before
+ * it" (it fires when the placing holds, which can be at the start); one with
+ * nothing to wait for fires at its start, early or late. A random point is
+ * graded by its odds. Nothing for a skill that isn't an accel, has no
+ * verdict, or whose odds aren't confirmed.
+ */
+export function grade(entry: SkillZoneEntry | undefined): Grade | null {
+	if (!entry?.spurt || !entry.effects?.includes("accel") || entry.unreadable) return null
+	const { spurt } = entry
+	if (entry.fires_at !== undefined) {
+		if (Math.abs(spurt.from) < 1) return { word: "At the spurt", tone: "great" }
+		if (spurt.from < 0) return (entry.needs?.length ?? 0) > 0 ? { word: "Ready before it", tone: "good" } : { word: "Early", tone: "poor" }
+		return { word: "Late", tone: "poor" }
+	}
+	if (spurt.odds === undefined) return null
+	const odds = spurt.odds
+	if (odds >= 0.9) return { word: "At the spurt", tone: "great", odds }
+	if (odds >= 0.5) return { word: "Usually lands", tone: "good", odds }
+	if (odds >= 0.2) return { word: "Sometimes lands", tone: "ok", odds }
+	return { word: "Rarely lands", tone: "poor", odds }
+}
+
 // ── Skills set off by other skills (notes/course-map-plan-2.md, section 6) ──
 
 export type ChainResult = { from: number; to: number } | { missing: number; have: number }
