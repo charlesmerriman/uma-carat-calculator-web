@@ -33,11 +33,11 @@ export default function CourseLegend() {
 			))}
 			<li className="flex items-center gap-1.5">
 				<span className="inline-block h-3 w-0.5 rounded-px bg-brand" />
-				Last spurt can start
+				Spurt starts
 			</li>
 			<li className="flex items-center gap-1.5">
 				<span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-course-gate)" }} />
-				Start
+				Start, and the arrow the race runs
 			</li>
 			<li className="flex items-center gap-1.5">
 				<span

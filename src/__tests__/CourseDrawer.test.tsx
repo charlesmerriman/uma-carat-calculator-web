@@ -49,9 +49,8 @@ describe("CourseDrawer", () => {
 		// The track's callouts once the shape is in (twice: the desktop and the
 		// phone track, CSS picking); never the strip.
 		expect(await screen.findAllByText("Corner 3")).toHaveLength(2)
-		// Both tracks call the spurt marker "Last spurt" now, the short form
-		// the phone's track already used.
-		expect(screen.getAllByText("Last spurt")).toHaveLength(2)
+		// Both tracks call the spurt marker "Spurt starts" (Henry, 2026-11-03).
+		expect(screen.getAllByText("Spurt starts")).toHaveLength(2)
 		expect(container.querySelector('[data-band="track"]')).toBeNull()
 		expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`/race-courses/${CHUKYO_1200.id}/shape`), expect.anything())
 		expect(screen.getByLabelText("Read off the course")).toHaveTextContent("Final straight 412m")
