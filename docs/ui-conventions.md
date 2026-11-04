@@ -1895,6 +1895,201 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
+### The course map (`components/course/`)
+
+The plan is `notes/course-map-plan.md`; the look is `notes/course-map-visual-plan.md` (the
+owner's decisions of 2026-11-03, with the mock renders the build is checked against). A CM
+or LoH with a `course` (the API's nested record, `types/events.ts` `RaceCourse`) gets a
+**Course map** block at the foot of the guide's `EventHeader` (`CourseSection`): the course's
+name and the bar, the headline (`CourseHeadline`: the spurt sentence from `derivedFacts` in
+bold, the other facts in one line under it; it replaced the chips), the map, and the same in
+words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidden`).
+
+- **The strip is the ruler** (`CourseStrip`, both orientations): a label column (Height,
+  Phase, Course, Slope, Ground, the layer rows, Section) and a track cell per row (the
+  `data-band`), the marks' words above the rows in lanes (`markerLanes`) with their lines
+  through every row, the metres under the sections. A segment shows its words, then its
+  metres only where they fit beside them (an estimate against a 1,000 px strip; nothing is
+  measured). Hills carry Daptrius's triangle (`CourseIcon`). Down the page the rows are
+  columns and the marks' words sit in a margin at the right. A layer span is drawn in its
+  `colour` (a veteran's `--color-course-vet-N`, else the lit `--color-course-lit`), the
+  veteran's avatar at the head of her first row and "Lit" at the head of the open skill's.
+- **Icons are `CourseIcon`**, Daptrius's set (corners turning the course's way, the straight,
+  the double-arrow final straight, the hills' triangles, the flag).
+
+- **`utils/courseGeometry.ts` is the one place a metre becomes a position**, and where the
+  phases, sections, position keep end, hill heights and chips are derived. The game's
+  fractions are `GAME_GEOMETRY`, a parameter with defaults. Never compute a position in a
+  component.
+- **Four phase bands: Early-race, Mid-race, Late-race, and Last spurt (phase 3: 5/6 to the
+  finish, sections 21 to 24)**, with the "Spurt starts" marker at 2/3, section 17, where the
+  last spurt can start, and a "Halfway" marker at 1/2 (owner and Daptrius, 2026-11-03; the
+  marker's name follows gametora's, Henry, 2026-11-03). The headline says "Last spurt can
+  start ..."; the hill facts, the verdicts and the accel list measure from the 2/3 point and
+  call it "the late race". Corner, straight and final-straight callouts point at their start
+  metre, each spot once with every lap's metres; a segment wide enough shows its start and
+  end metres. A hill's chip sits where the hill begins. Every leader starts at the kerb's
+  edge and nothing is drawn on the track itself (Henry, 2026-11-03); the spurt chip's leader
+  runs from its line, a hill's from its bracket, a layer's from its arc. An arrow just inside
+  the kerb past the gate points the way the race runs. The Track view alone carries a legend
+  (`CourseLegend`); under Strip and Both the strip's words name every colour.
+- **The spurt start is the map's first job** (owner, 2026-11-03; `notes/course-map-plan-2.md`):
+  `spurtStart(course)` says what 2/3 falls on, how much of it is left and what comes next,
+  and the chip says it exactly ("Late race starts in corner 4, 8m before the final
+  straight"). Slope chips name the stat a hill near it rewards ("Uphill at the spurt start:
+  Power helps"; within 100 m, a presentation choice). Its marker is placed first and kept on
+  a phone's compact track; its strip line is solid. A flat course draws no profile or hills.
+- **One `CourseStrip`, two orientations.** `CourseSection` renders a horizontal strip
+  (`hidden sm:block`) and a vertical one (`sm:hidden`) and lets CSS pick, because the page
+  is prerendered. Down the page the word columns share the width (a `Band` without a
+  `size`) and the words wrap; across, they truncate, and a part too narrow for its words
+  shows a short form (a hill's percent) or only its colour.
+- **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any
+  `overlays` (`{spans, markers}` in metres) and an optional `cursor` (a metre or a motion
+  value). A later layer is a pure function to that shape; it never changes the strip.
+- **Words sit above the lines**: a segment's label has its band's fill as a background and
+  `z-10`, so a marker line through the middle never cuts it.
+- **Colours** are `--color-course-*` in `index.css`'s `:root`, with a light-theme set under
+  `[data-theme-mode="light"]`: the four phases as a heat ramp (`-early`, `-mid`, `-late`,
+  `-spurt`) each with its `-ink-*`, the quiet course row (`-straight`, `-straight-final`,
+  `-corner`, `-corner-alt`), the hills (`-up`, `-down`), the ground, the height profile, the
+  track's bed and marks, the beacon and its glow, and the layers (`-lit`, `-vet-1/2/3`).
+  The owner may retune the shades (2026-11-03): change the tokens, nothing else.
+- **The track view** (`CourseTrack`, behind the block's Strip | Track switch from `sm` up,
+  and compact over the strip on a phone, where `CourseSection` reads the screen in an effect
+  and fetches the shape at once): the course along its real shape (`GET
+  /race-courses/<id>/shape` through `services/courseQueries.ts`, fetched the first time
+  Track is chosen, the box held while it loads) or the schematic
+  (`utils/courseSchematic.ts`, from the record), Real shape | Schematic remembered per
+  device in `services/courseShapeStore.ts`. The look (`notes/course-map-visual-plan.md`,
+  "The track"): a kerb under the surface in the four phase colours, thin ticks where a
+  phase changes, a gate bar at the start and a chequer at the goal, the last-spurt line
+  across the track with a glow over the metres just after it (a look, not a number), hills
+  as brackets outside the track, and callouts beside it with `CourseIcon` shapes (one per
+  spot; a corner or hill a course passes twice lists both laps' metres), placed by
+  `placeLabels` from size estimates and then clamped inside the box; the spurt chip sits
+  inside the curve. Each callout's leader is a short line in its own colour with a dot on
+  the track. Later laps are rings (`withLapRings`): ring k blends in over the half turn
+  before the course has turned k full circles, inside or outside per `later_laps`. A full
+  circle has 10 degrees of slack (`TURN_SLACK`): real shapes that finish on the straight they
+  started on turn a little under (Nakayama 2000: 357; Nakayama 3600: 717 for two). A ground
+  change gets a callout ("Dirt from here").
+- **Layers** (`utils/courseLayers.ts`, `services/courseMapStore.ts`): the skill row open
+  in the team builder's Guide skills panel lights its zones (the panel sets the store's
+  `focus`, and clears it on unmount), and the Layers menu (`CourseLayersMenu`, off by
+  default, ticks remembered per device) holds "My veterans' skills": the preferred team's
+  linked veterans (`VeteranLayerSource`, mounted only while the layer is on, so the
+  catalogue and veterans are fetched only then), their skills that fire at a place for
+  their style, all or only the guide's (`heldSkillMeetsPick`), one group of lanes each
+  headed by her `FramedUma`. Zones come from `GET /race-courses/<id>/skill-zones`
+  (`services/courseQueries.ts`), fetched only once a layer needs them. On the strip a
+  layer is a row per lane (labels pop in along the race); on the track, one arc per GROUP
+  (`CourseSpan.group`: the lit skill, each veteran) outside the hills in the group's
+  colour, solid where it fires, dashed for a random point, dotted for the carry-over
+  window, a dot for a spot, with the skill's name chip at the zone's start.
+- **A verdict per lit skill** (`verdictLines` in `courseLayers.ts`; the API's
+  `skill_verdicts.py` works it out, this only words it): where it fires against the last
+  spurt for an accel, a heal against the late-race HP check, carry-over and repeats once the
+  API sends them, then "Also needs: ..." in verified words. An open skill row shows it with
+  "See it on the map" (`scrollToCourseMap`, to the block's `COURSE_MAP_ID`), a layer label
+  as its hover, and `focusLayer` adds a "Heal before here" mark while a heal is lit and a
+  carry-over band when one exists. Nothing promises a skill fires: each assumes its Wit check.
+- **Lighting from anywhere** (section 8 of the plan): a skill chip's or mention's hover card
+  lights its skill while open (`useHoverPopup`'s `onOpenChange`; `clearCourseFocus` unlights
+  only if it is still the one lit) and shows its verdict (`CourseVerdict`, reading only the
+  cached map through `useCachedCourseZones` and the block's `usePageCourse`, so a page of
+  chips costs no request), with its grade and its zone as one bar. **A lit skill gets a
+  verdict card** beside the headline (`CourseVerdictCard`: the skill's picture or her
+  portrait, a grade, the verdict lines, the zone bar; a close button clears the focus),
+  built from what came with the focus (`CourseFocus.image`, `.owner`), never a fetch.
+  **The grade** (`grade()` in `courseLayers.ts`, owner 2026-11-03: a word with the odds
+  beside it): "At the spurt" (a fixed point the API's `odds` says lands in the window, a
+  few metres either side of the start included), "Ready before it" (a fixed zone that opens
+  early and waits on a placing), "Early", "Late" (a fixed point outside the window, or a
+  random point that can't reach it), or by odds "Usually lands", "Sometimes lands", "Rarely
+  lands". A speed skill reads "Ends before the late race" only when its whole trigger is
+  before the carry window; one that fires in the late race says nothing about carry. A fixed
+  zone that waits on something ("Also needs") gets no odds line, since the needs say it
+  depends. A skill with several ways of firing (the API's `paths`) reads one sentence per
+  way, the most useful first and the rest as "Or ...", each with its own needs, and is
+  graded by its best way; the chain kinds `end_after` and `later_half` count a member's
+  first metre against the late-race start and half-way. **"Accels that land at the spurt"** (`CourseAccelList`, a column beside the map
+  from `lg` up and under it below, opened by the bar's Accels button and remembered on the
+  device through `useAccelsOpen`; closed it fetches nothing, since its names cost the
+  catalogue; owner, 2026-11-03) lists only the accels that can land at the spurt start,
+  most useful first (`accelRows` on the API's `spurt.useful`, never shown as a number),
+  eight then "Show all", by style with the guide tab's style first (`useStyleTab`, a store
+  snapshot of the address); a unique, or its inherited white (the same name), shows the
+  uma's `FramedUma` and names her on a quieter line; a tap lights one and opens the card.
+  Beside the map the column scrolls within itself past the screen's height, so "Show all"
+  never strands the map at the top of a long page. The button carries the count only once
+  the map is already cached; the column's title carries it once loaded.
+- **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
+  track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
+  her a tick per skill of hers that can fire at a place here (`veteranSkillChoices`). Only
+  the reader's ticks are stored (`useVeteranPicks`, by her trained uma's id, on the device);
+  the defaults are every veteran shown and, of her skills, her accels only
+  (`veteranShown` / `skillShown`). **Each veteran has a colour by team spot**
+  (`--color-course-vet-1/2/3`, assigned in `CourseSection`): her spans on the strip, her arc
+  on the track, a ring round her avatar at the head of her rows (`.course-ring`) and a swatch
+  beside her name in the menu; the lit skill keeps `--color-course-lit`.
+- **The spurt start on the track** has a tick across the track and its label inside the
+  curve; with layers on, every other label sits past the outermost layer line.
+- **Skills set off by other skills** (section 6): the Layers menu's "Skills set off by other
+  skills" (`layers.chains`, off by default, shown with the veterans' layer) draws a chained
+  skill where her own skills set it off (`resolveChain`: the N-th of them by earliest and by
+  latest point, then her skill's own zone start), and not at all when she has too few. With
+  it on, a chained GUIDE pick lights the same way, placed by the guide's other picks for the
+  tab's style (every pick under "All"; `useStyleTab`, `focusLayer`'s `chainSet`): the owner's
+  yes of 2026-11-04 to the first "Left for later" items.
+- **An uma's tile lights her unique** while its hover detail is open (`lightUniqueOnCourseMap`,
+  her as the card's owner), from `unique` on the guide's uma ref; a tile with no note shows
+  "Unique: <name>" as its detail, so the hover exists.
+- **Lighting from below never moves the chip.** A chip or tile under the map that lights a
+  skill grows the map (the card, the lit rows); the chip would slide off the pointer, close,
+  and the map would shrink back, round and round (seen 2026-11-04; Chrome re-checks hover
+  after layout, and the browser's scroll anchoring did not step in, the page scrolling in an
+  inner column). `CourseSection` measures the block's bottom the moment the store changes
+  (`subscribeCourseMap`) and again after the render, and scrolls the block's scroller by the
+  move when the pointer was below the block. Measured, never assumed.
+- **The strip and the track preview each other** (owner, 2026-11-04): the layer span under the
+  pointer on either (`onPreview`, by span key) draws its arc bolder on the track and quietens
+  the others (`preview` on `CourseTrack`, `data-preview` on the lit arc), and its bar on the
+  strip ringed in white with the others at 0.45 (`preview` on `CourseStrip`, `data-previewed`).
+  The arcs and the icons carry `<title>` with the name and the verdict.
+- **A lit skill is marked by its ICON on the track**, at its arc's start, ringed in its layer's
+  colour, one per skill per group, sliding forward along its arc when another icon sits there
+  (several skills start at the late-race start); a span with no icon keeps a name chip. The
+  strip's bars draw the icon before the name. Under the track (Track and Both), a "Lit skills"
+  legend names every lit skill by icon and name in its colour, each a hover target for its arc
+  and bar; on a phone it is the names alone. Every span carries `image` for this
+  (`skillSpans`, `focusLayer`, `veteranLayer`'s `images` from the catalogue).
+- **The accels column says why a row ranks where it does**: two chips, Accel (the share landing
+  well times the speed its acceleration adds) and Carry (the share carrying speed into the late
+  race times that speed), the API's `spurt.accel` and `spurt.carry`, a zero left out; and the
+  carry in the game's terms, "+0.35 m/s into the late race for 3.2 s" (`carry_speed`,
+  `carry_seconds`). `ZoneBar` draws the four phases under the zone, so a popup far from the map
+  (a skill chip's, an uma tile's, which now carries `CourseVerdict` for her unique) reads as a
+  one-lane strip.
+- **Walk the course is shelved** (owner, 2026-11-03: a runner on the course without the race
+  logic was a simulator in name only). The hook, the runner and the strip's cursor line are
+  gone; a runner belongs to the run view (`notes/course-map-later.md`), with the race logic.
+- **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
+  foot, closed by default, opening (a height animation under `useReducedMotion`) to the
+  name, the course's REAL shape as a track (owner, 2026-11-03: never the strip or the
+  schematic), the headline and a link to the guide. The shape is fetched on open, or earlier
+  when a pointer or focus reaches the button. Two tracks, CSS picking: 720 px from `sm`
+  up, and a phone's 340 px `compact` one that calls out only the start, the goal, the spurt,
+  the corners and the final straight (the headline says the rest). Only for an event with a
+  course. The headline is one component (`CourseHeadline`) in both.
+- **The draw-in**: the first paint is the finished strip (the motion value starts at 1);
+  after mount an `IntersectionObserver` sweeps it in once, on a motion value through a
+  `clip-path`, never a React state per frame. Reduced motion, or no observer (the test
+  DOM), keeps it still. **Two quiet touches** (the visual plan's "Motion"): the spurt glow
+  on the track breathes on a looping motion value (still under reduced motion), and the
+  verdict card slides in from the headline's side through `AnimatePresence` (a fade under
+  reduced motion). Nothing loops that the reader can see change state, and nothing autoplays.
+
 ### Guide editor view (`components/pvp/editor/`)
 
 `?view=editor`, the fourth tab, drawn only when `account.guide_editor` is true (staff

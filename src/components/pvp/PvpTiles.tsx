@@ -39,6 +39,8 @@ import { FramedCard } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { splitOutfit } from "../../utils/umaName"
 import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
+import { clearCourseFocus, setCourseFocus } from "../../services/courseMapStore"
+import CourseVerdict from "../course/CourseVerdict"
 
 /**
  * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
@@ -110,9 +112,16 @@ const HOVER_OPEN_DELAY_MS = 120
  * The popup is in the DOM only while open, so it is `aria-hidden`: the
  * screen reader's copy is the caller's `sr-only` element, always in the DOM
  * and named by `aria-describedby`, as the old in-place popup was.
+ *
+ * `onOpenChange` hears every open and close: a skill's card lights the skill
+ * on the course map while it is open (notes/course-map-plan-2.md, section 8).
  */
-function useHoverPopup(placement: Placement) {
-	const [open, setOpen] = useState(false)
+function useHoverPopup(placement: Placement, onOpenChange?: (open: boolean) => void) {
+	const [open, setOpenState] = useState(false)
+	const setOpen = (next: boolean) => {
+		setOpenState(next)
+		onOpenChange?.(next)
+	}
 	const reducedMotion = useReducedMotion()
 	const { refs, floatingStyles, context } = useFloating({
 		open,
@@ -135,7 +144,7 @@ function useHoverPopup(placement: Placement) {
 			// A touch screen has no hover, and a tap's focus isn't
 			// :focus-visible, so a tap toggles it.
 			onPointerUp(event) {
-				if (event.pointerType === "touch") setOpen((was) => !was)
+				if (event.pointerType === "touch") setOpen(!open)
 			},
 		}),
 	}
@@ -231,7 +240,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 	const skill = useSkillMentions()[name.toLowerCase()]
 	const insideHover = useContext(InsideHoverContext)
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom-start")
+	const { referenceProps, popup } = useHoverPopup("bottom-start", (open) => skill && lightOnCourseMap(skill, open))
 	if (!skill) return <>{name}</>
 	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
@@ -261,25 +270,56 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 			<span id={detailId} role="tooltip" className="sr-only">
 				<SkillDetail skill={skill} />
 			</span>
-			{popup(<SkillDetail skill={skill} />, "w-72")}
+			{popup(<><SkillDetail skill={skill} /><CourseVerdict skillId={skill.id} /></>, "w-72")}
 		</span>
 	)
+}
+
+/**
+ * A skill's card lights it on the course map while it is open, and unlights
+ * it on close unless something else lit another skill meanwhile
+ * (notes/course-map-plan-2.md, section 8).
+ */
+function lightOnCourseMap(skill: PvpSkillRef, open: boolean) {
+	if (open) setCourseFocus({ skillId: skill.id, name: skill.name, image: skill.image })
+	else clearCourseFocus(skill.id)
+}
+
+/**
+ * An uma's tile lights her unique while its detail is open, with her as its
+ * owner on the verdict card (course-map-plan-2.md, "Left for later", 1; the
+ * owner's yes, 2026-11-04). Her ref carries the unique (the guide payload).
+ */
+function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
+	if (!uma.unique) return
+	if (open) {
+		setCourseFocus({
+			skillId: uma.unique.id,
+			name: uma.unique.name,
+			image: uma.unique.image,
+			owner: { name: uma.name, portrait: uma.portrait ?? uma.image, inherited: false },
+		})
+	} else {
+		clearCourseFocus(uma.unique.id)
+	}
 }
 
 /**
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
  * no `detail` it renders the child plainly and is not focusable.
  */
-function WithDetail({ label, detail, children, className = "", detailClassName = "w-64" }: {
+function WithDetail({ label, detail, children, className = "", detailClassName = "w-64", onOpenChange }: {
 	label: string
 	detail: ReactNode
 	children: ReactNode
 	className?: string
 	/** The detail box's width; a card's art wants a narrower box than text. */
 	detailClassName?: string
+	/** Hears the detail open and close (a skill chip lights the course map). */
+	onOpenChange?: (open: boolean) => void
 }) {
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom")
+	const { referenceProps, popup } = useHoverPopup("bottom", onOpenChange)
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
@@ -394,8 +434,20 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	return (
 		<WithDetail
 			label={uma.name}
-			detail={note ? <><InlineNote text={note} /><MentionedSkills text={note} /></> : null}
+			// Her unique's verdict rides in the popup, with its zone bar, so the
+			// answer is at the pointer when the map is scrolled away (owner,
+			// 2026-11-04); with no note, the unique's name is the detail.
+			detail={note || uma.unique
+				? (
+					<>
+						{note && <><InlineNote text={note} /><MentionedSkills text={note} /></>}
+						{uma.unique && <p className={`text-xs text-gray-300 ${note ? "mt-1.5" : ""}`}>Unique: {uma.unique.name}</p>}
+						{uma.unique && <CourseVerdict skillId={uma.unique.id} />}
+					</>
+				)
+				: null}
 			className={className}
+			onOpenChange={(open) => lightUniqueOnCourseMap(uma, open)}
 		>
 			{/* h-full: in a grid the tile fills its row, so when one tile's
 			    letters wrap the others grow with it and every note slot, pinned
@@ -880,13 +932,14 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 		<>
 			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
 			<MentionedSkills text={note} skip={skill.id} />
+			<CourseVerdict skillId={skill.id} />
 		</>
 	)
 	// On the gold the text is the gradient's own dark brown (.skill-gold), so
 	// the grey text classes step aside and the note dims with opacity instead.
 	const gold = skill.rarity === GOLD_SKILL_RARITY
 	return (
-		<WithDetail label={skill.name} detail={detail} detailClassName="w-72">
+		<WithDetail label={skill.name} detail={detail} detailClassName="w-72" onOpenChange={(open) => lightOnCourseMap(skill, open)}>
 			{/* rounded-lg, not a capsule: the square icon's corners stuck out
 			    through a capsule's round ends. The skills panel's rows and the
 			    mention pill are rounded rectangles too. */}

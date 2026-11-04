@@ -83,6 +83,7 @@ import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { announcedCoursePairs } from "../../utils/courseDetails"
 import { CoursePairs } from "../timeline/CourseDetails"
+import CourseSection from "../course/CourseSection"
 import { formatDate, formatTime, localZoneName } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { guideLinkPath } from "../../utils/appRoutes"
@@ -117,7 +118,7 @@ import { PvpGalleryRankings } from "./PvpGalleryRankings"
 import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
-import type { PvpStyleTab } from "../../types/pvpGuide"
+import type { PvpGuide, PvpStyleTab } from "../../types/pvpGuide"
 import type { UseDeckRequest } from "../../utils/pvpTeams"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
@@ -425,6 +426,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 							now={now}
 							keyDates={milestones(event, calculationConstants)}
 							onCopyLink={() => copyLink(event)}
+							guide={guideState.status === "ready" ? guideState.guide : null}
 						/>
 
 						{/* Pinned under the event band (desktop) or the navbar (phone)
@@ -665,11 +667,13 @@ const PANEL_LABEL = "mb-2 text-[11px] font-semibold uppercase tracking-wider tex
  * pills, both read as congested): labels above values, no boxes, and the key
  * dates as a step line that shows how far the event has got.
  */
-function EventHeader({ event, now, keyDates, onCopyLink }: {
+function EventHeader({ event, now, keyDates, onCopyLink, guide }: {
 	event: RaceEvent
 	now: Date
 	keyDates: ReturnType<typeof milestones>
 	onCopyLink: () => void
+	/** The guide once loaded: the course map lights its skills (CourseSection). */
+	guide: PvpGuide | null
 }) {
 	const { kicker, title } = splitEventName(event)
 	const hasCourse = announcedCoursePairs(event).length > 0
@@ -795,6 +799,10 @@ function EventHeader({ event, now, keyDates, onCopyLink }: {
 					</div>
 				)}
 			</div>
+
+			{/* The course map (notes/course-map-plan.md): only for an event the
+			    admin's "Link courses" has given a course. */}
+			{event.course && <CourseSection course={event.course} event={event} guide={guide} />}
 		</section>
 	)
 }

@@ -1173,6 +1173,13 @@
 	content: none;
 }
 
+/* The course map's veterans' layer (components/course/CourseStrip.tsx): a ring
+   in her colour round her avatar at the head of her rows, outside the frame,
+   never in place of it. */
+.course-ring .uma-frame {
+	box-shadow: 0 0 0 2px var(--course-ring);
+}
+
 /* ===== CARD FRAMES =====
    components/FramedCard.tsx: a support card built the way Daptrius's pipeline
    builds it. His overlays are drawn on a 762 x 1000 canvas: the 1536 x 2048

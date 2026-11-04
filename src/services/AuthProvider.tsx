@@ -39,6 +39,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { AuthContext } from "./AuthContext"
 import { accountFetch } from "./accountFetchCalls"
+import { applyAdFreeClass } from "./adFreeClass"
 import { clearAuthToken, getAuthToken, subscribeToAuthToken } from "./authToken"
 import { userLogout } from "./userServices"
 import type { Account, AccountStatus } from "../types/account"
@@ -104,6 +105,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		void load()
 		return () => controller.abort()
 	}, [hasToken, reloadNonce])
+
+	// The ad-free body class follows the server's answer: on for an account
+	// that says so, off for a guest (sign-out, a revoked token). "loading" and
+	// "error" leave <body> as the inline script in index.html set it from the
+	// last answer, so a slow or failed fetch never flips a supporter's page to
+	// ads. An effect, never the render body: it touches document.
+	useEffect(() => {
+		if (status === "ready") applyAdFreeClass(account?.ad_free ?? false)
+		else if (status === "anonymous") applyAdFreeClass(false)
+	}, [status, account])
 
 	const refresh = useCallback((): void => {
 		setReloadNonce((nonce) => nonce + 1)

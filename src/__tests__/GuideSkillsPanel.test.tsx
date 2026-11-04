@@ -1,7 +1,13 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { fireEvent, render as renderPlain, screen, within } from "@testing-library/react"
+import type { ReactElement } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { GuideSkillsBody } from "../components/pvp/GuideSkillsPanel"
+import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { PvpGuide } from "../types/pvpGuide"
+import { CHUKYO_1200 } from "./courseFixtures"
+
+// An open row reads the course's skill zones through the query cache.
+const render = (ui: ReactElement) => renderPlain(ui, { wrapper: TestQueryProvider })
 
 /**
  * Recommended skills: by category, each skill once, the team's skills ticked
@@ -112,6 +118,26 @@ describe("GuideSkillsBody", () => {
 		// End has no recovery of its own, but the general one is still recovery.
 		fireEvent.click(positions.getByRole("button", { name: "End" }))
 		expect(screen.getByRole("button", { name: /Swinging Maestro/ })).toBeInTheDocument()
+	})
+
+	it("says where an open row's skill fires on the course, with the way to the map", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+			"2": { kind: "place", zones: [{ start: 300, end: 550, kind: "random" }], styles: null,
+				effects: ["heal"], spread: [300, 550], before_spurt: 1 },
+		})))
+		render(
+			<GuideSkillsBody
+				guideState={{ status: "ready", guide: GUIDE }}
+				teamSkillSources={new Map()}
+				spots={SPOTS}
+				onSearch={() => {}}
+				course={CHUKYO_1200}
+			/>
+		)
+		fireEvent.click(screen.getByRole("button", { name: /Swinging Maestro/ }))
+		expect(await screen.findByText("Heals in time, before the late-race HP check")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "See it on the map" })).toBeInTheDocument()
+		vi.restoreAllMocks()
 	})
 
 	it("keeps the filters in view, greyed out, when the guide has no skills", () => {

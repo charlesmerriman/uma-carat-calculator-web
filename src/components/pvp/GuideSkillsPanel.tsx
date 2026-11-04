@@ -19,8 +19,8 @@
  * (components/pvp/SidePanel.tsx has both placements).
  */
 
-import { useMemo, useState } from "react"
-import { Check, ChevronDown, Loader2, Search } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Check, ChevronDown, Loader2, Map as MapIcon, Search } from "lucide-react"
 import {
 	SKILL_CATEGORY_LABELS,
 	SKILL_CATEGORY_ORDER,
@@ -30,8 +30,12 @@ import {
 	skillPositions,
 	type GuideSkillPick,
 } from "../../utils/pvpGuide"
+import type { RaceCourse } from "../../types"
 import type { PvpSkillCategory, PvpStyle } from "../../types/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
+import { useCourseZones } from "../../services/courseQueries"
+import { scrollToCourseMap, setCourseFocus } from "../../services/courseMapStore"
+import { verdictLines } from "../../utils/courseLayers"
 
 /** One team spot a skill can be searched for: "Spot 1 · Daiwa Scarlet". */
 export interface SkillSearchSpot {
@@ -47,9 +51,11 @@ interface GuideSkillsProps {
 	spots: SkillSearchSpot[]
 	/** Opens the picker for a spot with `skillName` in the search box. */
 	onSearch: (position: number, skillName: string) => void
+	/** The event's course, for an open row's verdict (notes/course-map-plan-2.md, section 8). */
+	course?: RaceCourse | null
 }
 
-export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch }: GuideSkillsProps) {
+export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch, course = null }: GuideSkillsProps) {
 	const guide = guideState.status === "ready" ? guideState.guide : null
 	// Position on top, category under it. "all" for either shows everything.
 	const [position, setPosition] = useState<PvpStyle | "all">("all")
@@ -60,6 +66,11 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 		[guide, position]
 	)
 	const [openId, setOpenId] = useState<number | null>(null)
+	// The map lights the open row; leaving the panel closes it there too.
+	useEffect(() => () => setCourseFocus(null), [])
+	// The open row says its own verdict, so the answer never needs the map in
+	// view; the same cached map the course block reads.
+	const zones = useCourseZones(openId !== null && course ? course.id : null).data
 	// A category the chosen position has nothing in reads as "all", so
 	// switching position never leaves the list empty behind a stale filter.
 	const activeCategory = groups.some((group) => group.category === category) ? category : "all"
@@ -154,9 +165,15 @@ export function GuideSkillsBody({ guideState, teamSkillSources, spots, onSearch 
 									pick={pick}
 									sources={familySources(teamSkillSources, pick.skill)}
 									open={openId === pick.skill.id}
-									onToggle={() => setOpenId(openId === pick.skill.id ? null : pick.skill.id)}
+									onToggle={() => {
+										const opening = openId !== pick.skill.id
+										setOpenId(opening ? pick.skill.id : null)
+										// The course map lights the open row's zones (CourseSection).
+										setCourseFocus(opening ? { skillId: pick.skill.id, name: pick.skill.name, image: pick.skill.image } : null)
+									}}
 									spots={spots}
 									onSearch={(position) => onSearch(position, pick.skill.name)}
+									verdict={zones && course ? verdictLines(zones[String(pick.skill.id)], course.distance) : []}
 								/>
 							))}
 						</ul>
@@ -215,13 +232,15 @@ function plain(text: string): string {
 	return text.replace(/==/g, "").replace(/\[\[([^\]]+)\]\]/g, "$1")
 }
 
-function SkillRow({ pick, sources, open, onToggle, spots, onSearch }: {
+function SkillRow({ pick, sources, open, onToggle, spots, onSearch, verdict }: {
 	pick: GuideSkillPick
 	sources: string[] | null
 	open: boolean
 	onToggle: () => void
 	spots: SkillSearchSpot[]
 	onSearch: (position: number) => void
+	/** Where it fires on this course, in words (courseLayers.verdictLines); empty without a map. */
+	verdict: string[]
 }) {
 	const { skill } = pick
 	return (
@@ -269,6 +288,21 @@ function SkillRow({ pick, sources, open, onToggle, spots, onSearch }: {
 							{plain(note)}
 						</p>
 					))}
+					{verdict.length > 0 && (
+						<div className="rounded-md bg-gray-800/70 px-2 py-1" aria-label="On this course">
+							{verdict.map((line) => (
+								<p key={line} className="text-gray-200">{line}</p>
+							))}
+							<button
+								type="button"
+								onClick={scrollToCourseMap}
+								className="mt-0.5 flex items-center gap-1 font-medium text-brand transition hover:text-brand/75"
+							>
+								<MapIcon className="h-3 w-3" aria-hidden="true" />
+								See it on the map
+							</button>
+						</div>
+					)}
 					<p className={sources ? "text-brand" : "text-gray-500"}>
 						{sources ? `Your team: ${sources.join(", ")}` : "Not on your team yet."}
 					</p>
