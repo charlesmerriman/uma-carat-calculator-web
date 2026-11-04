@@ -105,6 +105,7 @@ function spurtWords(entry: SkillZoneEntry, hasNeeds: boolean): string | null {
 		return hasNeeds ? `From ${where}` : `Fires ${where}`
 	}
 	const { from, to } = spurt
+	if (Math.abs(to) < 1) return `At a random point in the ${away(from)} before the last spurt starts`
 	if (to <= 0) return `At a random point ${away(to)} to ${away(from)} before the last spurt starts`
 	if (from >= 0) {
 		return from === 0
@@ -184,6 +185,53 @@ export function verdictLines(entry: SkillZoneEntry | undefined, distance: number
 	const needs = needsWords(entry.needs)
 	if (needs) lines.push(needs)
 	return lines
+}
+
+// ── Skills set off by other skills (notes/course-map-plan-2.md, section 6) ──
+
+export type ChainResult = { from: number; to: number } | { missing: number; have: number }
+
+const COUNT_WORDS: Record<NonNullable<SkillZoneEntry["chain"]>["counts"], string> = {
+	heal: "recovery skills",
+	all: "skills",
+	start: "early-race skills",
+	middle: "mid-race skills",
+}
+
+/**
+ * Where a skill set off by others can fire, given the skills that can set it
+ * off (`members`: the same runner's other skills on this course). The N-th of
+ * them lands no earlier than the N-th smallest earliest point and no later
+ * than the N-th smallest latest point; the skill then fires from its own
+ * zone's start. Counted by each member's earliest point ("start": in the early
+ * race; "middle": in the mid race). A member with no place (anywhere, never,
+ * unreadable) can't be placed, so it isn't counted. Null without a chain.
+ */
+export function resolveChain(entry: SkillZoneEntry, members: (SkillZoneEntry | undefined)[], distance: number): ChainResult | null {
+	const { chain } = entry
+	if (!chain) return null
+	const { mid, late } = phaseStarts(distance)
+	const points = members.flatMap((member) => {
+		if (!member || member.kind !== "place" || member.unreadable) return []
+		const first = member.fires_at ?? member.spread?.[0]
+		const last = member.fires_at ?? member.spread?.[1]
+		if (first === undefined || last === undefined) return []
+		const counts = chain.counts === "heal" ? (member.effects?.includes("heal") ?? false)
+			: chain.counts === "start" ? first < mid
+				: chain.counts === "middle" ? first >= mid && first < late
+					: true
+		return counts ? [{ first, last }] : []
+	})
+	if (points.length < chain.at_least) return { missing: chain.at_least - points.length, have: points.length }
+	const nth = (values: number[]) => [...values].sort((a, b) => a - b)[chain.at_least - 1]
+	const own = entry.fires_at ?? entry.spread?.[0] ?? 0
+	return { from: Math.max(own, nth(points.map((point) => point.first))), to: Math.max(own, nth(points.map((point) => point.last))) }
+}
+
+/** A resolved chain in words, for the span's hover. */
+function chainWords(result: { from: number; to: number }, chain: NonNullable<SkillZoneEntry["chain"]>): string {
+	const where = result.from === result.to ? `fires at ${formatMetres(result.from)}` : `fires from ${formatMetres(result.from)} to ${formatMetres(result.to)}`
+	return `Set off by her ${chain.at_least} ${COUNT_WORDS[chain.counts]}: ${where}`
 }
 
 /**
@@ -291,7 +339,10 @@ function labelShareOf(label: string): number {
  * fire at a PLACE on this course for her style, as labels, one group of lanes
  * per veteran (packed so labels don't overlap). `keep` is the "All that fire
  * at a place" / "Only the guide's" choice; anywhere, passive and never skills
- * are not drawn.
+ * are not drawn. With `chains` ("Skills set off by other skills", owner
+ * 2026-11-03: every such skill, toggleable), a skill set off by others is
+ * drawn where her own skills set it off (resolveChain), and not at all when
+ * she lacks enough of them.
  */
 export function veteranLayer(
 	veterans: VeteranInLayer[],
@@ -299,6 +350,7 @@ export function veteranLayer(
 	distance: number,
 	names: ReadonlyMap<number, string>,
 	keep: (skillId: number, veteran: VeteranInLayer) => boolean,
+	options: { chains?: boolean } = {},
 ): { spans: LayerSpan[]; lanes: VeteranLane[] } {
 	const spans: LayerSpan[] = []
 	const lanes: VeteranLane[] = []
@@ -308,7 +360,19 @@ export function veteranLayer(
 		for (const skillId of veteran.skillIds) {
 			const entry = zones[String(skillId)]
 			if (!entry || entry.kind !== "place" || !firesForStyle(entry, veteran.style) || !keep(skillId, veteran)) continue
-			own.push(...skillSpans(entry, distance, names.get(skillId) ?? `Skill ${skillId}`, 0, `${veteran.key}-${skillId}`))
+			const label = names.get(skillId) ?? `Skill ${skillId}`
+			const key = `${veteran.key}-${skillId}`
+			if (options.chains && entry.chain) {
+				const others = veteran.skillIds.filter((other) => other !== skillId).map((other) => zones[String(other)])
+				const result = resolveChain(entry, others, distance)
+				if (result && "missing" in result) continue
+				if (result) {
+					const kind = result.from === result.to ? "fixed" : "random"
+					own.push({ key: `${key}-chain`, start: result.from, end: result.to, kind, label, lane: 0, detail: chainWords(result, entry.chain) })
+					continue
+				}
+			}
+			own.push(...skillSpans(entry, distance, label, 0, key))
 		}
 		if (own.length === 0) continue
 		const rows = packLabels(own.map((span) => ({ start: span.start, end: span.end, labelShare: labelShareOf(span.label ?? "") })), distance)

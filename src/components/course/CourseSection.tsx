@@ -124,14 +124,14 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				&& heldSkillMeetsPick(pick.skill, skillId))
 			// Below whatever lanes the open skill used.
 			const offset = spans.length > 0 ? Math.max(...spans.map((span) => span.lane ?? 0)) + 1 : 0
-			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep)
+			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep, { chains: layers.chains })
 			spans.push(...veterans.spans.map((span) => ({ ...span, lane: (span.lane ?? 0) + offset })))
 			for (const lane of veterans.lanes) {
 				heads.push({ key: lane.key, firstLane: lane.firstLane + offset, lanes: lane.lanes, head: veteranData.heads.get(lane.key) })
 			}
 		}
 		return { overlays: { spans, markers }, heads }
-	}, [zones, focus, veteransOn, veteranData, guide, layers.scope, course.distance])
+	}, [zones, focus, veteransOn, veteranData, guide, layers.scope, layers.chains, course.distance])
 	const hasLayer = layer.overlays.spans.length > 0
 
 	return (

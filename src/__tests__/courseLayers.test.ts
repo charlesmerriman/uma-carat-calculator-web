@@ -3,7 +3,7 @@
  * zones as spans, the style gate, label rows, and the veterans' layer.
  */
 import { describe, expect, it } from "vitest"
-import { accelRows, firesForStyle, focusLayer, packLabels, skillSpans, verdictLines, veteranLayer, type SkillZoneEntry, type SkillZoneMap } from "../utils/courseLayers"
+import { accelRows, firesForStyle, focusLayer, packLabels, resolveChain, skillSpans, verdictLines, veteranLayer, type SkillZoneEntry, type SkillZoneMap } from "../utils/courseLayers"
 
 const ZONES: SkillZoneMap = {
 	"1": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: ["front"] },
@@ -105,6 +105,11 @@ describe("the verdict in words", () => {
 			kind: "place", zones: [{ start: 800, end: 900, kind: "random" }], styles: ["pace"],
 			effects: ["accel"], spread: [800, 900], spurt: { from: 0, to: 100 },
 		}, 1200)).toEqual(["At a random point in the first 100m of the last spurt"])
+		// Up to the spurt's start: no "0m".
+		expect(verdictLines({
+			kind: "place", zones: [{ start: 500, end: 800, kind: "random" }], styles: null,
+			effects: ["accel"], spread: [500, 800], spurt: { from: -300, to: 0 },
+		}, 1200)).toEqual(["At a random point in the 300m before the last spurt starts"])
 		expect(verdictLines({ kind: "never", zones: [], styles: null, effects: ["accel"] }, 1200)).toEqual(["Can't fire on this course"])
 		expect(verdictLines({ kind: "place", zones: [], styles: null, effects: ["accel"], unreadable: true }, 1200)[0])
 			.toBe("Part of its trigger can't be read yet, so there's no timing for it")
@@ -136,6 +141,53 @@ describe("the verdict in words", () => {
 	it("keeps an unreadable clause as a plain note after the words it can read", () => {
 		expect(verdictLines({ ...FINAL_PUSH, needs: ["In the lead", "Plus a condition we can't read yet"] }, 1200).at(-1))
 			.toBe("Also needs: in the lead. Plus a condition we can't read yet")
+	})
+})
+
+describe("skills set off by other skills", () => {
+	// The plan's worked example, CM 21: an End Oguri with three heals.
+	const heal = (first: number, last: number): SkillZoneEntry => ({
+		kind: "place", zones: [{ start: first, end: last, kind: first === last ? "fixed" : "random" }], styles: null,
+		effects: ["heal"], ...(first === last ? { fires_at: first } : { spread: [first, last] as [number, number] }),
+	})
+	const FESTIVE: SkillZoneEntry = {
+		kind: "place", zones: [{ start: 600, end: 1200, kind: "fixed" }], styles: null,
+		effects: ["accel", "speed", "heal"], fires_at: 600, chain: { counts: "heal", at_least: 3 },
+	}
+	const goHome = heal(100, 100)
+	const breath = heal(200, 200)
+	const maestro = heal(300, 550)
+
+	it("places her unique after her third heal, and no earlier than half the race", () => {
+		// The third heal lands 300 to 550 m; her unique also needs 600 m.
+		expect(resolveChain(FESTIVE, [goHome, breath, maestro], 1200)).toEqual({ from: 600, to: 600 })
+		// With a later third heal, the heal sets the range.
+		expect(resolveChain(FESTIVE, [goHome, breath, heal(650, 780)], 1200)).toEqual({ from: 650, to: 780 })
+	})
+
+	it("says how many it's short, and counts only what it counts", () => {
+		expect(resolveChain(FESTIVE, [goHome, breath], 1200)).toEqual({ missing: 1, have: 2 })
+		// An accel is not a recovery skill; a skill with no place can't be placed.
+		const accel: SkillZoneEntry = { ...goHome, effects: ["accel"] }
+		const anywhere: SkillZoneEntry = { kind: "anywhere", zones: [], styles: null, effects: ["heal"] }
+		expect(resolveChain(FESTIVE, [goHome, breath, accel, anywhere], 1200)).toEqual({ missing: 1, have: 2 })
+		const middle: SkillZoneEntry = { ...FESTIVE, fires_at: 0, chain: { counts: "middle", at_least: 2 } }
+		// Mid race is 200 to 800 m: Go-Home Specialist at 100 m is early.
+		expect(resolveChain(middle, [goHome, breath, maestro], 1200)).toEqual({ from: 300, to: 550 })
+	})
+
+	it("draws it there in the veterans' layer only while the tick is on", () => {
+		const zones: SkillZoneMap = { "1": goHome, "2": breath, "3": maestro, "9": FESTIVE }
+		const names = new Map([[9, "Festive Miracle"]])
+		const oguri = [{ key: "spot-0", umaId: 1, style: "end" as const, skillIds: [1, 2, 3, 9] }]
+		const plain = veteranLayer(oguri, zones, 1200, names, () => true)
+		expect(plain.spans.find((span) => span.label === "Festive Miracle")).toMatchObject({ start: 600, end: 1200 })
+		const chained = veteranLayer(oguri, zones, 1200, names, () => true, { chains: true })
+		expect(chained.spans.find((span) => span.label === "Festive Miracle")).toMatchObject({
+			start: 600, end: 600, detail: "Set off by her 3 recovery skills: fires at 600m",
+		})
+		const short = veteranLayer([{ ...oguri[0], skillIds: [1, 2, 9] }], zones, 1200, names, () => true, { chains: true })
+		expect(short.spans.some((span) => span.label === "Festive Miracle")).toBe(false)
 	})
 })
 
