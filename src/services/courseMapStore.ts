@@ -75,3 +75,16 @@ export function setCourseLayers(changes: Partial<CourseLayers>) {
 	}
 	notify()
 }
+
+/** The guide's course block (CourseSection): one per page. */
+export const COURSE_MAP_ID = "course-map"
+
+/**
+ * "See it on the map": bring the course block into view from wherever a skill
+ * was lit (notes/course-map-plan-2.md, section 8). For an event handler only,
+ * since it reads the document.
+ */
+export function scrollToCourseMap() {
+	const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+	document.getElementById(COURSE_MAP_ID)?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" })
+}

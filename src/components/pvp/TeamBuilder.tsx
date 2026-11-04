@@ -370,6 +370,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 	const skillsBody = (
 		<GuideSkillsBody
 			guideState={guideState}
+			course={event.course ?? null}
 			teamSkillSources={skillSources}
 			spots={skillSpots}
 			onSearch={(position, skillName) => {

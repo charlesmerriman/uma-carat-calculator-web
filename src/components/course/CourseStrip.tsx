@@ -68,6 +68,8 @@ const LAYER_LOOKS: Record<string, CSSProperties> = {
 	point: { background: "var(--color-brand)" },
 	anywhere: { border: "1px dashed var(--color-brand)" },
 	passive: { background: "color-mix(in srgb, var(--color-brand) 18%, transparent)" },
+	// The carry-over window: where a speed skill must fire to run into the spurt.
+	window: { background: "color-mix(in srgb, var(--color-gray-300) 20%, transparent)", border: "1px dashed var(--color-gray-300)" },
 }
 
 /**
@@ -113,6 +115,8 @@ function LayersBand({ spans, laneHeads, distance, vertical }: {
 								key={span.key ?? `${span.kind}-${span.start}-${lane}`}
 								className="absolute flex items-center overflow-visible rounded-sm"
 								style={{ ...place, ...LAYER_LOOKS[span.kind] }}
+								// The skill's verdict on hover; the overhaul may give it a card.
+								title={span.detail || undefined}
 								initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.85 }}
 								animate={{ opacity: 1, scale: 1, transition: { delay: reduceMotion ? 0 : (span.start / distance) * 0.35, duration: 0.2 } }}
 								exit={{ opacity: 0, transition: { duration: 0.15 } }}
