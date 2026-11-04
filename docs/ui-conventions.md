@@ -1921,6 +1921,10 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   `z-10`, so a marker line through the middle never cuts it.
 - **Colours** are `--color-course-*` in `index.css`'s `:root` (fills only; the component
   picks a light or dark ink per fill).
+- **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's
+  foot, closed by default, opening (a height animation under `useReducedMotion`) to the
+  mini strip (track and phases, no words), the name, the chips and a link to the guide.
+  Only for an event with a course. The chips are one component (`CourseChips`) in both.
 - **The draw-in**: the first paint is the finished strip (the motion value starts at 1);
   after mount an `IntersectionObserver` sweeps it in once, on a motion value through a
   `clip-path`, never a React state per frame. Reduced motion, or no observer (the test

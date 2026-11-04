@@ -10,13 +10,12 @@
  * may not read the screen's width.
  */
 import type { RaceCourse } from "../../types"
-import { derivedFacts } from "../../utils/courseGeometry"
+import CourseChips from "./CourseChips"
 import CourseFactsList from "./CourseFactsList"
 import CourseStrip from "./CourseStrip"
 import { courseName } from "./courseName"
 
 export default function CourseSection({ course }: { course: RaceCourse }) {
-	const chips = derivedFacts(course)
 	return (
 		<div className="border-t border-gray-700/70 p-3 sm:p-4">
 			<div className="mb-2 flex flex-wrap items-baseline gap-x-3">
@@ -26,15 +25,7 @@ export default function CourseSection({ course }: { course: RaceCourse }) {
 			</div>
 			<CourseStrip course={course} orientation="horizontal" className="hidden sm:block" />
 			<CourseStrip course={course} orientation="vertical" className="sm:hidden" />
-			{chips.length > 0 && (
-				<ul className="mt-3 flex flex-wrap gap-2" aria-label="Read off the course">
-					{chips.map((chip) => (
-						<li key={chip} className="rounded-full border border-gray-700 bg-gray-900/40 px-3 py-1 text-xs text-gray-200">
-							{chip}
-						</li>
-					))}
-				</ul>
-			)}
+			<CourseChips course={course} className="mt-3" />
 			<CourseFactsList course={course} />
 		</div>
 	)
