@@ -34,7 +34,7 @@
       dist/spa.html. Client-side route changes are counted by GA4's enhanced
       measurement ("page changes based on browser history events", on by default in
       the GA stream settings), not by code here. The G- measurement ID is public by
-      design, like the AdSense ca-pub- ID below. The privacy policy's "Traffic
+      design, like the Raptive site id below. The privacy policy's "Traffic
       Measurement" section describes this tag; keep the two in step.
 
       CONSENT MODE v2. The 'consent' 'default' calls MUST come before 'config':
@@ -108,6 +108,40 @@
       })(0);
     </script>
     <!--
+      Raptive, the ad partner (notes/raptive-install-plan.md). Their head tag
+      as they sent it on 2026-11-04, verbatim: it loads their ad script once
+      per page load, and the script watches route changes itself (Raptive asks
+      that the tag is NOT re-run on navigation, which a single-page app's one
+      template guarantees). It lands on every prerendered page and on spa.html
+      through scripts/prerender.mjs, like the Analytics tag above. The site id
+      in the URL is public by design, like the GA id: it is the same id the
+      /ads.txt redirect names (an App Platform ingress rule, mirrored in the
+      api's .do/app.yaml). Until Raptive switches the site on, the script
+      answers 404 and nothing shows.
+
+      What runs where (content ads, the sticky footer, the video player, the
+      EU consent dialog, the US do-not-sell link, the partner badge) is set on
+      Raptive's side and in their dashboard, never here. Ads run on every
+      route (owner, 2026-11-03). Never add a cookie prompt of our own beside
+      their dialog; the Consent Mode block above explains the arrangement.
+    -->
+    <!-- Raptive Head Tag Manual -->
+    <script data-no-optimize="1" data-cfasync="false">
+    (function(w, d) {
+    	w.adthrive = w.adthrive || {};
+    	w.adthrive.cmd = w.adthrive.cmd || [];
+    	w.adthrive.plugin = 'adthrive-ads-manual';
+    	w.adthrive.host = 'ads.adthrive.com';
+    	var s = d.createElement('script');
+    	s.async = true;
+    	s.referrerpolicy='no-referrer-when-downgrade';
+    	s.src = 'https://' + w.adthrive.host + '/sites/6ac93b25e6e9a91f14516ba1/ads.min.js?referrer=' + w.encodeURIComponent(w.location.href) + '&cb=' + (Math.floor(Math.random() * 100) + 1);
+    	var n = d.getElementsByTagName('script')[0];
+    	n.parentNode.insertBefore(s, n);
+    })(window, document);
+    </script>
+    <!-- End of Raptive Head Tag -->
+    <!--
       Umagon face icon set. favicon.ico carries 16/24/32/48/64 for browsers that
       still request /favicon.ico by default; the PNG links cover everything
       modern, and the 192/512 pair is what Android reaches for when a page is
@@ -162,30 +196,6 @@
     <meta name="twitter:image" content="https://umacaratcalculator.com/social-card.png" />
     <meta name="twitter:image:alt" content="The Uma Musume Carat Calculator umagon mascot." />
 
-    <!--
-      Google AdSense. This tag is BOTH the site-ownership verification Google
-      asks for during the application and the runtime that serves ads once the
-      account is approved - there is no separate verification tag to remove
-      later, so it stays exactly as-is.
-
-      The ca-pub- publisher ID is public by design: it is visible in this HTML
-      on every page, and it is the same ID declared in public/ads.txt. It is an
-      account identifier, not a credential, so it belongs in the repo.
-
-      Placed last in <head> and loaded async so it never blocks the app bundle.
-      Until the account is approved this fetches the script and serves nothing.
-
-      NOTE: whether ads actually appear - and WHERE - is controlled entirely in
-      the AdSense dashboard (Auto ads formats, ad load, page exclusions), not
-      here. Side rails in particular can squeeze the planner below
-      --container-banner-table's minimum width, where the banner table stops
-      rendering as a spreadsheet; keep that format off.
-    -->
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9720922917211031"
-      crossorigin="anonymous"
-    ></script>
   </head>
   <body class="bg-neutral-200">
     <div id="root"></div>
