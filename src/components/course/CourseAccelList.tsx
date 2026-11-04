@@ -16,18 +16,16 @@
  * scrolls within itself past the screen's height, so "Show all" never
  * strands the map at the top of a long page.
  */
-import { useMemo, useState, useSyncExternalStore } from "react"
+import { useMemo, useState } from "react"
 import { FramedUma } from "../FramedUma"
 import type { RaceCourse } from "../../types"
-import type { CatalogueUma, MemberStyle } from "../../types/pvpTeam"
+import type { CatalogueUma } from "../../types/pvpTeam"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useCourseZones } from "../../services/courseQueries"
-import { setCourseFocus, useCourseFocus } from "../../services/courseMapStore"
+import { setCourseFocus, useCourseFocus, useStyleTab, type StyleChoice } from "../../services/courseMapStore"
 import { accelRows, grade, verdictLines, type AccelRow } from "../../utils/courseLayers"
 import { GradePill, ZoneBar } from "./CourseVerdictCard"
-
-type StyleChoice = MemberStyle | "all"
 
 const STYLES: { value: StyleChoice; label: string }[] = [
 	{ value: "all", label: "All" },
@@ -44,24 +42,6 @@ interface Owner {
 	uma: CatalogueUma
 	/** The inherited version (a white with the unique's name), not her own. */
 	inherited: boolean
-}
-
-/** The guide tab the reader is on, as the pills' first choice ("all" for anything else). */
-function styleFromTab(tab: string | null): StyleChoice {
-	return tab && tab in STYLE_NAMES ? (tab as StyleChoice) : "all"
-}
-
-function onNavigation(listener: () => void) {
-	window.addEventListener("popstate", listener)
-	return () => window.removeEventListener("popstate", listener)
-}
-
-/**
- * The `style` in the address (the guide tab): a client snapshot with "all"
- * on the server, since the block is prerendered and can sit outside a router.
- */
-function useStyleTab(): StyleChoice {
-	return useSyncExternalStore(onNavigation, () => styleFromTab(new URLSearchParams(window.location.search).get("style")), () => "all")
 }
 
 function AccelRows({ course, rows, style, owners, skillsById }: {

@@ -286,6 +286,25 @@ function lightOnCourseMap(skill: PvpSkillRef, open: boolean) {
 }
 
 /**
+ * An uma's tile lights her unique while its detail is open, with her as its
+ * owner on the verdict card (course-map-plan-2.md, "Left for later", 1; the
+ * owner's yes, 2026-11-04). Her ref carries the unique (the guide payload).
+ */
+function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
+	if (!uma.unique) return
+	if (open) {
+		setCourseFocus({
+			skillId: uma.unique.id,
+			name: uma.unique.name,
+			image: uma.unique.image,
+			owner: { name: uma.name, portrait: uma.portrait ?? uma.image, inherited: false },
+		})
+	} else {
+		clearCourseFocus(uma.unique.id)
+	}
+}
+
+/**
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
  * no `detail` it renders the child plainly and is not focusable.
  */
@@ -415,8 +434,12 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	return (
 		<WithDetail
 			label={uma.name}
-			detail={note ? <><InlineNote text={note} /><MentionedSkills text={note} /></> : null}
+			// With no note, her unique's name is the detail: the hover that lights it needs one.
+			detail={note
+				? <><InlineNote text={note} /><MentionedSkills text={note} /></>
+				: uma.unique ? <p className="text-xs text-gray-300">Unique: {uma.unique.name}</p> : null}
 			className={className}
+			onOpenChange={(open) => lightUniqueOnCourseMap(uma, open)}
 		>
 			{/* h-full: in a grid the tile fills its row, so when one tile's
 			    letters wrap the others grow with it and every note slot, pinned

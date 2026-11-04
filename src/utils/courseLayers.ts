@@ -372,9 +372,26 @@ export function accelRows(zones: SkillZoneMap, style: MemberStyle | "all", rank:
  * has one (lane 1), and a "Heal before here" mark at the late-race start while
  * a heal is lit (section 4; opt-in like every layer).
  */
-export function focusLayer(entry: SkillZoneEntry | undefined, distance: number, name: string, skillId: number): { spans: LayerSpan[]; markers: CourseMarker[] } {
-	const spans = skillSpans(entry, distance, name, 0, `focus-${skillId}`)
+export function focusLayer(
+	entry: SkillZoneEntry | undefined,
+	distance: number,
+	name: string,
+	skillId: number,
+	chainSet?: (SkillZoneEntry | undefined)[],
+): { spans: LayerSpan[]; markers: CourseMarker[] } {
+	const spans: LayerSpan[] = []
 	const markers: CourseMarker[] = []
+	// A skill set off by others, with the chains layer on: placed by the
+	// guide's other picks for the tab's style (course-map-plan-2.md, "Left for
+	// later", 2; the owner's yes, 2026-11-04). Too few of them to count, and it
+	// stays "anywhere".
+	const chain = entry?.chain && chainSet ? resolveChain(entry, chainSet, distance) : null
+	if (entry?.chain && chain && "from" in chain) {
+		const kind = chain.from === chain.to ? "fixed" : "random"
+		spans.push({ key: `focus-${skillId}`, start: chain.from, end: chain.to, kind, label: name, lane: 0, detail: chainWords(chain, entry.chain) })
+	} else {
+		spans.push(...skillSpans(entry, distance, name, 0, `focus-${skillId}`))
+	}
 	if (entry?.carry_window) {
 		const [start, end] = entry.carry_window
 		spans.push({ key: `carry-${skillId}`, start, end, kind: "window", label: "Carry-over window", lane: 1 })

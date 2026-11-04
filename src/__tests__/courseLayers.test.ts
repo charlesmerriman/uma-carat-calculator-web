@@ -225,6 +225,17 @@ describe("skills set off by other skills", () => {
 		expect(resolveChain(FESTIVE, [goHome, breath, heal(650, 780)], 1200)).toEqual({ from: 650, to: 780 })
 	})
 
+	it("places a chained guide pick by the guide's other picks when the open skill's layer is given them", () => {
+		// Enough heals among the picks: one span where it fires, worded by the chain.
+		const placed = focusLayer(FESTIVE, 1200, "Festive Unique", 5, [goHome, breath, heal(650, 780)])
+		expect(placed.spans).toHaveLength(1)
+		expect(placed.spans[0]).toMatchObject({ key: "focus-5", start: 650, end: 780, kind: "random", label: "Festive Unique" })
+		expect(placed.spans[0].detail).toContain("recovery skills")
+		// Too few, or no set at all: its own zone, "anywhere" unchanged.
+		expect(focusLayer(FESTIVE, 1200, "Festive Unique", 5, [goHome]).spans[0].kind).toBe("fixed")
+		expect(focusLayer(FESTIVE, 1200, "Festive Unique", 5).spans[0].start).toBe(600)
+	})
+
 	it("says how many it's short, and counts only what it counts", () => {
 		expect(resolveChain(FESTIVE, [goHome, breath], 1200)).toEqual({ missing: 1, have: 2 })
 		// An accel is not a recovery skill; a skill with no place can't be placed.
