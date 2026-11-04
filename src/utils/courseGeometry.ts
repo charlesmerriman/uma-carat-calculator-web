@@ -46,6 +46,10 @@ export interface CourseSpan {
 	lane?: number
 	/** Words for a hover: a lit skill's verdict (courseLayers.verdictLines). */
 	detail?: string
+	/** The layer's colour (a veteran's, or the lit skill's); the strip's default is the lit colour. */
+	colour?: string
+	/** Which group of spans this belongs to (the lit skill, one veteran): the track draws one arc per group. */
+	group?: string
 }
 
 export type MarkerKind = "spurt-start" | "position-keep-end" | "midpoint" | "heal-check"
@@ -330,20 +334,21 @@ function partName(part: TrackPart): string {
 }
 
 /**
- * The spurt chip: what the start falls on and how far the next part is.
- * "Late race starts": the 2/3 point, under the "Last spurt" marker; on the
- * final straight it counts into the straight, not to the goal.
+ * The spurt sentence: what the start falls on and how far the next part is.
+ * "Last spurt can start": the 2/3 point, under the "Last spurt" marker (owner,
+ * 2026-11-03); on the final straight it counts into the straight, not to the
+ * goal.
  */
 function spurtChip(spurt: SpurtStart): string | null {
 	const { on, next } = spurt
 	const ahead = next ? `, ${formatMetres(next.in)} before ${partName(next)}` : ""
-	if (on.kind === "corner") return `Late race starts in ${partName(on)}${ahead}`
+	if (on.kind === "corner") return `Last spurt can start in ${partName(on)}${ahead}`
 	if (on.kind === "straight") {
 		return on.label === "Final straight"
-			? `Late race starts on the final straight, ${formatMetres(spurt.at - on.start)} into it`
-			: `Late race starts on a straight${ahead}`
+			? `Last spurt can start on the final straight, ${formatMetres(spurt.at - on.start)} into it`
+			: `Last spurt can start on a straight${ahead}`
 	}
-	return next ? `Late race starts ${formatMetres(next.in)} before ${partName(next)}` : null
+	return next ? `Last spurt can start ${formatMetres(next.in)} before ${partName(next)}` : null
 }
 
 /**
@@ -368,12 +373,13 @@ export function derivedFacts(course: RaceCourse, geometry: RaceGeometry = GAME_G
 	if (spurt.downhill) facts.push("Downhill into the late race: Wit helps")
 	else if (downhillMetres >= course.distance / 2) facts.push("Mostly downhill: Wit helps")
 
-	// The steepest climb that reaches into the last 400 m.
+	// The steepest climb that reaches into the last 400 m, unless it is the
+	// hill the spurt line already named (owner, 2026-11-03: say it once).
 	const lastStretch = course.distance - 400
 	const climb = slopes
 		.filter((slope) => slope.kind === "uphill" && slope.end > lastStretch)
 		.sort((a, b) => b.percent - a.percent)[0]
-	if (climb) facts.push(`${climb.percent}% climb in the last 400m`)
+	if (climb && climb.start !== spurt.uphill?.start) facts.push(`${climb.percent}% climb in the last 400m`)
 	return facts
 }
 

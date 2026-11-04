@@ -1,8 +1,9 @@
 /**
  * The "Course map" block in a CM or LoH guide's header (PvpGuidePage.tsx,
- * EventHeader): the course's name and its bar, the map, the chips that read it
- * off, and the same in words for screen readers. Drawn only for an event with
- * a course record (notes/course-map-plan.md).
+ * EventHeader): the course's name and its bar, the headline that reads the
+ * course off (CourseHeadline), the map, and the same in words for screen
+ * readers. Drawn only for an event with a course record
+ * (notes/course-map-plan.md; the look is notes/course-map-visual-plan.md).
  *
  * The map is the strip by default; Track is the switch (owner, 2026-10-29),
  * and inside it Real shape | Schematic, real when the course has one (fetched
@@ -36,11 +37,11 @@ import type { CourseMarker } from "../../utils/courseGeometry"
 import { schematicShape } from "../../utils/courseSchematic"
 import { heldSkillMeetsPick } from "../../utils/pvpGuide"
 import CourseAccelList from "./CourseAccelList"
-import CourseChips from "./CourseChips"
 import CourseFactsList from "./CourseFactsList"
+import CourseHeadline from "./CourseHeadline"
 import CourseLegend from "./CourseLegend"
 import CourseLayersMenu, { type VeteranMenuRow } from "./CourseLayersMenu"
-import CourseStrip from "./CourseStrip"
+import CourseStrip, { type LaneHead } from "./CourseStrip"
 import CourseTrack from "./CourseTrack"
 import { courseName } from "./courseName"
 import { useWalk } from "./useWalk"
@@ -49,6 +50,8 @@ import VeteranLayerSource, { type VeteranLayerData } from "./VeteranLayerSource"
 // "both": the track with the strip under it, as in Daptrius's render (owner, 2026-11-03).
 type View = "strip" | "track" | "both"
 type ShapeChoice = CourseShapeChoice
+// One colour per team spot for the veterans' layer (notes/course-map-visual-plan.md).
+const VETERAN_COLOURS = ["var(--color-course-vet-1)", "var(--color-course-vet-2)", "var(--color-course-vet-3)"]
 
 function Segmented<T extends string>({ label, value, options, onChange }: {
 	label: string
@@ -128,7 +131,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			spans.push(...lit.spans)
 			markers.push(...lit.markers)
 		}
-		const heads: NonNullable<Parameters<typeof CourseStrip>[0]["laneHeads"]> = []
+		const heads: LaneHead[] = []
 		const menu: VeteranMenuRow[] = []
 		if (zones && veteransOn && veteranData) {
 			const picks = guide?.skill_recommendations ?? []
@@ -143,9 +146,17 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			// Below whatever lanes the open skill used.
 			const offset = spans.length > 0 ? Math.max(...spans.map((span) => span.lane ?? 0)) + 1 : 0
 			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep, { chains: layers.chains })
-			spans.push(...veterans.spans.map((span) => ({ ...span, lane: (span.lane ?? 0) + offset })))
-			for (const lane of veterans.lanes) {
-				heads.push({ key: lane.key, firstLane: lane.firstLane + offset, lanes: lane.lanes, head: veteranData.heads.get(lane.key) })
+			// Her colour follows her team spot, on her spans and at the head of her rows.
+			const colourOf = (lane: number) => {
+				const index = veterans.lanes.findIndex((group) => lane >= group.firstLane && lane < group.firstLane + group.lanes)
+				return VETERAN_COLOURS[Math.max(0, index) % VETERAN_COLOURS.length]
+			}
+			spans.push(...veterans.spans.map((span) => {
+				const group = veterans.lanes.find((candidate) => (span.lane ?? 0) >= candidate.firstLane && (span.lane ?? 0) < candidate.firstLane + candidate.lanes)
+				return { ...span, lane: (span.lane ?? 0) + offset, colour: colourOf(span.lane ?? 0), group: group?.key }
+			}))
+			for (const [index, lane] of veterans.lanes.entries()) {
+				heads.push({ key: lane.key, firstLane: lane.firstLane + offset, lanes: lane.lanes, head: veteranData.heads.get(lane.key), colour: VETERAN_COLOURS[index % VETERAN_COLOURS.length] })
 			}
 			// The Layers menu's rows: each veteran, and each of her skills that
 			// can fire here, with its tick.
@@ -201,6 +212,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					)}
 				</div>
 			</div>
+			{/* The map's first job, in words, before the drawing (owner, 2026-11-03). */}
+			<CourseHeadline course={course} className="mb-3" />
 			<div className="hidden sm:block">
 				<AnimatePresence mode="wait" initial={false}>
 					<motion.div
@@ -229,18 +242,18 @@ export default function CourseSection({ course, event = null, guide = null }: {
 						)}
 					</motion.div>
 				</AnimatePresence>
-				{view !== "strip" && <CourseLegend />}
+				{/* The track alone needs a legend; under Strip and Both the strip names every colour (owner, 2026-11-03). */}
+				{view === "track" && <CourseLegend />}
 				{hasLayer && (
-					// The legend from the mock: what a layer's marks mean.
+					// What a layer's marks mean.
 					<ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400" aria-label="Layer legend">
-						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "color-mix(in srgb, var(--color-brand) 75%, transparent)" }} />Fires here</li>
-						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 70%, transparent) 0 4px, color-mix(in srgb, var(--color-brand) 30%, transparent) 4px 8px)" }} />At a random point here</li>
-						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm border border-dashed border-brand" />Anywhere in the race</li>
+						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "var(--color-course-lit)" }} />Fires here</li>
+						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "repeating-linear-gradient(135deg, var(--color-course-lit) 0 4px, color-mix(in srgb, var(--color-course-lit) 35%, transparent) 4px 8px)" }} />At a random point here</li>
+						<li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-5 rounded-sm border border-dashed" style={{ borderColor: "var(--color-course-lit)" }} />Anywhere in the race</li>
 					</ul>
 				)}
 			</div>
-			<CourseStrip course={course} orientation="vertical" className="sm:hidden" overlays={layer.overlays} />
-			<CourseChips course={course} className="mt-3" />
+			<CourseStrip course={course} orientation="vertical" className="sm:hidden" overlays={layer.overlays} laneHeads={layer.heads} />
 			<CourseAccelList course={course} />
 			<CourseFactsList course={course} />
 			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}

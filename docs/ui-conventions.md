@@ -1897,10 +1897,25 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 
 ### The course map (`components/course/`)
 
-The plan is `notes/course-map-plan.md`. A CM or LoH with a `course` (the API's nested
-record, `types/events.ts` `RaceCourse`) gets a **Course map** block at the foot of the
-guide's `EventHeader` (`CourseSection`): the course's name, the strip, the chips, and the
-same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidden`).
+The plan is `notes/course-map-plan.md`; the look is `notes/course-map-visual-plan.md` (the
+owner's decisions of 2026-11-03, with the mock renders the build is checked against). A CM
+or LoH with a `course` (the API's nested record, `types/events.ts` `RaceCourse`) gets a
+**Course map** block at the foot of the guide's `EventHeader` (`CourseSection`): the course's
+name and the bar, the headline (`CourseHeadline`: the spurt sentence from `derivedFacts` in
+bold, the other facts in one line under it; it replaced the chips), the map, and the same in
+words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidden`).
+
+- **The strip is the ruler** (`CourseStrip`, both orientations): a label column (Height,
+  Phase, Course, Slope, Ground, the layer rows, Section) and a track cell per row (the
+  `data-band`), the marks' words above the rows in lanes (`markerLanes`) with their lines
+  through every row, the metres under the sections. A segment shows its words, then its
+  metres only where they fit beside them (an estimate against a 1,000 px strip; nothing is
+  measured). Hills carry Daptrius's triangle (`CourseIcon`). Down the page the rows are
+  columns and the marks' words sit in a margin at the right. A layer span is drawn in its
+  `colour` (a veteran's `--color-course-vet-N`, else the lit `--color-course-lit`), the
+  veteran's avatar at the head of her first row and "Lit" at the head of the open skill's.
+- **Icons are `CourseIcon`**, Daptrius's set (corners turning the course's way, the straight,
+  the double-arrow final straight, the hills' triangles, the flag).
 
 - **`utils/courseGeometry.ts` is the one place a metre becomes a position**, and where the
   phases, sections, position keep end, hill heights and chips are derived. The game's
@@ -1909,10 +1924,11 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
 - **Four phase bands: Early-race, Mid-race, Late-race, and Last spurt (phase 3: 5/6 to the
   finish, sections 21 to 24)**, with the "Last spurt" marker at 2/3, section 17, where the
   last spurt can start, and a "Halfway" marker at 1/2 (owner and Daptrius, 2026-11-03).
-  The chips, the verdicts and the accel list measure from the 2/3 point and call it "the late
-  race". Corner, straight and final-straight callouts point at their start metre, each spot
-  once with every lap's metres; a segment wide enough shows its start and end metres. The
-  track view (Track or Both) carries a legend; the strip writes its words on the segments.
+  The headline says "Last spurt can start ..."; the hill facts, the verdicts and the accel
+  list measure from the 2/3 point and call it "the late race". Corner, straight and
+  final-straight callouts point at their start metre, each spot once with every lap's
+  metres; a segment wide enough shows its start and end metres. The Track view alone
+  carries a legend (`CourseLegend`); under Strip and Both the strip's words name every colour.
 - **The spurt start is the map's first job** (owner, 2026-11-03; `notes/course-map-plan-2.md`):
   `spurtStart(course)` says what 2/3 falls on, how much of it is left and what comes next,
   and the chip says it exactly ("Late race starts in corner 4, 8m before the final
@@ -1929,8 +1945,12 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   value). A later layer is a pure function to that shape; it never changes the strip.
 - **Words sit above the lines**: a segment's label has its band's fill as a background and
   `z-10`, so a marker line through the middle never cuts it.
-- **Colours** are `--color-course-*` in `index.css`'s `:root` (fills only; the component
-  picks a light or dark ink per fill).
+- **Colours** are `--color-course-*` in `index.css`'s `:root`, with a light-theme set under
+  `[data-theme-mode="light"]`: the four phases as a heat ramp (`-early`, `-mid`, `-late`,
+  `-spurt`) each with its `-ink-*`, the quiet course row (`-straight`, `-straight-final`,
+  `-corner`, `-corner-alt`), the hills (`-up`, `-down`), the ground, the height profile, the
+  track's bed and marks, the beacon and its glow, and the layers (`-lit`, `-vet-1/2/3`).
+  The owner may retune the shades (2026-11-03): change the tokens, nothing else.
 - **The track view** (`CourseTrack`, behind the block's Strip | Track switch, from `sm` up;
   phones keep the strip): the course along its real shape (`GET
   /race-courses/<id>/shape` through `services/courseQueries.ts`, fetched the first time

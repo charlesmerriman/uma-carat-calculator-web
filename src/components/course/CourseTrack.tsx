@@ -38,7 +38,7 @@ import {
 } from "../../utils/courseGeometry"
 import { useDrawIn } from "./useDrawIn"
 
-const PHASE_STROKES = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-final)"]
+const PHASE_STROKES = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-spurt)"]
 // The box is at most this wide by default (`widthPx`); label sizes are
 // estimated at the box's own width, since nothing is measured.
 const BOX_PX = 900
@@ -372,7 +372,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, cursor
 					/>
 				))}
 				{hills.map((hill) => (
-					<g key={hill.start} stroke={hill.kind === "uphill" ? "var(--color-course-uphill)" : "var(--color-course-downhill)"} strokeWidth={track * 0.35} fill="none">
+					<g key={hill.start} stroke={hill.kind === "uphill" ? "var(--color-course-up)" : "var(--color-course-down)"} strokeWidth={track * 0.35} fill="none">
 						<polyline points={points(hill.bracket)} />
 						<line {...tick(hill.bracket[0], pointAtMetre(shape, hill.start, distance))} />
 						<line {...tick(hill.bracket[hill.bracket.length - 1], pointAtMetre(shape, hill.end, distance))} />
