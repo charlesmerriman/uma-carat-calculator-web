@@ -80,6 +80,24 @@ export default function CourseLayersMenu({ signedIn, veteransNote }: {
 							{veteransNote && <p className="pt-1 text-gray-400">{veteransNote}</p>}
 						</div>
 					)}
+					{signedIn && layers.veterans && (
+						// Off by default like every layer (owner, 2026-11-03: "toggleable
+						// in the view"); it changes where the veterans' layer draws them.
+						<label className="mt-3 flex items-start gap-2">
+							<input
+								type="checkbox"
+								className="mt-0.5"
+								checked={layers.chains}
+								onChange={(event) => setCourseLayers({ chains: event.target.checked })}
+							/>
+							<span>
+								<span className="font-semibold text-gray-100">Skills set off by other skills</span>
+								<span className="block text-xs text-gray-400">
+									Placed where her own skills set them off, like Christmas Oguri's unique after three heals.
+								</span>
+							</span>
+						</label>
+					)}
 				</div>
 			)}
 		</div>

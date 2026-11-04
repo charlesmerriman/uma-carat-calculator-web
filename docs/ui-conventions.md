@@ -1965,6 +1965,10 @@ same in words for screen readers (`CourseFactsList`, `sr-only`; the strip is `ar
   chips costs no request). "Accels on this course" (`CourseAccelList`, under the chips,
   closed until opened) lists every accel that can fire for a style, nearest the spurt start
   first (`accelRows`), uniques named from the catalogue; a tap lights one.
+- **Skills set off by other skills** (section 6): the Layers menu's "Skills set off by other
+  skills" (`layers.chains`, off by default, shown with the veterans' layer) draws a chained
+  skill where her own skills set it off (`resolveChain`: the N-th of them by earliest and by
+  latest point, then her skill's own zone start), and not at all when she has too few.
 - **Walk the course** (`useWalk`): one motion value, -1 when idle, read by both views; under
   reduced motion it steps phase by phase.
 - **The Timeline race card's drawer** (`CourseDrawer`): a "Course map" button at the card's

@@ -24,10 +24,12 @@ export interface CourseFocus {
 export interface CourseLayers {
 	veterans: boolean
 	scope: "all" | "guide"
+	/** Skills set off by other skills placed by what sets them off (notes/course-map-plan-2.md, section 6). */
+	chains: boolean
 }
 
 const LAYERS_KEY = "uma-course-map-layers"
-const OFF: CourseLayers = { veterans: false, scope: "all" }
+const OFF: CourseLayers = { veterans: false, scope: "all", chains: false }
 
 let focus: CourseFocus | null = null
 let layers: CourseLayers | null = null
@@ -45,7 +47,7 @@ function notify() {
 function readLayers(): CourseLayers {
 	try {
 		const stored = JSON.parse(localStorage.getItem(LAYERS_KEY) ?? "null") as Partial<CourseLayers> | null
-		return { veterans: stored?.veterans === true, scope: stored?.scope === "guide" ? "guide" : "all" }
+		return { veterans: stored?.veterans === true, scope: stored?.scope === "guide" ? "guide" : "all", chains: stored?.chains === true }
 	} catch {
 		// Storage blocked or garbled: every layer off.
 		return OFF
