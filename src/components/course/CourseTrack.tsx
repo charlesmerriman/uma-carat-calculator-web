@@ -7,7 +7,7 @@
  * The look is the overhaul's (notes/course-map-visual-plan.md, "The track"):
  * a dark kerb under the surface, the surface in the four phases, a gate bar
  * at the start and a chequer at the goal, the last-spurt line across the
- * track with a warm glow over the metres where an accel lands on time, hills
+ * track (the warm glow over it is gone, Henry 2026-11-06), hills
  * as brackets beside the track (never dashed outlines; Henry, 2026-11-01),
  * and words in callouts beside the track, one per spot listing each lap's
  * metres, with Daptrius's icons. A course over one lap is drawn as rings,
@@ -20,12 +20,11 @@
  * the edge slides back inside the box. The layers draw one arc per group
  * (the lit skill, each veteran) just outside the hills, in the group's
  * colour, with the skill's name at its start. The draw-in traces the track
- * gate to finish once, and the spurt glow breathes, both on motion values:
- * no React render per frame. (Walk the course was shelved, owner 2026-11-03;
+ * gate to finish once, on a motion value: no React render per frame. (Walk the course was shelved, owner 2026-11-03;
  * a runner on the course belongs to the run view, notes/course-map-later.md.)
  */
-import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
-import { animate, motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion"
+import { useMemo, type CSSProperties, type ReactNode } from "react"
+import { motion, useTransform, type MotionValue } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
 	courseFacts,
@@ -57,11 +56,6 @@ const CHAR_PX = 6.3
 const LABEL_PAD_PX = 18
 const ICON_PX = 18
 const LABEL_HEIGHT_PX = 24
-// The glow over the spurt line: the metres just after the late-race start
-// where an accel lands on time. A look, not a number (the engine's ranking
-// window is the API's).
-const GLOW_BEFORE_M = 25
-const GLOW_AFTER_M = 70
 
 type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "downhill" | "mark" | "heal" | "ground" | "layer"
 
@@ -188,7 +182,8 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 			style={{ ...style, ...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}) }}
 		>
 			{callout.icon && <CourseIcon name={callout.icon} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
-			<b className={callout.tone === "mark" ? "font-semibold" : callout.tone === "spurt" ? "font-extrabold" : "font-bold"}>{callout.label}</b>
+			{/* An icon-only chip (a bare track) has no label. */}
+			{callout.label && <b className={callout.tone === "mark" ? "font-semibold" : callout.tone === "spurt" ? "font-extrabold" : "font-bold"}>{callout.label}</b>}
 			{detail}
 		</div>
 	)
@@ -203,7 +198,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	widthPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
-	/** False draws the track bare, no callouts or leaders (a phone's, until it's tapped). */
+	/** False draws the track bare: icon chips with no words (a phone's, until it's tapped). */
 	showWords?: boolean
 	className?: string
 	/** A layer span's `key` the strip's pointer is over: drawn bolder, the other arcs quietened. */
@@ -213,18 +208,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 }) {
 	const distance = course.distance
 	const { ref, progress } = useDrawIn<HTMLDivElement>(1.4)
-	// The spurt glow breathes, slowly (notes/course-map-visual-plan.md,
-	// "Motion"); still under reduced motion. A motion value, so no render per frame.
-	const reduceMotion = useReducedMotion()
-	const glow = useMotionValue(0.4)
-	useEffect(() => {
-		if (reduceMotion) {
-			glow.set(0.4)
-			return
-		}
-		const controls = animate(glow, [0.3, 0.48, 0.3], { duration: 2.4, repeat: Infinity, ease: "easeInOut" })
-		return () => controls.stop()
-	}, [reduceMotion, glow])
+	// (The breathing glow over the spurt line is gone: Henry, 2026-11-06, board
+	// post 1568126648560390237. The beacon line and the spurt chip mark the spot.)
 
 	const drawing = useMemo(() => {
 		const base = shapeBounds(baseShape)
@@ -420,14 +405,16 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// course that passes its corners twice has no room for them either: the
 	// strip under the track names them.
 	const twoLaps = course.corners.length > 4
-	const callouts = !showWords
-		? []
-		: compact
+	const worded = compact
 		? allCallouts
 			.filter((callout) => ["start", "goal", "spurt"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.
 			.map((callout) => (callout.tone === "spurt" ? callout : { ...callout, detail: undefined }))
 		: allCallouts
+	// Bare (a phone's track until it's tapped): the chips that carry an icon keep
+	// it, without their words, like gametora's map (Henry, 2026-11-04). Start and
+	// Goal have no icon; the gate bar and the chequer already mark them.
+	const callouts = showWords ? worded : worded.filter((callout) => callout.icon).map((callout) => ({ ...callout, label: "", detail: undefined }))
 
 	// Every callout sits past the outermost layer arc so no word covers a zone.
 	const labelReach = outermost < 0 ? size * 0.11 : Math.max(size * 0.11, track * (1.85 + outermost * 0.62) + track * 1.6)
@@ -529,13 +516,13 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	return (
 		<div ref={ref} className={`relative mx-auto w-full ${className}`} style={{ maxWidth: widthPx, aspectRatio: `${box.width} / ${box.height}` }} aria-hidden="true">
 			<svg viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`} className="absolute inset-0 h-full w-full overflow-visible">
-				{/* The kerb, then the race over it, phase by phase. */}
-				<polyline points={points(shape)} fill="none" stroke="var(--color-course-bed)" strokeWidth={track * 1.55} strokeLinejoin="round" strokeLinecap="round" />
+				{/* The kerb, then the race over it, phase by phase. Butt ends: a
+				    round cap poked a black nub out past the chequer and behind the
+				    gate (Henry, 2026-11-04), so the kerb now stops flush with both. */}
+				<polyline points={points(shape)} fill="none" stroke="var(--color-course-bed)" strokeWidth={track * 1.55} strokeLinejoin="round" strokeLinecap="butt" />
 				{phases.map((phase, index) => (
 					<PhaseLine key={phase.start} shape={shape} start={phase.start} end={phase.end} distance={distance} stroke={PHASE_STROKES[index % PHASE_STROKES.length]} width={track} progress={progress} />
 				))}
-				{/* The glow over the spurt: where an accel lands on time. */}
-				<motion.polyline points={points(slice(shape, late - GLOW_BEFORE_M, late + GLOW_AFTER_M, distance))} fill="none" stroke="var(--color-course-beacon-glow)" strokeWidth={track * 2.4} strokeLinecap="round" style={{ opacity: glow }} />
 				{/* Thin ticks where a phase changes. */}
 				{[mid, finalSixth].map((metre) => <line key={metre} {...across(metre, track * 0.55)} stroke="var(--color-course-tick)" strokeWidth={track * 0.12} />)}
 				{hills.map((hill) => (

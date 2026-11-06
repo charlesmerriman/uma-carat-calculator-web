@@ -438,12 +438,11 @@ html {
 	--color-course-mark: rgb(255 255 255 / 40%);
 	--color-course-gate: #f8fafc;
 	--color-course-beacon: #fff6d6;
-	/* The glow and the lit skill follow the theme's brand (Race Day's blue,
-	   Light's brown), so the spurt chip, its glow and a lit zone always agree. */
-	--color-course-beacon-glow: var(--color-brand);
 	--color-course-heal: #7fe4b0;
 	/* The layers: the lit skill, and one colour per team spot for the veterans
-	   (kept apart from the phases and the running-style colours). */
+	   (kept apart from the phases and the running-style colours). The lit skill
+	   follows the theme's brand (Race Day's blue, Light's brown), so the spurt
+	   chip and a lit zone always agree. */
 	--color-course-lit: var(--color-brand);
 	--color-course-vet-1: #f472b6;
 	--color-course-vet-2: #a78bfa;
