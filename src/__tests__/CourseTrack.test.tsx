@@ -84,6 +84,26 @@ describe("CourseTrack", () => {
 		expect(screen.queryByText("Position keep ends")).toBeNull()
 	})
 
+	it("turns the corner and straight icons the way the track runs, snapped to 22.5 degrees, and keeps hills upright (Daptrius, 2026-11-04)", () => {
+		// One point per metre: heading left (-x) to 400 m, down (+y) to 700 m,
+		// then right (+x) to the goal. Corner 3 starts at 300 m heading left; the
+		// final straight starts at 788 m heading right.
+		const shape: [number, number][] = []
+		for (let metre = 0; metre <= 1200; metre++) {
+			if (metre <= 400) shape.push([400 - metre, 0])
+			else if (metre <= 700) shape.push([0, metre - 400])
+			else shape.push([metre - 700, 300])
+		}
+		const { container } = render(<CourseTrack course={CHUKYO_1200} shape={shape} />)
+		// Heading left is 180 degrees; the corner arrow starts heading up, so +90.
+		expect(container.querySelector('[data-course-icon="cornerLeft"]')).toHaveStyle({ transform: "rotate(270deg)" })
+		// The final straight points right already: no turn at all.
+		expect(container.querySelector('[data-course-icon="finalStraight"]')).not.toHaveAttribute("style")
+		for (const hill of container.querySelectorAll('[data-course-icon="uphill"], [data-course-icon="downhill"]')) {
+			expect(hill).not.toHaveAttribute("style")
+		}
+	})
+
 	it("gives a corner the course passes twice one callout with both laps' metres (Nakayama 3600)", () => {
 		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} />)
 		expect(screen.getAllByText("Corner 1")).toHaveLength(1)

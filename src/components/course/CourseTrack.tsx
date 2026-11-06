@@ -71,6 +71,8 @@ interface Callout {
 	detail?: string
 	tone: Tone
 	icon?: CourseIconName
+	/** The icon's turn in degrees, for icons that follow the track (iconTurn). */
+	iconRotate?: number
 	/** A layer's name chip: its colour. */
 	colour?: string
 	/** Placed inside the curve, not outside (the spurt chip). */
@@ -108,6 +110,25 @@ function frameAt(shape: Shape, metre: number, distance: number) {
 	const length = Math.hypot(bx - ax, by - ay) || 1
 	const t: [number, number] = [(bx - ax) / length, (by - ay) / length]
 	return { t, n: [t[1], -t[0]] as [number, number] }
+}
+
+/**
+ * How far to turn a corner or straight icon so it points the way the race
+ * runs at `metre` (Daptrius, 2026-11-04). The heading is the tangent's angle
+ * in screen axes (y down, so positive is clockwise, the same sense as CSS's
+ * rotate), snapped to 22.5 degrees: his idea, and it keeps a near-flat
+ * straight's arrow flat instead of tilted a degree or two. The base offset
+ * lines the icon's own heading up with 0 degrees: the straights already point
+ * right, and the corner arrows start heading up (-90), so they take +90.
+ */
+const ICON_SNAP = 22.5
+function iconTurn(shape: Shape, metre: number, distance: number, icon: CourseIconName): number {
+	const { t } = frameAt(shape, metre, distance)
+	const heading = (Math.atan2(t[1], t[0]) * 180) / Math.PI
+	const base = icon === "cornerLeft" || icon === "cornerRight" ? 90 : 0
+	const turn = Math.round(heading / ICON_SNAP) * ICON_SNAP + base
+	// Kept in [0, 360) so the same heading always writes the same transform.
+	return ((turn % 360) + 360) % 360
 }
 
 /** One phase of the track, drawn in as the draw-in's progress passes it. */
@@ -181,7 +202,7 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 			className={`pointer-events-none absolute inline-flex items-center gap-1 whitespace-nowrap rounded-[7px] border px-2 py-[3px] text-[11px] leading-tight shadow-[0_2px_8px_rgb(0_0_0/25%)] ${TONES[callout.tone]}`}
 			style={{ ...style, ...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}) }}
 		>
-			{callout.icon && <CourseIcon name={callout.icon} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
+			{callout.icon && <CourseIcon name={callout.icon} rotate={callout.iconRotate} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
 			{/* An icon-only chip (a bare track) has no label. */}
 			{callout.label && <b className={callout.tone === "mark" ? "font-semibold" : callout.tone === "spurt" ? "font-extrabold" : "font-bold"}>{callout.label}</b>}
 			{detail}
@@ -315,6 +336,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			detail: starts.map(formatMetres).join(", "),
 			tone: "corner",
 			icon: cornerIcon,
+			// A corner run on each lap is the same ground, so the first lap's heading serves.
+			iconRotate: iconTurn(shape, starts[0], distance, cornerIcon),
 		})
 	}
 	const straight = finalStraight(course)
@@ -328,6 +351,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			detail: formatMetres(straight.start),
 			tone: "straight",
 			icon: "finalStraight",
+			iconRotate: iconTurn(shape, straight.start, distance, "finalStraight"),
 		})
 	}
 	// Every other straight: one callout per spot with each lap's start metres,
@@ -342,7 +366,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		else straightSpots.push({ at: [part.start], point })
 	}
 	for (const spot of straightSpots) {
-		allCallouts.push({ key: `straight-${spot.at[0]}`, at: spot.at[0], point: spot.point, label: "Straight", detail: spot.at.map(formatMetres).join(", "), tone: "straight", icon: "straight" })
+		allCallouts.push({ key: `straight-${spot.at[0]}`, at: spot.at[0], point: spot.point, label: "Straight", detail: spot.at.map(formatMetres).join(", "), tone: "straight", icon: "straight", iconRotate: iconTurn(shape, spot.at[0], distance, "straight") })
 	}
 	for (const hill of hills) {
 		allCallouts.push({
