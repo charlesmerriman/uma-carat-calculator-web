@@ -565,50 +565,155 @@ export interface LabelRequest {
 	/** The label's estimated box, in the shape's units. */
 	width: number
 	height: number
+	/** Its own first distance out, when it needs more than the shared one (a chip that must clear the track by a margin). */
+	reach?: number
+	/** Keeps no margin from the track (options.margin), only off the track itself: the spurt chip, inside a curve with no room for one. */
+	noMargin?: boolean
 }
+
+/** Points a chip must keep clear of, and how far either side of them is too near. */
+export interface KeepOut {
+	points: readonly (readonly [number, number])[]
+	halfWidth: number
+}
+
+export interface PlaceLabelsOptions {
+	/**
+	 * The clear air wanted round the track, wider than `track` (which is the
+	 * track itself): a spot inside it is a small fault, worth taking over a
+	 * spot on another chip, on the track or out of the box.
+	 */
+	margin?: KeepOut
+	/** More things no chip may cover: the hill brackets and their ticks, the layer arcs. */
+	keepOut?: KeepOut[]
+	/** The box every chip must fit inside (the drawing's). */
+	bounds?: { x: number; y: number; width: number; height: number }
+	/**
+	 * The track a leader must not cut across on its way out to its chip. A
+	 * leader runs from the anchor to the chip, so the first stretch of it (two
+	 * half-widths from the anchor) is its own spot and never counts.
+	 */
+	leaderTrack?: KeepOut
+}
+
+// How far out (in `distance`s) and how far round (in radians either side of
+// straight out) a chip may go looking for room, in the order tried. The wide
+// swings let a crowded chip slide along to the next clear stretch with a
+// longer leader, the way the spurt chip does (Henry, 2026-11-06: Corner 4's
+// chip "next to corner 3 with a long line").
+const REACHES = [1, 1.5, 2.1, 2.8, 3.6, 4.6]
+// At each reach, in order: straight out, swung a little, slid sideways by part
+// of the chip's own width (along the track, so two chips that want one stretch
+// sit side by side), swung further, slid further, swung furthest.
+const MOVES: ({ swing: number } | { slide: number })[] = [
+	{ swing: 0 }, { swing: 0.45 }, { swing: -0.45 },
+	{ slide: 0.6 }, { slide: -0.6 },
+	{ swing: 0.9 }, { swing: -0.9 },
+	{ slide: 1.2 }, { slide: -1.2 },
+	{ swing: 1.35 }, { swing: -1.35 },
+]
+// What each fault costs a spot. A spot that spills out of the box is worst
+// (the box would clamp it back onto whatever is there), then one on another
+// chip (it hides words), then one on the track, then one inside the margin
+// or over a hill's bracket, then a leader that cuts across the track. The
+// cheapest spot wins when none is clear.
+const COST = { outside: 8, chip: 6, track: 5, margin: 2, keepOut: 2, leader: 1 }
 
 /**
  * Where each callout goes so none overlaps another: tried in the order given
  * (most important first), each at its preferred distance out from the track,
- * then further out and swung a little to either side, taking the first spot
- * that is clear. Sizes are estimates from the text, since nothing on a
- * prerendered page may be measured. Returns the centre of each label.
+ * then further out and swung to either side, taking the first spot that is
+ * clear. Sizes are estimates from the text, since nothing on a prerendered
+ * page may be measured. Returns the centre of each label.
  *
  * `track` (optional) is the drawn path and how far either side of it counts
  * as on it: a spot whose box covers a point of it isn't clear either, so a
  * wide chip near a bend moves further out instead of lying across the track.
- * When no spot is clear the label takes its first one, as before.
+ * `options` adds the other things a spot must keep clear of (see
+ * PlaceLabelsOptions). When no spot is clear the label takes the one with the
+ * fewest faults (COST), the earliest on a tie, so with nothing but the track
+ * in the way it keeps its first spot, as before.
  */
 export function placeLabels(
 	requests: LabelRequest[],
 	distance: number,
-	track?: { points: readonly (readonly [number, number])[]; halfWidth: number },
+	track?: KeepOut,
+	options: PlaceLabelsOptions = {},
 ): Record<string, [number, number]> {
+	const { margin, keepOut = [], bounds, leaderTrack } = options
 	const placed: { x: number; y: number; w: number; h: number }[] = []
 	const result: Record<string, [number, number]> = {}
-	const onTrack = (x: number, y: number, w: number, h: number) =>
-		!!track && track.points.some(([px, py]) => Math.abs(px - x) < w / 2 + track.halfWidth && Math.abs(py - y) < h / 2 + track.halfWidth)
-	const overlaps = (x: number, y: number, w: number, h: number) =>
-		placed.some((box) => Math.abs(box.x - x) < (box.w + w) / 2 && Math.abs(box.y - y) < (box.h + h) / 2) || onTrack(x, y, w, h)
+	// A box centred at (x, y), w by h, comes within `zone.halfWidth` of a point of the zone.
+	const covers = (zone: KeepOut, x: number, y: number, w: number, h: number) =>
+		zone.points.some(([px, py]) => Math.abs(px - x) < w / 2 + zone.halfWidth && Math.abs(py - y) < h / 2 + zone.halfWidth)
+	const outside = (x: number, y: number, w: number, h: number) =>
+		!!bounds && (x - w / 2 < bounds.x || x + w / 2 > bounds.x + bounds.width || y - h / 2 < bounds.y || y + h / 2 > bounds.y + bounds.height)
+	// Does the line from the anchor to the chip pass over the track somewhere
+	// past the anchor's own spot? Sampled every half-width, stopping at the chip's edge.
+	const leaderCrosses = (anchor: readonly [number, number], x: number, y: number, w: number, h: number) => {
+		if (!leaderTrack) return false
+		const [ax, ay] = anchor
+		const length = Math.hypot(x - ax, y - ay)
+		const skip = leaderTrack.halfWidth * 2
+		const steps = Math.min(48, Math.ceil(length / leaderTrack.halfWidth))
+		for (let step = 1; step < steps; step++) {
+			const px = ax + ((x - ax) * step) / steps
+			const py = ay + ((y - ay) * step) / steps
+			if (Math.hypot(px - ax, py - ay) < skip) continue
+			if (Math.abs(px - x) < w / 2 && Math.abs(py - y) < h / 2) break
+			if (leaderTrack.points.some(([qx, qy]) => Math.hypot(qx - px, qy - py) < leaderTrack.halfWidth)) return true
+		}
+		return false
+	}
+	// `beat`: the best cost so far, so the slow leader check runs only when it could change the winner.
+	const cost = (request: LabelRequest, x: number, y: number, beat: number) => {
+		const { width: w, height: h } = request
+		let total = 0
+		if (outside(x, y, w, h)) total += COST.outside
+		if (placed.some((box) => Math.abs(box.x - x) < (box.w + w) / 2 && Math.abs(box.y - y) < (box.h + h) / 2)) total += COST.chip
+		// The chip inside the curve (noMargin) may lie over the track's inner
+		// edge sooner than leave the curve: on a phone's wide oval it can't fit
+		// inside clear of it, and it always sat there before.
+		if (track && covers(track, x, y, w, h)) total += request.noMargin ? COST.margin + 1 : COST.track
+		else if (margin && !request.noMargin && covers(margin, x, y, w, h)) total += COST.margin
+		if (keepOut.some((zone) => covers(zone, x, y, w, h))) total += COST.keepOut
+		// The slowest check last, and only when it could still matter. (Run only
+		// on otherwise clear spots, it let a chip slid out across the course,
+		// whose one other fault was a bracket, beat a spot inside the curve.) A
+		// chip placed inside the curve (noMargin) that would reach a spot across
+		// the far side of the track is as bad as one lying on the track: it has
+		// left the curve, and its leader crosses the course to get back.
+		const crossing = request.noMargin ? COST.track : COST.leader
+		if (total < beat && leaderCrosses(request.anchor, x, y, w, h)) total += crossing
+		return total
+	}
 	for (const request of requests) {
 		const [ax, ay] = request.anchor
 		const [dx, dy] = request.direction
-		let chosen: [number, number] | null = null
-		let fallback: [number, number] = [ax + dx * distance, ay + dy * distance]
-		search: for (const reach of [1, 1.5, 2.1, 2.8, 3.6]) {
-			for (const swing of [0, 0.45, -0.45, 0.9, -0.9]) {
-				const cos = Math.cos(swing)
-				const sin = Math.sin(swing)
-				const x = ax + (dx * cos - dy * sin) * distance * reach
-				const y = ay + (dx * sin + dy * cos) * distance * reach
-				if (reach === 1 && swing === 0) fallback = [x, y]
-				if (!overlaps(x, y, request.width, request.height)) {
-					chosen = [x, y]
-					break search
+		const out = Math.max(distance, request.reach ?? 0)
+		let best: { at: [number, number]; cost: number } | null = null
+		// How far a slide moves the chip: part of its own extent across the direction out.
+		const across = Math.abs(dy) * request.width + Math.abs(dx) * request.height
+		search: for (const reach of REACHES) {
+			for (const move of MOVES) {
+				let x: number
+				let y: number
+				if ("swing" in move) {
+					const cos = Math.cos(move.swing)
+					const sin = Math.sin(move.swing)
+					x = ax + (dx * cos - dy * sin) * out * reach
+					y = ay + (dx * sin + dy * cos) * out * reach
+				} else {
+					// Straight out, then sideways: (-dy, dx) is the direction out turned a quarter.
+					x = ax + dx * out * reach - dy * across * move.slide
+					y = ay + dy * out * reach + dx * across * move.slide
 				}
+				const spot = cost(request, x, y, best?.cost ?? Infinity)
+				if (!best || spot < best.cost) best = { at: [x, y], cost: spot }
+				if (spot === 0) break search
 			}
 		}
-		const [x, y] = chosen ?? fallback
+		const [x, y] = best!.at
 		placed.push({ x, y, w: request.width, h: request.height })
 		result[request.key] = [x, y]
 	}

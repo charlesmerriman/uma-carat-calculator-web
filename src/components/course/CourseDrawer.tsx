@@ -18,6 +18,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { ChevronDown, Loader2, Map as MapIcon } from "lucide-react"
 import type { RaceCourse } from "../../types"
 import { useCourseShape, usePrefetchCourseShape } from "../../services/courseQueries"
+import { useTrackColours } from "../../services/courseShapeStore"
 import CourseHeadline from "./CourseHeadline"
 import CourseFactsList from "./CourseFactsList"
 import CourseTrack from "./CourseTrack"
@@ -31,6 +32,8 @@ const PHONE_TRACK_PX = 340
 
 function DrawerTrack({ course }: { course: RaceCourse }) {
 	const shape = useCourseShape(course.id)
+	// The guide's Phase | Course choice, remembered on this device; the drawer has no switch of its own.
+	const colours = useTrackColours()
 	if (shape.isPending) {
 		return (
 			<div className="mx-auto flex aspect-[2/1] w-full items-center justify-center" style={{ maxWidth: DRAWER_TRACK_PX }}>
@@ -47,8 +50,8 @@ function DrawerTrack({ course }: { course: RaceCourse }) {
 	// own box size and only the callouts that fit it.
 	return (
 		<>
-			<CourseTrack course={course} shape={shape.data} widthPx={DRAWER_TRACK_PX} className="hidden sm:block" />
-			<CourseTrack course={course} shape={shape.data} widthPx={PHONE_TRACK_PX} compact className="sm:hidden" />
+			<CourseTrack course={course} shape={shape.data} widthPx={DRAWER_TRACK_PX} colours={colours} className="hidden sm:block" />
+			<CourseTrack course={course} shape={shape.data} widthPx={PHONE_TRACK_PX} compact colours={colours} className="sm:hidden" />
 		</>
 	)
 }
