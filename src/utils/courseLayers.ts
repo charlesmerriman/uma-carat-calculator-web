@@ -49,6 +49,11 @@ export interface SkillZoneEntry {
 	repeats?: number
 	/** What else must hold, in verified words. */
 	needs?: string[]
+	/**
+	 * Where in the field it must be, one band per way it can fire here;
+	 * absent when it can fire from any place (skill_verdicts.py, `placing`).
+	 */
+	placing?: Placing[]
 	/** A clause the map can't read yet: no timing fields at all. */
 	unreadable?: boolean
 	/** Set off by other skills: "after using 3 or more recovery skills". */
@@ -62,8 +67,22 @@ export interface SkillZoneEntry {
 
 export type ChainCount = "heal" | "all" | "start" | "middle" | "end_after" | "later_half"
 
+/**
+ * One way's place bounds: `order` in places (1 is the lead; the last place is
+ * null when open, because the field size belongs to the event, not the
+ * course), `rate` in percent back in the field (0 the lead, 100 last). Both
+ * when both bound it (Budding Blossom: 3rd or lower and the front 40%).
+ */
+export interface Placing {
+	order?: [number, number | null]
+	rate?: [number, number]
+}
+
 /** One way of firing: the verdict fields for that way alone. */
-export type VerdictPath = Pick<SkillZoneEntry, "zones" | "fires_at" | "spread" | "spurt" | "before_spurt" | "carry" | "carry_window" | "needs" | "unreadable">
+export type VerdictPath = Pick<
+	SkillZoneEntry,
+	"zones" | "fires_at" | "spread" | "spurt" | "before_spurt" | "carry" | "carry_window" | "needs" | "placing" | "unreadable"
+>
 
 /** Skill id (as a string, JSON's key) -> where it fires on the course. */
 export type SkillZoneMap = Record<string, SkillZoneEntry>
@@ -360,11 +379,20 @@ export interface AccelRow {
  * ties by `rank` (uniques first), then id. An accel that can only fire before
  * or after the start, or whose timing can't be read, is left out.
  */
-export function accelRows(zones: SkillZoneMap, style: MemberStyle | "all", rank: (skillId: number) => number = () => 0): AccelRow[] {
+export function accelRows(
+	zones: SkillZoneMap,
+	style: MemberStyle | "all",
+	rank: (skillId: number) => number = () => 0,
+	fieldSize: number = FIELD_SIZE.cm,
+): AccelRow[] {
 	const rows: AccelRow[] = []
 	for (const [key, entry] of Object.entries(zones)) {
 		if (!entry.effects?.includes("accel") || entry.kind !== "place" || entry.unreadable) continue
-		if (style !== "all" && !firesForStyle(entry, style)) continue
+		// A style pill keeps a skill only when that style can meet both its
+		// running-style clause and where it needs to be in the field (lane A:
+		// a unique with no style clause but a back-of-the-field placing used to
+		// show under Front).
+		if (style !== "all" && !(firesForStyle(entry, style) && placesForStyle(entry, style, fieldSize))) continue
 		const useful = entry.spurt?.useful ?? 0
 		if (useful > 0) rows.push({ skillId: Number(key), entry, useful })
 	}
@@ -411,6 +439,66 @@ export function focusLayer(
 export function firesForStyle(entry: SkillZoneEntry, style: MemberStyle): boolean {
 	if (entry.styles === null) return true
 	return entry.styles.includes(style === "runaway" ? "front" : style)
+}
+
+/**
+ * How many runners an event's race holds, to turn a place ("in the lead")
+ * into percent back in the field. CM: 9, three trainers with three umas each
+ * (a CM replay's `numRaceHorses`, notes/cm-runs-plan-2.md). LoH: 12, from
+ * gametora's own skill code (notes/skills-plan-4.md); not yet seen in a
+ * replay. A team correction replaces either.
+ */
+export const FIELD_SIZE = { cm: 9, loh: 12 } as const
+
+/**
+ * Where each style usually runs in the late race, as percent back in the
+ * field (0 the lead, 100 last). A WORKING TABLE, NOT GAME CONSTANTS: fitted
+ * on 2026-11-06 to the owner's three examples (notes/course-map-feedback-
+ * plan.md, lane A): "Pump some iron [65-70%] is usually taken on late surgers
+ * and end closers, same with moving past [50-70%]. Angling and scheming [the
+ * lead] is obviously front runners." The bands overlap on purpose: a pace
+ * chaser can sit 4th of 9, and so can a front runner who lost the lead. A
+ * team correction replaces the numbers here and nowhere else.
+ */
+export const STYLE_PLACING: Record<"front" | "pace" | "late" | "end", [number, number]> = {
+	front: [0, 25],
+	pace: [20, 45],
+	late: [45, 80],
+	end: [65, 100],
+}
+
+/**
+ * One way's placing as one percent band, or null when its place and its rate
+ * can't both hold. A place p of n is 100 * p / n percent back: the inverse of
+ * uma-skill-tools' `order_rate` check (ActivationConditions.ts,
+ * `Math.round(numUmas * (rate / 100))`), so 1st of 9 is 11%, 3rd is 33%.
+ */
+export function placingBand(placing: Placing, fieldSize: number): [number, number] | null {
+	let [low, high] = placing.rate ?? [0, 100]
+	if (placing.order) {
+		const [first, last] = placing.order
+		low = Math.max(low, (100 * first) / fieldSize)
+		high = Math.min(high, (100 * (last ?? fieldSize)) / fieldSize)
+	}
+	return low <= high ? [low, high] : null
+}
+
+/**
+ * Whether a style can be where the skill needs it in the field: any of its
+ * ways' bands overlaps the style's (STYLE_PLACING). Ranges must share some
+ * width, so 45% back alone doesn't put a skill under both Pace and Late; a
+ * single place (the lead, 11%) counts when it falls inside the band. No
+ * placing means any place will do.
+ */
+export function placesForStyle(entry: SkillZoneEntry, style: MemberStyle, fieldSize: number = FIELD_SIZE.cm): boolean {
+	if (!entry.placing) return true
+	const [bandLow, bandHigh] = STYLE_PLACING[style === "runaway" ? "front" : style]
+	return entry.placing.some((placing) => {
+		const band = placingBand(placing, fieldSize)
+		if (!band) return false
+		const [low, high] = band
+		return low === high ? bandLow <= low && low <= bandHigh : low < bandHigh && high > bandLow
+	})
 }
 
 /**
