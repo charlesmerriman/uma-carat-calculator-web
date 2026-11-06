@@ -7,7 +7,7 @@
  * The look is the overhaul's (notes/course-map-visual-plan.md, "The track"):
  * a dark kerb under the surface, the surface in the four phases, a gate bar
  * at the start and a chequer at the goal, the last-spurt line across the
- * track with a warm glow over the metres where an accel lands on time, hills
+ * track (the warm glow over it is gone, Henry 2026-11-06), hills
  * as brackets beside the track (never dashed outlines; Henry, 2026-11-01),
  * and words in callouts beside the track, one per spot listing each lap's
  * metres, with Daptrius's icons. A course over one lap is drawn as rings,
@@ -20,12 +20,11 @@
  * the edge slides back inside the box. The layers draw one arc per group
  * (the lit skill, each veteran) just outside the hills, in the group's
  * colour, with the skill's name at its start. The draw-in traces the track
- * gate to finish once, and the spurt glow breathes, both on motion values:
- * no React render per frame. (Walk the course was shelved, owner 2026-11-03;
+ * gate to finish once, on a motion value: no React render per frame. (Walk the course was shelved, owner 2026-11-03;
  * a runner on the course belongs to the run view, notes/course-map-later.md.)
  */
-import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
-import { animate, motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion"
+import { useMemo, type CSSProperties, type ReactNode } from "react"
+import { motion, useTransform, type MotionValue } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
 	courseFacts,
@@ -57,11 +56,8 @@ const CHAR_PX = 6.3
 const LABEL_PAD_PX = 18
 const ICON_PX = 18
 const LABEL_HEIGHT_PX = 24
-// The glow over the spurt line: the metres just after the late-race start
-// where an accel lands on time. A look, not a number (the engine's ranking
-// window is the API's).
-const GLOW_BEFORE_M = 25
-const GLOW_AFTER_M = 70
+// The least space kept between two chips, across (and two thirds of it down).
+const CHIP_GAP_PX = 6
 
 type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "downhill" | "mark" | "heal" | "ground" | "layer"
 
@@ -77,6 +73,8 @@ interface Callout {
 	detail?: string
 	tone: Tone
 	icon?: CourseIconName
+	/** The icon's turn in degrees, for icons that follow the track (iconTurn). */
+	iconRotate?: number
 	/** A layer's name chip: its colour. */
 	colour?: string
 	/** Placed inside the curve, not outside (the spurt chip). */
@@ -116,6 +114,25 @@ function frameAt(shape: Shape, metre: number, distance: number) {
 	return { t, n: [t[1], -t[0]] as [number, number] }
 }
 
+/**
+ * How far to turn a corner or straight icon so it points the way the race
+ * runs at `metre` (Daptrius, 2026-11-04). The heading is the tangent's angle
+ * in screen axes (y down, so positive is clockwise, the same sense as CSS's
+ * rotate), snapped to 22.5 degrees: his idea, and it keeps a near-flat
+ * straight's arrow flat instead of tilted a degree or two. The base offset
+ * lines the icon's own heading up with 0 degrees: the straights already point
+ * right, and the corner arrows start heading up (-90), so they take +90.
+ */
+const ICON_SNAP = 22.5
+function iconTurn(shape: Shape, metre: number, distance: number, icon: CourseIconName): number {
+	const { t } = frameAt(shape, metre, distance)
+	const heading = (Math.atan2(t[1], t[0]) * 180) / Math.PI
+	const base = icon === "cornerLeft" || icon === "cornerRight" ? 90 : 0
+	const turn = Math.round(heading / ICON_SNAP) * ICON_SNAP + base
+	// Kept in [0, 360) so the same heading always writes the same transform.
+	return ((turn % 360) + 360) % 360
+}
+
 /** One phase of the track, drawn in as the draw-in's progress passes it. */
 function PhaseLine({ shape, start, end, distance, stroke, width, progress }: {
 	shape: Shape
@@ -153,7 +170,9 @@ const TONES: Record<Tone, string> = {
 	mark: "border-transparent bg-gray-800 text-[10px] text-gray-400",
 	heal: "border-[color:var(--color-course-heal)] bg-gray-800 text-[color:var(--color-course-heal)]",
 	ground: "border-[color:var(--color-course-dirt)] bg-gray-800 text-gray-100",
-	layer: "border-transparent text-[10.5px] font-bold text-[#0b0b0f] shadow-none",
+	// The lit skill's ink is a theme token (light on a light theme's deep
+	// brand); a veteran's chip sets its own dark ink in CalloutBox.
+	layer: "border-transparent text-[10.5px] font-bold text-[color:var(--color-course-lit-ink)] shadow-none",
 }
 const ICON_TONES: Partial<Record<Tone, string>> = {
 	corner: "text-[color:var(--color-course-leader-corner)]",
@@ -185,10 +204,16 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	return (
 		<div
 			className={`pointer-events-none absolute inline-flex items-center gap-1 whitespace-nowrap rounded-[7px] border px-2 py-[3px] text-[11px] leading-tight shadow-[0_2px_8px_rgb(0_0_0/25%)] ${TONES[callout.tone]}`}
-			style={{ ...style, ...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}) }}
+			style={{
+				...style,
+				...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}),
+				// A veteran's colour is bright on every theme, so it keeps the dark ink.
+				...(callout.colour && callout.colour !== LIT ? { color: "#0b0b0f" } : {}),
+			}}
 		>
-			{callout.icon && <CourseIcon name={callout.icon} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
-			<b className={callout.tone === "mark" ? "font-semibold" : callout.tone === "spurt" ? "font-extrabold" : "font-bold"}>{callout.label}</b>
+			{callout.icon && <CourseIcon name={callout.icon} rotate={callout.iconRotate} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
+			{/* An icon-only chip (a bare track) has no label. */}
+			{callout.label && <b className={callout.tone === "mark" ? "font-semibold" : callout.tone === "spurt" ? "font-extrabold" : "font-bold"}>{callout.label}</b>}
 			{detail}
 		</div>
 	)
@@ -203,7 +228,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	widthPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
-	/** False draws the track bare, no callouts or leaders (a phone's, until it's tapped). */
+	/** False draws the track bare: icon chips with no words (a phone's, until it's tapped). */
 	showWords?: boolean
 	className?: string
 	/** A layer span's `key` the strip's pointer is over: drawn bolder, the other arcs quietened. */
@@ -213,18 +238,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 }) {
 	const distance = course.distance
 	const { ref, progress } = useDrawIn<HTMLDivElement>(1.4)
-	// The spurt glow breathes, slowly (notes/course-map-visual-plan.md,
-	// "Motion"); still under reduced motion. A motion value, so no render per frame.
-	const reduceMotion = useReducedMotion()
-	const glow = useMotionValue(0.4)
-	useEffect(() => {
-		if (reduceMotion) {
-			glow.set(0.4)
-			return
-		}
-		const controls = animate(glow, [0.3, 0.48, 0.3], { duration: 2.4, repeat: Infinity, ease: "easeInOut" })
-		return () => controls.stop()
-	}, [reduceMotion, glow])
+	// (The breathing glow over the spurt line is gone: Henry, 2026-11-06, board
+	// post 1568126648560390237. The beacon line and the spurt chip mark the spot.)
 
 	const drawing = useMemo(() => {
 		const base = shapeBounds(baseShape)
@@ -246,6 +261,12 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const outside = clockwise ? 1 : -1
 	const unitsPerPx = box.width / widthPx
 	const P = (metre: number) => pointAtMetre(shape, metre, distance)
+	// The same metre before the laps are pulled apart into rings: every pass of
+	// one spot (a hill run each lap, the home straight) lies on the same ground
+	// here, so "the same spot" is judged on this path, never on the rings. On
+	// the rings, a spot passed three times (Nakayama 3600's home straight) has
+	// its outer pass two ring gaps out, past `near`, and split into two chips.
+	const PB = (metre: number) => pointAtMetre(baseShape, metre, distance)
 
 	const facts = courseFacts(course)
 	const { mid, late, finalSixth } = phaseStarts(distance)
@@ -269,8 +290,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// spot is ONE bracket, the first lap's, and one label with each lap's metres.
 	const hills: { start: number; end: number; kind: "uphill" | "downhill"; label: string; percent: number; starts: number[]; bracket: [number, number][] }[] = []
 	for (const hill of slopeParts(course)) {
-		const middle = P((hill.start + hill.end) / 2)
-		const same = hills.find((other) => other.label === hill.label && near(P((other.start + other.end) / 2), middle))
+		const middle = PB((hill.start + hill.end) / 2)
+		const same = hills.find((other) => other.label === hill.label && near(PB((other.start + other.end) / 2), middle))
 		if (same) {
 			same.starts.push(hill.start)
 			continue
@@ -330,34 +351,44 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			detail: starts.map(formatMetres).join(", "),
 			tone: "corner",
 			icon: cornerIcon,
+			// A corner run on each lap is the same ground, so the first lap's heading serves.
+			iconRotate: iconTurn(shape, starts[0], distance, cornerIcon),
 		})
 	}
 	const straight = finalStraight(course)
+	// Every other straight: one callout per spot with each lap's start metres,
+	// like the corners (Daptrius's render). Not the one leaving the gate: the
+	// Start callout is already there.
+	const straightSpots: { at: number[]; base: [number, number] }[] = []
+	for (const part of [...course.straights].sort((a, b) => a.start - b.start)) {
+		if (part.start === 0 || part.start === straight?.start) continue
+		const base = PB(part.start)
+		const same = straightSpots.find((spot) => near(spot.base, base))
+		if (same) same.at.push(part.start)
+		else straightSpots.push({ at: [part.start], base })
+	}
 	if (straight) {
+		// On a course of more than one lap the final straight is the home
+		// straight an earlier lap already ran: that pass joins this chip instead
+		// of a second chip beside it (owner, 2026-11-06), named for what it is,
+		// since the earlier metre isn't the final straight yet.
+		const earlier = straightSpots.find((spot) => near(spot.base, PB(straight.start)))
+		if (earlier) straightSpots.splice(straightSpots.indexOf(earlier), 1)
+		const before = earlier ? ` (${earlier.at.map(formatMetres).join(", ")} ${earlier.at.length === 1 ? "a lap before" : "on earlier laps"})` : ""
 		allCallouts.push({
 			key: "final-straight",
 			at: straight.start,
 			point: P(straight.start),
 			label: "Final straight",
 			// Its start, not its length: every other callout counts from the gate.
-			detail: formatMetres(straight.start),
+			detail: formatMetres(straight.start) + before,
 			tone: "straight",
 			icon: "finalStraight",
+			iconRotate: iconTurn(shape, straight.start, distance, "finalStraight"),
 		})
 	}
-	// Every other straight: one callout per spot with each lap's start metres,
-	// like the corners (Daptrius's render). Not the one leaving the gate: the
-	// Start callout is already there.
-	const straightSpots: { at: number[]; point: [number, number] }[] = []
-	for (const part of [...course.straights].sort((a, b) => a.start - b.start)) {
-		if (part.start === 0 || part.start === straight?.start) continue
-		const point = P(part.start)
-		const same = straightSpots.find((spot) => near(spot.point, point))
-		if (same) same.at.push(part.start)
-		else straightSpots.push({ at: [part.start], point })
-	}
 	for (const spot of straightSpots) {
-		allCallouts.push({ key: `straight-${spot.at[0]}`, at: spot.at[0], point: spot.point, label: "Straight", detail: spot.at.map(formatMetres).join(", "), tone: "straight", icon: "straight" })
+		allCallouts.push({ key: `straight-${spot.at[0]}`, at: spot.at[0], point: P(spot.at[0]), label: "Straight", detail: spot.at.map(formatMetres).join(", "), tone: "straight", icon: "straight", iconRotate: iconTurn(shape, spot.at[0], distance, "straight") })
 	}
 	for (const hill of hills) {
 		allCallouts.push({
@@ -420,14 +451,16 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// course that passes its corners twice has no room for them either: the
 	// strip under the track names them.
 	const twoLaps = course.corners.length > 4
-	const callouts = !showWords
-		? []
-		: compact
+	const worded = compact
 		? allCallouts
 			.filter((callout) => ["start", "goal", "spurt"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.
 			.map((callout) => (callout.tone === "spurt" ? callout : { ...callout, detail: undefined }))
 		: allCallouts
+	// Bare (a phone's track until it's tapped): the chips that carry an icon keep
+	// it, without their words, like gametora's map (Henry, 2026-11-04). Start and
+	// Goal have no icon; the gate bar and the chequer already mark them.
+	const callouts = showWords ? worded : worded.filter((callout) => callout.icon).map((callout) => ({ ...callout, label: "", detail: undefined }))
 
 	// Every callout sits past the outermost layer arc so no word covers a zone.
 	const labelReach = outermost < 0 ? size * 0.11 : Math.max(size * 0.11, track * (1.85 + outermost * 0.62) + track * 1.6)
@@ -435,12 +468,44 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		const text = callout.label.length + (callout.detail ? callout.detail.length + 1.5 : 0)
 		return { width: (text * CHAR_PX + LABEL_PAD_PX + (callout.icon ? ICON_PX : 0)) * unitsPerPx, height: LABEL_HEIGHT_PX * unitsPerPx }
 	}
+	// How far out, along `direction`, the track's OTHER passes of this spot run
+	// past `point`: on rings, a chip anchored on an inner pass would otherwise
+	// land on the passes outside it (Nakayama 3600's Start chip sat on the red
+	// final straight, two rings out). A pass is another stretch of the path on
+	// the same ground before the rings (PB), at least a fifth of the race away
+	// along it, so the anchor's own pass never counts.
+	const lastPoint = shape.length - 1
+	const outerPasses = (at: number, point: readonly [number, number], direction: readonly [number, number]) => {
+		const [bx, by] = PB(at)
+		const index = Math.round(metreToFraction(at, distance) * lastPoint)
+		let reach = 0
+		for (let i = 0; i <= lastPoint; i++) {
+			if (Math.abs(i - index) < lastPoint * 0.2) continue
+			if (Math.hypot(baseShape[i][0] - bx, baseShape[i][1] - by) > size * 0.04) continue
+			const past = (shape[i][0] - point[0]) * direction[0] + (shape[i][1] - point[1]) * direction[1]
+			reach = Math.max(reach, past)
+		}
+		return reach
+	}
 	const positions = placeLabels(
 		callouts.map((callout) => {
 			const [ox, oy] = awayFromMiddle(callout.point)
-			return { key: callout.key, anchor: callout.point, direction: callout.inward ? [-ox, -oy] as const : [ox, oy] as const, ...estimate(callout) }
+			const direction = callout.inward ? [-ox, -oy] as const : [ox, oy] as const
+			// The chip is placed from the outermost pass at its spot; the leader
+			// still starts at the callout's own point, across the passes outside it.
+			const out = callout.inward ? 0 : outerPasses(callout.at, callout.point, direction)
+			const anchor = [callout.point[0] + direction[0] * out, callout.point[1] + direction[1] * out] as const
+			// A few px of air round each chip when checking for clashes: the
+			// widths are estimates from the text, and a chip moved off an inner
+			// pass otherwise met its neighbour edge to edge (Goal and Corner 1 on Oi 2000).
+			const { width, height } = estimate(callout)
+			return { key: callout.key, anchor, direction, width: width + CHIP_GAP_PX * unitsPerPx, height: height + (CHIP_GAP_PX / 1.5) * unitsPerPx }
 		}),
 		labelReach,
+		// No chip lies across the track: half the track and its kerb either side
+		// of the path is the track. (A wide chip at a bend, like Nakayama 3600's
+		// "Final straight 3,290m (1,615m a lap before)", reached back over it.)
+		{ points: shape, halfWidth: track * 0.7 },
 	)
 	// Nothing may spill past the box: a chip near the edge slides back in.
 	for (const callout of callouts) {
@@ -529,13 +594,13 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	return (
 		<div ref={ref} className={`relative mx-auto w-full ${className}`} style={{ maxWidth: widthPx, aspectRatio: `${box.width} / ${box.height}` }} aria-hidden="true">
 			<svg viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`} className="absolute inset-0 h-full w-full overflow-visible">
-				{/* The kerb, then the race over it, phase by phase. */}
-				<polyline points={points(shape)} fill="none" stroke="var(--color-course-bed)" strokeWidth={track * 1.55} strokeLinejoin="round" strokeLinecap="round" />
+				{/* The kerb, then the race over it, phase by phase. Butt ends: a
+				    round cap poked a black nub out past the chequer and behind the
+				    gate (Henry, 2026-11-04), so the kerb now stops flush with both. */}
+				<polyline points={points(shape)} fill="none" stroke="var(--color-course-bed)" strokeWidth={track * 1.55} strokeLinejoin="round" strokeLinecap="butt" />
 				{phases.map((phase, index) => (
 					<PhaseLine key={phase.start} shape={shape} start={phase.start} end={phase.end} distance={distance} stroke={PHASE_STROKES[index % PHASE_STROKES.length]} width={track} progress={progress} />
 				))}
-				{/* The glow over the spurt: where an accel lands on time. */}
-				<motion.polyline points={points(slice(shape, late - GLOW_BEFORE_M, late + GLOW_AFTER_M, distance))} fill="none" stroke="var(--color-course-beacon-glow)" strokeWidth={track * 2.4} strokeLinecap="round" style={{ opacity: glow }} />
 				{/* Thin ticks where a phase changes. */}
 				{[mid, finalSixth].map((metre) => <line key={metre} {...across(metre, track * 0.55)} stroke="var(--color-course-tick)" strokeWidth={track * 0.12} />)}
 				{hills.map((hill) => (

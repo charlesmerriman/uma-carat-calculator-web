@@ -573,12 +573,23 @@ export interface LabelRequest {
  * then further out and swung a little to either side, taking the first spot
  * that is clear. Sizes are estimates from the text, since nothing on a
  * prerendered page may be measured. Returns the centre of each label.
+ *
+ * `track` (optional) is the drawn path and how far either side of it counts
+ * as on it: a spot whose box covers a point of it isn't clear either, so a
+ * wide chip near a bend moves further out instead of lying across the track.
+ * When no spot is clear the label takes its first one, as before.
  */
-export function placeLabels(requests: LabelRequest[], distance: number): Record<string, [number, number]> {
+export function placeLabels(
+	requests: LabelRequest[],
+	distance: number,
+	track?: { points: readonly (readonly [number, number])[]; halfWidth: number },
+): Record<string, [number, number]> {
 	const placed: { x: number; y: number; w: number; h: number }[] = []
 	const result: Record<string, [number, number]> = {}
+	const onTrack = (x: number, y: number, w: number, h: number) =>
+		!!track && track.points.some(([px, py]) => Math.abs(px - x) < w / 2 + track.halfWidth && Math.abs(py - y) < h / 2 + track.halfWidth)
 	const overlaps = (x: number, y: number, w: number, h: number) =>
-		placed.some((box) => Math.abs(box.x - x) < (box.w + w) / 2 && Math.abs(box.y - y) < (box.h + h) / 2)
+		placed.some((box) => Math.abs(box.x - x) < (box.w + w) / 2 && Math.abs(box.y - y) < (box.h + h) / 2) || onTrack(x, y, w, h)
 	for (const request of requests) {
 		const [ax, ay] = request.anchor
 		const [dx, dy] = request.direction

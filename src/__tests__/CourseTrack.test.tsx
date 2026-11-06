@@ -10,6 +10,7 @@ import CourseSection from "../components/course/CourseSection"
 import CourseTrack from "../components/course/CourseTrack"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import { schematicShape } from "../utils/courseSchematic"
+import { shapeBounds, withLapRings } from "../utils/courseGeometry"
 import { CHUKYO_1200, NAKAYAMA_3600, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 /** The shape endpoint answers with `shape` (null: a course with no path file). */
@@ -84,6 +85,26 @@ describe("CourseTrack", () => {
 		expect(screen.queryByText("Position keep ends")).toBeNull()
 	})
 
+	it("turns the corner and straight icons the way the track runs, snapped to 22.5 degrees, and keeps hills upright (Daptrius, 2026-11-04)", () => {
+		// One point per metre: heading left (-x) to 400 m, down (+y) to 700 m,
+		// then right (+x) to the goal. Corner 3 starts at 300 m heading left; the
+		// final straight starts at 788 m heading right.
+		const shape: [number, number][] = []
+		for (let metre = 0; metre <= 1200; metre++) {
+			if (metre <= 400) shape.push([400 - metre, 0])
+			else if (metre <= 700) shape.push([0, metre - 400])
+			else shape.push([metre - 700, 300])
+		}
+		const { container } = render(<CourseTrack course={CHUKYO_1200} shape={shape} />)
+		// Heading left is 180 degrees; the corner arrow starts heading up, so +90.
+		expect(container.querySelector('[data-course-icon="cornerLeft"]')).toHaveStyle({ transform: "rotate(270deg)" })
+		// The final straight points right already: no turn at all.
+		expect(container.querySelector('[data-course-icon="finalStraight"]')).not.toHaveAttribute("style")
+		for (const hill of container.querySelectorAll('[data-course-icon="uphill"], [data-course-icon="downhill"]')) {
+			expect(hill).not.toHaveAttribute("style")
+		}
+	})
+
 	it("gives a corner the course passes twice one callout with both laps' metres (Nakayama 3600)", () => {
 		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} />)
 		expect(screen.getAllByText("Corner 1")).toHaveLength(1)
@@ -92,11 +113,51 @@ describe("CourseTrack", () => {
 
 	it("gives each straight one callout with every lap's start metres (Nakayama 3600)", () => {
 		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} />)
-		// The back straight on both laps; the first lap's home straight; the
-		// final straight keeps its own callout, at where it starts.
+		// The back straight on both laps.
 		expect(screen.getByText("790m, 2,475m")).toBeInTheDocument()
-		expect(screen.getByText("1,615m")).toBeInTheDocument()
-		expect(screen.getByText("3,290m")).toBeInTheDocument()
+		// The first lap's home straight is the final straight's ground: one chip
+		// for both (owner, 2026-11-06), not "Straight 1,615m" beside it.
+		expect(screen.getByText("3,290m (1,615m a lap before)")).toBeInTheDocument()
+		expect(screen.queryByText("1,615m")).not.toBeInTheDocument()
+		expect(screen.getAllByText("Straight")).toHaveLength(1)
+	})
+
+	it("gives a hill run on all three passes of the home straight one chip and one bracket (Nakayama 3600)", () => {
+		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} />)
+		// The gate's straight, lap one and the final straight each climb 2% at
+		// one spot. The third pass sits two rings out, which used to split it off.
+		expect(screen.getAllByText("Uphill 2%")).toHaveLength(1)
+		expect(screen.getByText("40m, 1,740m, 3,425m")).toBeInTheDocument()
+		// One merged hill is one bracket too: the third pass's own bracket and its
+		// "3,425–3,535m" chip are gone.
+		expect(screen.queryByText("3,425–3,535m")).not.toBeInTheDocument()
+	})
+
+	it("puts a chip anchored on an inner pass outside the passes beyond it (Nakayama 3600's Start)", () => {
+		// Later laps run outside on Nakayama 3600, so the gate is on the
+		// innermost of three passes along the bottom; its chip used to land on
+		// the outermost (the red final straight). Now it sits below all three.
+		// The live course draws later laps outside (the fixture's default is inside).
+		const course = { ...NAKAYAMA_3600, later_laps: "outside" as const }
+		const base = schematicShape(course)
+		render(<CourseTrack course={course} shape={base} />)
+		// The box the component draws in, the same way it builds it.
+		const bounds = shapeBounds(base)
+		const size = Math.max(bounds.width, bounds.height)
+		const ringed = withLapRings(base, course, size * 0.045)
+		const ringedBox = shapeBounds(ringed)
+		const pad = size * 0.17
+		// The outermost pass under the gate: the lowest point of the final
+		// straight (the race's last 300 m, all on the bottom), as a page %.
+		const outerY = Math.max(...ringed.slice(920).map(([, y]) => y))
+		const boxTop = ringedBox.minY - pad
+		const boxHeight = ringedBox.height + 2 * pad
+		const boxWidth = ringedBox.width + 2 * pad
+		// The chip's top edge (its centre less half its 24 px, in a 1000 px box)
+		// must clear the pass's outer edge (half the track, 2% of the box, out).
+		const chip = screen.getByText("Start").closest("div") as HTMLElement
+		const chipTop = boxTop + (parseFloat(chip.style.top) / 100) * boxHeight - 12 * (boxWidth / 1000)
+		expect(chipTop).toBeGreaterThan(outerY + boxWidth * 0.01)
 	})
 })
 

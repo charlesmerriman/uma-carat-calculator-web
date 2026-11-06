@@ -438,13 +438,20 @@ html {
 	--color-course-mark: rgb(255 255 255 / 40%);
 	--color-course-gate: #f8fafc;
 	--color-course-beacon: #fff6d6;
-	/* The glow and the lit skill follow the theme's brand (Race Day's blue,
-	   Light's brown), so the spurt chip, its glow and a lit zone always agree. */
-	--color-course-beacon-glow: var(--color-brand);
 	--color-course-heal: #7fe4b0;
 	/* The layers: the lit skill, and one colour per team spot for the veterans
-	   (kept apart from the phases and the running-style colours). */
+	   (kept apart from the phases and the running-style colours). The lit skill
+	   follows the theme's brand (Race Day's blue, Light's brown), so the spurt
+	   chip and a lit zone always agree. */
 	--color-course-lit: var(--color-brand);
+	/* The words on a lit span: the track's layer chip, and the label pill in
+	   the strip (CourseStrip's LayerSpan), which is the lit colour mixed 15%
+	   toward the lift. Dark ink on a pale brand here; a light theme's brand is
+	   deep, so the light-mode block below swaps both (Pearl's near-black brand
+	   was 1.3:1 under dark ink, forum report 2026-11-04). The veterans' colours
+	   are bright on every theme and keep the dark ink. */
+	--color-course-lit-ink: #0b0b0f;
+	--color-course-lit-lift: #fff;
 	--color-course-vet-1: #f472b6;
 	--color-course-vet-2: #a78bfa;
 	--color-course-vet-3: #22d3ee;
@@ -948,6 +955,16 @@ html {
    on a light theme the brand is deep, so the label turns white. Warm Light kept
    black labels until 2026-10-18, which measured 3.9:1 on its brown-gold and
    read as a muddy block; white measures 5.3:1. */
+/* The same turn for the course map's lit spans (--color-course-lit-ink, in
+   :root above). Dark ink measured 2.8 to 3.7:1 on the light themes' solid lit
+   chip and 1.3:1 on Pearl; white measures 5.2:1 or better. The strip's label
+   pill darkens toward black instead of paling toward white, which keeps white
+   ink at 6.8:1 or better (warm Light is the lowest). */
+[data-theme-mode="light"] {
+	--color-course-lit-ink: var(--light-button-ink);
+	--color-course-lit-lift: #000;
+}
+
 [data-theme-mode="light"] .bg-brand.text-black {
 	color: var(--light-button-ink);
 }

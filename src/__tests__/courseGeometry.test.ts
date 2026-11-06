@@ -13,6 +13,7 @@ import {
 	markerLanes,
 	metreToFraction,
 	phaseBands,
+	placeLabels,
 	pointAtMetre,
 	positionKeepEnd,
 	rulerTicks,
@@ -239,5 +240,32 @@ describe("metres to positions", () => {
 			{ at: 560, kind: "position-keep-end", label: "c" },
 		]
 		expect(markerLanes(markers, 1200)).toEqual([0, 0, 1])
+	})
+})
+
+describe("placeLabels", () => {
+	// One label anchored at the origin, pointing up the page (y down), 40 wide
+	// and 10 tall, placed 20 out: its first spot is centred at (0, -20).
+	const request = { key: "a", anchor: [0, 0] as const, direction: [0, -1] as const, width: 40, height: 10 }
+
+	it("takes the first spot when nothing is in the way", () => {
+		const { a } = placeLabels([request], 20)
+		expect(a[0]).toBeCloseTo(0, 6)
+		expect(a[1]).toBeCloseTo(-20, 6)
+	})
+
+	it("moves a label off the track when its first spot would lie across it", () => {
+		// A stretch of track running across the page through the first spot.
+		const track = { points: Array.from({ length: 21 }, (_, i) => [i * 5 - 50, -20] as const), halfWidth: 2 }
+		const { a } = placeLabels([request], 20, track)
+		// Its box (10 tall) clears the track (2 either side of y = -20).
+		expect(Math.abs(a[1] + 20)).toBeGreaterThan(5 + 2)
+	})
+
+	it("keeps its first spot when every spot is on the track", () => {
+		// Track everywhere: a grid over the whole neighbourhood.
+		const points = Array.from({ length: 41 * 41 }, (_, i) => [(i % 41) * 5 - 100, Math.floor(i / 41) * 5 - 100] as const)
+		const { a } = placeLabels([request], 20, { points, halfWidth: 2 })
+		expect(a[1]).toBeCloseTo(-20, 6)
 	})
 })

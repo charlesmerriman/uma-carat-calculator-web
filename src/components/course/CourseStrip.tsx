@@ -102,6 +102,9 @@ const RULER_STEP_PX = 80
 const MARK_WORDS_PX = 160
 const HANG_LEFT_PX = 280
 const LIT = "var(--color-course-lit)"
+// A lit span's words: the theme's ink for the lit skill, dark for a veteran's bright colour.
+const LIT_INK = "var(--color-course-lit-ink)"
+const VET_INK = "#0b0b0f"
 
 // Light ink on the darker fills, dark on the light ones.
 const LIGHT_INK = "#f8fafc"
@@ -280,7 +283,11 @@ function LayerSpan({ span, distance, vertical, onPreview, previewed = null }: {
 					className="relative z-10 ml-1 whitespace-nowrap rounded-[3px] px-1 text-[10px] font-bold leading-tight"
 					style={span.kind === "window"
 						? { color: "var(--color-gray-300)", background: "var(--color-gray-900)" }
-						: { color: "#0b0b0f", background: `color-mix(in srgb, ${colour} 85%, #fff)` }}
+						// The lit skill follows the brand, so its ink and lift are theme
+						// tokens (index.css); a veteran's colour is bright on every theme.
+						: span.colour
+							? { color: VET_INK, background: `color-mix(in srgb, ${colour} 85%, #fff)` }
+							: { color: LIT_INK, background: `color-mix(in srgb, ${colour} 85%, var(--color-course-lit-lift))` }}
 				>
 					{span.image && <img src={span.image} alt="" className="mr-1 inline-block h-3 w-3 align-[-2px]" loading="lazy" decoding="async" />}
 					{span.label}
