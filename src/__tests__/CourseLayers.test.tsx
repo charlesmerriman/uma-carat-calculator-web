@@ -24,6 +24,37 @@ afterEach(() => {
 	vi.restoreAllMocks()
 })
 
+/**
+ * The accels column's two fetches: the course's skill zones (three listed,
+ * one too early to list) and the catalogue, where 89 is Seiun Sky's unique
+ * and 90 its inherited white.
+ */
+function mockAccelFetch() {
+	vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+		if (String(input).includes("/skill-zones")) {
+			return new Response(JSON.stringify({
+				"88": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: ["front"],
+					effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12, useful: 0.096 } },
+				"89": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
+					effects: ["accel", "speed"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2, accel: 0.85, carry: 0.35 },
+					carry_window: [740, 791], carry_speed: 0.35, carry_seconds: 3.2 },
+				"90": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
+					effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 0.6 } },
+				// Fires 250 m early: no use at the spurt start, so not listed.
+				"91": { kind: "place", zones: [{ start: 550, end: 1200, kind: "fixed" }], styles: null,
+					effects: ["accel"], fires_at: 550, spurt: { from: -250, to: -250, useful: 0 } },
+			}))
+		}
+		const skill = (id: number, name: string, rarity = 1) => ({ id, name, description: "", image: null, rarity, tier: 1, group_id: id, cost: 100 })
+		return new Response(JSON.stringify({
+			umas: [{ id: 1, name: "Seiun Sky", portrait: null, skills: [{ skill: 89, source: "unique", level: 1 }] }],
+			support_cards: [],
+			// 90 is the unique's inherited white: the same name.
+			skills: [skill(88, "Final Push"), skill(89, "Angling and Scheming", 5), skill(90, "Angling and Scheming"), skill(91, "Red Shift")],
+		}))
+	})
+}
+
 describe("the course map's layers", () => {
 	it("fetches nothing until a layer needs the zones", () => {
 		const fetchSpy = vi.spyOn(globalThis, "fetch")
@@ -82,29 +113,7 @@ describe("the course map's layers", () => {
 	})
 
 	it("lists the accels useful at the spurt start, most useful first, and lights one on a tap", async () => {
-		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-			if (String(input).includes("/skill-zones")) {
-				return new Response(JSON.stringify({
-					"88": { kind: "place", zones: [{ start: 550, end: 788, kind: "random" }], styles: ["front"],
-						effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12, useful: 0.096 } },
-					"89": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
-						effects: ["accel", "speed"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2, accel: 0.85, carry: 0.35 },
-						carry_window: [740, 791], carry_speed: 0.35, carry_seconds: 3.2 },
-					"90": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
-						effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 0.6 } },
-					// Fires 250 m early: no use at the spurt start, so not listed.
-					"91": { kind: "place", zones: [{ start: 550, end: 1200, kind: "fixed" }], styles: null,
-						effects: ["accel"], fires_at: 550, spurt: { from: -250, to: -250, useful: 0 } },
-				}))
-			}
-			const skill = (id: number, name: string, rarity = 1) => ({ id, name, description: "", image: null, rarity, tier: 1, group_id: id, cost: 100 })
-			return new Response(JSON.stringify({
-				umas: [{ id: 1, name: "Seiun Sky", portrait: null, skills: [{ skill: 89, source: "unique", level: 1 }] }],
-				support_cards: [],
-				// 90 is the unique's inherited white: the same name.
-				skills: [skill(88, "Final Push"), skill(89, "Angling and Scheming", 5), skill(90, "Angling and Scheming"), skill(91, "Red Shift")],
-			}))
-		})
+		mockAccelFetch()
 		const { container } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
 		// The Accels button is in the bar and, for a phone, under the headline: one column either way.
 		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
@@ -137,6 +146,30 @@ describe("the course map's layers", () => {
 		expect(card.getByText("At a random point 12m to 250m before the late race starts")).toBeInTheDocument()
 		fireEvent.click(card.getByRole("button", { name: "Unlight this skill" }))
 		await waitFor(() => expect(screen.queryByLabelText("Final Push on this course")).toBeNull())
+	})
+
+	it("searches the accels by skill name and by the owner uma's name", async () => {
+		mockAccelFetch()
+		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		const list = within(await screen.findByRole("list", { name: "Accels on this course" }))
+		const search = screen.getByRole("searchbox", { name: "Search the accels" })
+		// Her name finds her unique and its inherited white, in rank order.
+		fireEvent.change(search, { target: { value: "SEIUN" } })
+		await waitFor(() => expect(list.getAllByRole("button")).toHaveLength(2))
+		expect(screen.getByText("2 here")).toBeInTheDocument()
+		expect(list.getAllByRole("button")[1]).toHaveTextContent("inherited from Seiun Sky")
+		fireEvent.change(search, { target: { value: "push" } })
+		await waitFor(() => expect(list.getAllByRole("button")).toHaveLength(1))
+		expect(list.getByRole("button")).toHaveTextContent("Final Push")
+		// Red Shift fires too early to be listed, so the search can't find it.
+		fireEvent.change(search, { target: { value: "red shift" } })
+		expect(await screen.findByText("No skill here matches that.")).toBeInTheDocument()
+		expect(screen.getByText("0 here")).toBeInTheDocument()
+		// The search holds across a style pill.
+		fireEvent.change(search, { target: { value: "push" } })
+		fireEvent.click(screen.getByRole("button", { name: "Pace" }))
+		expect(await screen.findByText("No skill here matches that.")).toBeInTheDocument()
 	})
 
 	it("ticks each veteran and each of her skills that can fire here", () => {
