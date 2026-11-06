@@ -22,7 +22,7 @@ import type { RaceCourse, RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import { AuthContext } from "../../services/AuthContext"
 import { useCachedCourseZones, useCourseShape, useCourseZones } from "../../services/courseQueries"
-import { setCourseShapeChoice, useCourseShapeChoice, type CourseShapeChoice } from "../../services/courseShapeStore"
+import { setCourseShapeChoice, setTrackColours, useCourseShapeChoice, useTrackColours, type CourseShapeChoice, type TrackColours } from "../../services/courseShapeStore"
 import {
 	COURSE_MAP_ID,
 	setAccelsOpen,
@@ -72,6 +72,9 @@ const PHONE_TRACK_PX = 358
 // the 60px label column. Wide enough for every section number and the words.
 const PHONE_STRIP_PX = 660
 
+// The strip's row names: Phase colours the track like the Phase row, Course like the Course row.
+const TRACK_COLOUR_OPTIONS: { value: TrackColours; label: string }[] = [{ value: "phase", label: "Phase" }, { value: "course", label: "Course" }]
+
 function Segmented<T extends string>({ label, value, options, onChange }: {
 	label: string
 	value: T
@@ -117,6 +120,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	const [view, setView] = useState<View>("strip")
 	// Remembered per device, through a store: the page is prerendered.
 	const shapeChoice = useCourseShapeChoice()
+	// The track's surface by race phase or by corners and straights, remembered the same way.
+	const trackColours = useTrackColours()
 	// The page's course, for skill cards far from the map (CourseVerdict).
 	useEffect(() => {
 		setPageCourse(course)
@@ -335,6 +340,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 							options={[{ value: "real", label: "Real shape" }, { value: "schematic", label: "Schematic" }]}
 						/>
 					)}
+					{view !== "strip" && <Segmented<TrackColours> label="Track colours" value={trackColours} onChange={setTrackColours} options={TRACK_COLOUR_OPTIONS} />}
 				</div>
 			</div>
 			{/* The map's first job, in words, before the drawing (owner, 2026-11-03),
@@ -380,7 +386,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 									<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 								</div>
 							)
-							: <CourseTrack course={course} shape={shape} overlays={layer.overlays} preview={preview} onPreview={setPreview} />)}
+							: <CourseTrack course={course} shape={shape} colours={trackColours} overlays={layer.overlays} preview={preview} onPreview={setPreview} />)}
 						{view !== "strip" && litSkills.length > 0 && (
 							// The lit skills by icon and name, each a hover target for its arc.
 							<ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px]" aria-label="Lit skills">
@@ -412,7 +418,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					</motion.div>
 				</AnimatePresence>
 				{/* The track alone needs a legend; under Strip and Both the strip names every colour (owner, 2026-11-03). */}
-				{view === "track" && <CourseLegend />}
+				{view === "track" && <CourseLegend colours={trackColours} />}
 				{hasLayer && (
 					// What a layer's marks mean.
 					<ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400" aria-label="Layer legend">
@@ -438,9 +444,15 @@ export default function CourseSection({ course, event = null, guide = null }: {
 						onClick={() => setTrackWords(!trackWords)}
 						className="mb-3 block w-full"
 					>
-						<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact showWords={trackWords} overlays={layer.overlays} />
+						<CourseTrack course={course} shape={phoneShape} widthPx={PHONE_TRACK_PX} compact showWords={trackWords} colours={trackColours} overlays={layer.overlays} />
 						<span className="mt-1 block text-center text-[11px] text-gray-500">{trackWords ? "Tap the track to hide labels" : "Tap the track for labels"}</span>
 					</button>
+				)}
+				{/* Outside the track's button, so choosing colours doesn't also toggle its labels. */}
+				{narrow && phoneShape && (
+					<div className="-mt-1 mb-3 flex justify-center">
+						<Segmented<TrackColours> label="Track colours" value={trackColours} onChange={setTrackColours} options={TRACK_COLOUR_OPTIONS} />
+					</div>
 				)}
 				<div className="mb-2 flex items-center justify-between gap-2">
 					<span className="text-[11px] text-gray-500">{stripDown ? "" : "Scroll sideways for the whole race"}</span>

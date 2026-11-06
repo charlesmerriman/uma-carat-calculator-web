@@ -262,6 +262,32 @@ describe("placeLabels", () => {
 		expect(Math.abs(a[1] + 20)).toBeGreaterThan(5 + 2)
 	})
 
+	it("keeps a label inside the box rather than spill past its edge", () => {
+		// The first spot (0, -20) would reach 5 above a box that starts at y = -18.
+		const { a } = placeLabels([request], 20, undefined, { bounds: { x: -100, y: -18, width: 200, height: 118 } })
+		expect(a[1] - 5).toBeGreaterThanOrEqual(-18)
+	})
+
+	it("steps out of the margin round the track when a clear spot is left", () => {
+		// A margin over the first spot only: the label moves off it.
+		const margin = { points: [[0, -20]] as const, halfWidth: 3 }
+		const { a } = placeLabels([request], 20, undefined, { margin })
+		expect(Math.abs(a[0]) > 20 + 3 || Math.abs(a[1] + 20) > 5 + 3).toBe(true)
+		// Inside it beats lying on another label: with the margin everywhere, it stays put.
+		const everywhere = { points: Array.from({ length: 41 * 41 }, (_, i) => [(i % 41) * 5 - 100, Math.floor(i / 41) * 5 - 100] as const), halfWidth: 2 }
+		const { a: kept } = placeLabels([request], 20, undefined, { margin: everywhere })
+		expect(kept[1]).toBeCloseTo(-20, 6)
+	})
+
+	it("won't run a leader across the track when a spot without one is left", () => {
+		// A short stretch of track across the leader's way, halfway out, too far
+		// from the first spot's box to cover it: only the leader meets it.
+		const leaderTrack = { points: Array.from({ length: 21 }, (_, i) => [i - 10, -10] as const), halfWidth: 1 }
+		const { a } = placeLabels([request], 20, undefined, { leaderTrack })
+		// It swings out wide enough that its leader passes the stretch's end.
+		expect(Math.abs(a[0])).toBeGreaterThan(10)
+	})
+
 	it("keeps its first spot when every spot is on the track", () => {
 		// Track everywhere: a grid over the whole neighbourhood.
 		const points = Array.from({ length: 41 * 41 }, (_, i) => [(i % 41) * 5 - 100, Math.floor(i / 41) * 5 - 100] as const)

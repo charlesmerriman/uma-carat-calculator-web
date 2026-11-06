@@ -11,7 +11,7 @@ import CourseTrack from "../components/course/CourseTrack"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import { schematicShape } from "../utils/courseSchematic"
 import { shapeBounds, withLapRings } from "../utils/courseGeometry"
-import { CHUKYO_1200, NAKAYAMA_3600, TOKYO_DIRT_1600 } from "./courseFixtures"
+import { CHUKYO_1200, NAKAYAMA_2500, NAKAYAMA_3600, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 /** The shape endpoint answers with `shape` (null: a course with no path file). */
 function serveShape(shape: readonly (readonly [number, number])[] | null) {
@@ -219,6 +219,41 @@ describe("CourseSection's switches", () => {
 		expect(screen.queryByRole("button", { name: "Walk the course" })).toBeNull()
 	})
 
+	it("keeps the hills on a phone's compact track, as their triangle and percent, bare or with words (Henry, 2026-11-06)", () => {
+		// Chukyo 1200: Downhill 1% from 100 m, Uphill 2% from 875 m.
+		const { container, unmount } = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} widthPx={340} compact />)
+		expect(screen.getByText("1%")).toBeInTheDocument()
+		expect(screen.getByText("2%")).toBeInTheDocument()
+		expect(screen.queryByText("Downhill 1%")).toBeNull()
+		expect(container.querySelector('[data-course-icon="downhill"]')).not.toBeNull()
+		unmount()
+		const bare = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} widthPx={340} compact showWords={false} />)
+		expect(bare.container.querySelector('[data-course-icon="uphill"]')).not.toBeNull()
+		expect(bare.container.querySelector('[data-course-icon="downhill"]')).not.toBeNull()
+		expect(screen.queryByText("2%")).toBeNull()
+	})
+
+	it("gives a corner number met at two different spots two callouts (Nakayama 2500's chute, Daptrius 2026-11-06)", () => {
+		// The race starts on a chute that joins corner 3 partway round (100 m);
+		// the next lap's corner 3 starts at its own entry (1,700 m), elsewhere.
+		render(<CourseTrack course={NAKAYAMA_2500} shape={schematicShape(NAKAYAMA_2500)} />)
+		expect(screen.getAllByText("Corner 3")).toHaveLength(2)
+		expect(screen.getByText("100m")).toBeInTheDocument()
+		expect(screen.getByText("1,700m")).toBeInTheDocument()
+	})
+
+	it("colours the track by corners and straights on request (Daptrius, 2026-11-06)", () => {
+		const strokes = (container: HTMLElement) => [...container.querySelectorAll("polyline")].map((line) => line.getAttribute("stroke"))
+		const { container, unmount } = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} />)
+		expect(strokes(container)).toContain("var(--color-course-early)")
+		expect(strokes(container)).not.toContain("var(--color-course-corner)")
+		unmount()
+		const byCourse = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} colours="course" />)
+		expect(strokes(byCourse.container)).toContain("var(--color-course-corner)")
+		expect(strokes(byCourse.container)).toContain("var(--color-course-straight-final)")
+		expect(strokes(byCourse.container)).not.toContain("var(--color-course-early)")
+	})
+
 	it("drops the corner chips from a two-lap course's compact track (Nakayama 3600)", () => {
 		render(<CourseTrack course={NAKAYAMA_3600} shape={schematicShape(NAKAYAMA_3600)} widthPx={340} compact />)
 		expect(screen.getByText("Spurt starts")).toBeInTheDocument()
@@ -242,5 +277,18 @@ describe("CourseSection's switches", () => {
 		await waitFor(() => expect(screen.getAllByText("Spurt starts")).toHaveLength(3))
 		expect(screen.getAllByText("Last spurt")).toHaveLength(2)
 		expect(screen.queryByText("Position keep ends", { selector: "b" })).toBeNull()
+	})
+
+	it("switches a phone's track between phase and course colours, outside the track's tap target", async () => {
+		vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+		serveShape(schematicShape(CHUKYO_1200))
+		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		const colours = await screen.findByRole("group", { name: "Track colours" })
+		fireEvent.click(within(colours).getByRole("button", { name: "Course" }))
+		expect(within(colours).getByRole("button", { name: "Course" })).toHaveAttribute("aria-pressed", "true")
+		// Choosing colours didn't also show the track's labels.
+		expect(screen.getByRole("button", { name: "Show the track's labels" })).toBeInTheDocument()
+		expect(localStorage.getItem("uma-course-map-colours")).toBe("course")
+		fireEvent.click(within(colours).getByRole("button", { name: "Phase" }))
 	})
 })

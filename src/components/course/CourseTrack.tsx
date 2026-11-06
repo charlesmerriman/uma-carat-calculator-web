@@ -38,11 +38,13 @@ import {
 	shapeBounds,
 	slopeParts,
 	surfaceParts,
+	trackParts,
 	withLapRings,
 	type CourseOverlays,
 	type CourseSpan,
 	type Shape,
 } from "../../utils/courseGeometry"
+import type { TrackColours } from "../../services/courseShapeStore"
 import CourseIcon, { type CourseIconName } from "./CourseIcon"
 import { useDrawIn } from "./useDrawIn"
 
@@ -58,6 +60,19 @@ const ICON_PX = 18
 const LABEL_HEIGHT_PX = 24
 // The least space kept between two chips, across (and two thirds of it down).
 const CHIP_GAP_PX = 6
+// The track's kerb, either side of the centreline, in track widths (it is
+// drawn 1.55 tracks wide).
+const KERB_HALF = 0.775
+// How much clear air a chip keeps from the kerb's edge, in track widths.
+// Daptrius drew his maps with no label within one track width of the track;
+// Henry asked for one and a half (2026-11-06), the final straight's chip
+// especially, which sat on the track's edge.
+const CHIP_CLEAR_TRACKS = 1.5
+// And from a hill's bracket and its ticks, which are thinner.
+const BRACKET_CLEAR_TRACKS = 0.9
+// Centre to centre between one lap's ring and the next, in track widths: the
+// kerb (1.55) plus most of a track of air between them.
+const RING_GAP_TRACKS = 2.4
 
 type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "downhill" | "mark" | "heal" | "ground" | "layer"
 
@@ -79,6 +94,8 @@ interface Callout {
 	colour?: string
 	/** Placed inside the curve, not outside (the spurt chip). */
 	inward?: boolean
+	/** A hill's grade, for its short chip on a phone. */
+	percent?: number
 }
 
 /** The slice of the shape between two metres. */
@@ -133,7 +150,7 @@ function iconTurn(shape: Shape, metre: number, distance: number, icon: CourseIco
 	return ((turn % 360) + 360) % 360
 }
 
-/** One phase of the track, drawn in as the draw-in's progress passes it. */
+/** One stretch of the track (a phase, or a corner or straight), drawn in as the draw-in's progress passes it. */
 function PhaseLine({ shape, start, end, distance, stroke, width, progress }: {
 	shape: Shape
 	start: number
@@ -219,7 +236,7 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, showWords = true, className = "", preview = null, onPreview }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
@@ -230,6 +247,12 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	compact?: boolean
 	/** False draws the track bare: icon chips with no words (a phone's, until it's tapped). */
 	showWords?: boolean
+	/**
+	 * What the track's surface is coloured by: the four race phases, or the
+	 * corners and straights in the strip's Course row colours (Daptrius,
+	 * 2026-11-06: "to clearly show when and where corners and straights are").
+	 */
+	colours?: TrackColours
 	className?: string
 	/** A layer span's `key` the strip's pointer is over: drawn bolder, the other arcs quietened. */
 	preview?: string | null
@@ -244,19 +267,40 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const drawing = useMemo(() => {
 		const base = shapeBounds(baseShape)
 		const size = Math.max(base.width, base.height) || 1
-		// Ring spacing: a little over a track's width at this size.
-		const shape = withLapRings(baseShape, course, size * 0.045)
+		// Room for the callouts round the track; a phone's box needs more. A
+		// desktop's has more at the sides than above and below, because a chip
+		// is far wider than it is tall. (0.17 all round until the chips kept a
+		// track and a half clear of the kerb: one on a bend near the box's side,
+		// like Chukyo 1200's Corner 4, had nowhere to go but round.) A phone's
+		// has more below: the finish runs along the bottom, so the final
+		// straight, the hills on it and the last corner all want that edge,
+		// and a phone's chips are big for its box. Henry's markup (2026-11-06)
+		// put Corner 4 down there and the final straight under it.
+		const pad = compact
+			? { x: size * 0.48, top: size * 0.35, bottom: size * 0.62 }
+			: { x: size * 0.27, top: size * 0.2, bottom: size * 0.2 }
+		// The track's width in the shape's units: 2% of the box (3% on a phone),
+		// sized on the course before its rings so the rings can be spaced by it.
+		// (Rings drawn outside widen the box a little; the track stays this wide.)
+		const nominal = (base.width + 2 * pad.x) * (compact ? 0.03 : 0.02)
+		// A course drawn as rings needs room for them on its bends: its track is
+		// no wider than a desktop's share of the course (about 3.2%), or a
+		// phone's thicker track spaced its inner ring so far in that the bend
+		// folded over itself (Chukyo dirt 1800). One-lap courses keep theirs.
+		const ringed = withLapRings(baseShape, course, 1) !== baseShape
+		const track = ringed ? Math.min(nominal, size * 0.032) : nominal
+		// Ring spacing, in track widths. It used to be a share of the course's
+		// size (4.5%), which on a phone, whose track is drawn thicker, was less
+		// than the track's own width with its kerb: later laps ran over earlier
+		// ones (Daptrius, 2026-11-06: Hanshin and Kyoto "overlap with themselves").
+		const shape = withLapRings(baseShape, course, track * RING_GAP_TRACKS)
 		const bounds = shapeBounds(shape)
-		// Room for the callouts round the track; a phone's box needs more.
-		const pad = size * (compact ? 0.4 : 0.17)
-		const box = { x: bounds.minX - pad, y: bounds.minY - pad, width: bounds.width + 2 * pad, height: bounds.height + 2 * pad }
+		const box = { x: bounds.minX - pad.x, y: bounds.minY - pad.top, width: bounds.width + 2 * pad.x, height: bounds.height + pad.top + pad.bottom }
 		const centre = [bounds.minX + bounds.width / 2, bounds.minY + bounds.height / 2] as const
 		const clockwise = (cumulativeTurn(shape).at(-1) ?? 0) >= 0
-		return { shape, box, size, centre, clockwise }
+		return { shape, box, size, centre, clockwise, track }
 	}, [baseShape, course, compact])
-	const { shape, box, size, centre, clockwise } = drawing
-	// The track's width in the shape's units: 2% of the box (3% on a phone).
-	const track = box.width * (compact ? 0.03 : 0.02)
+	const { shape, box, size, centre, clockwise, track } = drawing
 	// The outside of the track is the left of travel on a clockwise course.
 	const outside = clockwise ? 1 : -1
 	const unitsPerPx = box.width / widthPx
@@ -271,6 +315,25 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const facts = courseFacts(course)
 	const { mid, late, finalSixth } = phaseStarts(distance)
 	const phases = facts.spans.filter((span) => span.kind === "phase")
+	// The stretches the surface is drawn in, each in its colour. By course,
+	// corners alternate two shades so two in a row read as two, and a gap the
+	// game leaves between parts (Nakayama 2500's gate, before the chute joins
+	// corner 3) is a faded straight: the strip leaves it unfilled, but on the
+	// track a bare kerb read as a hole in the course.
+	const stretches = colours === "course"
+		? (() => {
+			let corner = 0
+			return trackParts(course).map((part) => ({
+				start: part.start,
+				end: part.end,
+				stroke: part.kind === "gap"
+					? "color-mix(in srgb, var(--color-course-straight) 50%, var(--color-course-bed))"
+					: part.kind === "corner"
+						? corner++ % 2 === 1 ? "var(--color-course-corner-alt)" : "var(--color-course-corner)"
+						: part.label === "Final straight" ? "var(--color-course-straight-final)" : "var(--color-course-straight)",
+			}))
+		})()
+		: phases.map((phase, index) => ({ start: phase.start, end: phase.end, stroke: PHASE_STROKES[index % PHASE_STROKES.length] }))
 
 	const awayFromMiddle = ([x, y]: readonly [number, number]): [number, number] => {
 		const dx = x - centre[0]
@@ -338,13 +401,22 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// A corner's and a straight's callout points at where it STARTS, the metre
 	// it names, like every other callout (Daptrius, 2026-11-03).
 	const cornerIcon: CourseIconName = course.direction === "right" ? "cornerRight" : "cornerLeft"
-	const cornerGroups = new Map<number, number[]>()
+	// One chip per corner SPOT, with each lap's metres: the same number on the
+	// same ground. The number alone isn't enough: Nakayama 2500 starts on a
+	// chute that joins corner 3 partway round, so its first "corner 3" (100 m)
+	// and the next lap's (1,700 m) start in different places, and one chip
+	// pointing at the chute left lap two's corner 3 unmarked (Daptrius,
+	// 2026-11-06: "it's unclear where the corner is").
+	const cornerSpots: { number: number; starts: number[]; base: [number, number] }[] = []
 	for (const corner of [...course.corners].sort((a, b) => a.start - b.start)) {
-		cornerGroups.set(corner.number, [...(cornerGroups.get(corner.number) ?? []), corner.start])
+		const base = PB(corner.start)
+		const same = cornerSpots.find((spot) => spot.number === corner.number && near(spot.base, base))
+		if (same) same.starts.push(corner.start)
+		else cornerSpots.push({ number: corner.number, starts: [corner.start], base })
 	}
-	for (const [number, starts] of cornerGroups) {
+	for (const { number, starts } of cornerSpots) {
 		allCallouts.push({
-			key: `corner-${number}`,
+			key: `corner-${number}-${starts[0]}`,
 			at: starts[0],
 			point: P(starts[0]),
 			label: number > 0 ? `Corner ${number}` : "Corner",
@@ -400,6 +472,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			detail: hill.starts.length > 1 ? hill.starts.map(formatMetres).join(", ") : `${Math.round(hill.start).toLocaleString("en-US")}–${formatMetres(hill.end)}`,
 			tone: hill.kind,
 			icon: hill.kind,
+			percent: hill.percent,
 		})
 	}
 	// Where the ground changes (Tokyo dirt 1600 starts on turf), as the strip's
@@ -447,15 +520,21 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		icons.push({ key: `icon-${span.group ?? "lit"}-${span.label}`, span, x, y, colour: span.colour ?? LIT })
 	}
 	// A phone-sized box has room for the start, the goal, the spurt, the
-	// corners and the final straight; the headline under it says the rest. A
-	// course that passes its corners twice has no room for them either: the
-	// strip under the track names them.
+	// corners, the final straight and the hills (Henry, 2026-11-06: the hills'
+	// triangles on a phone too, bare or with words); the headline under it says
+	// the rest. A course that passes its corners twice has no room for them
+	// either: the strip under the track names them.
 	const twoLaps = course.corners.length > 4
 	const worded = compact
 		? allCallouts
-			.filter((callout) => ["start", "goal", "spurt"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
+			.filter((callout) => ["start", "goal", "spurt", "uphill", "downhill"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.
 			.map((callout) => (callout.tone === "spurt" ? callout : { ...callout, detail: undefined }))
+			// A hill keeps its triangle and its percent, the strip's short form
+			// for a hill too narrow for its words: "Uphill 2%" in full was as wide
+			// as the final straight's chip, and on a small track the two fought
+			// for the same stretch.
+			.map((callout) => (callout.percent === undefined ? callout : { ...callout, label: `${callout.percent}%` }))
 		: allCallouts
 	// Bare (a phone's track until it's tapped): the chips that carry an icon keep
 	// it, without their words, like gametora's map (Henry, 2026-11-04). Start and
@@ -475,7 +554,25 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// the same ground before the rings (PB), at least a fifth of the race away
 	// along it, so the anchor's own pass never counts.
 	const lastPoint = shape.length - 1
-	const outerPasses = (at: number, point: readonly [number, number], direction: readonly [number, number]) => {
+	// The track and the brackets as the placer sees them: points no further
+	// apart than half a track, so no gap between two of them lets a chip
+	// through, and no more of them than that (every chip's every spot is
+	// checked against all of them).
+	const thin = (path: readonly (readonly [number, number])[]) => {
+		if (path.length < 3) return path
+		let length = 0
+		for (let i = 1; i < path.length; i++) length += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1])
+		const every = Math.max(1, Math.floor((track * 0.5) / (length / (path.length - 1) || 1)))
+		return path.filter((_, index) => index % every === 0 || index === path.length - 1)
+	}
+	const trackPoints = thin(shape)
+	// A bracket's run and both its ticks back to the track.
+	const bracketPoints = hills.flatMap((hill) => {
+		const tick = (from: readonly [number, number], to: readonly [number, number]) =>
+			[0.25, 0.5].map((k) => [from[0] + (to[0] - from[0]) * k, from[1] + (to[1] - from[1]) * k] as const)
+		return [...thin(hill.bracket), ...tick(hill.bracket[0], P(hill.start)), ...tick(hill.bracket[hill.bracket.length - 1], P(hill.end))]
+	})
+	const outerPasses =(at: number, point: readonly [number, number], direction: readonly [number, number]) => {
 		const [bx, by] = PB(at)
 		const index = Math.round(metreToFraction(at, distance) * lastPoint)
 		let reach = 0
@@ -489,7 +586,11 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	}
 	const positions = placeLabels(
 		callouts.map((callout) => {
-			const [ox, oy] = awayFromMiddle(callout.point)
+			// Away from the middle of the drawing, except on a straight course,
+			// where that points along the track and every chip queued off its
+			// ends (Niigata 1000's on a phone sat on each other): there, the
+			// side of the track (up, the spurt chip down).
+			const [ox, oy] = course.direction === "straight" ? [0, -1] : awayFromMiddle(callout.point)
 			const direction = callout.inward ? [-ox, -oy] as const : [ox, oy] as const
 			// The chip is placed from the outermost pass at its spot; the leader
 			// still starts at the callout's own point, across the passes outside it.
@@ -499,13 +600,35 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			// widths are estimates from the text, and a chip moved off an inner
 			// pass otherwise met its neighbour edge to edge (Goal and Corner 1 on Oi 2000).
 			const { width, height } = estimate(callout)
-			return { key: callout.key, anchor, direction, width: width + CHIP_GAP_PX * unitsPerPx, height: height + (CHIP_GAP_PX / 1.5) * unitsPerPx }
+			// Its first try sits just clear of the track: the kerb, the clear air,
+			// then half the chip's own depth that way. A shared distance put a
+			// wide chip back on the track and a small one too far out.
+			const depth = (Math.abs(direction[0]) * width + Math.abs(direction[1]) * height) / 2
+			const reach = callout.inward ? 0 : track * (KERB_HALF + CHIP_CLEAR_TRACKS + 0.25) + depth
+			return { key: callout.key, anchor, direction, width: width + CHIP_GAP_PX * unitsPerPx, height: height + (CHIP_GAP_PX / 1.5) * unitsPerPx, reach, noMargin: callout.inward }
 		}),
 		labelReach,
-		// No chip lies across the track: half the track and its kerb either side
-		// of the path is the track. (A wide chip at a bend, like Nakayama 3600's
-		// "Final straight 3,290m (1,615m a lap before)", reached back over it.)
-		{ points: shape, halfWidth: track * 0.7 },
+		// No chip lies across the track and its kerb (a wide chip at a bend,
+		// like Nakayama 3600's "Final straight 3,290m (1,615m a lap before)",
+		// reached back over it)...
+		{ points: trackPoints, halfWidth: track * (KERB_HALF + 0.2) },
+		{
+			// ...and none within a track and a half of the kerb (CHIP_CLEAR_TRACKS)
+			// while there's a clear spot elsewhere. The spurt chip, inside the
+			// curve, keeps only off the track: a small track's curve has no room
+			// for the margin, and outside it the chip's leader crossed the track.
+			margin: { points: trackPoints, halfWidth: track * (KERB_HALF + CHIP_CLEAR_TRACKS) },
+			// Nor over a hill's bracket and its ticks (Henry, 2026-11-06).
+			keepOut: bracketPoints.length ? [{ points: bracketPoints, halfWidth: track * BRACKET_CLEAR_TRACKS }] : [],
+			// Inside the box: a chip that spilled out used to be clamped straight
+			// back in, onto whatever was there (Corner 4 and the final straight
+			// on a phone's Chukyo 1200 landed on the track).
+			bounds: box,
+			// And a leader that would cut across another stretch of the track is
+			// a last resort.
+			// A last resort too: a leader across a hill's bracket.
+			leaderTrack: { points: [...trackPoints, ...bracketPoints], halfWidth: track * KERB_HALF },
+		},
 	)
 	// Nothing may spill past the box: a chip near the edge slides back in.
 	for (const callout of callouts) {
@@ -598,11 +721,11 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 				    round cap poked a black nub out past the chequer and behind the
 				    gate (Henry, 2026-11-04), so the kerb now stops flush with both. */}
 				<polyline points={points(shape)} fill="none" stroke="var(--color-course-bed)" strokeWidth={track * 1.55} strokeLinejoin="round" strokeLinecap="butt" />
-				{phases.map((phase, index) => (
-					<PhaseLine key={phase.start} shape={shape} start={phase.start} end={phase.end} distance={distance} stroke={PHASE_STROKES[index % PHASE_STROKES.length]} width={track} progress={progress} />
+				{stretches.map((stretch) => (
+					<PhaseLine key={stretch.start} shape={shape} start={stretch.start} end={stretch.end} distance={distance} stroke={stretch.stroke} width={track} progress={progress} />
 				))}
-				{/* Thin ticks where a phase changes. */}
-				{[mid, finalSixth].map((metre) => <line key={metre} {...across(metre, track * 0.55)} stroke="var(--color-course-tick)" strokeWidth={track * 0.12} />)}
+				{/* Thin ticks where a phase changes; by course, the colours change there instead. */}
+				{colours === "phase" && [mid, finalSixth].map((metre) => <line key={metre} {...across(metre, track * 0.55)} stroke="var(--color-course-tick)" strokeWidth={track * 0.12} />)}
 				{hills.map((hill) => (
 					<g key={hill.start} stroke={hill.kind === "uphill" ? "var(--color-course-up)" : "var(--color-course-down)"} strokeWidth={track * 0.22} fill="none" strokeLinecap="round">
 						<polyline points={points(hill.bracket)} />
