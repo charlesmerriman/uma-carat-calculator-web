@@ -25,8 +25,9 @@ afterEach(() => {
 })
 
 /**
- * The accels column's two fetches: the course's skill zones (three listed,
- * one too early to list) and the catalogue, where 89 is Seiun Sky's unique
+ * The accels column's two fetches: the course's skill zones (three accels
+ * listed, one too early to list; on the Speed list 89 and three speed skills,
+ * one worth nothing here) and the catalogue, where 89 is Seiun Sky's unique
  * and 90 its inherited white.
  */
 function mockAccelFetch() {
@@ -37,12 +38,27 @@ function mockAccelFetch() {
 					effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12, useful: 0.096 } },
 				"89": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
 					effects: ["accel", "speed"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2, accel: 0.85, carry: 0.35 },
-					carry_window: [740, 791], carry_speed: 0.35, carry_seconds: 3.2 },
+					carry_window: [740, 791], carry_speed: 0.35, carry_seconds: 3.2,
+					speed_kind: "target", speed_rank: { useful: 0.35, speed: 0, carry: 0.35, accelerating: 1 } },
 				"90": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
 					effects: ["accel"], fires_at: 800, spurt: { from: 0, to: 0, useful: 0.6 } },
 				// Fires 250 m early: no use at the spurt start, so not listed.
 				"91": { kind: "place", zones: [{ start: 550, end: 1200, kind: "fixed" }], styles: null,
 					effects: ["accel"], fires_at: 550, spurt: { from: -250, to: -250, useful: 0 } },
+				// Speed skills: the final straight, a quarter of it while speeding up...
+				"92": { kind: "place", zones: [{ start: 788, end: 1200, kind: "random" }], styles: null, effects: ["speed"],
+					spread: [788, 1200], spurt: { from: -12, to: 400 }, speed_kind: "target",
+					speed_rank: { useful: 0.26, speed: 0.26, carry: 0, accelerating: 0.25 } },
+				// ...Uma Stan, with no place on the course, at full strength...
+				"93": { kind: "anywhere", zones: [], styles: null, effects: ["speed"], speed_kind: "target",
+					speed_rank: { useful: 0.15, speed: 0.15, carry: 0 } },
+				// ...one raising current speed at the late-race start, uncut...
+				"94": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null, effects: ["speed"],
+					fires_at: 800, spurt: { from: 0, to: 0 }, speed_kind: "current", speed_rank: { useful: 0.55, speed: 0.55, carry: 0 } },
+				// ...and a target-speed one there, worth nothing: not listed.
+				"95": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null, effects: ["speed"],
+					fires_at: 800, spurt: { from: 0, to: 0 }, speed_kind: "target",
+					speed_rank: { useful: 0, speed: 0, carry: 0, accelerating: 1 } },
 			}))
 		}
 		const skill = (id: number, name: string, rarity = 1) => ({ id, name, description: "", image: null, rarity, tier: 1, group_id: id, cost: 100 })
@@ -50,7 +66,8 @@ function mockAccelFetch() {
 			umas: [{ id: 1, name: "Seiun Sky", portrait: null, skills: [{ skill: 89, source: "unique", level: 1 }] }],
 			support_cards: [],
 			// 90 is the unique's inherited white: the same name.
-			skills: [skill(88, "Final Push"), skill(89, "Angling and Scheming", 5), skill(90, "Angling and Scheming"), skill(91, "Red Shift")],
+			skills: [skill(88, "Final Push"), skill(89, "Angling and Scheming", 5), skill(90, "Angling and Scheming"), skill(91, "Red Shift"),
+				skill(92, "Homestretch Haste"), skill(93, "Uma Stan"), skill(94, "Sublimated Thunder"), skill(95, "Late Charger")],
 		}))
 	})
 }
@@ -170,6 +187,35 @@ describe("the course map's layers", () => {
 		fireEvent.change(search, { target: { value: "push" } })
 		fireEvent.click(screen.getByRole("button", { name: "Pace" }))
 		expect(await screen.findByText("No skill here matches that.")).toBeInTheDocument()
+	})
+
+	it("switches to the speed skills, ranked by the API's speed score", async () => {
+		mockAccelFetch()
+		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		await screen.findByRole("list", { name: "Accels on this course" })
+		const lists = within(screen.getByRole("group", { name: "Which skills" }))
+		expect(lists.getByRole("button", { name: "Accels" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(lists.getByRole("button", { name: "Speed" }))
+		// The title follows the switch.
+		expect(screen.getByRole("complementary", { name: "Speed skills on this course" })).toBeInTheDocument()
+		const list = within(await screen.findByRole("list", { name: "Speed skills on this course" }))
+		const rows = list.getAllByRole("button")
+		expect(rows.map((row) => row.textContent?.split(/unique|inherited|Fires|At a|Not tied/)[0])).toEqual([
+			"Sublimated Thunder", "Angling and Scheming", "Homestretch Haste", "Uma Stan",
+		])
+		expect(screen.getByText("4 here")).toBeInTheDocument()
+		// Current speed says why it takes no cut; the carry keeps its chip and words.
+		expect(rows[0]).toHaveTextContent("Speed 0.55")
+		expect(rows[0]).toHaveTextContent("Raises current speed")
+		expect(rows[1]).toHaveTextContent("Carry 0.35")
+		expect(rows[1]).toHaveTextContent("+0.35 m/s into the late race for 3.2 s")
+		expect(rows[1]).toHaveTextContent("Always fires while still speeding up")
+		expect(rows[2]).toHaveTextContent("Fires while still speeding up 25% of the time")
+		expect(rows[3]).toHaveTextContent("Not tied to a place on the course")
+		// The search works on this list too.
+		fireEvent.change(screen.getByRole("searchbox", { name: "Search the speed skills" }), { target: { value: "stan" } })
+		await waitFor(() => expect(list.getAllByRole("button")).toHaveLength(1))
 	})
 
 	it("ticks each veteran and each of her skills that can fire here", () => {

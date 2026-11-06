@@ -45,6 +45,19 @@ export interface SkillZoneEntry {
 	/** What a speed skill carries: the target speed it adds (m/s) and its run here (s), with the window. */
 	carry_speed?: number
 	carry_seconds?: number
+	/**
+	 * A speed skill's kind: "target" raises the speed cap (most), "current"
+	 * raises the speed itself, so it pays even while the runner is speeding up.
+	 */
+	speed_kind?: "target" | "current"
+	/**
+	 * A speed skill's ranking score for the Speed list (skill_verdicts.py, rule
+	 * 9): `useful` orders it, never shown; `speed` and `carry` are its parts;
+	 * `accelerating`, the share of a target-speed trigger landing while the
+	 * runner is still speeding up (the late race's first metres, or the start
+	 * for a front-runner-only skill).
+	 */
+	speed_rank?: { useful: number; speed: number; carry: number; accelerating?: number }
 	/** How many times a short-cooldown skill can fire here. */
 	repeats?: number
 	/** What else must hold, in verified words. */
@@ -367,8 +380,19 @@ function chainWords(result: { from: number; to: number }, chain: NonNullable<Ski
 export interface AccelRow {
 	skillId: number
 	entry: SkillZoneEntry
-	/** The API's ranking score: the share landing at the spurt start times the speed it adds. */
+	/** The API's ranking score: `spurt.useful` for an accel, `speed_rank.useful` for a speed skill. */
 	useful: number
+}
+
+/** Highest score first, ties by `rank` (uniques first), then fewer needs, then id. */
+function byScore(rank: (skillId: number) => number) {
+	return (a: AccelRow, b: AccelRow) =>
+		b.useful - a.useful || rank(a.skillId) - rank(b.skillId) || (a.entry.needs?.length ?? 0) - (b.entry.needs?.length ?? 0) || a.skillId - b.skillId
+}
+
+/** A style pill keeps a skill only when that style meets its style clause and its placing (lane A). */
+function shownForStyle(entry: SkillZoneEntry, style: MemberStyle | "all", fieldSize: number): boolean {
+	return style === "all" || (firesForStyle(entry, style) && placesForStyle(entry, style, fieldSize))
 }
 
 /**
@@ -388,15 +412,39 @@ export function accelRows(
 	const rows: AccelRow[] = []
 	for (const [key, entry] of Object.entries(zones)) {
 		if (!entry.effects?.includes("accel") || entry.kind !== "place" || entry.unreadable) continue
-		// A style pill keeps a skill only when that style can meet both its
-		// running-style clause and where it needs to be in the field (lane A:
-		// a unique with no style clause but a back-of-the-field placing used to
-		// show under Front).
-		if (style !== "all" && !(firesForStyle(entry, style) && placesForStyle(entry, style, fieldSize))) continue
+		// Lane A: a unique with no style clause but a back-of-the-field
+		// placing used to show under Front.
+		if (!shownForStyle(entry, style, fieldSize)) continue
 		const useful = entry.spurt?.useful ?? 0
 		if (useful > 0) rows.push({ skillId: Number(key), entry, useful })
 	}
-	return rows.sort((a, b) => b.useful - a.useful || rank(a.skillId) - rank(b.skillId) || a.skillId - b.skillId)
+	return rows.sort(byScore(rank))
+}
+
+/**
+ * "Speed skills on this course" (course-map-feedback-plan.md, lane B; Henry,
+ * 2026-11-04: "is it only possible to get accel? Not the other spd skills?"):
+ * every speed skill worth anything here for this style, by the API's
+ * `speed_rank.useful` (the owner's rule: a target-speed skill is worth less
+ * the more often it fires while the runner is still speeding up). Ties as the
+ * accels, then fewer needs first, the owner's "ease of proc". A skill with no
+ * place on the course ("anywhere", Uma Stan) is listed too: the API ranks it
+ * at its full strength.
+ */
+export function speedRows(
+	zones: SkillZoneMap,
+	style: MemberStyle | "all",
+	rank: (skillId: number) => number = () => 0,
+	fieldSize: number = FIELD_SIZE.cm,
+): AccelRow[] {
+	const rows: AccelRow[] = []
+	for (const [key, entry] of Object.entries(zones)) {
+		if (!entry.effects?.includes("speed") || (entry.kind !== "place" && entry.kind !== "anywhere") || entry.unreadable) continue
+		if (!shownForStyle(entry, style, fieldSize)) continue
+		const useful = entry.speed_rank?.useful ?? 0
+		if (useful > 0) rows.push({ skillId: Number(key), entry, useful })
+	}
+	return rows.sort(byScore(rank))
 }
 
 /**
