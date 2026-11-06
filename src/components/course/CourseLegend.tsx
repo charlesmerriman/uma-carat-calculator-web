@@ -1,8 +1,11 @@
+import type { TrackColours } from "../../services/courseShapeStore"
+
 /**
  * The track view's legend: what its colours and marks mean. Shown with the
  * Track view alone (owner, 2026-11-03): under Strip and Both the strip's words
  * already name every colour. The swatches are the same tokens the track and
- * the strip draw with (notes/course-map-visual-plan.md).
+ * the strip draw with (notes/course-map-visual-plan.md). Its first swatches
+ * follow the track's colours: the phases, or the corners and straights.
  */
 const PHASES = [
 	{ label: "Early-race", colour: "var(--color-course-early)" },
@@ -10,15 +13,21 @@ const PHASES = [
 	{ label: "Late-race", colour: "var(--color-course-late)" },
 	{ label: "Last spurt", colour: "var(--color-course-spurt)" },
 ]
+// By course, the strip's Course row colours: straights, the final straight, and the two corner shades.
+const PARTS = [
+	{ label: "Straight", colour: "var(--color-course-straight)" },
+	{ label: "Final straight", colour: "var(--color-course-straight-final)" },
+	{ label: "Corner", colour: "linear-gradient(90deg, var(--color-course-corner) 50%, var(--color-course-corner-alt) 50%)" },
+]
 const HILLS = [
 	{ label: "Uphill", colour: "var(--color-course-up)" },
 	{ label: "Downhill", colour: "var(--color-course-down)" },
 ]
 
-export default function CourseLegend() {
+export default function CourseLegend({ colours = "phase" }: { colours?: TrackColours }) {
 	return (
 		<ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400" aria-label="Track legend">
-			{PHASES.map((phase) => (
+			{(colours === "course" ? PARTS : PHASES).map((phase) => (
 				<li key={phase.label} className="flex items-center gap-1.5">
 					<span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: phase.colour }} />
 					{phase.label}

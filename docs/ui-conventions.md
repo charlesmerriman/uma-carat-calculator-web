@@ -1974,17 +1974,28 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   and fetches the shape at once): the course along its real shape (`GET
   /race-courses/<id>/shape` through `services/courseQueries.ts`, fetched the first time
   Track is chosen, the box held while it loads) or the schematic
-  (`utils/courseSchematic.ts`, from the record), Real shape | Schematic remembered per
-  device in `services/courseShapeStore.ts`. The look (`notes/course-map-visual-plan.md`,
+  (`utils/courseSchematic.ts`, from the record), Real shape | Schematic and Phase | Course
+  (the surface in the four phase colours, or in the strip's Course row colours: Daptrius,
+  2026-11-06) remembered per device in `services/courseShapeStore.ts`; the Timeline drawer
+  follows the same choice. The look (`notes/course-map-visual-plan.md`,
   "The track"): a kerb under the surface in the four phase colours, thin ticks where a
   phase changes, a gate bar at the start and a chequer at the goal, the last-spurt line
   across the track with a glow over the metres just after it (a look, not a number), hills
   as brackets outside the track, and callouts beside it with `CourseIcon` shapes (one per
-  spot; a corner or hill a course passes twice lists both laps' metres), placed by
-  `placeLabels` from size estimates and then clamped inside the box; the spurt chip sits
-  inside the curve. Each callout's leader is a short line in its own colour with a dot on
-  the track. Later laps are rings (`withLapRings`): ring k blends in over the half turn
-  before the course has turned k full circles, inside or outside per `later_laps`. A full
+  spot, a spot being one number on one stretch of ground: Nakayama 2500's chute corner 3
+  and the next lap's are two; a corner or hill a course passes twice at one spot lists both
+  laps' metres), placed by `placeLabels` from size estimates. **No chip sits on the track,
+  within a track and a half of its kerb, or over a hill's bracket, while a clear spot is
+  left** (Henry and Daptrius, 2026-11-06): every spot tried is scored (`COST`: out of the
+  box, on another chip, on the track, in the margin, over a bracket, a leader across the
+  track) and the cheapest wins, so the box's edge never pushes a chip back over the track.
+  A chip's first try sits just past the margin; it then swings and slides along the track.
+  The spurt chip sits inside the curve, and may lie over the track's inner edge sooner
+  than leave it. On a phone a hill's chip is its triangle and percent. Each callout's
+  leader is a short line in its own colour with a dot on the track. Later laps are rings
+  (`withLapRings`), 2.4 track widths apart (`RING_GAP_TRACKS`; a ringed course's track is
+  at most 3.2% of the course, so a phone's rings fit its bends): ring k blends in over the
+  half turn before the course has turned k full circles, inside or outside per `later_laps`. A full
   circle has 10 degrees of slack (`TURN_SLACK`): real shapes that finish on the straight they
   started on turn a little under (Nakayama 2000: 357; Nakayama 3600: 717 for two). A ground
   change gets a callout ("Dirt from here").
