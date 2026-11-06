@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest"
 import {
-	accelRows, firesForStyle, focusLayer, grade, packLabels, resolveChain, skillShown, skillSpans, verdictLines, veteranLayer, veteranShown,
+	accelRows, FIELD_SIZE, firesForStyle, focusLayer, grade, packLabels, placesForStyle, placingBand, resolveChain, skillShown, skillSpans, verdictLines, veteranLayer, veteranShown,
 	veteranSkillChoices, type SkillZoneEntry, type SkillZoneMap,
 } from "../utils/courseLayers"
 
@@ -291,6 +291,47 @@ describe("accels on this course", () => {
 		// A tie goes to the unique (rank 0), then the lower id.
 		expect(accelRows(zones, "late", (id) => (id === 4 ? 0 : 1)).map((row) => row.skillId)).toEqual([4, 2, 1])
 		expect(accelRows(zones, "all").map((row) => row.skillId)).toEqual([3, 2, 4, 1])
+	})
+
+	// Lane A (notes/course-map-feedback-plan.md): the pills check where in the
+	// field a skill needs to be. The owner's three examples are the table.
+	const IRON = accel({ from: 0, to: 0, useful: 1.2 }, { placing: [{ rate: [65, 70] }] })
+	const MOVING_PAST = accel({ from: 0, to: 0, useful: 1.1 }, { placing: [{ rate: [50, 70] }] })
+	const ANGLING = accel({ from: 0, to: 0, useful: 1 }, { placing: [{ order: [1, 1] }] })
+	const BLOSSOM = accel({ from: 0, to: 0, useful: 0.9 }, { placing: [{ order: [3, null], rate: [0, 40] }] })
+	const TAMAMO = accel({ from: 0, to: 0, useful: 0.8 }, { placing: [{ rate: [70, 75] }, { rate: [20, 30] }] })
+	const FREE = accel({ from: 0, to: 0, useful: 0.5 })
+	const placed: SkillZoneMap = { "1": IRON, "2": MOVING_PAST, "3": ANGLING, "4": BLOSSOM, "5": TAMAMO, "6": FREE }
+
+	it("lists a skill under a style only where that style runs in the field", () => {
+		const ids = (style: Parameters<typeof accelRows>[1]) => accelRows(placed, style).map((row) => row.skillId)
+		// Pump Some Iron and Moving Past: late surgers and end closers.
+		// Angling and Scheming: front runners (the lead, 11% back of 9).
+		// Budding Blossom: 3rd of 9 or lower (33%) and the front 40%, so Pace.
+		// Tamamo's two ways: 20-30% (Pace, and Front's 20-25% overlap) or
+		// 70-75% (Late, End).
+		expect(ids("front")).toEqual([3, 5, 6])
+		expect(ids("runaway")).toEqual([3, 5, 6])
+		expect(ids("pace")).toEqual([4, 5, 6])
+		expect(ids("late")).toEqual([1, 2, 5, 6])
+		expect(ids("end")).toEqual([1, 2, 5, 6])
+		// All is untouched: every skill, same as before.
+		expect(ids("all")).toEqual([1, 2, 3, 4, 5, 6])
+	})
+
+	it("turns a place into a share of the event's field", () => {
+		expect(placingBand({ order: [1, 1] }, 9)).toEqual([100 / 9, 100 / 9])
+		expect(placingBand({ order: [3, null], rate: [0, 40] }, 9)).toEqual([100 / 3, 40])
+		// Victoria por plancha, 2nd or better: 11-22% back of a CM's 9 reaches
+		// into Pace's band; 8-17% of LoH's 12 stays Front only.
+		const victoria = accel({ from: 0, to: 0, useful: 1 }, { placing: [{ order: [1, 2] }] })
+		expect(placesForStyle(victoria, "pace", FIELD_SIZE.cm)).toBe(true)
+		expect(placesForStyle(victoria, "pace", FIELD_SIZE.loh)).toBe(false)
+		expect(placesForStyle(victoria, "front", FIELD_SIZE.loh)).toBe(true)
+		// A place and a rate that can't both hold: no style at all.
+		expect(placingBand({ order: [5, null], rate: [0, 20] }, 9)).toBeNull()
+		// A band that only touches a style's edge doesn't count.
+		expect(placesForStyle(accel({ from: 0, to: 0, useful: 1 }, { placing: [{ rate: [0, 20] }] }), "pace")).toBe(false)
 	})
 })
 

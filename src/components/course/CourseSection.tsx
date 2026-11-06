@@ -37,6 +37,7 @@ import {
 } from "../../services/courseMapStore"
 import {
 	accelRows,
+	FIELD_SIZE,
 	focusLayer,
 	skillShown,
 	veteranLayer,
@@ -476,7 +477,15 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			</div>
 			</div>
 			{/* Beside the map from lg up, under it below; mounted only while open. */}
-			{accelsOpen && <CourseAccelList course={course} className="self-start" />}
+			{accelsOpen && (
+				<CourseAccelList
+					course={course}
+					// A place ("in the lead") becomes a share of the field by the
+					// event's field size; with no event (a test), a CM's.
+					fieldSize={event?.event_type === "league_of_heroes" ? FIELD_SIZE.loh : FIELD_SIZE.cm}
+					className="self-start"
+				/>
+			)}
 			</div>
 			<CourseFactsList course={course} />
 			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}

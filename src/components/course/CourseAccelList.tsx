@@ -145,7 +145,16 @@ function AccelRows({ course, rows, style, owners, skillsById }: {
 }
 
 /** The column: its title with the count, the style pills and the rows. Mounted only while open. */
-export default function CourseAccelList({ course, className = "" }: { course: RaceCourse; className?: string }) {
+export default function CourseAccelList({
+	course,
+	fieldSize,
+	className = "",
+}: {
+	course: RaceCourse
+	/** Runners in the event's race, for the style pills' placing check (FIELD_SIZE). */
+	fieldSize?: number
+	className?: string
+}) {
 	// The guide tab's style until the reader picks a pill.
 	const tab = useStyleTab()
 	const [picked, setPicked] = useState<StyleChoice | null>(null)
@@ -173,8 +182,8 @@ export default function CourseAccelList({ course, className = "" }: { course: Ra
 		return found
 	}, [ready])
 	const rows = useMemo(
-		() => (zones.data ? accelRows(zones.data, style, (skillId) => (owners.has(skillId) ? 0 : 1)) : []),
-		[zones.data, style, owners],
+		() => (zones.data ? accelRows(zones.data, style, (skillId) => (owners.has(skillId) ? 0 : 1), fieldSize) : []),
+		[zones.data, style, owners, fieldSize],
 	)
 	const loaded = zones.data !== undefined && ready !== null
 
