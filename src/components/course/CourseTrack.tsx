@@ -56,6 +56,8 @@ const CHAR_PX = 6.3
 const LABEL_PAD_PX = 18
 const ICON_PX = 18
 const LABEL_HEIGHT_PX = 24
+// The least space kept between two chips, across (and two thirds of it down).
+const CHIP_GAP_PX = 6
 
 type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "downhill" | "mark" | "heal" | "ground" | "layer"
 
@@ -259,6 +261,12 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const outside = clockwise ? 1 : -1
 	const unitsPerPx = box.width / widthPx
 	const P = (metre: number) => pointAtMetre(shape, metre, distance)
+	// The same metre before the laps are pulled apart into rings: every pass of
+	// one spot (a hill run each lap, the home straight) lies on the same ground
+	// here, so "the same spot" is judged on this path, never on the rings. On
+	// the rings, a spot passed three times (Nakayama 3600's home straight) has
+	// its outer pass two ring gaps out, past `near`, and split into two chips.
+	const PB = (metre: number) => pointAtMetre(baseShape, metre, distance)
 
 	const facts = courseFacts(course)
 	const { mid, late, finalSixth } = phaseStarts(distance)
@@ -282,8 +290,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// spot is ONE bracket, the first lap's, and one label with each lap's metres.
 	const hills: { start: number; end: number; kind: "uphill" | "downhill"; label: string; percent: number; starts: number[]; bracket: [number, number][] }[] = []
 	for (const hill of slopeParts(course)) {
-		const middle = P((hill.start + hill.end) / 2)
-		const same = hills.find((other) => other.label === hill.label && near(P((other.start + other.end) / 2), middle))
+		const middle = PB((hill.start + hill.end) / 2)
+		const same = hills.find((other) => other.label === hill.label && near(PB((other.start + other.end) / 2), middle))
 		if (same) {
 			same.starts.push(hill.start)
 			continue
@@ -348,32 +356,39 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		})
 	}
 	const straight = finalStraight(course)
+	// Every other straight: one callout per spot with each lap's start metres,
+	// like the corners (Daptrius's render). Not the one leaving the gate: the
+	// Start callout is already there.
+	const straightSpots: { at: number[]; base: [number, number] }[] = []
+	for (const part of [...course.straights].sort((a, b) => a.start - b.start)) {
+		if (part.start === 0 || part.start === straight?.start) continue
+		const base = PB(part.start)
+		const same = straightSpots.find((spot) => near(spot.base, base))
+		if (same) same.at.push(part.start)
+		else straightSpots.push({ at: [part.start], base })
+	}
 	if (straight) {
+		// On a course of more than one lap the final straight is the home
+		// straight an earlier lap already ran: that pass joins this chip instead
+		// of a second chip beside it (owner, 2026-11-06), named for what it is,
+		// since the earlier metre isn't the final straight yet.
+		const earlier = straightSpots.find((spot) => near(spot.base, PB(straight.start)))
+		if (earlier) straightSpots.splice(straightSpots.indexOf(earlier), 1)
+		const before = earlier ? ` (${earlier.at.map(formatMetres).join(", ")} ${earlier.at.length === 1 ? "a lap before" : "on earlier laps"})` : ""
 		allCallouts.push({
 			key: "final-straight",
 			at: straight.start,
 			point: P(straight.start),
 			label: "Final straight",
 			// Its start, not its length: every other callout counts from the gate.
-			detail: formatMetres(straight.start),
+			detail: formatMetres(straight.start) + before,
 			tone: "straight",
 			icon: "finalStraight",
 			iconRotate: iconTurn(shape, straight.start, distance, "finalStraight"),
 		})
 	}
-	// Every other straight: one callout per spot with each lap's start metres,
-	// like the corners (Daptrius's render). Not the one leaving the gate: the
-	// Start callout is already there.
-	const straightSpots: { at: number[]; point: [number, number] }[] = []
-	for (const part of [...course.straights].sort((a, b) => a.start - b.start)) {
-		if (part.start === 0 || part.start === straight?.start) continue
-		const point = P(part.start)
-		const same = straightSpots.find((spot) => near(spot.point, point))
-		if (same) same.at.push(part.start)
-		else straightSpots.push({ at: [part.start], point })
-	}
 	for (const spot of straightSpots) {
-		allCallouts.push({ key: `straight-${spot.at[0]}`, at: spot.at[0], point: spot.point, label: "Straight", detail: spot.at.map(formatMetres).join(", "), tone: "straight", icon: "straight", iconRotate: iconTurn(shape, spot.at[0], distance, "straight") })
+		allCallouts.push({ key: `straight-${spot.at[0]}`, at: spot.at[0], point: P(spot.at[0]), label: "Straight", detail: spot.at.map(formatMetres).join(", "), tone: "straight", icon: "straight", iconRotate: iconTurn(shape, spot.at[0], distance, "straight") })
 	}
 	for (const hill of hills) {
 		allCallouts.push({
@@ -453,12 +468,44 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		const text = callout.label.length + (callout.detail ? callout.detail.length + 1.5 : 0)
 		return { width: (text * CHAR_PX + LABEL_PAD_PX + (callout.icon ? ICON_PX : 0)) * unitsPerPx, height: LABEL_HEIGHT_PX * unitsPerPx }
 	}
+	// How far out, along `direction`, the track's OTHER passes of this spot run
+	// past `point`: on rings, a chip anchored on an inner pass would otherwise
+	// land on the passes outside it (Nakayama 3600's Start chip sat on the red
+	// final straight, two rings out). A pass is another stretch of the path on
+	// the same ground before the rings (PB), at least a fifth of the race away
+	// along it, so the anchor's own pass never counts.
+	const lastPoint = shape.length - 1
+	const outerPasses = (at: number, point: readonly [number, number], direction: readonly [number, number]) => {
+		const [bx, by] = PB(at)
+		const index = Math.round(metreToFraction(at, distance) * lastPoint)
+		let reach = 0
+		for (let i = 0; i <= lastPoint; i++) {
+			if (Math.abs(i - index) < lastPoint * 0.2) continue
+			if (Math.hypot(baseShape[i][0] - bx, baseShape[i][1] - by) > size * 0.04) continue
+			const past = (shape[i][0] - point[0]) * direction[0] + (shape[i][1] - point[1]) * direction[1]
+			reach = Math.max(reach, past)
+		}
+		return reach
+	}
 	const positions = placeLabels(
 		callouts.map((callout) => {
 			const [ox, oy] = awayFromMiddle(callout.point)
-			return { key: callout.key, anchor: callout.point, direction: callout.inward ? [-ox, -oy] as const : [ox, oy] as const, ...estimate(callout) }
+			const direction = callout.inward ? [-ox, -oy] as const : [ox, oy] as const
+			// The chip is placed from the outermost pass at its spot; the leader
+			// still starts at the callout's own point, across the passes outside it.
+			const out = callout.inward ? 0 : outerPasses(callout.at, callout.point, direction)
+			const anchor = [callout.point[0] + direction[0] * out, callout.point[1] + direction[1] * out] as const
+			// A few px of air round each chip when checking for clashes: the
+			// widths are estimates from the text, and a chip moved off an inner
+			// pass otherwise met its neighbour edge to edge (Goal and Corner 1 on Oi 2000).
+			const { width, height } = estimate(callout)
+			return { key: callout.key, anchor, direction, width: width + CHIP_GAP_PX * unitsPerPx, height: height + (CHIP_GAP_PX / 1.5) * unitsPerPx }
 		}),
 		labelReach,
+		// No chip lies across the track: half the track and its kerb either side
+		// of the path is the track. (A wide chip at a bend, like Nakayama 3600's
+		// "Final straight 3,290m (1,615m a lap before)", reached back over it.)
+		{ points: shape, halfWidth: track * 0.7 },
 	)
 	// Nothing may spill past the box: a chip near the edge slides back in.
 	for (const callout of callouts) {
