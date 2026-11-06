@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest"
 import {
-	accelRows, FIELD_SIZE, firesForStyle, focusLayer, grade, packLabels, placesForStyle, placingBand, resolveChain, skillShown, skillSpans, verdictLines, veteranLayer, veteranShown,
+	accelRows, FIELD_SIZE, speedRows, firesForStyle, focusLayer, grade, packLabels, placesForStyle, placingBand, resolveChain, skillShown, skillSpans, verdictLines, veteranLayer, veteranShown,
 	veteranSkillChoices, type SkillZoneEntry, type SkillZoneMap,
 } from "../utils/courseLayers"
 
@@ -291,6 +291,29 @@ describe("accels on this course", () => {
 		// A tie goes to the unique (rank 0), then the lower id.
 		expect(accelRows(zones, "late", (id) => (id === 4 ? 0 : 1)).map((row) => row.skillId)).toEqual([4, 2, 1])
 		expect(accelRows(zones, "all").map((row) => row.skillId)).toEqual([3, 2, 4, 1])
+	})
+
+	it("lists the speed skills by the API's speed score, fewer needs first on a tie (lane B)", () => {
+		const speed = (useful: number, extra: Partial<SkillZoneEntry> = {}): SkillZoneEntry => ({
+			kind: "place", zones: [{ start: 300, end: 700, kind: "random" }], styles: null, effects: ["speed"],
+			speed_kind: "target", speed_rank: { useful, speed: useful, carry: 0 }, ...extra,
+		})
+		const zones: SkillZoneMap = {
+			"1": speed(0.35, { needs: ["In the lead", "Close to many runners"] }),
+			"2": speed(0.35, { needs: ["In the lead"] }),
+			"3": speed(0.55, { styles: ["end"] }),
+			// No place on the course (Uma Stan): listed, at the API's score.
+			"4": { kind: "anywhere", zones: [], styles: null, effects: ["speed"], speed_rank: { useful: 0.15, speed: 0.15, carry: 0 } },
+			// Worth nothing here, can't fire, unreadable, or an accel: not listed.
+			"5": speed(0),
+			"6": { kind: "never", zones: [], styles: null, effects: ["speed"] },
+			"7": speed(1, { unreadable: true }),
+			"8": accel({ from: 0, to: 0, useful: 1.2 }),
+		}
+		expect(speedRows(zones, "all").map((row) => row.skillId)).toEqual([3, 2, 1, 4])
+		expect(speedRows(zones, "front").map((row) => row.skillId)).toEqual([2, 1, 4])
+		// The unique tie-break still comes before needs.
+		expect(speedRows(zones, "front", (id) => (id === 1 ? 0 : 1)).map((row) => row.skillId)).toEqual([1, 2, 4])
 	})
 
 	// Lane A (notes/course-map-feedback-plan.md): the pills check where in the
