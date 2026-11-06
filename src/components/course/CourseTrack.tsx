@@ -168,7 +168,9 @@ const TONES: Record<Tone, string> = {
 	mark: "border-transparent bg-gray-800 text-[10px] text-gray-400",
 	heal: "border-[color:var(--color-course-heal)] bg-gray-800 text-[color:var(--color-course-heal)]",
 	ground: "border-[color:var(--color-course-dirt)] bg-gray-800 text-gray-100",
-	layer: "border-transparent text-[10.5px] font-bold text-[#0b0b0f] shadow-none",
+	// The lit skill's ink is a theme token (light on a light theme's deep
+	// brand); a veteran's chip sets its own dark ink in CalloutBox.
+	layer: "border-transparent text-[10.5px] font-bold text-[color:var(--color-course-lit-ink)] shadow-none",
 }
 const ICON_TONES: Partial<Record<Tone, string>> = {
 	corner: "text-[color:var(--color-course-leader-corner)]",
@@ -200,7 +202,12 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	return (
 		<div
 			className={`pointer-events-none absolute inline-flex items-center gap-1 whitespace-nowrap rounded-[7px] border px-2 py-[3px] text-[11px] leading-tight shadow-[0_2px_8px_rgb(0_0_0/25%)] ${TONES[callout.tone]}`}
-			style={{ ...style, ...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}) }}
+			style={{
+				...style,
+				...(callout.colour ? { background: callout.colour, borderColor: callout.colour } : {}),
+				// A veteran's colour is bright on every theme, so it keeps the dark ink.
+				...(callout.colour && callout.colour !== LIT ? { color: "#0b0b0f" } : {}),
+			}}
 		>
 			{callout.icon && <CourseIcon name={callout.icon} rotate={callout.iconRotate} className={`h-3.5 w-3.5 shrink-0 ${ICON_TONES[callout.tone] ?? ""}`} />}
 			{/* An icon-only chip (a bare track) has no label. */}
