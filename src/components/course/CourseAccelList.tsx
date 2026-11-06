@@ -15,6 +15,10 @@
  * (FramedUma). The pills open on the guide tab's style. Beside the map it
  * scrolls within itself past the screen's height, so "Show all" never
  * strands the map at the top of a long page.
+ *
+ * A search box above the pills (Henry, 2026-11-04: "We need search function
+ * for accel") narrows the rows by the skill's name or its owner uma's,
+ * client-side, inside the picked style.
  */
 import { useMemo, useState } from "react"
 import { FramedUma } from "../FramedUma"
@@ -37,6 +41,11 @@ const STYLES: { value: StyleChoice; label: string }[] = [
 const STYLE_NAMES: Record<string, string> = { front: "Front", pace: "Pace", late: "Late", end: "End" }
 // Enough to see the best of a style; the rest behind "Show all".
 const FIRST_ROWS = 8
+
+/** Lower case with the accents dropped, so "condor" finds "Cóndor" too. */
+function folded(text: string): string {
+	return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+}
 
 interface Owner {
 	uma: CatalogueUma
@@ -68,17 +77,21 @@ function RankParts({ entry }: { entry: AccelRow["entry"] }) {
 	)
 }
 
-function AccelRows({ course, rows, style, owners, skillsById }: {
+function AccelRows({ course, rows, style, searching, owners, skillsById }: {
 	course: RaceCourse
 	rows: AccelRow[]
 	style: StyleChoice
+	/** A search is narrowing the rows: an empty list says so. */
+	searching: boolean
 	owners: Map<number, Owner>
 	skillsById: Map<number, { name: string; image: string | null }>
 }) {
 	const oshiIds = useOshiIds()
 	const focus = useCourseFocus()
 	const [all, setAll] = useState(false)
-	if (rows.length === 0) return <p className="text-xs text-gray-400">No accel lands at the late-race start here for this style.</p>
+	if (rows.length === 0) {
+		return <p className="text-xs text-gray-400">{searching ? "No skill here matches that." : "No accel lands at the late-race start here for this style."}</p>
+	}
 	const shown = all ? rows : rows.slice(0, FIRST_ROWS)
 	return (
 		<>
@@ -159,6 +172,7 @@ export default function CourseAccelList({
 	const tab = useStyleTab()
 	const [picked, setPicked] = useState<StyleChoice | null>(null)
 	const style = picked ?? tab
+	const [query, setQuery] = useState("")
 	const zones = useCourseZones(course.id)
 	const catalogue = usePvpCatalogue()
 	const ready = catalogue.status === "ready" ? catalogue : null
@@ -185,6 +199,17 @@ export default function CourseAccelList({
 		() => (zones.data ? accelRows(zones.data, style, (skillId) => (owners.has(skillId) ? 0 : 1), fieldSize) : []),
 		[zones.data, style, owners, fieldSize],
 	)
+	// The search: a row stays when its skill's name, or its owner uma's,
+	// holds the words typed (one substring, case and accents ignored).
+	const needle = folded(query.trim())
+	const found = useMemo(() => {
+		if (!needle) return rows
+		return rows.filter(({ skillId }) => {
+			const name = ready?.skillsById.get(skillId)?.name ?? `Skill ${skillId}`
+			const owner = owners.get(skillId)?.uma.name ?? ""
+			return folded(name).includes(needle) || folded(owner).includes(needle)
+		})
+	}, [rows, needle, ready, owners])
 	const loaded = zones.data !== undefined && ready !== null
 
 	return (
@@ -194,8 +219,16 @@ export default function CourseAccelList({
 		>
 			<div className="flex items-baseline justify-between gap-2">
 				<h4 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-300">Accels that land at the spurt</h4>
-				{loaded && <span className="shrink-0 text-[11px] text-gray-500">{rows.length} here</span>}
+				{loaded && <span className="shrink-0 text-[11px] text-gray-500">{found.length} here</span>}
 			</div>
+			<input
+				type="search"
+				value={query}
+				onChange={(event) => setQuery(event.target.value)}
+				placeholder="Search a skill or uma"
+				aria-label="Search the accels"
+				className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-800/70 px-2.5 py-1 text-xs text-gray-100 placeholder:text-gray-500 focus:border-brand focus:outline-none"
+			/>
 			<div role="group" aria-label="Running style" className="my-2 flex flex-wrap gap-1">
 				{STYLES.map((option) => (
 					<button
@@ -216,7 +249,7 @@ export default function CourseAccelList({
 			) : !loaded ? (
 				<p className="text-xs text-gray-400" role="status">Loading the accels…</p>
 			) : (
-				<AccelRows course={course} rows={rows} style={style} owners={owners} skillsById={ready.skillsById} />
+				<AccelRows course={course} rows={found} style={style} searching={needle !== ""} owners={owners} skillsById={ready.skillsById} />
 			)}
 		</aside>
 	)
