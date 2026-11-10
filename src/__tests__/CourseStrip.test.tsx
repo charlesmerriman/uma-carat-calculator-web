@@ -77,13 +77,11 @@ describe("CourseStrip, across the page", () => {
 		expect(markers.getByText("Halfway")).toBeInTheDocument()
 	})
 
-	it("shows the ground row only where the ground changes (Tokyo dirt 1600's turf start)", () => {
-		const { container, unmount } = render(<CourseStrip course={TOKYO_DIRT_1600} />)
-		expect(band(container, "ground")).not.toBeNull()
-		expect(within(band(container, "ground")).getByText("Dirt")).toBeInTheDocument()
-		unmount()
-		const chukyo = render(<CourseStrip course={CHUKYO_1200} />)
-		expect(band(chukyo.container, "ground")).toBeNull()
+	it("draws no ground row, even where the course changes surface (Tokyo dirt 1600's turf start)", () => {
+		// The race counts as its own surface from the gate (Daptrius, 2026-11-09).
+		const { container } = render(<CourseStrip course={TOKYO_DIRT_1600} />)
+		expect(band(container, "ground")).toBeNull()
+		expect(screen.queryByText("Turf start")).toBeNull()
 	})
 
 	it("draws no profile and no hills on a flat course (Funabashi dirt 1600)", () => {
