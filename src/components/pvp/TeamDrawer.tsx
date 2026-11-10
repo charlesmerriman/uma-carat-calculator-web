@@ -43,6 +43,7 @@ import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { focusTeamDrawerButton } from "../../services/TeamDrawerContext"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { usePvpGuide } from "../../hooks/usePvpGuide"
+import { useRoster } from "../../services/rosterQueries"
 import { lockedTeamEvents, usePvpAccess } from "../../hooks/usePvpAccess"
 import { formatDate } from "../../utils/dateFormat"
 import { hasEnded, raceEventsInOrder } from "../../utils/pvpGuide"
@@ -62,6 +63,10 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 	const { status, teams, mode, saveState, ensureLoaded, pinTeam, editTeam, createTeam } = usePvpTeams()
 	const { championsMeetingData, leagueOfHeroesData } = useCalculatorData()
 	const catalogue = usePvpCatalogue()
+	// The Collection, for the pickers' "Owned only" switch, as on My team. A
+	// signed-in account only: a guest has no Collection, and the query shares
+	// My team's cache, so opening the window costs at most one request.
+	const roster = useRoster(mode === "account").data
 	const reduceMotion = useReducedMotion()
 	const windowRef = useRef<HTMLElement>(null)
 	const headingRef = useRef<HTMLHeadingElement>(null)
@@ -151,6 +156,7 @@ export function TeamDrawer({ onClose }: { onClose: () => void }) {
 							members={choice.kind === "team" ? choice.team.members : []}
 							index={catalogue}
 							guide={guideState.status === "ready" ? guideState.guide : null}
+							roster={mode === "account" ? roster : undefined}
 							onChange={(members) => {
 								// No team for this event yet: the first pick makes one, as on My team.
 								if (choice.kind === "team") editTeam(choice.team.key, { members })
