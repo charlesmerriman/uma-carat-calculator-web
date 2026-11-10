@@ -133,6 +133,11 @@ export interface PvpSkillRef {
 	rarity: number
 	/** The outfit whose unique this skill is, or null. */
 	unique_of: string | null
+	/**
+	 * A unique's inherited copy: a white by `rarity`, framed in the unique's
+	 * purple. Absent (an older API, a ref the editor builds) reads as false.
+	 */
+	is_inherited?: boolean
 	/** This skill's own version label: "○ white", "◎ white", "◎ gold", "evolved". */
 	version: string
 	/** The game's place in the group, as on PvpSkillVersion; `rarity` says the colour. */
