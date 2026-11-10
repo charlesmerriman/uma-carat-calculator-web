@@ -25,6 +25,20 @@ const post = (path: string, body?: unknown, method = "POST"): Promise<Response> 
 		body: body === undefined ? undefined : JSON.stringify(body),
 	})
 
+/**
+ * What a gallery rate limit says, with the wait when the server gave one.
+ * DRF words it "Request was throttled. Expected available in 2100 seconds."
+ * The Retry-After header holds the same number, but a cross-origin page can't
+ * read it (it isn't a CORS-safelisted header), so the number comes from the
+ * sentence. If DRF ever rewords it, the message just loses the number.
+ */
+export function throttledText(detail: unknown): string {
+	const seconds = typeof detail === "string" ? Number(/(\d+) second/.exec(detail)?.[1]) : NaN
+	if (!Number.isFinite(seconds)) return "You've been busy in the gallery. Give it a little while and try again."
+	const minutes = Math.max(1, Math.ceil(seconds / 60))
+	return `You've been busy in the gallery. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`
+}
+
 /** The sentence a refusal carries, or `fallback` when it has none. */
 export async function refusalText(response: Response, fallback: string): Promise<string> {
 	return (await refusal(response, fallback)).text
@@ -37,7 +51,11 @@ export async function refusalText(response: Response, fallback: string): Promise
  */
 export async function refusal(response: Response, fallback: string): Promise<{ text: string; field: string | null }> {
 	try {
-		const body = (await response.json()) as { error?: unknown; field?: unknown }
+		const body = (await response.json()) as { error?: unknown; field?: unknown; detail?: unknown }
+		// A rate limit is DRF's own 429, which carries `detail`, never `error`.
+		// Without this the player saw the route's generic "didn't load" and a
+		// Try again button that kept failing for up to an hour.
+		if (response.status === 429) return { text: throttledText(body.detail), field: null }
 		return {
 			text: typeof body.error === "string" && body.error ? body.error : fallback,
 			field: typeof body.field === "string" ? body.field : null,
