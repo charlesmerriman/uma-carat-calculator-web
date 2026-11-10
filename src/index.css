@@ -428,8 +428,6 @@ html {
 	--color-course-up: #c9873a;
 	--color-course-down: #4c9bc0;
 	--color-course-ink-hill: #0d0d12;
-	--color-course-turf: #4f8a3c;
-	--color-course-dirt: #9a7046;
 	--color-course-height: #263743;
 	--color-course-height-line: #8fb8c9;
 	/* The track view's bed, ticks and marks (components/course/CourseTrack.tsx). */

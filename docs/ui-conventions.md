@@ -1998,7 +1998,9 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   half turn before the course has turned k full circles, inside or outside per `later_laps`. A full
   circle has 10 degrees of slack (`TURN_SLACK`): real shapes that finish on the straight they
   started on turn a little under (Nakayama 2000: 357; Nakayama 3600: 717 for two). A ground
-  change gets a callout ("Dirt from here").
+  change (Tokyo dirt 1600's turf start) gets no callout and no strip row: the race counts as
+  its own surface from the gate, and showing the turf made players doubt the aptitude
+  (Daptrius, 2026-11-09). Only the facts list names it.
 - **Layers** (`utils/courseLayers.ts`, `services/courseMapStore.ts`): the skill row open
   in the team builder's Guide skills panel lights its zones (the panel sets the store's
   `focus`, and clears it on unmount), and the Layers menu (`CourseLayersMenu`, off by
