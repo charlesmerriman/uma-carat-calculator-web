@@ -145,7 +145,10 @@ export interface BannerWindowGroup {
 	end_date: string
 	/** True if any constituent's dates are still an estimate. */
 	is_predicted: boolean
-	/** In API order. Never empty. */
+	/**
+	 * In API order, except that a Golden Week revival comes after the banner it
+	 * runs beside (see groupTimelineEvents). Never empty.
+	 */
 	banners: BannerTimelineForViewing[]
 	/**
 	 * The first campaign attached to any constituent. Campaigns attach per
@@ -338,6 +341,12 @@ export const TIMELINE_FOCUS_HIGHLIGHT =
  * caller's sort still holds. The input is ascending by start, so that first
  * constituent is also the group's earliest.
  *
+ * WITHIN a group, a Golden Week revival goes after the ordinary banner it runs
+ * beside, and nothing else moves (a stable sort). API order put it on top
+ * of some cards and under others, and the card's sections and its title both
+ * read in this order (Daptrius, 2026-11-04). The group's identity is its
+ * start date, never its first banner, so the move changes no key.
+ *
  * Pure, and called on an already-filtered list: grouping must run AFTER the
  * past/future split, or a group could straddle the boundary and drag an ended
  * banner into the current view. A staggered pair whose halves END on different
@@ -388,6 +397,16 @@ export function groupTimelineEvents(events: TimelineEvent[]): TimelineRow[] {
 		groupsByKey.set(startKey, group)
 		if (jpKey && !groupsByKey.has(jpKey)) groupsByKey.set(jpKey, group)
 		rows.push({ kind: "banner_window", group })
+	}
+
+	// The revival under the banner it runs beside. Array.prototype.sort is
+	// stable, so every other pair keeps its API order.
+	const revivalLast = (banner: BannerTimelineForViewing): number =>
+		banner.banner_category === "golden_week_revival" ? 1 : 0
+	for (const row of rows) {
+		if (row.kind === "banner_window" && row.group.banners.length > 1) {
+			row.group.banners.sort((a, b) => revivalLast(a) - revivalLast(b))
+		}
 	}
 
 	return rows
