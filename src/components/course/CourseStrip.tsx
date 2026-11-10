@@ -1,7 +1,7 @@
 /**
  * The course as a strip: the race from the gate to the finish, read in rows
  * (the height profile, the phases, the straights and corners, the hills, the
- * ground where it changes, the layers, the 24 sections, the metres), each row
+ * layers, the 24 sections, the metres), each row
  * named in a label column, the marks' words above. The look is the overhaul's
  * ruler (notes/course-map-visual-plan.md, "The ruler"); the words go on the
  * segments, never symbols (Henry, 2026-11-01), with Daptrius's triangles on
@@ -36,7 +36,6 @@ import {
 	rulerTicks,
 	sectionBoundaries,
 	slopeParts,
-	surfaceParts,
 	trackParts,
 	type CourseMarker,
 	type CourseOverlays,
@@ -106,8 +105,6 @@ const LIT = "var(--color-course-lit)"
 const LIT_INK = "var(--color-course-lit-ink)"
 const VET_INK = "#0b0b0f"
 
-// Light ink on the darker fills, dark on the light ones.
-const LIGHT_INK = "#f8fafc"
 const PHASE_FILLS = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-spurt)"]
 const PHASE_INKS = ["var(--color-course-ink-early)", "var(--color-course-ink-mid)", "var(--color-course-ink-late)", "var(--color-course-ink-spurt)"]
 
@@ -370,7 +367,6 @@ export default function CourseStrip({
 
 	const track = trackParts(course)
 	const hills = slopeParts(course)
-	const ground = surfaceParts(course)
 	const phases = spans.filter((span) => span.kind === "phase")
 	const layerSpans = (overlays?.spans.filter((span) => span.kind !== "phase") ?? []) as (CourseSpan & { key?: string })[]
 	const layerRows = Math.max(0, ...layerSpans.map((span) => (span.lane ?? 0) + 1), ...laneHeads.map((head) => head.firstLane + head.lanes))
@@ -475,24 +471,10 @@ export default function CourseStrip({
 					))}
 				</Row>
 			)}
-			{ground.length > 0 && (
-				<Row vertical={vertical} label="Ground" band="ground" size={vertical ? 36 : 20}>
-					{ground.map((part) => (
-						<Segment
-							stripPx={widthPx}
-							key={part.start}
-							start={part.start}
-							end={part.end}
-							distance={distance}
-							vertical={vertical}
-							fill={part.surface === "turf" ? "var(--color-course-turf)" : "var(--color-course-dirt)"}
-							ink={LIGHT_INK}
-							label={part.surface === "turf" ? (part.start === 0 ? "Turf start" : "Turf") : "Dirt"}
-							shortLabel={part.surface === "turf" ? "Turf" : "Dirt"}
-						/>
-					))}
-				</Row>
-			)}
+			{/* No ground row where a course changes surface (Tokyo dirt 1600's
+			    turf start): the race counts as its own surface from the gate,
+			    and a "Turf" stretch made players doubt which aptitude it needs
+			    (Daptrius, 2026-11-09). The facts list still names it. */}
 			{layerRows > 0 && !vertical && (
 				<div className="flex flex-col gap-0.5" data-band="layers">
 					{Array.from({ length: layerRows }, (_, lane) => (

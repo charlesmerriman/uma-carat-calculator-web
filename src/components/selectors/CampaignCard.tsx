@@ -9,7 +9,8 @@ import { SelectorTargetPicker } from "./SelectorTargetPicker"
 import { StepUpSelectionStrip } from "./StepUpSelectionStrip"
 import type { PlannedCampaign, PlannedProduct } from "../../hooks/useSelectorPlanner"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
-import { useState, type RefObject } from "react"
+import { useRememberedOpen } from "../../hooks/useRememberedOpen"
+import type { RefObject } from "react"
 import type {
 	BannerUma,
 	BannerSupport,
@@ -66,7 +67,13 @@ export const CampaignCard = ({
 	// is a first-paint question, and a listener would undo the reader's own
 	// toggling on every resize. This page only renders behind /app's loading
 	// gate, so `window` is always there.
-	const [open, setOpen] = useState(
+	//
+	// What the reader opened or hid is remembered per campaign until a reload,
+	// as on the planner (Daptrius, 2026-11-04: changing pages unhid
+	// everything). The card a deep link names is the exception: the link asked
+	// for it, so it opens whatever was remembered, and is not remembered itself.
+	const [open, setOpen] = useRememberedOpen(
+		focusRef ? null : `campaign-${event.id}`,
 		() => defaultOpen || (typeof window !== "undefined" && window.matchMedia("(min-width: 64rem)").matches)
 	)
 	// Passed campaigns are removed before this component receives them. Undated
@@ -137,7 +144,7 @@ export const CampaignCard = ({
 	return (
 		<section
 			ref={focusRef}
-			className={`card-panel overflow-hidden ${FOCUS_SCROLL_MARGIN} ${locked ? "opacity-60" : ""}`}
+			className={`card-panel relative overflow-hidden ${FOCUS_SCROLL_MARGIN} ${locked ? "opacity-60" : ""}`}
 		>
 			{/* WHY 49rem IS A CONSTANT AND NOT `max-content`
 			    Every card is its own grid, so an intrinsic track sizes each one to its
@@ -157,20 +164,24 @@ export const CampaignCard = ({
 					<div className="flex flex-wrap items-center gap-2">
 						<h3 className="text-base font-semibold text-gray-100">{event.name}</h3>
 						{event.is_predicted && <PredictedBadge />}
-					</div>
-					<p className="mt-2 text-sm font-medium text-gray-300">{dates}</p>
-					<div className="mt-1 flex items-center justify-between gap-2">
-						<p className="text-xs text-gray-500">Campaign purchases</p>
+						{/* Hide sits where a folded card's chevron is, at the card's
+						    top right, so opening and hiding happen in one spot
+						    (Daptrius, 2026-11-04). Below lg the header spans the card,
+						    so the end of the title row is that corner; from lg the
+						    header is the first of three columns, so the button pins to
+						    the card's corner, beside the Selectors heading. */}
 						<button
 							type="button"
 							aria-expanded={true}
 							onClick={() => setOpen(false)}
-							className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+							className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-gray-400 transition hover:bg-gray-700 hover:text-gray-100 lg:absolute lg:right-2.5 lg:top-2.5"
 						>
 							Hide
 							<ChevronDown className="h-3.5 w-3.5 shrink-0 rotate-180" aria-hidden="true" />
 						</button>
 					</div>
+					<p className="mt-2 text-sm font-medium text-gray-300">{dates}</p>
+					<p className="mt-1 text-xs text-gray-500">Campaign purchases</p>
 				</header>
 
 				<div className="min-w-0 border-b border-gray-700 px-4 py-3 lg:border-b-0 lg:border-r">

@@ -4,7 +4,7 @@
  * drawer's team / empty state / pin, and Escape.
  */
 
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TeamDrawerButton } from "../components/navbar/TeamDrawerButton"
@@ -50,6 +50,10 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 	}),
 }))
 vi.mock("../hooks/usePvpGuide", () => ({ usePvpGuide: () => ({ status: "none" }) }))
+// The Collection behind the pickers' "Owned only" switch. A guest (every test
+// here) never asks for it; the spy pins that.
+const useRosterSpy = vi.hoisted(() => vi.fn((_enabled: boolean) => ({ data: undefined })))
+vi.mock("../services/rosterQueries", () => ({ useRoster: useRosterSpy }))
 // The drawer as everyone will have it, unless a test locks it; the rule for
 // WHO is locked has its own tests (usePvpAccess.test.tsx).
 const access = vi.hoisted(() => ({ value: "open" as "open" | "pending" | "locked" }))
@@ -148,6 +152,15 @@ describe("TeamDrawerButton, locked (early access)", () => {
 })
 
 describe("TeamDrawer", () => {
+	it("asks for the Collection only when signed in, for the Owned only switch", () => {
+		useRosterSpy.mockClear()
+		renderDrawer(teamsValue([]))
+		expect(useRosterSpy).toHaveBeenLastCalledWith(false)
+		cleanup()
+		renderDrawer(teamsValue([], { mode: "account" }))
+		expect(useRosterSpy).toHaveBeenLastCalledWith(true)
+	})
+
 	it("shows and offers only events with My team open while locked", () => {
 		access.value = "locked"
 		cmEvents = [LIBRA, OPEN]

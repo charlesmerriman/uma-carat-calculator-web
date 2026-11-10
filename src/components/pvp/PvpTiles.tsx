@@ -848,16 +848,18 @@ function BorrowTab({ borrow, className = "", children }: { borrow: boolean; clas
 // The game's skill rarities: 1 white, 2 gold, 3 to 6 the unique kinds. A gold
 // skill is drawn the way the game draws it, on the gold gradient (.skill-gold
 // in App.css). The rest take theme tokens, not stock palette classes, so the
-// frame reads on light themes too: the step-up violet for uniques.
+// frame reads on light themes too: the step-up violet for uniques, and for a
+// unique's inherited copy, which the game stores as a white (rarity 1) but a
+// player reads as the unique it came from.
 /** An evolved skill is drawn on the pink (.skill-evolved), whatever its rarity
  * says; otherwise `fallback`, the chip's or mention's own surface. */
 function skillSurface(skill: { is_evolved: boolean }, fallback: string): string {
 	return skill.is_evolved ? "skill-evolved" : fallback
 }
 
-function skillSurfaceClass(rarity: number): string {
-	if (rarity === GOLD_SKILL_RARITY) return "skill-gold"
-	if (rarity >= 3) return "border-step-up-border/70 bg-gray-800"
+function skillSurfaceClass(skill: Pick<PvpSkillRef, "rarity" | "is_inherited">): string {
+	if (skill.rarity === GOLD_SKILL_RARITY) return "skill-gold"
+	if (skill.rarity >= 3 || skill.is_inherited) return "border-step-up-border/70 bg-gray-800"
 	return "border-gray-600 bg-gray-800"
 }
 
@@ -879,7 +881,7 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 	const small = size === "small"
 	return (
 		<div
-			className={`flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill.rarity))} ${
+			className={`flex w-full min-w-0 items-center border text-left leading-tight ${skillSurface(skill, skillSurfaceClass(skill))} ${
 				small ? "h-[2.125rem] gap-1 rounded py-0.5 pl-0.5 pr-1 text-[11px]" : "h-10 gap-2 rounded-md pl-1 pr-2 text-[13px]"
 			}`}
 		>
@@ -943,7 +945,7 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 			{/* rounded-lg, not a capsule: the square icon's corners stuck out
 			    through a capsule's round ends. The skills panel's rows and the
 			    mention pill are rounded rectangles too. */}
-			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border py-0.5 pl-0.5 pr-2.5 ${skillSurface(skill, skillSurfaceClass(skill.rarity))}`}>
+			<div className={`flex max-w-full items-center gap-1.5 rounded-lg border py-0.5 pl-0.5 pr-2.5 ${skillSurface(skill, skillSurfaceClass(skill))}`}>
 				{skill.image ? (
 					<img src={skill.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
 				) : (

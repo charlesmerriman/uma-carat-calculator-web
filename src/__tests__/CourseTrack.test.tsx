@@ -76,9 +76,10 @@ describe("CourseTrack", () => {
 		expect(container.querySelectorAll('polyline[opacity="0.25"]')).toHaveLength(0)
 	})
 
-	it("calls out where the ground changes, and keeps the spurt on a phone's compact track", () => {
+	it("leaves out where the ground changes, and keeps the spurt on a phone's compact track", () => {
+		// The race counts as its own surface from the gate (Daptrius, 2026-11-09).
 		const { unmount } = render(<CourseTrack course={TOKYO_DIRT_1600} shape={schematicShape(TOKYO_DIRT_1600)} />)
-		expect(screen.getByText("Dirt from here")).toBeInTheDocument()
+		expect(screen.queryByText("Dirt from here")).toBeNull()
 		unmount()
 		render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} widthPx={340} compact />)
 		expect(screen.getByText("Spurt starts")).toBeInTheDocument()

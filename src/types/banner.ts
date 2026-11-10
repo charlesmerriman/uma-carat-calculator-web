@@ -113,9 +113,9 @@ export interface Uma extends JpDated {
 /**
  * A support card that can appear on a banner.
  *
- * Deliberately has no `is_time_limited` / `is_three_star`: those gates are an
- * uma-side concept (★3 has no support equivalent — supports are SSR/SR), so a
- * support card is only ever gated on its cutoff date.
+ * Deliberately has no `is_time_limited` / `is_three_star`: those flags are
+ * uma-side. A support card is gated on its cutoff date and on `rarity`
+ * (a selector grants only an SSR; see `isCardSelectable`).
  */
 export interface SupportCard extends JpDated {
 	id: number

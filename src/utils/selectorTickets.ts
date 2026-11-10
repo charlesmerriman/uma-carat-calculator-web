@@ -145,8 +145,8 @@ export function isCardEligible(
 /**
  * The fields the intrinsic gate reads. Structural rather than importing `Uma`,
  * so this module stays free of the API types — and OPTIONAL because a
- * `SupportCard` carries neither. Absent means "no such restriction exists for
- * this kind of card", which is also what the model defaults encode.
+ * `SupportCard` carries neither flag. Absent means "no such restriction exists
+ * for this kind of card", which is also what the model defaults encode.
  */
 export interface IntrinsicallyGatedCard {
 	/**
@@ -158,6 +158,12 @@ export interface IntrinsicallyGatedCard {
 	id: number
 	is_time_limited?: boolean
 	is_three_star?: boolean
+	/**
+	 * Both card types carry it: an uma's starting stars, a support card's
+	 * R / SR / SSR, each as 1 / 2 / 3. Null or absent reads as 3, the same
+	 * default `is_three_star` applies.
+	 */
+	rarity?: number | null
 }
 
 /**
@@ -170,9 +176,16 @@ export interface IntrinsicallyGatedCard {
  *
  * `is_three_star` is compared against `false` rather than coerced, so an
  * absent field (a support card) reads as unrestricted rather than as ★1.
+ *
+ * The rarity check is what keeps SR and R support cards out. A support
+ * selector only ever grants an SSR, and once the timeline started listing SR
+ * and R cards on banners they gained a release date, so the date gate (which
+ * used to keep them out by having none) let them through. Kept in step with
+ * `is_intrinsically_selectable` in the API's eligibility.py.
  */
 export function isCardSelectable(card: IntrinsicallyGatedCard): boolean {
 	if (card.is_time_limited) return false
+	if (card.rarity != null && card.rarity < 3) return false
 	return card.is_three_star !== false
 }
 

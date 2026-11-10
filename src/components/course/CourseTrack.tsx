@@ -37,7 +37,6 @@ import {
 	pointAtMetre,
 	shapeBounds,
 	slopeParts,
-	surfaceParts,
 	trackParts,
 	withLapRings,
 	type CourseOverlays,
@@ -74,7 +73,7 @@ const BRACKET_CLEAR_TRACKS = 0.9
 // kerb (1.55) plus most of a track of air between them.
 const RING_GAP_TRACKS = 2.4
 
-type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "downhill" | "mark" | "heal" | "ground" | "layer"
+type Tone = "start" | "goal" | "spurt" | "corner" | "straight" | "uphill" | "downhill" | "mark" | "heal" | "layer"
 
 interface Callout {
 	key: string
@@ -186,7 +185,6 @@ const TONES: Record<Tone, string> = {
 	// Quiet, but on the card's fill so a leader passing behind never strikes the words.
 	mark: "border-transparent bg-gray-800 text-[10px] text-gray-400",
 	heal: "border-[color:var(--color-course-heal)] bg-gray-800 text-[color:var(--color-course-heal)]",
-	ground: "border-[color:var(--color-course-dirt)] bg-gray-800 text-gray-100",
 	// The lit skill's ink is a theme token (light on a light theme's deep
 	// brand); a veteran's chip sets its own dark ink in CalloutBox.
 	layer: "border-transparent text-[10.5px] font-bold text-[color:var(--color-course-lit-ink)] shadow-none",
@@ -207,7 +205,6 @@ const LEADERS: Record<Tone, string> = {
 	downhill: "var(--color-course-down)",
 	mark: "var(--color-course-leader-mark)",
 	heal: "var(--color-course-heal)",
-	ground: "var(--color-course-dirt)",
 	layer: "transparent",
 }
 
@@ -475,11 +472,9 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			percent: hill.percent,
 		})
 	}
-	// Where the ground changes (Tokyo dirt 1600 starts on turf), as the strip's
-	// ground row says.
-	for (const part of surfaceParts(course).slice(1)) {
-		allCallouts.push({ key: `ground-${part.start}`, at: part.start, point: P(part.start), label: part.surface === "dirt" ? "Dirt from here" : "Turf from here", detail: formatMetres(part.start), tone: "ground" })
-	}
+	// No callout where the ground changes (Tokyo dirt 1600 starts on turf): the
+	// race counts as its own surface from the gate, and "Dirt from here" made
+	// players doubt which aptitude it needs (Daptrius, 2026-11-09).
 	// Halfway and Position keep ends keep their callouts (owner, 2026-11-03), quietly.
 	for (const marker of facts.markers) {
 		if (marker.kind === "spurt-start") continue

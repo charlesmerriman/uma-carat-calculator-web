@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { FOCUS_TAILROOM } from '../hooks/useFocusScroll'
@@ -133,5 +133,27 @@ describe('Selectors campaign deep links', () => {
     renderSelectors('/app/selectors?campaign=1')
 
     expect(tailroom()).toHaveLength(0)
+  })
+})
+
+describe('Selectors campaign folding', () => {
+  // The soonest campaign starts open; jsdom has no matchMedia, so the rest fold.
+  it('keeps a hidden campaign hidden after leaving the page and coming back', () => {
+    const first = renderSelectors()
+    fireEvent.click(screen.getByRole('button', { name: /Hide/ }))
+    expect(screen.queryByRole('button', { name: /Hide/ })).toBeNull()
+    first.unmount()
+
+    renderSelectors()
+    expect(screen.queryByRole('button', { name: /Hide/ })).toBeNull()
+  })
+
+  it('opens the campaign a link names, even one the reader hid', () => {
+    const first = renderSelectors()
+    fireEvent.click(screen.getByRole('button', { name: /Hide/ }))
+    first.unmount()
+
+    renderSelectors('/app/selectors?campaign=1')
+    expect(screen.getByRole('button', { name: /Hide/ })).toBeInTheDocument()
   })
 })
