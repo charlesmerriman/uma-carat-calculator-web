@@ -137,6 +137,19 @@ describe('buildEligibleCardCatalogue', () => {
     expect(build('support', null, umas, supports).map((c) => c.label)).toEqual(['An SSR'])
   })
 
+  it('leaves SR and R support cards out, even with a release date', () => {
+    // A support selector grants only an SSR. SR and R cards on a timeline
+    // banner have a JP date, so the date gate alone would let them in.
+    const cards = build('support', null, [], [
+      supportBanner('Debut', [
+        { ...makeSupport('An R', '2024-01-01'), rarity: 1 },
+        { ...makeSupport('An SR', '2024-01-01'), rarity: 2 },
+        { ...makeSupport('An SSR', '2024-01-01'), rarity: 3 },
+      ]),
+    ])
+    expect(cards.map((c) => c.label)).toEqual(['An SSR'])
+  })
+
   // ── The cutoff ──────────────────────────────────────────────────────────
 
   it('includes a card released exactly ON the cutoff', () => {
