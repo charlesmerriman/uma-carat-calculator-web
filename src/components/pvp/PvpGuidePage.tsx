@@ -612,18 +612,19 @@ function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogg
 	}
 	return (
 		<div ref={ref} className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
-			{/* One centred group from `md:`: the past toggle sits beside the event
-			    controls it changes. It was pinned to the far left of a three-column
-			    grid, with the right column left empty to balance it. Stacked on a
-			    phone, toggle first. */}
-			<div className="mx-auto flex w-full max-w-[96rem] flex-col items-stretch gap-2 px-3 py-2 md:flex-row md:items-center md:justify-center md:px-2">
+			{/* From `md:`, three columns: the past toggle at the far left, under the
+			    site's logo, and Previous / the event / Next centred, the right column
+			    empty to balance them. The toggle sat right beside Previous for a
+			    while, and a reader stepping back through events kept clicking it
+			    instead (Daptrius, 2026-11-04). Stacked on a phone, toggle first. */}
+			<div className="mx-auto flex w-full max-w-[96rem] flex-col items-stretch gap-2 px-3 py-2 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center md:px-2">
 				{hasPast && (
-					<button type="button" className={`${controlButtonClass} w-full md:w-auto`} onClick={onTogglePast}>
+					<button type="button" className={`${controlButtonClass} w-full md:col-start-1 md:w-auto md:justify-self-start`} onClick={onTogglePast}>
 						<History className="h-4 w-4 text-brand" />
 						{showPast ? "Hide past events" : "Show past events"}
 					</button>
 				)}
-				<div className="flex items-center justify-center gap-2">
+				<div className="flex items-center justify-center gap-2 md:col-start-2">
 					<button
 						type="button"
 						className={paginationButtonClass}
