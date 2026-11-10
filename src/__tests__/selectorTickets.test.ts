@@ -98,6 +98,15 @@ describe('isCardSelectable', () => {
     expect(isCardSelectable({ id: 1 })).toBe(true)
   })
 
+  it('refuses SR and R support cards, and admits an SSR or an unknown rarity', () => {
+    // A support selector only grants an SSR. SR and R cards now sit on
+    // timeline banners, so they have release dates and only rarity bars them.
+    expect(isCardSelectable({ id: 1, rarity: 1 })).toBe(false)
+    expect(isCardSelectable({ id: 1, rarity: 2 })).toBe(false)
+    expect(isCardSelectable({ id: 1, rarity: 3 })).toBe(true)
+    expect(isCardSelectable({ id: 1, rarity: null })).toBe(true)
+  })
+
   it('is independent of any cutoff', () => {
     // The whole point of the second gate: an unrestricted (null) cutoff makes
     // isCardEligible wave everything through, and this must still refuse.
