@@ -105,6 +105,18 @@ describe('groupTimelineEvents', () => {
     expect(groups(rows)[0].banners.map((b) => b.id)).toEqual([189, 190])
   })
 
+  it('puts a Golden Week revival under the banner it runs beside, whichever the API sent first', () => {
+    const start = '2029-03-09T19:30:14.400000Z'
+    const end = '2029-03-20T19:30:13.400000Z'
+    const revival = banner(189, start, end, { banner_category: 'golden_week_revival' })
+    const standard = banner(190, start, end)
+
+    for (const order of [[revival, standard], [standard, revival]]) {
+      const [group] = groups(groupTimelineEvents(order))
+      expect(group.banners.map((b) => b.id)).toEqual([190, 189])
+    }
+  })
+
   it('leaves banners with different start dates as separate rows', () => {
     const rows = groupTimelineEvents([
       banner(1, '2029-01-01T00:00:00Z', '2029-01-08T00:00:00Z'),
