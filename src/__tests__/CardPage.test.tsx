@@ -53,7 +53,9 @@ describe("CardPage", () => {
 	it("shows the card, its hints and event skills, and its trainee", async () => {
 		renderAt("/app/cards/30001")
 		expect(await screen.findByRole("heading", { level: 1, name: "Special Week" })).toBeInTheDocument()
-		expect(screen.getByText("SSR · Guts")).toBeInTheDocument()
+		// Rarity and type are two tags in the hero now, not one line of text.
+		expect(screen.getByText("SSR")).toBeInTheDocument()
+		expect(screen.getByText("Guts")).toBeInTheDocument()
 		expect(screen.getByRole("heading", { name: "Skill hints" })).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Corner Adept/ })).toBeInTheDocument()
 		expect(screen.getByRole("heading", { name: "Skills from events" })).toBeInTheDocument()

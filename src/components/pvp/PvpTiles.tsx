@@ -8,31 +8,18 @@
  * on touch screens. Written fresh here rather than shared, so the Timeline's
  * tile stays untouched by guide work. The popup is drawn on <body>
  * (useHoverPopup), and nothing inside a tile with a detail opens a detail of
- * its own (InsideHoverContext).
+ * its own (InsideHoverContext). The popup itself lives in hoverPopup.tsx,
+ * which the Encyclopedia's skill rows share.
  */
 
-import { createContext, useContext, useId, useState, type ReactNode } from "react"
-import {
-	autoUpdate,
-	flip,
-	FloatingPortal,
-	offset,
-	shift,
-	useDismiss,
-	useFloating,
-	useFocus,
-	useHover,
-	useInteractions,
-	useTransitionStyles,
-	type Placement,
-} from "@floating-ui/react"
-import { useReducedMotion } from "framer-motion"
+import { useContext, useId, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { GOLD_SKILL_RARITY, type UmaAptitude } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
+import { InsideHoverContext, useHoverPopup } from "./hoverPopup"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { FramedCard } from "../FramedCard"
@@ -78,91 +65,6 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
 			<NotePieces pieces={splitNoteText(text)} />
 		</span>
 	)
-}
-
-/**
- * True inside a tile or chip that has a hover detail (WithDetail), on its face
- * and in its detail alike. Tailwind's `group-hover:` answers to ANY hovered
- * `.group` above it, not the nearest, so a [[mention]] in a tile's note opened
- * its own popup the moment the tile was hovered, drawn over the tile's: two
- * at once for "Activate [[A]] with [[B]]" (2026-11-02). A mention on a chip's
- * face did the same. Inside one, a mention draws its pill alone, and the
- * detail lists what the note names at its bottom (MentionedSkills).
- */
-const InsideHoverContext = createContext(false)
-
-// How long the pointer rests on a tile before its popup opens, so a mouse
-// crossing a grid of skills doesn't flash a popup per cell. Focus and a tap
-// open it at once.
-const HOVER_OPEN_DELAY_MS = 120
-
-/**
- * The popup of a hover detail (WithDetail, SkillMention): opened by hover,
- * keyboard focus (`:focus-visible` only, as before) or a tap on a touch
- * screen, and drawn in a portal on <body> by Floating UI (2026-11-02).
- *
- * Why a portal: drawn inside its tile, a popup could rise only as high as the
- * tile's stacking context, and the guide makes several. The General skills
- * column is `position: sticky` and each deck cell is a framer-motion `layout`
- * box, so a popup from that column slid under the cards beside it (the
- * owner's "Perfect Spot!" screenshot). On <body> nothing covers it. Floating
- * UI also opens it above when there's no room below (`flip`), keeps it on
- * screen (`shift`) and follows the tile while the page scrolls (`autoUpdate`,
- * only while it's open).
- *
- * The popup is in the DOM only while open, so it is `aria-hidden`: the
- * screen reader's copy is the caller's `sr-only` element, always in the DOM
- * and named by `aria-describedby`, as the old in-place popup was.
- *
- * `onOpenChange` hears every open and close: a skill's card lights the skill
- * on the course map while it is open (notes/course-map-plan-2.md, section 8).
- */
-function useHoverPopup(placement: Placement, onOpenChange?: (open: boolean) => void) {
-	const [open, setOpenState] = useState(false)
-	const setOpen = (next: boolean) => {
-		setOpenState(next)
-		onOpenChange?.(next)
-	}
-	const reducedMotion = useReducedMotion()
-	const { refs, floatingStyles, context } = useFloating({
-		open,
-		onOpenChange: setOpen,
-		placement,
-		middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
-		whileElementsMounted: autoUpdate,
-	})
-	const { getReferenceProps } = useInteractions([
-		useHover(context, { mouseOnly: true, delay: { open: HOVER_OPEN_DELAY_MS } }),
-		useFocus(context, { visibleOnly: true }),
-		// Escape, or a tap anywhere else, closes it.
-		useDismiss(context),
-	])
-	// A short fade in and out; none for a reader who asked for less motion.
-	const { isMounted, styles } = useTransitionStyles(context, { duration: reducedMotion ? 0 : 150 })
-	const referenceProps = {
-		ref: refs.setReference,
-		...getReferenceProps({
-			// A touch screen has no hover, and a tap's focus isn't
-			// :focus-visible, so a tap toggles it.
-			onPointerUp(event) {
-				if (event.pointerType === "touch") setOpen(!open)
-			},
-		}),
-	}
-	const popup = (content: ReactNode, widthClassName: string) =>
-		isMounted && (
-			<FloatingPortal>
-				<div
-					ref={refs.setFloating}
-					aria-hidden="true"
-					style={{ ...floatingStyles, ...styles }}
-					className={`pointer-events-none z-50 max-w-[80vw] rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${widthClassName}`}
-				>
-					<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>
-				</div>
-			</FloatingPortal>
-		)
-	return { referenceProps, popup }
 }
 
 // The skills a note's pieces mention that the guide's map holds, each once,
@@ -241,7 +143,13 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 	const skill = useSkillMentions()[name.toLowerCase()]
 	const insideHover = useContext(InsideHoverContext)
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom-start", (open) => skill && lightOnCourseMap(skill, open))
+	// For early access the card ends in a link to the skill's page, so it has
+	// to be reachable with the pointer (hoverPopup.tsx, `interactive`).
+	const preview = useSkillsPreview()
+	const { referenceProps, popup } = useHoverPopup("bottom-start", {
+		onOpenChange: (open) => skill && lightOnCourseMap(skill, open),
+		interactive: preview && skill?.game_id != null,
+	})
 	if (!skill) return <>{name}</>
 	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
@@ -271,7 +179,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 			<span id={detailId} role="tooltip" className="sr-only">
 				<SkillDetail skill={skill} />
 			</span>
-			{popup(<><SkillDetail skill={skill} /><CourseVerdict skillId={skill.id} /></>, "w-72")}
+			{popup(<><SkillDetail skill={skill} /><CourseVerdict skillId={skill.id} /></>, "w-80")}
 		</span>
 	)
 }
@@ -309,7 +217,7 @@ function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
  * no `detail` it renders the child plainly and is not focusable.
  */
-function WithDetail({ label, detail, children, className = "", detailClassName = "w-64", onOpenChange }: {
+function WithDetail({ label, detail, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false }: {
 	label: string
 	detail: ReactNode
 	children: ReactNode
@@ -318,9 +226,11 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 	detailClassName?: string
 	/** Hears the detail open and close (a skill chip lights the course map). */
 	onOpenChange?: (open: boolean) => void
+	/** The detail holds a link (a skill card's "Open its page"): let the pointer reach it. */
+	interactive?: boolean
 }) {
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom", onOpenChange)
+	const { referenceProps, popup } = useHoverPopup("bottom", { onOpenChange, interactive })
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
@@ -913,6 +823,7 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 }
 
 export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRef; note: string; size?: "regular" | "small" }) {
+	const preview = useSkillsPreview()
 	const detail = (
 		<>
 			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
@@ -922,7 +833,7 @@ export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRe
 	// A small cell (under a deck card) has no room for a caption.
 	const sub = size === "small" ? "" : skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
 	return (
-		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-72">
+		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-80" interactive={preview && skill.game_id != null}>
 			<SkillFace skill={skill} sub={sub} size={size} />
 		</WithDetail>
 	)
@@ -942,7 +853,13 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 	// the grey text classes step aside and the note dims with opacity instead.
 	const gold = skill.rarity === GOLD_SKILL_RARITY
 	return (
-		<WithDetail label={skill.name} detail={detail} detailClassName="w-72" onOpenChange={(open) => lightOnCourseMap(skill, open)}>
+		<WithDetail
+			label={skill.name}
+			detail={detail}
+			detailClassName="w-80"
+			onOpenChange={(open) => lightOnCourseMap(skill, open)}
+			interactive={preview && skill.game_id != null}
+		>
 			{/* rounded-lg, not a capsule: the square icon's corners stuck out
 			    through a capsule's round ends. The skills panel's rows and the
 			    mention pill are rounded rectangles too. */}

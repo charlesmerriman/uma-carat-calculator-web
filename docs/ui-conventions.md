@@ -2521,14 +2521,65 @@ workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: 
   `GET /encyclopedia/<kind>/<id>` through TanStack Query (`services/encyclopediaQueries.ts`). The
   API sends no dates: banners and release dates come from `/calculator-data`
   (`utils/encyclopediaBanners.ts`), so date prediction stays in one place.
-- **Rules that bite**: every uma is `FramedUma` from its `portrait`; cards draw the bordered
-  `image` (owner's answer, revisited with the visual overhaul); every date goes through
-  `formatDate`; a section with no data is left out, never drawn empty; a JP-only outfit's
-  aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words, layout classes) live in
-  `utils/encyclopedia.ts`, so the component files export components only.
+- **Rules that bite**: every uma is `FramedUma` from its `portrait`; every card is `FramedCard`
+  from its `image_borderless` (the visual overhaul settled the owner's first-round answer that
+  way, as in the Collection; a card with no frameless art draws its bordered `image`); every
+  date goes through `formatDate`; a section with no data is left out, never drawn empty; a
+  JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
+  colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
+  components only.
 - **The navbar**: an Encyclopedia tab beside Rankings, drawn on the same rule, so early access
-  has seven tabs on a phone (labels hide below 440px). Its short phone label and the fit are the
-  visual overhaul's.
+  has seven tabs on a phone (icons only below 440px, so there is no phone label to choose).
+
+### The look (the visual overhaul, 2026-11-12)
+
+Drawn first on a canvas (https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6; the mocks and their
+generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to it.
+
+- **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
+  in `@layer components` so a Tailwind utility at the call site still wins. Classes are
+  `enc-*` plus four that are used outside these pages: `.skill-card` (the hover card),
+  `.kind-pill`, `.apt-letter`, `.grade-pill`. Every colour is a theme token, except the game's
+  own (aptitude letters, race grades, rarity, a gold / evolved / unique skill), which are fixed
+  fills with dark ink so they read the same on all twelve themes.
+- **The frame** (`EncyclopediaTabs`): the Rankings page's shape, a display-face title, one line
+  of description, underlined tabs. **The filter bar** (`listFilters.tsx`: `Toolbar`,
+  `SearchBox`, `Count`, `Chips`): one card, each filter a small caps label and its chips. The
+  group is named by `aria-label`, and the visible label is `aria-hidden`. On a phone a filter's
+  chips are one row that scrolls sideways.
+- **A detail page** is `Crumbs`, a `Hero` (art, eyebrow, name, tags, `Fact`s on the right), a
+  `JumpBar`, then a `Section` card per group of facts (`pieces.tsx`). `--enc-accent` on the hero
+  tints its corner: the brand by default, a card's type colour, a skill's own.
+- **The jump bar sticks**, and where depends on what scrolls: under the navbar when the
+  document scrolls (a phone, a short window), at 0 inside the desktop app shell. Its offsets in
+  `encyclopedia.css` are index.css's `scroll-padding-top` numbers: change them together. It
+  draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
+  `#hash` links, so Back leaves the page.
+- **A skill row** (`skillRows.tsx`, `.enc-skill`) is quiet on purpose: the theme's surface,
+  with the kind as a 3px spine, a faint wash and a `KindPill`. The solid gold and pink
+  (`.skill-gold`, `.skill-evolved`) stay on the PvP guides' chips. Its second line says how
+  the page's uma or card has it, else its type and owner.
+- **Loading is a skeleton** (`PageSkeleton`, `GridSkeleton`, `.enc-skeleton`), and "nothing
+  matched" or "didn't load" is `EmptyNote`, a dashed box.
+
+### The skill card (`components/pvp/SkillDetail.tsx`, `.skill-card`)
+
+What hovering a skill shows, on a guide's chips, mentions and deck cells and on every
+Encyclopedia skill row: a header in the skill's own colour (icon, name, kind, and for early
+access the type and cost), the description, a guide's note, When and Does as a small table,
+timing as chips, where it comes from, its other versions, and a footer.
+
+- **Every element is a `<span>`**: a mention sits inside a sentence, where a `<div>` is
+  invalid. A label's colon is `sr-only`, for a screen reader and for copied text.
+- **The popup is `components/pvp/hoverPopup.tsx`** (`useHoverPopup`), lifted out of
+  `PvpTiles.tsx` so both places draw one card. `interactive` lets the pointer travel into the
+  popup (Floating UI's `safePolygon`) and click its link; it is on only for early access on a
+  skill with a `game_id`, because that is when the card ends in "Open its page". The popup is
+  `aria-hidden` (its words are in the caller's `sr-only` copy), so that link is `tabIndex={-1}`
+  there (`InsidePopupContext`). `tap: false` is for a row that is itself a link.
+- **An Encyclopedia row fetches its card's body on first hover** (`useSkillPage`, one request
+  per skill, shared with the skill's page), through `utils/skillCard.ts`
+  (`rowToCardSkill`, `detailToCardSkill`). It never fetches for a row nobody hovered.
 
 ## Selectors page (`components/selectors/`)
 

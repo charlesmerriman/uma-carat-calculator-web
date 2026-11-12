@@ -1,0 +1,1524 @@
+/* ==========================================================================
+   THE ENCYCLOPEDIA (components/encyclopedia/, components/skills/) and the
+   skill card every skill hover draws (components/pvp/SkillDetail.tsx).
+
+   The look drawn on the overhaul canvas (the notes repo's
+   notes/encyclopedia-overhaul/, where the mocks and their generator are).
+   One file because the pieces are shared across six pages and the PvP
+   guide's hover: a hero, a filter bar, tiles, skill rows, the aptitude
+   letters, the stat bars, the career rail and the skill card.
+
+   RULES THIS FILE KEEPS
+   - Every colour is a theme token (var(--color-*), --card-fill), so all
+     twelve themes restyle it for free. The exceptions are the game's own
+     colours (aptitude letters, race grades, gold and evolved skills): fixed
+     fills with dark ink on top, the .skill-gold / .grade-badge reasoning, so
+     they read the same on every theme.
+   - A token colour never sets text on top of a fixed fill, and a fixed fill
+     never sits behind theme-coloured text.
+   - Motion is a hover lift only, and it is off under prefers-reduced-motion.
+
+   IN @layer components, like .card-panel in App.css: a Tailwind utility at
+   the call site beats a rule here, which is how a one-off tweak is meant to
+   be made. Imported by App.tsx beside App.css.
+   ========================================================================== */
+
+@layer components {
+	/* ---- The frame: title, tabs ------------------------------------------- */
+
+	.enc-head {
+		display: flex;
+		flex-direction: column;
+		gap: 0.625rem;
+	}
+	.enc-head__title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-family: var(--font-display);
+		font-size: 1.5rem;
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--color-brand);
+	}
+	.enc-head__title svg {
+		width: 1.375rem;
+		height: 1.375rem;
+		flex-shrink: 0;
+	}
+	.enc-head__sub {
+		font-size: 0.875rem;
+		line-height: 1.5;
+		color: var(--color-gray-400);
+	}
+
+	/* Underlined tabs, the Rankings page's: the active one carries the brand
+	   rule, the strip a hairline the rule sits on. */
+	.enc-tabs {
+		display: flex;
+		gap: 0.25rem;
+		overflow-x: auto;
+		border-bottom: 1px solid var(--color-edge);
+		scrollbar-width: none;
+	}
+	.enc-tab {
+		display: inline-flex;
+		flex-shrink: 0;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: -1px;
+		padding: 0.5rem 0.875rem 0.625rem;
+		border-bottom: 2px solid transparent;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--color-gray-400);
+		transition: color 0.15s;
+	}
+	.enc-tab svg {
+		width: 1rem;
+		height: 1rem;
+	}
+	.enc-tab:hover {
+		color: var(--color-gray-200);
+	}
+	.enc-tab[aria-current="page"] {
+		border-bottom-color: var(--color-brand);
+		color: var(--color-gray-100);
+	}
+
+	/* ---- The filter bar ----------------------------------------------------
+	   One card: the search box, then each filter as a small caps label and its
+	   chips, so nobody has to guess what a row of chips filters. */
+
+	.enc-toolbar {
+		display: flex;
+		flex-direction: column;
+		gap: 0.625rem;
+		padding: 0.75rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.75rem;
+		background: var(--card-fill);
+		box-shadow: var(--card-shadow);
+	}
+	.enc-toolbar__top {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1rem;
+	}
+	.enc-search {
+		position: relative;
+		flex: 1 1 16rem;
+		max-width: 24rem;
+	}
+	.enc-search svg {
+		position: absolute;
+		top: 50%;
+		left: 0.75rem;
+		width: 1rem;
+		height: 1rem;
+		transform: translateY(-50%);
+		color: var(--color-gray-400);
+		pointer-events: none;
+	}
+	.enc-search input {
+		width: 100%;
+		padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 0.5rem;
+		background: var(--color-gray-900);
+		font-size: 0.875rem;
+		color: var(--color-gray-100);
+	}
+	.enc-search input::placeholder {
+		color: var(--color-gray-500);
+	}
+	.enc-search input:focus {
+		border-color: var(--color-brand);
+		outline: none;
+	}
+	.enc-count {
+		font-family: var(--font-display);
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--color-gray-200);
+		white-space: nowrap;
+	}
+	.enc-filters {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+	}
+	.enc-filter {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+	.enc-filter__label {
+		flex-shrink: 0;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	/* On a phone a filter's chips are one row that scrolls sideways, so three
+	   filters cost three lines, not eight. */
+	.enc-filter__chips {
+		display: flex;
+		gap: 0.25rem;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.enc-filter__chips > * {
+		flex-shrink: 0;
+	}
+	@media (min-width: 40rem) {
+		.enc-filter__chips {
+			flex-wrap: wrap;
+			overflow-x: visible;
+		}
+	}
+	.enc-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3125rem;
+		padding: 0.1875rem 0.625rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 999px;
+		font-size: 0.75rem;
+		line-height: 1.25rem;
+		color: var(--color-gray-300);
+		transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+	}
+	.enc-chip:hover {
+		border-color: var(--color-gray-500);
+		color: var(--color-gray-100);
+	}
+	.enc-chip[aria-pressed="true"] {
+		border-color: var(--color-brand);
+		background: color-mix(in srgb, var(--color-brand) 15%, transparent);
+		color: var(--color-gray-100);
+	}
+
+	/* A dot in a kind's own colour, on a filter chip or beside a word. */
+	.enc-dot {
+		width: 0.5rem;
+		height: 0.5rem;
+		flex-shrink: 0;
+		border-radius: 999px;
+		background: var(--dot, var(--color-gray-400));
+	}
+
+	/* ---- Tiles: an uma or a card in a list ---------------------------------
+	   Art on top, the name under it, one quiet line of facts. The whole tile is
+	   the link and lifts on hover. */
+
+	.enc-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(9.25rem, 1fr));
+		gap: 0.75rem;
+	}
+	.enc-tile {
+		position: relative;
+		display: flex;
+		height: 100%;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.875rem 0.625rem 0.75rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.75rem;
+		background: var(--card-fill);
+		text-align: center;
+		transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+	}
+	.enc-tile:hover,
+	.enc-tile:focus-visible {
+		border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+		box-shadow: 0 10px 24px rgb(0 0 0 / 28%);
+		transform: translateY(-2px);
+	}
+	.enc-tile__art {
+		width: 5.75rem;
+		height: 5.75rem;
+		flex-shrink: 0;
+	}
+	.enc-tile__art--card {
+		width: 6.5rem;
+		height: auto;
+		aspect-ratio: 3 / 4;
+	}
+	.enc-tile__name {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		font-size: 0.875rem;
+		font-weight: 600;
+		line-height: 1.25;
+		color: var(--color-gray-100);
+	}
+	.enc-tile__sub {
+		overflow: hidden;
+		max-width: 100%;
+		font-size: 0.75rem;
+		line-height: 1.3;
+		color: var(--color-gray-400);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.enc-tile__facts {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem 0.375rem;
+		margin-top: auto;
+		padding-top: 0.125rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-300);
+	}
+	/* "Owned": a tick in the tile's top right corner, clear of the art. */
+	.enc-tile__owned {
+		position: absolute;
+		top: 0.4375rem;
+		right: 0.4375rem;
+		display: inline-flex;
+		width: 1.25rem;
+		height: 1.25rem;
+		align-items: center;
+		justify-content: center;
+		border-radius: 999px;
+		background: var(--color-brand);
+		color: var(--color-gray-900);
+	}
+	.enc-tile__owned svg {
+		width: 0.75rem;
+		height: 0.75rem;
+		stroke-width: 3;
+	}
+
+	/* A row-shaped link: another outfit, a card, an uma that has a skill. */
+	.enc-rows {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+		gap: 0.5rem;
+	}
+	.enc-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+		padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.625rem;
+		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		transition: border-color 0.15s, background-color 0.15s;
+	}
+	a.enc-row:hover,
+	a.enc-row:focus-visible {
+		border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+		background: color-mix(in srgb, var(--color-brand) 6%, transparent);
+	}
+	.enc-row__art {
+		width: 3rem;
+		height: 3rem;
+		flex-shrink: 0;
+	}
+	.enc-row__art--card {
+		width: 2.75rem;
+		height: auto;
+		aspect-ratio: 3 / 4;
+	}
+	.enc-row__text {
+		min-width: 0;
+		flex: 1;
+	}
+	.enc-row__name {
+		display: block;
+		overflow: hidden;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-gray-100);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.enc-row__sub {
+		display: block;
+		overflow: hidden;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.enc-row__go {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+		color: var(--color-gray-500);
+	}
+	a.enc-row:hover .enc-row__go {
+		color: var(--color-brand);
+	}
+
+	/* ---- A detail page ------------------------------------------------------ */
+
+	.enc-crumbs {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	.enc-crumbs a {
+		color: var(--color-gray-300);
+		transition: color 0.15s;
+	}
+	.enc-crumbs a:hover {
+		color: var(--color-brand);
+	}
+	.enc-crumbs svg {
+		width: 0.75rem;
+		height: 0.75rem;
+		color: var(--color-gray-500);
+	}
+
+	/* The hero: the art, the name, the facts. A wash of the page's accent in
+	   the corner the art sits in (--enc-accent: the brand by default, a card's
+	   type colour, a skill's own), over the card's fill. */
+	.enc-hero {
+		--enc-accent: var(--color-brand);
+		position: relative;
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 1rem 1.25rem;
+		overflow: hidden;
+		padding: 1.25rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 1rem;
+		background:
+			radial-gradient(60rem 22rem at 0% 0%, color-mix(in srgb, var(--enc-accent) 13%, transparent), transparent 60%),
+			var(--card-fill);
+		box-shadow: var(--card-shadow);
+	}
+	@media (min-width: 64rem) {
+		.enc-hero {
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			padding: 1.5rem;
+		}
+	}
+	.enc-hero__art {
+		width: 6.5rem;
+		height: 6.5rem;
+	}
+	.enc-hero__art--card {
+		width: 7.5rem;
+		height: auto;
+		aspect-ratio: 3 / 4;
+	}
+	@media (min-width: 40rem) {
+		.enc-hero__art {
+			width: 9.5rem;
+			height: 9.5rem;
+		}
+		.enc-hero__art--card {
+			width: 11.5rem;
+		}
+	}
+	/* A skill's hero art is its 64px icon at its own size, never stretched. */
+	.enc-hero__art--skill {
+		width: 4rem;
+		height: 4rem;
+		border-radius: 0.75rem;
+	}
+	.enc-hero__body {
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 0.375rem;
+	}
+	.enc-hero__eyebrow {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.enc-hero__name {
+		font-family: var(--font-display);
+		font-size: 1.625rem;
+		font-weight: 700;
+		line-height: 1.15;
+		color: var(--color-gray-100);
+	}
+	@media (min-width: 40rem) {
+		.enc-hero__name {
+			font-size: 2rem;
+		}
+	}
+	.enc-hero__title {
+		font-size: 1rem;
+		color: var(--color-gray-200);
+	}
+	.enc-hero__jp {
+		font-size: 0.8125rem;
+		color: var(--color-gray-400);
+	}
+	.enc-hero__tags {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+		margin-top: 0.25rem;
+	}
+	.enc-hero__lead {
+		max-width: 46rem;
+		margin-top: 0.25rem;
+		font-size: 0.9375rem;
+		line-height: 1.55;
+		color: var(--color-gray-200);
+	}
+	/* The facts beside the name: release dates, cost. Full width under the
+	   name until there is room for a third column. */
+	.enc-hero__facts {
+		display: grid;
+		grid-column: 1 / -1;
+		grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+		gap: 0.5rem;
+		align-content: start;
+	}
+	@media (min-width: 64rem) {
+		.enc-hero__facts {
+			grid-column: auto;
+			grid-template-columns: 11.5rem;
+		}
+	}
+	.enc-fact {
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.625rem;
+		background: color-mix(in srgb, var(--color-gray-900) 55%, transparent);
+	}
+	.enc-fact__label {
+		display: block;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.enc-fact__value {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+		font-family: var(--font-display);
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--color-gray-100);
+	}
+
+	/* A small labelled pill in a hero or on a row. */
+	.enc-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.125rem 0.5rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		line-height: 1.25rem;
+		color: var(--color-gray-200);
+		white-space: nowrap;
+	}
+	.enc-tag--jp {
+		border-color: currentColor;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-gray-300);
+	}
+	/* Rarity, in the game's metals: fixed fills, dark ink. */
+	.enc-tag--ssr,
+	.enc-tag--sr,
+	.enc-tag--r {
+		border-color: transparent;
+		font-weight: 800;
+		letter-spacing: 0.03em;
+		color: #1b1420;
+	}
+	.enc-tag--ssr {
+		background: linear-gradient(120deg, #9be7ff 0%, #c9b1ff 45%, #ffb3d9 75%, #ffe08a 100%);
+	}
+	.enc-tag--sr {
+		background: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+	}
+	.enc-tag--r {
+		background: linear-gradient(135deg, #f3f5f9 0%, #a9b3c4 100%);
+	}
+
+	/* "You own this", in the hero. */
+	.enc-owned {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.625rem;
+		margin-top: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		border: 1px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
+		border-radius: 0.625rem;
+		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
+		font-size: 0.875rem;
+		color: var(--color-gray-100);
+	}
+	.enc-owned b {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3125rem;
+		color: var(--color-brand);
+	}
+	.enc-owned svg {
+		width: 0.875rem;
+		height: 0.875rem;
+	}
+	.enc-owned a {
+		margin-left: auto;
+		font-size: 0.75rem;
+		color: var(--color-brand);
+	}
+
+	/* The jump bar under the hero: one chip per section the page has. It
+	   sticks to the top of the scroller so a long page stays one tap away. */
+	/* WHERE IT STICKS depends on what scrolls. On a phone, and in a short
+	   desktop window, the document scrolls under the sticky navbar, so the bar
+	   parks below it: the same offsets as index.css's scroll-padding-top
+	   ("STICKY NAVBAR OFFSET"; change them together). In the desktop app shell
+	   the page scrolls inside its own box, the navbar is outside it, and the
+	   top of that box is 0. The two media queries are the desktop-nav and
+	   app-shell variants of index.css, spelled out because this is plain CSS. */
+	.enc-jump {
+		position: sticky;
+		top: 7.75rem;
+		z-index: 5;
+		display: flex;
+		gap: 0.25rem;
+		overflow-x: auto;
+		margin: -0.25rem 0;
+		padding: 0.375rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.75rem;
+		background: color-mix(in srgb, var(--color-gray-900) 88%, transparent);
+		backdrop-filter: blur(8px);
+		scrollbar-width: none;
+	}
+	@media (min-width: 64rem) {
+		.enc-jump {
+			top: 4.125rem;
+		}
+	}
+	@media (min-width: 64rem) and (min-height: 32rem) {
+		.enc-jump {
+			top: 0;
+		}
+	}
+	.enc-jump button {
+		flex-shrink: 0;
+		padding: 0.3125rem 0.75rem;
+		border-radius: 0.5rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--color-gray-300);
+		transition: background-color 0.15s, color 0.15s;
+	}
+	.enc-jump button:hover {
+		background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+		color: var(--color-gray-100);
+	}
+	.enc-jump__count {
+		margin-left: 0.3125rem;
+		font-size: 0.6875rem;
+		color: var(--color-gray-400);
+	}
+
+	/* A section: a card with a display-face heading, and room on the heading's
+	   right for a switch or a count. */
+	.enc-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.75rem;
+		background: var(--card-fill);
+		box-shadow: var(--card-shadow);
+		scroll-margin-top: 3.5rem;
+	}
+	@media (min-width: 40rem) {
+		.enc-section {
+			padding: 1.125rem 1.25rem 1.25rem;
+		}
+	}
+	.enc-section__head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.375rem 0.75rem;
+	}
+	.enc-section__title {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		font-family: var(--font-display);
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-gray-100);
+	}
+	.enc-section__count {
+		font-family: var(--font-sans, inherit);
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--color-gray-400);
+	}
+	.enc-section__note {
+		font-size: 0.75rem;
+		line-height: 1.5;
+		color: var(--color-gray-400);
+	}
+	.enc-sub {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.enc-sub::after {
+		height: 1px;
+		flex: 1;
+		background: var(--color-edge);
+		content: "";
+	}
+	.enc-two {
+		display: grid;
+		gap: 1.25rem;
+	}
+	@media (min-width: 64rem) {
+		.enc-two {
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		}
+	}
+
+	/* A segmented switch: the star level, "Hide R". */
+	.enc-switch {
+		display: inline-flex;
+		padding: 0.125rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.5rem;
+		background: color-mix(in srgb, var(--color-gray-900) 60%, transparent);
+	}
+	.enc-switch button {
+		padding: 0.1875rem 0.625rem;
+		border-radius: 0.375rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-gray-400);
+		transition: background-color 0.15s, color 0.15s;
+	}
+	.enc-switch button:hover {
+		color: var(--color-gray-100);
+	}
+	.enc-switch button[aria-pressed="true"] {
+		background: color-mix(in srgb, var(--color-brand) 20%, transparent);
+		color: var(--color-gray-100);
+	}
+
+	/* ---- Aptitudes -----------------------------------------------------------
+	   The game's letters on the game's colours: S gold, A orange, B pink,
+	   C green, D blue, E violet, F indigo, G grey. Fixed fills, dark ink. */
+
+	.enc-apt {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.enc-apt__row {
+		display: grid;
+		align-items: center;
+		gap: 0.25rem 0.5rem;
+	}
+	@media (min-width: 40rem) {
+		.enc-apt__row {
+			grid-template-columns: 4.25rem minmax(0, 1fr);
+		}
+	}
+	.enc-apt__group {
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	/* Two to a row on a phone, where four would cut "Medium" short. */
+	.enc-apt__cells {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.375rem;
+	}
+	@media (min-width: 40rem) {
+		.enc-apt__cells {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+	.enc-apt__cell {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.25rem;
+		min-width: 0;
+		padding: 0.3125rem 0.375rem 0.3125rem 0.5rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.5rem;
+		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		font-size: 0.75rem;
+		color: var(--color-gray-200);
+	}
+	@media (min-width: 40rem) {
+		.enc-apt__cell {
+			padding-left: 0.625rem;
+			font-size: 0.8125rem;
+		}
+	}
+	.enc-apt__cell > span:first-child {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	/* An aptitude she can't use (D or worse) steps back, so the A's stand out. */
+	.enc-apt__cell[data-weak="true"] {
+		color: var(--color-gray-500);
+	}
+	.enc-apt__cell[data-weak="true"] .apt-letter {
+		opacity: 0.55;
+	}
+	.apt-letter {
+		display: inline-flex;
+		width: 1.5rem;
+		height: 1.5rem;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.375rem;
+		background: #8b8d98;
+		font-family: var(--font-display);
+		font-size: 0.875rem;
+		font-weight: 800;
+		line-height: 1;
+		color: #15121c;
+	}
+	.apt-letter[data-rank="S"] { background: linear-gradient(135deg, #fff1b8, #f2c94c); }
+	.apt-letter[data-rank="A"] { background: #ff9b61; }
+	.apt-letter[data-rank="B"] { background: #f590ba; }
+	.apt-letter[data-rank="C"] { background: #86d672; }
+	.apt-letter[data-rank="D"] { background: #72b7f5; }
+	.apt-letter[data-rank="E"] { background: #b9a2f5; }
+	.apt-letter[data-rank="F"] { background: #9aa3d6; }
+	.apt-letter[data-rank="G"] { background: #a3a3ad; }
+
+	/* ---- Stats ---------------------------------------------------------------
+	   Five columns in the stats' own hues (--color-stat-*): the number, a bar
+	   scaled to the tallest stat on show, and the growth bonus under it. */
+
+	.enc-stats {
+		display: grid;
+		gap: 0.375rem;
+	}
+	/* On a phone each stat is a row: name, bar, number, growth. */
+	.enc-stat {
+		--stat: var(--color-gray-400);
+		display: grid;
+		grid-template-columns: 4.25rem minmax(0, 1fr) 2.25rem 3rem;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+		padding: 0.375rem 0.625rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.5rem;
+		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+	}
+	.enc-stat__value {
+		order: 3;
+		text-align: right;
+	}
+	.enc-stat__growth {
+		order: 4;
+		text-align: right;
+	}
+	@media (min-width: 40rem) {
+		.enc-stats {
+			grid-template-columns: repeat(5, minmax(0, 1fr));
+		}
+		.enc-stat {
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.25rem;
+			padding: 0.5rem 0.5rem 0.5625rem;
+		}
+		.enc-stat__value,
+		.enc-stat__growth {
+			order: 0;
+			text-align: left;
+		}
+	}
+	.enc-stat[data-stat="speed"] { --stat: var(--color-stat-speed); }
+	.enc-stat[data-stat="stamina"] { --stat: var(--color-stat-stamina); }
+	.enc-stat[data-stat="power"] { --stat: var(--color-stat-power); }
+	.enc-stat[data-stat="guts"] { --stat: var(--color-stat-guts); }
+	.enc-stat[data-stat="wit"] { --stat: var(--color-stat-wit); }
+	.enc-stat__label {
+		display: flex;
+		align-items: center;
+		gap: 0.3125rem;
+		overflow: hidden;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: var(--color-gray-300);
+		white-space: nowrap;
+	}
+	.enc-stat__label::before {
+		width: 0.4375rem;
+		height: 0.4375rem;
+		flex-shrink: 0;
+		border-radius: 999px;
+		background: var(--stat);
+		content: "";
+	}
+	.enc-stat__value {
+		font-family: var(--font-display);
+		font-size: 1.25rem;
+		font-weight: 700;
+		line-height: 1.1;
+		color: var(--color-gray-100);
+	}
+	.enc-stat__bar {
+		height: 0.25rem;
+		overflow: hidden;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--stat) 18%, transparent);
+	}
+	.enc-stat__bar > span {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background: var(--stat);
+	}
+	.enc-stat__growth {
+		font-size: 0.6875rem;
+		color: var(--color-gray-500);
+	}
+	/* "Growth" is spelled out where there is room; a phone's row has the column. */
+	.enc-stat__growth i {
+		display: none;
+		font-style: normal;
+		font-weight: 400;
+		color: var(--color-gray-500);
+	}
+	@media (min-width: 40rem) {
+		.enc-stat__growth i {
+			display: inline;
+		}
+	}
+	.enc-stat__growth[data-bonus="true"] {
+		font-weight: 700;
+		color: var(--color-gray-100);
+	}
+
+	/* ---- Skill rows ----------------------------------------------------------
+	   One skill as a link: its icon, its name, a line saying how it is had, and
+	   its cost. The kind shows as a 3px spine and a faint wash (gold, evolved
+	   pink, a unique's foil), never a full gradient: a list of two thousand
+	   stays readable, and the name keeps the theme's ink. */
+
+	.enc-skills {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+		gap: 0.4375rem;
+	}
+	.enc-skill {
+		--kind: var(--color-gray-600);
+		--kind-wash: transparent;
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		min-width: 0;
+		overflow: hidden;
+		padding: 0.4375rem 0.625rem 0.4375rem 0.75rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.625rem;
+		background:
+			linear-gradient(90deg, var(--kind-wash), transparent 70%),
+			color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		transition: border-color 0.15s, transform 0.15s;
+	}
+	.enc-skill::before {
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: 3px;
+		background: var(--kind);
+		content: "";
+	}
+	.enc-skill[data-kind="gold"] {
+		--kind: linear-gradient(180deg, #fff4d7, #e8b51a);
+		--kind-wash: rgb(232 181 26 / 13%);
+		border-color: rgb(232 181 26 / 38%);
+	}
+	.enc-skill[data-kind="evolved"] {
+		--kind: linear-gradient(180deg, #ffe6f2, #f28cbc);
+		--kind-wash: rgb(242 140 188 / 14%);
+		border-color: rgb(242 140 188 / 40%);
+	}
+	.enc-skill[data-kind="unique"] {
+		--kind: linear-gradient(180deg, #9be7ff, #c9b1ff 45%, #ffb3d9 75%, #ffe08a);
+		--kind-wash: rgb(201 177 255 / 12%);
+		border-color: rgb(201 177 255 / 36%);
+	}
+	a.enc-skill:hover,
+	a.enc-skill:focus-visible {
+		border-color: color-mix(in srgb, var(--color-brand) 60%, transparent);
+		transform: translateX(2px);
+	}
+	.enc-skill__icon {
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+		border-radius: 0.375rem;
+	}
+	.enc-skill__text {
+		min-width: 0;
+		flex: 1;
+	}
+	.enc-skill__name {
+		display: block;
+		overflow: hidden;
+		font-size: 0.875rem;
+		font-weight: 600;
+		line-height: 1.25;
+		color: var(--color-gray-100);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.enc-skill__sub {
+		display: flex;
+		align-items: center;
+		gap: 0.3125rem;
+		overflow: hidden;
+		font-size: 0.75rem;
+		line-height: 1.3;
+		color: var(--color-gray-400);
+		white-space: nowrap;
+	}
+	.enc-skill__sub > span:not(.kind-pill) {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.enc-skill__sub > .kind-pill {
+		flex-shrink: 0;
+	}
+	/* "JP only" at the end of the name line: small, in the line's own ink. */
+	.enc-skill__jp {
+		flex-shrink: 0;
+		padding: 0 0.3125rem;
+		border: 1px solid currentColor;
+		border-radius: 0.25rem;
+		font-size: 0.625rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		line-height: 1rem;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.enc-skill__cost {
+		flex-shrink: 0;
+		font-family: var(--font-display);
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-gray-200);
+		white-space: nowrap;
+	}
+	.enc-skill__cost small {
+		margin-left: 0.125rem;
+		font-family: var(--font-sans, inherit);
+		font-size: 0.625rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		color: var(--color-gray-400);
+	}
+
+	/* A skill's kind as a word: "gold" on the gold, "evolved" on the pink. */
+	.kind-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 0 0.4375rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 999px;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		line-height: 1.125rem;
+		color: var(--color-gray-300);
+		white-space: nowrap;
+	}
+	.kind-pill[data-kind="gold"] {
+		border-color: #c89a1e;
+		background: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+		color: #3f2c00;
+	}
+	.kind-pill[data-kind="evolved"] {
+		border-color: #d9649c;
+		background: linear-gradient(135deg, #ffe6f2 0%, #f28cbc 100%);
+		color: #4a1030;
+	}
+	.kind-pill[data-kind="unique"] {
+		border-color: transparent;
+		background: linear-gradient(120deg, #9be7ff 0%, #c9b1ff 45%, #ffb3d9 75%, #ffe08a 100%);
+		color: #1b1420;
+	}
+
+	/* ---- How a skill works ---------------------------------------------------
+	   A block per effect slot: a label down the left (When, Does, Lasts), the
+	   words on the right. Conditions and effects are chips so each clause reads
+	   on its own. */
+
+	.enc-how {
+		display: flex;
+		flex-direction: column;
+		gap: 0.625rem;
+	}
+	.enc-how__slot {
+		display: grid;
+		grid-template-columns: 5.5rem minmax(0, 1fr);
+		gap: 0.5rem 0.75rem;
+		padding: 0.75rem 0.875rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.625rem;
+		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+	}
+	.enc-how__part {
+		grid-column: 1 / -1;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-brand);
+	}
+	.enc-how__label {
+		padding-top: 0.1875rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.enc-how__value {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.3125rem;
+		min-width: 0;
+		font-size: 0.875rem;
+		color: var(--color-gray-200);
+	}
+	.enc-clause {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.125rem 0.5rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.375rem;
+		background: var(--card-fill);
+		font-size: 0.8125rem;
+		line-height: 1.35;
+		color: var(--color-gray-100);
+	}
+	.enc-clause--effect {
+		border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
+		font-weight: 600;
+	}
+	/* The game's own code for a clause nobody has confirmed the meaning of. */
+	.enc-clause--raw {
+		border-style: dashed;
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	.enc-how__join {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		color: var(--color-gray-500);
+	}
+
+	/* The other versions of a skill, as steps: white, gold, evolved. */
+	.enc-ladder {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+		gap: 0.5rem;
+	}
+
+	/* ---- Career objectives ---------------------------------------------------
+	   A rail per year, the goals as stops on it. The grade wears the game's
+	   colour: G1 blue, G2 pink, G3 green, an open race orange. */
+
+	.enc-career {
+		display: grid;
+		gap: 1rem 1.5rem;
+	}
+	@media (min-width: 56rem) {
+		.enc-career {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	.enc-career__year {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.enc-career__stops {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding-left: 1.125rem;
+	}
+	.enc-career__stops::before {
+		position: absolute;
+		top: 0.375rem;
+		bottom: 0.375rem;
+		left: 0.25rem;
+		width: 2px;
+		border-radius: 2px;
+		background: var(--color-gray-600);
+		content: "";
+	}
+	.enc-stop {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.4375rem 0.625rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.5rem;
+		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+	}
+	.enc-stop::before {
+		position: absolute;
+		top: 0.875rem;
+		left: -1.125rem;
+		width: 0.625rem;
+		height: 0.625rem;
+		border: 2px solid var(--color-gray-400);
+		border-radius: 999px;
+		background: var(--card-fill);
+		content: "";
+	}
+	.enc-stop[data-win="true"]::before {
+		border-color: var(--color-brand);
+		background: var(--color-brand);
+	}
+	.enc-stop__when {
+		font-size: 0.6875rem;
+		color: var(--color-gray-400);
+	}
+	.enc-stop__race {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.4375rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-gray-100);
+	}
+	.enc-stop__need {
+		margin-left: auto;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--color-brand);
+		white-space: nowrap;
+	}
+	.grade-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 0 0.375rem;
+		border-radius: 0.25rem;
+		background: #ffb45e;
+		font-size: 0.625rem;
+		font-weight: 800;
+		line-height: 1rem;
+		letter-spacing: 0.02em;
+		color: #15121c;
+	}
+	.grade-pill[data-grade="G1"] { background: #6fb2ff; }
+	.grade-pill[data-grade="G2"] { background: #f78fb6; }
+	.grade-pill[data-grade="G3"] { background: #7fd87a; }
+
+	/* ---- Banners ------------------------------------------------------------- */
+
+	.enc-banners {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4375rem;
+	}
+	.enc-banner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.625rem;
+		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		transition: border-color 0.15s, background-color 0.15s;
+	}
+	.enc-banner:hover,
+	.enc-banner:focus-visible {
+		border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+		background: color-mix(in srgb, var(--color-brand) 6%, transparent);
+	}
+	.enc-banner__name {
+		min-width: 0;
+		flex: 1 1 14rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-gray-100);
+	}
+	.enc-banner__dates {
+		font-size: 0.8125rem;
+		color: var(--color-gray-300);
+		white-space: nowrap;
+	}
+	/* ---- States: loading, nothing found, the supporters note ----------------- */
+
+	.enc-empty {
+		padding: 2rem 1rem;
+		border: 1px dashed var(--color-gray-600);
+		border-radius: 0.75rem;
+		font-size: 0.875rem;
+		color: var(--color-gray-400);
+		text-align: center;
+	}
+	.enc-skeleton {
+		border-radius: 0.75rem;
+		background: linear-gradient(
+			100deg,
+			color-mix(in srgb, var(--color-gray-700) 55%, transparent) 30%,
+			color-mix(in srgb, var(--color-gray-600) 55%, transparent) 50%,
+			color-mix(in srgb, var(--color-gray-700) 55%, transparent) 70%
+		);
+		background-size: 200% 100%;
+		animation: enc-shimmer 1.4s linear infinite;
+	}
+	@keyframes enc-shimmer {
+		to {
+			background-position: -200% 0;
+		}
+	}
+	.enc-more {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.375rem;
+		margin-top: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	.enc-more button {
+		padding: 0.4375rem 1.125rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-gray-100);
+		transition: border-color 0.15s, background-color 0.15s;
+	}
+	.enc-more button:hover {
+		border-color: var(--color-brand);
+		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
+	}
+	.enc-foot {
+		font-size: 0.75rem;
+		line-height: 1.6;
+		color: var(--color-gray-400);
+	}
+	.enc-foot a {
+		color: var(--color-brand);
+	}
+
+	/* ==========================================================================
+	   THE SKILL CARD: what hovering a skill shows, wherever a skill is drawn
+	   (a PvP guide's chips, mentions and deck cells, the Encyclopedia's rows).
+	   A header in the skill's own colour, the description, then When and Does
+	   as a small table, where it comes from, its other versions, and a footer.
+	   ========================================================================== */
+
+	.skill-card {
+		display: block;
+		font-size: 0.75rem;
+		line-height: 1.45;
+		color: var(--color-gray-200);
+	}
+	.skill-card__head {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: -0.5rem -0.5rem 0.5rem;
+		padding: 0.5rem 0.625rem;
+		border-bottom: 1px solid var(--color-edge);
+		border-radius: 0.4375rem 0.4375rem 0 0;
+		background: color-mix(in srgb, var(--color-gray-700) 60%, transparent);
+	}
+	.skill-card__head[data-kind="gold"] {
+		border-bottom-color: #c89a1e;
+		background: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+		color: #3f2c00;
+	}
+	.skill-card__head[data-kind="evolved"] {
+		border-bottom-color: #d9649c;
+		background: linear-gradient(135deg, #ffe6f2 0%, #f28cbc 100%);
+		color: #4a1030;
+	}
+	.skill-card__head[data-kind="unique"] {
+		border-bottom-color: transparent;
+		background: linear-gradient(120deg, #9be7ff 0%, #c9b1ff 45%, #ffb3d9 75%, #ffe08a 100%);
+		color: #1b1420;
+	}
+	.skill-card__icon {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex-shrink: 0;
+		border-radius: 0.3125rem;
+	}
+	.skill-card__title {
+		display: block;
+		min-width: 0;
+		flex: 1;
+	}
+	.skill-card__name {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--color-gray-100);
+	}
+	.skill-card__meta {
+		display: block;
+		font-size: 0.6875rem;
+		color: var(--color-gray-300);
+	}
+	/* On a coloured header the words take the header's own dark ink. */
+	.skill-card__head[data-kind="gold"] :is(.skill-card__name, .skill-card__meta),
+	.skill-card__head[data-kind="evolved"] :is(.skill-card__name, .skill-card__meta),
+	.skill-card__head[data-kind="unique"] :is(.skill-card__name, .skill-card__meta) {
+		color: inherit;
+	}
+	.skill-card__head .skill-card__meta {
+		opacity: 0.85;
+	}
+	.skill-card__text {
+		display: block;
+		color: var(--color-gray-200);
+	}
+	.skill-card__note {
+		display: block;
+		margin-top: 0.375rem;
+		padding-left: 0.5rem;
+		border-left: 2px solid var(--color-brand);
+		color: var(--color-gray-200);
+	}
+	.skill-card__block {
+		display: block;
+		margin-top: 0.5rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--color-edge);
+	}
+	.skill-card__rows {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.1875rem 0.5rem;
+	}
+	.skill-card__label {
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		line-height: 1.0875rem;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.skill-card__part {
+		grid-column: 1 / -1;
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-brand);
+	}
+	.skill-card__part:not(:first-child) {
+		margin-top: 0.25rem;
+	}
+	.skill-card__does {
+		font-weight: 600;
+		color: var(--color-gray-100);
+	}
+	.skill-card__chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-top: 0.375rem;
+	}
+	.skill-card__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0 0.375rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-gray-700) 50%, transparent);
+		font-size: 0.6875rem;
+		line-height: 1.125rem;
+		color: var(--color-gray-200);
+	}
+	.skill-card__foot {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		padding-top: 0.375rem;
+		border-top: 1px solid var(--color-edge);
+		font-size: 0.6875rem;
+		color: var(--color-gray-500);
+	}
+	.skill-card__open {
+		margin-left: auto;
+		font-weight: 600;
+		color: var(--color-brand);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.enc-tile,
+		.enc-skill,
+		.enc-skeleton {
+			transition: none;
+			animation: none;
+		}
+		.enc-tile:hover,
+		a.enc-skill:hover {
+			transform: none;
+		}
+	}
+}

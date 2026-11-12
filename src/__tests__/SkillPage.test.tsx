@@ -78,9 +78,12 @@ describe("SkillPage", () => {
 	it("reads the skill in full, with its uma named", async () => {
 		const { container } = renderAt("/app/skills/100101111")
 		expect(await screen.findByRole("heading", { level: 1, name: /Gluttonous Ruler/ })).toBeInTheDocument()
-		expect(container).toHaveTextContent("evolved · Special Week")
+		// Its uma is in the hero's eyebrow, its kind a pill beside the name.
+		expect(container).toHaveTextContent("Skill · Special Week")
+		expect(within(screen.getByRole("banner")).getByText("evolved")).toBeInTheDocument()
 		expect(container).toHaveTextContent("When: At a random moment mid-race")
-		expect(container).toHaveTextContent("Does: Recovers 5.5% endurance once per race")
+		expect(container).toHaveTextContent("Does: Recovers 5.5% endurance")
+		expect(container).toHaveTextContent("Cooldown: Once per race")
 		expect(container).toHaveTextContent("Rolls Wit check.")
 		expect(container).toHaveTextContent("Coming to global")
 		expect(container).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
@@ -102,15 +105,16 @@ describe("SkillPage", () => {
 		}
 		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(unique), { status: 200 })))
 		renderAt("/app/skills/110331")
-		const versions = (await screen.findByRole("heading", { name: "Other versions" })).parentElement as HTMLElement
+		// The heading carries its count ("Other versions 1"); the links are in its section.
+		const versions = (await screen.findByRole("heading", { name: /^Other versions/ })).closest("section") as HTMLElement
 		expect(within(versions).getByRole("link", { name: /Lights of Vaudeville.*inherited/ })).toHaveAttribute("href", "/app/skills/910331")
 	})
 
 	it("hides R cards on request", async () => {
 		renderAt("/app/skills/100101111")
-		expect(await screen.findByRole("heading", { name: "Cards that teach it (2)" })).toBeInTheDocument()
+		expect(await screen.findByRole("heading", { name: "Cards that teach it 2" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Hide R" }))
-		expect(screen.getByRole("heading", { name: "Cards that teach it (1)" })).toBeInTheDocument()
+		expect(screen.getByRole("heading", { name: "Cards that teach it 1" })).toBeInTheDocument()
 		expect(screen.queryByRole("link", { name: /Nice Nature/ })).not.toBeInTheDocument()
 	})
 

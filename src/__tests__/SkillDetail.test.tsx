@@ -40,8 +40,9 @@ describe("SkillDetail", () => {
 		expect(container).toHaveTextContent(
 			"When: In 3rd place or lower, and one of: (Within 1 length of the runner ahead) or (is_overtake==1)"
 		)
-		expect(container).toHaveTextContent("Does: Velocity +0.35 m/s for 5 s, once per race")
-		expect(container).toHaveTextContent("Rolls Wit check.")
+		expect(container).toHaveTextContent("Does: Velocity +0.35 m/s")
+		// How long it lasts, how often it fires and the Wit roll are chips under the rows.
+		for (const chip of ["Lasts 5 s", "Once per race", "Rolls Wit check"]) expect(screen.getByText(chip)).toBeInTheDocument()
 		expect(screen.getByText("is_overtake==1").tagName).toBe("CODE")
 	})
 

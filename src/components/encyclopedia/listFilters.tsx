@@ -1,49 +1,81 @@
 /**
- * The search box and filter chips the uma and card lists share. The Skills
- * page has its own (SkillsPage), older and wider; PR 6 gives it this strip.
+ * The filter bar the three lists share: one card holding the search box, the
+ * count of what matched, and each filter as a small caps label with its
+ * chips, so nobody has to work out what a bare row of chips does
+ * (encyclopedia.css, ".enc-toolbar"). On a phone a filter's chips are one row
+ * that scrolls sideways.
  */
 
+import type { CSSProperties, ReactNode } from "react"
 import { Search } from "lucide-react"
 
-export function SearchBox({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+/** The card: `search` and `count` on its first line, the filters under them. */
+export function Toolbar({ search, count, children }: { search: ReactNode; count?: ReactNode; children: ReactNode }) {
 	return (
-		<div className="relative w-full sm:w-80">
-			<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+		<div className="enc-toolbar">
+			<div className="enc-toolbar__top">
+				{search}
+				{count}
+			</div>
+			<div className="enc-filters">{children}</div>
+		</div>
+	)
+}
+
+/** `label` names the box for a screen reader; `placeholder` may say more ("by skill or uma name"). */
+export function SearchBox({ label, placeholder, value, onChange }: {
+	label: string
+	placeholder?: string
+	value: string
+	onChange: (value: string) => void
+}) {
+	return (
+		<div className="enc-search">
+			<Search aria-hidden="true" />
 			<input
 				type="search"
 				aria-label={label}
-				placeholder={`${label}...`}
+				placeholder={placeholder ?? `${label}...`}
 				value={value}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-lg border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 placeholder-gray-500 focus:border-brand focus:outline-none"
 			/>
 		</div>
 	)
 }
 
+/** "112 umas": how many matched, announced politely as the filters change. */
+export function Count({ children }: { children: string }) {
+	return <p className="enc-count" aria-live="polite">{children}</p>
+}
+
+/**
+ * One filter: its name, then a chip per choice. `dot` is a choice's own
+ * colour (a card type, a skill's kind), always beside its word.
+ */
 export function Chips<T extends string>({ label, options, value, onChange }: {
 	label: string
-	options: { value: T; label: string }[]
+	options: { value: T; label: string; dot?: string }[]
 	value: T
 	onChange: (value: T) => void
 }) {
 	return (
-		<div role="group" aria-label={label} className="flex flex-wrap gap-1">
-			{options.map((option) => (
-				<button
-					key={option.value}
-					type="button"
-					aria-pressed={value === option.value}
-					onClick={() => onChange(option.value)}
-					className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
-						value === option.value
-							? "border-brand bg-brand/15 text-gray-100"
-							: "border-gray-600 text-gray-300 hover:border-gray-500"
-					}`}
-				>
-					{option.label}
-				</button>
-			))}
+		<div role="group" aria-label={label} className="enc-filter">
+			{/* The group is already named for a screen reader; this is the same name for the eye. */}
+			<span className="enc-filter__label" aria-hidden="true">{label}</span>
+			<div className="enc-filter__chips">
+				{options.map((option) => (
+					<button
+						key={option.value}
+						type="button"
+						aria-pressed={value === option.value}
+						onClick={() => onChange(option.value)}
+						className="enc-chip"
+					>
+						{option.dot && <span className="enc-dot" style={{ "--dot": option.dot } as CSSProperties} aria-hidden="true" />}
+						{option.label}
+					</button>
+				))}
+			</div>
 		</div>
 	)
 }

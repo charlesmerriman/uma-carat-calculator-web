@@ -1,63 +1,44 @@
 /**
  * The Skills page (/app/skills): every skill with a name (in Japanese when it has no English one), global's
- * and JP's, from GET /skills. Search by any name a skill has had, filter by
- * colour and by where it is. A row opens the skill's own page
- * (/app/skills/<game id>, SkillPage); the side card that used to open beside
- * the list is gone (owner's answer 7), and an old `?skill=<game id>` link
- * redirects to the page.
+ * and JP's, from GET /skills. Search by any name a skill has had or by an
+ * uma's name, filter by colour, type and where it is. A row opens the skill's
+ * own page (/app/skills/<game id>, SkillPage), and hovering one opens its
+ * card; an old `?skill=<game id>` link redirects to the page.
  *
- * The list is long (~1,800), so it shows a page of rows and grows on "Show
+ * The list is long (~2,200), so it shows a page of rows and grows on "Show
  * more" rather than drawing them all.
  */
 
 import { useMemo, useState } from "react"
-import { Link, Navigate, useSearchParams } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { Navigate, useSearchParams } from "react-router-dom"
 import { useSkillListState } from "../../hooks/useSkillList"
 import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
-import { Chips, SearchBox } from "../encyclopedia/listFilters"
-import type { SkillListRow } from "../../types/skills"
-import { PAGE_CONTAINER } from "../../utils/encyclopedia"
-import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
+import { Chips, Count, SearchBox, Toolbar } from "../encyclopedia/listFilters"
+import { EmptyNote } from "../encyclopedia/pieces"
+import { SkillList } from "../encyclopedia/skillRows"
+import { PAGE_CONTAINER, countLine } from "../../utils/encyclopedia"
 import {
 	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
-	skillKind, type ColourFilter, type TypeFilter, type WhereFilter,
+	type ColourFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/skillSearch"
-import { JpOnlyTag } from "../pvp/SkillDetail"
-import { nameLang } from "../../utils/skillList"
 
 const PAGE = 60
 
-/** A row's surface: the game's gold or pink, else a card's fill and edge with
- * light text (a bare bg-gray-800 is the page's own colour on some themes). */
-function rowSurface(row: SkillListRow): string {
-	if (row.is_evolved) return "skill-evolved"
-	if (row.rarity === GOLD_SKILL_RARITY) return "skill-gold"
-	return "border-edge bg-(--card-fill) text-gray-100 hover:border-gray-500"
+/**
+ * Each colour's dot on its filter chip, the hue its rows wear down their left
+ * edge (encyclopedia.css, ".enc-skill"): the game's gold, pink and a unique's
+ * violet are fixed; white and inherited take the theme's greys.
+ */
+const COLOUR_DOTS: Partial<Record<ColourFilter, string>> = {
+	white: "var(--color-gray-300)",
+	gold: "#e8b51a",
+	unique: "#c9b1ff",
+	inherited: "var(--color-gray-500)",
+	evolved: "#f28cbc",
 }
-
-function SkillRow({ row }: { row: SkillListRow }) {
-	return (
-		<li>
-			<Link
-				to={skillHref(row.game_id)}
-				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${rowSurface(row)}`}
-			>
-				{row.image ? (
-					<img src={row.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
-				) : (
-					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-				)}
-				<span className="min-w-0 flex-1 truncate" lang={nameLang(row.name)}>{row.name}</span>
-				{row.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
-				{/* Skill points beside the kind (Daptrius's list, item 4); a unique has none. */}
-				<span className="shrink-0 text-xs opacity-70">
-					{row.cost != null ? `${row.cost} SP · ` : ""}{skillKind(row)}
-				</span>
-			</Link>
-		</li>
-	)
-}
+const COLOUR_OPTIONS = COLOUR_FILTERS.map((option) => ({ ...option, dot: COLOUR_DOTS[option.value] }))
+// The filter's own name says "Type", so its first chip needn't.
+const TYPE_OPTIONS = TYPE_FILTERS.map((option) => (option.value === "all" ? { ...option, label: "Any" } : option))
 
 /**
  * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
@@ -100,60 +81,39 @@ const SkillsPageBody = () => {
 	return (
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
-			<p className="text-sm leading-relaxed text-gray-300">
-				Every skill in the game, on global and in JP. Search by name or by an uma's name, then open one to see
-				when it fires, what it does and which umas and cards give it.
-			</p>
-
-			<div className="flex flex-col gap-2">
-				<SearchBox label="Search skills" value={query} onChange={setQuery} />
-				<Chips label="Colour" options={COLOUR_FILTERS} value={colour} onChange={setColour} />
-				<Chips label="Type" options={TYPE_FILTERS} value={type} onChange={setType} />
+			<Toolbar
+				search={<SearchBox label="Search skills" placeholder="Search by skill or uma name..." value={query} onChange={setQuery} />}
+				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
+			>
+				<Chips label="Colour" options={COLOUR_OPTIONS} value={colour} onChange={setColour} />
+				<Chips label="Type" options={TYPE_OPTIONS} value={type} onChange={setType} />
 				<Chips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
-			</div>
+			</Toolbar>
 
-			<div>
-				<div>
-					{list.status === "loading" ? (
-						<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
-							<Loader2 className="h-4 w-4 animate-spin" /> Loading skills...
-						</p>
-					) : list.status === "error" ? (
-						<p className="text-sm text-gray-400">The skill list didn't load. Reload the page to try again.</p>
-					) : (
-						<>
-							<p className="mb-2 text-xs text-gray-400" aria-live="polite">
-								{rows.length === 1 ? "1 skill" : `${rows.length.toLocaleString("en-US")} skills`}
-							</p>
-							{rows.length === 0 ? (
-								<p className="text-sm text-gray-400">No skill matches that.</p>
-							) : (
-								<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-									{rows.slice(0, shown).map((row) => (
-										<SkillRow key={row.id} row={row} />
-									))}
-								</ul>
-							)}
-							{rows.length > shown && (
-								<button
-									type="button"
-									onClick={() => setShown((count) => count + PAGE)}
-									className="mt-3 rounded-lg border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition hover:border-gray-500"
-								>
-									Show more
-								</button>
-							)}
-						</>
-					)}
+			{list.status === "loading" ? (
+				<div role="status" aria-label="Loading skills" className="enc-skills">
+					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-12" />)}
 				</div>
-			</div>
+			) : list.status === "error" ? (
+				<EmptyNote>The skill list didn't load. Reload the page to try again.</EmptyNote>
+			) : rows.length === 0 ? (
+				<EmptyNote>No skill matches that.</EmptyNote>
+			) : (
+				<>
+					<SkillList skills={rows.slice(0, shown)} />
+					{rows.length > shown && (
+						<div className="enc-more">
+							<span>Showing {shown.toLocaleString("en-US")} of {rows.length.toLocaleString("en-US")}</span>
+							<button type="button" onClick={() => setShown((count) => count + PAGE)}>Show more</button>
+						</div>
+					)}
+				</>
+			)}
 
-			<p className="text-xs leading-relaxed text-gray-400">
+			<p className="enc-foot">
 				JP only skills aren't in the global game yet, and their numbers may change when they arrive. Some English
 				names and descriptions are{" "}
-				<a href={UMATL_URL} target="_blank" rel="noreferrer" className="text-brand transition hover:text-brand/75">
-					UmaTL
-				</a>
+				<a href={UMATL_URL} target="_blank" rel="noreferrer">UmaTL</a>
 				's fan translation, shown until global has its own. A part shown as code is one we haven't confirmed the
 				meaning of yet.
 			</p>

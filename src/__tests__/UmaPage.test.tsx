@@ -82,9 +82,10 @@ describe("UmaPage", () => {
 	it("switches the stats between star levels", async () => {
 		renderAt("/app/umas/100101")
 		await screen.findByRole("heading", { level: 1, name: "Special Week" })
-		expect(screen.getByRole("cell", { name: "83" })).toBeInTheDocument()
-		screen.getByRole("button", { name: "★5" }).click()
-		expect(await screen.findByRole("cell", { name: "102" })).toBeInTheDocument()
+		const stats = screen.getByRole("heading", { name: "Stats" }).closest("section") as HTMLElement
+		expect(within(stats).getByText("83")).toBeInTheDocument()
+		within(stats).getByRole("button", { name: "★5" }).click()
+		expect(await within(stats).findByText("102")).toBeInTheDocument()
 	})
 
 	it("links her other outfits and her cards", async () => {
