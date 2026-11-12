@@ -199,7 +199,7 @@ const SkillPageBody = () => {
 
 export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 	const credit = skill.uses_translation || skill.evolution.conditions.some((condition) => condition.uses_translation)
-	const isInherited = skillKind(skill) === "inherited"
+	const versions = skill.pair ? [skill.pair, ...skill.versions] : skill.versions
 	return (
 		<article aria-labelledby="skill-page-name" className={PAGE_CONTAINER}>
 			<Crumbs list="Skills" listPath={SKILL_LIST_PATH} name={skill.name} />
@@ -228,17 +228,13 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 				</div>
 			</Section>
 
-			{skill.pair && (
-				<p className="text-sm text-gray-300">
-					{isInherited ? "The unique it comes from: " : "Its inherited version: "}
-					<SkillLink skill={skill.pair} />
-				</p>
-			)}
-
-			{skill.versions.length > 0 && (
+			{/* A unique and its inherited copy are each other's other version, listed
+			    the way a white and its gold are (Daptrius, board "Inherit and Unique
+			    parity", 2026-11-12). The game links them by nothing but the id. */}
+			{versions.length > 0 && (
 				<Section title="Other versions">
 					<ul className="space-y-0.5 text-sm">
-						{skill.versions.map((version) => (
+						{versions.map((version) => (
 							<li key={version.id}>
 								<SkillLink skill={version} />
 							</li>

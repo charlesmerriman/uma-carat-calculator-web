@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -91,6 +91,19 @@ describe("SkillPage", () => {
 		expect(await screen.findByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
 		expect(screen.getByRole("link", { name: /Special Week.*Evolution, level 3/ })).toHaveAttribute("href", "/app/umas/100101")
 		expect(screen.getByRole("link", { name: /Kitasan Black/ })).toHaveAttribute("href", "/app/cards/30028")
+	})
+
+	it("lists a unique's inherited copy among its other versions, as white and gold are", async () => {
+		const unique: SkillDetailData = {
+			...DETAIL, id: 30, game_id: 110331, name: "Lights of Vaudeville", rarity: 5, is_evolved: false,
+			version: "○ white", availability: "global", owners: ["Fuji Kiseki"],
+			pair: { ...base, id: 31, game_id: 910331, name: "Lights of Vaudeville", rarity: 1, group_id: 91033 },
+			evolution: { from: null, into: [], conditions: [], scenario: null },
+		}
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(unique), { status: 200 })))
+		renderAt("/app/skills/110331")
+		const versions = (await screen.findByRole("heading", { name: "Other versions" })).parentElement as HTMLElement
+		expect(within(versions).getByRole("link", { name: /Lights of Vaudeville.*inherited/ })).toHaveAttribute("href", "/app/skills/910331")
 	})
 
 	it("hides R cards on request", async () => {
