@@ -142,7 +142,9 @@ export function createIncomeProjection({
 	const purchaseCredits: PurchaseCredit[] = userStatsData.include_purchases_in_projection
 		? userPlannedPurchaseData.flatMap((purchase) => {
 				const entry = productsById.get(purchase.product)
-				const startDate = entry?.event.main_start_date ?? entry?.event.start_date
+				// The part it goes on sale with (an anniversary's 1500 pack: Part 3),
+				// else the main part, else the opening for an old payload.
+				const startDate = entry?.product.opens_at ?? entry?.event.main_start_date ?? entry?.event.start_date
 				if (!entry || !startDate) return []
 				const quantity = Math.max(0, purchase.quantity)
 				if (quantity === 0) return []
