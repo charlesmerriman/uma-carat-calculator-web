@@ -93,6 +93,18 @@ describe("UmaPage", () => {
 		expect(screen.getByRole("link", { name: /The Brightest Star/ })).toHaveAttribute("href", "/app/cards/30001")
 	})
 
+	it("says you own her, with your stars, when she's in your Collection", async () => {
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(url.endsWith("/roster")
+				? new Response(JSON.stringify({ umas: [{ uma: 7, stars: 5 }], support_cards: [] }), { status: 200 })
+				: new Response(JSON.stringify(SPECIAL_WEEK), { status: 200 }))
+		)
+		renderAt("/app/umas/100101")
+		expect(await screen.findByText("You own this")).toBeInTheDocument()
+		expect(screen.getByText("★★★★★")).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "Open your Collection" })).toHaveAttribute("href", "/app/collection?tab=umas")
+	})
+
 	it("says so for an id with no page", async () => {
 		renderAt("/app/umas/999999")
 		expect(await screen.findByText(/There's no page for that/)).toBeInTheDocument()

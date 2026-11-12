@@ -264,6 +264,28 @@ export function JapaneseName({ name, title }: { name: string; title: string }) {
 	return <p className="text-xs text-gray-400" lang="ja">{[title, name].filter(Boolean).join(" ")}</p>
 }
 
+/**
+ * "You own this" with the player's stars or limit break, and a way to their
+ * Collection. Read from the Collection (useOwned); nothing here writes, so no
+ * "saved" wording. Nothing for a guest or for something they don't own.
+ */
+export function OwnedLine({ detail, tab }: { detail: string; tab: "umas" | "cards" }) {
+	return (
+		<p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-gray-100">
+			<span className="font-semibold text-brand">You own this</span>
+			{detail && <span>{detail}</span>}
+			<Link to={`/app/collection?tab=${tab}`} className="ml-auto text-xs text-brand transition hover:text-brand/75">
+				Open your Collection
+			</Link>
+		</p>
+	)
+}
+
+/** A small "Owned" mark on a list tile. */
+export function OwnedMark() {
+	return <span className="rounded border border-brand/50 px-1 text-[10px] font-semibold uppercase tracking-wide text-brand">Owned</span>
+}
+
 export function Stars({ count }: { count: number | null }) {
 	if (!count) return null
 	return <span className="text-sm text-highlight" aria-label={`${count} stars`}>{"★".repeat(count)}</span>

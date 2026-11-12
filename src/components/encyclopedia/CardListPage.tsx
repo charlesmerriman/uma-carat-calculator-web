@@ -13,9 +13,11 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { Chips, SearchBox } from "./listFilters"
+import { OwnedMark } from "./pieces"
+import { useOwned } from "../../hooks/useOwned"
 import {
-	PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, cardLine, countLine, filterCards,
-	type RarityFilter, type TypeFilter, type WhereFilter,
+	OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, cardLine, countLine, filterCards,
+	ownedMatches, type OwnedFilter, type RarityFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/encyclopedia"
 
 export const CardListPage = () => (
@@ -30,9 +32,16 @@ const CardListBody = () => {
 	const [type, setType] = useState<TypeFilter>("all")
 	const [rarity, setRarity] = useState<RarityFilter>("all")
 	const [where, setWhere] = useState<WhereFilter>("all")
+	const owned = useOwned()
+	const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
+	// The Owned chip and marks only for a signed-in player with something in their Collection.
+	const showOwned = owned.signedIn && !owned.empty
 	const cards = useMemo(
-		() => (catalogue.status === "ready" ? filterCards(catalogue.catalogue.support_cards, query, type, rarity, where) : []),
-		[catalogue, query, type, rarity, where]
+		() => (catalogue.status === "ready"
+			? filterCards(catalogue.catalogue.support_cards, query, type, rarity, where)
+				.filter((card) => ownedMatches(showOwned ? ownedFilter : "all", owned.cards, card.id))
+			: []),
+		[catalogue, query, type, rarity, where, owned, ownedFilter, showOwned]
 	)
 
 	return (
@@ -43,6 +52,7 @@ const CardListBody = () => {
 				<Chips label="Type" options={TYPE_OPTIONS} value={type} onChange={setType} />
 				<Chips label="Rarity" options={RARITY_OPTIONS} value={rarity} onChange={setRarity} />
 				<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
+				{showOwned && <Chips label="Owned" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
 			</div>
 			{catalogue.status === "loading" ? (
 				<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
@@ -73,6 +83,7 @@ const CardListBody = () => {
 										<span className="flex items-center gap-1.5 text-xs text-gray-300">
 											{cardLine({ rarity: card.rarity, card_type: card.card_type ?? "" })}
 											{!card.on_global && <JpOnlyTag className="text-[10px]" />}
+											{showOwned && owned.cards.has(card.id) && <OwnedMark />}
 										</span>
 									</Link>
 								</li>

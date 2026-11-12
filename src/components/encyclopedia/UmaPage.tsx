@@ -20,9 +20,10 @@ import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
 	AptitudeGrid, BannerLinks, CardList, JapaneseName, JpDataNote, OutfitList, ReleaseLine,
-	Section, SkillList, StarStatsTable, Stars,
+	OwnedLine, Section, SkillList, StarStatsTable, Stars,
 } from "./pieces"
-import { LINK_CLASS as LINK, PAGE_CONTAINER, RUNNING_STYLE_WORDS } from "../../utils/encyclopedia"
+import { LINK_CLASS as LINK, PAGE_CONTAINER, RUNNING_STYLE_WORDS, ownedStars } from "../../utils/encyclopedia"
+import { useOwned } from "../../hooks/useOwned"
 import { usePageTitle } from "./usePageTitle"
 
 /** The order and headings the game teaches skills in. */
@@ -91,6 +92,7 @@ function skillNote(skill: PageSkill, byGameId: Map<number, PageSkill>): string |
 
 export function UmaDetail({ uma }: { uma: UmaPageData }) {
 	const oshiIds = useOshiIds()
+	const owned = useOwned()
 	const calculator = useCalculatorDataSafe()
 	const releases = umaReleases(calculator?.umaBannerData ?? [], uma.id)
 	const byGameId = new Map(uma.skills.map((skill) => [skill.game_id, skill]))
@@ -115,6 +117,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 					{uma.purpose && <p className="text-sm text-gray-300">{uma.purpose}</p>}
 				</div>
 			</header>
+			{owned.umas.has(uma.id) && <OwnedLine tab="umas" detail={ownedStars(owned.umas.get(uma.id))} />}
 
 			{hasApt && (
 				<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

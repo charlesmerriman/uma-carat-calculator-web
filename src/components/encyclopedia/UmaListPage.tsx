@@ -14,9 +14,11 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { Chips, SearchBox } from "./listFilters"
-import { Stars } from "./pieces"
+import { OwnedMark, Stars } from "./pieces"
+import { useOwned } from "../../hooks/useOwned"
 import {
-	PAGE_CONTAINER, STAR_OPTIONS, WHERE_OPTIONS, countLine, filterUmas, type StarFilter, type WhereFilter,
+	OWNED_OPTIONS, PAGE_CONTAINER, STAR_OPTIONS, WHERE_OPTIONS, countLine, filterUmas, ownedMatches,
+	type OwnedFilter, type StarFilter, type WhereFilter,
 } from "../../utils/encyclopedia"
 
 export const UmaListPage = () => (
@@ -31,9 +33,15 @@ const UmaListBody = () => {
 	const [query, setQuery] = useState("")
 	const [where, setWhere] = useState<WhereFilter>("all")
 	const [stars, setStars] = useState<StarFilter>("all")
+	const owned = useOwned()
+	const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
+	// The Owned chip and marks only for a signed-in player with something in their Collection.
+	const showOwned = owned.signedIn && !owned.empty
 	const umas = useMemo(
-		() => (catalogue.status === "ready" ? filterUmas(catalogue.catalogue.umas, query, where, stars) : []),
-		[catalogue, query, where, stars]
+		() => (catalogue.status === "ready"
+			? filterUmas(catalogue.catalogue.umas, query, where, stars).filter((uma) => ownedMatches(showOwned ? ownedFilter : "all", owned.umas, uma.id))
+			: []),
+		[catalogue, query, where, stars, owned, ownedFilter, showOwned]
 	)
 
 	return (
@@ -43,6 +51,7 @@ const UmaListBody = () => {
 				<SearchBox label="Search umas" value={query} onChange={setQuery} />
 				<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
 				<Chips label="Stars" options={STAR_OPTIONS} value={stars} onChange={setStars} />
+				{showOwned && <Chips label="Owned" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
 			</div>
 			{catalogue.status === "loading" ? (
 				<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
@@ -68,6 +77,7 @@ const UmaListBody = () => {
 										<span className="flex items-center gap-1.5">
 											<Stars count={uma.rarity ?? 3} />
 											{!uma.on_global && <JpOnlyTag className="text-[10px]" />}
+											{showOwned && owned.umas.has(uma.id) && <OwnedMark />}
 										</span>
 									</Link>
 								</li>
