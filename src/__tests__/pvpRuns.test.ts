@@ -26,7 +26,8 @@ import {
 	summarizeRuns,
 	tallyRun,
 	ticketCounts,
-	slotsWithoutLineup,
+	clearLineup,
+	unracedSlots,
 	ticketState,
 	unloggedTickets,
 	veteranRecords,
@@ -208,30 +209,40 @@ describe("skipped tickets", () => {
 	})
 })
 
-describe("one lineup for every ticket", () => {
+describe("one team for many tickets", () => {
 	const days = (from: number) =>
 		Array.from({ length: 4 - from + 1 }, (_, index) => from + index).flatMap((day) =>
 			[1, 2, 3, 4].map((number) => ({ stage: "day", day, ticket: number }))
 		)
 
-	it("fills all sixteen tickets and the Finals before the CM starts", () => {
-		expect(slotsWithoutLineup([], CM_NOT_STARTED)).toEqual([...days(1), { stage: "final" }])
+	it("takes all sixteen tickets and the Finals before the CM starts", () => {
+		expect(unracedSlots([], CM_NOT_STARTED)).toEqual([...days(1), { stage: "final" }])
 	})
 
-	it("leaves past days, lineups and skips alone", () => {
+	it("replaces a lineup with no races, never a raced or skipped ticket, nor a past day", () => {
 		const skipped = { ...ticket(3, 2, [], []), skipped: true }
 		const lineupOnly = ticket(3, 1, [])
-		const slots = slotsWithoutLineup([lineupOnly, skipped, ticket(2, 1, races(0))], 3)
+		const slots = unracedSlots([lineupOnly, skipped, ticket(3, 3, races(0)), ticket(2, 1, [])], 3)
 		expect(slots).toEqual([
-			{ stage: "day", day: 3, ticket: 3 },
+			{ stage: "day", day: 3, ticket: 1 },
 			{ stage: "day", day: 3, ticket: 4 },
 			...days(4),
 			{ stage: "final" },
 		])
 	})
 
+	it("takes one day whole when it's picked, past or not, and never the Finals", () => {
+		const slots = unracedSlots([ticket(1, 2, races(0))], 3, undefined, 1)
+		expect(slots).toEqual([1, 3, 4].map((number) => ({ stage: "day", day: 1, ticket: number })))
+	})
+
 	it("is the Finals alone once Round 2 has ended", () => {
-		expect(slotsWithoutLineup([], null)).toEqual([{ stage: "final" }])
+		expect(unracedSlots([], null)).toEqual([{ stage: "final" }])
+	})
+
+	it("clears a lineup, keeping a ticket only for its note", () => {
+		expect(clearLineup(emptyContent(LINEUP))).toBeNull()
+		expect(clearLineup({ ...emptyContent(LINEUP), note: "rerolled" })).toMatchObject({ runners: [], note: "rerolled" })
 	})
 })
 
@@ -344,7 +355,7 @@ describe("a League of Heroes", () => {
 	})
 
 	it("fills every ticket left and leaves the Top 96 out", () => {
-		const slots = slotsWithoutLineup([], 1, shape)
+		const slots = unracedSlots([], 1, shape)
 		expect(slots).toHaveLength(30)
 		expect(slots.some((slot) => slot.stage === "final")).toBe(false)
 	})
