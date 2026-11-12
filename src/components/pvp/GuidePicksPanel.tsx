@@ -17,13 +17,14 @@
  * since it holds the team and its rules.
  */
 
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useMemo, useState, type ReactNode } from "react"
 import { Check, Loader2, Star } from "lucide-react"
 import { STYLE_LABELS, guidePicks } from "../../utils/pvpGuide"
 import type { PvpGuideState } from "../../hooks/usePvpGuide"
 import type { PvpStyle } from "../../types/pvpGuide"
 import type { PvpTeamMember } from "../../types/pvpTeam"
-import { DraggableCard } from "./CardDrag"
+import { memberStyleFrom, type UmaDrag } from "../../utils/pvpTeams"
+import { DraggableCard, DraggableUma } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
 import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
@@ -58,15 +59,15 @@ interface GuidePicksProps {
 	/** The selected team's members, to tick picks already on it. */
 	members: PvpTeamMember[]
 	actions: GuidePickActions
-	/** The docked panel: its cards drag into the slots beside it (CardDrag.tsx). */
-	dragCards?: boolean
+	/** The docked panel: its cards drag into the slots beside it, its umas onto the spots (CardDrag.tsx). */
+	draggable?: boolean
 }
 
 /** A grid row is four tiles; the action row follows the clicked tile's row. */
 const COLUMNS = 4
 
 /** The panel's contents. TeamBuilder wraps it in a DockedPanel or a SideDrawer (SidePanel.tsx). */
-export function GuidePicksBody({ guideState, members, actions, dragCards = false }: GuidePicksProps) {
+export function GuidePicksBody({ guideState, members, actions, draggable = false }: GuidePicksProps) {
 	const picks = useMemo(() => (guideState.status === "ready" ? guidePicks(guideState.guide) : null), [guideState])
 	// The one pick whose action row is open, as "uma-41" / "card-302".
 	const [openKey, setOpenKey] = useState<string | null>(null)
@@ -98,6 +99,7 @@ export function GuidePicksBody({ guideState, members, actions, dragCards = false
 					<PickGrid
 						items={picks.umas.map((pick) => ({
 							key: `uma-${pick.ref.id}`,
+							umaDrag: draggable ? { umaId: pick.ref.id, style: memberStyleFrom(pick.styles) } : undefined,
 							name: pick.ref.name,
 							image: pick.ref.image,
 							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image },
@@ -124,7 +126,7 @@ export function GuidePicksBody({ guideState, members, actions, dragCards = false
 					<PickGrid
 						items={picks.cards.map((pick) => ({
 							key: `card-${pick.ref.id}`,
-							cardId: dragCards ? pick.ref.id : undefined,
+							cardId: draggable ? pick.ref.id : undefined,
 							name: pick.ref.name,
 							image: pick.ref.image,
 							uma: null,
@@ -159,6 +161,8 @@ interface PickItem {
 	key: string
 	/** Set on a card that can be dragged into a slot. */
 	cardId?: number
+	/** Set on an uma that can be dragged onto a spot. */
+	umaDrag?: UmaDrag
 	name: string
 	image: string | null
 	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
@@ -215,7 +219,7 @@ function PickTile({ item, shape, open, onClick }: {
 	const ring = open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : ""
 	return (
 		<li className="min-w-0">
-			<DraggableCard id={`pick-${item.key}`} drag={item.cardId === undefined ? null : { from: "pick", cardId: item.cardId }}>
+			<PickDrag item={item}>
 				<button
 					type="button"
 					aria-expanded={open}
@@ -258,8 +262,24 @@ function PickTile({ item, shape, open, onClick }: {
 						{item.name}
 					</span>
 				</button>
-			</DraggableCard>
+			</PickDrag>
 		</li>
+	)
+}
+
+/** What a pick drags as: an uma onto a spot, a card into a slot, or nothing (the drawer). */
+function PickDrag({ item, children }: { item: PickItem; children: ReactNode }) {
+	if (item.umaDrag) {
+		return (
+			<DraggableUma id={`pick-${item.key}`} drag={item.umaDrag}>
+				{children}
+			</DraggableUma>
+		)
+	}
+	return (
+		<DraggableCard id={`pick-${item.key}`} drag={item.cardId === undefined ? null : { from: "pick", cardId: item.cardId }}>
+			{children}
+		</DraggableCard>
 	)
 }
 

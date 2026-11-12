@@ -43,6 +43,9 @@ import {
 	umaBlockReason,
 	type CardDrag,
 	type CardDropTarget,
+	dropUma,
+	type UmaDrag,
+	type UmaDropTarget,
 } from "../../utils/pvpTeams"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { DECK_STAT_LABELS, noteOnlyType } from "../../utils/deckNotes"
@@ -355,10 +358,17 @@ function ReadyBuilder({ event, teamsState, index }: {
 	// A few dozen links, so worked out on every render.
 	const skillSources = teamSkillSources(members, index.umasById, index.cardsById)
 
-	const picksBody = (dragCards: boolean) => <GuidePicksBody guideState={guideState} members={members} actions={pickActions} dragCards={dragCards} />
+	const picksBody = (draggable: boolean) => <GuidePicksBody guideState={guideState} members={members} actions={pickActions} draggable={draggable} />
 	const dropCardOnSlot = (drag: CardDrag, target: CardDropTarget) => {
 		const late = drag.from === "pick" ? releaseBlockReason(releaseFor("support", drag.cardId)) : null
 		const dropped = late ? { reason: late } : dropCard(members, drag, target, index)
+		if ("reason" in dropped) toast(dropped.reason)
+		else if (dropped.members !== members) applyMembers(dropped.members)
+	}
+	// The same checks as Guide picks' Add / Replace: not out yet, then the uma rules.
+	const dropUmaOnSpot = (drag: UmaDrag, target: UmaDropTarget) => {
+		const late = releaseBlockReason(releaseFor("uma", drag.umaId))
+		const dropped = late ? { reason: late } : dropUma(members, drag, target, index)
 		if ("reason" in dropped) toast(dropped.reason)
 		else if (dropped.members !== members) applyMembers(dropped.members)
 	}
@@ -388,7 +398,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 	return (
 		// Guide picks docks on the left from xl, Recommended skills on the
 		// right from 2xl; below those, each retracts behind a toolbar button.
-		<CardDragProvider cardsById={index.cardsById} onDrop={dropCardOnSlot}>
+		<CardDragProvider cardsById={index.cardsById} umasById={index.umasById} onDrop={dropCardOnSlot} onDropUma={dropUmaOnSpot}>
 			<div className={`mx-auto grid w-full max-w-4xl items-start gap-4 ${gridLayout(picksDocked, skillsDocked)}`}>
 				{picksDocked && (
 					<DockedPanel side="left" title="Guide picks" icon={picksIcon} onCollapse={() => dockPicks(false)}>
