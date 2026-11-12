@@ -66,4 +66,12 @@ describe("spreadLabel", () => {
 		const steps = [0, 2, 3, 4, 5]
 		expect(steps.map((_, index) => spreadLabel(steps, index))).toEqual(["under 2", "2", "3", "4", "5+"])
 	})
+
+	it("names the server's spike buckets by their number alone", () => {
+		// rankings_figures.EDGES: a bucket one wide is exactly that many.
+		const label = (edges: number[]) => edges.map((_, index) => spreadLabel(edges, index))
+		expect(label([0, 100, 133, 134, 200, 201])).toEqual(["under 100", "100 to 132", "133", "134 to 199", "200", "201+"])
+		expect(label([0, 200, 201, 400, 401, 600])).toEqual(["under 200", "200", "201 to 399", "400", "401 to 599", "600+"])
+		expect(label([0, 5, 6, 10, 11, 15])).toEqual(["under 5", "5", "6 to 9", "10", "11 to 14", "15+"])
+	})
 })
