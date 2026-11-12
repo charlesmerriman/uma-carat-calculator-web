@@ -107,6 +107,10 @@ export const Navbar = () => {
 		? "truncate max-[439px]:sr-only"
 		: showRankings ? "truncate max-[389px]:sr-only" : "truncate max-[359px]:sr-only"
 	const mobileColumns = showEncyclopedia ? "grid-cols-7" : showRankings ? "grid-cols-6" : "grid-cols-5"
+	// The desktop bar: a sixth label overflows it at 1024px, so Rankings is an
+	// icon below xl. With the seventh (the Encyclopedia) the bar wrapped "Legend
+	// Races" and the wordmark at 1440px, so both are icons below 2xl (1536px).
+	const desktopLabel = showEncyclopedia ? "sr-only 2xl:not-sr-only" : "sr-only xl:not-sr-only"
 	const mobileNavClass = (active: boolean) =>
 		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
@@ -316,14 +320,14 @@ export const Navbar = () => {
 						{showEncyclopedia && (
 							<Link to={UMA_LIST_PATH} className={desktopNavClass(isEncyclopedia)} title="Encyclopedia" {...prefetchOnIntent}>
 								<BookOpen className="h-4 w-4" />
-								<span className="sr-only xl:not-sr-only">Encyclopedia</span>
+								<span className={desktopLabel}>Encyclopedia</span>
 							</Link>
 						)}
 						{/* Icon only below xl: a sixth label overflows the bar at 1024px. */}
 						{showRankings && (
 							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
 								<ListOrdered className="h-4 w-4" />
-								<span className="sr-only xl:not-sr-only">Rankings</span>
+								<span className={desktopLabel}>Rankings</span>
 							</Link>
 						)}
 					</div>
