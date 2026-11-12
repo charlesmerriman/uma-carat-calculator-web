@@ -30,7 +30,7 @@ import { useCalculatorData } from "../../services/CalculatorContext"
 import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinStore"
 import type { PlannedBannerType, PullPlanRankingsPayload } from "../../types/pullPlanRankings"
 import { formatShare } from "../../utils/guideRankings"
-import { monthShares, pullPlanRows, type PullPlanSort } from "../../utils/pullPlanRankings"
+import { pullPlanRows, stripColumns, type PullPlanSort, type StripColumn } from "../../utils/pullPlanRankings"
 import { movement } from "../../utils/rankingsMovement"
 import { useReportUpdated } from "./rankingsUpdated"
 import { Lens } from "./kit/Lens"
@@ -90,8 +90,11 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 		const shown = (key: string) => rows.some((row) => `${row.type}-${row.id}` === key)
 		return movement(rows.map((row) => `${row.type}-${row.id}`), payload.previous?.banners.filter(shown))
 	}, [sort, rows, payload])
-	const months = useMemo(() => monthShares(payload.demand, now), [payload, now])
-	const busiest = months.reduce<(typeof months)[number] | null>((best, month) => (best && best.share >= month.share ? best : month), null)
+	const columns = useMemo(() => stripColumns(payload.demand, now), [payload, now])
+	// A month, never a quarter or Later: three months summed would outweigh any one.
+	const busiest = columns
+		.filter((column) => column.kind === "month")
+		.reduce<StripColumn | null>((best, month) => (best && best.share >= month.share ? best : month), null)
 	// The banner ahead the most players plan, as a share of everyone with a plan.
 	const mostPlanned = ahead.reduce<(typeof ahead)[number] | null>((best, row) => (best && best.share >= row.share ? best : row), null)
 	// A banner's Timeline card is its BannerTimeline, which the calculator's banners carry.
@@ -121,7 +124,7 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 
 			{payload.demand.length > 0 && (
 				<Panel title="When the pulls fall due" hint={'Share of planned pulls by the month a banner ends. Undated banners sit in "Later".'}>
-					<MonthStrip months={months} />
+					<MonthStrip columns={columns} />
 				</Panel>
 			)}
 
@@ -154,29 +157,44 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 }
 
 /**
- * Six columns, this month to "Later", each a bar of its share of the pulls
- * planned (tallest = the biggest month). The running month is drawn in the
- * running colour and says "now". Divs, no chart library.
+ * Eleven columns: this month and the next five, four quarters, then "Later"
+ * (stripColumns), each a bar of its share of the pulls planned (tallest = the
+ * biggest column). The running month is drawn in the running colour and says
+ * "now"; a quarter's bar is a shade lighter, since it holds three months.
+ * Divs, no chart library. On a phone the strip scrolls sideways rather than
+ * squeezing eleven labels into ~30px each.
  */
-function MonthStrip({ months }: { months: ReturnType<typeof monthShares> }) {
-	const top = Math.max(0, ...months.map((month) => month.share))
+function MonthStrip({ columns }: { columns: StripColumn[] }) {
+	const top = Math.max(0, ...columns.map((column) => column.share))
 	return (
-		<ol className="grid grid-cols-6 items-end gap-2 px-1 @min-[40rem]:gap-4" aria-label="Share of planned pulls by month">
-			{months.map((month) => (
-				<li key={month.key} className="flex min-w-0 flex-col items-center gap-1">
-					<span className="flex h-20 w-full max-w-[3.5rem] items-end" aria-hidden="true">
-						<span
-							className={`block w-full rounded-t-[4px] border-t-2 ${month.current ? "border-status-running bg-status-running/35" : "border-brand bg-brand/35"}`}
-							style={{ height: `${top > 0 ? Math.max(2, (month.share / top) * 100) : 2}%` }}
-						/>
-					</span>
-					<b className="text-xs font-semibold tabular-nums text-gray-100">{formatShare(month.share)}</b>
-					<span className="truncate text-[10px] tabular-nums text-gray-400">
-						{month.label}
-						{month.current ? " · now" : ""}
-					</span>
-				</li>
-			))}
-		</ol>
+		<div className="overflow-x-auto [scrollbar-width:thin]">
+			<ol
+				className="grid items-end gap-2 px-1 @min-[40rem]:gap-3"
+				style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(3.25rem, 1fr))` }}
+				aria-label="Share of planned pulls by month"
+			>
+				{columns.map((column) => (
+					<li key={column.key} className="flex min-w-0 flex-col items-center gap-1">
+						<span className="flex h-20 w-full max-w-[3.5rem] items-end" aria-hidden="true">
+							<span
+								className={`block w-full rounded-t-[4px] border-t-2 ${
+									column.current
+										? "border-status-running bg-status-running/35"
+										: column.kind === "month"
+											? "border-brand bg-brand/35"
+											: "border-brand/70 bg-brand/20"
+								}`}
+								style={{ height: `${top > 0 ? Math.max(2, (column.share / top) * 100) : 2}%` }}
+							/>
+						</span>
+						<b className="text-xs font-semibold tabular-nums text-gray-100">{formatShare(column.share)}</b>
+						<span className="text-center text-[10px] leading-tight tabular-nums text-gray-400">
+							{column.label}
+							{column.current ? " · now" : ""}
+						</span>
+					</li>
+				))}
+			</ol>
+		</div>
 	)
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { PlannedBannerRank } from "../types/pullPlanRankings"
-import { monthShares, pullPlanRows, spreadLabel } from "../utils/pullPlanRankings"
+import { pullPlanRows, spreadLabel, stripColumns } from "../utils/pullPlanRankings"
 
 /** Pull plans' rows (utils/pullPlanRankings.ts): what shows, and the two orders. */
 
@@ -38,24 +38,30 @@ describe("pullPlanRows", () => {
 	})
 })
 
-describe("monthShares", () => {
+describe("stripColumns", () => {
 	const month = (key: string, share: number) => ({ month: key, share })
 
-	it("shares this month, the next four and Later, scaled to add up to everything still ahead", () => {
+	it("six months, four quarters and Later, scaled to add up to everything still ahead", () => {
 		// The server's shares are of every month it sent, the ended September's too.
-		const shares = monthShares(
-			[month("2026-09", 0.5), month("2026-10", 0.05), month("2026-12", 0.15), month("2027-03", 0.1), month("2027-06", 0.125), month("Later", 0.075)],
+		const columns = stripColumns(
+			[
+				month("2026-09", 0.2), month("2026-10", 0.1), month("2027-03", 0.1),
+				month("2027-04", 0.1), month("2027-05", 0.05), month("2027-06", 0.15),
+				month("2028-03", 0.1), month("2028-04", 0.1), month("Later", 0.1),
+			],
 			new Date("2026-10-28T12:00:00Z")
 		)
-		expect(shares.map((entry) => [entry.key, entry.share])).toEqual([
-			["2026-10", 0.1], ["2026-11", 0], ["2026-12", 0.3], ["2027-01", 0], ["2027-02", 0], ["Later", 0.6],
+		expect(columns.map((column) => [column.label, Math.round(column.share * 1000) / 1000])).toEqual([
+			["2026/10", 0.125], ["2026/11", 0], ["2026/12", 0], ["2027/1", 0], ["2027/2", 0], ["2027/3", 0.125],
+			["2027/4 to 2027/6", 0.375], ["2027/7 to 2027/9", 0], ["2027/10 to 2027/12", 0], ["2028/1 to 2028/3", 0.125],
+			["Later", 0.25],
 		])
-		expect(shares[0]).toMatchObject({ label: "2026/10", current: true })
-		expect(shares[5].label).toBe("Later")
+		expect(columns[0]).toMatchObject({ kind: "month", current: true })
+		expect(columns.map((column) => column.kind).slice(5, 7)).toEqual(["month", "quarter"])
 	})
 
 	it("is all zeros with nothing planned", () => {
-		expect(monthShares([], new Date("2026-10-28T00:00:00Z")).every((entry) => entry.share === 0)).toBe(true)
+		expect(stripColumns([], new Date("2026-10-28T00:00:00Z")).every((column) => column.share === 0)).toBe(true)
 	})
 })
 
