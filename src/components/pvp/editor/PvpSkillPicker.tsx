@@ -16,6 +16,7 @@ import type { CatalogueSkill } from "../../../types/pvpTeam"
 import type { PvpSkillCategory } from "../../../types/pvpGuide"
 import { SKILL_CATEGORY_LABELS } from "../../../utils/pvpGuide"
 import { CATEGORY_CHOICES, TIER_CHOICES } from "../../../utils/guideDocument"
+import { foldText, nameLang, skillMatches, skillSearchWords } from "../../../utils/skillList"
 import { SELECT } from "./editorStyles"
 
 export function PvpSkillPicker({ title, skills, category: initialCategory, tier: initialTier, blockReason, onPick, onClose }: {
@@ -40,13 +41,16 @@ export function PvpSkillPicker({ title, skills, category: initialCategory, tier:
 		return () => window.removeEventListener("keydown", closeOnEscape)
 	}, [onClose])
 
-	const query = search.trim().toLowerCase()
+	const query = search.trim()
 	const shown = useMemo(
-		() =>
-			skills
-				.filter((skill) => !query || skill.name.toLowerCase().includes(query) || skill.description.toLowerCase().includes(query))
+		() => {
+			// Any of the skill's names or its id (skillMatches), or words from what it does.
+			const words = skillSearchWords(query)
+			return skills
+				.filter((skill) => skillMatches(skill, words) || (query !== "" && foldText(skill.description).includes(foldText(query))))
 				.sort((a, b) => a.name.localeCompare(b.name))
-				.slice(0, 120),
+				.slice(0, 120)
+		},
 		[skills, query]
 	)
 
@@ -129,7 +133,7 @@ export function PvpSkillPicker({ title, skills, category: initialCategory, tier:
 											)}
 											<span className="min-w-0 flex-1">
 												<span className="flex flex-wrap items-center gap-x-2">
-													<span className="text-sm font-medium text-gray-100">{skill.name}</span>
+													<span className="text-sm font-medium text-gray-100" lang={nameLang(skill.name)}>{skill.name}</span>
 													{skill.version && <span className="rounded border border-gray-600 px-1 text-[10px] text-gray-300">{skill.version}</span>}
 													{reason && <span className="text-[11px] text-gray-400">{reason}</span>}
 												</span>

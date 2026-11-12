@@ -28,6 +28,7 @@ import { useMemo, useState } from "react"
 import { FramedUma } from "../FramedUma"
 import type { RaceCourse } from "../../types"
 import type { CatalogueUma } from "../../types/pvpTeam"
+import { foldText, skillMatches, skillSearchWords } from "../../utils/skillList"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useCourseZones } from "../../services/courseQueries"
@@ -66,11 +67,6 @@ const LISTS: Record<ListKind, { label: string; title: string; rows: string; sear
 		none: "No speed skill pays off here for this style.",
 		loading: "Loading the speed skills…",
 	},
-}
-
-/** Lower case with the accents dropped, so "condor" finds "Cóndor" too. */
-function folded(text: string): string {
-	return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 }
 
 interface Owner {
@@ -249,15 +245,17 @@ export default function CourseAccelList({
 		},
 		[zones.data, list, style, owners, fieldSize],
 	)
-	// The search: a row stays when its skill's name, or its owner uma's,
-	// holds the words typed (one substring, case and accents ignored).
-	const needle = folded(query.trim())
+	// The search: a row stays when its skill matches by any of its names or
+	// its id (skillMatches), or its owner uma's name holds what was typed
+	// (one substring, case and accents ignored).
+	const needle = foldText(query.trim())
 	const found = useMemo(() => {
 		if (!needle) return rows
+		const words = skillSearchWords(needle)
 		return rows.filter(({ skillId }) => {
-			const name = ready?.skillsById.get(skillId)?.name ?? `Skill ${skillId}`
+			const skill = ready?.skillsById.get(skillId) ?? { name: `Skill ${skillId}` }
 			const owner = owners.get(skillId)?.uma.name ?? ""
-			return folded(name).includes(needle) || folded(owner).includes(needle)
+			return skillMatches(skill, words) || foldText(owner).includes(needle)
 		})
 	}, [rows, needle, ready, owners])
 	const loaded = zones.data !== undefined && ready !== null

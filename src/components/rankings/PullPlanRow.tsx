@@ -141,11 +141,19 @@ export function PullPlanRow({ row, fill, timelineOf, movement }: {
 	)
 }
 
-/** Five small bars, one per bucket, each its share of the planners with a sane figure (the server's). */
+/**
+ * One small bar per bucket, each its share of the planners with a sane figure
+ * (the server's). How many buckets is the server's call (six since the
+ * 2026-11 edges: rankings_figures.EDGES), so the columns follow the edges.
+ */
 function Spread({ spread, unit }: { spread: NonNullable<PlannedBannerRank["spread"]>; unit: "pulls" | "steps" }) {
 	const top = Math.max(0, ...spread.shares)
 	return (
-		<ol className="grid grid-cols-5 items-end gap-1.5" aria-label={`Planners by ${unit} planned`}>
+		<ol
+			className="grid items-end gap-1.5"
+			style={{ gridTemplateColumns: `repeat(${spread.shares.length}, minmax(0, 1fr))` }}
+			aria-label={`Planners by ${unit} planned`}
+		>
 			{spread.shares.map((share, index) => (
 				<li key={index} className="flex min-w-0 flex-col items-center gap-0.5">
 					<span className="flex h-8 w-full items-end" aria-hidden="true">

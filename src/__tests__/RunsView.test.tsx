@@ -211,7 +211,7 @@ describe("logging a ticket", () => {
 	it("puts one team on every ticket and the Finals in one tap", async () => {
 		show()
 		const bar = await screen.findByRole("region", { name: "Every ticket left" })
-		expect(within(bar).getByText("16 tickets and the Finals have no lineup yet.")).toBeTruthy()
+		expect(within(bar).getByText("16 tickets and the Finals not raced yet.")).toBeTruthy()
 		fireEvent.click(within(bar).getByRole("button", { name: "Use Team 1 for all of them" }))
 
 		await waitFor(() => expect(puts()).toHaveLength(17))
@@ -220,21 +220,46 @@ describe("logging a ticket", () => {
 		expect(paths).toContain("/pvp-runs/cm/10/day/4/ticket/4")
 		expect(paths[16]).toBe("/pvp-runs/cm/10/final")
 		expect(puts().every((put) => (put.body.runners as unknown[]).length === 3)).toBe(true)
-		expect(toastSuccess).toHaveBeenCalledWith("Team 1 is on every ticket left.")
-		// Nothing left to fill, so the bar goes; Ticket 1 is open with its race buttons.
-		await waitFor(() => expect(screen.queryByRole("region", { name: "Every ticket left" })).toBeNull())
+		expect(toastSuccess).toHaveBeenCalledWith("Team 1 is on every ticket left.", expect.objectContaining({ action: expect.anything() }))
+		// Nothing is raced yet, so the bar stays, now offering Clear; Ticket 1 is open with its race buttons.
+		await waitFor(() => expect(within(bar).getByRole("button", { name: "Clear them" })).toBeTruthy())
 		expect(screen.getByRole("button", { name: "Ticket 1, race 1: Oguri Cap won" })).toBeTruthy()
 	})
 
-	it("asks which team first when there are two", async () => {
+	it("offers every team as its own button, and replaces tickets that only hold a team", async () => {
 		teams.list = [TEAM, { ...TEAM, key: "t2", id: 2, name: "Plan B", members: TEAM.members.slice(0, 2) }]
+		// Ticket 1 holds Team 1 with nothing raced; Ticket 2 is raced and stays.
+		runs.list = [logged(1, []), logged(2, [{ race: 1, winner: 0 }])]
 		show()
 		const bar = await screen.findByRole("region", { name: "Every ticket left" })
-		fireEvent.click(within(bar).getByRole("button", { name: "Pick a team for all of them" }))
-		fireEvent.click(within(bar).getByRole("button", { name: /Plan B/ }))
+		fireEvent.click(within(bar).getByRole("button", { name: "Use Plan B for all of them" }))
 
-		await waitFor(() => expect(puts()).toHaveLength(17))
+		await waitFor(() => expect(puts()).toHaveLength(16))
 		expect(puts().every((put) => (put.body.runners as unknown[]).length === 2)).toBe(true)
+		expect(puts().map((put) => put.path)).not.toContain("/pvp-runs/cm/10/day/1/ticket/2")
+	})
+
+	it("clears every ticket left, and Undo puts them back", async () => {
+		runs.list = [logged(1, []), logged(2, [])]
+		show()
+		const bar = await screen.findByRole("region", { name: "Every ticket left" })
+		fireEvent.click(within(bar).getByRole("button", { name: "Clear them" }))
+		await waitFor(() => expect(deletes()).toEqual(["/pvp-runs/cm/10/day/1/ticket/1", "/pvp-runs/cm/10/day/1/ticket/2"]))
+
+		const [message, options] = toastSuccess.mock.calls.at(-1) as [string, { action: { onClick: () => void } }]
+		expect(message).toBe("Cleared the teams from every ticket left.")
+		options.action.onClick()
+		await waitFor(() => expect(puts().map((put) => put.path)).toEqual(["/pvp-runs/cm/10/day/1/ticket/1", "/pvp-runs/cm/10/day/1/ticket/2"]))
+	})
+
+	it("puts a team on one day's tickets", async () => {
+		teams.list = [TEAM, { ...TEAM, key: "t2", id: 2, name: "Plan B", members: TEAM.members.slice(0, 2) }]
+		show()
+		const day = await screen.findByRole("group", { name: "All of Day 1" })
+		fireEvent.click(within(day).getByRole("button", { name: "Plan B" }))
+		await waitFor(() => expect(puts()).toHaveLength(4))
+		expect(puts().every((put) => put.path.startsWith("/pvp-runs/cm/10/day/1/"))).toBe(true)
+		expect(toastSuccess).toHaveBeenCalledWith("Plan B is on Day 1's tickets.", expect.anything())
 	})
 
 	it("clears a race with a second tap", async () => {
@@ -246,17 +271,15 @@ describe("logging a ticket", () => {
 		expect(puts()[0].body.races).toEqual([{ race: 1, winner: 0 }])
 	})
 
-	it("offers the last ticket's umas for the next one, named by where they came from", async () => {
+	it("offers only teams, the one the ticket before ran first", async () => {
+		teams.list = [TEAM, { ...TEAM, key: "t2", id: 2, name: "Plan B", members: TEAM.members.slice(0, 2) }]
 		show()
 		const first = await screen.findByRole("region", { name: "Ticket 1" })
-		fireEvent.click(within(first).getByRole("button", { name: "Use Team 1" }))
+		fireEvent.click(within(first).getByRole("button", { name: "Use Plan B" }))
 		const second = screen.getByRole("region", { name: "Ticket 2" })
-		await waitFor(() => expect(within(second).getByRole("button", { name: "Same three as Ticket 1" })).toBeTruthy())
-		// The team is the same three, so the list doesn't offer it twice.
-		fireEvent.click(within(second).getByRole("button", { name: "Pick a team" }))
-		// The one-tap button and the list's card.
-		expect(within(second).getAllByRole("button", { name: /^Same three as Ticket 1/ })).toHaveLength(2)
-		expect(within(second).queryByRole("button", { name: /^Team 1/ })).toBeNull()
+		await waitFor(() => expect(within(second).getAllByRole("button", { name: /^Use / })[0]).toHaveTextContent("Use Plan B"))
+		expect(within(second).getByRole("button", { name: "Use Team 1" })).toBeTruthy()
+		expect(within(second).queryByRole("button", { name: /Same three/ })).toBeNull()
 	})
 
 	it("opens the ticket in progress and folds the rest", async () => {
@@ -397,12 +420,13 @@ describe("the finals", () => {
 		expect(within(finals).getByRole("radio", { name: "1st" })).toHaveAttribute("aria-checked", "true")
 	})
 
-	it("starts the Finals from the event's last ticket", async () => {
+	it("starts the Finals from the team the event's last ticket ran", async () => {
 		runs.list = [logged(3, [{ race: 1, winner: 0 }], { day: 4 })]
 		show()
 		fireEvent.click(await screen.findByRole("tab", { name: /Finals/ }))
 		const finals = screen.getByRole("region", { name: "Finals" })
-		expect(within(finals).getByRole("button", { name: "Same three as Day 4, Ticket 3" })).toBeTruthy()
+		// The team the last ticket ran, never "Same three as" (owner, 2026-11-12).
+		expect(within(finals).getAllByRole("button", { name: /^Use / })[0]).toHaveTextContent("Use Team 1")
 	})
 })
 

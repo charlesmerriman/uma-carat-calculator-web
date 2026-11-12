@@ -13,6 +13,7 @@ import { UMATL_URL, skillHref, skillKind } from "../../utils/skillSearch"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { JpOnlyTag, ReadableText } from "../pvp/SkillDetail"
+import { nameLang } from "../../utils/skillList"
 
 type DetailState =
 	| { status: "loading"; gameId: number }
@@ -33,7 +34,7 @@ function SkillLink({ skill }: { skill: Omit<SkillListRow, "other_names"> }) {
 	return (
 		<Link to={skillHref(skill.game_id)} className="inline-flex items-center gap-1 text-brand transition hover:text-brand/75">
 			<SkillIcon image={skill.image} className="h-4 w-4" />
-			{skill.name}
+			<span lang={nameLang(skill.name)}>{skill.name}</span>
 			<span className="text-gray-400">({skillKind(skill)})</span>
 		</Link>
 	)
@@ -194,7 +195,7 @@ export function SkillDetailCard({ gameId, onClose }: { gameId: number; onClose: 
 				<SkillIcon image={skill.image} className="h-10 w-10" />
 				<div className="min-w-0 flex-1">
 					<h2 id="skill-detail-name" className="flex flex-wrap items-center gap-x-2 text-lg font-semibold text-gray-100">
-						{skill.name}
+						<span lang={nameLang(skill.name)}>{skill.name}</span>
 						{skill.availability === "jp" && <JpOnlyTag className="text-xs" />}
 						{skill.availability === "announced" && (
 							<span className="rounded border border-gray-500 px-1 text-xs font-medium text-gray-300">Coming to global</span>

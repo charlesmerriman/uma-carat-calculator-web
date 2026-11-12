@@ -22,7 +22,7 @@ import type { RaceEvent } from "../../types"
 import { releaseBlockReason, releaseNote, type ReleaseStatus } from "../../utils/cardRelease"
 import type { ReleaseCheck } from "../../hooks/useCardReleases"
 import type { CatalogueSupportCard, CatalogueUma, MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
-import { CardDropSlot, DraggableCard } from "./CardDrag"
+import { CardDropSlot, DraggableCard, UmaDropSpot } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
 import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { VeteranPicker } from "../collection/VeteranPicker"
@@ -191,21 +191,24 @@ function MemberPanel({
 	// those read as a form nobody has started. The slots appear with the uma.
 	if (!member) {
 		return (
-			<button
-				type="button"
-				aria-label={`Add uma ${position + 1}`}
-				onClick={() => onPickUma(position)}
-				className="group flex w-full items-center gap-3 rounded-xl border border-dashed border-gray-600 bg-gray-800/40 p-2.5 text-left transition hover:border-brand hover:bg-brand/5 sm:p-3"
-			>
-				<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-700 text-xs font-bold text-gray-400 transition group-hover:bg-brand group-hover:text-black" aria-hidden="true">
-					{position + 1}
-				</span>
-				<UserPlus className="h-5 w-5 shrink-0 text-gray-500 transition group-hover:text-brand" aria-hidden="true" />
-				<span className="min-w-0">
-					<span className="block text-sm font-semibold text-gray-200 group-hover:text-brand">Add an uma</span>
-					<span className="block truncate text-xs text-gray-500">Then pick her five support cards and a borrowed one.</span>
-				</span>
-			</button>
+			// An uma dragged from Guide picks can land here too (CardDrag.tsx).
+			<UmaDropSpot position={position}>
+				<button
+					type="button"
+					aria-label={`Add uma ${position + 1}`}
+					onClick={() => onPickUma(position)}
+					className="group flex w-full items-center gap-3 rounded-xl border border-dashed border-gray-600 bg-gray-800/40 p-2.5 text-left transition hover:border-brand hover:bg-brand/5 sm:p-3"
+				>
+					<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-700 text-xs font-bold text-gray-400 transition group-hover:bg-brand group-hover:text-black" aria-hidden="true">
+						{position + 1}
+					</span>
+					<UserPlus className="h-5 w-5 shrink-0 text-gray-500 transition group-hover:text-brand" aria-hidden="true" />
+					<span className="min-w-0">
+						<span className="block text-sm font-semibold text-gray-200 group-hover:text-brand">Add an uma</span>
+						<span className="block truncate text-xs text-gray-500">Then pick her five support cards and a borrowed one.</span>
+					</span>
+				</button>
+			</UmaDropSpot>
 		)
 	}
 
@@ -265,18 +268,20 @@ function MemberPanel({
 			</header>
 
 			<div className={`grid items-start gap-1.5 sm:gap-2 ${ROW_GRID}`}>
-				<Tile
-					className="row-span-2 sm:row-span-1"
-					art={uma?.portrait ?? uma?.image ?? null}
-					framed
-					large
-					starred={starred("uma", member.uma)}
-					flag={releaseFor?.("uma", member.uma)}
-					favorite={isFavorite?.(member.uma) ?? false}
-					label={`Change uma ${position + 1}: ${umaLabel}`}
-					onClick={() => onPickUma(position)}
-					empty={null}
-				/>
+				{/* Dropping an uma here swaps her in and keeps the deck, like Replace. */}
+				<UmaDropSpot position={position} className="row-span-2 min-w-0 sm:row-span-1">
+					<Tile
+						art={uma?.portrait ?? uma?.image ?? null}
+						framed
+						large
+						starred={starred("uma", member.uma)}
+						flag={releaseFor?.("uma", member.uma)}
+						favorite={isFavorite?.(member.uma) ?? false}
+						label={`Change uma ${position + 1}: ${umaLabel}`}
+						onClick={() => onPickUma(position)}
+						empty={null}
+					/>
+				</UmaDropSpot>
 				{OWNED_SLOTS.map(cardTile)}
 				<span className="hidden self-stretch rounded-full bg-gray-600 sm:block" aria-hidden="true" />
 				{cardTile(PVP_BORROW_SLOT)}

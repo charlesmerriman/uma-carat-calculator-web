@@ -6,6 +6,7 @@
 import type { SkillAvailability } from "../types/pvpGuide"
 import type { SkillListRow } from "../types/skills"
 import { WHITE_SKILL_RARITY, skillColour } from "./pvpGuide"
+import { skillMatches, skillSearchWords } from "./skillList"
 
 export type ColourFilter = "all" | "white" | "gold" | "unique" | "evolved"
 export type WhereFilter = "all" | SkillAvailability
@@ -26,9 +27,8 @@ export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
 ]
 
 /**
- * The rows that match: every word of the query in the name or any other name
- * (the translation, old names, the Japanese one), ignoring case, then the
- * two filters. Rows keep the API's order (by name).
+ * The rows that match the query by any name or the id (skillMatches), then
+ * the two filters. Rows keep the API's order (by name).
  */
 export function filterSkills(
 	rows: SkillListRow[],
@@ -36,13 +36,11 @@ export function filterSkills(
 	colour: ColourFilter,
 	where: WhereFilter
 ): SkillListRow[] {
-	const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+	const words = skillSearchWords(query)
 	return rows.filter((row) => {
 		if (colour !== "all" && skillColour(row) !== colour) return false
 		if (where !== "all" && row.availability !== where) return false
-		if (words.length === 0) return true
-		const haystack = [row.name, ...row.other_names].join(" ").toLowerCase()
-		return words.every((word) => haystack.includes(word))
+		return skillMatches(row, words)
 	})
 }
 

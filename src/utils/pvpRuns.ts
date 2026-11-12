@@ -305,32 +305,42 @@ export function isPastDay(day: number, today: number | null): boolean {
 	return today === null || day < today
 }
 
-// ── One lineup for every ticket ──────────────────────────────────────────
+// ── One team for many tickets ────────────────────────────────────────────
 
 /**
- * The slots "Use Team 1 for all of them" fills (owner's pick, 2026-10-29;
- * notes/v2-10-feedback-plan.md, item 10): every ticket with no lineup on a
- * day that isn't over, then the Finals if it has none. A lineup with no races
- * reads "started" (ticketState), so a past day's unplayed tickets are left
- * for "Mark the rest skipped", and a ticket that is skipped or already has a
- * lineup is never touched. A LoH's Top 96 has no lineup to fill.
+ * A ticket the bulk tools may change: nothing raced, skipped, placed or
+ * grouped on it, so at most a lineup (and a note). Once a race is logged a
+ * ticket is what happened and keeps its lineup (notes/runs-follow-team-plan.md).
  */
-export function slotsWithoutLineup(runs: PvpRun[], today: number | null, shape: RunShape = CM_SHAPE): PvpRunSlot[] {
-	const empty = (slot: PvpRunSlot) => {
-		const run = findRun(runs, slot)
-		return !run || (run.runners.length === 0 && run.races.length === 0 && !run.skipped)
-	}
+export function isUnraced(run: PvpRun | undefined): boolean {
+	return !run || (run.races.length === 0 && !run.skipped && run.placement === null && run.finals_group === "")
+}
+
+/**
+ * The slots "Use Team 1 for all of them" and "Clear" act on (Daptrius,
+ * 2026-11-05: replace or clear every team, or a day's): the unraced tickets of
+ * `day`, or with no day every unraced ticket on a day that isn't over, then
+ * the Finals. A past day's unplayed tickets are left for "Mark the rest
+ * skipped" in the all-days case, but a day picked by hand is taken whole. A
+ * LoH's Top 96 is a registered team, never filled in bulk.
+ */
+export function unracedSlots(runs: PvpRun[], today: number | null, shape: RunShape = CM_SHAPE, day: number | null = null): PvpRunSlot[] {
 	const slots: PvpRunSlot[] = []
-	for (let day = 1; day <= shape.days; day++) {
-		if (isPastDay(day, today)) continue
+	for (let each = 1; each <= shape.days; each++) {
+		if (day === null ? isPastDay(each, today) : each !== day) continue
 		for (let ticket = 1; ticket <= shape.tickets; ticket++) {
-			const slot: PvpRunSlot = { stage: "day", day, ticket }
-			if (empty(slot)) slots.push(slot)
+			const slot: PvpRunSlot = { stage: "day", day: each, ticket }
+			if (isUnraced(findRun(runs, slot))) slots.push(slot)
 		}
 	}
 	const final: PvpRunSlot = { stage: "final" }
-	if (shape.rounds && empty(final)) slots.push(final)
+	if (day === null && shape.rounds && isUnraced(findRun(runs, final))) slots.push(final)
 	return slots
+}
+
+/** An unraced ticket with its lineup taken off: gone (no row) unless it holds a note. */
+export function clearLineup(current: PvpRunContent): PvpRunContent | null {
+	return current.note ? { ...current, runners: [], races: [] } : null
 }
 
 // ── Win rates ────────────────────────────────────────────────────────────

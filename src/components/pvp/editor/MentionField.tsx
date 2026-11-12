@@ -15,6 +15,7 @@ import { Bold, Eye, EyeOff, Highlighter, Italic, Link2, Sparkles } from "lucide-
 import { MarkdownContent } from "../../info/MarkdownContent"
 import { SkillMention } from "../PvpTiles"
 import { useGuideEditor } from "./GuideEditorContext"
+import { skillMatches, skillSearchWords } from "../../../utils/skillList"
 import { FIELD_ERROR, ICON_BUTTON, INPUT } from "./editorStyles"
 
 const MAX_SUGGESTIONS = 8
@@ -77,10 +78,12 @@ export function MentionField({
 	const mention = caret === null ? null : openMention(value, caret)
 	const suggestions = useMemo(() => {
 		if (!mention) return []
-		const query = mention.query.trim().toLowerCase()
+		const words = skillSearchWords(mention.query)
 		const names: string[] = []
 		for (const skill of index.catalogue.skills) {
-			if (query && !skill.name.toLowerCase().includes(query)) continue
+			// Matched by any name or the id, but always suggested by the
+			// shown name: that is what the guide should say.
+			if (!skillMatches(skill, words)) continue
 			if (!names.includes(skill.name)) names.push(skill.name)
 			if (names.length >= MAX_SUGGESTIONS) break
 		}

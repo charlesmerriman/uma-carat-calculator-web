@@ -1,5 +1,5 @@
 /**
- * The Skills page (/app/skills): every skill with an English name, global's
+ * The Skills page (/app/skills): every skill with a name (in Japanese when it has no English one), global's
  * and JP's, from GET /skills. Search by any name a skill has had, filter by
  * colour and by where it is, and open one to see it in full
  * (SkillDetailCard, GET /skills/<game_id>).
@@ -23,6 +23,7 @@ import {
 } from "../../utils/skillSearch"
 import { JpOnlyTag } from "../pvp/SkillDetail"
 import { SkillDetailCard } from "./SkillDetailCard"
+import { nameLang } from "../../utils/skillList"
 
 const PAGE = 60
 
@@ -76,7 +77,7 @@ function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
 				) : (
 					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 				)}
-				<span className="min-w-0 flex-1 truncate">{row.name}</span>
+				<span className="min-w-0 flex-1 truncate" lang={nameLang(row.name)}>{row.name}</span>
 				{row.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
 				<span className="shrink-0 text-xs opacity-70">{skillKind(row)}</span>
 			</Link>

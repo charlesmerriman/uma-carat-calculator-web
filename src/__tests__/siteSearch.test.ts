@@ -26,7 +26,9 @@ const SOURCES: SearchSources = {
 	] as unknown as RaceEvent[],
 	scenarios: [{ id: 3, name: "Trackblazer" }] as Scenario[],
 	campaigns: [],
-	skills: [{ id: 7, name: "Groundwork", description: "Speed up early on." }] as CatalogueSkill[],
+	skills: [
+		{ id: 7, name: "Groundwork", description: "Speed up early on.", game_id: 200011, other_names: ["Preparations"] },
+	] as CatalogueSkill[],
 }
 
 const entries = buildSearchEntries(SOURCES, NOW, false)
@@ -59,6 +61,12 @@ describe("the site search", () => {
 
 	it("finds a page by a word that isn't in its name", () => {
 		expect(titles("patch notes")[0]).toBe("Changelog")
+	})
+
+	it("finds a skill by a name it never shows, and by its id alone", () => {
+		expect(titles("preparations")[0]).toBe("Groundwork")
+		expect(titles("200011")).toEqual(["Groundwork"])
+		expect(titles("200012")).toEqual([])
 	})
 
 	it("sends a skill nowhere, since it has no page", () => {

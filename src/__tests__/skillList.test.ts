@@ -4,7 +4,7 @@ import type { GuideDocument } from "../types/guideDocument"
 import type { CatalogueSkill, PvpCatalogue } from "../types/pvpTeam"
 import type { SkillListRow } from "../types/skills"
 import { hydrateGuide, validateDocument } from "../utils/guideDocument"
-import { skillNames, withShownSkills } from "../utils/skillList"
+import { nameLang, skillMatches, skillNames, skillSearchWords, withShownSkills } from "../utils/skillList"
 
 /**
  * The guide editor's widened catalogue: the builder's skills (global) plus
@@ -80,5 +80,41 @@ describe("the editor with JP skills", () => {
 		expect(hydrated.skill_recommendations[0].skill).toMatchObject({ name: "Fan Skill", availability: "jp" })
 		const mentioned = hydrateGuide(document("[[old groundwork]]"), widened, [], null)
 		expect(mentioned.skill_mentions?.["old groundwork"]).toMatchObject({ id: 1, name: "Groundwork" })
+	})
+})
+
+describe("skill search (skillMatches)", () => {
+	// Certain Victory, which players know by GameTora's "It's Going to Be Me".
+	const victory = { name: "Certain Victory", game_id: 110031, other_names: ["It's Going to Be Me", "絶対は、ボクだ"] }
+	const matches = (query: string) => skillMatches(victory, skillSearchWords(query))
+
+	it("matches every word across the shown name and the hidden ones", () => {
+		expect(matches("certain")).toBe(true)
+		expect(matches("going me")).toBe(true)
+		expect(matches("ボクだ")).toBe(true)
+		expect(matches("certain loss")).toBe(false)
+	})
+
+	it("ignores case, accents and the ○ ◎ marks", () => {
+		expect(matches("CERTAÍN ◎")).toBe(true)
+	})
+
+	it("finds the skill by its whole id and never by part of one", () => {
+		expect(matches("110031")).toBe(true)
+		expect(matches("1100")).toBe(false)
+		expect(skillMatches({ name: "No Id" }, ["110031"])).toBe(false)
+	})
+
+	it("matches everything when nothing is typed", () => {
+		expect(matches("  ")).toBe(true)
+	})
+})
+
+describe("a Japanese name's lang (nameLang)", () => {
+	it("is ja for kana or kanji, and off for an English name", () => {
+		expect(nameLang("右回り○")).toBe("ja")
+		expect(nameLang("スピードスター")).toBe("ja")
+		expect(nameLang("Hot Blooded ☆ Amigo")).toBeUndefined()
+		expect(nameLang("introduction：My body")).toBeUndefined()
 	})
 })

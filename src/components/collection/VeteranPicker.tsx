@@ -120,6 +120,14 @@ function PickerOverlay({ uma, options, value, oshi, onPick, onClose }: {
 					</button>
 				</header>
 				<ul className="flex min-h-0 flex-col gap-2 overflow-y-auto p-3">
+					{/* First, always: with a dozen veterans of one uma, "none" at the
+					    bottom of a scrolled list was the hardest choice to reach (Daptrius). */}
+					<li>
+						<button type="button" aria-pressed={value === null} onClick={() => onPick(null)} className={choice(value === null)}>
+							<span className="flex-1 text-sm text-gray-300">No veteran</span>
+							{value === null && <Check className="h-4 w-4 text-brand" aria-hidden="true" />}
+						</button>
+					</li>
 					{options.map((veteran) => {
 						const strong = aptitudeSummary(veteran.apt)
 						return (
@@ -145,12 +153,6 @@ function PickerOverlay({ uma, options, value, oshi, onPick, onClose }: {
 							</li>
 						)
 					})}
-					<li>
-						<button type="button" aria-pressed={value === null} onClick={() => onPick(null)} className={choice(value === null)}>
-							<span className="flex-1 text-sm text-gray-300">No veteran</span>
-							{value === null && <Check className="h-4 w-4 text-brand" aria-hidden="true" />}
-						</button>
-					</li>
 				</ul>
 			</section>
 		</div>,
