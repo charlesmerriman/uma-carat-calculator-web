@@ -37,6 +37,14 @@ export interface AnniversaryEventProduct {
 	jp_cutoff_date: string | null
 	/** The product's own override, null when the cutoff came from the campaign. */
 	jp_cutoff_date_override: string | null
+	/** The campaign part it goes on sale with, as the editor set it; null = the main part. */
+	opens_with_part?: number | null
+	/**
+	 * When its paid carats credit: that part's start, else the campaign's
+	 * `main_start_date` (the API resolves it). Optional only because a payload
+	 * cached before the field existed lacks it for a few minutes after a deploy.
+	 */
+	opens_at?: string | null
 	order: number
 }
 
