@@ -75,6 +75,13 @@ describe("skills", () => {
 		expect(searchSkills(SKILLS, "c", new Set())).toEqual([])
 	})
 
+	it("finds a skill by a name it never shows, and by its id", () => {
+		const star = { ...SKILLS[3], game_id: 100011, other_names: ["Falling Star"] }
+		expect(searchSkills([star], "falling", new Set()).map((each) => each.id)).toEqual([4])
+		expect(searchSkills([star], "100011", new Set()).map((each) => each.id)).toEqual([4])
+		expect(searchSkills([star], "1000", new Set())).toEqual([])
+	})
+
 	it("levels only a unique skill", () => {
 		expect(isUniqueSkill(SKILLS[3])).toBe(true)
 		expect(isUniqueSkill(SKILLS[0])).toBe(false)
