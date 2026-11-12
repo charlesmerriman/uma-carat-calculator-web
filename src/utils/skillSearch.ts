@@ -8,7 +8,9 @@ import type { SkillListRow } from "../types/skills"
 import { WHITE_SKILL_RARITY, skillColour } from "./pvpGuide"
 import { skillMatches, skillSearchWords } from "./skillList"
 
-export type ColourFilter = "all" | "white" | "gold" | "unique" | "evolved"
+// "inherited" is a unique's copy a parent passes on: white by colour, but its
+// own filter and out of White (Daptrius's list, item 10).
+export type ColourFilter = "all" | "white" | "gold" | "unique" | "inherited" | "evolved"
 export type WhereFilter = "all" | SkillAvailability
 
 export const COLOUR_FILTERS: { value: ColourFilter; label: string }[] = [
@@ -16,7 +18,31 @@ export const COLOUR_FILTERS: { value: ColourFilter; label: string }[] = [
 	{ value: "white", label: "White" },
 	{ value: "gold", label: "Gold" },
 	{ value: "unique", label: "Unique" },
+	{ value: "inherited", label: "Inherited" },
 	{ value: "evolved", label: "Evolved" },
+]
+
+/**
+ * The Type filter (Daptrius's list, item 1): the API's `type`, read off the
+ * skill's icon family (backend skill_types.py, where the grouping and its
+ * evidence are). The names are Daptrius's to confirm before the release.
+ */
+export type TypeFilter = "all" | "unique" | "stat" | "velocity" | "acceleration" | "recovery" | "navigation"
+	| "start" | "vision" | "debuff" | "scenario" | "other"
+
+export const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
+	{ value: "all", label: "Any type" },
+	{ value: "velocity", label: "Speed" },
+	{ value: "acceleration", label: "Acceleration" },
+	{ value: "recovery", label: "Recovery" },
+	{ value: "stat", label: "Stat boost" },
+	{ value: "navigation", label: "Lane movement" },
+	{ value: "start", label: "Start" },
+	{ value: "vision", label: "Vision" },
+	{ value: "debuff", label: "Debuff" },
+	{ value: "unique", label: "Unique" },
+	{ value: "scenario", label: "Scenario" },
+	{ value: "other", label: "Other" },
 ]
 
 export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
@@ -27,20 +53,23 @@ export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
 ]
 
 /**
- * The rows that match the query by any name or the id (skillMatches), then
- * the two filters. Rows keep the API's order (by name).
+ * The rows that match the query by any name, the id, or the uma a unique or
+ * an evolution belongs to (`owners`, Daptrius's item 11: "Special Week" finds
+ * Shooting Star), then the filters. Rows keep the API's order (by name).
  */
 export function filterSkills(
 	rows: SkillListRow[],
 	query: string,
 	colour: ColourFilter,
-	where: WhereFilter
+	where: WhereFilter,
+	type: TypeFilter = "all"
 ): SkillListRow[] {
 	const words = skillSearchWords(query)
 	return rows.filter((row) => {
-		if (colour !== "all" && skillColour(row) !== colour) return false
+		if (colour !== "all" && skillKind(row) !== colour) return false
 		if (where !== "all" && row.availability !== where) return false
-		return skillMatches(row, words)
+		if (type !== "all" && (row.type ?? "other") !== type) return false
+		return skillMatches({ ...row, other_names: [...row.other_names, ...(row.owners ?? [])] }, words)
 	})
 }
 
