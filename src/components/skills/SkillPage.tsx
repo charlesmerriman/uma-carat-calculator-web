@@ -194,10 +194,10 @@ const SkillPageBody = () => {
 			</p>
 		)
 	}
-	return <SkillDetail skill={page.data} />
+	return <SkillPageDetail skill={page.data} />
 }
 
-export function SkillDetail({ skill }: { skill: SkillDetailData }) {
+export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 	const credit = skill.uses_translation || skill.evolution.conditions.some((condition) => condition.uses_translation)
 	const isInherited = skillKind(skill) === "inherited"
 	return (
