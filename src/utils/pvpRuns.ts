@@ -231,13 +231,13 @@ export function previousRun(runs: PvpRun[], day: number, ticket: number): PvpRun
 
 /** An empty ticket's content: a lineup and nothing else. */
 export function emptyContent(runners: PvpRunRunner[] = []): PvpRunContent {
-	return { runners, races: [], finals_group: "", placement: null, note: "", skipped: false }
+	return { runners, races: [], finals_group: "", placement: null, note: "", skipped: false, team: null }
 }
 
 /** A run's content, the part a PUT sends. */
 export function contentOf(run: PvpRun): PvpRunContent {
-	const { runners, races, finals_group, placement, note, skipped } = run
-	return { runners, races, finals_group, placement, note, skipped }
+	const { runners, races, finals_group, placement, note, skipped, team } = run
+	return { runners, races, finals_group, placement, note, skipped, team: team ?? null }
 }
 
 /**
@@ -340,7 +340,7 @@ export function unracedSlots(runs: PvpRun[], today: number | null, shape: RunSha
 
 /** An unraced ticket with its lineup taken off: gone (no row) unless it holds a note. */
 export function clearLineup(current: PvpRunContent): PvpRunContent | null {
-	return current.note ? { ...current, runners: [], races: [] } : null
+	return current.note ? { ...current, runners: [], races: [], team: null } : null
 }
 
 // ── Win rates ────────────────────────────────────────────────────────────

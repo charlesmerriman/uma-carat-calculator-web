@@ -71,6 +71,7 @@ import {
 	bestTicketWins,
 	dayLabel,
 	clearLineup,
+	isUnraced,
 	contentOf,
 	emptyContent,
 	findRun,
@@ -142,6 +143,8 @@ interface LineupChoice {
 	badge: string | null
 	/** A logged ticket's three (the Top 96 only), drawn in the brand colour. */
 	previous: boolean
+	/** The team's id, which the ticket then follows (null: the Top 96's, or a team not saved yet). */
+	team: number | null
 	runners: PvpRunRunner[]
 }
 
@@ -295,7 +298,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		})
 	}
 	const bulkTeam = (slots: PvpRunSlot[], choice: LineupChoice, where: string) =>
-		bulk(slots, (current) => withLineup(current, choice.runners), `${choice.label} is on ${where}.`)
+		bulk(slots, (current) => withLineup(current, choice), `${choice.label} is on ${where}.`)
 	const bulkClear = (slots: PvpRunSlot[], where: string) => bulk(slots, clearLineup, `Cleared the teams from ${where}.`)
 	// No team in My team and nothing logged yet: there is nothing a ticket could copy.
 	const noLineups = eventTeams.length === 0 && !runs.some((run) => run.runners.length > 0)
@@ -425,11 +428,15 @@ function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: nu
 			label: named || `Team ${index + 1}`,
 			badge: named ? `Team ${index + 1}` : null,
 			previous: false,
+			team: team.id,
 			runners: lineupFromTeam(team.members),
 		}
 	})
 	const previous = previousRun(runs, day, ticket)
-	const ranBefore = previous ? choices.findIndex((choice) => sameLineup(choice.runners, previous.runners)) : -1
+	// The team it follows, else (filled before the link existed) the same three.
+	const ranBefore = previous
+		? choices.findIndex((choice) => (previous.team !== null && choice.team === previous.team) || sameLineup(choice.runners, previous.runners))
+		: -1
 	if (ranBefore > 0) choices.unshift(...choices.splice(ranBefore, 1))
 	return choices
 }
@@ -447,6 +454,7 @@ function topChoices(runs: PvpRun[], teams: PvpTeam[], shape: RunShape): LineupCh
 		label: `Same three as ${ticketSource(run, shape, false)}`,
 		badge: null,
 		previous: true,
+		team: null,
 		runners: run.runners,
 	}))
 }
@@ -536,10 +544,19 @@ function startLabel(choice: LineupChoice): string {
 	return choice.previous ? choice.label : `Use ${choice.label}`
 }
 
-/** A ticket's content with a new lineup. A race won by a spot the new lineup leaves empty goes back to "not run". */
-function withLineup(current: PvpRunContent, runners: PvpRunRunner[]): PvpRunContent {
-	const spots = new Set(runners.map((runner) => runner.position))
-	return { ...current, runners, races: current.races.filter((race) => race.winner === null || spots.has(race.winner)) }
+/**
+ * A ticket's content with a choice's lineup, following its team (null for the
+ * Top 96's "Same three as"). A race won by a spot the new lineup leaves empty
+ * goes back to "not run".
+ */
+function withLineup(current: PvpRunContent, choice: Pick<LineupChoice, "runners" | "team">): PvpRunContent {
+	const spots = new Set(choice.runners.map((runner) => runner.position))
+	return {
+		...current,
+		runners: choice.runners,
+		team: choice.team,
+		races: current.races.filter((race) => race.winner === null || spots.has(race.winner)),
+	}
 }
 
 function umaName(umasById: Map<number, CatalogueUma>, runner: PvpRunRunner | undefined): string {
@@ -819,7 +836,7 @@ function TicketRow({ title, eyebrow, run, choices, open, onOpen, shared, onWrite
 		const start = (choice: LineupChoice) => {
 			setPicking(false)
 			onOpen(true)
-			onWrite((current) => withLineup(current, choice.runners))
+			onWrite((current) => withLineup(current, choice))
 		}
 		return (
 			<section aria-label={title} className={quiet}>
@@ -1069,10 +1086,15 @@ function LineupBlock({ title, eyebrow, run, choices, shared, onWrite }: {
 }) {
 	const [picking, setPicking] = useState(false)
 	const [confirmClear, setConfirmClear] = useState(false)
+	// "follows Team 1" while nothing is raced: a My team edit still changes it.
+	const followed = run.team !== null && isUnraced(run) ? choices.find((choice) => choice.team === run.team)?.label : undefined
 	return (
 		<div className="flex flex-col gap-2.5">
 			<div className="flex items-center justify-between gap-2 sm:gap-3">
-				<span className={EYEBROW}>Who ran it</span>
+				<span className={EYEBROW}>
+					Who ran it
+					{followed && <span className="ml-1.5 normal-case tracking-normal text-gray-400">· follows {followed}</span>}
+				</span>
 				<div className="flex gap-1.5 sm:gap-2">
 					<button type="button" className={SOFT_BUTTON} aria-expanded={picking} onClick={() => setPicking((isOpen) => !isOpen)}>
 						<ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1106,7 +1128,7 @@ function LineupBlock({ title, eyebrow, run, choices, shared, onWrite }: {
 						shared={shared}
 						onPick={(choice) => {
 							setPicking(false)
-							onWrite((current) => withLineup(current, choice.runners))
+							onWrite((current) => withLineup(current, choice))
 						}}
 					/>
 				</div>
@@ -1448,7 +1470,7 @@ function TopBody({ run, choices, shared, onWrite }: {
 						eyebrow="Top 96"
 						choices={choices}
 						shared={shared}
-						onPick={(choice) => onWrite((current) => withLineup(current, choice.runners))}
+						onPick={(choice) => onWrite((current) => withLineup(current, choice))}
 					/>
 				)
 			)}
@@ -1522,7 +1544,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 					eyebrow="Finals"
 					choices={choices}
 					shared={shared}
-					onPick={(choice) => onWrite((current) => withLineup(current, choice.runners))}
+					onPick={(choice) => onWrite((current) => withLineup(current, choice))}
 				/>
 			</div>
 		)
