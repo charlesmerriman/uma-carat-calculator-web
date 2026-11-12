@@ -47,9 +47,9 @@ const DETAIL: SkillDetailData = {
 	versions: [],
 }
 
-/** The shelved skills work shows to guide editors only (useSkillsPreview). */
+/** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
 function asEditor(node: ReactNode, editor = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { guide_editor: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
+	const value = { isLoggedIn: true, status: "ready", account: { early_access: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
@@ -143,13 +143,13 @@ describe("SkillsPage", () => {
 		await waitFor(() => expect(screen.getByText(/The skill list didn't load/)).toBeInTheDocument())
 	})
 
-	it("isn't there for anyone but a guide editor while it's shelved", () => {
+	it("tells anyone without early access it's for supporters first", () => {
 		renderPage("/app/skills", false)
-		expect(screen.getByText(/This page isn't here/)).toBeInTheDocument()
+		expect(screen.getByText(/The Encyclopedia is for our Patreon supporters for now/)).toBeInTheDocument()
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("sends the editor's token: the API answers guide editors only while it's shelved", async () => {
+	it("sends the token: the API answers early access only", async () => {
 		setAuthToken("editor-token")
 		try {
 			renderPage("/app/skills?skill=100101111")

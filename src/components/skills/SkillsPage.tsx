@@ -9,12 +9,11 @@
  * rather than drawing them all.
  */
 
-import { useContext, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Loader2, Search, Zap } from "lucide-react"
 import { useSkillListState } from "../../hooks/useSkillList"
-import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { AuthContext } from "../../services/AuthContext"
+import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
 import type { SkillListRow } from "../../types/skills"
 import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
 import {
@@ -86,29 +85,15 @@ function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
 }
 
 /**
- * SHELVED to the guide editors (useSkillsPreview, owner 2026-10-23): anyone
- * else gets a plain "not here", and the route is neither prerendered nor in
- * the sitemap until the work is picked up again. Waits for the account while
- * it loads, so an editor's page doesn't flash "not here" first.
+ * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
+ * owner 2026-11-12): anyone else gets the supporters note, and the route is
+ * neither prerendered nor in the sitemap until it opens to everyone.
  */
-export const SkillsPage = () => {
-	const preview = useSkillsPreview()
-	const auth = useContext(AuthContext)
-	if (!preview) {
-		const waiting = Boolean(auth?.isLoggedIn) && auth?.status === "loading"
-		return (
-			<p className="mx-auto my-6 w-[calc(100%-1rem)] max-w-6xl text-sm text-gray-400" role="status">
-				{waiting ? "Loading..." : (
-					<>
-						This page isn't here.{" "}
-						<Link to="/app" className="text-brand transition hover:text-brand/75">Back to the calculator</Link>
-					</>
-				)}
-			</p>
-		)
-	}
-	return <SkillsPageBody />
-}
+export const SkillsPage = () => (
+	<EncyclopediaGate>
+		<SkillsPageBody />
+	</EncyclopediaGate>
+)
 
 const SkillsPageBody = () => {
 	const list = useSkillListState()
