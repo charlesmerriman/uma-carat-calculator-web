@@ -12,6 +12,8 @@
  */
 
 import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
+import { skillHref } from "../../utils/skillSearch"
 import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable, SkillSlot } from "../../types/pvpGuide"
 import { skillColour } from "../../utils/pvpGuide"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
@@ -180,8 +182,9 @@ function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 
 /** The whole hover detail of one skill. `note` is a guide row's note, if any. */
 export function SkillDetail({ skill, note }: { skill: PvpSkillRef; note?: ReactNode }) {
-	// The shelved skills work shows to guide editors only (useSkillsPreview);
-	// everyone else gets the hover card as it was: name, text, versions.
+	// The skills work shows to early access only (useSkillsPreview, the
+	// Encyclopedia's supporters-first rule); everyone else gets the hover card
+	// as it was: name, text, versions.
 	const preview = useSkillsPreview()
 	return (
 		<>
@@ -204,6 +207,11 @@ export function SkillDetail({ skill, note }: { skill: PvpSkillRef; note?: ReactN
 			)}
 			<SkillVersions skill={skill} />
 			{preview && skill.uses_translation && <span className="mt-1 block text-[0.9em] text-gray-500">English text: UmaTL fan translation.</span>}
+			{preview && skill.game_id != null && (
+				<Link to={skillHref(skill.game_id)} className="mt-1 block text-[0.9em] text-brand transition hover:text-brand/75">
+					Open its page
+				</Link>
+			)}
 		</>
 	)
 }

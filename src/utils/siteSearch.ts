@@ -10,9 +10,12 @@
  * PvP guide. A skill has no page either (the Skills page is shelved), so it has
  * no `href`: the palette shows what it does and who teaches it instead.
  *
- * Dedicated uma and support card pages are coming (owner, 2026-10-30), with
- * details on every one. When they exist, these results go there, every card
- * gets listed whether or not it has a banner, and skills can follow.
+ * WITH EARLY ACCESS (the Encyclopedia, supporters first, owner 2026-11-12)
+ * every uma and card in the PvP catalogue is listed, banner or not, and opens
+ * its own page; a banner it has stays in the detail line. A skill opens its
+ * page too, and the Encyclopedia is a page result. Everyone else gets the
+ * behaviour above, untouched. Opening the Encyclopedia to everyone is
+ * dropping the `earlyAccess` branch here (notes/encyclopedia-plan.md).
  *
  * WHY FUSE
  * --------
@@ -27,7 +30,10 @@ import { formatDate, parseApiDate } from "./dateFormat"
 import { pvpEventHref, refForRaceEvent, shortEventName } from "./pvpEvent"
 import { timelineFocusHref } from "./timelineFocus"
 import type { AnniversaryEvent, BannerStepUp, BannerSupport, BannerUma, RaceEvent, Scenario } from "../types"
-import type { CatalogueSkill, PvpCatalogue } from "../types/pvpTeam"
+import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
+import { cardLine } from "./encyclopedia"
+import { UMA_LIST_PATH, cardHref, umaHref } from "./encyclopediaRoutes"
+import { skillHref } from "./skillSearch"
 
 export type SearchKind = "page" | "uma" | "card" | "banner" | "event" | "skill"
 
@@ -59,6 +65,9 @@ export interface SearchSources {
 	scenarios: Scenario[]
 	campaigns: AnniversaryEvent[]
 	skills: CatalogueSkill[]
+	/** The PvP catalogue's outfits and cards: the Encyclopedia's entries, early access only. */
+	umas?: CatalogueUma[]
+	cards?: CatalogueSupportCard[]
 }
 
 const page = (title: string, href: string, keywords = ""): SearchEntry => ({
@@ -78,7 +87,13 @@ export function pageEntries(earlyAccess: boolean): SearchEntry[] {
 		page("Selectors", "/app/selectors", "selector tickets campaign packs step-up"),
 		page("Legend Races", "/app/legend-races", "daily"),
 		page("PvP", "/app/pvp", "guides teams gallery champions meeting league of heroes"),
-		...(earlyAccess ? [page("Rankings", "/app/rankings", "most used")] : []),
+		...(earlyAccess
+			? [
+				page("Rankings", "/app/rankings", "most used"),
+				page("Encyclopedia", UMA_LIST_PATH, "umas support cards skills characters wiki"),
+				page("Skills", "/app/skills", "encyclopedia"),
+			]
+			: []),
 		page("Collection", "/app/collection", "veterans owned cards history"),
 		page("FAQ", "/faq", "questions income help"),
 		page("Changelog", "/changelog", "patch notes updates"),
@@ -117,9 +132,9 @@ const onBanner = (label: string, banner: { banner_timeline: { id: number; end_da
 	href: timelineFocusHref({ kind: "banner", id: banner.banner_timeline.id }),
 })
 
-export function buildSearchEntries(sources: SearchSources, now: Date, earlyAccess: boolean): SearchEntry[] {
-	const entries = pageEntries(earlyAccess)
-
+/** Everyone else's umas and cards: each on its banner, and none without one. */
+function bannerEntries(sources: SearchSources, now: Date): SearchEntry[] {
+	const entries: SearchEntry[] = []
 	for (const { card: uma, banners } of groupByCard(sources.umaBanners, (banner) => banner.umas).values()) {
 		entries.push({
 			id: `uma-${uma.id}`,
@@ -140,6 +155,60 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			image: card.image,
 			...onBanner("Support banner", pickBanner(banners, now)),
 		})
+	}
+	return entries
+}
+
+/**
+ * Early access's umas and cards: every one in the catalogue, opening its
+ * Encyclopedia page. The detail line names its banner when it has one, else
+ * says where it is out. A card's title is a keyword, since many share a name.
+ */
+function encyclopediaEntries(
+	sources: SearchSources, umas: CatalogueUma[], cards: CatalogueSupportCard[], now: Date,
+): SearchEntry[] {
+	const umaBanners = groupByCard(sources.umaBanners, (banner) => banner.umas)
+	const cardBanners = groupByCard(sources.supportBanners, (banner) => banner.support_cards)
+	const where = (onGlobal: boolean | undefined) => (onGlobal === false ? " · JP only" : "")
+	const entries: SearchEntry[] = []
+	for (const uma of umas) {
+		if (uma.game_id == null) continue
+		const banners = umaBanners.get(uma.id)?.banners
+		entries.push({
+			id: `uma-${uma.id}`,
+			kind: "uma",
+			title: uma.name,
+			keywords: "",
+			image: uma.portrait ?? uma.image,
+			umaId: uma.id,
+			detail: banners ? onBanner("Uma banner", pickBanner(banners, now)).detail : `Uma${where(uma.on_global)}`,
+			href: umaHref(uma.game_id),
+		})
+	}
+	for (const card of cards) {
+		if (card.game_id == null || card.placeholder) continue
+		const banners = cardBanners.get(card.id)?.banners
+		const line = [card.title, cardLine(card)].filter(Boolean).join(" · ")
+		entries.push({
+			id: `card-${card.id}`,
+			kind: "card",
+			title: card.name,
+			keywords: card.title,
+			image: card.image,
+			detail: banners ? `${line} · ${onBanner("Support banner", pickBanner(banners, now)).detail}` : `${line}${where(card.on_global)}`,
+			href: cardHref(card.game_id),
+		})
+	}
+	return entries
+}
+
+export function buildSearchEntries(sources: SearchSources, now: Date, earlyAccess: boolean): SearchEntry[] {
+	const entries = pageEntries(earlyAccess)
+
+	if (earlyAccess && sources.umas && sources.cards) {
+		entries.push(...encyclopediaEntries(sources, sources.umas, sources.cards, now))
+	} else {
+		entries.push(...bannerEntries(sources, now))
 	}
 	for (const stepUp of sources.stepUps) {
 		entries.push({
@@ -192,6 +261,8 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			image: skill.image,
 			skillId: skill.id,
 			gameId: skill.game_id ?? undefined,
+			// Early access opens the skill's page; everyone else reads it in the palette.
+			...(earlyAccess && skill.game_id != null ? { href: skillHref(skill.game_id) } : {}),
 		})
 	}
 	return entries

@@ -125,6 +125,8 @@ export interface PvpSkillSources {
 
 export interface PvpSkillRef {
 	id: number
+	/** The game's id: the skill's Encyclopedia page. Absent from an older API and on an editor-built ref. */
+	game_id?: number | null
 	name: string
 	/** The game's own description: what the chip shows on hover. */
 	description: string
