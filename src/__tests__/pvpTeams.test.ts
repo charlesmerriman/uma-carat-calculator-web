@@ -9,6 +9,7 @@ import {
 	deckToMemberCards,
 	drawerTeam,
 	dropCard,
+	dropUma,
 	firstOpenCardSlot,
 	memberStyleFrom,
 	recommendedIds,
@@ -475,5 +476,33 @@ describe("dropCard", () => {
 		const team = [member(0, MARU.id, [{ slot: 1, support_card: 302 }])]
 		const dropped = dropCard(team, { from: "slot", position: 0, slot: 1, cardId: 302 }, { position: 0, slot: 1 }, LOOKUPS)
 		expect(dropped).toEqual({ members: team })
+	})
+})
+
+describe("dropUma", () => {
+	const member = (position: number, uma: number, cards: PvpTeamMember["cards"] = []): PvpTeamMember =>
+		({ position, uma, style: "pace", cards, trained_uma: null }) as PvpTeamMember
+
+	it("puts her on an empty spot on the guide's style", () => {
+		const dropped = dropUma([], { umaId: MARU.id, style: "front" }, { position: 1 }, LOOKUPS)
+		expect(dropped).toEqual({ members: [{ position: 1, uma: MARU.id, style: "front", cards: [] }] })
+	})
+
+	it("swaps her into a filled spot and keeps the deck, like Replace", () => {
+		const team = [member(0, MARU.id, [{ slot: 1, support_card: 304 }])]
+		const dropped = dropUma(team, { umaId: RICE.id }, { position: 0 }, LOOKUPS)
+		if (!("members" in dropped)) throw new Error("refused")
+		expect(dropped.members[0]).toMatchObject({ uma: RICE.id, style: "pace", cards: [{ slot: 1, support_card: 304 }] })
+	})
+
+	it("refuses what the picker refuses", () => {
+		const team = [member(0, OGURI.id), member(1, MARU.id)]
+		expect(dropUma(team, { umaId: OGURI_XMAS.id }, { position: 1 }, LOOKUPS)).toEqual({ reason: "Oguri Cap is already on this team" })
+		expect(dropUma(team, { umaId: 99 }, { position: 2 }, LOOKUPS)).toEqual({ reason: "Not in the uma list" })
+	})
+
+	it("leaves the team alone when she lands on her own spot", () => {
+		const team = [member(0, MARU.id)]
+		expect(dropUma(team, { umaId: MARU.id }, { position: 0 }, LOOKUPS)).toEqual({ members: team })
 	})
 })

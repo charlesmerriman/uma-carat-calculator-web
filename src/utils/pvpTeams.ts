@@ -172,6 +172,34 @@ export function dropCard(
 }
 
 /**
+ * An uma being dragged from the docked Guide picks onto a team spot. `style`
+ * is the guide's first style for her, the one "Add" would give her too.
+ * Its own type, not a CardDrag variant: the two land on different targets
+ * (a spot, a card slot), so CardDrag.tsx carries them under different keys.
+ */
+export type UmaDrag = { umaId: number; style?: MemberStyle }
+export type UmaDropTarget = { position: number }
+
+/**
+ * Where a dragged uma lands: an empty spot gains her, a filled one swaps her
+ * in and keeps its deck and style, the same as Guide picks' Replace
+ * (setMemberUma). The picker's uma rules can refuse, with `reason`.
+ */
+export function dropUma(
+	members: PvpTeamMember[],
+	drag: UmaDrag,
+	target: UmaDropTarget,
+	// The rules' lookups, with what setMemberUma needs of her too.
+	lookups: Omit<TeamRuleLookups, "umasById"> & { umasById: Map<number, Pick<CatalogueUma, "id" | "name" | "character_id" | "running_style">> }
+): { members: PvpTeamMember[] } | { reason: string } {
+	const candidate = lookups.umasById.get(drag.umaId)
+	if (!candidate) return { reason: "Not in the uma list" }
+	if (memberAt(members, target.position)?.uma === drag.umaId) return { members }
+	const reason = umaBlockReason(members, target.position, candidate, lookups)
+	return reason ? { reason } : { members: setMemberUma(members, target.position, candidate, drag.style) }
+}
+
+/**
  * The picker's "Add to every deck on this team": the card goes in the chosen
  * slot, then into each other deck's first open slot, a borrowed card into the
  * other decks' borrow slots. Never replaces a card. A deck already holding it
