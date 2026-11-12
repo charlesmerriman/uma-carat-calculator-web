@@ -16,6 +16,32 @@ export const RUNNING_STYLE_WORDS: Record<number, string> = {
 	1: "Front Runner", 2: "Pace Chaser", 3: "Late Surger", 4: "End Closer",
 }
 
+// ── What the player owns (hooks/useOwned.ts) ────────────────────────────────
+
+/** "★★★★" for an owned outfit; "" when the player hasn't set its stars. */
+export function ownedStars(stars: number | null | undefined): string {
+	return stars ? "★".repeat(stars) : ""
+}
+
+/** "Limit break 3", or "Max limit break" at 4. */
+export function limitBreakWords(limitBreak: number): string {
+	return limitBreak >= 4 ? "Max limit break" : `Limit break ${limitBreak}`
+}
+
+export type OwnedFilter = "all" | "owned" | "missing"
+
+export const OWNED_OPTIONS: { value: OwnedFilter; label: string }[] = [
+	{ value: "all", label: "Owned or not" },
+	{ value: "owned", label: "Owned" },
+	{ value: "missing", label: "Not owned" },
+]
+
+/** Does a row with this pk pass the Owned filter? */
+export function ownedMatches(filter: OwnedFilter, owned: { has: (id: number) => boolean }, id: number): boolean {
+	if (filter === "all") return true
+	return owned.has(id) === (filter === "owned")
+}
+
 // ── A skill page's cards ────────────────────────────────────────────────────
 
 export type HideFilter = "none" | "r" | "sr"

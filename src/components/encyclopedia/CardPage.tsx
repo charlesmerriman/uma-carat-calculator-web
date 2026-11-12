@@ -16,8 +16,9 @@ import type { CardPageData } from "../../types/encyclopedia"
 import { cardReleases } from "../../utils/encyclopediaBanners"
 import { CARD_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
-import { BannerLinks, CardList, JapaneseName, OutfitList, ReleaseLine, Section, SkillList } from "./pieces"
-import { PAGE_CONTAINER, cardLine } from "../../utils/encyclopedia"
+import { BannerLinks, CardList, JapaneseName, OutfitList, OwnedLine, ReleaseLine, Section, SkillList } from "./pieces"
+import { PAGE_CONTAINER, cardLine, limitBreakWords } from "../../utils/encyclopedia"
+import { useOwned } from "../../hooks/useOwned"
 import { Crumbs, NotFound } from "./UmaPage"
 import { usePageTitle } from "./usePageTitle"
 
@@ -48,6 +49,7 @@ const CardPageBody = () => {
 
 export function CardDetail({ card }: { card: CardPageData }) {
 	const calculator = useCalculatorDataSafe()
+	const limitBreak = useOwned().cards.get(card.id)
 	const releases = cardReleases(calculator?.supportBannerData ?? [], card.id)
 	const isGroup = card.card_type === "group"
 	const hints = card.skills.filter((skill) => skill.source === "hint")
@@ -80,6 +82,7 @@ export function CardDetail({ card }: { card: CardPageData }) {
 					{card.purpose && <p className="text-sm text-gray-300">{card.purpose}</p>}
 				</div>
 			</header>
+			{limitBreak !== undefined && <OwnedLine tab="cards" detail={limitBreakWords(limitBreak)} />}
 
 			{hints.length > 0 && (
 				<Section title="Skill hints">
