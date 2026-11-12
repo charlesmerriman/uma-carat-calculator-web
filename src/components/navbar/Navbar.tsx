@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
+import { BookOpen, CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
@@ -12,6 +12,7 @@ import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
 import { useSiteSearch } from "../../hooks/useSiteSearch"
+import { UMA_LIST_PATH, isEncyclopediaPath } from "../../utils/encyclopediaRoutes"
 
 export const Navbar = () => {
 	const location = useLocation()
@@ -40,6 +41,9 @@ export const Navbar = () => {
 	// for early access alone. The account is unknown during the prerender and
 	// while it loads, so the item appears after load and never flashes.
 	const showRankings = Boolean(account?.early_access)
+	// The Encyclopedia is supporters first too (owner, 2026-11-12), on the same
+	// rule, so the two tabs always come and go together.
+	const showEncyclopedia = showRankings
 
 	// Search + team drawer + settings gear + theme picker, grouped so the desktop
 	// nav's branches render the same controls. TeamDrawerButton and SettingsMenu
@@ -70,6 +74,7 @@ export const Navbar = () => {
 	const isLegendRaces = location.pathname === "/app/legend-races"
 	const isPvp = location.pathname === "/app/pvp"
 	const isRankings = location.pathname === "/app/rankings"
+	const isEncyclopedia = isEncyclopediaPath(location.pathname)
 
 	const timerIsGoing = calculatorData?.timerIsGoing ?? false
 	// False once this browser has refused to store the guest's plan.
@@ -93,7 +98,15 @@ export const Navbar = () => {
 	// A sixth tab (Rankings, early access only) takes each cell to about 54px
 	// at 375px, where "Calculator" no longer fits, so with six the words hide
 	// below 390px instead. Both strings are literal so Tailwind sees them.
-	const mobileLabel = showRankings ? "truncate max-[389px]:sr-only" : "truncate max-[359px]:sr-only"
+	//
+	// The seventh (the Encyclopedia, with Rankings: early access only) takes a
+	// cell to about 46px at 375px, so with seven the words hide below 440px.
+	// Its short phone label and the fit are the visual overhaul's to settle
+	// (notes/encyclopedia-plan.md); this keeps it working until then.
+	const mobileLabel = showEncyclopedia
+		? "truncate max-[439px]:sr-only"
+		: showRankings ? "truncate max-[389px]:sr-only" : "truncate max-[359px]:sr-only"
+	const mobileColumns = showEncyclopedia ? "grid-cols-7" : showRankings ? "grid-cols-6" : "grid-cols-5"
 	const mobileNavClass = (active: boolean) =>
 		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
@@ -216,7 +229,7 @@ export const Navbar = () => {
 				    phone never reaches the cap. Height unchanged, so the
 				    scroll-padding figures in index.css still hold. */}
 				<div className="border-t border-gray-700 px-2 py-2">
-				<div className={`mx-auto grid max-w-[32rem] gap-1 ${showRankings ? "grid-cols-6" : "grid-cols-5"}`}>
+				<div className={`mx-auto grid max-w-[32rem] gap-1 ${mobileColumns}`}>
 					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>Calculator</span>
@@ -239,6 +252,12 @@ export const Navbar = () => {
 						<Swords className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>PvP</span>
 					</Link>
+					{showEncyclopedia && (
+						<Link to={UMA_LIST_PATH} className={mobileNavClass(isEncyclopedia)} {...prefetchOnIntent}>
+							<BookOpen className="h-4 w-4 shrink-0" />
+							<span className={mobileLabel}>Encyclopedia</span>
+						</Link>
+					)}
 					{showRankings && (
 						<Link to="/app/rankings" className={mobileNavClass(isRankings)} {...prefetchOnIntent}>
 							<ListOrdered className="h-4 w-4 shrink-0" />
@@ -293,6 +312,13 @@ export const Navbar = () => {
 							<Swords className="h-4 w-4" />
 							PvP
 						</Link>
+						{/* Icon only below xl, like Rankings: a sixth label overflows the bar at 1024px. */}
+						{showEncyclopedia && (
+							<Link to={UMA_LIST_PATH} className={desktopNavClass(isEncyclopedia)} title="Encyclopedia" {...prefetchOnIntent}>
+								<BookOpen className="h-4 w-4" />
+								<span className="sr-only xl:not-sr-only">Encyclopedia</span>
+							</Link>
+						)}
 						{/* Icon only below xl: a sixth label overflows the bar at 1024px. */}
 						{showRankings && (
 							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>

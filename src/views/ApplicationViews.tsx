@@ -7,6 +7,10 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
 import { SkillsPage } from "../components/skills/SkillsPage"
+import { UmaListPage } from "../components/encyclopedia/UmaListPage"
+import { UmaPage } from "../components/encyclopedia/UmaPage"
+import { CardListPage } from "../components/encyclopedia/CardListPage"
+import { CardPage } from "../components/encyclopedia/CardPage"
 import { RankingsPage } from "../components/rankings/RankingsPage"
 import { RankingsDock } from "../components/rankings/RankingsDock"
 import { CollectionPage } from "../components/collection/CollectionPage"
@@ -204,6 +208,13 @@ export const ApplicationViews = () => (
 			<Route path="selectors" element={<Selectors />}/>
 			<Route path="legend-races" element={<DailyLegendRaces />}/>
 			<Route path="skills" element={<SkillsPage />}/>
+			{/* The Encyclopedia (notes/encyclopedia-plan.md): early access only,
+			    noindex and not prerendered while it is supporters first. A page
+			    is keyed by the game's id (utils/encyclopediaRoutes.ts). */}
+			<Route path="umas" element={<UmaListPage />}/>
+			<Route path="umas/:gameId" element={<UmaPage />}/>
+			<Route path="cards" element={<CardListPage />}/>
+			<Route path="cards/:gameId" element={<CardPage />}/>
 			{/* A static path, so it outranks the ":publicId" share route below;
 			    "pvp" is also too short to pass isPublicId. */}
 			<Route path="pvp" element={<PvpGuidePage />}/>

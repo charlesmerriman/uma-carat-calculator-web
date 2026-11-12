@@ -17,12 +17,13 @@
  */
 
 import { useContext, useState, type ReactNode } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { ListOrdered, Pin, PinOff, type LucideIcon } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
 import { pinRankings, useRankingsPin, type RankingsSection as Section } from "../../services/rankingsPinStore"
 import { formatDate } from "../../utils/dateFormat"
 import { formatTimeAgo } from "../../utils/relativeDate"
+import { SupportersFirstNote } from "../SupportersFirstNote"
 import { RankingsSection } from "./RankingsSection"
 import { RankingsUpdatedContext } from "./rankingsUpdated"
 import { parseSection, useSectionBadges, useVisibleSections } from "./sections"
@@ -34,17 +35,9 @@ const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-7xl flex-col gap-
 export const RankingsPage = () => {
 	const auth = useContext(AuthContext)
 	if (!auth?.account?.early_access) {
-		const waiting = Boolean(auth?.isLoggedIn) && auth?.status === "loading"
 		return (
 			<div className={CONTAINER}>
-				<p className="text-sm text-gray-400" role="status">
-					{waiting ? "Loading..." : (
-						<>
-							Rankings are for our Patreon supporters for now.{" "}
-							<Link to="/app" className="text-brand transition hover:text-brand/75">Back to the calculator</Link>
-						</>
-					)}
-				</p>
+				<SupportersFirstNote feature="Rankings are" />
 			</div>
 		)
 	}

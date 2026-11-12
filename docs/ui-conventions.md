@@ -2501,6 +2501,34 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   button (bottom right) and a bottom sheet (`kit/FilterSheet.tsx`, a native `<dialog>`). The
   pills and the sheet draw the same `FilterGroup`s, so they can't disagree.
 
+## Encyclopedia pages (`components/encyclopedia/`, `components/skills/`)
+
+A page for every trainee outfit, support card and skill (`notes/encyclopedia-plan.md`, in the
+workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: nothing reaches
+`develop` until the owner says so, and then only early access sees it.
+
+- **Routes**: `/app/umas`, `/app/umas/:gameId`, `/app/cards`, `/app/cards/:gameId`,
+  `/app/skills` (and, from PR 5, `/app/skills/:gameId`). A page is keyed by the GAME's id;
+  `utils/encyclopediaRoutes.ts` is the only builder of these links (`umaHref`, `cardHref`), and
+  `parseGameId` reads only the leading digits so a readable suffix can come later.
+- **The gate**: every list and page is wrapped in `EncyclopediaGate` (`useSkillsPreview()`,
+  which is `account.early_access`). Anyone else gets `SupportersFirstNote`, the note Rankings
+  shows. The API is the real gate (401 / 403). No route is prerendered or in the sitemap, and
+  `AppRouteMeta` marks them all `noindex`; a detail page has a generic title until its data lands
+  (`usePageTitle`). Opening it to everyone is the plan's "Opening it to everyone".
+- **Data**: the lists read `/pvp-catalogue` (`usePvpCatalogue`); a page reads
+  `GET /encyclopedia/<kind>/<id>` through TanStack Query (`services/encyclopediaQueries.ts`). The
+  API sends no dates: banners and release dates come from `/calculator-data`
+  (`utils/encyclopediaBanners.ts`), so date prediction stays in one place.
+- **Rules that bite**: every uma is `FramedUma` from its `portrait`; cards draw the bordered
+  `image` (owner's answer, revisited with the visual overhaul); every date goes through
+  `formatDate`; a section with no data is left out, never drawn empty; a JP-only outfit's
+  aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words, layout classes) live in
+  `utils/encyclopedia.ts`, so the component files export components only.
+- **The navbar**: an Encyclopedia tab beside Rankings, drawn on the same rule, so early access
+  has seven tabs on a phone (labels hide below 440px). Its short phone label and the fit are the
+  visual overhaul's.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It

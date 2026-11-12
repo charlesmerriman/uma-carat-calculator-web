@@ -24,6 +24,14 @@ export interface SkillListRow {
 	uses_translation: boolean
 	/** Every other name it answers to (translation, old names, Japanese), for search. */
 	other_names: string[]
+	/** Skill points; null for a unique. Absent from an API older than the Encyclopedia. */
+	cost?: number | null
+	/** The Type filter's key, from the skill's icon family (backend skill_types.py). */
+	type?: string
+	/** The outfits a unique, its inherited copy or an evolution belongs to. */
+	owners?: string[]
+	/** A unique's inherited copy, or the copy's unique, by game id. */
+	pair?: number | null
 }
 
 export interface SkillSourceUma {
