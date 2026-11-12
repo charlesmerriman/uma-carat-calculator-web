@@ -56,7 +56,7 @@ function GuideEditor({ event, onViewAsVisitor, autosaveMs }: {
 }) {
 	const editor = useGuideDocument(event, { autosaveMs })
 	const catalogue = usePvpCatalogue()
-	// Every skill with an English name, JP-only ones too, for the picker and
+	// Every skill with a name (Japanese when there is no English one), JP-only ones too, for the picker and
 	// [[mentions]]. If it fails the editor still works with global's skills.
 	const skillList = useSkillList()
 	// Rebuilt only when either changes, so the editor's memos (hydration,

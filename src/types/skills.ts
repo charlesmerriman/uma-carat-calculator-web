@@ -1,6 +1,7 @@
 /**
  * GET /skills and GET /skills/<game_id>: every skill a player may read about
- * (any skill with an English name, JP-only ones included), for the Skills
+ * (any skill with a name, JP-only ones included, the Japanese name when it has
+ * no English one), for the Skills
  * page and the guide editor's picker. See backend/docs/api-reference.md.
  */
 

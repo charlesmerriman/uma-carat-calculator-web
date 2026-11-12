@@ -21,6 +21,7 @@ import type { GuideActionResult, GuideEditor } from "../../../hooks/useGuideDocu
 import type { EditableGuideRow, GuideDocument, RevisionRow, RevisionSource } from "../../../types/guideDocument"
 import type { GuideVisibility } from "../../../types/pvpGuide"
 import { GUIDE_VISIBILITY_LABELS, visibilityNote, type ChecklistItem, type EditorTab } from "../../../utils/guideDocument"
+import { nameLang } from "../../../utils/skillList"
 
 const SECTION_LABELS: Array<[string, string]> = [
 	["overview", "Overview text and style ranking"],
@@ -402,7 +403,7 @@ export function TrackGreensDialog({ runAction, onClose }: { runAction: GuideEdit
 			{skills.map((skill) => (
 				<li key={skill.id} className="flex items-center gap-1 rounded-lg border border-gray-600 bg-gray-800 py-0.5 pl-0.5 pr-2 text-sm text-gray-100">
 					{skill.image ? <img src={skill.image} alt="" className="h-5 w-5" /> : <span className="h-5 w-5 rounded-full bg-gray-700" aria-hidden="true" />}
-					{skill.name}
+					<span lang={nameLang(skill.name)}>{skill.name}</span>
 				</li>
 			))}
 		</ul>

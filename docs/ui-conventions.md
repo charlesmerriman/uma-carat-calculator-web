@@ -1894,6 +1894,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   aliases including GameTora's names, which are never displayed, and the Japanese one),
   and a query that is one whole number finds the skill with that game id. A new skill
   search box calls it rather than matching `name` itself.
+  **A skill with no global or UmaTL name is shown by its Japanese name** (owner and Daptrius,
+  2026-11-12), with no marker beside it (owner: being in Japanese says enough). Wherever a
+  skill's name is drawn, its element carries `lang={nameLang(name)}` (`utils/skillList.ts`,
+  read from the text), so the browser picks Japanese glyphs.
   The open skill is `?skill=<game id>` (`skillHref`), drawn by `SkillDetailCard` from
   `GET /skills/<game_id>`: readable text (the hover card's `ReadableText`), every uma
   (`FramedUma`, rainbow for covered favorites) and card that gives it, evolution and its

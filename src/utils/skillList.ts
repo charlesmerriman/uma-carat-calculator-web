@@ -70,6 +70,20 @@ export function skillNames(skill: CatalogueSkill): string[] {
  * only that one: a part of an id would match dozens.
  */
 
+// Hiragana, katakana and the CJK ideographs: a name with any of them is Japanese.
+const JAPANESE_SCRIPT = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/
+
+/**
+ * `lang` for a skill's name: "ja" when it's the Japanese name (a skill with no
+ * global or UmaTL name is shown in Japanese, owner and Daptrius 2026-11-12),
+ * else undefined, which React leaves off. The browser then picks Japanese
+ * glyphs and a screen reader the Japanese voice. Read from the text, so every
+ * route that sends a name is covered without a flag of its own.
+ */
+export function nameLang(name: string): "ja" | undefined {
+	return JAPANESE_SCRIPT.test(name) ? "ja" : undefined
+}
+
 /** Something a skill search can match: a catalogue skill or a GET /skills row. */
 export interface SearchableSkill {
 	name: string

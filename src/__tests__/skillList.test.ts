@@ -4,7 +4,7 @@ import type { GuideDocument } from "../types/guideDocument"
 import type { CatalogueSkill, PvpCatalogue } from "../types/pvpTeam"
 import type { SkillListRow } from "../types/skills"
 import { hydrateGuide, validateDocument } from "../utils/guideDocument"
-import { skillMatches, skillNames, skillSearchWords, withShownSkills } from "../utils/skillList"
+import { nameLang, skillMatches, skillNames, skillSearchWords, withShownSkills } from "../utils/skillList"
 
 /**
  * The guide editor's widened catalogue: the builder's skills (global) plus
@@ -107,5 +107,14 @@ describe("skill search (skillMatches)", () => {
 
 	it("matches everything when nothing is typed", () => {
 		expect(matches("  ")).toBe(true)
+	})
+})
+
+describe("a Japanese name's lang (nameLang)", () => {
+	it("is ja for kana or kanji, and off for an English name", () => {
+		expect(nameLang("右回り○")).toBe("ja")
+		expect(nameLang("スピードスター")).toBe("ja")
+		expect(nameLang("Hot Blooded ☆ Amigo")).toBeUndefined()
+		expect(nameLang("introduction：My body")).toBeUndefined()
 	})
 })

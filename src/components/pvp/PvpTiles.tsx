@@ -41,6 +41,7 @@ import { splitOutfit } from "../../utils/umaName"
 import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 import { clearCourseFocus, setCourseFocus } from "../../services/courseMapStore"
 import CourseVerdict from "../course/CourseVerdict"
+import { nameLang } from "../../utils/skillList"
 
 /**
  * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
@@ -201,7 +202,7 @@ function MentionedSkills({ text, skip }: { text: string; skip?: number }) {
 						<span className="mt-px h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 					)}
 					<span>
-						<span className="font-medium text-gray-100">{skill.name}</span>
+						<span className="font-medium text-gray-100" lang={nameLang(skill.name)}>{skill.name}</span>
 						{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
 						{skill.description && <span className="block text-gray-400">{skill.description}</span>}
 					</span>
@@ -252,7 +253,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 			) : (
 				<span className="h-[1.1em] w-[1.1em] shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 			)}
-			{keepMarkWithName(skill.name)}
+			<span lang={nameLang(skill.name)}>{keepMarkWithName(skill.name)}</span>
 		</>
 	)
 	// Not focusable either: there is nothing for focus to open.
@@ -901,7 +902,7 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 			    while a short name in a narrow cell lost its owner (2026-10-24).
 			    The caption stays in the hover detail and for a screen reader. */}
 			<span className="flex min-w-0 flex-1 flex-col flex-wrap content-start justify-center self-stretch overflow-hidden">
-				<span className={`line-clamp-2 w-full hyphens-auto break-words ${gold ? "font-medium" : "text-gray-100"}`}>
+				<span className={`line-clamp-2 w-full hyphens-auto break-words ${gold ? "font-medium" : "text-gray-100"}`} lang={nameLang(skill.name)}>
 					{keepMarkWithName(skill.name)}
 				</span>
 				{sub && <span className={`w-full truncate text-[11px] ${gold ? "opacity-80" : "text-gray-400"}`}>{sub}</span>}
@@ -952,7 +953,7 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 				)}
 				<span className={`truncate text-sm ${gold ? "font-medium" : "text-gray-100"}`}>
-					{keepMarkWithName(skill.name)}
+					<span lang={nameLang(skill.name)}>{keepMarkWithName(skill.name)}</span>
 					{skill.unique_of && <span className="text-gray-400"> ({skill.unique_of})</span>}
 				</span>
 				{/* No ◎ badge for "has a gold version": the game prints ○/◎ in the

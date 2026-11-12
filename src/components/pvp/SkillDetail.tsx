@@ -15,6 +15,7 @@ import type { ReactNode } from "react"
 import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable, SkillSlot } from "../../types/pvpGuide"
 import { skillColour } from "../../utils/pvpGuide"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
+import { nameLang } from "../../utils/skillList"
 
 /** The game's own code for a clause, in a quiet code box. */
 function Phrase({ phrase }: { phrase: SkillPhrase }) {
@@ -185,7 +186,7 @@ export function SkillDetail({ skill, note }: { skill: PvpSkillRef; note?: ReactN
 	return (
 		<>
 			<span className="block font-semibold text-gray-100">
-				{skill.name}
+				<span lang={nameLang(skill.name)}>{skill.name}</span>
 				{skill.unique_of && <span className="font-normal text-gray-400"> ({skill.unique_of})</span>}
 				{preview && skill.availability === "jp" && <JpOnlyTag className="ml-1.5 align-middle" />}
 			</span>
