@@ -14,6 +14,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { authHeaders } from "./authToken"
 import { HttpError } from "./queryClient"
+import { fetchSkillDetail } from "./skillsFetchCalls"
 import type { CardPageData, UmaPageData } from "../types/encyclopedia"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -21,6 +22,7 @@ const API_URL = import.meta.env.VITE_API_URL
 export const encyclopediaKeys = {
 	uma: (gameId: number) => ["encyclopedia", "uma", gameId] as const,
 	card: (gameId: number) => ["encyclopedia", "card", gameId] as const,
+	skill: (gameId: number) => ["encyclopedia", "skill", gameId] as const,
 }
 
 /** One page, or null when the API has no such page (404). */
@@ -37,6 +39,15 @@ export function useUmaPage(gameId: number | null) {
 		queryKey: encyclopediaKeys.uma(gameId ?? 0),
 		enabled: gameId !== null,
 		queryFn: () => fetchPage<UmaPageData>(`/encyclopedia/umas/${gameId}`),
+	})
+}
+
+/** One skill's page, through the fetch the guide editor already uses. */
+export function useSkillPage(gameId: number | null) {
+	return useQuery({
+		queryKey: encyclopediaKeys.skill(gameId ?? 0),
+		enabled: gameId !== null,
+		queryFn: () => fetchSkillDetail(gameId as number),
 	})
 }
 

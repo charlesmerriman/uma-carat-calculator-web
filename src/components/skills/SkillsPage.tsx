@@ -1,16 +1,17 @@
 /**
  * The Skills page (/app/skills): every skill with a name (in Japanese when it has no English one), global's
  * and JP's, from GET /skills. Search by any name a skill has had, filter by
- * colour and by where it is, and open one to see it in full
- * (SkillDetailCard, GET /skills/<game_id>).
+ * colour and by where it is. A row opens the skill's own page
+ * (/app/skills/<game id>, SkillPage); the side card that used to open beside
+ * the list is gone (owner's answer 7), and an old `?skill=<game id>` link
+ * redirects to the page.
  *
- * The open skill is `?skill=<game id>` in the URL, so a link opens it. The
- * list is long (~1,800), so it shows a page of rows and grows on "Show more"
- * rather than drawing them all.
+ * The list is long (~1,800), so it shows a page of rows and grows on "Show
+ * more" rather than drawing them all.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useMemo, useState } from "react"
+import { Link, Navigate, useSearchParams } from "react-router-dom"
 import { Loader2, Search, Zap } from "lucide-react"
 import { useSkillListState } from "../../hooks/useSkillList"
 import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
@@ -21,7 +22,6 @@ import {
 	type ColourFilter, type WhereFilter,
 } from "../../utils/skillSearch"
 import { JpOnlyTag } from "../pvp/SkillDetail"
-import { SkillDetailCard } from "./SkillDetailCard"
 import { nameLang } from "../../utils/skillList"
 
 const PAGE = 60
@@ -61,15 +61,12 @@ function rowSurface(row: SkillListRow): string {
 	return "border-edge bg-(--card-fill) text-gray-100 hover:border-gray-500"
 }
 
-function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
+function SkillRow({ row }: { row: SkillListRow }) {
 	return (
 		<li>
 			<Link
 				to={skillHref(row.game_id)}
-				aria-current={open ? "true" : undefined}
-				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${rowSurface(row)} ${
-					open ? "ring-2 ring-brand" : ""
-				}`}
+				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${rowSurface(row)}`}
 			>
 				{row.image ? (
 					<img src={row.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
@@ -89,21 +86,24 @@ function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
  * owner 2026-11-12): anyone else gets the supporters note, and the route is
  * neither prerendered nor in the sitemap until it opens to everyone.
  */
-export const SkillsPage = () => (
-	<EncyclopediaGate>
-		<SkillsPageBody />
-	</EncyclopediaGate>
-)
+export const SkillsPage = () => {
+	// An old link (Discord, a bookmark) named the skill as ?skill=<id>; its page is its own address now.
+	const [searchParams] = useSearchParams()
+	const oldLink = parseSkillParam(searchParams.get(SKILL_PARAM))
+	if (oldLink !== null) return <Navigate to={skillHref(oldLink)} replace />
+	return (
+		<EncyclopediaGate>
+			<SkillsPageBody />
+		</EncyclopediaGate>
+	)
+}
 
 const SkillsPageBody = () => {
 	const list = useSkillListState()
-	const [searchParams, setSearchParams] = useSearchParams()
-	const openId = parseSkillParam(searchParams.get(SKILL_PARAM))
 	const [query, setQuery] = useState("")
 	const [colour, setColour] = useState<ColourFilter>("all")
 	const [where, setWhere] = useState<WhereFilter>("all")
 	const [shown, setShown] = useState(PAGE)
-	const detailRef = useRef<HTMLDivElement | null>(null)
 
 	const rows = useMemo(
 		() => (list.status === "ready" ? filterSkills(list.rows, query, colour, where) : []),
@@ -116,18 +116,6 @@ const SkillsPageBody = () => {
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
 		setShown(PAGE)
-	}
-
-	// Opening a skill on a narrow screen puts its card in view (it sits above
-	// the list there). Read in an effect: the page is prerendered.
-	useEffect(() => {
-		if (openId !== null) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
-	}, [openId])
-
-	const close = () => {
-		const next = new URLSearchParams(searchParams)
-		next.delete(SKILL_PARAM)
-		setSearchParams(next)
 	}
 
 	return (
@@ -159,14 +147,8 @@ const SkillsPageBody = () => {
 				<FilterChips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
 			</div>
 
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-				{openId !== null && (
-					<div ref={detailRef} className="lg:sticky lg:top-4 lg:order-2 lg:self-start">
-						<SkillDetailCard gameId={openId} onClose={close} />
-					</div>
-				)}
-
-				<div className="lg:order-1">
+			<div>
+				<div>
 					{list.status === "loading" ? (
 						<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
 							<Loader2 className="h-4 w-4 animate-spin" /> Loading skills...
@@ -181,9 +163,9 @@ const SkillsPageBody = () => {
 							{rows.length === 0 ? (
 								<p className="text-sm text-gray-400">No skill matches that.</p>
 							) : (
-								<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+								<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
 									{rows.slice(0, shown).map((row) => (
-										<SkillRow key={row.id} row={row} open={row.game_id === openId} />
+										<SkillRow key={row.id} row={row} />
 									))}
 								</ul>
 							)}

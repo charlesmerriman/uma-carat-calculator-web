@@ -41,7 +41,7 @@ describe("SkillDetail", () => {
 			"When: In 3rd place or lower, and one of: (Within 1 length of the runner ahead) or (is_overtake==1)"
 		)
 		expect(container).toHaveTextContent("Does: Velocity +0.35 m/s for 5 s, once per race")
-		expect(container).toHaveTextContent("Rolls against Wit before it fires.")
+		expect(container).toHaveTextContent("Rolls Wit check.")
 		expect(screen.getByText("is_overtake==1").tagName).toBe("CODE")
 	})
 
