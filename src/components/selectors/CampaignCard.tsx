@@ -95,9 +95,14 @@ export const CampaignCard = ({
 	// these in exactly this order.
 	const claimedSelectors = selectors.filter((line) => line.quantity > 0)
 
+	// The purchase window, not the whole campaign: an anniversary's Part 1 is a
+	// run-up of login rewards that sells nothing, and the paid packs and
+	// selectors open with the main part (Daptrius, 2026-11-04). It starts where
+	// the projection credits the purchases, `main_start_date`
+	// (predictions._main_part), which is `start_date` for every other campaign.
 	const dates = isUndated
 		? "Dates unknown"
-		: `${formatDate(event.start_date)} – ${formatDate(event.end_date)}`
+		: `${formatDate(event.main_start_date ?? event.start_date)} – ${formatDate(event.end_date)}`
 
 	if (!open) {
 		return (
