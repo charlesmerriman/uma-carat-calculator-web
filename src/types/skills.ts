@@ -54,18 +54,26 @@ export interface SkillSourceCard {
 	/** hint / event */
 	source: string
 	on_global: boolean
+	/** 1 R, 2 SR, 3 SSR, for "Hide R". Absent from an API older than the Encyclopedia. */
+	rarity?: number | null
+	card_type?: string | null
 }
 
-/** GET /skills/<game_id>: one skill in full. */
-export interface SkillDetailData extends SkillListRow {
+/** A skill named on another skill's page: a list row without its search names. */
+type SkillRef = Omit<SkillListRow, "other_names">
+
+/** GET /skills/<game_id>: one skill in full. Its `pair` is the whole row, not an id. */
+export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
+	pair?: SkillRef | null
 	description: string
 	readable: SkillReadable
 	sources: { umas: SkillSourceUma[]; cards: SkillSourceCard[] }
 	evolution: {
-		from: Omit<SkillListRow, "other_names"> | null
-		into: Omit<SkillListRow, "other_names">[]
+		from: SkillRef | null
+		/** Each with the outfits that evolve it (`owners`). */
+		into: SkillRef[]
 		conditions: { text: string; uses_translation: boolean; is_japanese: boolean }[]
 		scenario: number | null
 	}
-	versions: Omit<SkillListRow, "other_names">[]
+	versions: SkillRef[]
 }

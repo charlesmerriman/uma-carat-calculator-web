@@ -1,15 +1,15 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { SkillsPage } from "../components/skills/SkillsPage"
 import { clearAuthToken, setAuthToken } from "../services/authToken"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
-import type { SkillDetailData, SkillListRow } from "../types/skills"
-import { filterSkills, parseSkillParam, skillKind } from "../utils/skillSearch"
+import type { SkillListRow } from "../types/skills"
+import { filterSkills, parseSkillParam, skillHref, skillKind } from "../utils/skillSearch"
 
-/** The Skills page (/app/skills): the list, search and filters, and one skill opened in full. */
+/** The Skills list (/app/skills): search and filters; a row opens the skill's own page. */
 
 const row = (id: number, name: string, overrides: Partial<SkillListRow> = {}): SkillListRow => ({
 	id, game_id: 200000 + id, name, image: null, rarity: 1, tier: 1, group_id: id, version: "○ white",
@@ -23,52 +23,24 @@ const ROWS = [
 	row(4, "Fan Skill", { availability: "jp", uses_translation: true }),
 ]
 
-const DETAIL: SkillDetailData = {
-	...ROWS[2],
-	description: "Recover endurance mid-race.",
-	readable: {
-		wit_check: true, complete: true,
-		slots: [{ after: { all: [], any: [] }, when: { all: [{ text: "At a random moment mid-race", raw: false }], any: [] },
-			effects: [{ text: "Recovers 5.5% endurance", raw: false }], duration: null, cooldown: "Once per race" }],
-	},
-	sources: {
-		umas: [{ id: 7, name: "Special Week", game_id: 100101, image: null, source: "evolved", level: 3, on_global: true }],
-		cards: [],
-	},
-	evolution: {
-		from: { ...ROWS[1] },
-		into: [],
-		conditions: [
-			{ text: "Attain at least 600 Stamina", uses_translation: false, is_japanese: false },
-			{ text: "スキルを3個", uses_translation: false, is_japanese: true },
-		],
-		scenario: null,
-	},
-	versions: [],
-}
-
 /** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
-function asEditor(node: ReactNode, editor = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { early_access: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
+function asReader(node: ReactNode, earlyAccess = true) {
+	const value = { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } } as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
 const fetchMock = vi.fn()
 
-function serve() {
-	fetchMock.mockImplementation((url: string) => {
-		const body = url.endsWith("/skills") ? ROWS : url.endsWith("/skills/100101111") ? DETAIL : null
-		return Promise.resolve(new Response(JSON.stringify(body ?? {}), { status: body ? 200 : 404 }))
-	})
-}
-
-function renderPage(url = "/app/skills", editor = true) {
+function renderPage(url = "/app/skills", earlyAccess = true) {
 	return render(
-		asEditor(
+		asReader(
 			<MemoryRouter initialEntries={[url]}>
-				<SkillsPage />
+				<Routes>
+					<Route path="/app/skills" element={<SkillsPage />} />
+					<Route path="/app/skills/:gameId" element={<p>The skill's own page</p>} />
+				</Routes>
 			</MemoryRouter>,
-			editor
+			earlyAccess
 		)
 	)
 }
@@ -77,7 +49,9 @@ beforeEach(() => {
 	resetSkillListForTests()
 	fetchMock.mockReset()
 	vi.stubGlobal("fetch", fetchMock)
-	serve()
+	fetchMock.mockImplementation((url: string) =>
+		Promise.resolve(url.endsWith("/skills") ? new Response(JSON.stringify(ROWS), { status: 200 }) : new Response("{}", { status: 404 }))
+	)
 })
 
 afterEach(() => {
@@ -99,10 +73,11 @@ describe("filterSkills", () => {
 		expect(skillKind({ game_id: 100661, rarity: 5, is_evolved: false })).toBe("unique")
 	})
 
-	it("reads only a game id from the link", () => {
+	it("reads only a game id from an old link, and links to the skill's own page", () => {
 		expect(parseSkillParam("100101111")).toBe(100101111)
 		expect(parseSkillParam("abc")).toBeNull()
 		expect(parseSkillParam(null)).toBeNull()
+		expect(skillHref(100101111)).toBe("/app/skills/100101111")
 	})
 })
 
@@ -111,29 +86,16 @@ describe("SkillsPage", () => {
 		renderPage()
 		expect(await screen.findByText("4 skills")).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
+		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
 	})
 
-	it("opens the skill a link names, in full", async () => {
-		const { container } = renderPage("/app/skills?skill=100101111")
-		expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
-		expect(container).toHaveTextContent("When: At a random moment mid-race")
-		expect(container).toHaveTextContent("Does: Recovers 5.5% endurance once per race")
-		expect(container).toHaveTextContent("Coming to global")
-		expect(screen.getByText("Special Week")).toBeInTheDocument()
-		expect(screen.getByText("Evolution, level 3")).toBeInTheDocument()
-		// Its base links to the base's own page (the list has a Gourmand link too).
-		const card = screen.getByRole("article")
-		expect(within(card).getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills?skill=200002")
-		expect(container).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
-	})
-
-	it("says so when a link names no skill", async () => {
-		renderPage("/app/skills?skill=999999")
-		expect(await screen.findByText("There's no skill with that link.")).toBeInTheDocument()
+	it("sends an old ?skill= link to the skill's own page", async () => {
+		renderPage("/app/skills?skill=100101111")
+		expect(await screen.findByText("The skill's own page")).toBeInTheDocument()
 	})
 
 	it("says so when the list doesn't load", async () => {
@@ -150,13 +112,12 @@ describe("SkillsPage", () => {
 	})
 
 	it("sends the token: the API answers early access only", async () => {
-		setAuthToken("editor-token")
+		setAuthToken("reader-token")
 		try {
-			renderPage("/app/skills?skill=100101111")
-			expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
+			renderPage()
+			expect(await screen.findByText("4 skills")).toBeInTheDocument()
 			const sent = fetchMock.mock.calls.map(([url, init]) => [String(url).replace(/^.*(\/skills.*)$/, "$1"), init?.headers])
-			expect(sent).toContainEqual(["/skills", { Authorization: "Token editor-token" }])
-			expect(sent).toContainEqual(["/skills/100101111", { Authorization: "Token editor-token" }])
+			expect(sent).toContainEqual(["/skills", { Authorization: "Token reader-token" }])
 		} finally {
 			clearAuthToken()
 		}

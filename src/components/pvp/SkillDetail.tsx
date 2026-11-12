@@ -91,7 +91,7 @@ export function ReadableText({ readable }: { readable: SkillReadable }) {
 					)}
 				</span>
 			))}
-			{readable.wit_check && <span className="block text-gray-400">Rolls against Wit before it fires.</span>}
+			{readable.wit_check && <span className="block text-gray-400">Rolls Wit check.</span>}
 		</span>
 	)
 }

@@ -16,6 +16,24 @@ export const RUNNING_STYLE_WORDS: Record<number, string> = {
 	1: "Front Runner", 2: "Pace Chaser", 3: "Late Surger", 4: "End Closer",
 }
 
+// ── A skill page's cards ────────────────────────────────────────────────────
+
+export type HideFilter = "none" | "r" | "sr"
+
+export const HIDE_OPTIONS: { value: HideFilter; label: string }[] = [
+	{ value: "none", label: "Every card" },
+	{ value: "r", label: "Hide R" },
+	{ value: "sr", label: "Hide R and SR" },
+]
+
+/** The cards a reader keeps (Daptrius's list, item 3): R and SR cards teach
+ * many golds nobody would deck them for. A card with no rarity stays. */
+export function keepCard(card: { rarity?: number | null }, hide: HideFilter): boolean {
+	if (hide === "r") return card.rarity !== 1
+	if (hide === "sr") return card.rarity !== 1 && card.rarity !== 2
+	return true
+}
+
 /** "SSR · Speed": a card's rarity and type, as one short line. */
 export function cardLine(card: { rarity: number | null; card_type: string | null }): string {
 	return [RARITY_WORDS[card.rarity ?? 0], CARD_TYPE_LABELS[card.card_type ?? ""]].filter(Boolean).join(" · ")

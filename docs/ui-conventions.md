@@ -2508,7 +2508,8 @@ workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: 
 `develop` until the owner says so, and then only early access sees it.
 
 - **Routes**: `/app/umas`, `/app/umas/:gameId`, `/app/cards`, `/app/cards/:gameId`,
-  `/app/skills` (and, from PR 5, `/app/skills/:gameId`). A page is keyed by the GAME's id;
+  `/app/skills`, `/app/skills/:gameId` (`SkillPage`; an old `?skill=` link redirects there). A
+  page is keyed by the GAME's id;
   `utils/encyclopediaRoutes.ts` is the only builder of these links (`umaHref`, `cardHref`), and
   `parseGameId` reads only the leading digits so a readable suffix can come later.
 - **The gate**: every list and page is wrapped in `EncyclopediaGate` (`useSkillsPreview()`,

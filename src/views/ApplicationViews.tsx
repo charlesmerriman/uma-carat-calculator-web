@@ -7,6 +7,7 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
 import { SkillsPage } from "../components/skills/SkillsPage"
+import { SkillPage } from "../components/skills/SkillPage"
 import { UmaListPage } from "../components/encyclopedia/UmaListPage"
 import { UmaPage } from "../components/encyclopedia/UmaPage"
 import { CardListPage } from "../components/encyclopedia/CardListPage"
@@ -211,6 +212,7 @@ export const ApplicationViews = () => (
 			{/* The Encyclopedia (notes/encyclopedia-plan.md): early access only,
 			    noindex and not prerendered while it is supporters first. A page
 			    is keyed by the game's id (utils/encyclopediaRoutes.ts). */}
+			<Route path="skills/:gameId" element={<SkillPage />}/>
 			<Route path="umas" element={<UmaListPage />}/>
 			<Route path="umas/:gameId" element={<UmaPage />}/>
 			<Route path="cards" element={<CardListPage />}/>

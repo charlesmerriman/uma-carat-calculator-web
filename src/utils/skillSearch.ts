@@ -44,18 +44,19 @@ export function filterSkills(
 	})
 }
 
-/** `?skill=<game id>` -> the id, or null for anything that isn't one. */
+/** An OLD link's `?skill=<game id>` -> the id, or null for anything that isn't one. The
+ * Skills page redirects such a link to the skill's own page (encyclopedia PR 5). */
 export function parseSkillParam(value: string | null): number | null {
 	if (value === null || !/^\d{4,9}$/.test(value)) return null
 	return Number(value)
 }
 
-/** The query parameter that names the open skill on the Skills page. */
+/** The query parameter old links named a skill by, before skills had pages. */
 export const SKILL_PARAM = "skill"
 
-/** The link that opens one skill on the Skills page. */
+/** One skill's page in the Encyclopedia: the only builder of the link. */
 export function skillHref(gameId: number): string {
-	return `/app/skills?${SKILL_PARAM}=${gameId}`
+	return `/app/skills/${gameId}`
 }
 
 /** UmaTL's translation, credited wherever its text shows. */
