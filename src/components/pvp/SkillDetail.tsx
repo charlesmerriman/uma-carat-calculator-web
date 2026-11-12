@@ -1,23 +1,35 @@
 /**
- * What a skill's hover detail says, shared by a recommended skill's chip and
- * a `[[mention]]` in guide text (PvpTiles.tsx), and by the Skills page.
+ * THE SKILL CARD: what hovering a skill shows, wherever a skill is drawn. A
+ * recommended skill's chip, a `[[mention]]` in guide text and a deck's skill
+ * cell (PvpTiles.tsx), and every skill row in the Encyclopedia
+ * (encyclopedia/SkillHover.tsx).
  *
- * In order: the name (with whose unique it is and a "JP only" tag), the
- * description, when it fires and what it does, where a player gets it, the
- * other versions, and the UmaTL credit when the text shown is theirs.
+ * Top to bottom: a header in the skill's own colour (icon, name, kind, and
+ * the type and cost where the caller knows them), the description, a guide's
+ * note, when it fires and what it does, where a player gets it, its other
+ * versions, and a footer with the UmaTL credit and the way to its page. The
+ * look is encyclopedia.css, ".skill-card" (the overhaul canvas, 2026-11-12).
  *
  * The readable text comes from the API (skill_text.describe), built from the
  * game's own data. A phrase marked `raw` is a clause nobody has confirmed the
  * meaning of yet, so it is shown as the game's code rather than guessed.
+ *
+ * EVERY ELEMENT IS A SPAN: the card is drawn inside inline hosts (a mention
+ * sits in a sentence), where a <div> is invalid HTML. The CSS makes them
+ * blocks. A label's colon is there for a screen reader and for copied text,
+ * and hidden from sight, where the small caps label already reads as one.
  */
 
-import type { ReactNode } from "react"
+import { useContext, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { skillHref } from "../../utils/skillSearch"
-import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable, SkillSlot } from "../../types/pvpGuide"
+import { ArrowRight } from "lucide-react"
+import { SKILL_TYPE_WORDS, skillHref, skillKind } from "../../utils/skillSearch"
+import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable } from "../../types/pvpGuide"
 import { skillColour } from "../../utils/pvpGuide"
+import { cooldownWords, durationWords, hasCondition } from "../../utils/skillWords"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { nameLang } from "../../utils/skillList"
+import { InsidePopupContext } from "./hoverPopup"
 
 /** The game's own code for a clause, in a quiet code box. */
 function Phrase({ phrase }: { phrase: SkillPhrase }) {
@@ -51,49 +63,69 @@ export function ConditionText({ condition }: { condition: SkillCondition }) {
 	return parts.length > 0 ? <>{parts}</> : <>Any time</>
 }
 
-function hasCondition(condition: SkillCondition): boolean {
-	return condition.all.length > 0 || condition.any.length > 0
+/** A small caps label with a colon only a screen reader (and a copy) gets. */
+function Label({ children }: { children: ReactNode }) {
+	return (
+		<span className="skill-card__label">
+			{children}
+			<span className="sr-only">: </span>
+		</span>
+	)
 }
 
-/** "for 2.4 s, once per race" after the effects; nothing for an instant one. */
-function timing(slot: SkillSlot): string {
-	const parts: string[] = []
-	if (slot.duration === "Whole race") parts.push("for the whole race")
-	else if (slot.duration) parts.push(`for ${slot.duration}`)
-	if (slot.cooldown === "Once per race") parts.push("once per race")
-	else if (slot.cooldown) parts.push(`can fire again after ${slot.cooldown}`)
-	return parts.length > 0 ? ` ${parts.join(", ")}` : ""
-}
-
-/** When it fires and what it does, a short block per effect slot. */
+/**
+ * When it fires and what it does: a row per fact, a block per effect slot,
+ * then how long it lasts and how often it can fire as chips.
+ */
 export function ReadableText({ readable }: { readable: SkillReadable }) {
 	if (readable.slots.length === 0) return null
 	const many = readable.slots.length > 1
 	return (
-		<span className="block space-y-0.5">
-			{readable.slots.map((slot, index) => (
-				<span key={index} className="block">
-					{many && <span className="block font-medium text-gray-300">Part {index + 1}</span>}
-					{hasCondition(slot.after) && (
-						<span className="block">
-							<span className="text-gray-400">Only after: </span>
-							<ConditionText condition={slot.after} />
+		<>
+			<span className="skill-card__rows">
+				{readable.slots.map((slot, index) => {
+					const timing = [durationWords(slot), cooldownWords(slot)].filter(Boolean).join(", ")
+					return (
+						<span key={index} className="contents">
+							{many && <span className="skill-card__part">Part {index + 1}</span>}
+							{hasCondition(slot.after) && (
+								<>
+									<Label>Only after</Label>
+									<span><ConditionText condition={slot.after} /></span>
+								</>
+							)}
+							<Label>When</Label>
+							<span><ConditionText condition={slot.when} /></span>
+							{slot.effects.length > 0 && (
+								<>
+									<Label>Does</Label>
+									<span className="skill-card__does">{joined(slot.effects, "; ")}</span>
+								</>
+							)}
+							{/* With one slot the timing is the chips below; with two, each part says its own. */}
+							{many && timing && (
+								<>
+									<Label>Timing</Label>
+									<span>{timing}</span>
+								</>
+							)}
 						</span>
-					)}
-					<span className="block">
-						<span className="text-gray-400">When: </span>
-						<ConditionText condition={slot.when} />
-					</span>
-					{slot.effects.length > 0 && (
-						<span className="block">
-							<span className="text-gray-400">Does: </span>
-							{joined(slot.effects, "; ")}
-							{timing(slot)}
-						</span>
-					)}
-				</span>
-			))}
-			{readable.wit_check && <span className="block text-gray-400">Rolls Wit check.</span>}
+					)
+				})}
+			</span>
+			<ReadableChips readable={readable} single={!many} />
+		</>
+	)
+}
+
+function ReadableChips({ readable, single }: { readable: SkillReadable; single: boolean }) {
+	const slot = single ? readable.slots[0] : undefined
+	const chips = [slot && durationWords(slot), slot && cooldownWords(slot), readable.wit_check ? "Rolls Wit check" : null]
+		.filter((chip): chip is string => Boolean(chip))
+	if (chips.length === 0) return null
+	return (
+		<span className="skill-card__chips">
+			{chips.map((chip) => <span key={chip} className="skill-card__chip">{chip}</span>)}
 		</span>
 	)
 }
@@ -120,20 +152,24 @@ function more(shown: number, total: number): string {
 export function SourcesText({ sources }: { sources: PvpSkillSources }) {
 	if (sources.uma_count === 0 && sources.card_count === 0) return null
 	return (
-		<span className="block text-gray-300">
+		<span className="skill-card__rows">
 			{sources.uma_count > 0 && (
-				<span className="block">
-					<span className="text-gray-400">Umas: </span>
-					{sources.umas.map((row) => `${row.name} (${sourceLabel(row.source, row.level)}${row.on_global ? "" : ", JP"})`).join(", ")}
-					{more(sources.umas.length, sources.uma_count)}
-				</span>
+				<>
+					<Label>Umas</Label>
+					<span>
+						{sources.umas.map((row) => `${row.name} (${sourceLabel(row.source, row.level)}${row.on_global ? "" : ", JP"})`).join(", ")}
+						{more(sources.umas.length, sources.uma_count)}
+					</span>
+				</>
 			)}
 			{sources.card_count > 0 && (
-				<span className="block">
-					<span className="text-gray-400">Cards: </span>
-					{sources.cards.map((row) => `${row.name} (${sourceLabel(row.source, null)}${row.on_global ? "" : ", JP"})`).join(", ")}
-					{more(sources.cards.length, sources.card_count)}
-				</span>
+				<>
+					<Label>Cards</Label>
+					<span>
+						{sources.cards.map((row) => `${row.name} (${sourceLabel(row.source, null)}${row.on_global ? "" : ", JP"})`).join(", ")}
+						{more(sources.cards.length, sources.card_count)}
+					</span>
+				</>
 			)}
 		</span>
 	)
@@ -150,68 +186,109 @@ export function JpOnlyTag({ className = "" }: { className?: string }) {
 	)
 }
 
-/** The other versions of a skill (white, gold, evolved). Nothing when it has none.
- *
- * No heading: an "Also as" heading read as unclear (Daptrius, 2026-10-17).
- * A bar down the left ties the list to the skill above it, and each version
- * carries its colour as a small tag. A guide's popup can also list the skills
- * its note names (MentionedSkills in PvpTiles.tsx), under a rule with the icon
- * hanging; the two lists read the same until the versions took the bar
- * (owner, 2026-11-02). */
+/** A skill's colour as a small pill in the game's own colours (encyclopedia.css, ".kind-pill"). */
+export function KindPill({ kind }: { kind: string }) {
+	return <span className="kind-pill" data-kind={kind}>{kind}</span>
+}
+
+/**
+ * The other versions of a skill (white, gold, evolved), each with its colour
+ * as a pill and its description. Nothing when it has none. No heading: an
+ * "Also as" heading read as unclear (Daptrius, 2026-10-17); the pills say
+ * what the list is.
+ */
 function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 	if (skill.versions.length === 0) return null
 	return (
-		<span className="mt-1.5 block space-y-1 border-l-2 border-gray-600 pl-2 text-gray-300">
-			{skill.versions.map((version) => (
-				<span key={version.id} className="block">
-					<span className="flex items-center gap-1">
-						{version.image ? (
-							<img src={version.image} alt="" className="h-3.5 w-3.5 shrink-0" loading="lazy" decoding="async" />
-						) : (
-							<span className="h-3.5 w-3.5 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-						)}
-						<span className="font-medium text-gray-100">{version.name}</span>{" "}
-						<span className="shrink-0 rounded bg-gray-700 px-1 text-[0.85em] leading-snug text-gray-200">{skillColour(version)}</span>
+		<span className="skill-card__block">
+			<span className="skill-card__rows">
+				{skill.versions.map((version) => (
+					<span key={version.id} className="contents">
+						{/* The lone spaces are for the screen reader's copy and copied text: blocks
+						    set end to end would read as one word ("goldGroundwork"). */}
+						<span><KindPill kind={skillColour(version)} />{" "}</span>
+						<span>
+							<span className="font-medium text-gray-100" lang={nameLang(version.name)}>{version.name}</span>{" "}
+							{version.description && <span className="block text-gray-400">{version.description}</span>}{" "}
+						</span>
 					</span>
-					{version.description && <span className="block text-gray-400">{version.description}</span>}
-				</span>
-			))}
+				))}
+			</span>
 		</span>
 	)
 }
 
-/** The whole hover detail of one skill. `note` is a guide row's note, if any. */
-export function SkillDetail({ skill, note }: { skill: PvpSkillRef; note?: ReactNode }) {
+/**
+ * The whole card for one skill. `note` is a guide row's note, if any.
+ * `link` false leaves out "Open its page" where the thing hovered is already
+ * the link (an Encyclopedia row).
+ */
+export function SkillDetail({ skill, note, link = true }: {
+	skill: PvpSkillRef
+	note?: ReactNode
+	link?: boolean
+}) {
 	// The skills work shows to early access only (useSkillsPreview, the
-	// Encyclopedia's supporters-first rule); everyone else gets the hover card
-	// as it was: name, text, versions.
+	// Encyclopedia's supporters-first rule); everyone else gets the card with
+	// its header, text and versions, as before.
 	const preview = useSkillsPreview()
+	// The drawn popup is aria-hidden, so its link is for the pointer only (hoverPopup.tsx).
+	const inPopup = useContext(InsidePopupContext)
+	const kind = skill.is_inherited ? "inherited" : skill.game_id != null ? skillKind({ ...skill, game_id: skill.game_id }) : skillColour(skill)
+	// The type and the cost are part of the skills work, so early access only,
+	// like the readable text below them.
+	const meta = [
+		kind,
+		preview && skill.type ? SKILL_TYPE_WORDS[skill.type] : null,
+		preview && skill.cost != null ? `${skill.cost} SP` : null,
+		skill.unique_of,
+	].filter(Boolean).join(" · ")
+	const credit = preview && skill.uses_translation
+	const page = preview && link && skill.game_id != null
 	return (
-		<>
-			<span className="block font-semibold text-gray-100">
-				<span lang={nameLang(skill.name)}>{skill.name}</span>
-				{skill.unique_of && <span className="font-normal text-gray-400"> ({skill.unique_of})</span>}
-				{preview && skill.availability === "jp" && <JpOnlyTag className="ml-1.5 align-middle" />}
+		<span className="skill-card">
+			<span className="skill-card__head" data-kind={kind}>
+				{skill.image ? (
+					<img src={skill.image} alt="" className="skill-card__icon" loading="lazy" decoding="async" />
+				) : (
+					<span className="skill-card__icon bg-gray-700" aria-hidden="true" />
+				)}
+				<span className="skill-card__title">
+					<span className="skill-card__name">
+						<span lang={nameLang(skill.name)}>{skill.name}</span>
+						{preview && skill.availability === "jp" && <JpOnlyTag className="ml-1.5 align-middle font-medium" />}
+					</span>{" "}
+					<span className="skill-card__meta">{meta}</span>{" "}
+				</span>
 			</span>
-			{skill.description}
-			{note && <span className="mt-1 block text-gray-300">{note}</span>}
-			{preview && skill.readable && (
-				<span className="mt-1 block border-t border-gray-700/70 pt-1">
+			{skill.description && <span className="skill-card__text">{skill.description}</span>}{" "}
+			{note && <span className="skill-card__note">{note}</span>}
+			{preview && skill.readable && skill.readable.slots.length > 0 && (
+				<span className="skill-card__block">
 					<ReadableText readable={skill.readable} />
 				</span>
 			)}
-			{preview && skill.sources && (
-				<span className="mt-1 block">
+			{preview && skill.sources && (skill.sources.uma_count > 0 || skill.sources.card_count > 0) && (
+				<span className="skill-card__block">
 					<SourcesText sources={skill.sources} />
 				</span>
 			)}
 			<SkillVersions skill={skill} />
-			{preview && skill.uses_translation && <span className="mt-1 block text-[0.9em] text-gray-500">English text: UmaTL fan translation.</span>}
-			{preview && skill.game_id != null && (
-				<Link to={skillHref(skill.game_id)} className="mt-1 block text-[0.9em] text-brand transition hover:text-brand/75">
-					Open its page
-				</Link>
+			{(credit || page) && (
+				<span className="skill-card__foot">
+					{credit && <span>English text: UmaTL fan translation.</span>}
+					{page && (
+						<Link
+							to={skillHref(skill.game_id as number)}
+							tabIndex={inPopup ? -1 : undefined}
+							className="skill-card__open inline-flex items-center gap-1 transition hover:opacity-80"
+						>
+							Open its page
+							<ArrowRight className="h-3 w-3" aria-hidden="true" />
+						</Link>
+					)}
+				</span>
 			)}
-		</>
+		</span>
 	)
 }

@@ -6,15 +6,14 @@
 
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Loader2 } from "lucide-react"
 import { FramedUma } from "../FramedUma"
-import { JpOnlyTag } from "../pvp/SkillDetail"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
+import { splitOutfit } from "../../utils/umaName"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
-import { Chips, SearchBox } from "./listFilters"
-import { OwnedMark, Stars } from "./pieces"
+import { Chips, Count, SearchBox, Toolbar } from "./listFilters"
+import { EmptyNote, GridSkeleton, JpTag, OwnedMark, Stars } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
 	OWNED_OPTIONS, PAGE_CONTAINER, STAR_OPTIONS, WHERE_OPTIONS, countLine, filterUmas, ownedMatches,
@@ -35,7 +34,7 @@ const UmaListBody = () => {
 	const [stars, setStars] = useState<StarFilter>("all")
 	const owned = useOwned()
 	const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
-	// The Owned chip and marks only for a signed-in player with something in their Collection.
+	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
 	const umas = useMemo(
 		() => (catalogue.status === "ready"
@@ -47,44 +46,41 @@ const UmaListBody = () => {
 	return (
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
-			<div className="flex flex-col gap-2">
-				<SearchBox label="Search umas" value={query} onChange={setQuery} />
+			<Toolbar
+				search={<SearchBox label="Search umas" value={query} onChange={setQuery} />}
+				count={catalogue.status === "ready" && <Count>{countLine(umas.length, "uma", "umas")}</Count>}
+			>
 				<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
 				<Chips label="Stars" options={STAR_OPTIONS} value={stars} onChange={setStars} />
-				{showOwned && <Chips label="Owned" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
-			</div>
+				{showOwned && <Chips label="Collection" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
+			</Toolbar>
 			{catalogue.status === "loading" ? (
-				<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
-					<Loader2 className="h-4 w-4 animate-spin" /> Loading umas...
-				</p>
+				<GridSkeleton label="Loading umas" />
 			) : catalogue.status === "error" ? (
-				<p className="text-sm text-gray-400">The uma list didn't load. Reload the page to try again.</p>
+				<EmptyNote>The uma list didn't load. Reload the page to try again.</EmptyNote>
+			) : umas.length === 0 ? (
+				<EmptyNote>No uma matches that.</EmptyNote>
 			) : (
-				<>
-					<p className="text-xs text-gray-400" aria-live="polite">{countLine(umas.length, "uma", "umas")}</p>
-					{umas.length === 0 ? (
-						<p className="text-sm text-gray-400">No uma matches that.</p>
-					) : (
-						<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-							{umas.map((uma) => (
-								<li key={uma.id}>
-									<Link
-										to={umaHref(uma.game_id as number)}
-										className="flex h-full flex-col items-center gap-1.5 rounded-lg border border-edge bg-(--card-fill) p-2 text-center text-sm text-gray-100 transition hover:border-gray-500"
-									>
-										<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="h-20 w-20" />
-										<span className="line-clamp-2 leading-tight">{uma.name}</span>
-										<span className="flex items-center gap-1.5">
-											<Stars count={uma.rarity ?? 3} />
-											{!uma.on_global && <JpOnlyTag className="text-[10px]" />}
-											{showOwned && owned.umas.has(uma.id) && <OwnedMark />}
-										</span>
-									</Link>
-								</li>
-							))}
-						</ul>
-					)}
-				</>
+				<ul className="enc-grid">
+					{umas.map((uma) => {
+						// "Special Week (Summer)": her name, then the outfit on its own quiet line.
+						const { base, outfit } = splitOutfit(uma.name)
+						return (
+							<li key={uma.id}>
+								<Link to={umaHref(uma.game_id as number)} className="enc-tile">
+									{showOwned && owned.umas.has(uma.id) && <OwnedMark />}
+									<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-tile__art" />
+									<span className="enc-tile__name">{base}</span>
+									{outfit && <span className="enc-tile__sub">{outfit}</span>}
+									<span className="enc-tile__facts">
+										<Stars count={uma.rarity ?? 3} />
+										{!uma.on_global && <JpTag />}
+									</span>
+								</Link>
+							</li>
+						)
+					})}
+				</ul>
 			)}
 		</div>
 	)

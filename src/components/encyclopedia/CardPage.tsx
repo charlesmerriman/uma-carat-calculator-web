@@ -1,30 +1,41 @@
 /**
  * /app/cards/<game id>: one support card's page. From GET
- * /encyclopedia/cards/<game id>, plus its banners from /calculator-data. The
- * card is drawn as its bordered picture (owner's first-round answer 5; the
- * visual overhaul revisits it).
+ * /encyclopedia/cards/<game id>, plus its banners from /calculator-data.
+ *
+ * The hero draws the card large in the site's own frame (FramedCard), washed
+ * in the card type's colour; when the player owns it, the limit break
+ * diamonds sit on the art. That settles the owner's first-round answer 5
+ * ("bordered picture for now, revisit with the visual overhaul"): framed, as
+ * in the Collection. A card with no frameless art yet still draws its
+ * bordered picture (FramedCard's own fallback).
  *
  * Its effects at every level come in Phase 2 (PRs 9 and 10).
  */
 
 import { useParams } from "react-router-dom"
-import { Loader2 } from "lucide-react"
-import { JpOnlyTag } from "../pvp/SkillDetail"
+import { FramedCard } from "../FramedCard"
 import { useCardPage } from "../../services/encyclopediaQueries"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { CardPageData } from "../../types/encyclopedia"
+import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import { cardReleases } from "../../utils/encyclopediaBanners"
 import { CARD_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
-import { BannerLinks, CardList, JapaneseName, OutfitList, OwnedLine, ReleaseLine, Section, SkillList } from "./pieces"
-import { PAGE_CONTAINER, cardLine, limitBreakWords } from "../../utils/encyclopedia"
+import {
+	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, RarityTag, Section, SubHeading,
+	TypeTag, WhereTag, type JumpItem,
+} from "./pieces"
+import { BannerLinks, CardList, OutfitList, ReleaseFacts } from "./facts"
+import { SkillList } from "./skillRows"
+import { PAGE_CONTAINER, limitBreakWords } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
-import { Crumbs, NotFound } from "./UmaPage"
 import { usePageTitle } from "./usePageTitle"
 
 export const CardPage = () => (
 	<EncyclopediaGate>
-		<CardPageBody />
+		<div className={PAGE_CONTAINER}>
+			<CardPageBody />
+		</div>
 	</EncyclopediaGate>
 )
 
@@ -34,16 +45,8 @@ const CardPageBody = () => {
 	usePageTitle(page.data ? `${page.data.title} ${page.data.name}`.trim() : null)
 
 	if (gameId === null || page.data === null) return <NotFound />
-	if (page.isError) {
-		return <p className={`${PAGE_CONTAINER} text-sm text-gray-400`}>This page didn't load. Reload to try again.</p>
-	}
-	if (!page.data) {
-		return (
-			<p className={`${PAGE_CONTAINER} flex items-center gap-2 text-sm text-gray-400`} role="status">
-				<Loader2 className="h-4 w-4 animate-spin" /> Loading...
-			</p>
-		)
-	}
+	if (page.isError) return <EmptyNote>This page didn't load. Reload to try again.</EmptyNote>
+	if (!page.data) return <PageSkeleton label="Loading" />
 	return <CardDetail card={page.data} />
 }
 
@@ -57,55 +60,70 @@ export function CardDetail({ card }: { card: CardPageData }) {
 	// A card on no banner (most Rs, SRs and event SSRs) still has the game's own Global date.
 	const globalDate = releases.globalDate ?? card.released_at
 
+	const jump = ([
+		card.skills.length > 0 && { id: "skills", label: "Skills", count: card.skills.length },
+		releases.banners.length > 0 && { id: "banners", label: "Banners", count: releases.banners.length },
+		card.outfits.length > 0 && { id: "trainees", label: "As a trainee", count: card.outfits.length },
+		card.cards.length > 0 && { id: "cards", label: "Other cards", count: card.cards.length },
+	] as (JumpItem | false)[]).filter((item): item is JumpItem => Boolean(item))
+
 	return (
-		<article className={PAGE_CONTAINER}>
+		<article className="flex flex-col gap-4">
 			<Crumbs list="Support cards" listPath={CARD_LIST_PATH} name={card.title || card.name} />
-			<header className="flex items-start gap-4">
-				{card.image ? (
-					<img src={card.image} alt={card.name} className="aspect-[3/4] w-28 shrink-0 rounded-lg object-cover sm:w-32" />
-				) : (
-					<span className="aspect-[3/4] w-28 shrink-0 rounded-lg bg-gray-700 sm:w-32" aria-hidden="true" />
-				)}
-				<div className="flex min-w-0 flex-col gap-1">
-					<h1 className="font-display text-xl font-bold text-gray-100">{card.name}</h1>
-					{card.title && <p className="text-sm text-gray-300">{card.title}</p>}
-					<div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-						<span>{cardLine(card)}</span>
-						{card.on_global ? <span>On global</span> : <JpOnlyTag />}
-					</div>
-					<JapaneseName name={card.jp_name} title={card.jp_title} />
-					<ReleaseLine
+			<Hero
+				accent={CARD_TYPE_COLORS[card.card_type]}
+				art={<FramedCard card={card} limitBreaks={limitBreak ?? null} alt={card.name} className="enc-hero__art--card" />}
+				eyebrow="Support card"
+				name={card.name}
+				title={card.title}
+				japanese={<JapaneseName name={card.jp_name} title={card.jp_title} />}
+				tags={
+					<>
+						<RarityTag rarity={card.rarity} />
+						<TypeTag type={card.card_type} />
+						<WhereTag onGlobal={card.on_global} />
+					</>
+				}
+				lead={card.purpose || undefined}
+				owned={limitBreak !== undefined && <OwnedLine tab="cards" detail={limitBreakWords(limitBreak)} />}
+				facts={
+					<ReleaseFacts
 						jpDate={releases.jpDate}
 						globalDate={globalDate}
 						predicted={releases.globalDate !== null && releases.predicted}
 					/>
-					{card.purpose && <p className="text-sm text-gray-300">{card.purpose}</p>}
-				</div>
-			</header>
-			{limitBreak !== undefined && <OwnedLine tab="cards" detail={limitBreakWords(limitBreak)} />}
+				}
+			/>
+			<JumpBar items={jump} />
 
-			{hints.length > 0 && (
-				<Section title="Skill hints">
-					<SkillList skills={hints} />
-				</Section>
-			)}
-			{events.length > 0 && (
-				<Section title="Skills from events">
-					<SkillList skills={events} />
+			{card.skills.length > 0 && (
+				<Section id="skills" title="Skills" count={card.skills.length}>
+					{hints.length > 0 && (
+						<div className="flex flex-col gap-2">
+							<SubHeading>Skill hints</SubHeading>
+							<SkillList skills={hints} />
+						</div>
+					)}
+					{events.length > 0 && (
+						<div className="flex flex-col gap-2">
+							<SubHeading>Skills from events</SubHeading>
+							<SkillList skills={events} />
+						</div>
+					)}
 				</Section>
 			)}
 			{releases.banners.length > 0 && (
-				<Section title="Banners">
+				<Section id="banners" title="Banners" count={releases.banners.length}>
 					<BannerLinks banners={releases.banners} />
 				</Section>
 			)}
 			{card.outfits.length > 0 && (
-				<Section title={isGroup ? "Its members as trainees" : `${card.name} as a trainee`}>
+				<Section id="trainees" title={isGroup ? "Its members as trainees" : `${card.name} as a trainee`} count={card.outfits.length}>
 					<OutfitList outfits={card.outfits} />
 				</Section>
 			)}
 			{card.cards.length > 0 && (
-				<Section title={`${card.name}'s other cards`}>
+				<Section id="cards" title={`${card.name}'s other cards`} count={card.cards.length}>
 					<CardList cards={card.cards} />
 				</Section>
 			)}

@@ -6,14 +6,38 @@
  */
 
 import type { CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
-import { CARD_TYPE_LABELS } from "./cardTypes"
+import type { Status } from "../components/rankings/kit/StatusPill"
+import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "./cardTypes"
+import { parseApiDate } from "./dateFormat"
 
 export const PAGE_CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
-export const LINK_CLASS = "text-brand transition hover:text-brand/75"
 
 export const RARITY_WORDS: Record<number, string> = { 1: "R", 2: "SR", 3: "SSR" }
+/** A rarity's pill, in the game's metals (encyclopedia.css, ".enc-tag--ssr"). */
+export const RARITY_TAG_CLASS: Record<number, string> = { 1: "enc-tag--r", 2: "enc-tag--sr", 3: "enc-tag--ssr" }
 export const RUNNING_STYLE_WORDS: Record<number, string> = {
 	1: "Front Runner", 2: "Pace Chaser", 3: "Late Surger", 4: "End Closer",
+}
+/** A running style's dot: Hakuraku's colours (index.css, --color-style-*), always beside the word. */
+export const RUNNING_STYLE_COLORS: Record<number, string> = {
+	1: "var(--color-style-front)", 2: "var(--color-style-pace)", 3: "var(--color-style-late)", 4: "var(--color-style-end)",
+}
+
+/**
+ * A banner's status from the dates the site already gave it: running between
+ * its two dates, ended after, upcoming before. `now` is the caller's clock,
+ * read once per page (useState), never at render time.
+ */
+export function bannerStatus(start: string, end: string, now: Date): Status {
+	const from = parseApiDate(start)?.getTime() ?? 0
+	const to = parseApiDate(end)?.getTime() ?? 0
+	if (now.getTime() > to) return "ended"
+	return now.getTime() >= from ? "running" : "upcoming"
+}
+
+/** An aptitude a player wouldn't race her on: D or worse (the game's 1 to 4 of 8). */
+export function isWeakAptitude(value: number | null): boolean {
+	return value != null && value <= 4
 }
 
 // ── What the player owns (hooks/useOwned.ts) ────────────────────────────────
@@ -31,7 +55,7 @@ export function limitBreakWords(limitBreak: number): string {
 export type OwnedFilter = "all" | "owned" | "missing"
 
 export const OWNED_OPTIONS: { value: OwnedFilter; label: string }[] = [
-	{ value: "all", label: "Owned or not" },
+	{ value: "all", label: "All" },
 	{ value: "owned", label: "Owned" },
 	{ value: "missing", label: "Not owned" },
 ]
@@ -94,7 +118,7 @@ export function countLine(count: number, one: string, many: string): string {
 export type StarFilter = "all" | "1" | "2" | "3"
 
 export const STAR_OPTIONS: { value: StarFilter; label: string }[] = [
-	{ value: "all", label: "Any stars" },
+	{ value: "all", label: "Any" },
 	{ value: "3", label: "★3" },
 	{ value: "2", label: "★2" },
 	{ value: "1", label: "★1" },
@@ -115,13 +139,14 @@ export function filterUmas(umas: CatalogueUma[], query: string, where: WhereFilt
 export type TypeFilter = "all" | keyof typeof CARD_TYPE_LABELS
 export type RarityFilter = "all" | "3" | "2" | "1"
 
-export const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
-	{ value: "all", label: "Any type" },
-	...Object.entries(CARD_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+export const TYPE_OPTIONS: { value: TypeFilter; label: string; dot?: string }[] = [
+	{ value: "all", label: "Any" },
+	// Each type's own hue as a dot on its chip (CARD_TYPE_COLORS), beside its word.
+	...Object.entries(CARD_TYPE_LABELS).map(([value, label]) => ({ value, label, dot: CARD_TYPE_COLORS[value] })),
 ]
 
 export const RARITY_OPTIONS: { value: RarityFilter; label: string }[] = [
-	{ value: "all", label: "Any rarity" },
+	{ value: "all", label: "Any" },
 	{ value: "3", label: "SSR" },
 	{ value: "2", label: "SR" },
 	{ value: "1", label: "R" },

@@ -157,6 +157,10 @@ export interface PvpSkillRef {
 	uses_translation?: boolean
 	readable?: SkillReadable
 	sources?: PvpSkillSources
+	/** Skill points; null for a unique. Absent from an API older than the visual overhaul. */
+	cost?: number | null
+	/** The Skills list's type key ("velocity"), worded by SKILL_TYPE_WORDS. Absent like `cost`. */
+	type?: string
 }
 
 export interface PvpStatConfig {

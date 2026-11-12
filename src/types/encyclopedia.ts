@@ -41,6 +41,8 @@ export interface PageCard {
 	name: string
 	title: string
 	image: string | null
+	/** The frameless texture FramedCard draws; null until uploaded, absent from an older API. */
+	image_borderless?: string | null
 	card_type: string
 	rarity: number | null
 	on_global: boolean

@@ -1,267 +1,156 @@
 /**
- * The small pieces the Encyclopedia's pages share (notes/encyclopedia-plan.md,
- * PR 4): a section, the aptitude grid, the stats table with its star switch,
- * a skill row that links to the skill, an outfit or card row that links to
- * its page, the release line and the banner links.
+ * The furniture every Encyclopedia page is built from: the breadcrumbs, the
+ * hero and its facts and tags, the jump bar, a section card, a segmented
+ * switch, and the loading, missing and failed states.
  *
- * Functionality first (owner, 2026-11-12): today's styles, nothing new. The
- * visual overhaul is another agent's, later, on the same branch.
+ * The look is encyclopedia.css (the visual overhaul, canvas of 2026-11-12:
+ * https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6). This file holds
+ * structure and wording only; what an aptitude grid or a skill row looks like
+ * lives beside it in facts.tsx and skillRows.tsx.
  */
 
-import { useState, type ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { Link } from "react-router-dom"
-import PredictedBadge from "../PredictedBadge"
-import { FramedUma } from "../FramedUma"
-import { JpOnlyTag } from "../pvp/SkillDetail"
-import { useOshiIds } from "../../hooks/useOshiIds"
-import type { PageCard, PageOutfit, PageSkill, StarStats, StatKey } from "../../types/encyclopedia"
-import type { AptitudeKey } from "../../types/pvpTeam"
-import { aptitudeLetter } from "../../utils/courseAptitude"
-import { formatDate } from "../../utils/dateFormat"
-import type { BannerLink } from "../../utils/encyclopediaBanners"
-import { cardLine } from "../../utils/encyclopedia"
-import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
-import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
-import { nameLang } from "../../utils/skillList"
-import { skillHref, skillKind } from "../../utils/skillSearch"
-import { APTITUDE_GROUPS, STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
+import { useReducedMotion } from "framer-motion"
+import { Check, ChevronRight } from "lucide-react"
+import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "../../utils/cardTypes"
+import { RARITY_TAG_CLASS, RARITY_WORDS } from "../../utils/encyclopedia"
+import { UMA_LIST_PATH } from "../../utils/encyclopediaRoutes"
 
-const INSET = "border border-edge bg-gray-900/40"
+// ── Finding your way ────────────────────────────────────────────────────────
 
-/** A titled block. Leave a section out when it has nothing: never draw it empty. */
-export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+export function Crumbs({ list, listPath, name }: { list: string; listPath: string; name: string }) {
 	return (
-		<section className="flex flex-col gap-2">
-			<h2 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-200">
-				{title}
-				{aside}
-			</h2>
-			{children}
-		</section>
+		<nav aria-label="Breadcrumb" className="enc-crumbs">
+			<Link to={UMA_LIST_PATH}>Encyclopedia</Link>
+			<ChevronRight aria-hidden="true" />
+			<Link to={listPath}>{list}</Link>
+			<ChevronRight aria-hidden="true" />
+			<span className="truncate">{name}</span>
+		</nav>
 	)
 }
 
-/** "From the JP game. May change on global." beside facts global doesn't have yet. */
-export function JpDataNote() {
-	return <p className="text-xs text-gray-400">From the JP game. May change on global.</p>
-}
-
-function letterTone(value: number | null): string {
-	if (value == null) return "text-gray-500"
-	if (value >= 7) return "text-brand"
-	if (value <= 4) return "text-highlight"
-	return "text-gray-200"
-}
-
-/** The ten aptitudes as the game groups them: surface, distance, style. */
-export function AptitudeGrid({ apt }: { apt: Record<AptitudeKey, number | null> }) {
-	return (
-		<div className={`flex flex-col gap-2 rounded-lg p-3 ${INSET}`}>
-			{APTITUDE_GROUPS.map((group) => (
-				<div key={group.label} className="grid grid-cols-[4.5rem_1fr] items-center gap-2">
-					<span className="text-xs text-gray-400">{group.label}</span>
-					<div className="grid grid-cols-4 gap-1.5">
-						{group.keys.map(({ key, label }) => (
-							<div key={key} className="flex min-w-0 items-center justify-between gap-1 rounded-md bg-gray-800/60 px-2 py-1 text-xs text-gray-200">
-								<span className="truncate">{label}</span>
-								<b className={`font-display text-sm ${letterTone(apt[key])}`}>{aptitudeLetter(apt[key]) ?? "–"}</b>
-							</div>
-						))}
-					</div>
-				</div>
-			))}
-		</div>
-	)
+export interface JumpItem {
+	/** The section's element id. */
+	id: string
+	label: string
+	count?: number
 }
 
 /**
- * Base stats at the chosen star level, and the growth bonuses. Opens at the
- * outfit's own starting stars when the game lists them, else its lowest.
+ * One chip per section the page has, stuck to the top of the scroller so a
+ * long page is one tap from any part of it. A button, not a #hash link: a
+ * hash would add a history entry per jump, and Back should leave the page.
  */
-export function StarStatsTable({ stars, growth, initialStar }: {
-	stars: StarStats[]
-	growth: Record<StatKey, number | null>
-	initialStar: number | null
-}) {
-	const [picked, setPicked] = useState<number | null>(null)
-	const star = picked ?? (stars.some((row) => row.star === initialStar) ? initialStar : stars[0]?.star) ?? null
-	const row = stars.find((entry) => entry.star === star)
+export function JumpBar({ items }: { items: JumpItem[] }) {
+	const reducedMotion = useReducedMotion()
+	// A page with one or two sections has nothing to jump between.
+	if (items.length < 3) return null
 	return (
-		<div className="flex flex-col gap-2">
-			{stars.length > 1 && (
-				<div role="group" aria-label="Star level" className="flex flex-wrap gap-1">
-					{stars.map((entry) => (
-						<button
-							key={entry.star}
-							type="button"
-							aria-pressed={entry.star === star}
-							onClick={() => setPicked(entry.star)}
-							className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
-								entry.star === star ? "border-brand bg-brand/15 text-gray-100" : "border-gray-600 text-gray-300 hover:border-gray-500"
-							}`}
-						>
-							★{entry.star}
-						</button>
-					))}
-				</div>
-			)}
-			<div className={`overflow-x-auto rounded-lg ${INSET}`}>
-				<table className="w-full text-center text-xs text-gray-200">
-					<thead>
-						<tr className="text-gray-400">
-							<th className="px-2 py-1.5 text-left font-medium"><span className="sr-only">Row</span></th>
-							{STAT_KEYS.map((key) => <th key={key} className="px-2 py-1.5 font-medium">{STAT_LABELS[key]}</th>)}
-						</tr>
-					</thead>
-					<tbody>
-						{row && (
-							<tr>
-								<td className="px-2 py-1.5 text-left text-gray-400">Base</td>
-								{STAT_KEYS.map((key) => <td key={key} className="px-2 py-1.5 font-semibold">{row[key]}</td>)}
-							</tr>
-						)}
-						<tr>
-							<td className="px-2 py-1.5 text-left text-gray-400">Growth</td>
-							{STAT_KEYS.map((key) => (
-								<td key={key} className="px-2 py-1.5">{growth[key] ? `+${growth[key]}%` : "0"}</td>
-							))}
-						</tr>
-					</tbody>
-				</table>
+		<nav aria-label="On this page" className="enc-jump">
+			{items.map((item) => (
+				<button
+					key={item.id}
+					type="button"
+					onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })}
+				>
+					{item.label}
+					{item.count !== undefined && <span className="enc-jump__count">{item.count}</span>}
+				</button>
+			))}
+		</nav>
+	)
+}
+
+// ── The hero ────────────────────────────────────────────────────────────────
+
+/**
+ * The top of a detail page: the art, the name, a line of tags, and the facts
+ * (release dates, cost) beside them. `accent` tints the corner the art sits
+ * in: the brand by default, a card's type colour, a skill's own.
+ */
+export function Hero({ accent, art, eyebrow, name, nameId, nameLang, title, japanese, tags, lead, owned, facts }: {
+	accent?: string
+	art: ReactNode
+	/** What kind of thing this is: "Trainee", "Support card", "Skill". */
+	eyebrow: ReactNode
+	name: string
+	nameId?: string
+	nameLang?: string
+	title?: string
+	japanese?: ReactNode
+	tags?: ReactNode
+	lead?: ReactNode
+	/** The "You own this" line, when the player does. */
+	owned?: ReactNode
+	/** <Fact> elements. */
+	facts?: ReactNode
+}) {
+	return (
+		<header className="enc-hero" style={accent ? ({ "--enc-accent": accent } as CSSProperties) : undefined}>
+			{art}
+			<div className="enc-hero__body">
+				<span className="enc-hero__eyebrow">{eyebrow}</span>
+				<h1 id={nameId} className="enc-hero__name" lang={nameLang}>{name}</h1>
+				{title && <p className="enc-hero__title">{title}</p>}
+				{japanese}
+				{tags && <div className="enc-hero__tags">{tags}</div>}
+				{lead && <p className="enc-hero__lead">{lead}</p>}
+				{owned}
 			</div>
+			{facts && <dl className="enc-hero__facts">{facts}</dl>}
+		</header>
+	)
+}
+
+/** One fact in the hero: a small caps label over its value. */
+export function Fact({ label, children }: { label: string; children: ReactNode }) {
+	return (
+		<div className="enc-fact">
+			<dt className="enc-fact__label">{label}</dt>
+			<dd className="enc-fact__value">{children}</dd>
 		</div>
 	)
 }
 
-function skillSurface(skill: PageSkill): string {
-	if (skill.is_evolved) return "skill-evolved"
-	if (skill.rarity === GOLD_SKILL_RARITY) return "skill-gold"
-	return "border-edge bg-(--card-fill) text-gray-100 hover:border-gray-500"
-}
-
-/** One skill, linking to its page. `note` is how this uma or card has it ("level 3"). */
-export function SkillLinkRow({ skill, note }: { skill: PageSkill; note?: string }) {
+/** A small pill. `dot` is a kind's own colour, always beside its word. */
+export function Tag({ children, dot, className = "" }: { children: ReactNode; dot?: string; className?: string }) {
 	return (
-		<li>
-			<Link
-				to={skillHref(skill.game_id)}
-				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${skillSurface(skill)}`}
-			>
-				{skill.image ? (
-					<img src={skill.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
-				) : (
-					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-				)}
-				<span className="min-w-0 flex-1 truncate" lang={nameLang(skill.name)}>{skill.name}</span>
-				{skill.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
-				<span className="shrink-0 text-xs opacity-70">
-					{[note, skill.cost != null ? `${skill.cost} SP` : null, skillKind(skill)].filter(Boolean).join(" · ")}
-				</span>
-			</Link>
-		</li>
+		<span className={`enc-tag ${className}`}>
+			{dot && <span className="enc-dot" style={{ "--dot": dot } as CSSProperties} aria-hidden="true" />}
+			{children}
+		</span>
 	)
 }
 
-export function SkillList({ skills, note }: { skills: PageSkill[]; note?: (skill: PageSkill) => string | undefined }) {
-	return (
-		<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-			{skills.map((skill) => <SkillLinkRow key={`${skill.source}-${skill.game_id}`} skill={skill} note={note?.(skill)} />)}
-		</ul>
-	)
+/** "SSR", "SR" or "R" in the game's metals. Nothing for a card with no rarity. */
+export function RarityTag({ rarity }: { rarity: number | null }) {
+	const word = RARITY_WORDS[rarity ?? 0]
+	if (!word) return null
+	return <span className={`enc-tag ${RARITY_TAG_CLASS[rarity ?? 0]}`}>{word}</span>
 }
 
-const PERSON_ROW = "flex items-center gap-2.5 rounded-lg border border-edge bg-(--card-fill) px-2 py-1.5 text-sm text-gray-100 transition hover:border-gray-500"
-
-/** Other outfits: each a FramedUma linking to its own page. */
-export function OutfitList({ outfits }: { outfits: PageOutfit[] }) {
-	const oshiIds = useOshiIds()
-	return (
-		<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-			{outfits.map((outfit) => (
-				<li key={outfit.game_id}>
-					<Link to={umaHref(outfit.game_id)} className={PERSON_ROW}>
-						<FramedUma src={outfit.portrait} oshi={oshiIds.has(outfit.id)} className="h-10 w-10 shrink-0" />
-						<span className="min-w-0 flex-1">
-							<span className="block truncate">{outfit.name}</span>
-							<span className="block truncate text-xs text-gray-400">{outfit.title}</span>
-						</span>
-						{!outfit.on_global && <JpOnlyTag className="shrink-0 text-[10px]" />}
-					</Link>
-				</li>
-			))}
-		</ul>
-	)
+/** A card's type with its colour dot. */
+export function TypeTag({ type }: { type: string | null }) {
+	const word = CARD_TYPE_LABELS[type ?? ""]
+	if (!word) return null
+	return <Tag dot={CARD_TYPE_COLORS[type ?? ""]}>{word}</Tag>
 }
 
-/** Support cards: the bordered picture (owner's answer 5), linking to each page. */
-export function CardList({ cards }: { cards: PageCard[] }) {
-	return (
-		<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-			{cards.map((card) => (
-				<li key={card.game_id}>
-					<Link to={cardHref(card.game_id)} className={PERSON_ROW}>
-						{card.image ? (
-							<img src={card.image} alt="" className="h-12 w-9 shrink-0 rounded object-cover" loading="lazy" decoding="async" />
-						) : (
-							<span className="h-12 w-9 shrink-0 rounded bg-gray-700" aria-hidden="true" />
-						)}
-						<span className="min-w-0 flex-1">
-							<span className="block truncate">{card.title || card.name}</span>
-							<span className="block truncate text-xs text-gray-400">{cardLine(card)}</span>
-						</span>
-						{!card.on_global && <JpOnlyTag className="shrink-0 text-[10px]" />}
-					</Link>
-				</li>
-			))}
-		</ul>
-	)
+/** "On global" with the running green, or the "JP only" tag. */
+export function WhereTag({ onGlobal }: { onGlobal: boolean }) {
+	return onGlobal ? <Tag dot="var(--color-status-running)">On global</Tag> : <JpTag />
 }
 
-/** The banners this outfit or card is on, as the site already dated them. */
-export function BannerLinks({ banners }: { banners: BannerLink[] }) {
-	return (
-		<ul className="flex flex-col gap-1.5">
-			{banners.map((banner) => (
-				<li key={banner.timelineId}>
-					<Link to={banner.href} className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${PERSON_ROW}`}>
-						<span className="min-w-0 flex-1 truncate">{banner.name}</span>
-						<span className="text-xs text-gray-400">{formatDate(banner.start)} to {formatDate(banner.end)}</span>
-						{banner.predicted && <PredictedBadge />}
-					</Link>
-				</li>
-			))}
-		</ul>
-	)
-}
-
-/**
- * When it came out: "JP release" from the first JP banner, and "Global" from
- * the first banner's date, with the site's badge when that date is predicted.
- * A card on no banner shows its own Global date. Only what is known.
- */
-export function ReleaseLine({ jpDate, globalDate, predicted }: {
-	jpDate: string | null
-	globalDate: string | null
-	predicted: boolean
-}) {
-	if (!jpDate && !globalDate) return null
-	return (
-		<p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
-			{jpDate && <span>JP release {formatDate(jpDate)}</span>}
-			{globalDate && (
-				<span className="flex items-center gap-1.5">
-					Global {formatDate(globalDate)}
-					{predicted && <PredictedBadge />}
-				</span>
-			)}
-		</p>
-	)
+export function JpTag() {
+	return <span className="enc-tag enc-tag--jp">JP only</span>
 }
 
 /** The Japanese name under the English one, marked as Japanese for screen readers and fonts. */
 export function JapaneseName({ name, title }: { name: string; title: string }) {
 	if (!name && !title) return null
-	return <p className="text-xs text-gray-400" lang="ja">{[title, name].filter(Boolean).join(" ")}</p>
+	return <p className="enc-hero__jp" lang="ja">{[title, name].filter(Boolean).join(" ")}</p>
 }
 
 /**
@@ -271,22 +160,122 @@ export function JapaneseName({ name, title }: { name: string; title: string }) {
  */
 export function OwnedLine({ detail, tab }: { detail: string; tab: "umas" | "cards" }) {
 	return (
-		<p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-brand/40 bg-brand/10 px-3 py-1.5 text-sm text-gray-100">
-			<span className="font-semibold text-brand">You own this</span>
+		<p className="enc-owned">
+			<b><Check aria-hidden="true" />You own this</b>
 			{detail && <span>{detail}</span>}
-			<Link to={`/app/collection?tab=${tab}`} className="ml-auto text-xs text-brand transition hover:text-brand/75">
-				Open your Collection
-			</Link>
+			<Link to={`/app/collection?tab=${tab}`} className="transition hover:opacity-75">Open your Collection</Link>
 		</p>
 	)
 }
 
-/** A small "Owned" mark on a list tile. */
+/** The tick in an owned tile's corner. The word is for a screen reader. */
 export function OwnedMark() {
-	return <span className="rounded border border-brand/50 px-1 text-[10px] font-semibold uppercase tracking-wide text-brand">Owned</span>
+	return (
+		<span className="enc-tile__owned" title="Owned">
+			<Check aria-hidden="true" />
+			<span className="sr-only">Owned</span>
+		</span>
+	)
 }
 
 export function Stars({ count }: { count: number | null }) {
 	if (!count) return null
 	return <span className="text-sm text-highlight" aria-label={`${count} stars`}>{"★".repeat(count)}</span>
+}
+
+// ── A section ───────────────────────────────────────────────────────────────
+
+/**
+ * A titled card. Leave a section out when it has nothing: never draw it
+ * empty. `count` sits small beside the title; `aside` (a switch) on its right.
+ */
+export function Section({ id, title, count, aside, children }: {
+	id?: string
+	title: string
+	count?: number | string
+	aside?: ReactNode
+	children: ReactNode
+}) {
+	return (
+		<section id={id} className="enc-section">
+			<div className="enc-section__head">
+				<h2 className="enc-section__title">
+					{title}
+					{/* The space keeps the heading's name readable ("Skills 11"); the gap is the CSS's. */}
+					{count !== undefined && <>{" "}<span className="enc-section__count">{count}</span></>}
+				</h2>
+				{aside}
+			</div>
+			{children}
+		</section>
+	)
+}
+
+/** A group's heading inside a section ("Innate skills"), ruled off to the right. */
+export function SubHeading({ children }: { children: ReactNode }) {
+	return <h3 className="enc-sub">{children}</h3>
+}
+
+export function SectionNote({ children }: { children: ReactNode }) {
+	return <p className="enc-section__note">{children}</p>
+}
+
+/** "From the JP game. May change on global." beside facts global doesn't have yet. */
+export function JpDataNote() {
+	return <SectionNote>From the JP game. May change on global.</SectionNote>
+}
+
+/** A segmented switch for a section's heading: the star level, "Hide R". */
+export function Switch<T extends string | number>({ label, options, value, onChange }: {
+	label: string
+	options: { value: T; label: string }[]
+	value: T
+	onChange: (value: T) => void
+}) {
+	return (
+		<div role="group" aria-label={label} className="enc-switch">
+			{options.map((option) => (
+				<button key={option.value} type="button" aria-pressed={option.value === value} onClick={() => onChange(option.value)}>
+					{option.label}
+				</button>
+			))}
+		</div>
+	)
+}
+
+// ── States ──────────────────────────────────────────────────────────────────
+
+/** The page's shape while its data loads: a hero and two cards, shimmering. */
+export function PageSkeleton({ label }: { label: string }) {
+	return (
+		<div role="status" aria-label={label} className="flex flex-col gap-4">
+			<div className="enc-skeleton h-4 w-56" />
+			<div className="enc-skeleton h-44 sm:h-52" />
+			<div className="enc-skeleton h-36" />
+			<div className="enc-skeleton h-56" />
+		</div>
+	)
+}
+
+/** A list's shape while it loads: a grid of blank tiles. */
+export function GridSkeleton({ label, tall = false }: { label: string; tall?: boolean }) {
+	return (
+		<div role="status" aria-label={label} className="enc-grid">
+			{Array.from({ length: 14 }, (_, index) => <div key={index} className={`enc-skeleton ${tall ? "h-52" : "h-40"}`} />)}
+		</div>
+	)
+}
+
+/** One line in a dashed box: nothing matched, or the page didn't load. */
+export function EmptyNote({ children }: { children: ReactNode }) {
+	return <p className="enc-empty">{children}</p>
+}
+
+export function NotFound() {
+	return (
+		<EmptyNote>
+			There's no page for that.{" "}
+			<Link to={UMA_LIST_PATH} className="text-brand transition hover:text-brand/75">Back to the Encyclopedia</Link>
+		</EmptyNote>
+	)
 }

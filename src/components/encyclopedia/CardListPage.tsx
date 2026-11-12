@@ -3,20 +3,24 @@
  * public). Search by name or title, filter by type, rarity and where it is
  * out; a tile opens the card's page. Placeholder cards ("your best SSR
  * Speed") are stand-ins, not game cards, so they have no page and aren't here.
+ *
+ * A tile is the card in the site's own frame (FramedCard), which already
+ * carries its type icon, so under it go only the name, the title and the
+ * rarity. The type's word is still there for a screen reader.
  */
 
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Loader2 } from "lucide-react"
-import { JpOnlyTag } from "../pvp/SkillDetail"
+import { FramedCard } from "../FramedCard"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
-import { Chips, SearchBox } from "./listFilters"
-import { OwnedMark } from "./pieces"
+import { Chips, Count, SearchBox, Toolbar } from "./listFilters"
+import { EmptyNote, GridSkeleton, JpTag, OwnedMark, RarityTag } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
-	OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, cardLine, countLine, filterCards,
+	OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, countLine, filterCards,
 	ownedMatches, type OwnedFilter, type RarityFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/encyclopedia"
 
@@ -34,7 +38,7 @@ const CardListBody = () => {
 	const [where, setWhere] = useState<WhereFilter>("all")
 	const owned = useOwned()
 	const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
-	// The Owned chip and marks only for a signed-in player with something in their Collection.
+	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
 	const cards = useMemo(
 		() => (catalogue.status === "ready"
@@ -47,50 +51,42 @@ const CardListBody = () => {
 	return (
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
-			<div className="flex flex-col gap-2">
-				<SearchBox label="Search support cards" value={query} onChange={setQuery} />
+			<Toolbar
+				search={<SearchBox label="Search support cards" value={query} onChange={setQuery} />}
+				count={catalogue.status === "ready" && <Count>{countLine(cards.length, "card", "cards")}</Count>}
+			>
 				<Chips label="Type" options={TYPE_OPTIONS} value={type} onChange={setType} />
 				<Chips label="Rarity" options={RARITY_OPTIONS} value={rarity} onChange={setRarity} />
 				<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
-				{showOwned && <Chips label="Owned" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
-			</div>
+				{showOwned && <Chips label="Collection" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
+			</Toolbar>
 			{catalogue.status === "loading" ? (
-				<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
-					<Loader2 className="h-4 w-4 animate-spin" /> Loading support cards...
-				</p>
+				<GridSkeleton label="Loading support cards" tall />
 			) : catalogue.status === "error" ? (
-				<p className="text-sm text-gray-400">The card list didn't load. Reload the page to try again.</p>
+				<EmptyNote>The card list didn't load. Reload the page to try again.</EmptyNote>
+			) : cards.length === 0 ? (
+				<EmptyNote>No card matches that.</EmptyNote>
 			) : (
-				<>
-					<p className="text-xs text-gray-400" aria-live="polite">{countLine(cards.length, "card", "cards")}</p>
-					{cards.length === 0 ? (
-						<p className="text-sm text-gray-400">No card matches that.</p>
-					) : (
-						<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-							{cards.map((card) => (
-								<li key={card.id}>
-									<Link
-										to={cardHref(card.game_id as number)}
-										className="flex h-full flex-col items-center gap-1.5 rounded-lg border border-edge bg-(--card-fill) p-2 text-center text-sm text-gray-100 transition hover:border-gray-500"
-									>
-										{card.image ? (
-											<img src={card.image} alt="" className="aspect-[3/4] w-20 rounded object-cover" loading="lazy" decoding="async" />
-										) : (
-											<span className="aspect-[3/4] w-20 rounded bg-gray-700" aria-hidden="true" />
-										)}
-										<span className="line-clamp-2 leading-tight">{card.name}</span>
-										<span className="line-clamp-1 text-xs text-gray-400">{card.title}</span>
-										<span className="flex items-center gap-1.5 text-xs text-gray-300">
-											{cardLine({ rarity: card.rarity, card_type: card.card_type ?? "" })}
-											{!card.on_global && <JpOnlyTag className="text-[10px]" />}
-											{showOwned && owned.cards.has(card.id) && <OwnedMark />}
-										</span>
-									</Link>
-								</li>
-							))}
-						</ul>
-					)}
-				</>
+				<ul className="enc-grid">
+					{cards.map((card) => {
+						const limitBreak = showOwned ? owned.cards.get(card.id) : undefined
+						return (
+							<li key={card.id}>
+								<Link to={cardHref(card.game_id as number)} className="enc-tile">
+									{limitBreak !== undefined && <OwnedMark />}
+									<FramedCard card={card} limitBreaks={limitBreak ?? null} className="enc-tile__art--card" />
+									<span className="enc-tile__name">{card.name}</span>
+									{card.title && <span className="enc-tile__sub">{card.title}</span>}
+									<span className="enc-tile__facts">
+										<RarityTag rarity={card.rarity} />
+										<span className="sr-only">{CARD_TYPE_LABELS[card.card_type ?? ""]}</span>
+										{!card.on_global && <JpTag />}
+									</span>
+								</Link>
+							</li>
+						)
+					})}
+				</ul>
 			)}
 		</div>
 	)

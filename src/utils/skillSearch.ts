@@ -45,6 +45,11 @@ export const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
 	{ value: "other", label: "Other" },
 ]
 
+/** A type's word by its key ("velocity" -> "Speed"), for a row's second line and the skill card. */
+export const SKILL_TYPE_WORDS: Record<string, string> = Object.fromEntries(
+	TYPE_FILTERS.filter((option) => option.value !== "all").map((option) => [option.value, option.label]),
+)
+
 export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
 	{ value: "all", label: "Anywhere" },
 	{ value: "global", label: "On global" },

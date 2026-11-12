@@ -49,6 +49,10 @@ export interface SkillSourceUma {
 export interface SkillSourceCard {
 	id: number
 	name: string
+	/** "[Fire at My Heels]": what tells one character's cards apart. Absent from an older API. */
+	title?: string
+	/** The frameless texture FramedCard draws; null until uploaded, absent from an older API. */
+	image_borderless?: string | null
 	game_id: number | null
 	image: string | null
 	/** hint / event */

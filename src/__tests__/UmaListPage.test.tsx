@@ -96,11 +96,11 @@ describe("UmaListPage", () => {
 		expect(screen.getByText("3 umas")).toBeInTheDocument()
 	})
 
-	it("shows a guest no Owned chip and no marks", async () => {
+	it("shows a guest no Collection filter and no marks", async () => {
 		const Providers = providers(false)
 		render(<Providers><UmaListPage /></Providers>)
 		expect(await screen.findByText("4 umas")).toBeInTheDocument()
-		expect(screen.queryByRole("group", { name: "Owned" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("group", { name: "Collection" })).not.toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Silence Suzuka/ })).not.toHaveTextContent("Owned")
 	})
 })
