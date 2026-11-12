@@ -12,12 +12,14 @@
  * race a row of four buttons (the three umas and Loss). One tap logs, a second
  * clears. Twenty selects a day was the old look's problem.
  *
- * An empty ticket starts in one tap: "Same three as Ticket 2" copies the
- * latest earlier ticket's lineup (`previousRun`), or "Use Team 1" one of the
- * event's teams from My team; "Pick a team" lists them all. The lineup is
- * COPIED into the ticket, so editing the team later never changes what was
- * logged. "Use Team 1 for all of them" (FillEveryTicket) does the same for
- * every empty ticket ahead and the Finals at once: it took 17 taps.
+ * An empty ticket starts in one tap from a team in My team: a button per
+ * team, the one the ticket before ran first ("Use Team 1"); "Pick a team"
+ * shows them with their umas. A ticket only ever holds a team (owner,
+ * 2026-11-12, Daptrius's ask): "Same three as Ticket 2" is gone. The lineup
+ * is COPIED into the ticket, so editing the team later never changes what was
+ * logged. "Use Team 1 for all of them" (EveryTicketLeft) puts a team on every
+ * ticket not raced yet and the Finals at once, replacing what was there, and
+ * each day can do the same for itself; both can clear, and both offer Undo.
  *
  * A ticket can be skipped whole or stopped after some races, and both can be
  * taken back (owner, 2026-10-26: a player may just be slow to type it in). A
@@ -68,6 +70,8 @@ import {
 	RUN_RACES,
 	bestTicketWins,
 	dayLabel,
+	clearLineup,
+	contentOf,
 	emptyContent,
 	findRun,
 	formatRate,
@@ -84,7 +88,6 @@ import {
 	runsOf,
 	sameLineup,
 	setRace,
-	slotsWithoutLineup,
 	summarizeRuns,
 	tallyRun,
 	ticketCounts,
@@ -92,6 +95,7 @@ import {
 	ticketRange,
 	ticketState,
 	unloggedTickets,
+	unracedSlots,
 	type RunShape,
 	type Tally,
 	type TicketState,
@@ -132,11 +136,11 @@ const RACES = Array.from({ length: RUN_RACES }, (_, index) => index + 1)
 /** What a lineup choice is called and what it copies in. */
 interface LineupChoice {
 	key: string
-	/** "Same three as Ticket 2", or the team's name. */
+	/** The team's name, or "Same three as Ticket 2" for a LoH Top 96 (topChoices). */
 	label: string
-	/** A small tag on the right: "Use these" on the previous ticket, "Team 2" on a named team. */
+	/** A small tag on the right: "Team 2" on a named team. */
 	badge: string | null
-	/** The previous ticket's three, drawn in the brand colour. */
+	/** A logged ticket's three (the Top 96 only), drawn in the brand colour. */
 	previous: boolean
 	runners: PvpRunRunner[]
 }
@@ -276,13 +280,23 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		}
 		save(slot, change)
 	}
-	// One lineup on every empty ticket ahead and the Finals (FillEveryTicket).
-	// Each slot saves on its own, through the event's one save queue.
-	const fillEvery = (slots: PvpRunSlot[], choice: LineupChoice) => {
+	// One change on many unraced tickets (EveryTicketLeft, DayBulk). Each slot
+	// saves on its own, through the event's one save queue; Undo writes back
+	// what each held, from the runs as they are now.
+	const bulk = (slots: PvpRunSlot[], change: RunChange, message: string) => {
 		setFailed(false)
-		for (const slot of slots) save(slot, (current) => withLineup(current, choice.runners))
-		toast.success(`${choice.previous ? "Those three are" : `${choice.label} is`} on every ticket left.`)
+		const before = slots.map((slot) => {
+			const run = findRun(runs, slot)
+			return { slot, content: run ? contentOf(run) : null }
+		})
+		for (const slot of slots) save(slot, change)
+		toast.success(message, {
+			action: { label: "Undo", onClick: () => before.forEach(({ slot, content }) => save(slot, () => content)) },
+		})
 	}
+	const bulkTeam = (slots: PvpRunSlot[], choice: LineupChoice, where: string) =>
+		bulk(slots, (current) => withLineup(current, choice.runners), `${choice.label} is on ${where}.`)
+	const bulkClear = (slots: PvpRunSlot[], where: string) => bulk(slots, clearLineup, `Cleared the teams from ${where}.`)
 	// No team in My team and nothing logged yet: there is nothing a ticket could copy.
 	const noLineups = eventTeams.length === 0 && !runs.some((run) => run.runners.length > 0)
 	const final = findRun(runs, { stage: "final" })
@@ -300,7 +314,16 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
 			</div>
 
-			{!noLineups && <FillEveryTicket runs={runs} teams={eventTeams} today={today} shape={shape} shared={shared} onFill={fillEvery} />}
+			{!noLineups && (
+				<EveryTicketLeft
+					runs={runs}
+					choices={lineupChoices(runs, eventTeams, shape.days + 1, 1)}
+					today={today}
+					shape={shape}
+					onTeam={(slots, choice) => bulkTeam(slots, choice, "every ticket left")}
+					onClear={(slots) => bulkClear(slots, "every ticket left")}
+				/>
+			)}
 
 			<div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:gap-5">
 				<section className="card-panel min-w-0" aria-label={tab === "final" ? (shape.rounds ? "Finals" : "Top 96") : dayLabel(tab, shape)}>
@@ -323,7 +346,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 					) : tab === "final" ? (
 						<FinalsBody
 							run={final}
-							choices={lineupChoices(runs, eventTeams, shape.days + 1, 1, shape)}
+							choices={lineupChoices(runs, eventTeams, shape.days + 1, 1)}
 							shared={shared}
 							onWrite={(change) => write({ stage: "final" }, change)}
 						/>
@@ -338,6 +361,8 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 							onOpen={(ticket) => setOpen(tab, ticket)}
 							shared={shared}
 							onWrite={write}
+							onTeam={(slots, choice) => bulkTeam(slots, choice, `${dayLabel(tab, shape)}'s tickets`)}
+							onClear={(slots) => bulkClear(slots, `${dayLabel(tab, shape)}'s tickets`)}
 						/>
 					)}
 				</section>
@@ -386,36 +411,26 @@ function ticketSource(run: PvpRun, shape: RunShape, sameDay: boolean): string {
 }
 
 /**
- * Who could have run a ticket: the latest earlier ticket's three first (most
- * players run the same team all day), named by where they came from, then
- * each of the event's teams that differs from it. An unnamed team is "Team 2"
- * (TeamBuilder's rule); a named one carries that as its badge.
+ * Who could run a ticket: the event's teams from My team, and only those (owner,
+ * 2026-11-12: a ticket always holds a team). The team the latest earlier
+ * ticket ran comes first, since most players run the same team all day, so
+ * the one-tap button repeats it. An unnamed team is "Team 2" (TeamBuilder's
+ * rule); a named one carries that as its badge.
  */
-function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: number, shape: RunShape): LineupChoice[] {
-	const choices: LineupChoice[] = []
-	const previous = previousRun(runs, day, ticket)
-	if (previous) {
-		const source = ticketSource(previous, shape, previous.day === day)
-		choices.push({
-			key: "previous",
-			label: `Same three as ${source}`,
-			badge: "Use these",
-			previous: true,
-			runners: previous.runners,
-		})
-	}
-	teams.forEach((team, index) => {
-		const runners = lineupFromTeam(team.members)
-		if (previous && sameLineup(previous.runners, runners)) return
+function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: number): LineupChoice[] {
+	const choices: LineupChoice[] = teams.map((team, index) => {
 		const named = team.name.trim()
-		choices.push({
+		return {
 			key: team.key,
 			label: named || `Team ${index + 1}`,
 			badge: named ? `Team ${index + 1}` : null,
 			previous: false,
-			runners,
-		})
+			runners: lineupFromTeam(team.members),
+		}
 	})
+	const previous = previousRun(runs, day, ticket)
+	const ranBefore = previous ? choices.findIndex((choice) => sameLineup(choice.runners, previous.runners)) : -1
+	if (ranBefore > 0) choices.unshift(...choices.splice(ranBefore, 1))
 	return choices
 }
 
@@ -426,7 +441,7 @@ function lineupChoices(runs: PvpRun[], teams: PvpTeam[], day: number, ticket: nu
  */
 function topChoices(runs: PvpRun[], teams: PvpTeam[], shape: RunShape): LineupChoice[] {
 	const registered = registeredLineups(runs)
-	if (registered.length === 0) return lineupChoices(runs, teams, shape.days + 1, 1, shape)
+	if (registered.length === 0) return lineupChoices(runs, teams, shape.days + 1, 1)
 	return registered.map((run) => ({
 		key: `ticket-${run.day}-${run.ticket}`,
 		label: `Same three as ${ticketSource(run, shape, false)}`,
@@ -437,54 +452,82 @@ function topChoices(runs: PvpRun[], teams: PvpTeam[], shape: RunShape): LineupCh
 }
 
 /**
- * "Use Team 1 for all of them": one tap puts a lineup on every ticket left
- * (slotsWithoutLineup: the empty tickets of today and later days, and the
- * Finals), where it took a tap per ticket, 17 in all (owner's pick B,
- * 2026-10-29). With one lineup to offer the button uses it; with several it
- * opens the picker first. Gone once fewer than two slots are empty: a single
- * ticket starts from its own row.
+ * "Use Team 1 for all of them": one tap puts a team on every ticket not raced
+ * yet (unracedSlots: today's and later days', and the Finals), replacing what
+ * was there, where it took a tap per ticket, 17 in all. A button per team
+ * (Daptrius, 2026-11-05), and Clear once any of them holds a team. Gone once
+ * fewer than two tickets are left: a single ticket starts from its own row.
  */
-function FillEveryTicket({ runs, teams, today, shape, shared, onFill }: {
+function EveryTicketLeft({ runs, choices, today, shape, onTeam, onClear }: {
 	runs: PvpRun[]
-	teams: PvpTeam[]
+	choices: LineupChoice[]
 	today: number | null
 	shape: RunShape
-	shared: Shared
-	onFill: (slots: PvpRunSlot[], choice: LineupChoice) => void
+	onTeam: (slots: PvpRunSlot[], choice: LineupChoice) => void
+	onClear: (slots: PvpRunSlot[]) => void
 }) {
-	const [picking, setPicking] = useState(false)
-	const slots = slotsWithoutLineup(runs, today, shape)
-	// The latest ticket's three first, then each team that differs: what the Finals offers.
-	const choices = lineupChoices(runs, teams, shape.days + 1, 1, shape)
+	const slots = unracedSlots(runs, today, shape)
 	if (slots.length < 2 || choices.length === 0) return null
-
 	// Two slots or more, and only one can be the Finals, so there is always a ticket.
 	const tickets = slots.filter((slot) => slot.stage === "day").length
 	const finals = slots.some((slot) => slot.stage === "final")
 	const what = `${tickets} ${tickets === 1 ? "ticket" : "tickets"}${finals ? " and the Finals" : ""}`
-	const only = choices.length === 1 ? choices[0] : null
-	const fill = (choice: LineupChoice) => {
-		setPicking(false)
-		onFill(slots, choice)
-	}
+	const withTeam = slots.filter((slot) => (findRun(runs, slot)?.runners.length ?? 0) > 0)
 	return (
 		<section aria-label="Every ticket left" className="card-panel">
 			<div className="flex flex-wrap items-center gap-2.5 px-3 py-2.5 sm:px-3.5">
-				<p className="min-w-0 flex-1 text-[13px] text-gray-300 sm:text-sm">{what} have no lineup yet.</p>
-				<button
-					type="button"
-					className={SOFT_BUTTON}
-					aria-expanded={only ? undefined : picking}
-					onClick={() => (only ? fill(only) : setPicking((open) => !open))}
-				>
-					<Users className="h-4 w-4 shrink-0" aria-hidden="true" />
-					{only ? (only.previous ? "Same three for all of them" : `Use ${only.label} for all of them`) : "Pick a team for all of them"}
-				</button>
+				<p className="min-w-0 flex-1 basis-56 text-[13px] text-gray-300 sm:text-sm">
+					{what} not raced yet{withTeam.length > 0 ? `, ${withTeam.length} with a team on` : ""}.
+				</p>
+				<span className="flex flex-wrap gap-1.5 sm:gap-2">
+					{choices.map((choice) => (
+						<button key={choice.key} type="button" className={SOFT_BUTTON} onClick={() => onTeam(slots, choice)}>
+							<Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+							{`Use ${choice.label} for all of them`}
+						</button>
+					))}
+					{withTeam.length > 0 && (
+						<button type="button" className={SOFT_BUTTON} onClick={() => onClear(withTeam)}>
+							Clear them
+						</button>
+					)}
+				</span>
 			</div>
-			{picking && (
-				<LineupPicker eyebrow="Every ticket left" heading="Who runs all of them?" choices={choices} shared={shared} onPick={fill} />
-			)}
 		</section>
+	)
+}
+
+/**
+ * One day's tickets in one go (Daptrius, 2026-11-05: "replace all tickets on a
+ * specific day"): a team on each ticket of the day not raced yet, or Clear.
+ * Shown while two or more of the day's tickets are unraced.
+ */
+function DayBulk({ day, runs, choices, shape, onTeam, onClear }: {
+	day: number
+	runs: PvpRun[]
+	choices: LineupChoice[]
+	shape: RunShape
+	onTeam: (slots: PvpRunSlot[], choice: LineupChoice) => void
+	onClear: (slots: PvpRunSlot[]) => void
+}) {
+	const slots = unracedSlots(runs, null, shape, day)
+	if (slots.length < 2 || choices.length === 0) return null
+	const withTeam = slots.filter((slot) => (findRun(runs, slot)?.runners.length ?? 0) > 0)
+	const chip = soft({ size: "min-h-9 px-2.5 text-[13px]" })
+	return (
+		<div className="mx-2 mt-2 flex flex-wrap items-center gap-1.5 sm:mx-2.5 sm:mt-2.5 sm:gap-2" aria-label={`All of ${dayLabel(day, shape)}`} role="group">
+			<span className="text-xs text-gray-400">All {slots.length} not raced:</span>
+			{choices.map((choice) => (
+				<button key={choice.key} type="button" className={chip} onClick={() => onTeam(slots, choice)}>
+					{choice.label}
+				</button>
+			))}
+			{withTeam.length > 0 && (
+				<button type="button" className={chip} onClick={() => onClear(withTeam)}>
+					Clear
+				</button>
+			)}
+		</div>
 	)
 }
 
@@ -668,7 +711,7 @@ function DayHeader({ event, day, today, runs, shape }: { event: RaceEvent; day: 
 	)
 }
 
-function DayTickets({ day, today, runs, teams, shape, open, onOpen, shared, onWrite }: {
+function DayTickets({ day, today, runs, teams, shape, open, onOpen, shared, onWrite, onTeam, onClear }: {
 	day: number
 	today: number | null
 	runs: PvpRun[]
@@ -678,6 +721,8 @@ function DayTickets({ day, today, runs, teams, shape, open, onOpen, shared, onWr
 	onOpen: (ticket: number | null) => void
 	shared: Shared
 	onWrite: (slot: PvpRunSlot, change: RunChange) => void
+	onTeam: (slots: PvpRunSlot[], choice: LineupChoice) => void
+	onClear: (slots: PvpRunSlot[]) => void
 }) {
 	// A day that is over, with tickets that have nothing logged: offered as
 	// skipped in one tap, never assumed (the player may still type them in).
@@ -703,6 +748,7 @@ function DayTickets({ day, today, runs, teams, shape, open, onOpen, shared, onWr
 					</button>
 				</div>
 			)}
+			<DayBulk day={day} runs={runs} choices={lineupChoices(runs, teams, day, 1)} shape={shape} onTeam={onTeam} onClear={onClear} />
 			<ol className="flex flex-col gap-1.5 p-2 sm:p-2.5">
 				{Array.from({ length: shape.tickets }, (_, index) => {
 					const ticket = index + 1
@@ -713,7 +759,7 @@ function DayTickets({ day, today, runs, teams, shape, open, onOpen, shared, onWr
 								title={`Ticket ${ticketNumber(day, ticket, shape)}`}
 								eyebrow={shape.rounds ? `Day ${day} · Round ${roundOfDay(day)}` : "League of Heroes"}
 								run={findRun(runs, slot)}
-								choices={lineupChoices(runs, teams, day, ticket, shape)}
+								choices={lineupChoices(runs, teams, day, ticket)}
 								open={open === ticket}
 								onOpen={(isOpen) => onOpen(isOpen ? ticket : null)}
 								shared={shared}
@@ -791,14 +837,20 @@ function TicketRow({ title, eyebrow, run, choices, open, onOpen, shared, onWrite
 					>
 						Skip
 					</button>
-					{/* On a phone the two share a line when they fit; a long "Same three as Day 1, Ticket 4" pushes Pick a team under it. */}
-					<span className="flex w-full flex-wrap gap-1.5 sm:w-auto sm:flex-nowrap sm:gap-2">
+					{/* A button per team, the one the ticket before ran first (Daptrius,
+					    2026-11-05: "no need to only show team 1"); they wrap on a phone. */}
+					<span className="flex w-full flex-wrap gap-1.5 sm:w-auto sm:gap-2">
 						{first && (
 							<button type="button" className={`${PRIMARY_BUTTON} flex-auto sm:flex-none`} onClick={() => start(first)}>
 								<Repeat className="h-4 w-4 shrink-0" aria-hidden="true" />
 								{startLabel(first)}
 							</button>
 						)}
+						{choices.slice(1).map((choice) => (
+							<button key={choice.key} type="button" className={soft({ size: "min-h-11 px-3 sm:min-h-10" })} onClick={() => start(choice)}>
+								{startLabel(choice)}
+							</button>
+						))}
 						<button type="button" className={soft({ size: "min-h-11 px-3 sm:min-h-10" })} aria-expanded={picking} onClick={() => setPicking((isOpen) => !isOpen)}>
 							Pick a team
 						</button>
