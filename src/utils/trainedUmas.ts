@@ -8,6 +8,7 @@
  */
 
 import { aptitudeLetter } from "./courseAptitude"
+import { skillMatches, skillSearchWords } from "./skillList"
 import type { AptitudeKey, CatalogueSkill, CatalogueUma } from "../types/pvpTeam"
 import type { StatKey, TrainedUma, VeteranInput, VeteranSkill } from "../types/trainedUma"
 
@@ -142,18 +143,17 @@ export function toggleSkill(draft: VeteranDraft, skill: number): VeteranDraft {
 }
 
 /**
- * Skills whose name contains every word of `query`, ignoring case and the
- * ○/◎ marks, at most `limit`, skipping the ones already picked. Empty for a
- * query under two characters, so the list never shows the whole catalogue.
+ * Skills matching `query` by any of their names or their id (skillMatches),
+ * at most `limit`, skipping the ones already picked. Empty for a query under
+ * two characters, so the list never shows the whole catalogue.
  */
 export function searchSkills(skills: CatalogueSkill[], query: string, picked: Set<number>, limit = 12): CatalogueSkill[] {
-	const words = query.toLowerCase().replace(/[○◎]/g, " ").split(/\s+/).filter(Boolean)
+	const words = skillSearchWords(query)
 	if (words.join("").length < 2) return []
 	const found: CatalogueSkill[] = []
 	for (const skill of skills) {
 		if (picked.has(skill.id)) continue
-		const name = skill.name.toLowerCase()
-		if (words.every((word) => name.includes(word))) found.push(skill)
+		if (skillMatches(skill, words)) found.push(skill)
 		if (found.length >= limit) break
 	}
 	return found

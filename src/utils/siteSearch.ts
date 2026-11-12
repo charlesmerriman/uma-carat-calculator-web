@@ -47,6 +47,8 @@ export interface SearchEntry {
 	umaId?: number
 	/** Set on a skill: its row in the PvP catalogue. */
 	skillId?: number
+	/** Set on a skill: the game's id, which a query of just that number finds. */
+	gameId?: number
 }
 
 export interface SearchSources {
@@ -184,9 +186,12 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			kind: "skill",
 			title: skill.name,
 			detail: skill.description,
-			keywords: "",
+			// Every other name it answers to: UmaTL's, aliases (GameTora's
+			// among them, never shown), the Japanese one. Searched, not drawn.
+			keywords: (skill.other_names ?? []).join(" · "),
 			image: skill.image,
 			skillId: skill.id,
+			gameId: skill.game_id ?? undefined,
 		})
 	}
 	return entries
@@ -203,7 +208,12 @@ export function createSearcher(entries: SearchEntry[]): (query: string) => Searc
 		threshold: 0.4,
 		ignoreLocation: true,
 	})
-	return (query) => fuse.search(query, { limit: MAX_RESULTS }).map((result) => result.item)
+	return (query) => {
+		// A skill id: that skill alone. Fuse would score near-miss ids as hits.
+		const id = query.trim()
+		if (/^\d+$/.test(id)) return entries.filter((entry) => entry.gameId === Number(id))
+		return fuse.search(query, { limit: MAX_RESULTS }).map((result) => result.item)
+	}
 }
 
 const MAX_TEACHERS = 8

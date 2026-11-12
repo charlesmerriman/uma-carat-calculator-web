@@ -92,10 +92,14 @@ export interface CatalogueSkill {
 	version?: string
 	/**
 	 * Only on the rows the guide editor adds from GET /skills (withShownSkills):
-	 * where the game has it, and every other name a [[mention]] may use.
-	 * The builder's own catalogue rows have neither: they are all on global.
+	 * where the game has it. The builder's own catalogue rows are all on global.
 	 */
 	availability?: SkillAvailability
+	/**
+	 * Every other name the skill answers to (the API's Skill.search_names:
+	 * UmaTL's, aliases including GameTora's, the Japanese name). Searched by
+	 * skillMatches, never shown. Optional only for hand-built test rows.
+	 */
 	other_names?: string[]
 }
 

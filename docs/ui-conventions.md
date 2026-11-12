@@ -911,7 +911,8 @@ redesign (owner, 2026-10-27; `notes/collection-redesign-plan.md`, with the mocku
 - **The form (`VeteranForm`) is an inline panel, never a modal**: it opens the uma picker
   (`PvpCardPicker`, an overlay), which a native `<dialog>` would cover in the top layer.
   Picking the uma fills her aptitudes from her own (`withUma`), so the player changes only
-  what training changed. Skills are searched by name (`searchSkills`); a unique skill
+  what training changed. Skills are searched by any name or the id (`searchSkills`, on
+  `skillMatches`; see "Skill search" under the Skills page); a unique skill
   (rarity 3 to 5) gets a level. The checks under each field are the API's rules
   (`draftProblems`), shown once Save is tried. A veteran from the game (`source: "import"`)
   keeps the game's numbers: its fields are disabled and an edit sends `label` only.
@@ -1887,6 +1888,12 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 - **The Skills page is `/app/skills`** (`components/skills/SkillsPage.tsx`, 2026-10-23):
   every `GET /skills` row, searched by any name a skill answers to (`filterSkills`,
   `utils/skillSearch.ts`) and filtered by colour and by where it is, 60 rows at a time.
+  **Skill search** is one rule everywhere (`skillMatches` in `utils/skillList.ts`): Ctrl+K,
+  the veteran form, the course map's list, the guide editor's picker and `[[` suggestions,
+  and this page. Every word typed must be in the shown name or `other_names` (UmaTL's,
+  aliases including GameTora's names, which are never displayed, and the Japanese one),
+  and a query that is one whole number finds the skill with that game id. A new skill
+  search box calls it rather than matching `name` itself.
   The open skill is `?skill=<game id>` (`skillHref`), drawn by `SkillDetailCard` from
   `GET /skills/<game_id>`: readable text (the hover card's `ReadableText`), every uma
   (`FramedUma`, rainbow for covered favorites) and card that gives it, evolution and its

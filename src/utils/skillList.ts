@@ -55,3 +55,44 @@ export function withShownSkills(index: PvpCatalogueIndex, rows: SkillListRow[]):
 export function skillNames(skill: CatalogueSkill): string[] {
 	return [skill.name, ...(skill.other_names ?? [])].filter(Boolean).map((name) => name.toLowerCase())
 }
+
+/**
+ * SKILL SEARCH, one rule for every box that searches skills (Ctrl+K, the
+ * veteran form, the course map's list, the guide editor's picker and its
+ * `[[` suggestions, the Skills page), so the next box can't forget a name.
+ *
+ * A skill matches when every word typed is somewhere in its names: the shown
+ * one and `other_names` (the API's Skill.search_names: UmaTL's, every alias
+ * including GameTora's, and the Japanese name). Players know many skills by
+ * GameTora's translation, which the site never shows (owner and Daptrius,
+ * 2026-11-12), so the alias is what lets "It's Going to Be Me" find Certain
+ * Victory. A query that is one number finds the skill with that game id, and
+ * only that one: a part of an id would match dozens.
+ */
+
+/** Something a skill search can match: a catalogue skill or a GET /skills row. */
+export interface SearchableSkill {
+	name: string
+	other_names?: string[]
+	game_id?: number | null
+}
+
+/** Lower case, accents dropped ("condor" finds "Cóndor"). */
+export function foldText(text: string): string {
+	return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+}
+
+/** A query as the words a skill search matches: folded, the ○/◎ marks dropped. */
+export function skillSearchWords(query: string): string[] {
+	return foldText(query).replace(/[○◎]/g, " ").split(/\s+/).filter(Boolean)
+}
+
+/** Does `skill` match the words (from skillSearchWords)? No words match everything. */
+export function skillMatches(skill: SearchableSkill, words: string[]): boolean {
+	if (words.length === 0) return true
+	if (words.length === 1 && /^\d+$/.test(words[0])) return String(skill.game_id ?? "") === words[0]
+	// One string for all the names, so the words may come from different ones,
+	// the way the Skills page always matched.
+	const haystack = foldText([skill.name, ...(skill.other_names ?? [])].join(" "))
+	return words.every((word) => haystack.includes(word))
+}
