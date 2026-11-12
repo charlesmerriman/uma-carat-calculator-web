@@ -12,46 +12,21 @@
 
 import { useMemo, useState } from "react"
 import { Link, Navigate, useSearchParams } from "react-router-dom"
-import { Loader2, Search, Zap } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useSkillListState } from "../../hooks/useSkillList"
-import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
+import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
+import { Chips, SearchBox } from "../encyclopedia/listFilters"
 import type { SkillListRow } from "../../types/skills"
+import { PAGE_CONTAINER } from "../../utils/encyclopedia"
 import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
 import {
-	COLOUR_FILTERS, SKILL_PARAM, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref, skillKind,
-	type ColourFilter, type WhereFilter,
+	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
+	skillKind, type ColourFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/skillSearch"
 import { JpOnlyTag } from "../pvp/SkillDetail"
 import { nameLang } from "../../utils/skillList"
 
 const PAGE = 60
-
-function FilterChips<T extends string>({ label, options, value, onChange }: {
-	label: string
-	options: { value: T; label: string }[]
-	value: T
-	onChange: (value: T) => void
-}) {
-	return (
-		<div role="group" aria-label={label} className="flex flex-wrap gap-1">
-			{options.map((option) => (
-				<button
-					key={option.value}
-					type="button"
-					aria-pressed={value === option.value}
-					onClick={() => onChange(option.value)}
-					className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
-						value === option.value
-							? "border-brand bg-brand/15 text-gray-100"
-							: "border-gray-600 text-gray-300 hover:border-gray-500"
-					}`}
-				>
-					{option.label}
-				</button>
-			))}
-		</div>
-	)
-}
 
 /** A row's surface: the game's gold or pink, else a card's fill and edge with
  * light text (a bare bg-gray-800 is the page's own colour on some themes). */
@@ -75,7 +50,10 @@ function SkillRow({ row }: { row: SkillListRow }) {
 				)}
 				<span className="min-w-0 flex-1 truncate" lang={nameLang(row.name)}>{row.name}</span>
 				{row.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
-				<span className="shrink-0 text-xs opacity-70">{skillKind(row)}</span>
+				{/* Skill points beside the kind (Daptrius's list, item 4); a unique has none. */}
+				<span className="shrink-0 text-xs opacity-70">
+					{row.cost != null ? `${row.cost} SP · ` : ""}{skillKind(row)}
+				</span>
 			</Link>
 		</li>
 	)
@@ -103,15 +81,16 @@ const SkillsPageBody = () => {
 	const [query, setQuery] = useState("")
 	const [colour, setColour] = useState<ColourFilter>("all")
 	const [where, setWhere] = useState<WhereFilter>("all")
+	const [type, setType] = useState<TypeFilter>("all")
 	const [shown, setShown] = useState(PAGE)
 
 	const rows = useMemo(
-		() => (list.status === "ready" ? filterSkills(list.rows, query, colour, where) : []),
-		[list, query, colour, where]
+		() => (list.status === "ready" ? filterSkills(list.rows, query, colour, where, type) : []),
+		[list, query, colour, where, type]
 	)
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colour}|${where}`
+	const filterKey = `${query}|${colour}|${where}|${type}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
@@ -119,32 +98,18 @@ const SkillsPageBody = () => {
 	}
 
 	return (
-		<div className="mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]">
-			<header>
-				<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
-					<Zap className="h-5 w-5 shrink-0" />
-					Skills
-				</h1>
-				<p className="mt-1 text-sm leading-relaxed text-gray-300">
-					Every skill in the game, on global and in JP. Search by name, then open one to see when it fires,
-					what it does and which umas and cards give it.
-				</p>
-			</header>
+		<div className={PAGE_CONTAINER}>
+			<EncyclopediaTabs />
+			<p className="text-sm leading-relaxed text-gray-300">
+				Every skill in the game, on global and in JP. Search by name or by an uma's name, then open one to see
+				when it fires, what it does and which umas and cards give it.
+			</p>
 
 			<div className="flex flex-col gap-2">
-				<div className="relative w-full sm:w-80">
-					<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-					<input
-						type="search"
-						aria-label="Search skills"
-						placeholder="Search skills..."
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						className="w-full rounded-lg border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 placeholder-gray-500 focus:border-brand focus:outline-none"
-					/>
-				</div>
-				<FilterChips label="Colour" options={COLOUR_FILTERS} value={colour} onChange={setColour} />
-				<FilterChips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
+				<SearchBox label="Search skills" value={query} onChange={setQuery} />
+				<Chips label="Colour" options={COLOUR_FILTERS} value={colour} onChange={setColour} />
+				<Chips label="Type" options={TYPE_FILTERS} value={type} onChange={setType} />
+				<Chips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
 			</div>
 
 			<div>

@@ -18,7 +18,7 @@ const row = (id: number, name: string, overrides: Partial<SkillListRow> = {}): S
 
 const ROWS = [
 	row(1, "Corner Adept ○", { other_names: ["コーナー巧者○"] }),
-	row(2, "Gourmand", { rarity: 2, version: "◎ gold" }),
+	row(2, "Gourmand", { rarity: 2, version: "◎ gold", cost: 180 }),
 	row(3, "Gluttonous Ruler", { game_id: 100101111, rarity: 6, is_evolved: true, version: "evolved", availability: "announced" }),
 	row(4, "Fan Skill", { availability: "jp", uses_translation: true }),
 ]
@@ -67,6 +67,21 @@ describe("filterSkills", () => {
 		expect(filterSkills(ROWS, "", "all", "jp").map((r) => r.name)).toEqual(["Fan Skill"])
 	})
 
+	it("gives inherited copies their own filter, out of White", () => {
+		const rows = [...ROWS, row(5, "Shooting Star", { game_id: 900011, owners: ["Special Week"] })]
+		expect(filterSkills(rows, "", "inherited", "all").map((r) => r.name)).toEqual(["Shooting Star"])
+		expect(filterSkills(rows, "", "white", "all").map((r) => r.name)).not.toContain("Shooting Star")
+	})
+
+	it("filters by type, and finds a unique by its uma's name", () => {
+		const rows = [
+			row(6, "Shooting Star", { game_id: 100011, rarity: 5, type: "unique", owners: ["Special Week"] }),
+			row(7, "Swinging Maestro", { type: "recovery" }),
+		]
+		expect(filterSkills(rows, "", "all", "all", "recovery").map((r) => r.name)).toEqual(["Swinging Maestro"])
+		expect(filterSkills(rows, "special week", "all", "all").map((r) => r.name)).toEqual(["Shooting Star"])
+	})
+
 	it("labels a unique's inherited copy, which shares its name", () => {
 		expect(skillKind({ game_id: 900661, rarity: 1, is_evolved: false })).toBe("inherited")
 		expect(skillKind({ game_id: 200012, rarity: 1, is_evolved: false })).toBe("white")
@@ -87,6 +102,9 @@ describe("SkillsPage", () => {
 		expect(await screen.findByText("4 skills")).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
+		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
+		// The Encyclopedia's tab strip, Skills open.
+		expect(screen.getByRole("link", { name: "Skills" })).toHaveAttribute("aria-current", "page")
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
