@@ -65,6 +65,7 @@ const ticket = (day: number, number: number, raced: PvpRunRace[], runners: PvpRu
 	placement: null,
 	note: "",
 	skipped: false,
+	team: null,
 	updated_at: "2026-11-01T00:00:00Z",
 })
 

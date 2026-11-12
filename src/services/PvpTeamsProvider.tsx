@@ -29,7 +29,8 @@
  * refuse) stays on the device and is offered again next load, never lost.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { QueryClientContext } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { useAccount } from "./AuthContext"
 import { useCalculatorData } from "./CalculatorContext"
@@ -54,6 +55,7 @@ import {
 	pvpTeamsFetch,
 } from "./pvpTeamFetchCalls"
 import { useAutoSave } from "../hooks/useAutoSave"
+import { pvpRunKeys } from "./pvpRunQueries"
 import { PVP_TEAM_CAP_PER_EVENT } from "../utils/pvpTeams"
 import { sameEvent, type PvpEventRef } from "../utils/pvpEvent"
 import type { PvpTeam, PvpTeamContent, PvpTeamPayload } from "../types/pvpTeam"
@@ -130,6 +132,9 @@ async function refusalMessage(response: Response): Promise<string> {
 export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 	const { isLoggedIn } = useAccount()
 	const { championsMeetingData, leagueOfHeroesData } = useCalculatorData()
+	// Read, not required: a team save that moved CM Runs tickets refreshes them
+	// (below), and a test that mounts this provider alone has no QueryClient.
+	const queryClient = useContext(QueryClientContext)
 
 	const [status, setStatus] = useState<PvpTeamsStatus>("idle")
 	const [mode, setMode] = useState<"guest" | "account" | null>(null)
@@ -198,7 +203,17 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 			dirtyRef.current.delete(key)
 			try {
 				const response = await pvpTeamReplace(team.id, team.members, team.notes)
-				if (!response.ok) {
+				if (response.ok) {
+					// Unraced CM Runs tickets that follow this team took its new lineup
+					// on the server (backend pvp_teams.sync_followers): re-read them.
+					const { tickets_followed: moved = 0 } = ((await response.json().catch(() => ({}))) ?? {}) as { tickets_followed?: number }
+					if (moved > 0) {
+						void queryClient?.invalidateQueries({ queryKey: pvpRunKeys.event({ kind: team.kind, id: team.event }) })
+						toast.success(
+							`${moved} CM ${moved === 1 ? "ticket" : "tickets"} you haven't raced yet ${moved === 1 ? "follows" : "follow"} this change.`
+						)
+					}
+				} else {
 					failed = true
 					// A refusal is about this exact team; sending it again would be
 					// refused again. The player's next edit tries once more.
@@ -211,7 +226,7 @@ export function PvpTeamsProvider({ children }: { children: ReactNode }) {
 			}
 		}
 		setRequestState(failed ? "error" : "saved")
-	}, [])
+	}, [queryClient])
 
 	const { timerIsGoing, startTimer } = useAutoSave({ saveFn: saveDirty, delayMs: SAVE_DELAY_MS })
 
