@@ -36,6 +36,7 @@ import type { PvpGuideState } from "../../hooks/usePvpGuide"
 import { useCourseZones } from "../../services/courseQueries"
 import { scrollToCourseMap, setCourseFocus } from "../../services/courseMapStore"
 import { verdictLines } from "../../utils/courseLayers"
+import { nameLang } from "../../utils/skillList"
 
 /** One team spot a skill can be searched for: "Spot 1 · Daiwa Scarlet". */
 export interface SkillSearchSpot {
@@ -257,7 +258,7 @@ function SkillRow({ pick, sources, open, onToggle, spots, onSearch, verdict }: {
 					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 				)}
 				<span className="min-w-0 flex-1">
-					<span className="block truncate text-sm text-gray-100">{skill.name}</span>
+					<span className="block truncate text-sm text-gray-100" lang={nameLang(skill.name)}>{skill.name}</span>
 					{skill.unique_of && <span className="block truncate text-[11px] text-gray-500">{skill.unique_of}</span>}
 				</span>
 				{sources && (
