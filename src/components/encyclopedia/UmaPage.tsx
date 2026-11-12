@@ -25,6 +25,7 @@ import {
 import { LINK_CLASS as LINK, PAGE_CONTAINER, RUNNING_STYLE_WORDS, ownedStars } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
 import { usePageTitle } from "./usePageTitle"
+import { CareerObjectives } from "./CareerObjectives"
 
 /** The order and headings the game teaches skills in. */
 const SKILL_GROUPS: { source: string; title: string }[] = [
@@ -143,6 +144,11 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 				)
 			})}
 
+			{(uma.objectives?.length ?? 0) > 0 && (
+				<Section title="Career objectives">
+					<CareerObjectives goals={uma.objectives ?? []} hidden={uma.objectives_hidden ?? 0} />
+				</Section>
+			)}
 			{releases.banners.length > 0 && (
 				<Section title="Banners">
 					<BannerLinks banners={releases.banners} />
