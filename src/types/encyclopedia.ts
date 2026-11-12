@@ -46,6 +46,18 @@ export interface PageCard {
 	on_global: boolean
 }
 
+/** One career goal, worded by the API (backend career.py). */
+export interface CareerGoal {
+	turn: number
+	/** "Classic Year, Early Feb" */
+	when: string
+	race: string
+	/** "G1" to "G3" or "OP"; null for a debut. */
+	grade: string | null
+	/** "Win", "Top 5" or "Run it". */
+	need: string
+}
+
 export interface UmaPageData {
 	/** The row's pk: how /calculator-data's banners and the Collection name it. */
 	id: number
@@ -64,6 +76,10 @@ export interface UmaPageData {
 	base: Record<StatKey, number | null>
 	growth: Record<StatKey, number | null>
 	star_stats: StarStats[]
+	/** Race goals in order; absent from an API older than Phase 3. */
+	objectives?: CareerGoal[]
+	/** Goals of kinds not decoded yet, left out. */
+	objectives_hidden?: number
 	skills: PageSkill[]
 	outfits: PageOutfit[]
 	cards: PageCard[]
