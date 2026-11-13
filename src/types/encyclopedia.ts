@@ -110,6 +110,11 @@ export interface CardEffect {
 export interface CardUniqueEffect {
 	level: number
 	text: string
+	/**
+	 * The card's own effects this one multiplies with instead of adding to
+	 * ("Friendship Bonus", "Specialty Priority"); empty for most cards.
+	 */
+	multiplies?: string[]
 }
 
 export interface CardPageData {

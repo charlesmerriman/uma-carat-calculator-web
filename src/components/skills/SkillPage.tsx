@@ -21,7 +21,7 @@ import { HIDE_OPTIONS, PAGE_CONTAINER, cardLine, keepCard, type HideFilter } fro
 import { SKILL_LIST_PATH, cardHref, parseGameId, umaHref } from "../../utils/encyclopediaRoutes"
 import { nameLang } from "../../utils/skillList"
 import { SKILL_TYPE_WORDS, UMATL_URL, skillKind } from "../../utils/skillSearch"
-import { hasCondition } from "../../utils/skillWords"
+import { hasCondition, hasScaledTime } from "../../utils/skillWords"
 import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag,
@@ -106,6 +106,9 @@ function HowItWorks({ readable }: { readable: SkillReadable }) {
 					</div>
 				))}
 			</div>
+			{hasScaledTime(readable.slots) && (
+				<SectionNote>Times are for every 1,000 m of the race, so a 2,000 m race doubles them.</SectionNote>
+			)}
 			{readable.wit_check && <SectionNote>Rolls Wit check.</SectionNote>}
 		</>
 	)

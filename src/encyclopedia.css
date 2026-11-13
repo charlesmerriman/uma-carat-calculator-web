@@ -1377,6 +1377,12 @@
 		color: var(--color-gray-400);
 		white-space: nowrap;
 	}
+	/* Its own line under the three above: how it combines with the card's own effect. */
+	.enc-unique__note {
+		flex: 1 1 100%;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
 	.enc-unique[data-locked="true"] {
 		border-color: var(--color-edge);
 		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
