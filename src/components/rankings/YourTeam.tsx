@@ -11,6 +11,8 @@ import { Link } from "react-router-dom"
 import type { RaceEvent } from "../../types"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaName } from "../EncyclopediaLinks"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { pvpEventHref, refForRaceEvent, shortEventName } from "../../utils/pvpEvent"
@@ -25,6 +27,7 @@ export function YourTeam({ event, ranked, catalogue }: {
 }) {
 	const { status, teams, ensureLoaded } = usePvpTeams()
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	useEffect(ensureLoaded, [ensureLoaded])
 	const ref = refForRaceEvent(event)
 	const team = teams
@@ -52,7 +55,7 @@ export function YourTeam({ event, ranked, catalogue }: {
 							<li key={member.position} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3">
 								<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(member.uma)} className="w-10" />
 								<span className="flex min-w-0 flex-col">
-									<b className="truncate text-[13px] font-semibold text-gray-100">{uma?.name ?? "Unknown uma"}</b>
+									<EncyclopediaName href={hrefs.uma(member.uma)} name={uma?.name ?? "Unknown uma"} className="truncate text-[13px] font-semibold text-gray-100" />
 									<span className="text-[11px] tabular-nums text-gray-400">
 										{place > 0 ? (
 											<>

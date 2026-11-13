@@ -24,6 +24,8 @@ import type {
 } from "../../types"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { Link } from "react-router-dom"
 
 interface StepUpSelectionPickerProps {
 	stepUp: BannerStepUp
@@ -61,6 +63,7 @@ export const StepUpSelectionPicker = ({
 	const isUma = poolFor(stepUp) === "uma"
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 
 	const options = useEligibleCardCatalogue({
 		pool: poolFor(stepUp),
@@ -109,6 +112,20 @@ export const StepUpSelectionPicker = ({
 		const slotNumber = index + 1
 		const card = selection ? cardsById.get(cardIdOf(selection) ?? -1) : undefined
 		const isTargetSlot = selection?.is_target ?? false
+		// A chosen slot's art opens the card's Encyclopedia page (early access).
+		// The candidates below stay pick-only: there a click chooses.
+		const page = card ? (isUma ? hrefs.uma(card.value) : hrefs.card(card.value)) : null
+		const art = card?.portrait ? (
+			<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
+		) : card ? (
+			<img
+				src={card.image}
+				alt={card.label}
+				loading="lazy"
+				decoding="async"
+				className="h-full w-full object-contain"
+			/>
+		) : null
 
 		return (
 			<div key={slotNumber} className="flex min-w-0 flex-col items-center gap-1">
@@ -123,16 +140,12 @@ export const StepUpSelectionPicker = ({
 							: "border-gray-600 bg-gray-900/50"
 					}`}
 				>
-					{card?.portrait ? (
-						<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
-					) : card ? (
-						<img
-							src={card.image}
-							alt={card.label}
-							loading="lazy"
-							decoding="async"
-							className="h-full w-full object-contain"
-						/>
+					{art && page ? (
+						<Link to={page} title="Open in the Encyclopedia" className="flex h-full w-full items-center justify-center transition hover:brightness-110">
+							{art}
+						</Link>
+					) : art ? (
+						art
 					) : selection ? (
 						// Chosen, but no longer in the eligible catalogue.
 						<span className="px-1 text-center text-[0.6rem] leading-tight text-amber-400">

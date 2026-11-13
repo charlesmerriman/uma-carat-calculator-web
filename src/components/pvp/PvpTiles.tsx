@@ -24,6 +24,9 @@ import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { FramedCard } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { OpenPageLink } from "../EncyclopediaLinks"
+import { Link } from "react-router-dom"
 import { splitOutfit } from "../../utils/umaName"
 import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 import { clearCourseFocus, setCourseFocus } from "../../services/courseMapStore"
@@ -339,6 +342,9 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 }) {
 	const oshiIds = useOshiIds()
 	const mentions = useSkillMentions()
+	// Her Encyclopedia page, for early access: "Open its page" ends the popup,
+	// as on a skill card, since the tile itself opens the popup.
+	const page = useEncyclopediaHrefs().uma(uma.id)
 	const { base, outfit } = splitOutfit(uma.name)
 	const mentioned = FIRST_MENTION.exec(note)?.[1]
 	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
@@ -348,17 +354,19 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 			// Her unique's verdict rides in the popup, with its zone bar, so the
 			// answer is at the pointer when the map is scrolled away (owner,
 			// 2026-11-04); with no note, the unique's name is the detail.
-			detail={note || uma.unique
+			detail={note || uma.unique || page
 				? (
 					<>
 						{note && <><InlineNote text={note} /><MentionedSkills text={note} /></>}
 						{uma.unique && <p className={`text-xs text-gray-300 ${note ? "mt-1.5" : ""}`}>Unique: {uma.unique.name}</p>}
 						{uma.unique && <CourseVerdict skillId={uma.unique.id} />}
+						{page && <OpenPageLink href={page} className={note || uma.unique ? "mt-1.5" : ""} />}
 					</>
 				)
 				: null}
 			className={className}
 			onOpenChange={(open) => lightUniqueOnCourseMap(uma, open)}
+			interactive={page !== null}
 		>
 			{/* h-full: in a grid the tile fills its row, so when one tile's
 			    letters wrap the others grow with it and every note slot, pinned
@@ -488,19 +496,44 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 }
 
 /**
+ * A card's art as the way into its Encyclopedia page, for the tiles with no
+ * hover card to carry "Open its page" (SupportTile, SwapInCard). The art's
+ * own alt (the card's name) names the link. No href: the art alone.
+ */
+function PageArt({ href, className, children }: { href: string | null; className: string; children: ReactNode }) {
+	if (!href) return <>{children}</>
+	return (
+		<Link
+			to={href}
+			title="Open in the Encyclopedia"
+			className={`block transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${className}`}
+		>
+			{children}
+		</Link>
+	)
+}
+
+/**
  * A support card in a deck slot: art (with the Link badge when the note says
  * "Scenario Link"), name, then the note's reasons (SlotReasons). `scenarioName`
  * is the guide's scenario, for the badge's words. `limitBreak` is the least the
  * guide recommends, drawn as the game's diamonds on the card.
  */
-export function SupportTile({ card, note, borrow = false, scenarioName = null, limitBreak = null }: {
+export function SupportTile({ card, note, borrow = false, scenarioName = null, limitBreak = null, pageLink = true }: {
 	card: PvpSupportCardRef
 	note: string
 	borrow?: boolean
 	scenarioName?: string | null
 	limitBreak?: number | null
+	/**
+	 * The art opens the card's Encyclopedia page (early access). False in the
+	 * guide editor, where a stray click would leave the guide mid-edit.
+	 */
+	pageLink?: boolean
 }) {
 	const linked = parseSlotNote(note).scenarioLink
+	const hrefs = useEncyclopediaHrefs()
+	const page = pageLink ? hrefs.card(card.id) : null
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1">
 			{/* The card is its own frame (FramedCard), so no box of ours round it:
@@ -511,7 +544,9 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null, l
 				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
 						<span className="relative block h-full">
-							<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
+							<PageArt href={page} className="h-full">
+								<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
+							</PageArt>
 							{linked && <LinkBadge scenarioName={scenarioName} />}
 						</span>
 					</BorrowTab>
@@ -551,11 +586,14 @@ export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
 	limitBreak?: number | null
 }) {
 	const linked = parseSlotNote(note).scenarioLink
+	const page = useEncyclopediaHrefs().card(card.id)
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1 text-center">
 			<span className="relative block w-16">
 				{card.image || card.image_borderless ? (
-					<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
+					<PageArt href={page} className="w-full">
+						<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
+					</PageArt>
 				) : (
 					<span className="block aspect-[3/4] w-full rounded-lg border border-gray-600 bg-gray-700" aria-hidden="true" />
 				)}
@@ -584,6 +622,7 @@ export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
  * over a two-line skill mention above it).
  */
 export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; note: string }) {
+	const page = useEncyclopediaHrefs().card(card?.id)
 	return (
 		<div className="text-center text-[11px] leading-tight text-gray-400">
 			{card && (
@@ -595,10 +634,12 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 							<>
 								<FramedCard card={card} className="mx-auto w-3/4" />
 								<span className="mt-1 block text-center font-medium text-gray-100">{card.name}</span>
+								{page && <span className="mt-1 block text-center"><OpenPageLink href={page} /></span>}
 							</>
 						}
 						className="inline-block max-w-full cursor-pointer align-baseline"
 						detailClassName="w-36"
+						interactive={page !== null}
 					>
 						<span className="text-gray-200 underline decoration-gray-500 decoration-dotted underline-offset-2">{card.name}</span>
 					</WithDetail>
@@ -631,6 +672,7 @@ export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: 
 /** An uma as her framed face, everything else in the hover. */
 export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: number; role: string; note: string }) {
 	const oshiIds = useOshiIds()
+	const page = useEncyclopediaHrefs().uma(uma.id)
 	const { base, outfit } = splitOutfit(uma.name)
 	const detail = (
 		<div className="flex flex-col gap-1">
@@ -646,10 +688,11 @@ export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: nu
 			{role && <div className="font-semibold text-brand">{role}</div>}
 			{note && <InlineNote text={note} />}
 			{note && <MentionedSkills text={note} />}
+			<OpenPageLink href={page} />
 		</div>
 	)
 	return (
-		<WithDetail label={uma.name} detail={detail} className="w-full" detailClassName="w-48">
+		<WithDetail label={uma.name} detail={detail} className="w-full" detailClassName="w-48" interactive={page !== null}>
 			<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 		</WithDetail>
 	)
@@ -669,6 +712,7 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 	limitBreak?: number | null
 }) {
 	const linked = parseSlotNote(note).scenarioLink
+	const page = useEncyclopediaHrefs().card(card.id)
 	const rarity = rarityLabel(card.rarity)
 	const detail = (
 		<div className="flex flex-col items-center gap-1 text-center">
@@ -678,10 +722,11 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 			</div>
 			<SlotReasons note={note} faces />
 			{extra}
+			<OpenPageLink href={page} />
 		</div>
 	)
 	return (
-		<WithDetail label={card.name} detail={detail} className="w-full" detailClassName="w-44">
+		<WithDetail label={card.name} detail={detail} className="w-full" detailClassName="w-44" interactive={page !== null}>
 			<BorrowTab borrow={borrow}>
 				<span className="relative block">
 					{card.image || card.image_borderless ? (

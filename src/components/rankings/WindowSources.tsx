@@ -25,6 +25,7 @@ import { chooseRankings, GUIDE_LENSES, useRankingsChoices, type GuideLens, type 
 import { useRankingsPayload, type RankingsState } from "../../hooks/useRankingsPayload"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { FramedUma } from "../FramedUma"
 import { allFilters, countedGuides, formatShare, rankCards, rankUmas } from "../../utils/guideRankings"
 import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
@@ -48,6 +49,8 @@ export interface WindowRow {
 	count: string
 	/** Under the count; a list of people's choices has none (its count is the share). */
 	share?: string
+	/** The uma or card's Encyclopedia page (useEncyclopediaHrefs); none on a banner row. */
+	href?: string | null
 }
 
 export interface WindowSetting {
@@ -108,6 +111,7 @@ function GuidesSource({ children }: { children: Render }) {
 	const state = useRankingsPayload<GuideRankingsPayload>("/rankings/guides")
 	const catalogue = usePvpCatalogue()
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const { championsMeetingData, leagueOfHeroesData } = useCalculatorData()
 	const events = useMemo(() => raceEventsInOrder(championsMeetingData, leagueOfHeroesData), [championsMeetingData, leagueOfHeroesData])
 	const lens: GuideLens = useRankingsChoices().guides?.lens ?? "overall"
@@ -133,6 +137,7 @@ function GuidesSource({ children }: { children: Render }) {
 					id: `uma-${rank.uma}`,
 					name: uma?.name ?? "Unknown uma",
 					art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(rank.uma)} className="w-8" />,
+					href: hrefs.uma(rank.uma),
 					fill,
 					count: rank.picks.toLocaleString(),
 					share: formatShare(rank.share),
@@ -149,13 +154,14 @@ function GuidesSource({ children }: { children: Render }) {
 				id: `card-${rank.card}`,
 				name: card?.name ?? "Unknown card",
 				art: <CardArt card={card} className="w-7" />,
+				href: hrefs.card(card?.id),
 				fill,
 				count: rank.decks.toLocaleString(),
 				share: formatShare(rank.share),
 			}
 		})
 		return { ...withMovement(rows, previous), guides: guides.length }
-	}, [payload, cardsById, umasById, events, lens, typeOf, oshiIds])
+	}, [payload, cardsById, umasById, events, lens, typeOf, oshiIds, hrefs])
 
 	const base = {
 		context: list ? `${LENS_LABELS[lens]} · all ${list.guides} guides` : LENS_LABELS[lens],
@@ -244,6 +250,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 	const state = useRankingsPayload<PvpRankingsPayload>(`/rankings/pvp/${ref.kind}/${ref.id}`)
 	const catalogue = usePvpCatalogue()
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const rows = useMemo(() => {
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
 		const { built, previous } = state.payload
@@ -254,6 +261,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 					id: `card-${row.card}`,
 					name: card?.name ?? "Unknown card",
 					art: <CardArt card={card} className="w-7" />,
+					href: hrefs.card(card?.id),
 					fill,
 					count: formatShare(row.share),
 				}
@@ -266,12 +274,13 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 				id: `uma-${row.uma}`,
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
+				href: hrefs.uma(row.uma),
 				fill,
 				count: formatShare(row.share),
 			}
 		})
 		return withMovement(umaRows, previous?.umas.map((id) => `uma-${id}`))
-	}, [state, catalogue, list, oshiIds])
+	}, [state, catalogue, list, oshiIds, hrefs])
 	const { title } = splitEventName(event)
 	const short = shortEventName(event)
 	const base = {
@@ -304,6 +313,7 @@ function PlayersSource({ children }: { children: Render }) {
 	const state = useRankingsPayload<PlayersRankingsPayload>("/rankings/players")
 	const catalogue = usePvpCatalogue()
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const rows = useMemo(() => {
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
 		const { favourites, previous } = state.payload
@@ -313,12 +323,13 @@ function PlayersSource({ children }: { children: Render }) {
 				id: `uma-${row.uma}`,
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
+				href: hrefs.uma(row.uma),
 				fill,
 				count: formatShare(row.share),
 			}
 		})
 		return withMovement(favouriteRows, previous?.favourites.map((id) => `uma-${id}`))
-	}, [state, catalogue, oshiIds])
+	}, [state, catalogue, oshiIds, hrefs])
 	const base = { context: "Favourite umas", tabName: "Players", settings: [] }
 	if (catalogue.status === "error") return children({ ...base, status: "error", rows: [] })
 	return children(pending(state, base) ?? (rows ? { ...base, status: "ready", ...rows } : { ...base, status: "loading", rows: [] }))
