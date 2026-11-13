@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -7,7 +7,7 @@ import { SkillsPage } from "../components/skills/SkillsPage"
 import { clearAuthToken, setAuthToken } from "../services/authToken"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
 import type { SkillListRow } from "../types/skills"
-import { filterSkills, parseSkillParam, skillHref, skillKind } from "../utils/skillSearch"
+import { SKILL_TYPE_WORDS, filterSkills, parseSkillParam, skillHref, skillKind, typeParent } from "../utils/skillSearch"
 
 /** The Skills list (/app/skills): search and filters; a row opens the skill's own page. */
 
@@ -82,6 +82,32 @@ describe("filterSkills", () => {
 		expect(filterSkills(rows, "special week", "all", "all").map((r) => r.name)).toEqual(["Shooting Star"])
 	})
 
+	it("keeps every sub-type under its type, and one sub-type alone", () => {
+		// Daptrius, 2026-11-12: the greens and the debuffs split into their sub-types.
+		const rows = [
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_stamina" }),
+			row(10, "Stamina Eater", { type: "debuff_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+			row(12, "Pressure", { type: "current_speed" }),
+		]
+		expect(filterSkills(rows, "", "all", "all", "stat").map((r) => r.name)).toEqual(["Right-Handed ○", "Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", "all", "all", "stat_stamina").map((r) => r.name)).toEqual(["Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", "all", "all", "debuff").map((r) => r.name)).toEqual(["Stamina Eater"])
+		// Current speed is a type of its own, out of Speed.
+		expect(filterSkills(rows, "", "all", "all", "velocity").map((r) => r.name)).toEqual(["Straightaway Adept"])
+		expect(filterSkills(rows, "", "all", "all", "current_speed").map((r) => r.name)).toEqual(["Pressure"])
+	})
+
+	it("knows a sub-type's parent, and words it so it can't be read as another type", () => {
+		expect(typeParent("stat_guts").value).toBe("stat")
+		expect(typeParent("velocity").value).toBe("velocity")
+		expect(typeParent("no such type").value).toBe("all")
+		expect(SKILL_TYPE_WORDS.stat_speed).toBe("Stat boost: Speed")
+		expect(SKILL_TYPE_WORDS.debuff_stamina).toBe("Debuff: Stamina drain")
+		expect(SKILL_TYPE_WORDS.velocity).toBe("Speed")
+	})
+
 	it("labels a unique's inherited copy, which shares its name", () => {
 		expect(skillKind({ game_id: 900661, rarity: 1, is_evolved: false })).toBe("inherited")
 		expect(skillKind({ game_id: 200012, rarity: 1, is_evolved: false })).toBe("white")
@@ -127,6 +153,26 @@ describe("SkillsPage", () => {
 		renderPage("/app/skills", false)
 		expect(screen.getByText(/The Encyclopedia is for our Patreon supporters for now/)).toBeInTheDocument()
 		expect(fetchMock).not.toHaveBeenCalled()
+	})
+
+	it("opens a type's sub-types once the type is picked", async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		expect(screen.queryByRole("group", { name: "Stat boost" })).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Stat boost" }))
+		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		const subs = within(screen.getByRole("group", { name: "Stat boost" }))
+		expect(subs.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(subs.getByRole("button", { name: "Stamina" }))
+		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		// The type's own chip stays lit while one of its sub-types is picked.
+		expect(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Stat boost" })).toHaveAttribute("aria-pressed", "true")
+		expect(screen.getByRole("link", { name: /Longchamp Racecourse/ })).toHaveTextContent("Stat boost: Stamina")
 	})
 
 	it("sends the token: the API answers early access only", async () => {

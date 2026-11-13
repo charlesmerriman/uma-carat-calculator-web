@@ -53,10 +53,13 @@ export interface CareerGoal {
 	turn: number
 	/** "Classic Year, Early Feb" */
 	when: string
+	/** A race to run, a fan count to reach, or placings to collect. Absent from an older API (all races). */
+	kind?: "race" | "fans" | "placings"
+	/** The race's name; for a "fans" or "placings" goal, its whole sentence ("Get 3,000 fans"). */
 	race: string
-	/** "G1" to "G3" or "OP"; null for a debut. */
+	/** "G1" to "G3" or "OP"; null for a debut and for a goal that isn't one race. */
 	grade: string | null
-	/** "Win", "Top 5" or "Run it". */
+	/** "Win", "Top 5" or "Run it"; "" for a goal that isn't one race. */
 	need: string
 }
 

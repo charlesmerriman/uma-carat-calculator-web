@@ -1,10 +1,11 @@
 /**
  * An uma's career goals on her page (notes/encyclopedia-plan.md, Phase 3): a
- * rail per year, the race goals as stops on it in order, each with when, the
- * race, its grade in the game's colour and the placing needed. Worded by the
- * API (backend career.py) from the game files. Goals of kinds nobody has
- * decoded yet (a fan count, places in several races) are left out, and the
- * section says so rather than look complete.
+ * rail per year, the goals as stops on it in order. A race goal shows when,
+ * the race, its grade in the game's colour and the placing needed; a fan
+ * count or a placings goal ("Get 3,000 fans", "Place 3rd or better in 2 G1
+ * races") shows its sentence in the race's place. Worded by the API (backend
+ * career.py) from the game files. A goal whose wording nobody has confirmed
+ * yet is left out, and the section says so rather than look complete.
  */
 
 import type { CareerGoal } from "../../types/encyclopedia"
@@ -38,7 +39,8 @@ export function CareerObjectives({ goals, hidden }: { goals: CareerGoal[]; hidde
 									<span className="enc-stop__race">
 										{goal.race}
 										{goal.grade && <span className="grade-pill" data-grade={goal.grade}>{goal.grade}</span>}
-										<span className="enc-stop__need">{goal.need}</span>
+										{/* A fan count or a placings goal says it all in its sentence. */}
+										{goal.need && <span className="enc-stop__need">{goal.need}</span>}
 									</span>
 								</li>
 							))}

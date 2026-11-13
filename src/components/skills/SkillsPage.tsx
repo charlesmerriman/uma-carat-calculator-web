@@ -19,7 +19,7 @@ import { SkillList } from "../encyclopedia/skillRows"
 import { PAGE_CONTAINER, countLine } from "../../utils/encyclopedia"
 import {
 	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
-	type ColourFilter, type TypeFilter, type WhereFilter,
+	typeParent, type ColourFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/skillSearch"
 
 const PAGE = 60
@@ -38,7 +38,7 @@ const COLOUR_DOTS: Partial<Record<ColourFilter, string>> = {
 }
 const COLOUR_OPTIONS = COLOUR_FILTERS.map((option) => ({ ...option, dot: COLOUR_DOTS[option.value] }))
 // The filter's own name says "Type", so its first chip needn't.
-const TYPE_OPTIONS = TYPE_FILTERS.map((option) => (option.value === "all" ? { ...option, label: "Any" } : option))
+const TYPE_OPTIONS = TYPE_FILTERS.map(({ value, label }) => ({ value, label: value === "all" ? "Any" : label }))
 
 /**
  * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
@@ -86,7 +86,17 @@ const SkillsPageBody = () => {
 				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
 			>
 				<Chips label="Colour" options={COLOUR_OPTIONS} value={colour} onChange={setColour} />
-				<Chips label="Type" options={TYPE_OPTIONS} value={type} onChange={setType} />
+				{/* The Type chips are the types; a type with sub-types (the greens,
+				    the debuffs) opens a second filter under them once it is picked. */}
+				<Chips label="Type" options={TYPE_OPTIONS} value={typeParent(type).value} onChange={setType} />
+				{typeParent(type).subs && (
+					<Chips
+						label={typeParent(type).label}
+						options={[{ value: typeParent(type).value, label: "All" }, ...(typeParent(type).subs ?? [])]}
+						value={type}
+						onChange={setType}
+					/>
+				)}
 				<Chips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
 			</Toolbar>
 
