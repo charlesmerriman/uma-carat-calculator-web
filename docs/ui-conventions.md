@@ -2564,7 +2564,14 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
   The API sends one value per level (`effects[].values`, backend `support_effects.py`, which has
   the growth rule and its check), so the component only looks one up, and `effectValue` writes a
   unit only for a format the API names. It opens at the level the owner's limit break reaches,
-  derived on each render because the Collection loads after the page.
+  derived on each render because the Collection loads after the page. It never adds the unique
+  effect into a row: a unique Friendship Bonus or Specialty Priority multiplies with the card's
+  own (Daptrius, 2026-11-13), so the unique effect says so in a line, for the effects the API
+  names in `unique_effect.multiplies`.
+- **A skill's times are per 1,000 m** (`utils/skillWords.ts`): the API states a timed duration
+  and a repeating cooldown against the race's length ("2.4 s per 1,000 m"), because the game
+  scales both by it (Daptrius, 2026-11-13). The skill page explains that once, under How it
+  works, when a time scales (`hasScaledTime`); the hover card only shows the chips.
 - **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
   type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
   sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole

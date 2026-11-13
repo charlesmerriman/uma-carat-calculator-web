@@ -89,6 +89,21 @@ describe("SkillPage", () => {
 		expect(container).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
 	})
 
+	it("explains per 1,000 m once, only for a skill whose times scale", async () => {
+		const first = renderAt("/app/skills/100101111")
+		await screen.findByRole("heading", { level: 1, name: /Gluttonous Ruler/ })
+		// Its one time is "Once per race": nothing scales, so nothing to explain.
+		expect(first.container).not.toHaveTextContent("every 1,000 m")
+		first.unmount()
+
+		const timed = { ...DETAIL, readable: { ...DETAIL.readable, slots: [{ ...DETAIL.readable.slots[0], duration: "2.4 s per 1,000 m" }] } }
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(timed), { status: 200 })))
+		const { container } = renderAt("/app/skills/100101111")
+		await screen.findByRole("heading", { level: 1, name: /Gluttonous Ruler/ })
+		expect(container).toHaveTextContent("Lasts: 2.4 s per 1,000 m")
+		expect(container).toHaveTextContent("Times are for every 1,000 m of the race, so a 2,000 m race doubles them.")
+	})
+
 	it("links its base, its umas and its cards to their pages", async () => {
 		renderAt("/app/skills/100101111")
 		expect(await screen.findByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")

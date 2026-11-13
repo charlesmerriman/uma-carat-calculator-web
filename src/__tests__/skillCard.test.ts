@@ -3,7 +3,7 @@ import type { SkillSlot } from "../types/pvpGuide"
 import type { SkillDetailData } from "../types/skills"
 import { bannerStatus, isWeakAptitude } from "../utils/encyclopedia"
 import { detailToCardSkill, rowToCardSkill } from "../utils/skillCard"
-import { cooldownWords, durationWords } from "../utils/skillWords"
+import { cooldownWords, durationWords, hasScaledTime } from "../utils/skillWords"
 
 /** The plain helpers behind the Encyclopedia's look: the hover card's data, a banner's status, the timing words. */
 
@@ -58,12 +58,18 @@ describe("timing words", () => {
 	const slot = (duration: string | null, cooldown: string | null) => ({ duration, cooldown }) as SkillSlot
 
 	it("words a duration and a cooldown, and says nothing for neither", () => {
-		expect(durationWords(slot("2.4 s", null))).toBe("Lasts 2.4 s")
+		expect(durationWords(slot("2.4 s per 1,000 m", null))).toBe("Lasts 2.4 s per 1,000 m")
 		expect(durationWords(slot("Whole race", null))).toBe("For the whole race")
 		expect(durationWords(slot(null, null))).toBeNull()
 		expect(cooldownWords(slot(null, "Once per race"))).toBe("Once per race")
 		expect(cooldownWords(slot(null, "30 s per 1,000 m"))).toBe("Again after 30 s per 1,000 m")
 		expect(cooldownWords(slot(null, null))).toBeNull()
+	})
+
+	it("knows when a time scales with the race's length", () => {
+		expect(hasScaledTime([slot("2.4 s per 1,000 m", "Once per race")])).toBe(true)
+		expect(hasScaledTime([slot(null, "30 s per 1,000 m")])).toBe(true)
+		expect(hasScaledTime([slot("Whole race", "Once per race"), slot(null, null)])).toBe(false)
 	})
 })
 
