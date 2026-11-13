@@ -6,7 +6,7 @@
  */
 
 import type { AptitudeKey } from "./pvpTeam"
-import type { SkillListRow } from "./skills"
+import type { SkillListRow, UnlockCondition } from "./skills"
 
 export type StatKey = "speed" | "stamina" | "power" | "guts" | "wit"
 
@@ -21,6 +21,12 @@ export interface PageSkill extends Omit<SkillListRow, "other_names"> {
 	level: number | null
 	/** An evolution's base, by game id. */
 	evolves_from: number | null
+	/**
+	 * An evolution's unlock conditions, empty on any other row. Optional only
+	 * because a page fetched before the field shipped may still be in the
+	 * browser's cache; read it as `conditions ?? []`.
+	 */
+	conditions?: UnlockCondition[]
 }
 
 /** Another outfit, on an uma or card page. */

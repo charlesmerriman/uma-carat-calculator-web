@@ -23,7 +23,7 @@ import {
 	SubHeading, Tag, WhereTag, type JumpItem,
 } from "./pieces"
 import { AptitudeGrid, BannerLinks, CardList, OutfitList, ReleaseFacts, StatsSection } from "./facts"
-import { SkillList } from "./skillRows"
+import { SkillList, UnlockConditions } from "./skillRows"
 import { PAGE_CONTAINER, RUNNING_STYLE_COLORS, RUNNING_STYLE_WORDS, ownedStars } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
 import { usePageTitle } from "./usePageTitle"
@@ -136,7 +136,12 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 						return (
 							<div key={source} className="flex flex-col gap-2">
 								<SubHeading>{title}</SubHeading>
-								<SkillList skills={skills} sub={(skill) => skillNote(skill, byGameId)} />
+								<SkillList
+									skills={skills}
+									sub={(skill) => skillNote(skill, byGameId)}
+									// Each evolution's unlock conditions right under it (Daptrius, 2026-11-13).
+									after={(skill) => ((skill.conditions ?? []).length > 0 ? <UnlockConditions conditions={skill.conditions ?? []} /> : null)}
+								/>
 							</div>
 						)
 					})}
