@@ -16,7 +16,8 @@ import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/Encyclopedia
 import { Chips, Count, SearchBox, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
 import { SkillList } from "../encyclopedia/skillRows"
-import { PAGE_CONTAINER, countLine } from "../../utils/encyclopedia"
+import { PAGE_CONTAINER, countLine, values } from "../../utils/encyclopedia"
+import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import {
 	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
 	typeParent, type ColourFilter, type TypeFilter, type WhereFilter,
@@ -44,6 +45,8 @@ const COLOUR_OPTIONS = COLOUR_FILTERS.map((option) => ({ ...option, dot: COLOUR_
 const TYPE_OPTIONS = TYPE_FILTERS
 	.filter(({ value }) => value !== "unique")
 	.map(({ value, label }) => ({ value, label: value === "all" ? "Any" : label }))
+// Every value the Type filter can hold: the chips and their sub-types' chips.
+const TYPE_VALUES = TYPE_OPTIONS.flatMap(({ value }) => [value, ...(typeParent(value).subs ?? []).map((sub) => sub.value)])
 
 /**
  * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
@@ -64,10 +67,11 @@ export const SkillsPage = () => {
 
 const SkillsPageBody = () => {
 	const list = useSkillListState()
-	const [query, setQuery] = useState("")
-	const [colour, setColour] = useState<ColourFilter>("all")
-	const [where, setWhere] = useState<WhereFilter>("all")
-	const [type, setType] = useState<TypeFilter>("all")
+	// Remembered for the tab, so a trip to a skill's page and back keeps them (useRememberedFilter).
+	const [query, setQuery] = useRememberedFilter<string>("skills:query", "")
+	const [colour, setColour] = useRememberedFilter<ColourFilter>("skills:colour", "all", values(COLOUR_FILTERS))
+	const [where, setWhere] = useRememberedFilter<WhereFilter>("skills:where", "all", values(WHERE_FILTERS))
+	const [type, setType] = useRememberedFilter<TypeFilter>("skills:type", "all", TYPE_VALUES)
 	const [shown, setShown] = useState(PAGE)
 
 	const rows = useMemo(

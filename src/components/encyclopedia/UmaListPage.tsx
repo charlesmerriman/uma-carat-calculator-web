@@ -4,7 +4,8 @@
  * where it is out and by starting stars; a tile opens the outfit's page.
  */
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
+import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
@@ -16,7 +17,7 @@ import { Chips, Count, SearchBox, Toolbar } from "./listFilters"
 import { EmptyNote, GridSkeleton, JpTag, OwnedMark, Stars } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
-	OWNED_OPTIONS, PAGE_CONTAINER, STAR_OPTIONS, WHERE_OPTIONS, countLine, filterUmas, ownedMatches,
+	OWNED_OPTIONS, PAGE_CONTAINER, STAR_OPTIONS, WHERE_OPTIONS, countLine, filterUmas, ownedMatches, values,
 	type OwnedFilter, type StarFilter, type WhereFilter,
 } from "../../utils/encyclopedia"
 
@@ -29,11 +30,12 @@ export const UmaListPage = () => (
 const UmaListBody = () => {
 	const catalogue = usePvpCatalogue()
 	const oshiIds = useOshiIds()
-	const [query, setQuery] = useState("")
-	const [where, setWhere] = useState<WhereFilter>("all")
-	const [stars, setStars] = useState<StarFilter>("all")
+	// Remembered for the tab, so a trip to an uma's page and back keeps them (useRememberedFilter).
+	const [query, setQuery] = useRememberedFilter<string>("umas:query", "")
+	const [where, setWhere] = useRememberedFilter<WhereFilter>("umas:where", "all", values(WHERE_OPTIONS))
+	const [stars, setStars] = useRememberedFilter<StarFilter>("umas:stars", "all", values(STAR_OPTIONS))
 	const owned = useOwned()
-	const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
+	const [ownedFilter, setOwnedFilter] = useRememberedFilter<OwnedFilter>("umas:owned", "all", values(OWNED_OPTIONS))
 	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
 	const umas = useMemo(
