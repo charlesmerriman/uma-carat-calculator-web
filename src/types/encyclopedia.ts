@@ -90,6 +90,28 @@ export interface UmaPageData {
 	cards: PageCard[]
 }
 
+/** One training effect of a support card, worded and worked out by the API (backend support_effects.py). */
+export interface CardEffect {
+	/** The game's effect type id. */
+	type: number
+	/** "Friendship Bonus", the game's own English. */
+	name: string
+	/** "Increases the effectiveness of Friendship Training" */
+	help: string
+	/** How its value is written. Only confirmed formats carry a unit; the rest are "number". */
+	format: "percent" | "number" | "level"
+	/** The first level the card has the effect. */
+	unlock: number
+	/** One per level, index 0 = level 1, up to the card's top cap; null before `unlock`. */
+	values: (number | null)[]
+}
+
+/** A card's unique effect: the level that unlocks it and the game's sentence for it. */
+export interface CardUniqueEffect {
+	level: number
+	text: string
+}
+
 export interface CardPageData {
 	id: number
 	game_id: number
@@ -107,6 +129,11 @@ export interface CardPageData {
 	released_at: string | null
 	group_members: string[]
 	purpose: string
+	/** Its training effects, in the order it gains them. Absent from an API older than Phase 2. */
+	effects?: CardEffect[]
+	/** Its level cap at each limit break, 0 to 4; [] when it has no effects on file. */
+	caps?: number[]
+	unique_effect?: CardUniqueEffect | null
 	skills: PageSkill[]
 	outfits: PageOutfit[]
 	cards: PageCard[]
