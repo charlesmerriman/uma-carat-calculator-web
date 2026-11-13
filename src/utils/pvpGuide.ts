@@ -287,16 +287,20 @@ export function tierLabel(tier: number): string {
 // How a guide's skills are grouped, everywhere they show. "other" is what a
 // guide files without a category (the sheet's per-style lists), so it reads
 // as the core list. Acceleration first: it is what a style lives or dies by;
-// the rest in the order a player builds a skill list.
+// then Henry's Early-Race / Mid-Game and Late-Race (board, 2026-11-13), then
+// the older groups. Every group stays pickable and an empty one never shows
+// (owner, 2026-11-13; notes/guide-skill-groups-plan.md).
 export const SKILL_CATEGORY_LABELS: Record<PvpSkillCategory, string> = {
 	acceleration: "Acceleration",
+	early_mid: "Early-Race / Mid-Game",
+	late: "Late-Race",
 	other: "Core skills",
 	speed: "Speed",
 	recovery: "Recovery",
 	green: "Green skills",
 	debuff: "Debuffs",
 }
-export const SKILL_CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
+export const SKILL_CATEGORY_ORDER: PvpSkillCategory[] = ["acceleration", "early_mid", "late", "other", "speed", "recovery", "green", "debuff"]
 
 /** The positions a guide recommends skills for, "everyone" left out, in display order. */
 export function skillPositions(guide: PvpGuide): PvpStyle[] {

@@ -30,7 +30,7 @@ import type {
 import type { PvpCatalogueIndex } from "../hooks/usePvpCatalogue"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { Scenario } from "../types"
-import { SKILL_CATEGORY_LABELS, STYLE_LABELS, STYLE_ORDER } from "./pvpGuide"
+import { SKILL_CATEGORY_LABELS, SKILL_CATEGORY_ORDER, STYLE_LABELS, STYLE_ORDER } from "./pvpGuide"
 
 export const DECK_SLOTS = 6
 /** The editor's tab for everything that is not a running style. */
@@ -520,7 +520,8 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 }
 
 /** The category a "+ Add skill" button under a group starts the picker on. */
-export const CATEGORY_CHOICES: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
+// Every group, in the reader's order: the editor offers them all (owner, 2026-11-13).
+export const CATEGORY_CHOICES: PvpSkillCategory[] = SKILL_CATEGORY_ORDER
 
 /** A skill row's tier, as the pickers and dialogs offer it. */
 export const TIER_CHOICES: Array<{ value: number | null; label: string }> = [

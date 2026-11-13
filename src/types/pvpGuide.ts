@@ -22,7 +22,8 @@ export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end
  */
 export type PvpStyleTab = Exclude<PvpStyle, "everyone"> | "all"
 
-export type PvpSkillCategory = "acceleration" | "speed" | "green" | "recovery" | "debuff" | "other"
+/** How a guide groups its skills (backend PvpSkillCategory). `early_mid` and `late` are Henry's of 2026-11-13. */
+export type PvpSkillCategory = "acceleration" | "early_mid" | "late" | "speed" | "green" | "recovery" | "debuff" | "other"
 
 /** Small embedded catalogue objects. Ids are the site's, not the game's. */
 export interface PvpUmaRef {
