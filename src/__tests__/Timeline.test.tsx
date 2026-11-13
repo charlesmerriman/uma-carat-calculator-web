@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { AuthContext, type AuthContextType } from '../services/AuthContext'
 import { TIMELINE_FOCUS_HIGHLIGHT } from '../components/timeline/timelineShared'
 import { formatDate, formatTime, localZoneName } from '../utils/dateFormat'
 import { FOCUS_TAILROOM } from '../hooks/useFocusScroll'
@@ -1082,6 +1083,56 @@ describe('Timeline recommended banners and card purposes', () => {
 
     fireEvent.pointerUp(tile, { pointerType: 'touch' })
     expect(note).toHaveClass('opacity-0')
+  })
+})
+
+describe('Timeline tiles link to the Encyclopedia', () => {
+  /** The Encyclopedia is supporters-first: early access sees the links (useSkillsPreview). */
+  function renderAs(earlyAccess: boolean) {
+    const value = {
+      isLoggedIn: true,
+      status: 'ready',
+      account: { early_access: earlyAccess, oshi_uma_ids: [] },
+    } as unknown as AuthContextType
+    return render(
+      <AuthContext.Provider value={value}>
+        <MemoryRouter initialEntries={['/app/timeline']}>
+          <Timeline />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    )
+  }
+
+  function withIds(): BannerTimelineForViewing {
+    const banner = categorised(1, 'standard', ['Gold Ship'], ['Kitasan Black', 'Any SSR'])
+    banner.banner_umas[0].umas[0].game_id = 100701
+    banner.banner_umas[0].umas[0].purpose = 'Great pace parent.'
+    banner.banner_supports[0].support_cards[0].game_id = 30028
+    // A placeholder card: the API sends no id, so it has no page to open.
+    banner.banner_supports[0].support_cards[1].game_id = null
+    return banner
+  }
+
+  it('makes each uma and card a link to its page, keeping the purpose note', () => {
+    events = [withIds()]
+    renderAs(true)
+
+    const uma = screen.getByRole('link', { name: 'Gold Ship' })
+    expect(uma).toHaveAttribute('href', '/app/umas/100701')
+    // The link is the one tab stop now, and still reads the note.
+    expect(uma).toHaveAccessibleDescription('Great pace parent.')
+    expect(screen.queryByRole('group', { name: 'Gold Ship' })).toBeNull()
+
+    expect(screen.getByRole('link', { name: 'Kitasan Black' })).toHaveAttribute('href', '/app/cards/30028')
+    expect(screen.queryByRole('link', { name: 'Any SSR' })).toBeNull()
+  })
+
+  it('leaves the tiles as they were for everyone else', () => {
+    events = [withIds()]
+    renderAs(false)
+
+    expect(screen.queryByRole('link', { name: 'Gold Ship' })).toBeNull()
+    expect(screen.getByRole('group', { name: 'Gold Ship' })).toHaveAccessibleDescription('Great pace parent.')
   })
 })
 

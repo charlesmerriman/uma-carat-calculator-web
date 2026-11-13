@@ -41,8 +41,11 @@ import type {
 	BannerUma,
 	UserPlannedBanner,
 } from "../../types"
+import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
+import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 
 /**
  * One timeline card: a date header, then one section per banner opening in that
@@ -293,6 +296,12 @@ type FeaturedCard = {
 	 * briefly receive cards without it; the API always sends a string.
 	 */
 	purpose?: string
+	/**
+	 * The key of its Encyclopedia page. Optional for the same reason as
+	 * `purpose`; null for a card the game hasn't numbered (or a placeholder),
+	 * and then the tile is not a link.
+	 */
+	game_id?: number | null
 }
 
 /**
@@ -317,12 +326,20 @@ type FeaturedCard = {
  *   reliably to a tapped non-button, so this one is state rather than CSS.
  *   pointerup rather than click, because a touch that becomes a scroll cancels
  *   the pointer and never fires it — scrolling past a tile can't open it.
+ *
+ * A LINKED tile (its Encyclopedia page, FeaturedTile) hands all three to the
+ * link around it: the link is the one tab stop and carries the `group` the
+ * overlay's hover and focus classes answer to, and a tap follows the link
+ * instead of toggling the note, the same call hoverPopup.tsx makes with
+ * `tap: false`. So the art box here is plain: no tab stop, no handlers.
  */
 function FeaturedTileArt({
 	item,
 	tileAspectClass,
 	framed,
 	oshi,
+	linked,
+	overlayId,
 }: {
 	item: FeaturedCard
 	tileAspectClass: string
@@ -333,8 +350,11 @@ function FeaturedTileArt({
 	framed: boolean
 	/** One of the person's favorite umas: the rainbow frame. */
 	oshi: boolean
+	/** The tile is a link: it owns focus, hover and taps (see above). */
+	linked: boolean
+	/** The overlay's id, made by the tile so a link can point at it too. */
+	overlayId: string
 }) {
-	const overlayId = useId()
 	const [tapped, setTapped] = useState(false)
 	const purpose = (item.purpose ?? "").trim()
 
@@ -380,6 +400,32 @@ function FeaturedTileArt({
 		)
 	}
 
+	// Always in the DOM, faded out rather than unmounted, so a screen reader
+	// gets the note through aria-describedby whether or not anyone is hovering.
+	// White on a black scrim rather than theme tokens: it sits on arbitrary
+	// card art — the same reasoning as mobileBannerSelectStyles.
+	const overlay = (
+		<div
+			id={overlayId}
+			role="tooltip"
+			className={`pointer-events-none absolute inset-0 z-20 flex items-end bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+				tapped ? "opacity-100" : "opacity-0"
+			}`}
+		>
+			<p className="line-clamp-6 break-words">{purpose}</p>
+		</div>
+	)
+
+	if (linked) {
+		return withSkirt(
+			<div className={`relative shrink-0 overflow-hidden ${surface}`}>
+				{recommendationBadge}
+				{art}
+				{overlay}
+			</div>
+		)
+	}
+
 	return withSkirt(
 		<div
 			role="group"
@@ -396,21 +442,81 @@ function FeaturedTileArt({
 		>
 			{recommendationBadge}
 			{art}
-			{/* Always in the DOM, faded out rather than unmounted, so a screen
-			    reader gets the note through aria-describedby whether or not anyone
-			    is hovering. White on a black scrim rather than theme tokens: it
-			    sits on arbitrary card art — the same reasoning as
-			    mobileBannerSelectStyles. */}
-			<div
-				id={overlayId}
-				role="tooltip"
-				className={`pointer-events-none absolute inset-0 z-20 flex items-end bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
-					tapped ? "opacity-100" : "opacity-0"
-				}`}
-			>
-				<p className="line-clamp-6 break-words">{purpose}</p>
-			</div>
+			{overlay}
 		</div>
+	)
+}
+
+/**
+ * One featured tile: the art (with its purpose note) over the name block.
+ *
+ * With `href` the whole tile is a link to the card's Encyclopedia page. Only
+ * early access gets one (`useSkillsPreview`, decided by FeaturePanel): the
+ * pages are supporters-first, and a link everyone else could follow would
+ * only open the "for supporters" note. Opening the Encyclopedia to everyone
+ * is that hook returning true, and these links follow with no change here.
+ */
+function FeaturedTile({
+	item,
+	href,
+	tileAspectClass,
+	tileWidthClass,
+	nameClass,
+	framed,
+	oshi,
+}: {
+	item: FeaturedCard
+	href: string | null
+	tileAspectClass: string
+	tileWidthClass: string
+	nameClass: string
+	framed: boolean
+	oshi: boolean
+}) {
+	const overlayId = useId()
+	const hasPurpose = Boolean((item.purpose ?? "").trim())
+
+	const body = (
+		<>
+			<FeaturedTileArt
+				item={item}
+				tileAspectClass={tileAspectClass}
+				framed={framed}
+				oshi={oshi}
+				linked={href !== null}
+				overlayId={overlayId}
+			/>
+			<div className="flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2">
+				<div
+					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
+				>
+					{item.name}
+				</div>
+			</div>
+		</>
+	)
+
+	// No fill or shadow of its own: either would show past the art's round top
+	// corners (FeaturedTileArt). The name block carries the tile's colour instead.
+	const tileClass = `flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg text-left ${tileWidthClass}`
+
+	if (!href) return <div className={tileClass}>{body}</div>
+
+	// `group` is what the purpose overlay and the name's hover colour answer
+	// to. The focus mark is an INSET outline: the tile clips its overflow and
+	// a band scrolls, so an outset ring would be shaved off at the edges.
+	// The name comes from aria-label, so the art's alt, the hidden note and
+	// the name block aren't all read as one long link name; the note is read
+	// as its description instead.
+	return (
+		<Link
+			to={href}
+			aria-label={item.name}
+			aria-describedby={hasPurpose ? overlayId : undefined}
+			className={`group ${tileClass} outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand`}
+		>
+			{body}
+		</Link>
 	)
 }
 
@@ -481,12 +587,18 @@ type FeaturePanelProps = {
 	 * chip in the title line under the same zero-layout rule as `recommended`.
 	 */
 	freePulls?: number
+	/**
+	 * A tile's Encyclopedia address from its game id: `umaHref` or `cardHref`.
+	 * The panel knows which it holds, so no tile has to guess from its shape.
+	 */
+	pageHref: (gameId: number) => string
 }
 
 function FeaturePanel({
 	icon: Icon,
 	title,
 	items,
+	pageHref,
 	hasBanner,
 	framed = false,
 	emptyText,
@@ -511,6 +623,8 @@ function FeaturePanel({
 	// so. A card that grows taller — or a line that scrolls — is the right trade.
 	const isBand = layout === "band"
 	const oshiIds = useOshiIds()
+	// Early access only, while the Encyclopedia is supporters-first (FeaturedTile).
+	const linksToPages = useSkillsPreview()
 
 	// A band tile is narrower than a column tile, so its name gets a smaller
 	// size and a third line. Both tiers were measured against real banners: at
@@ -525,26 +639,15 @@ function FeaturePanel({
 
 	const tiles = items.map((item) => {
 		const tile = (
-			<div
-				// No fill or shadow of its own: either would show past the art's
-				// round top corners (FeaturedTileArt). The name block carries the
-				// tile's colour instead.
-				className={`flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg text-left ${tileWidthClass}`}
-			>
-				<FeaturedTileArt
-					item={item}
-					tileAspectClass={tileAspectClass}
-					framed={framed}
-					oshi={framed && oshiIds.has(item.id)}
-				/>
-				<div className="flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2">
-					<div
-						className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${nameClass}`}
-					>
-						{item.name}
-					</div>
-				</div>
-			</div>
+			<FeaturedTile
+				item={item}
+				href={linksToPages && item.game_id ? pageHref(item.game_id) : null}
+				tileAspectClass={tileAspectClass}
+				tileWidthClass={tileWidthClass}
+				nameClass={nameClass}
+				framed={framed}
+				oshi={framed && oshiIds.has(item.id)}
+			/>
 		)
 
 		// In a band the growth sits on a wrapper so the tile keeps its own cap and
@@ -810,6 +913,7 @@ function BannerSection({
 			icon={Sparkles}
 			title="Featured Umamusume"
 			items={umaBanner?.umas ?? []}
+			pageHref={umaHref}
 			hasBanner={!!umaBanner}
 			framed
 			emptyText="No Umamusume banner"
@@ -835,6 +939,7 @@ function BannerSection({
 			icon={Ticket}
 			title="Featured Support Cards"
 			items={supportBanner?.support_cards ?? []}
+			pageHref={cardHref}
 			hasBanner={!!supportBanner}
 			emptyText="No Support Banner"
 			tileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"

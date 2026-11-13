@@ -108,6 +108,11 @@ export interface Uma extends JpDated {
 	 * utils/rateUpRates.ts, never this directly.
 	 */
 	rarity?: number | null
+	/**
+	 * The game's id, the key of its Encyclopedia page (utils/encyclopediaRoutes).
+	 * Null until imported; optional for a frontend deployed ahead of the API.
+	 */
+	game_id?: number | null
 }
 
 /**
@@ -127,6 +132,8 @@ export interface SupportCard extends JpDated {
 	purpose: string
 	/** See Uma.rarity: R / SR / SSR as 1 / 2 / 3. Null reads as SSR. */
 	rarity?: number | null
+	/** See Uma.game_id. Also null for a placeholder card, which has no page. */
+	game_id?: number | null
 }
 
 /** An uma gacha banner — contains one or more featured umas */
