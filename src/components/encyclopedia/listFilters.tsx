@@ -84,6 +84,28 @@ export function Chips<T extends string>({ label, options, value, onChange, after
 }
 
 /**
+ * A filter row whose choice is one of many (an effect type): its name, then a
+ * native select, which a phone shows as its own picker.
+ */
+export function SelectFilter({ label, options, value, onChange }: {
+	label: string
+	options: { value: string; label: string }[]
+	value: string
+	onChange: (value: string) => void
+}) {
+	return (
+		<div className="enc-filter">
+			<span className="enc-filter__label" aria-hidden="true">{label}</span>
+			<label className="enc-grade">
+				<select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+					{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+				</select>
+			</label>
+		</div>
+	)
+}
+
+/**
  * "at least [A]": the lowest aptitude grade an aptitude row lets through.
  * A native select, so a phone gets its own picker for eight grades rather
  * than eight more chips.
