@@ -220,11 +220,6 @@ export function SectionNote({ children }: { children: ReactNode }) {
 	return <p className="enc-section__note">{children}</p>
 }
 
-/** "From the JP game. May change on global." beside facts global doesn't have yet. */
-export function JpDataNote() {
-	return <SectionNote>From the JP game. May change on global.</SectionNote>
-}
-
 /** A segmented switch for a section's heading: the star level, "Hide R". */
 export function Switch<T extends string | number>({ label, options, value, onChange }: {
 	label: string

@@ -27,7 +27,3 @@ export function cooldownWords(slot: SkillSlot): string | null {
 	return slot.cooldown === "Once per race" ? "Once per race" : `Again after ${slot.cooldown}`
 }
 
-/** Does any of the skill's times scale with the race's length? The page explains the "per 1,000 m" once. */
-export function hasScaledTime(slots: SkillSlot[]): boolean {
-	return slots.some((slot) => [slot.duration, slot.cooldown].some((time) => time?.includes("per 1,000 m")))
-}

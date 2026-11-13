@@ -2,8 +2,8 @@
  * The filter bar the three lists share: one card holding the search box, the
  * count of what matched, and each filter as a small caps label with its
  * chips, so nobody has to work out what a bare row of chips does
- * (encyclopedia.css, ".enc-toolbar"). On a phone a filter's chips are one row
- * that scrolls sideways.
+ * (encyclopedia.css, ".enc-toolbar"). Each filter is a row of its own, and
+ * its chips wrap rather than scroll sideways.
  */
 
 import type { CSSProperties, ReactNode } from "react"

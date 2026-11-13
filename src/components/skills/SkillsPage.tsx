@@ -37,8 +37,13 @@ const COLOUR_DOTS: Partial<Record<ColourFilter, string>> = {
 	evolved: "#f28cbc",
 }
 const COLOUR_OPTIONS = COLOUR_FILTERS.map((option) => ({ ...option, dot: COLOUR_DOTS[option.value] }))
-// The filter's own name says "Type", so its first chip needn't.
-const TYPE_OPTIONS = TYPE_FILTERS.map(({ value, label }) => ({ value, label: value === "all" ? "Any" : label }))
+// The filter's own name says "Type", so its first chip needn't. No "Unique"
+// chip: the Color filter already has Unique, Inherited and Evolved, and the
+// type only caught the skills the game data gives no icon (Daptrius,
+// 2026-11-13). The type stays in TYPE_FILTERS so a row still has its word.
+const TYPE_OPTIONS = TYPE_FILTERS
+	.filter(({ value }) => value !== "unique")
+	.map(({ value, label }) => ({ value, label: value === "all" ? "Any" : label }))
 
 /**
  * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
@@ -85,7 +90,8 @@ const SkillsPageBody = () => {
 				search={<SearchBox label="Search skills" placeholder="Search by skill or uma name..." value={query} onChange={setQuery} />}
 				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
 			>
-				<Chips label="Colour" options={COLOUR_OPTIONS} value={colour} onChange={setColour} />
+				{/* American spelling on screen (Daptrius, 2026-11-13); the code keeps "colour". */}
+				<Chips label="Color" options={COLOUR_OPTIONS} value={colour} onChange={setColour} />
 				{/* The Type chips are the types; a type with sub-types (the greens,
 				    the debuffs) opens a second filter under them once it is picked. */}
 				<Chips label="Type" options={TYPE_OPTIONS} value={typeParent(type).value} onChange={setType} />

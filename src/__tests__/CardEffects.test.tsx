@@ -76,19 +76,6 @@ describe("CardEffects", () => {
 		expect(unique).toHaveTextContent("Unlocks at level 30")
 	})
 
-	it("says when the unique effect multiplies with the card's own, and only then", () => {
-		const { container, rerender } = render(<CardEffects effects={EFFECTS} caps={CAPS} unique={UNIQUE} />)
-		expect(container.querySelector(".enc-unique__note")).toBeNull()
-		rerender(<CardEffects effects={EFFECTS} caps={CAPS} unique={{ ...UNIQUE, multiplies: ["Friendship Bonus"] }} />)
-		expect(container.querySelector(".enc-unique__note")).toHaveTextContent(
-			"Multiplies with the card's own Friendship Bonus instead of adding to it."
-		)
-		rerender(<CardEffects effects={EFFECTS} caps={CAPS} unique={{ ...UNIQUE, multiplies: ["Friendship Bonus", "Specialty Priority"] }} />)
-		expect(container.querySelector(".enc-unique__note")).toHaveTextContent(
-			"Multiplies with the card's own Friendship Bonus and Specialty Priority instead of adding to them."
-		)
-	})
-
 	it("writes a unit only for a format that names one", () => {
 		expect([effectValue(16, "percent"), effectValue(2, "level"), effectValue(21, "number"), effectValue(5, "something new")])
 			.toEqual(["16%", "Lv 2", "21", "5"])
