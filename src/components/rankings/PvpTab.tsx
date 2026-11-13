@@ -33,6 +33,7 @@ import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { useGalleryRankings } from "../../hooks/useGalleryRankings"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { FramedUma } from "../FramedUma"
 import { STYLE_LABELS, defaultPvpEvent, findEvent, raceEventsInOrder } from "../../utils/pvpGuide"
 import { PVP_EVENT_PARAM, formatPvpEvent, parsePvpEvent, refForRaceEvent, shortEventName, splitEventName } from "../../utils/pvpEvent"
@@ -226,6 +227,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 	previous: string[] | undefined
 }) {
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const known = (row: WinRateRow) => catalogue.umasById.has(row.uma)
 	const rates = winRates(runs)
 	const ranked = rates.ranked.filter(known)
@@ -253,6 +255,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 				tone="win"
 				count={formatShare(entry.rate)}
 				share={<Marks marks={entry.marks} />}
+				href={hrefs.uma(entry.uma)}
 			/>
 		)
 	}

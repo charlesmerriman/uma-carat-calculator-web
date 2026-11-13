@@ -2605,6 +2605,28 @@ timing as chips, where it comes from, its other versions, and a footer.
   per skill, shared with the skill's page), through `utils/skillCard.ts`
   (`rowToCardSkill`, `detailToCardSkill`). It never fetches for a row nobody hovered.
 
+### Links into the Encyclopedia from the rest of the site
+
+Umas and cards drawn elsewhere open their page for early access. **One lookup serves them
+all: `useEncyclopediaHrefs()`** (`hooks/useEncyclopediaHrefs.ts`), which maps the SITE's
+row id (what every team, guide, ranking, roster and gallery snapshot carries) to the page
+through the PvP catalogue's `game_id`. It answers null for everyone else, for a placeholder
+card and for anything the catalogue doesn't number, and the caller then draws the old tile.
+The Timeline alone reads `game_id` from its own payload, since it has it. How each place
+links depends on what a click already does there:
+
+| The tile is... | The link is... | Where |
+|---|---|---|
+| display only | the tile itself (`<Link>`) | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
+| a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside | Collection names, the Selectors pick (bottom-left book) |
+| a hover card's trigger | "Open its page" in the card (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
+| a ranking row that opens | "Open its page" at the top of the breakdown | `RankRow` with `detail` |
+
+Left out on purpose: the planner's art cell (already a link to the banner on the Timeline,
+and a link can't hold links), pickers where a click chooses, the guide editor's deck
+(`pageLink={false}`: a stray click would leave mid-edit), the share pictures, and the account
+page.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It
