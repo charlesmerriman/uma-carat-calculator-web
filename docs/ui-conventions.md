@@ -1243,6 +1243,12 @@ and the card — so a floating tooltip would need a portal and a positioning lib
 field's 100-character cap is what keeps the text inside the narrowest tile. An empty purpose
 renders the tile exactly as before: no overlay, no tab stop, no handlers.
 
+**For early access, each tile is a link to its Encyclopedia page** (`FeaturedTile`, keyed
+by the payload's `game_id`; none when it is null, as on a placeholder card). The link then
+owns the overlay's triggers: it is the one tab stop and the `group` the hover and focus
+classes answer to, and a tap follows the link, so a touch screen doesn't toggle the note.
+Opening the Encyclopedia to everyone (`useSkillsPreview` returning true) opens these too.
+
 ### Infinite scroll — the reveal-count dependency is intentional
 
 The list reveals `INFINITE_CHUNK_SIZE` more cards each time a 1px sentinel `div` at the
