@@ -50,13 +50,15 @@ export function Count({ children }: { children: string }) {
 
 /**
  * One filter: its name, then a chip per choice. `dot` is a choice's own
- * colour (a card type, a skill's kind), always beside its word.
+ * colour (a card type, a skill's kind), always beside its word. `after` goes
+ * at the end of the row: the aptitude rows' "at least" grade.
  */
-export function Chips<T extends string>({ label, options, value, onChange }: {
+export function Chips<T extends string>({ label, options, value, onChange, after }: {
 	label: string
 	options: { value: T; label: string; dot?: string }[]
 	value: T
 	onChange: (value: T) => void
+	after?: ReactNode
 }) {
 	return (
 		<div role="group" aria-label={label} className="enc-filter">
@@ -75,7 +77,30 @@ export function Chips<T extends string>({ label, options, value, onChange }: {
 						{option.label}
 					</button>
 				))}
+				{after}
 			</div>
 		</div>
+	)
+}
+
+/**
+ * "at least [A]": the lowest aptitude grade an aptitude row lets through.
+ * A native select, so a phone gets its own picker for eight grades rather
+ * than eight more chips.
+ */
+export function GradeSelect({ label, options, value, onChange }: {
+	/** Names the select for a screen reader: "Lowest Mile grade". */
+	label: string
+	options: { value: string; label: string }[]
+	value: string
+	onChange: (value: string) => void
+}) {
+	return (
+		<label className="enc-grade">
+			<span aria-hidden="true">at least</span>
+			<select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+				{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+			</select>
+		</label>
 	)
 }

@@ -1,7 +1,7 @@
 /**
  * /app/cards: every support card, from the PvP catalogue (GET /pvp-catalogue,
  * public). Search by name or title, filter by type, rarity and where it is
- * out; a tile opens the card's page. Placeholder cards ("your best SSR
+ * out, sort by name, release or game id; a tile opens the card's page. Placeholder cards ("your best SSR
  * Speed") are stand-ins, not game cards, so they have no page and aren't here.
  *
  * A tile is the card in the site's own frame (FramedCard), which already
@@ -18,11 +18,12 @@ import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { Chips, Count, SearchBox, Toolbar } from "./listFilters"
+import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { EmptyNote, GridSkeleton, JpTag, OwnedMark, RarityTag } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
-	OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, countLine, filterCards,
-	ownedMatches, values, type OwnedFilter, type RarityFilter, type TypeFilter, type WhereFilter,
+	OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, SORT_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, countLine, filterCards,
+	ownedMatches, releaseDates, sortList, values, type OwnedFilter, type SortOrder, type RarityFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/encyclopedia"
 
 export const CardListPage = () => (
@@ -40,14 +41,22 @@ const CardListBody = () => {
 	const [where, setWhere] = useRememberedFilter<WhereFilter>("cards:where", "all", values(WHERE_OPTIONS))
 	const owned = useOwned()
 	const [ownedFilter, setOwnedFilter] = useRememberedFilter<OwnedFilter>("cards:owned", "all", values(OWNED_OPTIONS))
+	const [sort, setSort] = useRememberedFilter<SortOrder>("cards:sort", "name", values(SORT_OPTIONS))
+	// Release dates from the banners the calculator already loaded; none yet means Newest sorts by name.
+	const banners = useCalculatorDataSafe()?.supportBannerData
+	const dates = useMemo(() => releaseDates(banners ?? [], (banner) => banner.support_cards), [banners])
 	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
 	const cards = useMemo(
 		() => (catalogue.status === "ready"
-			? filterCards(catalogue.catalogue.support_cards, query, type, rarity, where)
-				.filter((card) => ownedMatches(showOwned ? ownedFilter : "all", owned.cards, card.id))
+			? sortList(
+				filterCards(catalogue.catalogue.support_cards, query, type, rarity, where)
+					.filter((card) => ownedMatches(showOwned ? ownedFilter : "all", owned.cards, card.id)),
+				sort,
+				dates,
+			)
 			: []),
-		[catalogue, query, type, rarity, where, owned, ownedFilter, showOwned]
+		[catalogue, query, type, rarity, where, owned, ownedFilter, showOwned, sort, dates]
 	)
 
 	return (
@@ -61,6 +70,7 @@ const CardListBody = () => {
 				<Chips label="Rarity" options={RARITY_OPTIONS} value={rarity} onChange={setRarity} />
 				<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
 				{showOwned && <Chips label="Collection" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
+				<Chips label="Sort" options={SORT_OPTIONS} value={sort} onChange={setSort} />
 			</Toolbar>
 			{catalogue.status === "loading" ? (
 				<GridSkeleton label="Loading support cards" tall />
