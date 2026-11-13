@@ -2501,6 +2501,104 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   button (bottom right) and a bottom sheet (`kit/FilterSheet.tsx`, a native `<dialog>`). The
   pills and the sheet draw the same `FilterGroup`s, so they can't disagree.
 
+## Encyclopedia pages (`components/encyclopedia/`, `components/skills/`)
+
+A page for every trainee outfit, support card and skill (`notes/encyclopedia-plan.md`, in the
+workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: nothing reaches
+`develop` until the owner says so, and then only early access sees it.
+
+- **Routes**: `/app/umas`, `/app/umas/:gameId`, `/app/cards`, `/app/cards/:gameId`,
+  `/app/skills`, `/app/skills/:gameId` (`SkillPage`; an old `?skill=` link redirects there). A
+  page is keyed by the GAME's id;
+  `utils/encyclopediaRoutes.ts` is the only builder of these links (`umaHref`, `cardHref`), and
+  `parseGameId` reads only the leading digits so a readable suffix can come later.
+- **The gate**: every list and page is wrapped in `EncyclopediaGate` (`useSkillsPreview()`,
+  which is `account.early_access`). Anyone else gets `SupportersFirstNote`, the note Rankings
+  shows. The API is the real gate (401 / 403). No route is prerendered or in the sitemap, and
+  `AppRouteMeta` marks them all `noindex`; a detail page has a generic title until its data lands
+  (`usePageTitle`). Opening it to everyone is the plan's "Opening it to everyone".
+- **Data**: the lists read `/pvp-catalogue` (`usePvpCatalogue`); a page reads
+  `GET /encyclopedia/<kind>/<id>` through TanStack Query (`services/encyclopediaQueries.ts`). The
+  API sends no dates: banners and release dates come from `/calculator-data`
+  (`utils/encyclopediaBanners.ts`), so date prediction stays in one place.
+- **Rules that bite**: every uma is `FramedUma` from its `portrait`; every card is `FramedCard`
+  from its `image_borderless` (the visual overhaul settled the owner's first-round answer that
+  way, as in the Collection; a card with no frameless art draws its bordered `image`); every
+  date goes through `formatDate`; a section with no data is left out, never drawn empty; a
+  JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
+  colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
+  components only.
+- **The navbar**: an Encyclopedia tab beside Rankings, drawn on the same rule, so early access
+  has seven tabs on a phone (icons only below 440px, so there is no phone label to choose).
+
+### The look (the visual overhaul, 2026-11-12)
+
+Drawn first on a canvas (https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6; the mocks and their
+generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to it.
+
+- **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
+  in `@layer components` so a Tailwind utility at the call site still wins. Classes are
+  `enc-*` plus four that are used outside these pages: `.skill-card` (the hover card),
+  `.kind-pill`, `.apt-letter`, `.grade-pill`. Every colour is a theme token, except the game's
+  own (aptitude letters, race grades, rarity, a gold / evolved / unique skill), which are fixed
+  fills with dark ink so they read the same on all twelve themes.
+- **The frame** (`EncyclopediaTabs`): the Rankings page's shape, a display-face title, one line
+  of description, underlined tabs. **The filter bar** (`listFilters.tsx`: `Toolbar`,
+  `SearchBox`, `Count`, `Chips`): one card, each filter a small caps label and its chips. The
+  group is named by `aria-label`, and the visible label is `aria-hidden`. On a phone a filter's
+  chips are one row that scrolls sideways.
+- **A detail page** is `Crumbs`, a `Hero` (art, eyebrow, name, tags, `Fact`s on the right), a
+  `JumpBar`, then a `Section` card per group of facts (`pieces.tsx`). `--enc-accent` on the hero
+  tints its corner: the brand by default, a card's type colour, a skill's own.
+- **The jump bar sticks**, and where depends on what scrolls: under the navbar when the
+  document scrolls (a phone, a short window), at 0 inside the desktop app shell. Its offsets in
+  `encyclopedia.css` are index.css's `scroll-padding-top` numbers: change them together. It
+  draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
+  `#hash` links, so Back leaves the page.
+- **A skill row** (`skillRows.tsx`, `.enc-skill`) is quiet on purpose: the theme's surface,
+  with the kind as a 3px spine, a faint wash and a `KindPill`. The solid gold and pink
+  (`.skill-gold`, `.skill-evolved`) stay on the PvP guides' chips. Its second line says how
+  the page's uma or card has it, else its type and owner.
+- **A card's effects** (`CardEffects.tsx`, first on the card page): a Limit break switch, a
+  level stepper, the unique effect, then every effect as a value chip with the game's help text.
+  The API sends one value per level (`effects[].values`, backend `support_effects.py`, which has
+  the growth rule and its check), so the component only looks one up, and `effectValue` writes a
+  unit only for a format the API names. It opens at the level the owner's limit break reaches,
+  derived on each render because the Collection loads after the page. It never adds the unique
+  effect into a row: a unique Friendship Bonus or Specialty Priority multiplies with the card's
+  own (Daptrius, 2026-11-13), so the unique effect says so in a line, for the effects the API
+  names in `unique_effect.multiplies`.
+- **A skill's times are per 1,000 m** (`utils/skillWords.ts`): the API states a timed duration
+  and a repeating cooldown against the race's length ("2.4 s per 1,000 m"), because the game
+  scales both by it (Daptrius, 2026-11-13). The skill page explains that once, under How it
+  works, when a time scales (`hasScaledTime`); the hover card only shows the chips.
+- **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
+  type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
+  sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole
+  type by prefix, and the page shows a second filter under Type once such a type is picked.
+  The grouping and its evidence are the API's (`skill_types.py`).
+- **Loading is a skeleton** (`PageSkeleton`, `GridSkeleton`, `.enc-skeleton`), and "nothing
+  matched" or "didn't load" is `EmptyNote`, a dashed box.
+
+### The skill card (`components/pvp/SkillDetail.tsx`, `.skill-card`)
+
+What hovering a skill shows, on a guide's chips, mentions and deck cells and on every
+Encyclopedia skill row: a header in the skill's own colour (icon, name, kind, and for early
+access the type and cost), the description, a guide's note, When and Does as a small table,
+timing as chips, where it comes from, its other versions, and a footer.
+
+- **Every element is a `<span>`**: a mention sits inside a sentence, where a `<div>` is
+  invalid. A label's colon is `sr-only`, for a screen reader and for copied text.
+- **The popup is `components/pvp/hoverPopup.tsx`** (`useHoverPopup`), lifted out of
+  `PvpTiles.tsx` so both places draw one card. `interactive` lets the pointer travel into the
+  popup (Floating UI's `safePolygon`) and click its link; it is on only for early access on a
+  skill with a `game_id`, because that is when the card ends in "Open its page". The popup is
+  `aria-hidden` (its words are in the caller's `sr-only` copy), so that link is `tabIndex={-1}`
+  there (`InsidePopupContext`). `tap: false` is for a row that is itself a link.
+- **An Encyclopedia row fetches its card's body on first hover** (`useSkillPage`, one request
+  per skill, shared with the skill's page), through `utils/skillCard.ts`
+  (`rowToCardSkill`, `detailToCardSkill`). It never fetches for a row nobody hovered.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It
