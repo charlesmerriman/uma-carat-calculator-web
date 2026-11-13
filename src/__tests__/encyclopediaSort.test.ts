@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { aptitudeMatches, releaseDates, sortList, type ReleaseDates } from "../utils/encyclopedia"
+import { aptitudeMatches, effectReading, releaseDates, sortByEffect, sortList, type ReleaseDates } from "../utils/encyclopedia"
+import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { AptitudeKey } from "../types/pvpTeam"
 import { parseApiDate } from "../utils/dateFormat"
 
@@ -59,5 +60,47 @@ describe("aptitudeMatches", () => {
 
 	it("never passes an aptitude the data doesn't have", () => {
 		expect(aptitudeMatches(apt, "long", "1")).toBe(false)
+	})
+})
+
+describe("effectReading and sortByEffect", () => {
+	// SSR caps; Specialty Priority (19) 20..35, Race Bonus (15) 5..10, a unique at level 30.
+	const card = (unique: CardEffectsRow["unique"], effects: CardEffectsRow["effects"]): CardEffectsRow => ({
+		caps: [30, 35, 40, 45, 50], effects, unique,
+	})
+	const spe = card({ level: 30, values: { "19": 40, "15": 2 }, conditional: false }, { "19": [20, 25, 30, 35, 35], "15": [5, 5, 8, 10, 10] })
+
+	it("multiplies a unique Specialty Priority with the card's own: 35 and 40 give 89, not 75", () => {
+		expect(effectReading(spe, 19, 4)).toEqual({ value: 89, unsure: false })
+	})
+
+	it("adds any other unique value, once unlocked at that limit break's cap", () => {
+		expect(effectReading(spe, 15, 4)).toEqual({ value: 12, unsure: false })
+		const late = card({ level: 45, values: { "15": 2 }, conditional: false }, { "15": [5, 5, 8, 10, 10] })
+		expect(effectReading(late, 15, 2)?.value).toBe(8) // cap 40, unique not yet
+		expect(effectReading(late, 15, 3)?.value).toBe(12) // cap 45, unique on
+	})
+
+	it("says when the unique has a part nobody decoded, and is null for an effect the card lacks", () => {
+		const unsure = card({ level: 30, values: {}, conditional: true }, { "15": [5, 5, 8, 10, 10] })
+		expect(effectReading(unsure, 15, 4)).toEqual({ value: 10, unsure: true })
+		expect(effectReading(unsure, 19, 4)).toBeNull()
+	})
+
+	it("sorts highest first, unread cards after, cards without the effect last", () => {
+		const data: CardEffectsData = {
+			types: [{ type: 15, name: "Race Bonus", format: "percent" }],
+			cards: {
+				"1": card(null, { "15": [5, 5, 5, 5, 5] }),
+				"2": card(null, { "15": [10, 10, 10, 10, 10] }),
+				"3": card(null, {}),
+				"4": card(null, { "15": [8, 8, 8, 8, 8] }),
+			},
+		}
+		const cards = [1, 2, 3, 4].map((id) => ({ id, name: `Card ${id}` }))
+		// The player owns 1, 2 and 3; card 4 can't be read at "my limit break".
+		const mine = (entry: { id: number }) => (entry.id === 4 ? null : 4)
+		expect(sortByEffect(cards, 15, mine, data).map((entry) => entry.id)).toEqual([2, 1, 4, 3])
+		expect(sortByEffect(cards, 15, () => 4, data).map((entry) => entry.id)).toEqual([2, 4, 1, 3])
 	})
 })

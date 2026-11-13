@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query"
 import { authHeaders } from "./authToken"
 import { HttpError } from "./queryClient"
 import { fetchSkillDetail } from "./skillsFetchCalls"
-import type { CardPageData, UmaPageData } from "../types/encyclopedia"
+import type { CardEffectsData, CardPageData, UmaPageData } from "../types/encyclopedia"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -23,6 +23,7 @@ export const encyclopediaKeys = {
 	uma: (gameId: number) => ["encyclopedia", "uma", gameId] as const,
 	card: (gameId: number) => ["encyclopedia", "card", gameId] as const,
 	skill: (gameId: number) => ["encyclopedia", "skill", gameId] as const,
+	cardEffects: ["encyclopedia", "card-effects"] as const,
 }
 
 /** One page, or null when the API has no such page (404). */
@@ -56,5 +57,19 @@ export function useCardPage(gameId: number | null) {
 		queryKey: encyclopediaKeys.card(gameId ?? 0),
 		enabled: gameId !== null,
 		queryFn: () => fetchPage<CardPageData>(`/encyclopedia/cards/${gameId}`),
+	})
+}
+
+/**
+ * Every card's effects, for the card list's "By effect" sort. Asked only
+ * once that sort is picked (`enabled`), so nobody else downloads it.
+ */
+export function useCardEffects(enabled: boolean) {
+	return useQuery({
+		queryKey: encyclopediaKeys.cardEffects,
+		enabled,
+		queryFn: () => fetchPage<CardEffectsData>("/encyclopedia/card-effects"),
+		// The game data changes at a release, not while a list is open.
+		staleTime: 30 * 60 * 1000,
 	})
 }

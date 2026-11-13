@@ -299,6 +299,21 @@
 		font-size: 0.75rem;
 		color: var(--color-gray-300);
 	}
+	/* Sorting by an effect: what this card gives for it, under the facts, in
+	   the brand so the eye can run down the order. "+?" when the unique effect
+	   has a part nobody has decoded (notes/card-effect-sort-plan.md). */
+	.enc-tile__effect {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-brand);
+		text-align: center;
+	}
+	.enc-tile__effect abbr {
+		margin-left: 0.25rem;
+		text-decoration: none;
+		color: var(--color-gray-400);
+		cursor: help;
+	}
 	/* "Owned": a tick in the tile's top right corner, clear of the art. */
 	.enc-tile__owned {
 		position: absolute;

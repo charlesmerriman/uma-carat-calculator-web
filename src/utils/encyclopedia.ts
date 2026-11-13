@@ -6,6 +6,7 @@
  */
 
 import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
+import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { Status } from "../components/rankings/kit/StatusPill"
 import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "./cardTypes"
 import { parseApiDate } from "./dateFormat"
@@ -291,4 +292,78 @@ export const GRADE_OPTIONS: { value: string; label: string }[] = ["S", "A", "B",
 export function aptitudeMatches(apt: Record<AptitudeKey, number | null>, key: "any" | AptitudeKey, min: string): boolean {
 	if (key === "any") return true
 	return (apt[key] ?? 0) >= Number(min)
+}
+
+// ── Sorting the card list by an effect (notes/card-effect-sort-plan.md) ──────
+
+/** The card list's sorts: the shared four, and "By effect". */
+export type CardSortOrder = SortOrder | "effect"
+
+export const CARD_SORT_OPTIONS: { value: CardSortOrder; label: string }[] = [
+	...SORT_OPTIONS,
+	{ value: "effect", label: "By effect" },
+]
+
+/** Which limit break the effect sort reads: max, or the player's own copy. */
+export type EffectAt = "max" | "mine"
+
+export const EFFECT_AT_OPTIONS: { value: EffectAt; label: string }[] = [
+	{ value: "max", label: "Max limit break" },
+	{ value: "mine", label: "My limit break" },
+]
+
+/** Friendship Bonus and Specialty Priority: a unique's value multiplies with the card's own (backend support_effects.MULTIPLIED_TYPES). */
+const MULTIPLIED_TYPES = new Set([1, 19])
+
+/** What a card gives for one effect type at one limit break, for the sort and the tile. */
+export interface EffectReading {
+	value: number
+	/** True when the unique effect is unlocked here and has a part nobody has decoded: the value may be higher. */
+	unsure: boolean
+}
+
+/**
+ * What `row` gives for effect `type` at limit break `limitBreak` (0 to 4),
+ * unique effect included once it is unlocked at that limit break's cap.
+ * A unique Friendship Bonus or Specialty Priority multiplies with the card's
+ * own: (100 + own) x (1 + unique / 100) - 100, so own 35 and unique 40 give
+ * 89, not 75 (Daptrius, 2026-11-13). Every other unique value adds. Null when
+ * the card has neither the effect nor a unique value for it.
+ */
+export function effectReading(row: CardEffectsRow, type: number, limitBreak: number): EffectReading | null {
+	const own = row.effects[String(type)]?.[limitBreak] ?? null
+	const unique = row.unique && row.unique.level <= (row.caps[limitBreak] ?? 0) ? row.unique : null
+	const extra = unique?.values[String(type)]
+	const unsure = Boolean(unique?.conditional)
+	if (extra === undefined) return own === null ? null : { value: own, unsure }
+	if (own !== null && MULTIPLIED_TYPES.has(type)) {
+		return { value: Math.floor((100 + own) * (1 + extra / 100) - 100), unsure }
+	}
+	return { value: (own ?? 0) + extra, unsure }
+}
+
+/**
+ * `cards` by what each gives for `type`, highest first. `limitBreakOf`
+ * answers which limit break to read a card at, or null for a card it can't
+ * (a card the player doesn't own, sorting by their own copies): those come
+ * after every card read, and a card without the effect after those, by name.
+ */
+export function sortByEffect<T extends { id: number; name: string }>(
+	cards: T[],
+	type: number,
+	limitBreakOf: (card: T) => number | null,
+	data: CardEffectsData,
+): T[] {
+	const keyOf = (card: T): [number, number] => {
+		const row = data.cards[String(card.id)]
+		const limitBreak = limitBreakOf(card)
+		if (limitBreak === null) return [1, 0]
+		const reading = row ? effectReading(row, type, limitBreak) : null
+		return reading ? [0, reading.value] : [2, 0]
+	}
+	return [...cards].sort((a, b) => {
+		const [bucketA, valueA] = keyOf(a)
+		const [bucketB, valueB] = keyOf(b)
+		return bucketA - bucketB || valueB - valueA || a.name.localeCompare(b.name)
+	})
 }
