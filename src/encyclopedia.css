@@ -801,14 +801,16 @@
 		color: var(--color-gray-400);
 	}
 	/* Four to a row whenever the box has room for "Medium" and its letter
-	   four times over, two only on the narrowest phones. A viewport query sent
-	   every phone to 2x2, even with room to spare (Daptrius, 2026-11-13). */
+	   four times over, else two. A viewport query sent every phone to 2x2, even
+	   with room to spare (Daptrius, 2026-11-13). 25rem is where "Medium" stops
+	   being cut: at 21rem and 23rem a 390px and a 430px phone went to four and
+	   showed "Me..." (seen in the 2026-11-13 feature log's phone shots). */
 	.enc-apt__cells {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.375rem;
 	}
-	@container (min-width: 21rem) {
+	@container (min-width: 25rem) {
 		.enc-apt__cells {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
