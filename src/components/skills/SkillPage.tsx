@@ -26,7 +26,7 @@ import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag,
 } from "../encyclopedia/pieces"
-import { SkillList } from "../encyclopedia/skillRows"
+import { SkillList, UnlockConditions } from "../encyclopedia/skillRows"
 import { usePageTitle } from "../encyclopedia/usePageTitle"
 import { FramedCard } from "../FramedCard"
 import { FramedUma } from "../FramedUma"
@@ -242,14 +242,7 @@ function Evolution({ skill }: { skill: SkillDetailData }) {
 			{evolution.conditions.length > 0 && (
 				<div className="flex flex-col gap-2">
 					<SubHeading>To unlock it</SubHeading>
-					<ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-200">
-						{evolution.conditions.map((condition, index) => (
-							<li key={index}>
-								{condition.text}
-								{condition.is_japanese && <span className="text-gray-400"> (in Japanese, no translation yet)</span>}
-							</li>
-						))}
-					</ul>
+					<UnlockConditions conditions={evolution.conditions} />
 				</div>
 			)}
 		</Section>
@@ -317,6 +310,10 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 				</Section>
 			)}
 
+			{/* Evolution straight after how it works: its unlock conditions were
+			    at the bottom, under the long uma and card lists (Daptrius, 2026-11-13). */}
+			<Evolution skill={skill} />
+
 			{versions.length > 0 && (
 				<Section title="Other versions" count={versions.length}>
 					<SkillList skills={versions} className="enc-ladder" />
@@ -325,7 +322,6 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 
 			<UmaSources rows={skill.sources.umas} />
 			<CardSources rows={skill.sources.cards} />
-			<Evolution skill={skill} />
 
 			{/* No "also known as" line: other_names holds GameTora's names, which
 			    search may match but the site never shows (owner, 2026-11-12). */}
