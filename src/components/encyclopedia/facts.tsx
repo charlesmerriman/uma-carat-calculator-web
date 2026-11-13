@@ -26,7 +26,7 @@ import { bannerStatus, cardLine, isWeakAptitude } from "../../utils/encyclopedia
 import type { BannerLink } from "../../utils/encyclopediaBanners"
 import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 import { APTITUDE_GROUPS, STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
-import { Fact, JpDataNote, JpTag, Section, Switch } from "./pieces"
+import { Fact, JpTag, Section, Switch } from "./pieces"
 
 /**
  * The ten aptitudes as the game groups them: surface, distance, style. Each
@@ -62,13 +62,11 @@ export function AptitudeGrid({ apt }: { apt: Record<AptitudeKey, number | null> 
  * stars when the game lists them, else its lowest. A bar is measured against
  * the tallest stat at ANY star, so stepping up a star visibly fills them.
  */
-export function StatsSection({ id, stars, growth, initialStar, jpData }: {
+export function StatsSection({ id, stars, growth, initialStar }: {
 	id?: string
 	stars: StarStats[]
 	growth: Record<StatKey, number | null>
 	initialStar: number | null
-	/** A JP-only outfit: the numbers are the JP client's, and the section says so. */
-	jpData: boolean
 }) {
 	const [picked, setPicked] = useState<number | null>(null)
 	const star = picked ?? (stars.some((row) => row.star === initialStar) ? initialStar : stars[0]?.star) ?? null
@@ -103,7 +101,6 @@ export function StatsSection({ id, stars, growth, initialStar, jpData }: {
 					</li>
 				))}
 			</ul>
-			{jpData && <JpDataNote />}
 		</Section>
 	)
 }

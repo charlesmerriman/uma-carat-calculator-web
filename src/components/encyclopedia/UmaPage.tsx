@@ -19,7 +19,7 @@ import { umaReleases } from "../../utils/encyclopediaBanners"
 import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
-	Crumbs, EmptyNote, Hero, JapaneseName, JpDataNote, JumpBar, NotFound, OwnedLine, PageSkeleton, Section, Stars,
+	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, Section, Stars,
 	SubHeading, Tag, WhereTag, type JumpItem,
 } from "./pieces"
 import { AptitudeGrid, BannerLinks, CardList, OutfitList, ReleaseFacts, StatsSection } from "./facts"
@@ -118,11 +118,12 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 			{hasApt && (
 				<div className="enc-two">
 					<Section id="aptitudes" title="Aptitudes">
+						{/* No "from the JP game" note under these or the stats: the page's JP tag
+						    already says it (Daptrius, 2026-11-13). */}
 						<AptitudeGrid apt={uma.apt} />
-						{!uma.on_global && <JpDataNote />}
 					</Section>
 					{hasStats && (
-						<StatsSection id="stats" stars={uma.star_stats} growth={uma.growth} initialStar={uma.rarity} jpData={!uma.on_global} />
+						<StatsSection id="stats" stars={uma.star_stats} growth={uma.growth} initialStar={uma.rarity} />
 					)}
 				</div>
 			)}
