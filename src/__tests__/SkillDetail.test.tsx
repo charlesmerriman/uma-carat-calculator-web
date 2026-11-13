@@ -22,9 +22,9 @@ const READABLE: SkillReadable = {
 	}],
 }
 
-/** The shelved skills work shows to guide editors only (useSkillsPreview). */
+/** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
 function asEditor(node: ReactNode, editor = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { guide_editor: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
+	const value = { isLoggedIn: true, status: "ready", account: { early_access: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
@@ -40,8 +40,9 @@ describe("SkillDetail", () => {
 		expect(container).toHaveTextContent(
 			"When: In 3rd place or lower, and one of: (Within 1 length of the runner ahead) or (is_overtake==1)"
 		)
-		expect(container).toHaveTextContent("Does: Velocity +0.35 m/s for 5 s, once per race")
-		expect(container).toHaveTextContent("Rolls against Wit before it fires.")
+		expect(container).toHaveTextContent("Does: Velocity +0.35 m/s")
+		// How long it lasts, how often it fires and the Wit roll are chips under the rows.
+		for (const chip of ["Lasts 5 s", "Once per race", "Rolls Wit check"]) expect(screen.getByText(chip)).toBeInTheDocument()
 		expect(screen.getByText("is_overtake==1").tagName).toBe("CODE")
 	})
 
@@ -68,7 +69,7 @@ describe("SkillDetail", () => {
 		expect(container).not.toHaveTextContent("UmaTL")
 	})
 
-	it("shows a player only what the card always showed: the work is shelved", () => {
+	it("shows a player without early access only what the card always showed", () => {
 		const full = skill({ readable: READABLE, availability: "jp", uses_translation: true,
 			sources: { umas: [{ name: "Special Week", source: "unique", level: null, on_global: true }], uma_count: 1, cards: [], card_count: 0 } })
 		for (const node of [<SkillDetail skill={full} />, asEditor(<SkillDetail skill={full} />, false)]) {

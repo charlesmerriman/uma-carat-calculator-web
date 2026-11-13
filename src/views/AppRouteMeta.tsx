@@ -28,7 +28,9 @@ interface RouteMeta {
 	description: string
 }
 
-type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection" | "/app/rankings"
+type AppPath =
+	| "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection"
+	| "/app/rankings" | "/app/umas" | "/app/cards"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -75,6 +77,31 @@ const META: Record<AppPath, RouteMeta> = {
 		description:
 			"Every Uma Musume skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
 	},
+	// The Encyclopedia's lists: early access only, noindex below, not prerendered.
+	"/app/umas": {
+		title: "Umas",
+		description: "Every Uma Musume trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
+	},
+	"/app/cards": {
+		title: "Support Cards",
+		description: "Every Uma Musume support card on global and in JP, with the skills it teaches and its banners.",
+	},
+}
+
+/**
+ * An Encyclopedia page (/app/umas/<id> and its card and skill twins): one meta
+ * per kind until the page has its data, when it sets the real name itself
+ * (usePageTitle). About 2,650 pages, none prerendered: noindex.
+ */
+const ENCYCLOPEDIA_PAGE_META: Record<"umas" | "cards" | "skills", RouteMeta> = {
+	umas: { title: "Uma", description: "An Uma Musume trainee: aptitudes, stats, skills and banners." },
+	cards: { title: "Support Card", description: "An Uma Musume support card: the skills it teaches and its banners." },
+	skills: { title: "Skill", description: "An Uma Musume skill: when it activates, what it does, and who gives it." },
+}
+
+function encyclopediaPageKind(pathname: string): keyof typeof ENCYCLOPEDIA_PAGE_META | null {
+	const kind = /^\/app\/(umas|cards|skills)\/\d+/.exec(pathname)?.[1]
+	return (kind as keyof typeof ENCYCLOPEDIA_PAGE_META | undefined) ?? null
 }
 
 /**
@@ -102,6 +129,7 @@ function appPathFor(pathname: string): AppPath | "shared" {
 export const AppRouteMeta = () => {
 	const { pathname } = useLocation()
 	const content = useSiteContent()
+	const pageKind = encyclopediaPageKind(pathname)
 	const path = appPathFor(pathname)
 
 	// The Legend Races tab's title and description are the team's to write,
@@ -119,20 +147,24 @@ export const AppRouteMeta = () => {
 			: path === "/app/pvp"
 				? content.page("pvp-guides", { optional: true })
 				: null
-	const meta = page
-		? { title: page.title, description: page.meta_description }
-		: path === "shared"
-			? SHARED_PLAN_META
-			: META[path]
+	const meta = pageKind
+		? ENCYCLOPEDIA_PAGE_META[pageKind]
+		: page
+			? { title: page.title, description: page.meta_description }
+			: path === "shared"
+				? SHARED_PLAN_META
+				: META[path]
 
-	// The Skills page is shelved to guide editors (useSkillsPreview): noindex,
-	// like a shared plan, and not prerendered, until it is picked up again.
-	// The Collection is one player's account, so it never should be, and
-	// Rankings is behind early access.
+	// The Encyclopedia (the Skills page, the uma and card lists and every
+	// page) is supporters first (useSkillsPreview): noindex, like a shared
+	// plan, and not prerendered until it opens to everyone. The Collection is
+	// one player's account, so it never should be, and Rankings is behind
+	// early access.
 	useDocumentMeta(
 		meta.title,
 		meta.description,
-		path === "shared" || path === "/app/skills" || path === "/app/collection" || path === "/app/rankings"
+		pageKind !== null || path === "shared" || path === "/app/skills" || path === "/app/umas" || path === "/app/cards"
+			|| path === "/app/collection" || path === "/app/rankings"
 	)
 	return null
 }

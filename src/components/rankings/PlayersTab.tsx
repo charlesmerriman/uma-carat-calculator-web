@@ -25,6 +25,8 @@ import type { CatalogueUma } from "../../types/pvpTeam"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaName } from "../EncyclopediaLinks"
 import { FramedUma } from "../FramedUma"
 import { formatShare } from "../../utils/guideRankings"
 import { useReportUpdated } from "./rankingsUpdated"
@@ -250,6 +252,7 @@ function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue:
 /** A selector's top picks as chips: the uma's portrait or the card's art, the name, and its share of the picks. */
 function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue: PvpCatalogueIndex }) {
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	if (selector.top.length === 0) return null
 	return (
 		<ul className="flex flex-wrap gap-2">
@@ -263,7 +266,11 @@ function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue:
 					<li key={`${pick.uma ?? "c"}-${pick.card ?? "u"}`} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3">
 						{uma ? <FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
 						<span className="flex min-w-0 flex-col">
-							<b className="truncate text-[13px] font-semibold text-gray-100">{name}</b>
+							<EncyclopediaName
+								href={uma ? hrefs.uma(uma.id) : hrefs.card(card?.id)}
+								name={name}
+								className="truncate text-[13px] font-semibold text-gray-100"
+							/>
 							<span className="text-[11px] tabular-nums text-gray-400">{formatShare(pick.share)} of picks</span>
 						</span>
 					</li>

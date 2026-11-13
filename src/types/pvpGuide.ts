@@ -125,6 +125,8 @@ export interface PvpSkillSources {
 
 export interface PvpSkillRef {
 	id: number
+	/** The game's id: the skill's Encyclopedia page. Absent from an older API and on an editor-built ref. */
+	game_id?: number | null
 	name: string
 	/** The game's own description: what the chip shows on hover. */
 	description: string
@@ -155,6 +157,10 @@ export interface PvpSkillRef {
 	uses_translation?: boolean
 	readable?: SkillReadable
 	sources?: PvpSkillSources
+	/** Skill points; null for a unique. Absent from an API older than the visual overhaul. */
+	cost?: number | null
+	/** The Skills list's type key ("velocity"), worded by SKILL_TYPE_WORDS. Absent like `cost`. */
+	type?: string
 }
 
 export interface PvpStatConfig {

@@ -11,6 +11,8 @@ import type {
 } from "../../types"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
@@ -53,6 +55,7 @@ export const SelectorTargetPicker = ({
 	const isUma = product.product_type === "uma_selector"
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 
 	// The catalogue rules — "(All)" exclusion, inclusive cutoff, newest-first
 	// ordering — live in the hook, shared with the step-up selection picker.
@@ -173,6 +176,19 @@ export const SelectorTargetPicker = ({
 						(options.length === 0 ? "No eligible cards" : `Choose ${poolNoun}`)}
 				</span>
 			</button>
+
+			{/* The pick's Encyclopedia page (early access), in the art's one free
+			    corner, bottom left: the price has the top left, the pencil the
+			    bottom right. A sibling of the tile for the same reason as the
+			    clear button below. top-[6.25rem] is the h-32 art box less the
+			    icon and a 4px inset. */}
+			{selected && (
+				<EncyclopediaIconLink
+					href={isUma ? hrefs.uma(selected.value) : hrefs.card(selected.value)}
+					name={selected.label}
+					className="absolute left-1 top-[6.25rem]"
+				/>
+			)}
 
 			{/* A sibling of the tile, not a child — a button inside a button is
 			    invalid, and the tile is the button now. */}

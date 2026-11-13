@@ -25,6 +25,7 @@ import { Link } from "react-router-dom"
 import { ArrowDown, ArrowUp, Minus, MoreHorizontal, Plus, Search, X } from "lucide-react"
 import { FramedUma } from "../FramedUma"
 import { FramedCard } from "../FramedCard"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { LIMIT_BREAKS, STAR_LEVELS, cardSummary, limitBreakLabel, umaSummary, type RosterView } from "../../utils/roster"
 import {
 	CARD_SORTS,
@@ -410,6 +411,9 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 	onEdit: (changes: RosterChanges) => void
 }) {
 	const { tileRef, buttonRef, close } = useTileEditor(open, onToggle)
+	// Her Encyclopedia page (early access). The tile is the add/edit button, so
+	// the name under it is the link: a link inside a button is invalid.
+	const page = useEncyclopediaHrefs().uma(uma.id)
 	const set = (change: { stars?: number; talent_level?: number }) => onEdit({ umas: [{ uma: uma.id, owned: true, ...change }] })
 	return (
 		<li ref={tileRef} className="relative flex min-w-0 flex-col items-center gap-1.5">
@@ -444,7 +448,17 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 					<AddBadge />
 				)}
 			</button>
-			<span className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight ${row ? "text-gray-100" : "text-gray-400"}`}>{uma.name}</span>
+			{page ? (
+				<Link
+					to={page}
+					title="Open in the Encyclopedia"
+					className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight transition-colors hover:text-brand hover:underline ${row ? "text-gray-100" : "text-gray-400"}`}
+				>
+					{uma.name}
+				</Link>
+			) : (
+				<span className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight ${row ? "text-gray-100" : "text-gray-400"}`}>{uma.name}</span>
+			)}
 			{veterans > 0 && (
 				<Link to={`/app/collection?uma=${uma.id}`} className="-mt-1 text-[11.5px] font-medium text-brand hover:underline">
 					{veterans === 1 ? "1 veteran" : `${veterans} veterans`}
@@ -581,6 +595,8 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 	onEdit: (changes: RosterChanges) => void
 }) {
 	const { tileRef, buttonRef, close } = useTileEditor(open, onToggle)
+	// Its Encyclopedia page, on the name: see UmaTile.
+	const page = useEncyclopediaHrefs().card(card.id)
 	const named = `${card.name}${card.title ? ` (${card.title})` : ""}`
 	const set = (change: { limit_break?: number; spare_copies?: number }) =>
 		onEdit({ support_cards: [{ support_card: card.id, owned: true, ...change }] })
@@ -625,7 +641,13 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 			<span className="flex min-w-0 flex-col">
 				<span className={`flex min-w-0 items-center gap-1.5 text-xs font-semibold ${row ? "text-gray-100" : "text-gray-400"}`}>
 					<span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CARD_TYPE_COLORS[card.card_type ?? ""] ?? "var(--color-gray-500)" }} aria-hidden="true" />
-					<span className="truncate">{card.name}</span>
+					{page ? (
+						<Link to={page} title="Open in the Encyclopedia" className="min-w-0 truncate transition-colors hover:text-brand hover:underline">
+							{card.name}
+						</Link>
+					) : (
+						<span className="truncate">{card.name}</span>
+					)}
 				</span>
 				{card.title && <span className="truncate text-[11px] text-gray-400">{card.title}</span>}
 			</span>
