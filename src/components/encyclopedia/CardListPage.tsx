@@ -9,7 +9,8 @@
  * rarity. The type's word is still there for a screen reader.
  */
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
+import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedCard } from "../FramedCard"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
@@ -21,7 +22,7 @@ import { EmptyNote, GridSkeleton, JpTag, OwnedMark, RarityTag } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
 	OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS, countLine, filterCards,
-	ownedMatches, type OwnedFilter, type RarityFilter, type TypeFilter, type WhereFilter,
+	ownedMatches, values, type OwnedFilter, type RarityFilter, type TypeFilter, type WhereFilter,
 } from "../../utils/encyclopedia"
 
 export const CardListPage = () => (
@@ -32,12 +33,13 @@ export const CardListPage = () => (
 
 const CardListBody = () => {
 	const catalogue = usePvpCatalogue()
-	const [query, setQuery] = useState("")
-	const [type, setType] = useState<TypeFilter>("all")
-	const [rarity, setRarity] = useState<RarityFilter>("all")
-	const [where, setWhere] = useState<WhereFilter>("all")
+	// Remembered for the tab, so a trip to a card's page and back keeps them (useRememberedFilter).
+	const [query, setQuery] = useRememberedFilter<string>("cards:query", "")
+	const [type, setType] = useRememberedFilter<TypeFilter>("cards:type", "all", values(TYPE_OPTIONS))
+	const [rarity, setRarity] = useRememberedFilter<RarityFilter>("cards:rarity", "all", values(RARITY_OPTIONS))
+	const [where, setWhere] = useRememberedFilter<WhereFilter>("cards:where", "all", values(WHERE_OPTIONS))
 	const owned = useOwned()
-	const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
+	const [ownedFilter, setOwnedFilter] = useRememberedFilter<OwnedFilter>("cards:owned", "all", values(OWNED_OPTIONS))
 	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
 	const cards = useMemo(

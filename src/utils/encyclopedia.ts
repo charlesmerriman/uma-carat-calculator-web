@@ -12,6 +12,11 @@ import { parseApiDate } from "./dateFormat"
 
 export const PAGE_CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
+/** A filter's chip values, the `allowed` list a remembered filter is checked against. */
+export function values<T extends string>(options: readonly { value: T }[]): T[] {
+	return options.map((option) => option.value)
+}
+
 export const RARITY_WORDS: Record<number, string> = { 1: "R", 2: "SR", 3: "SSR" }
 /** A rarity's pill, in the game's metals (encyclopedia.css, ".enc-tag--ssr"). */
 export const RARITY_TAG_CLASS: Record<number, string> = { 1: "enc-tag--r", 2: "enc-tag--sr", 3: "enc-tag--ssr" }
