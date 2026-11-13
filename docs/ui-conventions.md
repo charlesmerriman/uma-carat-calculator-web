@@ -2559,6 +2559,11 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
   with the kind as a 3px spine, a faint wash and a `KindPill`. The solid gold and pink
   (`.skill-gold`, `.skill-evolved`) stay on the PvP guides' chips. Its second line says how
   the page's uma or card has it, else its type and owner.
+- **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
+  type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
+  sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole
+  type by prefix, and the page shows a second filter under Type once such a type is picked.
+  The grouping and its evidence are the API's (`skill_types.py`).
 - **Loading is a skeleton** (`PageSkeleton`, `GridSkeleton`, `.enc-skeleton`), and "nothing
   matched" or "didn't load" is `EmptyNote`, a dashed box.
 

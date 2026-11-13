@@ -27,6 +27,18 @@ describe("CareerObjectives", () => {
 		expect(screen.queryByText(/aren't shown yet/)).not.toBeInTheDocument()
 	})
 
+	it("shows a fan count or a placings goal as its sentence, with no grade or placing beside it", () => {
+		// As Daptrius read Oguri Cap's two off the game (board, 2026-11-12).
+		render(<CareerObjectives hidden={0} goals={[
+			{ turn: 24, when: "Junior Year, Late Dec", kind: "fans", race: "Get 3,000 fans", grade: null, need: "" },
+			{ turn: 60, when: "Senior Year, Late Jun", kind: "placings", race: "Place 3rd or better in 2 G1 races", grade: null, need: "" },
+		]} />)
+		expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual([
+			"Late DecGet 3,000 fans",
+			"Late JunPlace 3rd or better in 2 G1 races",
+		])
+	})
+
 	it("says when goals it can't word yet are left out", () => {
 		render(<CareerObjectives goals={GOALS} hidden={2} />)
 		expect(screen.getByText(/2 more goals aren't shown yet/)).toBeInTheDocument()
