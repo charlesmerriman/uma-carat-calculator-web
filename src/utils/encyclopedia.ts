@@ -5,7 +5,7 @@
  * the filters are testable on their own.
  */
 
-import type { CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
+import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { Status } from "../components/rankings/kit/StatusPill"
 import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "./cardTypes"
 import { parseApiDate } from "./dateFormat"
@@ -184,4 +184,111 @@ export function filterCards(
 		.filter((card) => rarity === "all" || String(card.rarity) === rarity)
 		.filter((card) => whereMatches(where, card.on_global))
 		.sort((a, b) => a.name.localeCompare(b.name) || (b.rarity ?? 0) - (a.rarity ?? 0))
+}
+
+// ── Sorting the lists (Daptrius, board "Encyclopedia Filter Sorts", 2026-11-13) ──
+
+export type SortOrder = "name" | "newest" | "oldest" | "game_id"
+
+export const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
+	{ value: "name", label: "Name" },
+	{ value: "newest", label: "Newest" },
+	{ value: "oldest", label: "Oldest" },
+	{ value: "game_id", label: "Game ID" },
+]
+
+/** The Skills list's sorts: a skill has no release date of its own. */
+export const SKILL_SORT_OPTIONS = SORT_OPTIONS.filter((option) => option.value === "name" || option.value === "game_id")
+
+/**
+ * When an outfit or card came out, as epoch ms: its first Global banner (the
+ * site's predicted date for one still to come) and its first JP banner.
+ * Read from the banners /calculator-data already holds, the same place the
+ * pages' release dates come from (encyclopediaBanners.ts), so a list and a
+ * page never disagree.
+ */
+export interface ReleaseDates {
+	global: number | null
+	jp: number | null
+}
+
+/** Every outfit's or card's release dates, by pk, in one pass over the banners. */
+export function releaseDates<B extends { banner_timeline: { start_date: string } }, C extends { id: number; first_jp_date: string | null }>(
+	banners: B[],
+	cardsOf: (banner: B) => C[],
+): Map<number, ReleaseDates> {
+	const dates = new Map<number, ReleaseDates>()
+	for (const banner of banners) {
+		const start = parseApiDate(banner.banner_timeline.start_date)?.getTime() ?? null
+		for (const entry of cardsOf(banner)) {
+			const known = dates.get(entry.id) ?? { global: null, jp: null }
+			if (start !== null && (known.global === null || start < known.global)) known.global = start
+			const jp = entry.first_jp_date ? parseApiDate(entry.first_jp_date)?.getTime() ?? null : null
+			if (jp !== null && (known.jp === null || jp < known.jp)) known.jp = jp
+			dates.set(entry.id, known)
+		}
+	}
+	return dates
+}
+
+/**
+ * `items` in the chosen order, as a new array. Name is A to Z. Game ID is the
+ * game's own numbering. Newest and Oldest go by the Global date; one with no
+ * Global date yet (JP only) comes after every Global one, by its JP date in the
+ * same direction, and one with no date at all comes last, by name. Mixing the
+ * two calendars in one run would file a JP card from 2021 among Global's 2021.
+ */
+export function sortList<T extends { id: number; name: string; game_id?: number | null }>(
+	items: T[],
+	order: SortOrder,
+	dates: Map<number, ReleaseDates> = new Map(),
+): T[] {
+	const byName = (a: T, b: T) => a.name.localeCompare(b.name)
+	if (order === "name") return [...items].sort(byName)
+	if (order === "game_id") return [...items].sort((a, b) => (a.game_id ?? 0) - (b.game_id ?? 0) || byName(a, b))
+	const direction = order === "newest" ? -1 : 1
+	// 0 = has a Global date, 1 = JP only, 2 = no date: the bucket orders first.
+	const keyOf = (item: T): [number, number] => {
+		const date = dates.get(item.id)
+		if (date?.global != null) return [0, date.global]
+		if (date?.jp != null) return [1, date.jp]
+		return [2, 0]
+	}
+	return [...items].sort((a, b) => {
+		const [bucketA, timeA] = keyOf(a)
+		const [bucketB, timeB] = keyOf(b)
+		return bucketA - bucketB || direction * (timeA - timeB) || byName(a, b)
+	})
+}
+
+// ── The Umas list's aptitude filter (same post) ─────────────────────────────
+
+/**
+ * Three rows, one per kind of aptitude, so "Mile C, Dirt D and Front A or
+ * better" is one pick in each. A row is a column (or "any") and the lowest
+ * grade that passes; 1..8 = G..S, as the API sends them.
+ */
+export const APTITUDE_GROUPS: { id: "surface" | "distance" | "style"; label: string; keys: { value: "any" | AptitudeKey; label: string }[] }[] = [
+	{ id: "surface", label: "Surface", keys: [
+		{ value: "any", label: "Any" }, { value: "turf", label: "Turf" }, { value: "dirt", label: "Dirt" },
+	] },
+	{ id: "distance", label: "Distance", keys: [
+		{ value: "any", label: "Any" }, { value: "short", label: "Sprint" }, { value: "mile", label: "Mile" },
+		{ value: "medium", label: "Medium" }, { value: "long", label: "Long" },
+	] },
+	{ id: "style", label: "Style", keys: [
+		{ value: "any", label: "Any" }, { value: "front", label: "Front" }, { value: "pace", label: "Pace" },
+		{ value: "late", label: "Late" }, { value: "end", label: "End" },
+	] },
+]
+
+/** The "at least" grades, best first; the value is the API's number as text (it is remembered as text). */
+export const GRADE_OPTIONS: { value: string; label: string }[] = ["S", "A", "B", "C", "D", "E", "F", "G"].map((letter, index) => ({
+	value: String(8 - index), label: letter,
+}))
+
+/** Does an outfit pass one aptitude row? An unimported (null) aptitude never passes a picked column. */
+export function aptitudeMatches(apt: Record<AptitudeKey, number | null>, key: "any" | AptitudeKey, min: string): boolean {
+	if (key === "any") return true
+	return (apt[key] ?? 0) >= Number(min)
 }

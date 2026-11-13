@@ -199,6 +199,28 @@
 		color: var(--color-gray-100);
 	}
 
+	/* An aptitude row's "at least [A]": quiet words, then a chip-sized select. */
+	.enc-grade {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		margin-left: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	.enc-grade select {
+		padding: 0.125rem 0.375rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 999px;
+		background: var(--color-gray-900);
+		font-size: 0.75rem;
+		color: var(--color-gray-100);
+	}
+	.enc-grade select:focus {
+		border-color: var(--color-brand);
+		outline: none;
+	}
+
 	/* A dot in a kind's own colour, on a filter chip or beside a word. */
 	.enc-dot {
 		width: 0.5rem;

@@ -16,7 +16,7 @@ import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/Encyclopedia
 import { Chips, Count, SearchBox, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
 import { SkillList } from "../encyclopedia/skillRows"
-import { PAGE_CONTAINER, countLine, values } from "../../utils/encyclopedia"
+import { PAGE_CONTAINER, SKILL_SORT_OPTIONS, countLine, sortList, values, type SortOrder } from "../../utils/encyclopedia"
 import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import {
 	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
@@ -72,15 +72,19 @@ const SkillsPageBody = () => {
 	const [colour, setColour] = useRememberedFilter<ColourFilter>("skills:colour", "all", values(COLOUR_FILTERS))
 	const [where, setWhere] = useRememberedFilter<WhereFilter>("skills:where", "all", values(WHERE_FILTERS))
 	const [type, setType] = useRememberedFilter<TypeFilter>("skills:type", "all", TYPE_VALUES)
+	const [sort, setSort] = useRememberedFilter<SortOrder>("skills:sort", "name", values(SKILL_SORT_OPTIONS))
 	const [shown, setShown] = useState(PAGE)
 
 	const rows = useMemo(
-		() => (list.status === "ready" ? filterSkills(list.rows, query, colour, where, type) : []),
-		[list, query, colour, where, type]
+		// By name the API's order stands (it sorts names the way the game does); Game ID re-sorts.
+		() => (list.status === "ready"
+			? (sort === "name" ? filterSkills(list.rows, query, colour, where, type) : sortList(filterSkills(list.rows, query, colour, where, type), sort))
+			: []),
+		[list, query, colour, where, type, sort]
 	)
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colour}|${where}|${type}`
+	const filterKey = `${query}|${colour}|${where}|${type}|${sort}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
@@ -108,6 +112,7 @@ const SkillsPageBody = () => {
 					/>
 				)}
 				<Chips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
+				<Chips label="Sort" options={SKILL_SORT_OPTIONS} value={sort} onChange={setSort} />
 			</Toolbar>
 
 			{list.status === "loading" ? (
