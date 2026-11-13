@@ -35,6 +35,17 @@ export function bannerStatus(start: string, end: string, now: Date): Status {
 	return now.getTime() >= from ? "running" : "upcoming"
 }
 
+/**
+ * A support card effect's value as the game writes it: "16%", "Lv 2", "21".
+ * The format is the API's, and only a confirmed one adds a unit (backend
+ * support_effects.py): an unconfirmed type is the bare number the files hold.
+ */
+export function effectValue(value: number, format: string): string {
+	if (format === "percent") return `${value}%`
+	if (format === "level") return `Lv ${value}`
+	return String(value)
+}
+
 /** An aptitude a player wouldn't race her on: D or worse (the game's 1 to 4 of 8). */
 export function isWeakAptitude(value: number | null): boolean {
 	return value != null && value <= 4

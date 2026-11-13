@@ -2559,6 +2559,12 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
   with the kind as a 3px spine, a faint wash and a `KindPill`. The solid gold and pink
   (`.skill-gold`, `.skill-evolved`) stay on the PvP guides' chips. Its second line says how
   the page's uma or card has it, else its type and owner.
+- **A card's effects** (`CardEffects.tsx`, first on the card page): a Limit break switch, a
+  level stepper, the unique effect, then every effect as a value chip with the game's help text.
+  The API sends one value per level (`effects[].values`, backend `support_effects.py`, which has
+  the growth rule and its check), so the component only looks one up, and `effectValue` writes a
+  unit only for a format the API names. It opens at the level the owner's limit break reaches,
+  derived on each render because the Collection loads after the page.
 - **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
   type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
   sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole

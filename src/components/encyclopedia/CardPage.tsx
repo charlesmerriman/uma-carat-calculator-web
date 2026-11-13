@@ -9,7 +9,8 @@
  * in the Collection. A card with no frameless art yet still draws its
  * bordered picture (FramedCard's own fallback).
  *
- * Its effects at every level come in Phase 2 (PRs 9 and 10).
+ * Its effects at every level are CardEffects (Phase 2), first on the page:
+ * they are what a card is for.
  */
 
 import { useParams } from "react-router-dom"
@@ -26,6 +27,7 @@ import {
 	TypeTag, WhereTag, type JumpItem,
 } from "./pieces"
 import { BannerLinks, CardList, OutfitList, ReleaseFacts } from "./facts"
+import { CardEffects } from "./CardEffects"
 import { SkillList } from "./skillRows"
 import { PAGE_CONTAINER, limitBreakWords } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
@@ -60,7 +62,12 @@ export function CardDetail({ card }: { card: CardPageData }) {
 	// A card on no banner (most Rs, SRs and event SSRs) still has the game's own Global date.
 	const globalDate = releases.globalDate ?? card.released_at
 
+	const effects = card.effects ?? []
+	const caps = card.caps ?? []
+	const hasEffects = effects.length > 0 && caps.length > 0
+
 	const jump = ([
+		hasEffects && { id: "effects", label: "Effects", count: effects.length },
 		card.skills.length > 0 && { id: "skills", label: "Skills", count: card.skills.length },
 		releases.banners.length > 0 && { id: "banners", label: "Banners", count: releases.banners.length },
 		card.outfits.length > 0 && { id: "trainees", label: "As a trainee", count: card.outfits.length },
@@ -96,6 +103,9 @@ export function CardDetail({ card }: { card: CardPageData }) {
 			/>
 			<JumpBar items={jump} />
 
+			{hasEffects && (
+				<CardEffects id="effects" effects={effects} caps={caps} unique={card.unique_effect ?? null} limitBreak={limitBreak} />
+			)}
 			{card.skills.length > 0 && (
 				<Section id="skills" title="Skills" count={card.skills.length}>
 					{hints.length > 0 && (
