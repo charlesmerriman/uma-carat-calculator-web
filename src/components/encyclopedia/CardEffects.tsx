@@ -13,8 +13,8 @@
  * It never adds the unique effect to a row either: a unique Friendship Bonus
  * or Specialty Priority multiplies with the card's own (35 with a unique 40
  * acts like (100 + 35) x 1.4 = 189, so 89, not 75; Daptrius, 2026-11-13). The
- * API names which of the two apply (`unique.multiplies`) and the unique
- * effect says so in a line.
+ * API names which of the two apply (`unique.multiplies`); the page used to
+ * say so in a line under the unique effect, cut as noise (Daptrius, same day).
  *
  * Opens at the level the owner's copy can reach (their limit break's cap)
  * when they own the card, else at the top level.
@@ -94,11 +94,6 @@ export function CardEffects({ id, effects, caps, unique, limitBreak }: {
 					</span>
 					<span className="enc-unique__text">{unique.text}</span>
 					<span className="enc-unique__level">{level < unique.level ? `Unlocks at level ${unique.level}` : `From level ${unique.level}`}</span>
-					{unique.multiplies && unique.multiplies.length > 0 && (
-						<span className="enc-unique__note">
-							Multiplies with the card's own {unique.multiplies.join(" and ")} instead of adding to {unique.multiplies.length > 1 ? "them" : "it"}.
-						</span>
-					)}
 				</div>
 			)}
 

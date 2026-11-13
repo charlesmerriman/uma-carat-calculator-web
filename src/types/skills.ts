@@ -67,6 +67,14 @@ export interface SkillSourceCard {
 type SkillRef = Omit<SkillListRow, "other_names">
 
 /** GET /skills/<game_id>: one skill in full. Its `pair` is the whole row, not an id. */
+/** One thing an evolved skill needs to unlock, as a player reads it (backend views/skills.py unlock_conditions). */
+export interface UnlockCondition {
+	text: string
+	uses_translation: boolean
+	/** No English yet: `text` is the game's Japanese. */
+	is_japanese: boolean
+}
+
 export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
 	pair?: SkillRef | null
 	description: string
@@ -76,7 +84,7 @@ export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
 		from: SkillRef | null
 		/** Each with the outfits that evolve it (`owners`). */
 		into: SkillRef[]
-		conditions: { text: string; uses_translation: boolean; is_japanese: boolean }[]
+		conditions: UnlockCondition[]
 		scenario: number | null
 	}
 	versions: SkillRef[]

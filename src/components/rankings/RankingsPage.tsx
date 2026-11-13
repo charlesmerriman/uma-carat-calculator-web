@@ -24,6 +24,8 @@ import { pinRankings, useRankingsPin, type RankingsSection as Section } from "..
 import { formatDate } from "../../utils/dateFormat"
 import { formatTimeAgo } from "../../utils/relativeDate"
 import { SupportersFirstNote } from "../SupportersFirstNote"
+import { FloatingBackToTop } from "../BackToTop"
+import { useBackToTop } from "../../hooks/useBackToTop"
 import { RankingsSection } from "./RankingsSection"
 import { RankingsUpdatedContext } from "./rankingsUpdated"
 import { parseSection, useSectionBadges, useVisibleSections } from "./sections"
@@ -54,6 +56,8 @@ const RankingsBody = () => {
 	// The open tab's payload time (rankingsUpdated.ts), read against one clock reading.
 	const [updated, setUpdated] = useState<string | null>(null)
 	const [now] = useState(() => Date.now())
+	// The floating arrow, as on the Encyclopedia (Daptrius, 2026-11-13: the long tabs need one on a phone).
+	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 	const open = (next: Section) => {
 		const params = new URLSearchParams(searchParams)
 		// The PvP tab's event belongs to that tab.
@@ -64,6 +68,10 @@ const RankingsBody = () => {
 	}
 
 	return (
+		<>
+		{/* Outside the column, so the anchor adds no gap to its flex stack. */}
+		<div ref={topRef} aria-hidden="true" />
+		<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="80rem" />
 		<div className={CONTAINER}>
 			<header className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
 				<h1 className="font-display mr-auto flex items-center gap-2 text-xl font-bold text-brand">
@@ -107,6 +115,7 @@ const RankingsBody = () => {
 				</p>
 			)}
 		</div>
+		</>
 	)
 }
 

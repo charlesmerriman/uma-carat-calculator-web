@@ -28,7 +28,13 @@ const SPECIAL_WEEK: UmaPageData = {
 	skills: [
 		skill(100011, "Shooting Star", "unique", { rarity: 5, cost: null }),
 		skill(200011, "Gourmand", "awakening", { rarity: 2, level: 3, cost: 180 }),
-		skill(100101111, "Gluttonous Ruler", "evolved", { rarity: 6, is_evolved: true, evolves_from: 200011 }),
+		skill(100101111, "Gluttonous Ruler", "evolved", {
+			rarity: 6, is_evolved: true, evolves_from: 200011,
+			conditions: [
+				{ text: "Reach 600 Stamina.", uses_translation: true, is_japanese: false },
+				{ text: "スキルを3個", uses_translation: false, is_japanese: true },
+			],
+		}),
 	],
 	outfits: [{ id: 8, game_id: 100102, name: "Special Week (Summer)", title: "[Ocean Line Blue]", portrait: null, rarity: 3, on_global: false }],
 	cards: [{ id: 9, game_id: 30001, name: "Special Week", title: "[The Brightest Star]", image: null, card_type: "guts", rarity: 3, on_global: true }],
@@ -77,6 +83,16 @@ describe("UmaPage", () => {
 		expect(screen.getByRole("link", { name: /Gourmand.*level 3.*180 SP/ })).toBeInTheDocument()
 		// An evolution names the gold it grows from.
 		expect(screen.getByRole("link", { name: /Gluttonous Ruler.*from Gourmand/ })).toBeInTheDocument()
+	})
+
+	it("lists each evolution's unlock conditions under it", async () => {
+		renderAt("/app/umas/100101")
+		const evolution = (await screen.findByRole("link", { name: /Gluttonous Ruler/ })).closest("li") as HTMLElement
+		expect(within(evolution).getByText("Reach 600 Stamina.")).toBeInTheDocument()
+		expect(evolution).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
+		// Only an evolution has any: the awakening row has no list under it.
+		const gold = screen.getByRole("link", { name: /^Gourmand/ }).closest("li") as HTMLElement
+		expect(gold.querySelector(".enc-unlock")).toBeNull()
 	})
 
 	it("switches the stats between star levels", async () => {

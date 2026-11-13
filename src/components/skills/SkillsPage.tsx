@@ -16,7 +16,8 @@ import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/Encyclopedia
 import { Chips, Count, SearchBox, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
 import { SkillList } from "../encyclopedia/skillRows"
-import { PAGE_CONTAINER, countLine } from "../../utils/encyclopedia"
+import { PAGE_CONTAINER, SKILL_SORT_OPTIONS, countLine, sortList, values, type SortOrder } from "../../utils/encyclopedia"
+import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import {
 	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref,
 	typeParent, type ColourFilter, type TypeFilter, type WhereFilter,
@@ -37,8 +38,15 @@ const COLOUR_DOTS: Partial<Record<ColourFilter, string>> = {
 	evolved: "#f28cbc",
 }
 const COLOUR_OPTIONS = COLOUR_FILTERS.map((option) => ({ ...option, dot: COLOUR_DOTS[option.value] }))
-// The filter's own name says "Type", so its first chip needn't.
-const TYPE_OPTIONS = TYPE_FILTERS.map(({ value, label }) => ({ value, label: value === "all" ? "Any" : label }))
+// The filter's own name says "Type", so its first chip needn't. No "Unique"
+// chip: the Color filter already has Unique, Inherited and Evolved, and the
+// type only caught the skills the game data gives no icon (Daptrius,
+// 2026-11-13). The type stays in TYPE_FILTERS so a row still has its word.
+const TYPE_OPTIONS = TYPE_FILTERS
+	.filter(({ value }) => value !== "unique")
+	.map(({ value, label }) => ({ value, label: value === "all" ? "Any" : label }))
+// Every value the Type filter can hold: the chips and their sub-types' chips.
+const TYPE_VALUES = TYPE_OPTIONS.flatMap(({ value }) => [value, ...(typeParent(value).subs ?? []).map((sub) => sub.value)])
 
 /**
  * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
@@ -59,19 +67,24 @@ export const SkillsPage = () => {
 
 const SkillsPageBody = () => {
 	const list = useSkillListState()
-	const [query, setQuery] = useState("")
-	const [colour, setColour] = useState<ColourFilter>("all")
-	const [where, setWhere] = useState<WhereFilter>("all")
-	const [type, setType] = useState<TypeFilter>("all")
+	// Remembered for the tab, so a trip to a skill's page and back keeps them (useRememberedFilter).
+	const [query, setQuery] = useRememberedFilter<string>("skills:query", "")
+	const [colour, setColour] = useRememberedFilter<ColourFilter>("skills:colour", "all", values(COLOUR_FILTERS))
+	const [where, setWhere] = useRememberedFilter<WhereFilter>("skills:where", "all", values(WHERE_FILTERS))
+	const [type, setType] = useRememberedFilter<TypeFilter>("skills:type", "all", TYPE_VALUES)
+	const [sort, setSort] = useRememberedFilter<SortOrder>("skills:sort", "name", values(SKILL_SORT_OPTIONS))
 	const [shown, setShown] = useState(PAGE)
 
 	const rows = useMemo(
-		() => (list.status === "ready" ? filterSkills(list.rows, query, colour, where, type) : []),
-		[list, query, colour, where, type]
+		// By name the API's order stands (it sorts names the way the game does); Game ID re-sorts.
+		() => (list.status === "ready"
+			? (sort === "name" ? filterSkills(list.rows, query, colour, where, type) : sortList(filterSkills(list.rows, query, colour, where, type), sort))
+			: []),
+		[list, query, colour, where, type, sort]
 	)
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colour}|${where}|${type}`
+	const filterKey = `${query}|${colour}|${where}|${type}|${sort}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
@@ -85,7 +98,8 @@ const SkillsPageBody = () => {
 				search={<SearchBox label="Search skills" placeholder="Search by skill or uma name..." value={query} onChange={setQuery} />}
 				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
 			>
-				<Chips label="Colour" options={COLOUR_OPTIONS} value={colour} onChange={setColour} />
+				{/* American spelling on screen (Daptrius, 2026-11-13); the code keeps "colour". */}
+				<Chips label="Color" options={COLOUR_OPTIONS} value={colour} onChange={setColour} />
 				{/* The Type chips are the types; a type with sub-types (the greens,
 				    the debuffs) opens a second filter under them once it is picked. */}
 				<Chips label="Type" options={TYPE_OPTIONS} value={typeParent(type).value} onChange={setType} />
@@ -98,6 +112,7 @@ const SkillsPageBody = () => {
 					/>
 				)}
 				<Chips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
+				<Chips label="Sort" options={SKILL_SORT_OPTIONS} value={sort} onChange={setSort} />
 			</Toolbar>
 
 			{list.status === "loading" ? (

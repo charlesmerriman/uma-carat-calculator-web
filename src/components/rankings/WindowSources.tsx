@@ -317,7 +317,7 @@ function PlayersSource({ children }: { children: Render }) {
 	const rows = useMemo(() => {
 		if (state.status !== "ready" || catalogue.status !== "ready") return null
 		const { favourites, previous } = state.payload
-		const favouriteRows = withFill(favourites.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.share, (row, fill) => {
+		const favouriteRows = withFill(favourites.filter((row) => catalogue.umasById.has(row.uma)), (row) => row.people, (row, fill) => {
 			const uma = catalogue.umasById.get(row.uma)
 			return {
 				id: `uma-${row.uma}`,
@@ -325,12 +325,12 @@ function PlayersSource({ children }: { children: Render }) {
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				href: hrefs.uma(row.uma),
 				fill,
-				count: formatShare(row.share),
+				count: row.people.toLocaleString("en-US"),
 			}
 		})
 		return withMovement(favouriteRows, previous?.favourites.map((id) => `uma-${id}`))
 	}, [state, catalogue, oshiIds, hrefs])
-	const base = { context: "Favourite umas", tabName: "Players", settings: [] }
+	const base = { context: "Favorite umas", tabName: "Players", settings: [] }
 	if (catalogue.status === "error") return children({ ...base, status: "error", rows: [] })
 	return children(pending(state, base) ?? (rows ? { ...base, status: "ready", ...rows } : { ...base, status: "loading", rows: [] }))
 }

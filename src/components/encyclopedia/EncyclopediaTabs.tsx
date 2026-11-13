@@ -15,6 +15,8 @@ import { BookOpen, Layers, Users, Zap } from "lucide-react"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { CARD_LIST_PATH, SKILL_LIST_PATH, UMA_LIST_PATH } from "../../utils/encyclopediaRoutes"
 import { SupportersFirstNote } from "../SupportersFirstNote"
+import { FloatingBackToTop } from "../BackToTop"
+import { useBackToTop } from "../../hooks/useBackToTop"
 import { PAGE_CONTAINER } from "../../utils/encyclopedia"
 
 const TABS = [
@@ -45,7 +47,25 @@ export function EncyclopediaGate({ children }: { children: ReactNode }) {
 			</div>
 		)
 	}
-	return <>{children}</>
+	return <WithBackToTop>{children}</WithBackToTop>
+}
+
+/**
+ * The floating "back to top" arrow every Encyclopedia page gets (Daptrius,
+ * board "Mobile UI issues on Encyclopedia", 2026-11-13). It lives here
+ * because every list and every uma, card and skill page renders through the
+ * gate. The anchor is an empty node above the page; useBackToTop measures it
+ * and scrolls it into view, whichever element is the live scroller.
+ */
+function WithBackToTop({ children }: { children: ReactNode }) {
+	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
+	return (
+		<>
+			<div ref={topRef} aria-hidden="true" />
+			{children}
+			<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="72rem" />
+		</>
+	)
 }
 
 export function EncyclopediaTabs() {

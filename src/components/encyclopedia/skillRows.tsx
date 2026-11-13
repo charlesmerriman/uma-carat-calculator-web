@@ -17,7 +17,8 @@
  * "Open its page" of its own and ignores the pointer; a tap follows the link.
  */
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
+import type { UnlockCondition } from "../../types/skills"
 import { Link } from "react-router-dom"
 import { useSkillPage } from "../../services/encyclopediaQueries"
 import { detailToCardSkill, rowToCardSkill } from "../../utils/skillCard"
@@ -58,7 +59,12 @@ function HoverCard({ skill, wanted }: { skill: RowSkill; wanted: boolean }) {
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
-export function SkillRow({ skill, sub }: { skill: RowSkill; sub?: string }) {
+export function SkillRow({ skill, sub, after }: {
+	skill: RowSkill
+	sub?: string
+	/** Drawn under the row, outside its link: an evolution's unlock conditions on an uma page. */
+	after?: ReactNode
+}) {
 	// Fetch on the first hover and keep asking after it closes, so the card
 	// doesn't empty while it fades out.
 	const [wanted, setWanted] = useState(false)
@@ -88,18 +94,41 @@ export function SkillRow({ skill, sub }: { skill: RowSkill; sub?: string }) {
 				{skill.cost != null && <span className="enc-skill__cost">{skill.cost} <small>SP</small></span>}
 			</Link>
 			{popup(<HoverCard skill={skill} wanted={wanted} />, "w-80")}
+			{after}
 		</li>
 	)
 }
 
-export function SkillList<T extends RowSkill>({ skills, sub, className = "enc-skills" }: {
+export function SkillList<T extends RowSkill>({ skills, sub, after, className = "enc-skills" }: {
 	skills: T[]
 	sub?: (skill: T) => string | undefined
+	after?: (skill: T) => ReactNode
 	className?: string
 }) {
 	return (
 		<ul className={className}>
-			{skills.map((skill, index) => <SkillRow key={`${skill.game_id}-${index}`} skill={skill} sub={sub?.(skill)} />)}
+			{skills.map((skill, index) => (
+				<SkillRow key={`${skill.game_id}-${index}`} skill={skill} sub={sub?.(skill)} after={after?.(skill)} />
+			))}
+		</ul>
+	)
+}
+
+/**
+ * What unlocks an evolved skill, one line each: on the skill's page and
+ * under each evolution on an uma's page (Daptrius, 2026-11-13: they were
+ * "hidden at the bottom of a nested menu"). A condition with no English yet
+ * shows the game's Japanese and says so.
+ */
+export function UnlockConditions({ conditions }: { conditions: UnlockCondition[] }) {
+	return (
+		<ul className="enc-unlock">
+			{conditions.map((condition, index) => (
+				<li key={index}>
+					{condition.is_japanese ? <span lang="ja">{condition.text}</span> : condition.text}
+					{condition.is_japanese && <span className="text-gray-400"> (in Japanese, no translation yet)</span>}
+				</li>
+			))}
 		</ul>
 	)
 }

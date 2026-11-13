@@ -6,7 +6,7 @@
  */
 
 import type { AptitudeKey } from "./pvpTeam"
-import type { SkillListRow } from "./skills"
+import type { SkillListRow, UnlockCondition } from "./skills"
 
 export type StatKey = "speed" | "stamina" | "power" | "guts" | "wit"
 
@@ -21,6 +21,12 @@ export interface PageSkill extends Omit<SkillListRow, "other_names"> {
 	level: number | null
 	/** An evolution's base, by game id. */
 	evolves_from: number | null
+	/**
+	 * An evolution's unlock conditions, empty on any other row. Optional only
+	 * because a page fetched before the field shipped may still be in the
+	 * browser's cache; read it as `conditions ?? []`.
+	 */
+	conditions?: UnlockCondition[]
 }
 
 /** Another outfit, on an uma or card page. */
@@ -142,4 +148,24 @@ export interface CardPageData {
 	skills: PageSkill[]
 	outfits: PageOutfit[]
 	cards: PageCard[]
+}
+
+/**
+ * GET /encyclopedia/card-effects: every card's effects, for the card list's
+ * "By effect" sort (backend views/encyclopedia.py, notes/card-effect-sort-plan.md).
+ * Keys are strings because JSON keys are: a card's pk, an effect's type.
+ */
+export interface CardEffectsData {
+	/** Every effect type any card has, in type order, with the game's name. */
+	types: { type: number; name: string; format: string }[]
+	cards: Record<string, CardEffectsRow>
+}
+
+export interface CardEffectsRow {
+	/** The level cap at limit break 0 to 4. */
+	caps: number[]
+	/** An effect type's value at each cap; null before it unlocks. */
+	effects: Record<string, (number | null)[]>
+	/** The unique effect's plain values; `conditional` when a part nobody decoded was left out. */
+	unique: { level: number; values: Record<string, number>; conditional: boolean } | null
 }
