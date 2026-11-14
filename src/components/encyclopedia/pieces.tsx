@@ -16,6 +16,7 @@ import { Check, ChevronRight } from "lucide-react"
 import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { RARITY_TAG_CLASS, RARITY_WORDS } from "../../utils/encyclopedia"
 import { UMA_LIST_PATH } from "../../utils/encyclopediaRoutes"
+import { UMATL_URL } from "../../utils/skillSearch"
 
 // ── Finding your way ────────────────────────────────────────────────────────
 
@@ -262,6 +263,22 @@ export function GridSkeleton({ label, tall = false }: { label: string; tall?: bo
 }
 
 /** One line in a dashed box: nothing matched, or the page didn't load. */
+/**
+ * The UmaTL credit, under a page or list showing any of its English (a title,
+ * a unique effect, a race name). UmaTL's terms ask for credit wherever its
+ * text shows (notes/encyclopedia-jp-fills-plan.md); the API says when a page
+ * does (`uses_translation`).
+ */
+export function TranslationCredit({ what = "Some English text on this page is" }: { what?: string }) {
+	return (
+		<p className="enc-foot">
+			{what}{" "}
+			<a href={UMATL_URL} target="_blank" rel="noreferrer">UmaTL</a>
+			's fan translation, shown until Global has its own.
+		</p>
+	)
+}
+
 export function EmptyNote({ children }: { children: ReactNode }) {
 	return <p className="enc-empty">{children}</p>
 }

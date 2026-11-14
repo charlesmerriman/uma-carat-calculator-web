@@ -24,6 +24,12 @@ import { useState } from "react"
 import { Lock, Minus, Plus } from "lucide-react"
 import type { CardEffect, CardUniqueEffect } from "../../types/encyclopedia"
 import { effectValue } from "../../utils/encyclopedia"
+
+/** "Speed Bonus 1, Skill Point Bonus 1": a unique effect's numbers, which no sentence of the game's states. */
+function uniqueAmounts(unique: CardUniqueEffect): string | null {
+	const parts = unique.amounts ?? []
+	return parts.length > 0 ? parts.map((part) => `${part.name} ${effectValue(part.value, part.format)}`).join(", ") : null
+}
 import { Section, Switch } from "./pieces"
 
 /** The limit break switch's words, by index: 0 to 3, then the game's "MLB" for all four. */
@@ -92,7 +98,10 @@ export function CardEffects({ id, effects, caps, unique, limitBreak }: {
 						{level < unique.level && <Lock aria-hidden="true" />}
 						Unique effect
 					</span>
-					<span className="enc-unique__text">{unique.text}</span>
+					<span className="enc-unique__text">
+						{unique.text}
+						{uniqueAmounts(unique) && <span className="enc-unique__amounts">{uniqueAmounts(unique)}</span>}
+					</span>
 					<span className="enc-unique__level">{level < unique.level ? `Unlocks at level ${unique.level}` : `From level ${unique.level}`}</span>
 				</div>
 			)}

@@ -35,6 +35,8 @@ export interface PageOutfit {
 	game_id: number
 	name: string
 	title: string
+	/** The title is UmaTL's fan translation (Global has none yet). Absent from an older API. */
+	title_translated?: boolean
 	portrait: string | null
 	rarity: number | null
 	on_global: boolean
@@ -46,6 +48,8 @@ export interface PageCard {
 	game_id: number
 	name: string
 	title: string
+	/** The title is UmaTL's fan translation (Global has none yet). Absent from an older API. */
+	title_translated?: boolean
 	image: string | null
 	/** The frameless texture FramedCard draws; null until uploaded, absent from an older API. */
 	image_borderless?: string | null
@@ -75,6 +79,8 @@ export interface UmaPageData {
 	game_id: number
 	name: string
 	title: string
+	/** Some English on the page is UmaTL's fan translation, so the page credits it. */
+	uses_translation?: boolean
 	jp_name: string
 	jp_title: string
 	portrait: string | null
@@ -112,10 +118,25 @@ export interface CardEffect {
 	values: (number | null)[]
 }
 
+/** One part of a unique effect, as the game's numbers (backend support_effects.effect_amounts). */
+export interface CardUniqueAmount {
+	type: number
+	name: string
+	value: number
+	format: "percent" | "number" | "level"
+	/** "Friendship Gauge 80+" when the part needs it, else null. */
+	condition: string | null
+}
+
 /** A card's unique effect: the level that unlocks it and the game's sentence for it. */
 export interface CardUniqueEffect {
 	level: number
+	/** The game's sentence, else UmaTL's (`translated`), else the effects by name. */
 	text: string
+	/** The text is UmaTL's fan translation. Absent from an older API. */
+	translated?: boolean
+	/** Each part's number; null when a part can't be read yet, absent from an older API. */
+	amounts?: CardUniqueAmount[] | null
 	/**
 	 * The card's own effects this one multiplies with instead of adding to
 	 * ("Friendship Bonus", "Specialty Priority"); empty for most cards.
@@ -128,6 +149,8 @@ export interface CardPageData {
 	game_id: number
 	name: string
 	title: string
+	/** Some English on the page is UmaTL's fan translation, so the page credits it. */
+	uses_translation?: boolean
 	jp_name: string
 	jp_title: string
 	image: string | null

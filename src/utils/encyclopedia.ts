@@ -146,7 +146,7 @@ export function filterUmas(umas: CatalogueUma[], query: string, where: WhereFilt
 	const key = searchKey(query)
 	return umas
 		.filter((uma) => uma.game_id != null)
-		.filter((uma) => !key || searchKey(uma.name).includes(key))
+		.filter((uma) => !key || searchKey(`${uma.name} ${uma.title ?? ""}`).includes(key))
 		.filter((uma) => whereMatches(where, uma.on_global))
 		// A blank rarity counts as ★3, the rule Uma.is_three_star follows.
 		.filter((uma) => stars === "all" || String(uma.rarity ?? 3) === stars)

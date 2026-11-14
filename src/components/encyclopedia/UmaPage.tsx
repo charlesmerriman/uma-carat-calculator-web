@@ -20,7 +20,7 @@ import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, Section, Stars,
-	SubHeading, Tag, WhereTag, type JumpItem,
+	SubHeading, Tag, TranslationCredit, WhereTag, type JumpItem,
 } from "./pieces"
 import { AptitudeGrid, BannerLinks, CardList, OutfitList, ReleaseFacts, StatsSection } from "./facts"
 import { SkillList, UnlockConditions } from "./skillRows"
@@ -168,6 +168,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 					<CardList cards={uma.cards} />
 				</Section>
 			)}
+			{uma.uses_translation && <TranslationCredit />}
 		</article>
 	)
 }

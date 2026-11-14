@@ -33,6 +33,8 @@ export interface CatalogueUma {
 	image: string | null
 	/** The borderless art when there is one, else the bordered art. */
 	portrait: string | null
+	/** The outfit's title: Global's or an editor's, else UmaTL's. Search matches it. Absent from an older API. */
+	title?: string
 	rarity: number | null
 	running_style: number | null
 	/** The game's character: two outfits of one character share it. */
