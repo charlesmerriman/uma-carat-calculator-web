@@ -67,6 +67,21 @@ describe("CardPage", () => {
 		expect(await screen.findByText(/^Global /)).toBeInTheDocument()
 	})
 
+	it("credits UmaTL only when the page shows its text", async () => {
+		renderAt("/app/cards/30001")
+		await screen.findByRole("heading", { level: 1, name: "Special Week" })
+		expect(screen.queryByRole("link", { name: "UmaTL" })).not.toBeInTheDocument()
+	})
+
+	it("credits UmaTL under a page that shows its text", async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(
+			JSON.stringify({ ...CARD, title: "[New Outfit]", on_global: false, uses_translation: true }), { status: 200 },
+		)))
+		renderAt("/app/cards/30001")
+		expect(await screen.findByRole("link", { name: "UmaTL" })).toHaveAttribute("href", "https://github.com/UmaTL/hachimi-tl-en")
+		expect(screen.getByText(/fan translation, shown until Global has its own/)).toBeInTheDocument()
+	})
+
 	it("leaves out a section with nothing in it", async () => {
 		renderAt("/app/cards/30001")
 		await screen.findByRole("heading", { level: 1, name: "Special Week" })

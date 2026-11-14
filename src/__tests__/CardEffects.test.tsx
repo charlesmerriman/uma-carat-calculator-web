@@ -66,6 +66,22 @@ describe("CardEffects", () => {
 		expect(screen.getByRole("button", { name: "1 level up" })).toBeDisabled()
 	})
 
+	it("writes a unique effect's numbers under its sentence, in each part's format", () => {
+		// Card 30053's type 101, decoded: the game's sentence names the effects, never the amounts.
+		const gauge = {
+			level: 1, text: "Speed Bonus and Training Effectiveness (Friendship Gauge 80+)",
+			amounts: [
+				{ type: 3, name: "Speed Bonus", value: 1, format: "number" as const, condition: "Friendship Gauge 80+" },
+				{ type: 8, name: "Training Effectiveness", value: 10, format: "percent" as const, condition: "Friendship Gauge 80+" },
+			],
+		}
+		const { container, rerender } = render(<CardEffects effects={EFFECTS} caps={CAPS} unique={gauge} />)
+		expect(container.querySelector(".enc-unique__amounts")).toHaveTextContent("Speed Bonus 1, Training Effectiveness 10%")
+		// A part nobody has decoded: the sentence alone.
+		rerender(<CardEffects effects={EFFECTS} caps={CAPS} unique={{ ...gauge, amounts: null }} />)
+		expect(container.querySelector(".enc-unique__amounts")).toBeNull()
+	})
+
 	it("locks the unique effect below its level", () => {
 		const { container } = render(<CardEffects effects={EFFECTS} caps={CAPS} unique={UNIQUE} limitBreak={0} />)
 		const unique = container.querySelector(".enc-unique") as HTMLElement

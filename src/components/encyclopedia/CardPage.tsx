@@ -24,7 +24,7 @@ import { CARD_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, RarityTag, Section, SubHeading,
-	TypeTag, WhereTag, type JumpItem,
+	TranslationCredit, TypeTag, WhereTag, type JumpItem,
 } from "./pieces"
 import { BannerLinks, CardList, OutfitList, ReleaseFacts } from "./facts"
 import { CardEffects } from "./CardEffects"
@@ -137,6 +137,7 @@ export function CardDetail({ card }: { card: CardPageData }) {
 					<CardList cards={card.cards} />
 				</Section>
 			)}
+			{card.uses_translation && <TranslationCredit />}
 		</article>
 	)
 }

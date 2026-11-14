@@ -34,7 +34,7 @@ const SOURCES: SearchSources = {
 // The PvP catalogue's outfits and cards: early access's Encyclopedia entries.
 const CATALOGUE_UMAS = [
 	{ id: 41, name: "Kitasan Black", game_id: 106801, portrait: "/kita.png", image: null, on_global: true },
-	{ id: 44, name: "Rice Shower", game_id: 103001, portrait: null, image: null, on_global: false },
+	{ id: 44, name: "Rice Shower", game_id: 103001, portrait: null, image: null, on_global: false, title: "[Rose Dreams]" },
 	{ id: 45, name: "No Game Id", game_id: null, portrait: null, image: null, on_global: true },
 ] as unknown as CatalogueUma[]
 const CATALOGUE_CARDS = [
@@ -133,5 +133,10 @@ describe("the site search with early access (the Encyclopedia)", () => {
 
 	it("opens a skill's page", () => {
 		expect(early.find((entry) => entry.kind === "skill")?.href).toBe("/app/skills/200011")
+	})
+
+	it("finds an uma by her outfit's title, Global's or UmaTL's", () => {
+		const searchEarly = createSearcher(early)
+		expect(searchEarly("rose dreams").map((entry) => entry.id)).toContain("uma-44")
 	})
 })

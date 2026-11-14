@@ -272,6 +272,7 @@ const SkillPageBody = () => {
 
 export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 	const credit = skill.uses_translation || skill.evolution.conditions.some((condition) => condition.uses_translation)
+		|| skill.sources.cards.some((card) => card.title_translated)
 	// A unique and its inherited copy are each other's other version, listed the
 	// way a white and its gold are (Daptrius, board "Inherit and Unique
 	// parity", 2026-11-12). The game links them by nothing but the id.

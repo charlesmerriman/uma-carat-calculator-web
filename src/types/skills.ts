@@ -51,6 +51,8 @@ export interface SkillSourceCard {
 	name: string
 	/** "[Fire at My Heels]": what tells one character's cards apart. Absent from an older API. */
 	title?: string
+	/** The title is UmaTL's fan translation, so the page credits it. Absent from an older API. */
+	title_translated?: boolean
 	/** The frameless texture FramedCard draws; null until uploaded, absent from an older API. */
 	image_borderless?: string | null
 	game_id: number | null
