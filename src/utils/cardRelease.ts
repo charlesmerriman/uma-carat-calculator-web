@@ -15,10 +15,12 @@
  * old card look new), the same reading as "New since" (newCardsBetween).
  *
  * A card on no banner at all (the launch roster, starter and event-reward
- * cards) has no date. The catalogue's `on_global` decides it: in the global
- * game today means out ("available"); otherwise it is "unreleased", not
- * pickable, "Not on global yet". An event-reward card therefore turns
- * pickable when the global snapshot that lists it is imported.
+ * cards) has no date. The catalogue's `on_global` decides it: released on
+ * global right now means out ("available"); otherwise it is "unreleased", not
+ * pickable, "Not on global yet". The API decides that (the backend's
+ * global_release.py: a started confirmed banner, or the game's own release
+ * date), so an event-reward card turns pickable on its release day once a
+ * global snapshot that dates it has been imported.
  *
  * Dates are the banners' effective dates, which may be predicted; the tag
  * shows the date so a player can judge.
