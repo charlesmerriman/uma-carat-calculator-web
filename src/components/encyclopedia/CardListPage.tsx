@@ -22,7 +22,7 @@ import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { Chips, Count, SearchBox, SelectFilter, Toolbar } from "./listFilters"
 import { useCardEffects } from "../../services/encyclopediaQueries"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
-import { EmptyNote, GridSkeleton, JpTag, OwnedMark, RarityTag } from "./pieces"
+import { EmptyNote, GridSkeleton, JpTag, OwnedMark, RarityTag, TranslationCredit } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
 	CARD_SORT_OPTIONS, EFFECT_AT_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, TYPE_OPTIONS, WHERE_OPTIONS,
@@ -143,6 +143,8 @@ const CardListBody = () => {
 					})}
 				</ul>
 			)}
+			{/* A JP-only card's title is UmaTL's until Global (or an editor) names it. */}
+			{shown.some((card) => !card.on_global && card.title) && <TranslationCredit what="Some JP only titles are" />}
 		</div>
 	)
 }

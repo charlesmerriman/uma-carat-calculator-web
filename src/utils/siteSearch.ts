@@ -178,7 +178,8 @@ function encyclopediaEntries(
 			id: `uma-${uma.id}`,
 			kind: "uma",
 			title: uma.name,
-			keywords: "",
+			// The outfit's title, Global's or UmaTL's, so a title finds it as a card's does.
+			keywords: uma.title ?? "",
 			image: uma.portrait ?? uma.image,
 			umaId: uma.id,
 			detail: banners ? onBanner("Uma banner", pickBanner(banners, now)).detail : `Uma${where(uma.on_global)}`,
