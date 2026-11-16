@@ -260,7 +260,7 @@ export const StepUpSelectionPicker = ({
 							type="search"
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							placeholder="Search cards…"
+							placeholder={isUma ? "Search umas…" : "Search cards…"}
 							className="w-full rounded border border-gray-600 bg-gray-900 py-2 pl-9 pr-3 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-brand"
 						/>
 					</label>
