@@ -95,6 +95,7 @@ const SkillsPageBody = () => {
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
 			<Toolbar
+				scope="skills"
 				search={<SearchBox label="Search skills" placeholder="Search by skill or uma name..." value={query} onChange={setQuery} />}
 				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
 			>
