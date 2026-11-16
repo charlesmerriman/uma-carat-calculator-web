@@ -198,5 +198,22 @@ describe('BannerRow odds cards', () => {
     expect(screen.getAllByText('Count this banner').length).toBeGreaterThan(0)
     expect(screen.getAllByRole('checkbox', { name: 'Also show' }).length).toBeGreaterThan(0)
   })
-})
 
+  // The desktop drawer is three titled columns (This banner, Odds, Note); a
+  // banner with one rate-up card has no odds to pick, so no Odds column.
+  it('lays the desktop drawer out as This banner, Odds and Note', () => {
+    renderRow(pair)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Odds for Kitasan Black' }).at(-1)!)
+    const headings = screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent)
+    expect(headings).toEqual(['This banner', 'Odds', 'Note'])
+    // The column's select keeps "Odds for" as its name under the "Card" label.
+    expect(screen.getAllByRole('combobox', { name: 'Odds for' }).length).toBeGreaterThan(0)
+  })
+
+  it('leaves the Odds column out on a one-card banner', () => {
+    renderRow(banner([uma(1, 'Kitasan Black')]))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Row options and note' }).at(-1)!)
+    const headings = screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent)
+    expect(headings).toEqual(['This banner', 'Note'])
+  })
+})

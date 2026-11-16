@@ -77,6 +77,8 @@ interface BannerNoteEditorProps {
 	bannerName: string
 	/** Called once, with the trimmed text, when the field loses focus. */
 	onCommit: (note: string) => void
+	/** Fill the desktop drawer's Note column, top to bottom, instead of two rows. */
+	fill?: boolean
 	className?: string
 }
 
@@ -94,6 +96,7 @@ export const BannerNoteEditor = ({
 	note,
 	bannerName,
 	onCommit,
+	fill = false,
 	className = "",
 }: BannerNoteEditorProps) => {
 	const [draft, setDraft] = useState(note)
@@ -117,7 +120,7 @@ export const BannerNoteEditor = ({
 	}
 
 	return (
-		<div className={`flex flex-col gap-1 ${className}`}>
+		<div className={`flex flex-col gap-1 ${fill ? "flex-1" : ""} ${className}`}>
 			<textarea
 				value={draft}
 				onChange={(event) => setDraft(event.target.value)}
@@ -126,7 +129,7 @@ export const BannerNoteEditor = ({
 				rows={2}
 				aria-label={`Note for ${bannerName}`}
 				placeholder="A reminder for yourself. Only you can see it."
-				className="w-full resize-y rounded-md border border-gray-600 bg-gray-900 px-2 py-1.5 text-sm text-gray-100 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
+				className={`w-full ${fill ? "min-h-[4.5rem] flex-1 resize-none" : "resize-y"} rounded-md border border-gray-600 bg-gray-900 px-2 py-1.5 text-sm text-gray-100 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none`}
 			/>
 			{draft.length >= COUNTER_THRESHOLD && (
 				<span className="self-end text-[10px] text-gray-400">

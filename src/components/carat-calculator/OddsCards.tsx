@@ -85,6 +85,12 @@ interface OddsCardsPanelProps {
 	onSecondChange: (id: number | null) => void
 	/** Copies to take the first card to: one of `targetChoices`. */
 	onTargetChange: (copies: number) => void
+	/**
+	 * "inline" is the phone card's sentence row ("Odds for 1x [card]  Also
+	 * show [card]"). "stacked" is the desktop drawer's Odds column: a labelled
+	 * form whose controls match the row options' 36px fields.
+	 */
+	layout?: "inline" | "stacked"
 	className?: string
 }
 
@@ -103,6 +109,7 @@ export const OddsCardsPanel = ({
 	onPrimaryChange,
 	onSecondChange,
 	onTargetChange,
+	layout = "inline",
 	className = "",
 }: OddsCardsPanelProps) => {
 	const others = cards.filter((card) => card.id !== primary.id)
@@ -117,6 +124,85 @@ export const OddsCardsPanel = ({
 			{card.name} ({formatRate(card.rate)})
 		</option>
 	)
+
+	const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-gray-400"
+	const tallSelect =
+		"h-9 min-w-0 w-full rounded-md border border-gray-600 bg-gray-900 px-2 text-sm text-gray-100 focus:border-gray-400 focus:outline-none disabled:opacity-50"
+	const targetGroup = (tall: boolean) => (
+		<div
+			role="radiogroup"
+			aria-label="First card target"
+			aria-disabled={second === null}
+			className={`flex w-max shrink-0 overflow-hidden rounded-md border border-gray-600 ${second === null ? "opacity-50" : ""}`}
+		>
+			{targetChoices.map((choice) => {
+				const chosen = choice.copies === target.copies
+				return (
+					<button
+						key={choice.copies}
+						type="button"
+						role="radio"
+						aria-checked={chosen}
+						disabled={second === null}
+						title={second ? `Take ${primary.name} to ${choice.label} first` : undefined}
+						onClick={() => onTargetChange(choice.copies)}
+						className={`${tall ? "h-9 px-2.5 text-sm" : "px-2 py-1 text-xs"} transition ${
+							chosen ? "bg-brand/20 font-semibold text-brand" : "bg-gray-900 text-gray-300 enabled:hover:bg-gray-700"
+						}`}
+					>
+						{choice.label}
+					</button>
+				)
+			})}
+		</div>
+	)
+	const alsoShow = (
+		<label className={`flex shrink-0 cursor-pointer items-center gap-1.5 ${LABEL}`}>
+			<input
+				type="checkbox"
+				checked={second !== null}
+				onChange={(event) => onSecondChange(event.target.checked ? secondChoice.id : null)}
+				className="h-3.5 w-3.5 shrink-0 accent-[var(--color-brand)]"
+			/>
+			<span>Also show</span>
+		</label>
+	)
+	const secondSelect = (
+		<select
+			value={secondChoice.id}
+			disabled={second === null}
+			aria-label="Second card"
+			onChange={(event) => onSecondChange(Number(event.target.value))}
+			className={tallSelect}
+		>
+			{others.map(option)}
+		</select>
+	)
+	// Two lines reserved either way, so ticking "Also show" never changes the drawer's height.
+	const helper = (
+		<p className="min-h-[2lh] text-[11px] leading-snug text-gray-400">
+			{second
+				? `Each box shows the chance of getting ${primary.name} ${timesWord(target.copies)} and ${second.name} at the indicated level.`
+				: `Each box is the chance of getting ${primary.name} at the indicated level.`}
+		</p>
+	)
+
+	if (layout === "stacked") {
+		return (
+			<div className={`grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 ${className}`}>
+				{/* Under the column's "Odds" heading the row says "Card"; the select keeps "Odds for" as its name. */}
+				<label htmlFor={primarySelectId} className={`cursor-pointer ${LABEL}`}>Card</label>
+				<select id={primarySelectId} aria-label="Odds for" value={primary.id} onChange={(event) => onPrimaryChange(Number(event.target.value))} className={tallSelect}>
+					{cards.map(option)}
+				</select>
+				{alsoShow}
+				{secondSelect}
+				<span className={LABEL}>First card to</span>
+				{targetGroup(true)}
+				<div className="col-span-2">{helper}</div>
+			</div>
+		)
+	}
 
 	return (
 		<div className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-300 ${className}`}>

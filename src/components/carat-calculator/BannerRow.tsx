@@ -460,7 +460,7 @@ export const BannerRow = ({
 		) : undefined
 	const hasOddsCaption = canChooseCards && chosenCards.primary !== null
 
-	const renderOddsPanel = (className: string, show = oddsPanelOpen) =>
+	const renderOddsPanel = (className: string, show = oddsPanelOpen, layout: "inline" | "stacked" = "inline") =>
 		show && canChooseCards && chosenCards.primary ? (
 			<OddsCardsPanel
 				cards={chosenCards.cards}
@@ -471,6 +471,7 @@ export const BannerRow = ({
 				onPrimaryChange={handlePrimaryCardChange}
 				onSecondChange={handleSecondCardChange}
 				onTargetChange={handleTargetChange}
+				layout={layout}
 				className={className}
 			/>
 		) : null
@@ -762,7 +763,8 @@ export const BannerRow = ({
 	const renderNoteEditor = (className: string, desktop = false) =>
 		(desktop ? drawerOpen : noteOpen) && hasBanner ? (
 			<RowOptionsPanel
-				aside={desktop ? renderOddsPanel("", true) : undefined}
+				aside={desktop ? renderOddsPanel("", true, "stacked") : undefined}
+				layout={desktop ? "columns" : "wrap"}
 				plannedBanner={plannedBanner}
 				isStepUp={isStepUp}
 				ticketKind={bannerType === "Support" ? "support" : "uma"}
@@ -777,6 +779,7 @@ export const BannerRow = ({
 					note={note}
 					bannerName={bannerName}
 					onCommit={handleNoteCommit}
+					fill={desktop}
 				/>
 			</RowOptionsPanel>
 		) : null
