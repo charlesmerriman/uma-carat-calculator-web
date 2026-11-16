@@ -64,6 +64,7 @@ const UmaListBody = () => {
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
 			<Toolbar
+				scope="umas"
 				search={<SearchBox label="Search umas" value={query} onChange={setQuery} />}
 				count={catalogue.status === "ready" && <Count>{countLine(umas.length, "uma", "umas")}</Count>}
 			>

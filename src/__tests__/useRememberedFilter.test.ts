@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { useRememberedFilter } from "../hooks/useRememberedFilter"
+import { resetRememberedFilters, useHasRememberedFilters, useRememberedFilter } from "../hooks/useRememberedFilter"
 
 const RARITIES = ["all", "ssr", "sr", "r"] as const
 type Rarity = (typeof RARITIES)[number]
@@ -29,5 +29,23 @@ describe("useRememberedFilter", () => {
 		expect(sessionStorage.getItem("enc-filter:cards:query")).toBe("kitasan")
 		act(() => result.current[1](""))
 		expect(sessionStorage.getItem("enc-filter:cards:query")).toBeNull()
+	})
+
+	it("resets one list's filters and leaves the other lists alone", () => {
+		const rarity = renderHook(() => useRememberedFilter<Rarity>("cards:rarity", "all", RARITIES))
+		const query = renderHook(() => useRememberedFilter<string>("cards:query", ""))
+		const active = renderHook(() => useHasRememberedFilters("cards"))
+		sessionStorage.setItem("enc-filter:umas:query", "oguri")
+		expect(active.result.current).toBe(false)
+
+		act(() => rarity.result.current[1]("sr"))
+		act(() => query.result.current[1]("kitasan"))
+		expect(active.result.current).toBe(true)
+
+		act(() => resetRememberedFilters("cards"))
+		expect(rarity.result.current[0]).toBe("all")
+		expect(query.result.current[0]).toBe("")
+		expect(active.result.current).toBe(false)
+		expect(sessionStorage.getItem("enc-filter:umas:query")).toBe("oguri")
 	})
 })

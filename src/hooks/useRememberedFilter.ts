@@ -79,3 +79,31 @@ export function useRememberedFilter<T extends string>(
 	const setValue = useCallback((next: T) => write(key, next, fallback), [key, fallback])
 	return [value, setValue]
 }
+
+/**
+ * True while any filter in `scope` ("cards", "umas", "skills") holds a
+ * non-default value: write() never stores a default, so "something stored
+ * under the scope" is exactly "something to reset". The board's "Filter
+ * Reset Button" (2026-11-14) shows only then.
+ */
+export function useHasRememberedFilters(scope: string): boolean {
+	return useSyncExternalStore(subscribe, () => hasStored(scope), () => false)
+}
+
+function hasStored(scope: string): boolean {
+	try {
+		return Object.keys(sessionStorage).some((key) => key.startsWith(`${PREFIX}${scope}:`))
+	} catch {
+		return false
+	}
+}
+
+/** Put every filter, sort and the search box in `scope` back to its default. */
+export function resetRememberedFilters(scope: string): void {
+	try {
+		for (const key of Object.keys(sessionStorage)) if (key.startsWith(`${PREFIX}${scope}:`)) sessionStorage.removeItem(key)
+	} catch {
+		// No storage: nothing was remembered, so nothing to reset.
+	}
+	listeners.forEach((listener) => listener())
+}
