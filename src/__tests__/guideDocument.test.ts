@@ -13,6 +13,7 @@ import {
 	rowsByTab,
 	tabForPath,
 	toPayload,
+	uniqueOwners,
 	validateDocument,
 } from "../utils/guideDocument"
 import {
@@ -295,5 +296,21 @@ describe("edits", () => {
 		expect(copied.decks[1].slots).toHaveLength(3)
 		const fromTeam = deckFromCards("late", "Henry's", [{ slot: 1, support_card: 302 }, { slot: 6, support_card: 303 }])
 		expect(fromTeam.slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[1, false], [6, true]])
+	})
+})
+
+describe("uniqueOwners", () => {
+	it("names a unique's outfit on its inherited copy too, the way the API does", () => {
+		const catalogue = {
+			umas: [{ id: 5, name: "Fuji Kiseki", skills: [{ skill: 11, source: "unique" }] }],
+			support_cards: [],
+			skills: [
+				{ id: 11, game_id: 110331, name: "Lights of Vaudeville" },
+				{ id: 12, game_id: 910331, name: "Lights of Vaudeville" },
+				{ id: 13, game_id: 919991, name: "No Unique Here" },
+			],
+		} as unknown as PvpCatalogue
+		const owners = uniqueOwners({ catalogue } as PvpCatalogueIndex)
+		expect([owners.get(11), owners.get(12), owners.get(13)]).toEqual(["Fuji Kiseki", "Fuji Kiseki", undefined])
 	})
 })

@@ -392,6 +392,24 @@ export const BannerRow = ({
 	// banner until a reload, so a trip to another page doesn't fold it away.
 	const viewKey = hasBanner ? `${target.type}-${target.banner.id}` : null
 	const [oddsPanelOpen, setOddsPanelOpen] = useRememberedOpen(viewKey && `odds-${viewKey}`)
+	// The note's flag (the row options strip), here beside the odds flag because
+	// the desktop drawer below reads both. Same rules: view state, never saved.
+	const [noteOpen, setNoteOpen] = useRememberedOpen(viewKey && `note-${viewKey}`)
+
+	// On desktop the row options and the odds picker are ONE drawer under the
+	// row (board "Consolidate Notes and banner odds into one menu", 2026-11-05):
+	// the note button and the odds caption both open it, and either closes it.
+	// The phone card keeps two separate panels, so it keeps the two flags'
+	// own toggles; only the desktop buttons get this one.
+	const drawerOpen = noteOpen || oddsPanelOpen
+	const toggleDrawer = (openThis: (open: boolean) => void) => () => {
+		if (drawerOpen) {
+			setNoteOpen(false)
+			setOddsPanelOpen(false)
+		} else {
+			openThis(true)
+		}
+	}
 
 	// Only a banner with a choice to make gets the control. On a one-card
 	// banner the strip stays exactly as it always was.
@@ -430,19 +448,20 @@ export const BannerRow = ({
 	const pairedTopLabel =
 		canChooseCards && chosenCards.second ? oddsGoal.label : undefined
 
-	const oddsCaption =
+	const renderOddsCaption = (open: boolean, onToggle: () => void) =>
 		canChooseCards && chosenCards.primary ? (
 			<OddsCaption
 				primary={chosenCards.primary}
 				second={chosenCards.second}
 				targetLabel={oddsGoal.label}
-				open={oddsPanelOpen}
-				onToggle={() => setOddsPanelOpen((open) => !open)}
+				open={open}
+				onToggle={onToggle}
 			/>
 		) : undefined
+	const hasOddsCaption = canChooseCards && chosenCards.primary !== null
 
-	const renderOddsPanel = (className: string) =>
-		oddsPanelOpen && canChooseCards && chosenCards.primary ? (
+	const renderOddsPanel = (className: string, show = oddsPanelOpen) =>
+		show && canChooseCards && chosenCards.primary ? (
 			<OddsCardsPanel
 				cards={chosenCards.cards}
 				primary={chosenCards.primary}
@@ -619,7 +638,7 @@ export const BannerRow = ({
 							<MLBChanceDisplay
 								plannedBanner={plannedBanner}
 								values={odds}
-								header={oddsCaption}
+								header={renderOddsCaption(oddsPanelOpen, () => setOddsPanelOpen((open) => !open))}
 								pairedWith={pairedTopLabel}
 							/>
 						)}
@@ -656,7 +675,6 @@ export const BannerRow = ({
 	// Open/closed is view state: it is not part of the plan and must not trigger
 	// a save. One flag drives both form factors, since only one of the card and
 	// the table row is ever visible.
-	const [noteOpen, setNoteOpen] = useRememberedOpen(viewKey && `note-${viewKey}`)
 	const note = plannedBanner.note ?? ""
 
 	const handleNoteCommit = (nextNote: string): void => {
@@ -722,21 +740,29 @@ export const BannerRow = ({
 
 	// Same factory shape as renderReservedInput below: the two form factors
 	// differ only in the button's box, never in its state.
-	const renderNoteButton = (className: string) => (
+	// The desktop row passes the drawer's state and toggle (toggleDrawer above).
+	const renderNoteButton = (
+		className: string,
+		open = noteOpen,
+		onToggle = () => setNoteOpen((value) => !value)
+	) => (
 		<BannerNoteButton
 			note={note}
 			hasOptions={hasRowOptions(plannedBanner)}
-			open={noteOpen}
-			onToggle={() => setNoteOpen((open) => !open)}
+			open={open}
+			onToggle={onToggle}
 			// A row with no banner chosen is never saved (toBannerPayload drops
 			// it), so a note typed on it would vanish on reload.
 			disabled={!hasBanner}
 			className={className}
 		/>
 	)
-	const renderNoteEditor = (className: string) =>
-		noteOpen && hasBanner ? (
+	// `desktop` draws the one drawer: open with either flag, and the odds picker
+	// at the end of the options row instead of in a strip of its own.
+	const renderNoteEditor = (className: string, desktop = false) =>
+		(desktop ? drawerOpen : noteOpen) && hasBanner ? (
 			<RowOptionsPanel
+				aside={desktop ? renderOddsPanel("", true) : undefined}
 				plannedBanner={plannedBanner}
 				isStepUp={isStepUp}
 				ticketKind={bannerType === "Support" ? "support" : "uma"}
@@ -802,6 +828,7 @@ export const BannerRow = ({
 		stepLimit,
 		pullsPerPity: PULLS_PER_PITY_COPY,
 		stepsPerRound: STEPS_PER_ROUND,
+		priorPulls: alreadyMade,
 	})
 
 	// ONE node, rendered by both the phone card and the desktop cell below. They
@@ -985,12 +1012,12 @@ export const BannerRow = ({
 			{/* py-1 when the strip carries its caption line: strip (41px) plus
 			    caption (13px) is 54px, and py-2 leaves only 48px inside this h-16
 			    row. Same trade as the reserved cell's py-0.5 above. */}
-			<div className={`flex items-center justify-center px-2 min-w-0 ${oddsCaption ? "py-1" : "py-2"} ${excluded ? "opacity-50" : ""}`}>
+			<div className={`flex items-center justify-center px-2 min-w-0 ${hasOddsCaption ? "py-1" : "py-2"} ${excluded ? "opacity-50" : ""}`}>
 				{odds ? (
 					<MLBChanceDisplay
 						plannedBanner={plannedBanner}
 						values={odds}
-						header={oddsCaption}
+						header={renderOddsCaption(drawerOpen, toggleDrawer(setOddsPanelOpen))}
 						pairedWith={pairedTopLabel}
 					/>
 				) : (
@@ -1006,7 +1033,9 @@ export const BannerRow = ({
 			    two 40x32px targets. */}
 			<div className="flex flex-col">
 			{renderNoteButton(
-				"flex flex-1 items-center justify-center border-l border-b border-gray-700 bg-gray-800 transition hover:bg-gray-700 cursor-pointer"
+				"flex flex-1 items-center justify-center border-l border-b border-gray-700 bg-gray-800 transition hover:bg-gray-700 cursor-pointer",
+				drawerOpen,
+				toggleDrawer(setNoteOpen)
 			)}
 			<button
 				onClick={handleDeleteBannerClick}
@@ -1019,18 +1048,16 @@ export const BannerRow = ({
 			</div>
 		</div>
 
-		{/* The open note, as a strip under the table row. Outside the grid so the
-		    row keeps its fixed h-16 and the columns stay aligned; the motion.div
-		    around each row (CaratCalculator) animates the height change. */}
-		{/* The odds-card picker, the same way: a strip under the row. */}
+		{/* The drawer (row options, the odds picker and the note), as a strip
+		    under the table row. Outside the grid so the row keeps its fixed h-16
+		    and the columns stay aligned; the motion.div around each row
+		    (CaratCalculator) animates the height change. */}
 		{renderExcludedNotice(
 			"hidden @banner-table:block border-t border-gray-700 bg-gray-800 px-3 py-1.5"
 		)}
-		{renderOddsPanel(
-			"hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2"
-		)}
 		{renderNoteEditor(
-			`hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2 ${ROW_DRAWER_CLASS[bannerType]}`
+			`hidden @banner-table:flex border-t border-gray-700 bg-gray-800 px-3 py-2 ${ROW_DRAWER_CLASS[bannerType]}`,
+			true
 		)}
 		</>
 	)

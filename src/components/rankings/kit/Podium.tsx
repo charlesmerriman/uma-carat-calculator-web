@@ -7,6 +7,7 @@
  */
 
 import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
 import { Movement, type MovementValue } from "./Movement"
 
 export interface PodiumEntry {
@@ -20,6 +21,8 @@ export interface PodiumEntry {
 	/** count / the leader's count. */
 	fill: number
 	movement?: MovementValue | null
+	/** Its Encyclopedia page (useEncyclopediaHrefs): the whole card opens it. */
+	href?: string | null
 }
 
 export function Podium({ entries, kicker, label }: {
@@ -39,7 +42,20 @@ export function Podium({ entries, kicker, label }: {
 							#{index + 1}{kicker ? ` ${kicker}` : ""}
 						</span>
 						<span className="flex min-w-0 items-center gap-1.5">
-							<span className="truncate text-sm font-semibold text-gray-100">{entry.name}</span>
+							{entry.href ? (
+								// A stretched link: its ::after covers the card (the li is
+								// `relative`), so the whole card opens the page and the
+								// link's name is the entry's name alone.
+								<Link
+									to={entry.href}
+									title="Open in the Encyclopedia"
+									className="truncate text-sm font-semibold text-gray-100 transition-colors after:absolute after:inset-0 after:rounded-xl hover:text-brand focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand"
+								>
+									{entry.name}
+								</Link>
+							) : (
+								<span className="truncate text-sm font-semibold text-gray-100">{entry.name}</span>
+							)}
 							<Movement value={entry.movement} />
 						</span>
 						<span className="text-xs tabular-nums text-gray-400">

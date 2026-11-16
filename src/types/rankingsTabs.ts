@@ -56,7 +56,8 @@ export interface PvpRankingsPayload {
 export interface PlayersRankingsPayload {
 	generated_at: string
 	/** Each of the players who use the calculator. */
-	favourites: Array<{ uma: number; share: number }>
+	/** A COUNT of people per uma, the one list that sends one (owner, 2026-11-13; backend rankings_shares.py). */
+	favourites: Array<{ uma: number; people: number }>
 	/** Favourite umas in order at the start of the week, for rank movement (api #193). */
 	previous?: { generated_at: string; favourites: number[] } | null
 	/** `share`: of every player, those who set the rank; a row's, of those who set it. */

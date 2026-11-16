@@ -237,7 +237,7 @@ function WindowBody({ entry, list, onNavigate }: { entry: SectionEntry; list: Wi
 					<ol className="flex flex-col divide-y divide-edge">
 						{rows.map(({ row, place }) => (
 							<li key={row.id}>
-								<RankRow compact place={place} art={row.art} name={row.name} movement={row.movement} fill={row.fill} count={row.count} share={row.share} />
+								<RankRow compact place={place} art={row.art} name={row.name} movement={row.movement} fill={row.fill} count={row.count} share={row.share} href={row.href} />
 							</li>
 						))}
 					</ol>

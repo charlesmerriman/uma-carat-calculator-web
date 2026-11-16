@@ -17,6 +17,8 @@
  */
 
 import { useState, type ReactNode } from "react"
+import { Link } from "react-router-dom"
+import { OpenPageLink } from "../../EncyclopediaLinks"
 import { ChevronDown } from "lucide-react"
 import { Bar, type BarPart } from "./Bar"
 import { Movement, type MovementValue } from "./Movement"
@@ -44,10 +46,17 @@ export interface RankRowProps {
 	compact?: boolean
 	/** A row under a list's floor (fewer races than ranked): muted ink. */
 	muted?: boolean
+	/**
+	 * The uma or card's Encyclopedia page (useEncyclopediaHrefs; null for
+	 * anyone without early access). A row that opens keeps its button and
+	 * starts its breakdown with "Open its page"; a row that doesn't open is
+	 * the link itself.
+	 */
+	href?: string | null
 }
 
 export function RankRow(props: RankRowProps) {
-	const { place, art, name, sub, movement, fill, parts, tone, count, share, detail, compact = false, muted = false } = props
+	const { place, art, name, sub, movement, fill, parts, tone, count, share, detail, compact = false, muted = false, href = null } = props
 	const [open, setOpen] = useState(false)
 	const top = place !== null && place <= 3
 	const nameInk = muted ? "text-gray-400" : "text-gray-100"
@@ -67,8 +76,9 @@ export function RankRow(props: RankRowProps) {
 	)
 
 	if (compact) {
-		return (
-			<div className="grid grid-cols-[1.4rem_auto_minmax(0,1fr)_minmax(4rem,auto)] items-center gap-2 rounded-lg px-1 py-1.5">
+		const compactGrid = "grid grid-cols-[1.4rem_auto_minmax(0,1fr)_minmax(4rem,auto)] items-center gap-2 rounded-lg px-1 py-1.5"
+		const cells = (
+			<>
 				{placeCell}
 				<span className="flex">{art}</span>
 				<span className="flex min-w-0 flex-col gap-1">
@@ -79,7 +89,14 @@ export function RankRow(props: RankRowProps) {
 					<Bar fill={fill} parts={parts} tone={tone} hairline />
 				</span>
 				{countCell}
-			</div>
+			</>
+		)
+		return href ? (
+			<Link to={href} title="Open in the Encyclopedia" className={`${compactGrid} transition hover:bg-gray-700`}>
+				{cells}
+			</Link>
+		) : (
+			<div className={compactGrid}>{cells}</div>
 		)
 	}
 
@@ -109,13 +126,26 @@ export function RankRow(props: RankRowProps) {
 	const grid =
 		"grid w-full grid-cols-[1.4rem_auto_minmax(0,1fr)_minmax(4.5rem,auto)_14px] items-center gap-2.5 rounded-lg px-1 py-[7px] text-left @min-[40rem]:grid-cols-[1.6rem_auto_minmax(0,1.3fr)_minmax(0,1fr)_minmax(4.5rem,auto)_14px]"
 
-	if (!detail) return <div className={grid}>{head}</div>
+	if (!detail) {
+		return href ? (
+			<Link to={href} title="Open in the Encyclopedia" className={`${grid} transition hover:bg-gray-700`}>
+				{head}
+			</Link>
+		) : (
+			<div className={grid}>{head}</div>
+		)
+	}
 	return (
 		<div>
 			<button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className={`${grid} transition hover:bg-gray-700`}>
 				{head}
 			</button>
-			{open && <div className="px-2 pb-3 pt-1 @min-[40rem]:pl-[4.2rem]">{detail}</div>}
+			{open && (
+				<div className="px-2 pb-3 pt-1 @min-[40rem]:pl-[4.2rem]">
+					{href && <OpenPageLink href={href} className="mb-2" />}
+					{detail}
+				</div>
+			)}
 		</div>
 	)
 }

@@ -23,30 +23,39 @@ export function RankedList<T>({ label, title, hint, items, render, itemKey, empt
 	start?: number
 	/** At the footer's left: a legend. */
 	footnote?: ReactNode
-	/** Rows after the ranked ones, never cut (What wins' thin rows). */
-	after?: ReactNode
+	/**
+	 * Unplaced rows drawn after the ranked ones (What wins' thin rows), each a
+	 * keyed <li>. They share the top-`start` cut with `items`: collapsed, the
+	 * list shows `start` rows in total, ranked first, so "Show the top 10"
+	 * means ten rows on screen however many are thin.
+	 */
+	after?: ReactNode[]
 }) {
 	const [all, setAll] = useState(false)
+	const extra = after ?? []
+	const total = items.length + extra.length
 	const shown = all ? items : items.slice(0, start)
+	// Whatever room the ranked rows leave under the cut goes to the thin rows.
+	const shownAfter = all ? extra : extra.slice(0, Math.max(0, start - shown.length))
 	return (
 		<section className="card-panel flex min-w-0 flex-col gap-2 p-3" aria-label={label}>
 			{title && <PanelHead title={label} hint={hint} />}
-			{items.length === 0 && !after ? (
+			{total === 0 ? (
 				<p className="px-1 py-2 text-sm text-gray-400">{empty}</p>
 			) : (
 				<ol className="flex flex-col divide-y divide-edge">
 					{shown.map((item, index) => (
 						<li key={itemKey(item)}>{render(item, index)}</li>
 					))}
-					{after}
+					{shownAfter}
 				</ol>
 			)}
-			{(footnote || items.length > start) && (
+			{(footnote || total > start) && (
 				<div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1 text-[11px]">
-					{footnote ?? <span className="text-gray-400">{all ? `Showing all ${items.length}` : `Showing the top ${start}`}</span>}
-					{items.length > start && (
+					{footnote ?? <span className="text-gray-400">{all ? `Showing all ${total}` : `Showing the top ${start}`}</span>}
+					{total > start && (
 						<button type="button" onClick={() => setAll(!all)} className="ml-auto text-brand transition hover:text-brand/75">
-							{all ? `Show the top ${start}` : `Show all ${items.length}`}
+							{all ? `Show the top ${start}` : `Show all ${total}`}
 						</button>
 					)}
 				</div>

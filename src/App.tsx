@@ -1,4 +1,5 @@
 import "./App.css"
+import "./encyclopedia.css"
 import { useEffect } from "react"
 import { Route, Routes } from "react-router-dom"
 import { Toaster } from "sonner"

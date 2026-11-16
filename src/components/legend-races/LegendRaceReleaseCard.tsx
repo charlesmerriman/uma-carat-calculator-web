@@ -10,6 +10,7 @@ import { arrivalCountdown, rarityGroups } from "../../utils/dailyLegendRaces"
 import { splitOutfit } from "../../utils/umaName"
 import type { DailyLegendRaceRelease, DailyLegendRaceUma } from "../../types"
 import { FramedUma } from "../FramedUma"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 
 const STARS: Record<1 | 2 | 3, string> = { 1: "★", 2: "★★", 3: "★★★" }
 
@@ -24,20 +25,33 @@ const STARS: Record<1 | 2 | 3, string> = { 1: "★", 2: "★★", 3: "★★★"
  * which still stops a long name stretching its row. The full name is the
  * tile's tooltip in case either half does get cut.
  */
-const UmaTile = ({ uma, isOshi }: { uma: DailyLegendRaceUma; isOshi: boolean }) => {
+const UmaTile = ({ uma, isOshi, href }: { uma: DailyLegendRaceUma; isOshi: boolean; href: string | null }) => {
 	const { base, outfit } = splitOutfit(uma.name)
-	return (
-		// A fixed width from `sm` up, where the tiles are a wrapping flex row
-		// (see the list below). On a phone the list is a grid and sizes them.
-		<li title={uma.name} className="flex min-w-0 flex-col items-center gap-1 sm:w-22">
+	const face = (
+		<>
 			{/* The borderless art in the site's frame; a favorite gets the
 			    rainbow one. */}
 			<FramedUma src={uma.portrait ?? uma.image} oshi={isOshi} className="w-full" />
-			<span className="text-center text-xs leading-tight text-gray-300">
+			<span className={`text-center text-xs leading-tight text-gray-300 ${href ? "transition-colors group-hover:text-brand" : ""}`}>
 				<span className="line-clamp-2">{base}</span>
 				{outfit && <span className="line-clamp-2 text-[0.6875rem] text-gray-400">{outfit}</span>}
 				{isOshi && <span className="sr-only"> (your favorite)</span>}
 			</span>
+		</>
+	)
+	// A fixed width from `sm` up, where the tiles are a wrapping flex row
+	// (see the list below). On a phone the list is a grid and sizes them.
+	const tileClass = "flex min-w-0 flex-col items-center gap-1"
+	return (
+		<li title={uma.name} className={`min-w-0 sm:w-22 ${href ? "" : tileClass}`}>
+			{/* Her Encyclopedia page, for early access (useEncyclopediaHrefs). */}
+			{href ? (
+				<Link to={href} className={`group ${tileClass} rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}>
+					{face}
+				</Link>
+			) : (
+				face
+			)}
 		</li>
 	)
 }
@@ -102,6 +116,7 @@ export const LegendRaceReleaseCard = ({
 	const [open, setOpen] = useState(defaultOpen)
 	const expanded = forceOpen || open
 	const umaCount = release.umas.length
+	const hrefs = useEncyclopediaHrefs()
 
 	return (
 		<section
@@ -179,7 +194,7 @@ export const LegendRaceReleaseCard = ({
 							    from one could not size itself to its tiles. */}
 							<ul className="grid grid-cols-[repeat(auto-fill,minmax(4.75rem,1fr))] gap-x-2 gap-y-3 sm:flex sm:flex-wrap">
 								{group.umas.map((uma) => (
-									<UmaTile key={uma.id} uma={uma} isOshi={oshiIds.has(uma.id)} />
+									<UmaTile key={uma.id} uma={uma} isOshi={oshiIds.has(uma.id)} href={hrefs.uma(uma.id)} />
 								))}
 							</ul>
 						</div>

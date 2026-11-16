@@ -15,6 +15,8 @@ import { failureText, useGalleryVote } from "../../../services/galleryQueries"
 import { useSignInPrompt } from "../../../hooks/useSignInPrompt"
 import { useOshiIds } from "../../../hooks/useOshiIds"
 import { FramedUma } from "../../FramedUma"
+import { Link } from "react-router-dom"
+import { useEncyclopediaHrefs } from "../../../hooks/useEncyclopediaHrefs"
 import { ProfileCard } from "./ProfileCard"
 import type { PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
 import type { GalleryPoster, GalleryRow, ProfileCardTarget } from "../../../types/gallery"
@@ -220,17 +222,32 @@ export function GalleryTeam({ members, index }: {
 	members: PvpTeamMember[]
 	index: Pick<PvpCatalogueIndex, "umasById" | "cardsById">
 }) {
+	// Each uma and card opens its Encyclopedia page (early access). The post is
+	// a frozen snapshot of row ids, which the catalogue maps to the game's ids.
+	const hrefs = useEncyclopediaHrefs()
 	return (
 		<ul className="flex flex-col gap-4" aria-label="Team">
 			{POSITIONS.map((position) => {
 				const member = memberAt(members, position)
 				if (!member) return null
 				const uma = index.umasById.get(member.uma)
+				const umaPage = uma ? hrefs.uma(uma.id) : null
+				const umaFace = (
+					<>
+						<UmaPortrait uma={uma} className="w-20" />
+						<span className={`line-clamp-2 text-xs font-medium text-gray-100 ${umaPage ? "transition-colors group-hover:text-brand" : ""}`}>{uma?.name ?? "Unknown uma"}</span>
+					</>
+				)
 				return (
 					<li key={position} className="flex items-start gap-3">
 						<div className="flex w-20 shrink-0 flex-col items-center gap-1 text-center">
-							<UmaPortrait uma={uma} className="w-20" />
-							<span className="line-clamp-2 text-xs font-medium text-gray-100">{uma?.name ?? "Unknown uma"}</span>
+							{umaPage ? (
+								<Link to={umaPage} className="group flex flex-col items-center gap-1 rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-brand">
+									{umaFace}
+								</Link>
+							) : (
+								umaFace
+							)}
 							<StyleChip style={member.style} />
 						</div>
 						<ul
@@ -241,9 +258,9 @@ export function GalleryTeam({ members, index }: {
 								const card = member.cards.find((entry) => entry.slot === slot)
 								const art = card ? index.cardsById.get(card.support_card) : undefined
 								const borrowed = slot === PVP_BORROW_SLOT
-								return [
-									borrowed ? <li key="divider" aria-hidden="true" className="hidden h-full w-0.5 rounded bg-gray-600 sm:block" /> : null,
-									<li key={slot} className="flex min-w-0 flex-col gap-0.5">
+								const cardPage = art ? hrefs.card(art.id) : null
+								const cardFace = (
+									<>
 										{art?.image ? (
 											<img
 												src={art.image}
@@ -254,9 +271,21 @@ export function GalleryTeam({ members, index }: {
 										) : (
 											<div className="aspect-[3/4] w-full rounded-md bg-gray-700" />
 										)}
-										<span className="line-clamp-2 text-[10px] leading-tight text-gray-400" title={art?.name}>
+										<span className={`line-clamp-2 text-[10px] leading-tight text-gray-400 ${cardPage ? "transition-colors group-hover:text-brand" : ""}`} title={art?.name}>
 											{art ? (borrowed ? `${art.name} (borrowed)` : art.name) : "Empty"}
 										</span>
+									</>
+								)
+								return [
+									borrowed ? <li key="divider" aria-hidden="true" className="hidden h-full w-0.5 rounded bg-gray-600 sm:block" /> : null,
+									<li key={slot} className="flex min-w-0 flex-col gap-0.5">
+										{cardPage ? (
+											<Link to={cardPage} className="group flex min-w-0 flex-col gap-0.5 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-brand">
+												{cardFace}
+											</Link>
+										) : (
+											cardFace
+										)}
 									</li>,
 								]
 							})}

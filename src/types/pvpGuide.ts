@@ -22,7 +22,8 @@ export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end
  */
 export type PvpStyleTab = Exclude<PvpStyle, "everyone"> | "all"
 
-export type PvpSkillCategory = "acceleration" | "speed" | "green" | "recovery" | "debuff" | "other"
+/** How a guide groups its skills (backend PvpSkillCategory). `early_mid` and `late` are Henry's of 2026-11-13. */
+export type PvpSkillCategory = "acceleration" | "early_mid" | "late" | "speed" | "green" | "recovery" | "debuff" | "other"
 
 /** Small embedded catalogue objects. Ids are the site's, not the game's. */
 export interface PvpUmaRef {
@@ -125,6 +126,8 @@ export interface PvpSkillSources {
 
 export interface PvpSkillRef {
 	id: number
+	/** The game's id: the skill's Encyclopedia page. Absent from an older API and on an editor-built ref. */
+	game_id?: number | null
 	name: string
 	/** The game's own description: what the chip shows on hover. */
 	description: string
@@ -155,6 +158,10 @@ export interface PvpSkillRef {
 	uses_translation?: boolean
 	readable?: SkillReadable
 	sources?: PvpSkillSources
+	/** Skill points; null for a unique. Absent from an API older than the visual overhaul. */
+	cost?: number | null
+	/** The Skills list's type key ("velocity"), worded by SKILL_TYPE_WORDS. Absent like `cost`. */
+	type?: string
 }
 
 export interface PvpStatConfig {

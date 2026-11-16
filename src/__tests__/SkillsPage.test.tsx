@@ -1,15 +1,15 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { SkillsPage } from "../components/skills/SkillsPage"
 import { clearAuthToken, setAuthToken } from "../services/authToken"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
-import type { SkillDetailData, SkillListRow } from "../types/skills"
-import { filterSkills, parseSkillParam, skillKind } from "../utils/skillSearch"
+import type { SkillListRow } from "../types/skills"
+import { SKILL_TYPE_WORDS, filterSkills, parseSkillParam, skillHref, skillKind, typeParent } from "../utils/skillSearch"
 
-/** The Skills page (/app/skills): the list, search and filters, and one skill opened in full. */
+/** The Skills list (/app/skills): search and filters; a row opens the skill's own page. */
 
 const row = (id: number, name: string, overrides: Partial<SkillListRow> = {}): SkillListRow => ({
 	id, game_id: 200000 + id, name, image: null, rarity: 1, tier: 1, group_id: id, version: "○ white",
@@ -18,57 +18,29 @@ const row = (id: number, name: string, overrides: Partial<SkillListRow> = {}): S
 
 const ROWS = [
 	row(1, "Corner Adept ○", { other_names: ["コーナー巧者○"] }),
-	row(2, "Gourmand", { rarity: 2, version: "◎ gold" }),
+	row(2, "Gourmand", { rarity: 2, version: "◎ gold", cost: 180 }),
 	row(3, "Gluttonous Ruler", { game_id: 100101111, rarity: 6, is_evolved: true, version: "evolved", availability: "announced" }),
 	row(4, "Fan Skill", { availability: "jp", uses_translation: true }),
 ]
 
-const DETAIL: SkillDetailData = {
-	...ROWS[2],
-	description: "Recover endurance mid-race.",
-	readable: {
-		wit_check: true, complete: true,
-		slots: [{ after: { all: [], any: [] }, when: { all: [{ text: "At a random moment mid-race", raw: false }], any: [] },
-			effects: [{ text: "Recovers 5.5% endurance", raw: false }], duration: null, cooldown: "Once per race" }],
-	},
-	sources: {
-		umas: [{ id: 7, name: "Special Week", game_id: 100101, image: null, source: "evolved", level: 3, on_global: true }],
-		cards: [],
-	},
-	evolution: {
-		from: { ...ROWS[1] },
-		into: [],
-		conditions: [
-			{ text: "Attain at least 600 Stamina", uses_translation: false, is_japanese: false },
-			{ text: "スキルを3個", uses_translation: false, is_japanese: true },
-		],
-		scenario: null,
-	},
-	versions: [],
-}
-
-/** The shelved skills work shows to guide editors only (useSkillsPreview). */
-function asEditor(node: ReactNode, editor = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { guide_editor: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
+/** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
+function asReader(node: ReactNode, earlyAccess = true) {
+	const value = { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } } as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
 const fetchMock = vi.fn()
 
-function serve() {
-	fetchMock.mockImplementation((url: string) => {
-		const body = url.endsWith("/skills") ? ROWS : url.endsWith("/skills/100101111") ? DETAIL : null
-		return Promise.resolve(new Response(JSON.stringify(body ?? {}), { status: body ? 200 : 404 }))
-	})
-}
-
-function renderPage(url = "/app/skills", editor = true) {
+function renderPage(url = "/app/skills", earlyAccess = true) {
 	return render(
-		asEditor(
+		asReader(
 			<MemoryRouter initialEntries={[url]}>
-				<SkillsPage />
+				<Routes>
+					<Route path="/app/skills" element={<SkillsPage />} />
+					<Route path="/app/skills/:gameId" element={<p>The skill's own page</p>} />
+				</Routes>
 			</MemoryRouter>,
-			editor
+			earlyAccess
 		)
 	)
 }
@@ -77,7 +49,9 @@ beforeEach(() => {
 	resetSkillListForTests()
 	fetchMock.mockReset()
 	vi.stubGlobal("fetch", fetchMock)
-	serve()
+	fetchMock.mockImplementation((url: string) =>
+		Promise.resolve(url.endsWith("/skills") ? new Response(JSON.stringify(ROWS), { status: 200 }) : new Response("{}", { status: 404 }))
+	)
 })
 
 afterEach(() => {
@@ -93,16 +67,58 @@ describe("filterSkills", () => {
 		expect(filterSkills(ROWS, "", "all", "jp").map((r) => r.name)).toEqual(["Fan Skill"])
 	})
 
+	it("gives inherited copies their own filter, out of White", () => {
+		const rows = [...ROWS, row(5, "Shooting Star", { game_id: 900011, owners: ["Special Week"] })]
+		expect(filterSkills(rows, "", "inherited", "all").map((r) => r.name)).toEqual(["Shooting Star"])
+		expect(filterSkills(rows, "", "white", "all").map((r) => r.name)).not.toContain("Shooting Star")
+	})
+
+	it("filters by type, and finds a unique by its uma's name", () => {
+		const rows = [
+			row(6, "Shooting Star", { game_id: 100011, rarity: 5, type: "unique", owners: ["Special Week"] }),
+			row(7, "Swinging Maestro", { type: "recovery" }),
+		]
+		expect(filterSkills(rows, "", "all", "all", "recovery").map((r) => r.name)).toEqual(["Swinging Maestro"])
+		expect(filterSkills(rows, "special week", "all", "all").map((r) => r.name)).toEqual(["Shooting Star"])
+	})
+
+	it("keeps every sub-type under its type, and one sub-type alone", () => {
+		// Daptrius, 2026-11-12: the greens and the debuffs split into their sub-types.
+		const rows = [
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_stamina" }),
+			row(10, "Stamina Eater", { type: "debuff_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+			row(12, "Pressure", { type: "current_speed" }),
+		]
+		expect(filterSkills(rows, "", "all", "all", "stat").map((r) => r.name)).toEqual(["Right-Handed ○", "Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", "all", "all", "stat_stamina").map((r) => r.name)).toEqual(["Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", "all", "all", "debuff").map((r) => r.name)).toEqual(["Stamina Eater"])
+		// Current speed is a type of its own, out of Speed.
+		expect(filterSkills(rows, "", "all", "all", "velocity").map((r) => r.name)).toEqual(["Straightaway Adept"])
+		expect(filterSkills(rows, "", "all", "all", "current_speed").map((r) => r.name)).toEqual(["Pressure"])
+	})
+
+	it("knows a sub-type's parent, and words it so it can't be read as another type", () => {
+		expect(typeParent("stat_guts").value).toBe("stat")
+		expect(typeParent("velocity").value).toBe("velocity")
+		expect(typeParent("no such type").value).toBe("all")
+		expect(SKILL_TYPE_WORDS.stat_speed).toBe("Stat boost: Speed")
+		expect(SKILL_TYPE_WORDS.debuff_stamina).toBe("Debuff: Stamina drain")
+		expect(SKILL_TYPE_WORDS.velocity).toBe("Speed")
+	})
+
 	it("labels a unique's inherited copy, which shares its name", () => {
 		expect(skillKind({ game_id: 900661, rarity: 1, is_evolved: false })).toBe("inherited")
 		expect(skillKind({ game_id: 200012, rarity: 1, is_evolved: false })).toBe("white")
 		expect(skillKind({ game_id: 100661, rarity: 5, is_evolved: false })).toBe("unique")
 	})
 
-	it("reads only a game id from the link", () => {
+	it("reads only a game id from an old link, and links to the skill's own page", () => {
 		expect(parseSkillParam("100101111")).toBe(100101111)
 		expect(parseSkillParam("abc")).toBeNull()
 		expect(parseSkillParam(null)).toBeNull()
+		expect(skillHref(100101111)).toBe("/app/skills/100101111")
 	})
 })
 
@@ -111,29 +127,19 @@ describe("SkillsPage", () => {
 		renderPage()
 		expect(await screen.findByText("4 skills")).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
+		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
+		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
+		// The Encyclopedia's tab strip, Skills open.
+		expect(screen.getByRole("link", { name: "Skills" })).toHaveAttribute("aria-current", "page")
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
 	})
 
-	it("opens the skill a link names, in full", async () => {
-		const { container } = renderPage("/app/skills?skill=100101111")
-		expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
-		expect(container).toHaveTextContent("When: At a random moment mid-race")
-		expect(container).toHaveTextContent("Does: Recovers 5.5% endurance once per race")
-		expect(container).toHaveTextContent("Coming to global")
-		expect(screen.getByText("Special Week")).toBeInTheDocument()
-		expect(screen.getByText("Evolution, level 3")).toBeInTheDocument()
-		// Its base links to the base's own page (the list has a Gourmand link too).
-		const card = screen.getByRole("article")
-		expect(within(card).getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills?skill=200002")
-		expect(container).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
-	})
-
-	it("says so when a link names no skill", async () => {
-		renderPage("/app/skills?skill=999999")
-		expect(await screen.findByText("There's no skill with that link.")).toBeInTheDocument()
+	it("sends an old ?skill= link to the skill's own page", async () => {
+		renderPage("/app/skills?skill=100101111")
+		expect(await screen.findByText("The skill's own page")).toBeInTheDocument()
 	})
 
 	it("says so when the list doesn't load", async () => {
@@ -143,20 +149,39 @@ describe("SkillsPage", () => {
 		await waitFor(() => expect(screen.getByText(/The skill list didn't load/)).toBeInTheDocument())
 	})
 
-	it("isn't there for anyone but a guide editor while it's shelved", () => {
+	it("tells anyone without early access it's for supporters first", () => {
 		renderPage("/app/skills", false)
-		expect(screen.getByText(/This page isn't here/)).toBeInTheDocument()
+		expect(screen.getByText(/The Encyclopedia is for our Patreon supporters for now/)).toBeInTheDocument()
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
-	it("sends the editor's token: the API answers guide editors only while it's shelved", async () => {
-		setAuthToken("editor-token")
+	it("opens a type's sub-types once the type is picked", async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		expect(screen.queryByRole("group", { name: "Stat boost" })).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Stat boost" }))
+		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		const subs = within(screen.getByRole("group", { name: "Stat boost" }))
+		expect(subs.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(subs.getByRole("button", { name: "Stamina" }))
+		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		// The type's own chip stays lit while one of its sub-types is picked.
+		expect(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Stat boost" })).toHaveAttribute("aria-pressed", "true")
+		expect(screen.getByRole("link", { name: /Longchamp Racecourse/ })).toHaveTextContent("Stat boost: Stamina")
+	})
+
+	it("sends the token: the API answers early access only", async () => {
+		setAuthToken("reader-token")
 		try {
-			renderPage("/app/skills?skill=100101111")
-			expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
+			renderPage()
+			expect(await screen.findByText("4 skills")).toBeInTheDocument()
 			const sent = fetchMock.mock.calls.map(([url, init]) => [String(url).replace(/^.*(\/skills.*)$/, "$1"), init?.headers])
-			expect(sent).toContainEqual(["/skills", { Authorization: "Token editor-token" }])
-			expect(sent).toContainEqual(["/skills/100101111", { Authorization: "Token editor-token" }])
+			expect(sent).toContainEqual(["/skills", { Authorization: "Token reader-token" }])
 		} finally {
 			clearAuthToken()
 		}

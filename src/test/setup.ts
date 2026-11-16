@@ -1,8 +1,10 @@
 import '@testing-library/jest-dom'
 import { afterEach } from 'vitest'
 import { forgetRememberedOpen } from '../hooks/useRememberedOpen'
+import { forgetRememberedFilters } from '../hooks/useRememberedFilter'
 
 afterEach(forgetRememberedOpen)
+afterEach(forgetRememberedFilters)
 
 // jsdom doesn't implement matchMedia, which some components (e.g. IncomeForm,
 // which reads the mobile breakpoint once to pick its default collapsed state)

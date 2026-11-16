@@ -175,4 +175,28 @@ describe('BannerRow odds cards', () => {
     expect(screen.getAllByRole('button', { name: 'Odds for Kitasan Black' }).length)
       .toBeGreaterThan(0)
   })
+
+  // Desktop (the last copy of each control; the phone card renders first): the
+  // row options and the odds picker are one drawer, and either button opens or
+  // closes the whole of it.
+  it('opens one drawer with the options and the odds from either desktop button', () => {
+    renderRow(pair)
+    const caption = () => screen.getAllByRole('button', { name: 'Odds for Kitasan Black' }).at(-1)!
+    const noteButton = () => screen.getAllByRole('button', { name: 'Row options and note' }).at(-1)!
+    expect(screen.queryByText('Count this banner')).toBeNull()
+
+    fireEvent.click(caption())
+    expect(screen.getAllByText('Count this banner').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('checkbox', { name: 'Also show' }).length).toBeGreaterThan(0)
+    expect(noteButton().getAttribute('aria-expanded')).toBe('true')
+
+    fireEvent.click(noteButton())
+    expect(screen.queryByText('Count this banner')).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: 'Also show' })).toBeNull()
+
+    fireEvent.click(noteButton())
+    expect(screen.getAllByText('Count this banner').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('checkbox', { name: 'Also show' }).length).toBeGreaterThan(0)
+  })
 })
+

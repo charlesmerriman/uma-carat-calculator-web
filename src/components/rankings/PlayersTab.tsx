@@ -25,6 +25,8 @@ import type { CatalogueUma } from "../../types/pvpTeam"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaName } from "../EncyclopediaLinks"
 import { FramedUma } from "../FramedUma"
 import { formatShare } from "../../utils/guideRankings"
 import { useReportUpdated } from "./rankingsUpdated"
@@ -64,7 +66,8 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 	useReportUpdated(payload.generated_at)
 	const favourites = payload.favourites.flatMap((row) => {
 		const uma = catalogue.umasById.get(row.uma)
-		return uma ? [{ uma, count: formatShare(row.share) }] : []
+		// How many players picked her, as a number (owner, 2026-11-13): the shares were nearly all "<1%".
+		return uma ? [{ uma, count: row.people.toLocaleString("en-US") }] : []
 	})
 	const trials = payload.ranks.find((rank) => rank.label === "Team Trials")
 	const topClass = trials?.rows.reduce<(typeof trials.rows)[number] | null>((best, row) => (best && best.share >= row.share ? best : row), null)
@@ -109,11 +112,11 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 					</Panel>
 				</div>
 				<div className="flex min-w-0 flex-col gap-3">
-					<Panel title="Favourite umas" hint="Share of players who picked her as a favourite. The first favourite is the account picture.">
+					<Panel title="Favorite umas" hint="How many players picked her as a favorite. The first favorite is the account picture.">
 						{favourites.length === 0 ? (
-							<p className="px-1 text-xs text-gray-400">Nobody has picked a favourite yet.</p>
+							<p className="px-1 text-xs text-gray-400">Nobody has picked a favorite yet.</p>
 						) : (
-							<Wall label="Favourite umas, most picked first" entries={favourites} />
+							<Wall label="Favorite umas, most picked first" entries={favourites} />
 						)}
 					</Panel>
 					{payload.budget && payload.budget.length > 0 && <Budget rows={payload.budget} />}
@@ -250,6 +253,7 @@ function Selectors({ selectors, catalogue }: { selectors: Selector[]; catalogue:
 /** A selector's top picks as chips: the uma's portrait or the card's art, the name, and its share of the picks. */
 function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue: PvpCatalogueIndex }) {
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	if (selector.top.length === 0) return null
 	return (
 		<ul className="flex flex-wrap gap-2">
@@ -263,7 +267,11 @@ function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue:
 					<li key={`${pick.uma ?? "c"}-${pick.card ?? "u"}`} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3">
 						{uma ? <FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
 						<span className="flex min-w-0 flex-col">
-							<b className="truncate text-[13px] font-semibold text-gray-100">{name}</b>
+							<EncyclopediaName
+								href={uma ? hrefs.uma(uma.id) : hrefs.card(card?.id)}
+								name={name}
+								className="truncate text-[13px] font-semibold text-gray-100"
+							/>
 							<span className="text-[11px] tabular-nums text-gray-400">{formatShare(pick.share)} of picks</span>
 						</span>
 					</li>

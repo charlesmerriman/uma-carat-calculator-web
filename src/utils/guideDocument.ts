@@ -30,7 +30,7 @@ import type {
 import type { PvpCatalogueIndex } from "../hooks/usePvpCatalogue"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { Scenario } from "../types"
-import { SKILL_CATEGORY_LABELS, STYLE_LABELS, STYLE_ORDER } from "./pvpGuide"
+import { SKILL_CATEGORY_LABELS, SKILL_CATEGORY_ORDER, STYLE_LABELS, STYLE_ORDER } from "./pvpGuide"
 
 export const DECK_SLOTS = 6
 /** The editor's tab for everything that is not a running style. */
@@ -145,10 +145,15 @@ function cardRef(card: CatalogueSupportCard): PvpSupportCardRef {
 	}
 }
 
+/** A unique's inherited copy is its game id with the leading 1 made a 9 (100011 -> 900011). */
+const INHERITED_OFFSET = 800000
+
 /**
  * Which outfit each unique skill belongs to, read off the catalogue's uma
  * skill links (source "unique"), the same answer the API's `unique_of`
- * gives. The lowest uma id wins a tie, as on the server.
+ * gives. The lowest uma id wins a tie, as on the server. A unique's inherited
+ * copy names the same outfit (Daptrius, 2026-11-12), matched by game id as
+ * the server matches it.
  */
 export function uniqueOwners(index: PvpCatalogueIndex): Map<number, string> {
 	const owners = new Map<number, string>()
@@ -157,6 +162,14 @@ export function uniqueOwners(index: PvpCatalogueIndex): Map<number, string> {
 		for (const link of uma.skills) {
 			if (link.source === "unique" && !owners.has(link.skill)) owners.set(link.skill, uma.name)
 		}
+	}
+	const idByGameId = new Map(index.catalogue.skills.filter((skill) => skill.game_id != null).map((skill) => [skill.game_id, skill.id]))
+	for (const skill of index.catalogue.skills) {
+		const gameId = skill.game_id ?? 0
+		if (gameId < 900000 || gameId >= 1000000 || owners.has(skill.id)) continue
+		const uniqueId = idByGameId.get(gameId - INHERITED_OFFSET)
+		const owner = uniqueId === undefined ? undefined : owners.get(uniqueId)
+		if (owner) owners.set(skill.id, owner)
 	}
 	return owners
 }
@@ -507,7 +520,8 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 }
 
 /** The category a "+ Add skill" button under a group starts the picker on. */
-export const CATEGORY_CHOICES: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
+// Every group, in the reader's order: the editor offers them all (owner, 2026-11-13).
+export const CATEGORY_CHOICES: PvpSkillCategory[] = SKILL_CATEGORY_ORDER
 
 /** A skill row's tier, as the pickers and dialogs offer it. */
 export const TIER_CHOICES: Array<{ value: number | null; label: string }> = [

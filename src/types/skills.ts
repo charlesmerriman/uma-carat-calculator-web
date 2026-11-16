@@ -24,6 +24,14 @@ export interface SkillListRow {
 	uses_translation: boolean
 	/** Every other name it answers to (translation, old names, Japanese), for search. */
 	other_names: string[]
+	/** Skill points; null for a unique. Absent from an API older than the Encyclopedia. */
+	cost?: number | null
+	/** The Type filter's key, from the skill's icon family (backend skill_types.py). */
+	type?: string
+	/** The outfits a unique, its inherited copy or an evolution belongs to. */
+	owners?: string[]
+	/** A unique's inherited copy, or the copy's unique, by game id. */
+	pair?: number | null
 }
 
 export interface SkillSourceUma {
@@ -41,23 +49,45 @@ export interface SkillSourceUma {
 export interface SkillSourceCard {
 	id: number
 	name: string
+	/** "[Fire at My Heels]": what tells one character's cards apart. Absent from an older API. */
+	title?: string
+	/** The title is UmaTL's fan translation, so the page credits it. Absent from an older API. */
+	title_translated?: boolean
+	/** The frameless texture FramedCard draws; null until uploaded, absent from an older API. */
+	image_borderless?: string | null
 	game_id: number | null
 	image: string | null
 	/** hint / event */
 	source: string
 	on_global: boolean
+	/** 1 R, 2 SR, 3 SSR, for "Hide R". Absent from an API older than the Encyclopedia. */
+	rarity?: number | null
+	card_type?: string | null
 }
 
-/** GET /skills/<game_id>: one skill in full. */
-export interface SkillDetailData extends SkillListRow {
+/** A skill named on another skill's page: a list row without its search names. */
+type SkillRef = Omit<SkillListRow, "other_names">
+
+/** GET /skills/<game_id>: one skill in full. Its `pair` is the whole row, not an id. */
+/** One thing an evolved skill needs to unlock, as a player reads it (backend views/skills.py unlock_conditions). */
+export interface UnlockCondition {
+	text: string
+	uses_translation: boolean
+	/** No English yet: `text` is the game's Japanese. */
+	is_japanese: boolean
+}
+
+export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
+	pair?: SkillRef | null
 	description: string
 	readable: SkillReadable
 	sources: { umas: SkillSourceUma[]; cards: SkillSourceCard[] }
 	evolution: {
-		from: Omit<SkillListRow, "other_names"> | null
-		into: Omit<SkillListRow, "other_names">[]
-		conditions: { text: string; uses_translation: boolean; is_japanese: boolean }[]
+		from: SkillRef | null
+		/** Each with the outfits that evolve it (`owners`). */
+		into: SkillRef[]
+		conditions: UnlockCondition[]
 		scenario: number | null
 	}
-	versions: Omit<SkillListRow, "other_names">[]
+	versions: SkillRef[]
 }

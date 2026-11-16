@@ -180,7 +180,9 @@ describe('AuthProvider', () => {
 			renderProvider()
 			await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('ready'))
 
-			expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(true)
+			// The class is set by an effect one commit after "ready" renders, so
+			// a slow runner can look before it lands: wait on the class itself.
+			await waitFor(() => expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(true))
 			expect(localStorage.getItem(AD_FREE_STORAGE_KEY)).toBe('true')
 		})
 
@@ -210,7 +212,8 @@ describe('AuthProvider', () => {
 			renderProvider()
 			await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('ready'))
 
-			expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(false)
+			// One effect after "ready", as above.
+			await waitFor(() => expect(document.body.classList.contains(AD_FREE_BODY_CLASS)).toBe(false))
 			expect(localStorage.getItem(AD_FREE_STORAGE_KEY)).toBeNull()
 		})
 

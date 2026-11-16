@@ -11,6 +11,8 @@ import type {
 } from "../../types"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
@@ -53,6 +55,7 @@ export const SelectorTargetPicker = ({
 	const isUma = product.product_type === "uma_selector"
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 
 	// The catalogue rules — "(All)" exclusion, inclusive cutoff, newest-first
 	// ordering — live in the hook, shared with the step-up selection picker.
@@ -174,6 +177,19 @@ export const SelectorTargetPicker = ({
 				</span>
 			</button>
 
+			{/* The pick's Encyclopedia page (early access), in the art's one free
+			    corner, bottom left: the price has the top left, the pencil the
+			    bottom right. A sibling of the tile for the same reason as the
+			    clear button below. top-[6.25rem] is the h-32 art box less the
+			    icon and a 4px inset. */}
+			{selected && (
+				<EncyclopediaIconLink
+					href={isUma ? hrefs.uma(selected.value) : hrefs.card(selected.value)}
+					name={selected.label}
+					className="absolute left-1 top-[6.25rem]"
+				/>
+			)}
+
 			{/* A sibling of the tile, not a child — a button inside a button is
 			    invalid, and the tile is the button now. */}
 			{selected && !disabled && (
@@ -205,7 +221,7 @@ export const SelectorTargetPicker = ({
 								<h5 className="text-base font-semibold text-gray-100">
 									Choose {isUma ? "an Uma" : "a support card"}
 								</h5>
-								<p className="text-xs text-gray-400">{options.length} eligible cards</p>
+								<p className="text-xs text-gray-400">{options.length} eligible {isUma ? "umas" : "cards"}</p>
 							</div>
 							<label className="relative w-full sm:w-64">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -214,7 +230,7 @@ export const SelectorTargetPicker = ({
 									type="search"
 									value={search}
 									onChange={(event) => setSearch(event.target.value)}
-									placeholder="Search cards…"
+									placeholder={isUma ? "Search umas…" : "Search cards…"}
 									className="w-full rounded border border-gray-600 bg-gray-900 py-2 pl-9 pr-3 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-brand"
 								/>
 							</label>

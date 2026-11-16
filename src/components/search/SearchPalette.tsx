@@ -106,6 +106,8 @@ export default function SearchPalette({ onClose }: { onClose: () => void }) {
 			scenarios: inApp?.scenarioData ?? payload?.scenario_data ?? [],
 			campaigns: inApp?.anniversaryEventData ?? payload?.anniversary_event_data ?? [],
 			skills: catalogue?.skills ?? [],
+			umas: catalogue?.umas,
+			cards: catalogue?.support_cards,
 		}
 		return createSearcher(buildSearchEntries(sources, new Date(), earlyAccess))
 	}, [inApp, payload, catalogue, earlyAccess])

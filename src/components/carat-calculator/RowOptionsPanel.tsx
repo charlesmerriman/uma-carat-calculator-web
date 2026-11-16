@@ -49,6 +49,8 @@ interface RowOptionsPanelProps {
 	onSetPulls: (pulls: number) => void
 	/** The note editor, last in the panel. */
 	children?: ReactNode
+	/** At the end of the options row: the odds picker, on the desktop drawer (BannerRow). */
+	aside?: ReactNode
 	className?: string
 }
 
@@ -71,6 +73,7 @@ export const RowOptionsPanel = ({
 	onChange,
 	onSetPulls,
 	children,
+	aside,
 	className = "",
 }: RowOptionsPanelProps) => {
 	const ticketLimit = rowTicketLimit(plannedBanner)
@@ -188,6 +191,8 @@ export const RowOptionsPanel = ({
 						</div>
 					</div>
 				)}
+
+				{aside && <div className="ml-auto self-center">{aside}</div>}
 			</div>
 			{children}
 		</div>
