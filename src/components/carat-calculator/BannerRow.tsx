@@ -828,6 +828,7 @@ export const BannerRow = ({
 		stepLimit,
 		pullsPerPity: PULLS_PER_PITY_COPY,
 		stepsPerRound: STEPS_PER_ROUND,
+		priorPulls: alreadyMade,
 	})
 
 	// ONE node, rendered by both the phone card and the desktop cell below. They

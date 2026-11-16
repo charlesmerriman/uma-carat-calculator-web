@@ -81,11 +81,19 @@ export function buildCountChips({
 	stepLimit,
 	pullsPerPity,
 	stepsPerRound,
+	priorPulls = 0,
 }: {
 	rowType: BannerRowType
 	stepLimit: number
 	pullsPerPity: number
 	stepsPerRound: number
+	/**
+	 * Pulls already made on the banner (the row's pulls_already_made). The
+	 * pity counter is the banner's whole count, so "Next pity" lands the
+	 * planned pulls where made + planned reaches the next threshold: 20 made
+	 * means 180 planned, the same number getPullCountStatus turns green.
+	 */
+	priorPulls?: number
 }): CountChipSet {
 	// Never below zero, matching NumberField's own floor — a "-200" on a row
 	// holding 10 lands on 0 rather than refusing to move.
@@ -135,6 +143,7 @@ export function buildCountChips({
 		}
 	}
 
+	const prior = Math.max(0, priorPulls)
 	// Defined for both pull kinds; the fallback only satisfies the type.
 	const coarse = coarsePullDelta(rowType, pullsPerPity) ?? pullsPerPity
 	const coarseTitle = coarse === pullsPerPity ? "One pity copy" : "Half a pity"
@@ -159,8 +168,10 @@ export function buildCountChips({
 		presets: [
 			{
 				label: "Next pity",
-				title: `Round up to the next pity threshold (a multiple of ${pullsPerPity} pulls)`,
-				next: toNextMultiple(pullsPerPity),
+				title: prior > 0
+					? `Up to the next pity threshold, counting the ${prior} pulls you've already made`
+					: `Round up to the next pity threshold (a multiple of ${pullsPerPity} pulls)`,
+				next: (current) => toNextMultiple(pullsPerPity)(current + prior) - prior,
 			},
 		],
 		// Shift ±10 stays on a support row's keyboard even though its pad has no

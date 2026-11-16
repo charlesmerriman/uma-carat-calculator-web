@@ -69,6 +69,24 @@ describe('buildCountChips — uma rows', () => {
 			expect(next(value)).toBeGreaterThan(value)
 		}
 	})
+	// The forum's example: 20 already pulled, so the next pity is 180 more.
+	it('counts pulls already made toward Next pity', () => {
+		const withPrior = (prior: number) =>
+			chip(
+				buildCountChips({
+					rowType: 'Uma',
+					stepLimit: Infinity,
+					pullsPerPity: PULLS_PER_PITY_COPY,
+					stepsPerRound: STEPS_PER_ROUND,
+					priorPulls: prior,
+				}),
+				'Next pity',
+			).next
+		expect(withPrior(20)(0)).toBe(180)
+		expect(withPrior(20)(180)).toBe(380)
+		expect(withPrior(250)(0)).toBe(150)
+		expect(withPrior(200)(0)).toBe(200)
+	})
 })
 
 describe('buildCountChips — support rows', () => {
