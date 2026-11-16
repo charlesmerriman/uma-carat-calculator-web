@@ -268,11 +268,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 			itemKey={(entry) => `${entry.uma}-${entry.style}`}
 			empty="Not enough runs yet."
 			render={(entry, index) => row(entry, index + 1)}
-			after={
-				unranked.length > 0
-					? unranked.map((entry) => <li key={`${entry.uma}-${entry.style}`}>{row(entry, null)}</li>)
-					: undefined
-			}
+			after={unranked.map((entry) => <li key={`${entry.uma}-${entry.style}`}>{row(entry, null)}</li>)}
 		/>
 	)
 }
