@@ -245,6 +245,37 @@ const ForecastPlot: React.FC<PlotProps> = ({
 		...points.map((p) => p.value + (hasPaid ? Math.max(0, p.paid) : 0)),
 		...markers.filter((m) => m.chargedEarly).map((m) => floatingDotValue(m, hasPaid))
 	)
+	// THE LEADERS (owner, 2026-11-16). A floating dot sits at its banner's end
+	// date, but its pulls came off earlier, at the top of a drop with no dot
+	// of its own. A dashed line from that spot to the dot shows which drop is
+	// its own; a player read the lone dot as misplaced without it. Read from
+	// `points` and `pullSeries`, not the plot data, because those two share
+	// positions with `chargedEarly.point` (withSkips shifts the plot data).
+	const caratLeaders = markers.flatMap((marker) => {
+		const at = marker.chargedEarly?.point
+		if (at === undefined) return []
+		const top = points[at]
+		// A step-up's dot rides the paid band's top edge when there is one,
+		// and so does its drop.
+		const onBand = marker.stepUp && hasPaid
+		return [{
+			key: marker.index,
+			from: { x: top.t, y: onBand ? top.value + Math.max(0, top.paid) : top.value },
+			to: { x: marker.t, y: floatingDotValue(marker, hasPaid) },
+			color: onBand ? "var(--color-step-up)" : "var(--color-brand)",
+		}]
+	})
+	const pullLeaders = pullSeries.flatMap((p) => {
+		const marker = p.bar?.marker
+		const at = marker?.chargedEarly?.point
+		if (!marker || at === undefined || p.floatPulls === undefined || !p.kind) return []
+		return [{
+			key: marker.index,
+			from: { x: pullSeries[at].t, y: pullSeries[at][p.kind] },
+			to: { x: p.t, y: p.floatPulls },
+			color: LINE_COLOR[p.kind],
+		}]
+	})
 	const low = Math.min(...values)
 	const zeroOffset = high <= 0 ? 0 : low >= 0 ? 1 : high / (high - low)
 	const last = points[points.length - 1]
@@ -385,6 +416,16 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-gray-400)" }}
 							/>
 						)}
+						{caratLeaders.map((leader) => (
+							<ReferenceLine
+								key={`leader-${leader.key}`}
+								segment={[leader.from, leader.to]}
+								stroke={leader.color}
+								strokeWidth={1.5}
+								strokeDasharray="4 3"
+								strokeOpacity={0.6}
+							/>
+						))}
 						{/* The dots of banners charged early, at their rows' numbers above
 						    the line (see caratForecast's module note). An invisible line
 						    whose only values are those dots, so they sit on the chart's
@@ -466,6 +507,16 @@ const ForecastPlot: React.FC<PlotProps> = ({
 									<PullDot key={`${line}-${props.index}`} {...props} line={line} onSelect={select} />
 								)}
 								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: LINE_COLOR[line] }}
+							/>
+						))}
+						{pullLeaders.map((leader) => (
+							<ReferenceLine
+								key={`leader-${leader.key}`}
+								segment={[leader.from, leader.to]}
+								stroke={leader.color}
+								strokeWidth={1.5}
+								strokeDasharray="4 3"
+								strokeOpacity={0.6}
 							/>
 						))}
 						{/* A banner charged early: its row's pulls, floating above its line

@@ -160,8 +160,15 @@ describe('buildCaratForecast', () => {
     // At day 30 the line carries straight on (-1,500 + 3,000 of income): no
     // spike up to banner 0's 4,000, and no second drop. That dot floats.
     expect(valuesAt(forecast.points, day(30).getTime())).toEqual([1500])
-    expect(forecast.markers[1].chargedEarly).toEqual({ t: day(10).getTime(), by: 1 })
+    expect(forecast.markers[1].chargedEarly).toMatchObject({ t: day(10).getTime(), by: 1 })
     expect(forecast.markers[0].chargedEarly).toBeUndefined()
+    // The dashed line's far end: the vertex where banner 0's drop starts,
+    // the first of the four at day 10 (2,000, before its 2,000 comes off).
+    const top = forecast.points[forecast.markers[1].chargedEarly!.point!]
+    expect(top).toMatchObject({ t: day(10).getTime(), value: 2000 })
+    expect(forecast.points.findIndex((p) => p.t === day(10).getTime())).toBe(
+      forecast.markers[1].chargedEarly!.point
+    )
     // And the line is right after the pair: 1,000 + 6,000 - 2,000 - 500. It
     // used to stay 500 too high (the inner banner's spend) until the next dot.
     expect(forecast.points[forecast.points.length - 1].value).toBe(4500)
@@ -179,6 +186,7 @@ describe('buildCaratForecast', () => {
     })!
     expect(forecast.points[0].value).toBe(600)
     expect(forecast.markers.map((m) => m.index)).toEqual([0])
+    // Its drop is not on the chart, so there is no point for a dashed line.
     expect(forecast.markers[0].chargedEarly).toEqual({ t: day(-2).getTime(), by: 1 })
     expect(valuesAt(forecast.points, day(20).getTime())).toEqual([2600])
   })
@@ -401,7 +409,12 @@ describe('buildCaratForecast with the real engine', () => {
       innerRow.freeCarats,
       innerRow.freeCarats - innerRow.freeCaratsSpent,
     ])
-    expect(outer.chargedEarly).toEqual({ t: inner.t, by: 1 })
+    expect(outer.chargedEarly).toMatchObject({ t: inner.t, by: 1 })
+    // The dashed line starts at the top of the outer drop: the inner row's
+    // number plus the outer row's spend.
+    expect(forecast.points[outer.chargedEarly!.point!].value).toBe(
+      innerRow.freeCarats + result.current[0].freeCaratsSpent
+    )
     // The next banner's dot needs no correction step: the line arrived right.
     const next = result.current[2]
     expect(valuesAt(forecast.points, after.t)).toEqual([next.freeCarats])

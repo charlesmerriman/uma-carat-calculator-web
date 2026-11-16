@@ -7,18 +7,43 @@
  */
 
 import type { CSSProperties, ReactNode } from "react"
-import { Search } from "lucide-react"
+import { RotateCcw, Search } from "lucide-react"
+import { resetRememberedFilters, useHasRememberedFilters } from "../../hooks/useRememberedFilter"
 
 /** The card: `search` and `count` on its first line, the filters under them. */
-export function Toolbar({ search, count, children }: { search: ReactNode; count?: ReactNode; children: ReactNode }) {
+export function Toolbar({ search, count, scope, children }: {
+	search: ReactNode
+	count?: ReactNode
+	/** The list's remembered-filter scope ("cards"); with it, a "Reset filters" button shows while anything is set. */
+	scope?: string
+	children: ReactNode
+}) {
 	return (
 		<div className="enc-toolbar">
 			<div className="enc-toolbar__top">
 				{search}
-				{count}
+				<div className="enc-toolbar__end">
+					{scope && <ResetFilters scope={scope} />}
+					{count}
+				</div>
 			</div>
 			<div className="enc-filters">{children}</div>
 		</div>
+	)
+}
+
+/**
+ * Clears the search box, every filter and the sort in one go. Hidden while
+ * everything is already at its default, so it never sits there doing nothing.
+ */
+function ResetFilters({ scope }: { scope: string }) {
+	const active = useHasRememberedFilters(scope)
+	if (!active) return null
+	return (
+		<button type="button" className="enc-reset" onClick={() => resetRememberedFilters(scope)}>
+			<RotateCcw aria-hidden="true" />
+			Reset filters
+		</button>
 	)
 }
 

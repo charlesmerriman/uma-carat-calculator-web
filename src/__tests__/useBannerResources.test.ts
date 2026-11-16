@@ -562,6 +562,24 @@ describe('campaign purchase crediting', () => {
     expect(results[0].paidCarats).toBe(7500)
   })
 
+  it('credits a product at the later part it opens with', () => {
+    // Day 10 Part 1, day 20 Part 2, day 30 Part 3; the pack opens with Part 3.
+    // Banner 1 ends on day 25 (after Part 2, before Part 3): no pack. Banner 2
+    // ends on day 40: the pack.
+    const base = campaign(10, 20)
+    const part3: AnniversaryEvent = {
+      ...base,
+      products: [{ ...base.products[0], opens_with_part: 3, opens_at: daysFromNow(30, 'T22:00:00Z') }],
+    }
+    const results = render(
+      [umaBanner(1, 5, 25), umaBanner(2, 35, 40)],
+      { include_purchases_in_projection: true },
+      withPurchase(part3)
+    )
+    expect(results[0].paidCarats).toBe(0)
+    expect(results[1].paidCarats).toBe(7500)
+  })
+
   it('credits the webstore bonus as FREE carats, leaving the pack paid', () => {
     // The whole point of the split: buying through the webstore must not
     // enlarge the PAID balance, because that is what step-ups and discounted

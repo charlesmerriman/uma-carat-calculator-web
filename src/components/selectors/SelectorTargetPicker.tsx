@@ -221,7 +221,7 @@ export const SelectorTargetPicker = ({
 								<h5 className="text-base font-semibold text-gray-100">
 									Choose {isUma ? "an Uma" : "a support card"}
 								</h5>
-								<p className="text-xs text-gray-400">{options.length} eligible cards</p>
+								<p className="text-xs text-gray-400">{options.length} eligible {isUma ? "umas" : "cards"}</p>
 							</div>
 							<label className="relative w-full sm:w-64">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -230,7 +230,7 @@ export const SelectorTargetPicker = ({
 									type="search"
 									value={search}
 									onChange={(event) => setSearch(event.target.value)}
-									placeholder="Search cards…"
+									placeholder={isUma ? "Search umas…" : "Search cards…"}
 									className="w-full rounded border border-gray-600 bg-gray-900 py-2 pl-9 pr-3 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-brand"
 								/>
 							</label>

@@ -82,6 +82,23 @@ describe("CardEffects", () => {
 		expect(container.querySelector(".enc-unique__amounts")).toBeNull()
 	})
 
+	it("writes each part's own phrase when the API sends one, and not twice when the text is built from them", () => {
+		// Narita Top Road 30086, type 104: the game's sentence has no numbers, and "Training Effectiveness 20%" would mislead.
+		const fans = {
+			level: 1, text: "Increases Training Effectiveness based on fans gained, up to 200,000 fans.",
+			amounts: [{
+				type: 8, name: "Training Effectiveness", value: 20, format: "percent" as const, condition: null,
+				line: "Training Effectiveness 1% per 10,000 fans, up to 20%", scope: "card" as const,
+			}],
+		}
+		const { container, rerender } = render(<CardEffects effects={EFFECTS} caps={CAPS} unique={fans} />)
+		expect(container.querySelector(".enc-unique__amounts")).toHaveTextContent("Training Effectiveness 1% per 10,000 fans, up to 20%")
+		// A JP-only card with no sentence: the text IS the lines, so no second copy under it.
+		rerender(<CardEffects effects={EFFECTS} caps={CAPS} unique={{ ...fans, text: fans.amounts[0].line, from_amounts: true }} />)
+		expect(container.querySelector(".enc-unique__text")).toHaveTextContent("Training Effectiveness 1% per 10,000 fans, up to 20%")
+		expect(container.querySelector(".enc-unique__amounts")).toBeNull()
+	})
+
 	it("locks the unique effect below its level", () => {
 		const { container } = render(<CardEffects effects={EFFECTS} caps={CAPS} unique={UNIQUE} limitBreak={0} />)
 		const unique = container.querySelector(".enc-unique") as HTMLElement
