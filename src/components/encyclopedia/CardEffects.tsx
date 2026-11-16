@@ -25,10 +25,19 @@ import { Lock, Minus, Plus } from "lucide-react"
 import type { CardEffect, CardUniqueEffect } from "../../types/encyclopedia"
 import { effectValue } from "../../utils/encyclopedia"
 
-/** "Speed Bonus 1, Skill Point Bonus 1": a unique effect's numbers, which no sentence of the game's states. */
+/**
+ * "Speed Bonus 1, Skill Point Bonus 1": a unique effect's numbers, which no
+ * sentence of the game's states. Each part's phrase comes whole from the API
+ * (`line`, backend support_effects.py), because a scaling effect needs more
+ * than a name and a number ("Training Effectiveness 1% per 10,000 fans, up to
+ * 20%"); an older cached body without it falls back to name and value. Null
+ * when the text was built from these same parts (`from_amounts`), so the
+ * numbers aren't written twice.
+ */
 function uniqueAmounts(unique: CardUniqueEffect): string | null {
 	const parts = unique.amounts ?? []
-	return parts.length > 0 ? parts.map((part) => `${part.name} ${effectValue(part.value, part.format)}`).join(", ") : null
+	if (parts.length === 0 || unique.from_amounts) return null
+	return parts.map((part) => part.line ?? `${part.name} ${effectValue(part.value, part.format)}`).join(", ")
 }
 import { Section, Switch } from "./pieces"
 
