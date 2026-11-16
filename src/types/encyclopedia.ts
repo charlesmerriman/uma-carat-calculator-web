@@ -120,21 +120,32 @@ export interface CardEffect {
 
 /** One part of a unique effect, as the game's numbers (backend support_effects.effect_amounts). */
 export interface CardUniqueAmount {
-	type: number
+	/** The effect type it gives; null for one that isn't an effect type (a failure-rate roll). */
+	type: number | null
 	name: string
+	/** The most it gives: what the card list's effect sort counts. */
 	value: number
 	format: "percent" | "number" | "level"
 	/** "Friendship Gauge 80+" when the part needs it, else null. */
 	condition: string | null
+	/**
+	 * The phrase to show, numbers and units in it ("Training Effectiveness 1%
+	 * per 10,000 fans, up to 20%"). Absent from an older cached API.
+	 */
+	line?: string
+	/** "deck" for an effect on other cards (Ryoka Tsurugi's Specialty Priority for every card). */
+	scope?: "card" | "deck"
 }
 
 /** A card's unique effect: the level that unlocks it and the game's sentence for it. */
 export interface CardUniqueEffect {
 	level: number
-	/** The game's sentence, else UmaTL's (`translated`), else the effects by name. */
+	/** The game's sentence, else UmaTL's (`translated`), else the parts' own lines (`from_amounts`). */
 	text: string
 	/** The text is UmaTL's fan translation. Absent from an older API. */
 	translated?: boolean
+	/** The text was built from `amounts`, numbers included, so they aren't written again under it. */
+	from_amounts?: boolean
 	/** Each part's number; null when a part can't be read yet, absent from an older API. */
 	amounts?: CardUniqueAmount[] | null
 	/**
