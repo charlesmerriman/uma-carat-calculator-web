@@ -30,6 +30,9 @@
  * sits on the line. The outer dot keeps its row's own numbers at its own end
  * date and floats above the line, with no drop of its own, because its drop
  * has already happened (`chargedEarly`). The line is right everywhere after.
+ * A dashed line joins the floating dot to the top of its drop (owner,
+ * 2026-11-16: a player read the lone dot as misplaced), so the reader can
+ * see which drop is its own.
  *
  * Every other dot still re-anchors the line to its row if the two differ
  * (they agree to the carat in practice; a floored paid balance is the case
@@ -88,8 +91,13 @@ export interface ForecastMarker {
 	 * (see the module note): `t` is when, and `by` is the position in
 	 * `userPlannedBannerData` of the banner whose end it was. Its dot floats
 	 * at its own end date with its row's numbers, off the line.
+	 *
+	 * `point` is the position in `points` of the vertex where that drop
+	 * starts: the plot joins it to the floating dot with a dashed line, so
+	 * the dot visibly owns its drop (owner, 2026-11-16). Absent when the drop
+	 * is not on the chart (charged before today, or it spent nothing).
 	 */
-	chargedEarly?: { t: number; by: number }
+	chargedEarly?: { t: number; by: number; point?: number }
 }
 
 export interface CaratForecast {
@@ -293,12 +301,18 @@ export function buildCaratForecast({
 		points.push(toPoint(t, add(offset, income(at))))
 	}
 
+	// Where each early drop starts, keyed by the row it belongs to. Its dot
+	// comes later in time (it ends later), so placeDot finds it here and hands
+	// it to the plot as `chargedEarly.point`, the far end of the dashed line.
+	const earlyDropTop = new Map<number, number>()
+
 	// A banner's pulls coming off at another banner's end: a drop with no dot.
 	const placeEarlyDrop = (entry: WalkEntry, t: number) => {
 		const spent = rowSpend(entry, resources[entry.index])
 		if (!CHANNELS.some((k) => spent[k] !== 0)) return
 		const at = new Date(t)
 		points.push(toPoint(t, add(offset, income(at))))
+		earlyDropTop.set(entry.index, points.length - 1)
 		offset = subtract(offset, spent)
 		points.push(toPoint(t, add(offset, income(at))))
 	}
@@ -339,7 +353,11 @@ export function buildCaratForecast({
 			paidBefore: before.paid,
 			paidAfter: before.paid - spent.paid,
 			stepUp: plannedBannerTarget(entry.banner).type === "StepUp",
-			...(chargedEarly && { chargedEarly }),
+			...(chargedEarly && {
+				chargedEarly: earlyDropTop.has(entry.index)
+					? { ...chargedEarly, point: earlyDropTop.get(entry.index) }
+					: chargedEarly,
+			}),
 		})
 	}
 
@@ -521,6 +539,9 @@ function pullsFrom(point: ForecastPoint, tickets: number, settings: PullSettings
  * other line keeps the daily figure. A banner charged early is the exception:
  * its pulls are already off the line, so its number floats (`floatPulls`) and
  * both lines carry straight on. A step-up has no bar, so no dot here.
+ *
+ * One point per forecast point, in the same order, so a position in
+ * `forecast.points` (`chargedEarly.point`) is the same position here.
  */
 export function buildPullSeries(
 	forecast: CaratForecast,

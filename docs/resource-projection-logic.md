@@ -626,7 +626,9 @@ of its own:
   inner dot sits on the line. The outer dot floats above the line at its own end date
   with its row's numbers and no drop of its own (`ForecastMarker.chargedEarly`), and
   its hover says why (owner, 2026-10-21; it used to dip, spike, and then run high by
-  the inner banner's spend until the next dot). Any other dot that disagrees with its
+  the inner banner's spend until the next dot). A dashed line joins the floating dot
+  to the top of its drop (`chargedEarly.point`, owner 2026-11-16), so it reads as
+  that drop's dot and not a misplaced one. Any other dot that disagrees with its
   row re-anchors the line to it, which in practice only a floored paid balance does.
   `caratForecast.test.ts` pins both: against the real engine, an ordinary plan meets
   every row with no step, and a nested pair meets the inner row and the next one.
