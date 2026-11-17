@@ -54,6 +54,8 @@ export interface SkillSourceUma {
 	source: string
 	level: number | null
 	on_global: boolean
+	/** On a ◎ page, the ○'s name when this row gives the ○, whose hint counts for the ◎. */
+	via?: string | null
 }
 
 export interface SkillSourceCard {
@@ -70,6 +72,8 @@ export interface SkillSourceCard {
 	/** hint / event */
 	source: string
 	on_global: boolean
+	/** On a ◎ page, the ○'s name when this card gives the ○, whose hint counts for the ◎. */
+	via?: string | null
 	/** 1 R, 2 SR, 3 SSR, for "Hide R". Absent from an API older than the Encyclopedia. */
 	rarity?: number | null
 	card_type?: string | null

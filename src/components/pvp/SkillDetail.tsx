@@ -26,7 +26,7 @@ import { ArrowRight } from "lucide-react"
 import { SKILL_TYPE_WORDS, skillHref, skillKind } from "../../utils/skillSearch"
 import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable } from "../../types/pvpGuide"
 import { skillColour } from "../../utils/pvpGuide"
-import { cooldownWords, durationWords, hasCondition } from "../../utils/skillWords"
+import { cooldownWords, durationWords, hasCondition, slotLabel } from "../../utils/skillWords"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { nameLang } from "../../utils/skillList"
 import { InsidePopupContext } from "./hoverPopup"
@@ -87,7 +87,7 @@ export function ReadableText({ readable }: { readable: SkillReadable }) {
 					const timing = [durationWords(slot), cooldownWords(slot)].filter(Boolean).join(", ")
 					return (
 						<span key={index} className="contents">
-							{many && <span className="skill-card__part">Part {index + 1}</span>}
+							{many && <span className="skill-card__part">{slotLabel(readable, index)}</span>}
 							{hasCondition(slot.after) && (
 								<>
 									<Label>Only after</Label>

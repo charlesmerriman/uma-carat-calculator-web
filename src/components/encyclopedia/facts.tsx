@@ -92,7 +92,8 @@ export function StatsSection({ id, stars, growth, initialStar }: {
 					<li key={key} className="enc-stat" data-stat={key}>
 						<span className="enc-stat__label">
 							<img src={STAT_ICON_PATHS[key]} alt="" width={20} height={20} loading="lazy" decoding="async" />
-							{STAT_LABELS[key]}
+							{/* On a phone the icon alone says which; the word stays for a screen reader. */}
+							<span className="enc-stat__name">{STAT_LABELS[key]}</span>
 						</span>
 						{row && <b className="enc-stat__value">{row[key]}</b>}
 						{row && (

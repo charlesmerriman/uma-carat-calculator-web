@@ -1147,7 +1147,16 @@
 	background-color: var(--color-gray-700);
 }
 
+/* The art is pinned to the frame's box (inset 0) rather than sized
+   `height: 100%` in flow against a box whose height comes from aspect-ratio.
+   Tried for Daptrius's report of the art hanging past the frame on iOS
+   (board "Issues with Uma SVG Alignment on iOS", 2026-11-17), but the
+   portraits are square, so a percentage height falling back to the picture's
+   own size would still fill the square: this only rules that out. The cause
+   is not found yet and needs a look on an iPhone. */
 .uma-frame > img {
+	position: absolute;
+	inset: 0;
 	display: block;
 	width: 100%;
 	height: 100%;

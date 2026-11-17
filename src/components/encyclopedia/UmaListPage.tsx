@@ -74,6 +74,8 @@ const UmaListBody = () => {
 	const totals = useMemo(() => (all ? {
 		umas: filterUmas(all.umas, "", "all", []).length,
 		cards: filterCards(all.support_cards, "", [], [], "all").length,
+		// The Skills tab's number before its list is opened (Daptrius, board, 2026-11-17).
+		...(all.skill_count !== undefined && { skills: all.skill_count }),
 	} : null), [all])
 	useEffect(() => {
 		if (totals) reportCounts(totals)

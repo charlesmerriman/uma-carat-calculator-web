@@ -116,6 +116,23 @@ describe("UmaPage", () => {
 		expect(within(loose).getByRole("link", { name: /Stray Star/ })).toBeInTheDocument()
 	})
 
+	it("puts the awakening levels JP added later, 6 and 7, on a row of their own", async () => {
+		// The owner, 2026-11-17: never squeezed onto the end of 2 to 5.
+		const raised: UmaPageData = {
+			...SPECIAL_WEEK,
+			skills: [2, 3, 4, 5, 6, 7].map((level) =>
+				skill(200000 + level, `Level ${level} Skill`, "awakening", { level, availability: level > 5 ? "jp" : "global" })),
+		}
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(raised), { status: 200 })))
+		const { container } = renderAt("/app/umas/100101")
+		await screen.findByText("Added later")
+		const [first, later] = [...container.querySelectorAll("ol.enc-awake")]
+		expect(within(first as HTMLElement).getAllByRole("link").map((link) => link.textContent)).toEqual(
+			[2, 3, 4, 5].map((level) => expect.stringContaining(`Level ${level} Skill`)))
+		expect(within(later as HTMLElement).getAllByRole("link").map((link) => link.textContent)).toEqual(
+			[6, 7].map((level) => expect.stringContaining(`Level ${level} Skill`)))
+	})
+
 	it("switches the stats between star levels", async () => {
 		renderAt("/app/umas/100101")
 		await screen.findByRole("heading", { level: 1, name: "Special Week" })

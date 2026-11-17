@@ -119,6 +119,8 @@ export interface PvpCatalogue {
 	 * character the files don't cover is simply missing.
 	 */
 	character_colours?: Record<string, [string, string]>
+	/** How many skills GET /skills lists, for the Encyclopedia's Skills tab. Absent from an older API. */
+	skill_count?: number
 }
 
 // ── A team ───────────────────────────────────────────────────────────────────

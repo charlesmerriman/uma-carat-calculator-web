@@ -686,7 +686,12 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
   frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
-  pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
+  pokes out past it. `className` only sizes the square (`w-14`, `h-full`), and it MUST size it:
+  the art is pinned to the frame's box (`position: absolute; inset: 0`), so it gives the frame
+  no size of its own. **Open:** on iOS 27 (every browser) the art shows past the frame's edge
+  on the PvP and Encyclopedia pages but not the Timeline (Daptrius, board "Issues with Uma SVG
+  Alignment on iOS", 2026-11-17). Not the art's own size (the portraits are square); cause not
+  found yet.
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's
@@ -1280,6 +1285,13 @@ card per campaign with no filtering.
 
 ### Other Timeline rules
 
+- **A featured tile's name breaks at a seam, never mid-word** (`withSeams` in
+  `BannerWindowCard.tsx`). Two names are one 18-letter word, "Matikanetannhauser" and
+  "Matikanefukukitaru", too wide for a support tile at any readable size, so a soft hyphen
+  after "Matikane" (`NAME_SEAMS`) lets them break as "Matikane-" over the rest, at the tile's
+  normal size (Daptrius, board "Timeline, Support Card, Longest Name Fix", 2026-11-17; he
+  agreed). Checked 2026-11-17: no other uma or card name has a word over 12 letters; a new
+  one goes in the list.
 - **`SUPPORTS_INTERSECTION_OBSERVER`** is read once at module scope. Where there is no
   observer (jsdom, pre-2019 browsers) the list renders unwindowed, rather than stranding
   the reader partway down with no way to advance.
@@ -2558,22 +2570,38 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
 - **The hero** (`Hero`): the art standing straight on a slanted field of `--c1` with a stripe
   of `--c2` (clipped shapes, so the slant never lands on the name), the game's own number on a
   dark plate, and the Japanese name large and faint behind (`ghost`, decoration: the readable
-  line is `japanese`; it uses the reader's own Japanese font, none is bundled). An uma's `h1`
-  is the character's name, with the outfit in the eyebrow ("Trainee · Christmas").
+  line is `japanese`; it uses the reader's own Japanese font, none is bundled). The ghost is
+  sized to fit WHOLE between the art's column and the right edge: the hero is a size container,
+  and the font size is that room over the name's character count (`--chars`), never above
+  6rem, sitting inside the hero's bottom edge (Daptrius, 2026-11-17: at a fixed 8rem a long
+  name lost its first characters under the colour field). An uma's `h1` is the character's
+  name, with the outfit in the eyebrow ("Trainee · Christmas").
 - **A section is one soft panel, no border** (`Section`), its heading flagged in the page's two
   colours. What is inside sits on `--enc-inset`, the one inset surface, a mix of two theme
   greys that reads on dark and light themes.
 - **An uma's page** (`UmaPage.tsx`): her unique skill first as a plate with what it does
   (`UniquePlate`; an outfit below three stars has two), the innate skills in a row, then the
   awakening levels as posts on a track with each evolved skill hanging off the gold it comes
-  from (one whose base isn't an awakening skill on the page is listed after). Career objectives
-  are one track with a gold post for a race to win and a chequered flag (`CareerObjectives`).
+  from (one whose base isn't an awakening skill on the page is listed after). From 64rem the
+  track runs across in four columns: levels 2 to 5 are one row, and the 6 and 7 JP added later
+  (their skills JP only) a row of their own under an "Added later" rule, in the same columns,
+  never squeezed onto the first (owner, 2026-11-17). A name on the track wraps to two balanced
+  lines instead of being cut short. Below 64rem it runs down the left. Evolutions come in the
+  API's release order, never by name. Career objectives are a list per year
+  (`CareerObjectives`), a gold post for a race to win and a chequered flag after the last:
+  on a phone the years run as one track, and from 48rem each year is its own column (Daptrius,
+  2026-11-17: the single track wrapped to two rows on desktop anyway). One markup; the CSS
+  switches, never a media query in render.
   A track's fact that is drawn (the level, what it grows from) is said to a screen reader
   through `SkillRow`'s `hint`.
 - **Aptitudes and stats** (`facts.tsx`): every aptitude cell at full strength, A or better
   filled in the page's colour (`isTopAptitude`), the letter a white badge ringed in the game's
   colour (an override inside a cell; `.apt-letter` itself is the PvP guides'). Stats are boxes
-  with the game's stat icons (`utils/statIcons.ts`).
+  with the game's stat icons (`utils/statIcons.ts`). On a phone (under 40rem) the five sit in
+  one row, each only the icon, the number and its growth: the bar goes, and the stat's name
+  stays for a screen reader (`.enc-stat__name`, the sr-only pattern; Daptrius, 2026-11-17). The
+  star switch opens at the stars the player has her at in their Collection (`useOwned`), else
+  her starting stars.
 - **Banners** show the banner's own picture and the faces of who else is on it
   (`utils/encyclopediaBanners.ts` adds `image`, `featured`, `kind`); related outfits and cards
   are picture tiles (`.enc-pic`).
@@ -2581,10 +2609,16 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   is a track that marks each limit break's cap beside the steppers, and each effect is its
   number over its name. **A skill's page** reads its steps left to right (`.enc-step`) and
   draws its family on one line (`Family`: evolves from and other versions, this skill, evolves
-  into), with the outfit it belongs to in the hero (`owner_umas`).
+  into; the API leaves the from and into rows out of `versions`, so nothing is listed twice),
+  with the outfit it belongs to in the hero (`owner_umas`). **Several slots are "Trigger 1, 2"**
+  (the game fires the first whose conditions hold) unless the API's `readable.chained` says a
+  later one waits on the first, then "Part 1, 2" (`slotLabel` in `utils/skillWords.ts`, the
+  hover card too; Daptrius, 2026-11-17). On a ◎ page a giver of its ○ is listed with the ○'s
+  name on its second line (`via`): a hint for the ○ counts for the ◎.
 - **The lists**: a masthead whose tabs lead with how many each list holds
   (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
-  another's data to count it). A tile is its art, no box; an uma's carries her colours as a bar.
+  another's data to count it; the uma and card lists report the Skills tab's number too, from
+  the catalogue's `skill_count`, so all three show from the first list opened). A tile is its art, no box; an uma's carries her colours as a bar.
   A full list in name order gets letter headings and an A to Z index (`letters.tsx`,
   `utils/encyclopediaLetters.ts`); filtered or re-sorted it is one plain grid. A letter heading
   is a `role="presentation"` item, so the list's items stay the tiles. On the Skills list a
@@ -2621,8 +2655,12 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   - **A query of digits is an id** (`searchMatches`): the start of a card's or outfit's game id,
     or its character's 4-digit id (`character_id`; an outfit id starts with it).
 - **The jump bar sticks**, and where depends on what scrolls: under the navbar when the
-  document scrolls (a phone, a short window), at 0 inside the desktop app shell. Its offsets in
-  `encyclopedia.css` are index.css's `scroll-padding-top` numbers: change them together. It
+  document scrolls (a phone, a short window), at 0 inside the desktop app shell. Under the
+  navbar it sticks at the navbar's MEASURED height, `--navbar-h` on `<html>`
+  (`hooks/useNavbarHeight.ts`, a ResizeObserver from `Navbar`): a written-down height was
+  wrong on a phone under 440px, where the tabs' labels go sr-only and the bar is shorter, and
+  left a gap (Daptrius, 2026-11-17). index.css's `scroll-padding-top` numbers are only its
+  first-paint fallback. It
   draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
   `#hash` links, so Back leaves the page.
 - **A card's effects** (`CardEffects.tsx`, first on the card page): a Limit break switch, a
@@ -2637,7 +2675,10 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
 - **A skill's times are per 1,000 m** (`utils/skillWords.ts`): the API states a timed duration
   and a repeating cooldown against the race's length ("2.4 s per 1,000 m"), because the game
   scales both by it (Daptrius, 2026-11-13). The skill page explains that once, under How it
-  works, when a time scales (`hasScaledTime`); the hover card only shows the chips.
+  works, when a time scales (`hasScaledTime`); the hover card only shows the chips. A value or
+  a duration that ALSO scales with something else ends "(varies)": the files give only a code
+  per kind of scaling (`value_usage`, `duration_usage`), and nothing is worded until someone
+  confirms what a code means (asked of Daptrius, 2026-11-17).
 - **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
   type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
   sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole

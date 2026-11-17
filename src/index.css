@@ -42,7 +42,12 @@
                padding, 2 x 1px border) + 1px bottom border = 122.5px
      desktop — 64px bar + 1px bottom border = 65px
    Rounded up a hair. CHANGE THESE IF THE NAVBAR'S HEIGHT CHANGES, or deep
-   links start landing partly under it. */
+   links start landing partly under it. The mobile figure is the bar WITH its
+   tab labels: under 440px they go sr-only (Navbar.tsx) and the bar is about
+   17px shorter, so a jump lands that much low there, harmless. The
+   Encyclopedia's jump bar doesn't use these: it sticks at the bar's measured
+   height (--navbar-h, hooks/useNavbarHeight.ts) and keeps these numbers only
+   as its first-paint fallback. */
 html {
 	scroll-padding-top: 7.75rem;
 
