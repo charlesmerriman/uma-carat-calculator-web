@@ -108,6 +108,8 @@ const CardListBody = () => {
 	const totals = useMemo(() => (catalogue.status === "ready" ? {
 		umas: filterUmas(catalogue.catalogue.umas, "", "all", []).length,
 		cards: filterCards(catalogue.catalogue.support_cards, "", [], [], "all").length,
+		// The Skills tab's number before its list is opened (Daptrius, board, 2026-11-17).
+		...(catalogue.catalogue.skill_count !== undefined && { skills: catalogue.catalogue.skill_count }),
 	} : null), [catalogue])
 	useEffect(() => {
 		if (totals) reportCounts(totals)

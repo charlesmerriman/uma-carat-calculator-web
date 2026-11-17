@@ -204,7 +204,14 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 						<AptitudeGrid apt={uma.apt} />
 					</Section>
 					{hasStats && (
-						<StatsSection id="stats" stars={uma.star_stats} growth={uma.growth} initialStar={uma.rarity} />
+						<StatsSection
+								id="stats"
+								stars={uma.star_stats}
+								growth={uma.growth}
+								// Opens at the stars the player has her at, from their Collection
+								// (Daptrius, board, 2026-11-17); else at her starting stars.
+								initialStar={owned.umas.get(uma.id) ?? uma.rarity}
+							/>
 					)}
 				</div>
 			)}

@@ -912,13 +912,23 @@
 			width: calc(var(--field) + 2.7rem);
 			clip-path: polygon(calc(100% - 0.3rem) 0, 100% 0, calc(100% - var(--slant)) 100%, calc(100% - var(--slant) - 0.3rem) 100%);
 		}
+		/* Sized to fit between the art's column and the right edge, whole: a
+		   long name at a fixed 8rem ran left under the colour field and lost
+		   its first characters (Daptrius, board "The Japanese Names Background
+		   Text", 2026-11-17). A Japanese character is about 1em wide, so the
+		   room over the character count (`--chars`, pieces.tsx) is the size,
+		   never above 6rem. The hero is the container the 100cqw reads. */
+		.enc-hero {
+			container-type: inline-size;
+		}
 		.enc-hero__ghost {
 			position: absolute;
 			right: 1rem;
-			bottom: -1.3rem;
+			/* Inside the hero's bottom edge: below it the glyphs lost their lower half. */
+			bottom: 0.1rem;
 			z-index: -2;
 			display: block;
-			font-size: 8rem;
+			font-size: min(6rem, calc((100cqw - var(--art-col) - 2rem) / var(--chars, 6)));
 			font-weight: 900;
 			line-height: 1;
 			letter-spacing: -0.04em;
@@ -1065,7 +1075,9 @@
 	   app-shell variants of index.css, spelled out because this is plain CSS. */
 	.enc-jump {
 		position: sticky;
-		top: 7.75rem;
+		/* The navbar's measured height (hooks/useNavbarHeight.ts); the
+		   written-down one only for the first paint. */
+		top: var(--navbar-h, 7.75rem);
 		z-index: 5;
 		display: flex;
 		/* Wraps on a narrow phone; it used to scroll sideways and cut "Support cards" off (2026-11-13). */
@@ -1079,7 +1091,7 @@
 	}
 	@media (min-width: 64rem) {
 		.enc-jump {
-			top: 4.125rem;
+			top: var(--navbar-h, 4.125rem);
 		}
 	}
 	@media (min-width: 64rem) and (min-height: 32rem) {
@@ -1349,46 +1361,48 @@
 	   A box per stat: the game's own icon and the name, the number, a bar
 	   scaled to the tallest stat on show, and Growth by name (the owner,
 	   2026-11-17: "sectioned off from each other", "the growth shouldn't be
-	   taken out"). On a phone each stat is a row. */
+	   taken out"). On a phone the five sit in one row, each box only the
+	   game's icon, the number and its growth (Daptrius, board "Mobile Uma
+	   Stats", 2026-11-17: a row per stat took a screen for five numbers). */
 
 	.enc-stats {
 		display: grid;
-		gap: 0.4rem;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 0.35rem;
 	}
 	.enc-stat {
 		--stat: var(--color-gray-400);
-		display: grid;
-		grid-template-columns: 5.75rem minmax(0, 1fr) 2.5rem 4.25rem;
-		align-items: center;
-		gap: 0.5rem;
+		display: flex;
 		min-width: 0;
-		padding: 0.45rem 0.7rem;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.5rem 0.2rem 0.45rem;
 		border-radius: 0.75rem;
 		background: var(--enc-inset);
+		text-align: center;
 	}
-	.enc-stat__value {
-		order: 3;
-		text-align: right;
-	}
-	.enc-stat__growth {
-		order: 4;
-		text-align: right;
+	/* On a phone the icon says which stat; the word is still read out (the
+	   sr-only pattern), and the bar goes: the number is the fact. */
+	@media (max-width: 39.99rem) {
+		.enc-stat__name {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+		.enc-stat__bar {
+			display: none;
+		}
 	}
 	@media (min-width: 40rem) {
-		.enc-stats {
-			grid-template-columns: repeat(5, minmax(0, 1fr));
-		}
 		.enc-stat {
-			display: flex;
-			flex-direction: column;
 			align-items: stretch;
 			gap: 0.3rem;
 			padding: 0.7rem 0.6rem 0.65rem;
 			border-radius: 0.85rem;
-		}
-		.enc-stat__value,
-		.enc-stat__growth {
-			order: 0;
 			text-align: left;
 		}
 	}
@@ -1411,6 +1425,12 @@
 		width: 1.15rem;
 		height: 1.15rem;
 		flex-shrink: 0;
+	}
+	@media (max-width: 39.99rem) {
+		.enc-stat__label img {
+			width: 1.4rem;
+			height: 1.4rem;
+		}
 	}
 	.enc-stat__value {
 		font-family: var(--font-display);
@@ -1437,7 +1457,7 @@
 		color: var(--color-gray-400);
 		white-space: nowrap;
 	}
-	/* "Growth" is spelled out where there is room; a phone's row has the column. */
+	/* "Growth" is spelled out where there is room; on a phone the +% says it. */
 	.enc-stat__growth i {
 		display: none;
 		font-style: normal;
@@ -2045,13 +2065,15 @@
 	}
 
 	/* ---- Career objectives ---------------------------------------------------
-	   One track from her debut to the end of her senior year: a post per
-	   goal, the year named once over its first goal, a chequered flag after
-	   the last. A race she must win is a gold post; a goal that isn't one race
-	   (fans, placings) is a diamond. Each goal draws its own stretch of line,
-	   so the track wraps onto a second row when she has many. On a phone it
-	   runs down the left. The grade wears the game's colour: G1 blue, G2 pink,
-	   G3 green, an open race orange. */
+	   On a phone, one track from her debut to the end of her senior year: a
+	   post per goal, the year named once over its first goal, a chequered
+	   flag after the last. From 48rem, a track per year side by side
+	   (Daptrius, board "Desktop Career Objectives", 2026-11-17: the single
+	   track wrapped to two rows for most characters). The markup is the same
+	   for both, a list per year (CareerObjectives.tsx). A race she must win is
+	   a gold post; a goal that isn't one race (fans, placings) is a diamond.
+	   The grade wears the game's colour: G1 blue, G2 pink, G3 green, an open
+	   race orange. */
 
 	.enc-career {
 		position: relative;
@@ -2059,7 +2081,13 @@
 		gap: 0.9rem;
 		padding-left: 2.1rem;
 	}
-	.enc-career::before {
+	.enc-career__year {
+		display: grid;
+		gap: 0.9rem;
+	}
+	/* The track: the whole column on a phone, each year's own from 48rem. */
+	.enc-career::before,
+	.enc-career__year::before {
 		position: absolute;
 		top: 0.5rem;
 		bottom: 1rem;
@@ -2068,6 +2096,9 @@
 		border-radius: 2px;
 		background: linear-gradient(var(--c1-line), var(--c1));
 		content: "";
+	}
+	.enc-career__year::before {
+		display: none;
 	}
 	.enc-stop {
 		position: relative;
@@ -2115,8 +2146,8 @@
 		background: #f2c14e;
 		box-shadow: inset 0 0 0 3px rgb(255 255 255 / 20%), 0 0 0 3px rgb(242 193 78 / 35%);
 	}
-	/* The chequered flag at the end of the track. */
-	.enc-stop:last-child::after {
+	/* The chequered flag at the end of the track: after her last goal. */
+	.enc-career__year:last-child > .enc-stop:last-child::after {
 		position: absolute;
 		bottom: -1.2rem;
 		left: -2.1rem;
@@ -2148,59 +2179,29 @@
 	.enc-stop[data-win="true"] .enc-stop__need {
 		color: color-mix(in oklab, #f2c14e 70%, var(--color-gray-50));
 	}
+	/* A track per year, side by side: the phone's track three times over,
+	   each starting at the top. The year heads its column. */
 	@media (min-width: 48rem) {
 		.enc-career {
-			grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
-			gap: 1.25rem 0;
+			grid-template-columns: repeat(var(--years, 3), minmax(0, 1fr));
+			align-items: start;
+			gap: 1.25rem 1.5rem;
 			padding-left: 0;
 		}
 		.enc-career::before {
 			display: none;
 		}
-		.enc-stop {
-			padding-right: 0.75rem;
-		}
-		/* The goal's stretch of track, behind its post. */
-		.enc-stop::before {
-			position: absolute;
-			top: 3.45rem;
-			right: 0;
-			left: 0;
-			height: 4px;
-			background: color-mix(in oklab, var(--c1) 70%, var(--color-gray-600));
-			content: "";
-		}
-		.enc-stop:first-child::before {
-			border-radius: 2px 0 0 2px;
-		}
-		.enc-stop:last-child::before {
-			right: 1.3rem;
-		}
-		.enc-stop:last-child::after {
-			top: 2.55rem;
-			right: 0;
-			bottom: auto;
-			left: auto;
-			width: 1.25rem;
-			height: 2.1rem;
-		}
-		.enc-stop__year,
-		.enc-stop__year:empty,
-		.enc-stop__year:not(:empty) {
-			display: block;
-			height: 1.4rem;
-			margin: 0;
-		}
-		.enc-stop__when {
-			height: 1.6rem;
-		}
-		.enc-stop__post {
+		.enc-career__year {
 			position: relative;
-			bottom: auto;
-			left: auto;
+			padding-left: 2.1rem;
 		}
-		.enc-stop__race {
-			margin-top: 0.7rem;
+		.enc-career__year::before {
+			display: block;
+			top: 1.9rem;
+		}
+		/* The flag needs room under the last column. */
+		.enc-career__year:last-child {
+			padding-bottom: 1.2rem;
 		}
 	}
 	.grade-pill {

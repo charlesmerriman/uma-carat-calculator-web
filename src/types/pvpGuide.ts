@@ -113,6 +113,13 @@ export interface SkillReadable {
 	wit_check: boolean | null
 	/** False when any phrase is raw. */
 	complete: boolean
+	/**
+	 * True when a later slot waits for the first to fire, so the slots run one
+	 * after the other ("Part 1, 2"); false when they are alternatives, the
+	 * first whose conditions hold firing ("Trigger 1, 2"). Absent from an
+	 * older API. slotLabel() reads it.
+	 */
+	chained?: boolean
 	slots: SkillSlot[]
 }
 
