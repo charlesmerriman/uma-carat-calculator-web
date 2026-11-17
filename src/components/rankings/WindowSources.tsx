@@ -37,6 +37,7 @@ import { movedInTop, movement } from "../../utils/rankingsMovement"
 import { CardArt } from "./kit/CardArt"
 import type { LensOption } from "./kit/Lens"
 import type { MovementValue } from "./kit/Movement"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 export interface WindowRow {
 	id: string
@@ -51,6 +52,8 @@ export interface WindowRow {
 	share?: string
 	/** The uma or card's Encyclopedia page (useEncyclopediaHrefs); none on a banner row. */
 	href?: string | null
+	/** The art's hover card (utils/hoverCards.ts). */
+	hover?: Record<string, string>
 }
 
 export interface WindowSetting {
@@ -138,6 +141,7 @@ function GuidesSource({ children }: { children: Render }) {
 					name: uma?.name ?? "Unknown uma",
 					art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(rank.uma)} className="w-8" />,
 					href: hrefs.uma(rank.uma),
+					hover: hoverCardProps("uma", rank.uma),
 					fill,
 					count: rank.picks.toLocaleString(),
 					share: formatShare(rank.share),
@@ -155,6 +159,7 @@ function GuidesSource({ children }: { children: Render }) {
 				name: card?.name ?? "Unknown card",
 				art: <CardArt card={card} className="w-7" />,
 				href: hrefs.card(card?.id),
+				hover: hoverCardProps("card", card?.id),
 				fill,
 				count: rank.decks.toLocaleString(),
 				share: formatShare(rank.share),
@@ -262,6 +267,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 					name: card?.name ?? "Unknown card",
 					art: <CardArt card={card} className="w-7" />,
 					href: hrefs.card(card?.id),
+					hover: hoverCardProps("card", card?.id),
 					fill,
 					count: formatShare(row.share),
 				}
@@ -275,6 +281,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				href: hrefs.uma(row.uma),
+				hover: hoverCardProps("uma", row.uma),
 				fill,
 				count: formatShare(row.share),
 			}
@@ -324,6 +331,7 @@ function PlayersSource({ children }: { children: Render }) {
 				name: uma?.name ?? "Unknown uma",
 				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				href: hrefs.uma(row.uma),
+				hover: hoverCardProps("uma", row.uma),
 				fill,
 				count: row.people.toLocaleString("en-US"),
 			}

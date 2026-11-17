@@ -15,7 +15,7 @@
  * favorite matters to a screen reader, the caller says so beside the name.
  */
 
-export function FramedUma({ src, oshi = false, frame = true, alt = "", title, className = "", onError }: {
+export function FramedUma({ src, oshi = false, frame = true, alt = "", title, className = "", onError, hover }: {
 	/** The borderless art (`portrait`), falling back to the bordered `image`. */
 	src: string | null | undefined
 	oshi?: boolean
@@ -30,9 +30,14 @@ export function FramedUma({ src, oshi = false, frame = true, alt = "", title, cl
 	className?: string
 	/** The picture failed to load (Avatar swaps in its silhouette). */
 	onError?: () => void
+	/**
+	 * Her hover card's attributes (utils/hoverCards.ts hoverCardProps), for a
+	 * face that is plain art with no tile of its own to carry them.
+	 */
+	hover?: Record<string, string>
 }) {
 	return (
-		<span className={`uma-frame ${frame ? "" : "uma-frame--bare"} ${className}`} data-oshi={frame && oshi ? "" : undefined} title={title}>
+		<span className={`uma-frame ${frame ? "" : "uma-frame--bare"} ${className}`} data-oshi={frame && oshi ? "" : undefined} title={title} {...hover}>
 			{src && <img src={src} alt={alt} loading="lazy" decoding="async" onError={onError} />}
 		</span>
 	)

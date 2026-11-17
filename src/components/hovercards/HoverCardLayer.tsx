@@ -196,7 +196,8 @@ function Layer() {
 			const { clientX, clientY } = event
 			frame = window.requestAnimationFrame(() => {
 				frame = 0
-				const under = document.elementsFromPoint(clientX, clientY).find((element) => element.matches(TILE))
+				// Optional: jsdom has no elementsFromPoint, and a scope must never throw.
+				const under = document.elementsFromPoint?.(clientX, clientY).find((element) => element.matches(TILE))
 				if (under && !under.closest(OWN_HOVER)) scheduleOpen(under)
 				else scheduleClose()
 			})

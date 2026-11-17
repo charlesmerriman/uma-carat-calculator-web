@@ -38,6 +38,7 @@ import { OptionRows } from "./kit/OptionRows"
 import { Panel, PanelHead } from "./kit/Panel"
 import { StatBand } from "./kit/StatBand"
 import { Wall } from "./kit/Wall"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
@@ -264,7 +265,11 @@ function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue:
 				const name = uma?.name ?? card?.name
 				if (!name) return null
 				return (
-					<li key={`${pick.uma ?? "c"}-${pick.card ?? "u"}`} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3">
+					<li
+						key={`${pick.uma ?? "c"}-${pick.card ?? "u"}`}
+						className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3"
+						{...(uma ? hoverCardProps("uma", uma.id) : hoverCardProps("card", card?.id))}
+					>
 						{uma ? <FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
 						<span className="flex min-w-0 flex-col">
 							<EncyclopediaName

@@ -75,6 +75,7 @@ import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const STYLES: PvpStyle[] = ["runaway", "front", "pace", "late", "end"]
 const KINDS: Array<{ id: PvpEventKind; label: string }> = [
@@ -244,6 +245,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={rank.alternatives} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard />}
 				href={hrefs.card(rank.card)}
+				hover={hoverCardProps("card", rank.card)}
 			/>
 		)
 	}
@@ -260,6 +262,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={0} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard={false} />}
 				href={hrefs.uma(rank.uma)}
+				hover={hoverCardProps("uma", rank.uma)}
 			/>
 		)
 	}
@@ -276,6 +279,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 						fill: fillOf(rank.picks),
 						movement: moves.get(rank.uma),
 						href: hrefs.uma(rank.uma),
+						hover: hoverCardProps("uma", rank.uma),
 					}
 				})
 			: lensCards.slice(0, 3).map((rank) => {
@@ -289,6 +293,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 						fill: fillOf(rank.decks),
 						movement: moves.get(rank.card),
 						href: hrefs.card(rank.card),
+						hover: hoverCardProps("card", rank.card),
 					}
 				})
 	const lensLabel = lensOptions.find((option) => option.id === lens)?.label ?? "Overall"
@@ -605,7 +610,7 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 				<ul className="flex flex-col gap-2.5">
 					{results.map((entry) =>
 						entry.kind === "card" ? (
-							<li key={`card-${entry.card.id}`} className="flex items-center gap-2.5">
+							<li key={`card-${entry.card.id}`} className="flex items-center gap-2.5" {...hoverCardProps("card", entry.card.id)}>
 								<CardArt card={entry.card} />
 								<span className="flex min-w-0 flex-col gap-0.5">
 									<EncyclopediaName href={hrefs.card(entry.card.id)} name={entry.card.name} className={RESULT_NAME} />
@@ -620,7 +625,7 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 								</span>
 							</li>
 						) : (
-							<li key={`uma-${entry.uma.id}`} className="flex items-center gap-2.5">
+							<li key={`uma-${entry.uma.id}`} className="flex items-center gap-2.5" {...hoverCardProps("uma", entry.uma.id)}>
 								<FramedUma src={entry.uma.portrait ?? entry.uma.image} oshi={oshiIds.has(entry.uma.id)} className="w-10" />
 								<span className="flex min-w-0 flex-col gap-0.5">
 									<EncyclopediaName href={hrefs.uma(entry.uma.id)} name={entry.uma.name} className={RESULT_NAME} />

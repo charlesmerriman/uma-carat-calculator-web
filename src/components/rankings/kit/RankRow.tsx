@@ -53,10 +53,12 @@ export interface RankRowProps {
 	 * the link itself.
 	 */
 	href?: string | null
+	/** The art's hover card (utils/hoverCards.ts hoverCardProps): the uma's or card's facts on hover. */
+	hover?: Record<string, string>
 }
 
 export function RankRow(props: RankRowProps) {
-	const { place, art, name, sub, movement, fill, parts, tone, count, share, detail, compact = false, muted = false, href = null } = props
+	const { place, art, name, sub, movement, fill, parts, tone, count, share, detail, compact = false, muted = false, href = null, hover } = props
 	const [open, setOpen] = useState(false)
 	const top = place !== null && place <= 3
 	const nameInk = muted ? "text-gray-400" : "text-gray-100"
@@ -80,7 +82,7 @@ export function RankRow(props: RankRowProps) {
 		const cells = (
 			<>
 				{placeCell}
-				<span className="flex">{art}</span>
+				<span className="flex" {...hover}>{art}</span>
 				<span className="flex min-w-0 flex-col gap-1">
 					<span className="flex min-w-0 items-center gap-1.5">
 						<span className={`truncate text-[13px] font-semibold ${nameInk}`}>{name}</span>
@@ -103,7 +105,7 @@ export function RankRow(props: RankRowProps) {
 	const head = (
 		<>
 			{placeCell}
-			<span className="flex">{art}</span>
+			<span className="flex" {...hover}>{art}</span>
 			<span className="flex min-w-0 flex-col gap-0.5">
 				<span className="flex min-w-0 items-center gap-1.5">
 					<span className={`truncate text-[13px] font-semibold ${nameInk}`}>{name}</span>
