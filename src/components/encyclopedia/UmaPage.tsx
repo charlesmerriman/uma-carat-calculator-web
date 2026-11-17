@@ -35,6 +35,9 @@ import { useOwned } from "../../hooks/useOwned"
 import { usePageTitle } from "./usePageTitle"
 import { CareerObjectives } from "./CareerObjectives"
 
+/** The highest awakening level every outfit has; JP's 6 and 7 came later. */
+const BASE_TOP_LEVEL = 5
+
 /** What unlocks an evolution, under its row (Daptrius, 2026-11-13). Nothing for any other skill. */
 function unlockList(skill: PageSkill) {
 	return (skill.conditions ?? []).length > 0 ? <UnlockConditions conditions={skill.conditions ?? []} /> : null
@@ -57,6 +60,38 @@ function UmaSkills({ skills }: { skills: PageSkill[] }) {
 	const loose = of("evolved").filter((skill) => !skill.evolves_from || !awakeningIds.has(skill.evolves_from))
 	// One post per awakening level, in order; a level with two skills shows both.
 	const levels = [...new Set(awakening.map((skill) => skill.level ?? 0))].sort((a, b) => a - b)
+	// Levels 2 to 5 are the track every outfit has. JP raised some outfits to 6
+	// and 7 later, so those get a row of their own under it, never squeezed onto
+	// the end of the first (the owner, 2026-11-17).
+	const base = levels.filter((level) => level <= BASE_TOP_LEVEL)
+	const later = levels.filter((level) => level > BASE_TOP_LEVEL)
+	const track = (shown: number[], className = "enc-awake") => (
+		<ol className={className}>
+			{shown.map((level) => (
+				<li key={level} className="enc-rung">
+					<span className="enc-rung__post" aria-hidden="true">Lv<b>{level}</b></span>
+					<ul className="enc-rung__skills">
+						{awakening.filter((skill) => (skill.level ?? 0) === level).map((skill) => (
+							<SkillRow
+								key={skill.game_id}
+								skill={skill}
+								// The post says the level and the elbow says what it grows
+								// from, so the row's own line stays its type.
+								hint={skillNote(skill, byGameId)}
+								after={hanging(skill).length > 0 && (
+									<ul className="enc-branches">
+										{hanging(skill).map((evolved) => (
+											<SkillRow key={evolved.game_id} skill={evolved} hint={skillNote(evolved, byGameId)} after={unlockList(evolved)} />
+										))}
+									</ul>
+								)}
+							/>
+						))}
+					</ul>
+				</li>
+			))}
+		</ol>
+	)
 	return (
 		<>
 			{uniques.length > 0 && (
@@ -77,31 +112,13 @@ function UmaSkills({ skills }: { skills: PageSkill[] }) {
 			{awakening.length > 0 && (
 				<div className="enc-group">
 					<SubHeading>Awakening skills</SubHeading>
-					<ol className="enc-awake">
-						{levels.map((level) => (
-							<li key={level} className="enc-rung">
-								<span className="enc-rung__post" aria-hidden="true">Lv<b>{level}</b></span>
-								<ul className="enc-rung__skills">
-									{awakening.filter((skill) => (skill.level ?? 0) === level).map((skill) => (
-										<SkillRow
-											key={skill.game_id}
-											skill={skill}
-											// The post says the level and the elbow says what it grows
-											// from, so the row's own line stays its type.
-											hint={skillNote(skill, byGameId)}
-											after={hanging(skill).length > 0 && (
-												<ul className="enc-branches">
-													{hanging(skill).map((evolved) => (
-														<SkillRow key={evolved.game_id} skill={evolved} hint={skillNote(evolved, byGameId)} after={unlockList(evolved)} />
-													))}
-												</ul>
-											)}
-										/>
-									))}
-								</ul>
-							</li>
-						))}
-					</ol>
+					{track(base)}
+					{later.length > 0 && (
+						<div className="enc-awake-later">
+							<p className="enc-awake-later__label">Added later</p>
+							{track(later, "enc-awake enc-awake--later")}
+						</div>
+					)}
 				</div>
 			)}
 			{loose.length > 0 && (

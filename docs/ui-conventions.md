@@ -2582,9 +2582,12 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
 - **An uma's page** (`UmaPage.tsx`): her unique skill first as a plate with what it does
   (`UniquePlate`; an outfit below three stars has two), the innate skills in a row, then the
   awakening levels as posts on a track with each evolved skill hanging off the gold it comes
-  from (one whose base isn't an awakening skill on the page is listed after). The track runs to
-  Lv 7 where JP has raised an outfit that far (those rungs' skills are JP only), and evolutions
-  come in the API's release order, never by name. Career objectives are a list per year
+  from (one whose base isn't an awakening skill on the page is listed after). From 64rem the
+  track runs across in four columns: levels 2 to 5 are one row, and the 6 and 7 JP added later
+  (their skills JP only) a row of their own under an "Added later" rule, in the same columns,
+  never squeezed onto the first (owner, 2026-11-17). A name on the track wraps to two balanced
+  lines instead of being cut short. Below 64rem it runs down the left. Evolutions come in the
+  API's release order, never by name. Career objectives are a list per year
   (`CareerObjectives`), a gold post for a race to win and a chequered flag after the last:
   on a phone the years run as one track, and from 48rem each year is its own column (Daptrius,
   2026-11-17: the single track wrapped to two rows on desktop anyway). One markup; the CSS
