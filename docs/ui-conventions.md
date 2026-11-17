@@ -685,14 +685,21 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   (`useOshiIds`, owner 2026-10-16: a favorite Oguri Cap frames Oguri Cap (Christmas) too,
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
-  frame over the art and keeps the art (and the grey square for a missing picture) 12 units
-  INSIDE the frame's outer edge, under its 24-unit band, with its corner on the same curve.
-  Never flush: the art and the frame are separate layers the browser rounds to device pixels
-  separately, and on an iPhone at the default zoom (iOS 27, Daptrius, board "Issues with Uma
-  SVG Alignment on iOS", 2026-11-17) flush art showed past the frame on fractional-width
-  grid tiles (PvP, Encyclopedia), gone at any other zoom. A bare frame's art fills the box.
+  frame over the art, and **the art fills the frame's box at exactly its size. Never shrink
+  or inset it.** The portraits are the game's cut, with rounded bottom corners baked into
+  the picture as transparency; at full size the frame's 24-unit band hides them with about
+  2 units to spare, and even at 99.5% they show. Web #379 drew the art at 96.85% and every
+  uma that reaches her bottom corners got a dark gap in both, on every device (v2.17,
+  2026-11-17). Only the grey square behind the art (a missing picture, the art's transparent
+  background) sits 12 units inside the frame's outer edge, under the band: a flat colour has
+  no corners to expose. A bare frame's square fills the box.
   `className` only sizes the square (`w-14`, `h-full`), and it MUST size it: the art is
   absolutely positioned, so it gives the frame no size of its own.
+  **Open:** on an iPhone (iOS 27, every browser) at the default zoom only, about one device
+  pixel of the art shows past the frame's outer edge on the PvP and Encyclopedia tiles, not
+  the Timeline (Daptrius, board "Issues with Uma SVG Alignment on iOS", 2026-11-17). Web
+  #376 (the art's sizing) didn't fix it; whether #379's inset did is not known. A fix has to
+  hide the art's edge without resizing the art, and be seen on an iPhone before it ships.
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's

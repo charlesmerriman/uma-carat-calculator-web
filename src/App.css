@@ -1145,25 +1145,45 @@
 	border-radius: 10.75%;
 }
 
-/* The art (and the grey square behind it, for a missing picture) sits
-   12 units INSIDE the frame's outer edge, under its 24-unit band, never flush
-   with it. Flush, the art and the frame are two layers (an <img> and a CSS
-   background) that the browser rounds to device pixels separately, and when
-   the box lands between pixels they can disagree by a pixel or two: on an
-   iPhone at the default zoom (3 device pixels per CSS pixel, fractional grid
-   tiles) the art showed past the frame's bottom and side, and changing the
-   zoom made it go away (Daptrius, board "Issues with Uma SVG Alignment on
-   iOS", 2026-11-17; web #376 tried the art's sizing first, which wasn't it).
-   With the edge under the band, the two layers can drift 12 units either way
-   (about 2 px on a 120 px tile) before anything shows: outward, the frame
-   still covers it; inward, the band's inner edge is 12 units further in.
-   Percentages so it holds at every size: inset 12/762 of the side (so 738/762
-   across), the corner 70/738 of the art's own box (the frame's 82-unit outer
-   curve, 12 in). Width and height are explicit, not `inset` on all four
-   sides: an absolutely positioned <img> with `width: auto` takes the
-   picture's own size instead of stretching between its insets. */
-.uma-frame > img,
+/* The art FILLS the frame's box, at exactly its size. Never shrink or inset
+   it: the portraits are the game's cut, with rounded bottom corners baked
+   into the picture as transparency, and at full size the frame's band hides
+   those corners with about 2 units to spare. Web #379 drew the art at 96.85%
+   (12 units in, to tuck its edge under the band) and the baked corners came
+   out from under the band on every uma that reaches them: the grey square
+   showed as a dark gap in both bottom corners, on every device (v2.17,
+   Daptrius, board "Issues with Uma SVG Alignment on iOS", 2026-11-17). Even
+   99.5% shows them.
+
+   It is pinned with `inset: 0` and an explicit width and height: an
+   absolutely positioned <img> with `width: auto` takes the picture's own size
+   instead of stretching between its insets.
+
+   STILL OPEN, the report that board post began with: on an iPhone (iOS 27,
+   every browser) at the default zoom only, about one device pixel of the art
+   shows past the frame's outer edge on the PvP and Encyclopedia tiles. Web
+   #376 (the art's sizing) didn't fix it; whether #379's inset did is not
+   known. A fix has to hide the art's edge without resizing the art, and has
+   to be seen on an iPhone before it ships. */
+.uma-frame > img {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: inherit;
+}
+
+/* The grey square behind the art, for a missing picture and for the art's
+   transparent background. A flat colour has no corners of its own to expose,
+   so it can sit 12 units inside the frame's outer edge, under the middle of
+   the 24-unit band, where the two layers' separate rounding to device pixels
+   can't show it past the frame. Percentages so it holds at every size: 12/762
+   of the side in (738/762 across), the corner 70/738 of its own box (the
+   frame's 82-unit outer curve, 12 in). */
 .uma-frame::before {
+	content: "";
 	position: absolute;
 	top: 1.5748%;
 	left: 1.5748%;
@@ -1171,15 +1191,7 @@
 	width: 96.8504%;
 	height: 96.8504%;
 	border-radius: 9.4851%;
-}
-
-.uma-frame::before {
-	content: "";
 	background-color: var(--color-gray-700);
-}
-
-.uma-frame > img {
-	object-fit: cover;
 }
 
 /* preserveAspectRatio="none" in both SVGs: if rounding leaves the box a hair
@@ -1198,12 +1210,11 @@
 
 /* The owner's named exceptions (the navbar profile, the account page outside
    the favorites card): the same borderless art and corner, no frame. With no
-   band to hide an edge under, the art fills the whole box. */
+   band to hide an edge under, the grey square fills the whole box too. */
 .uma-frame--bare::after {
 	content: none;
 }
 
-.uma-frame--bare > img,
 .uma-frame--bare::before {
 	top: 0;
 	left: 0;
