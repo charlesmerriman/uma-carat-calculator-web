@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { CareerObjectives } from "../components/encyclopedia/CareerObjectives"
 import type { CareerGoal } from "../types/encyclopedia"
 
-/** An uma's career goals on her page, grouped by year. */
+/** An uma's career goals on her page: one track, the year said once over its first goal. */
 
 const GOALS: CareerGoal[] = [
 	{ turn: 12, when: "Junior Year, Late Jun", race: "Junior Make Debut", grade: null, need: "Run it" },
@@ -13,17 +13,18 @@ const GOALS: CareerGoal[] = [
 ]
 
 describe("CareerObjectives", () => {
-	it("groups the goals by year, in order, with the race, grade and placing", () => {
+	it("lists the goals in order on one track, naming each year once, with the race, grade and placing", () => {
 		render(<CareerObjectives goals={GOALS} hidden={0} />)
-		expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual([
-			"Junior Year", "Classic Year", "Senior Year",
-		])
-		const classic = screen.getByRole("heading", { name: "Classic Year" }).parentElement as HTMLElement
-		const rows = within(classic).getAllByRole("listitem")
-		expect(rows.map((row) => row.textContent)).toEqual([
-			"Early FebKisaragi ShoG3Top 5",
+		const track = screen.getByRole("list")
+		expect(within(track).getAllByRole("listitem").map((row) => row.textContent)).toEqual([
+			"Junior YearLate JunJunior Make DebutRun it",
+			"Classic YearEarly FebKisaragi ShoG3Top 5",
+			// The second goal of a year doesn't repeat it.
 			"Late MayTokyo Yushun (Japanese Derby)G1Top 5",
+			"Senior YearLate DecArima KinenG1Win",
 		])
+		// A race she must win is the track's gold post.
+		expect(within(track).getAllByRole("listitem").map((row) => row.getAttribute("data-win"))).toEqual(["false", "false", "false", "true"])
 		expect(screen.queryByText(/aren't shown yet/)).not.toBeInTheDocument()
 	})
 
@@ -34,8 +35,8 @@ describe("CareerObjectives", () => {
 			{ turn: 60, when: "Senior Year, Late Jun", kind: "placings", race: "Place 3rd or better in 2 G1 races", grade: null, need: "" },
 		]} />)
 		expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual([
-			"Late DecGet 3,000 fans",
-			"Late JunPlace 3rd or better in 2 G1 races",
+			"Junior YearLate DecGet 3,000 fans",
+			"Senior YearLate JunPlace 3rd or better in 2 G1 races",
 		])
 	})
 
