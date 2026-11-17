@@ -32,6 +32,7 @@ import { RankedList } from "./kit/RankedList"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
@@ -71,6 +72,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 						count={formatShare(row.share)}
 						detail={detail?.(row)}
 						href={hrefs.uma(row.uma)}
+						hover={hoverCardProps("uma", row.uma)}
 					/>
 				)
 			}}
@@ -116,6 +118,7 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 						fill={leader > 0 ? row.share / leader : 0}
 						count={formatShare(row.share)}
 						href={hrefs.card(row.card)}
+						hover={hoverCardProps("card", row.card)}
 					/>
 				)
 			}}
@@ -146,7 +149,7 @@ export function TrioList({ trios, catalogue }: {
 									const page = hrefs.uma(uma.id)
 									// Each face opens her page; the names beside them stay text.
 									return page ? (
-										<Link key={uma.id} to={page} aria-label={uma.name} title="Open in the Encyclopedia" className="transition hover:brightness-110">
+										<Link key={uma.id} to={page} aria-label={uma.name} title="Open in the Encyclopedia" className="transition hover:brightness-110" {...hoverCardProps("uma", uma.id)}>
 											{face}
 										</Link>
 									) : (

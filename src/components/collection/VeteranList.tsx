@@ -20,6 +20,7 @@ import { STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
 import { GOOD_AT, VETERAN_SORTS, umaChoices, type VeteranFilter, type VeteranSort } from "../../utils/veteranList"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import type { TrainedUma } from "../../types/trainedUma"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const CONTROL =
 	"min-h-9 rounded-lg border border-gray-600 bg-gray-800 px-2.5 text-sm text-gray-100 focus:border-brand focus:outline-none"
@@ -153,7 +154,7 @@ function VeteranTile({ veteran, umaName, portrait, oshi, open, onOpen }: {
 		>
 			<span className="flex min-w-0 items-center gap-3">
 				<span className="relative shrink-0">
-					<FramedUma src={portrait} oshi={oshi} alt="" className="w-15" />
+					<FramedUma src={portrait} oshi={oshi} alt="" className="w-15" hover={hoverCardProps("uma", veteran.uma)} />
 					{grade && (
 						<GradeBadge
 							grade={grade}

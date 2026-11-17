@@ -103,6 +103,7 @@ import {
 import type { CalculationConstants, RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam } from "../../types/pvpTeam"
 import type { PvpFinalsGroup, PvpRun, PvpRunContent, PvpRunRunner, PvpRunSlot } from "../../types/pvpRun"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 /**
  * A quiet bordered button (Change umas, Skip, Undo). A button that needs another
@@ -946,6 +947,7 @@ function Pip({ race, run, shared }: { race: number; run: PvpRun; shared: Shared 
 			<FramedUma
 				src={uma?.portrait ?? uma?.image ?? null}
 				oshi={runner ? shared.oshiIds.has(runner.uma) : false}
+				hover={hoverCardProps("uma", runner?.uma)}
 				alt={label}
 				title={label}
 				className="w-6.5 ring-2 ring-brand sm:w-7.5"
@@ -987,6 +989,7 @@ function Faces({ runners, shared, className }: { runners: PvpRunRunner[]; shared
 						key={runner.position}
 						src={uma?.portrait ?? uma?.image ?? null}
 						oshi={shared.oshiIds.has(runner.uma)}
+						hover={hoverCardProps("uma", runner.uma)}
 						className={`${className} shadow-[0_0_0_2px_var(--card-fill)] ${index ? "-ml-2" : ""}`}
 					/>
 				)
@@ -1127,6 +1130,7 @@ function LineupBlock({ title, eyebrow, run, choices, shared, onWrite }: {
 							<FramedUma
 								src={uma?.portrait ?? uma?.image ?? null}
 								oshi={shared.oshiIds.has(runner.uma)}
+								hover={hoverCardProps("uma", runner.uma)}
 								alt={uma?.name ?? ""}
 								className="w-full max-w-24 shrink-0 sm:w-18"
 							/>
@@ -1216,6 +1220,7 @@ function RaceGrid({ title, run, shared, onWrite }: {
 							<FramedUma
 								src={uma?.portrait ?? uma?.image ?? null}
 								oshi={shared.oshiIds.has(runner.uma)}
+								hover={hoverCardProps("uma", runner.uma)}
 								alt=""
 								className="w-7.5 shrink-0 sm:w-8"
 							/>
@@ -1602,6 +1607,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 									<FramedUma
 										src={uma?.portrait ?? uma?.image ?? null}
 										oshi={shared.oshiIds.has(runner.uma)}
+										hover={hoverCardProps("uma", runner.uma)}
 										className="w-7.5 shrink-0 sm:w-8"
 									/>
 								) : (
@@ -1802,6 +1808,7 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 									<FramedUma
 										src={uma?.portrait ?? uma?.image ?? null}
 										oshi={oshiIds.has(tally.uma)}
+										hover={hoverCardProps("uma", tally.uma)}
 										alt=""
 										className="w-9.5 shrink-0 sm:w-10.5"
 									/>

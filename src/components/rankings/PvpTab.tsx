@@ -52,6 +52,7 @@ import { CardBuildList, TrioList, UmaBuildList } from "./TeamLists"
 import { knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
 import { EventStrip } from "./EventStrip"
 import { YourTeam } from "./YourTeam"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 /** Two lists side by side when both fit at 26rem, else stacked: by the container, like the kit. */
@@ -256,6 +257,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 				count={formatShare(entry.rate)}
 				share={<Marks marks={entry.marks} />}
 				href={hrefs.uma(entry.uma)}
+				hover={hoverCardProps("uma", entry.uma)}
 			/>
 		)
 	}

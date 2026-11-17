@@ -44,6 +44,7 @@ import { parseApiDate } from "../../utils/dateFormat"
 import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import type { CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
 import type { OwnedCardRow, OwnedUmaRow, RosterChanges } from "../../types/roster"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const CARD_TYPES = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
 const CARD_TYPE_LABELS: Record<string, string> = {
@@ -425,6 +426,7 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 				aria-haspopup={row ? "dialog" : undefined}
 				aria-expanded={row ? open : undefined}
 				title={row ? "Tap to change her stars or potential." : "Tap to add her."}
+				{...hoverCardProps("uma", uma.id)}
 				onClick={() => (row ? onToggle(!open) : onEdit({ umas: [{ uma: uma.id, owned: true, stars: baseStars(uma) }] }))}
 				className={`relative w-full rounded-[10.75%] transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
@@ -611,6 +613,7 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 				aria-haspopup={row ? "dialog" : undefined}
 				aria-expanded={row ? open : undefined}
 				title={row ? "Tap to change its limit break or spare copies." : "Tap to add it."}
+				{...hoverCardProps("card", card.id)}
 				onClick={() => (row ? onToggle(!open) : onEdit({ support_cards: [{ support_card: card.id, owned: true }] }))}
 				className={`relative block w-full rounded-md transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
