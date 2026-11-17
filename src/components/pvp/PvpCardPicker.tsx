@@ -46,6 +46,9 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { limitBreakLabel, type OwnedForPicker } from "../../utils/roster"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { whiteSkillPairs } from "../../utils/pvpTeams"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaIconLink } from "../EncyclopediaLinks"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -131,6 +134,13 @@ type PvpCardPickerProps = {
 	/** A team slot: remembers the filters for that place. Omitted: they start fresh. */
 	place?: PickerPlace
 	/**
+	 * A book button on each tile that opens its Encyclopedia page (early
+	 * access). Only where leaving loses nothing: the team builder and the team
+	 * window save as they go. Off in the guide editor and the veteran form,
+	 * where a stray click would drop an edit in progress.
+	 */
+	pageLinks?: boolean
+	/**
 	 * Drawn under the header: the Umas / Support cards switch of a skill
 	 * search. Switching changes `pool` and `items` on this same mounted
 	 * picker, so the search and the pinned skills carry across.
@@ -171,10 +181,12 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place } = props
+	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place, pageLinks = false } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	// Each tile's Encyclopedia page (early access; none for a placeholder card).
+	const pages = useEncyclopediaHrefs()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(place ? rememberedCardFilters.cardType : null)
 	const [rarity, setRarity] = useState<RarityFilter>(place ? rememberedCardFilters.rarity : null)
@@ -257,6 +269,10 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		)
 
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
+	// Each tile's hover card (early access): an uma's rings this race at this
+	// place's style. Where leaving would drop an edit (no pageLinks), the card
+	// draws without its links, the book button's rule.
+	const ring = pool === "uma" ? ringFor(event, style) : []
 	// The art's own shape: an uma tile is square, a support card is 3:4 (450x600).
 	const artAspect = pool === "uma" ? "aspect-square" : "aspect-[3/4]"
 	const chips = [
@@ -434,9 +450,10 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 								const isRecommended = recommended.has(item.id)
 								const isSelected = item.id === selectedId
 								return (
-									<li key={item.id} className="min-w-0">
+									<li key={item.id} className="relative min-w-0">
 										<button
 											type="button"
+											{...hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring, links: pageLinks })}
 											disabled={reason !== null}
 											aria-pressed={isSelected}
 											title={reason ?? item.name}
@@ -502,6 +519,25 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 												</span>
 											)}
 										</button>
+										{/* The tile's Encyclopedia page, on the art's bottom-right
+										    corner, the one corner the art leaves free (the star is top
+										    left, the owned tick and the card's type icon top right, the
+										    limit breaks bottom left). A SIBLING of the tile, since a link
+										    inside a button is invalid HTML. This box traces the art: the
+										    button's 1px border plus its p-1.5 put the art 7px in, at its
+										    own aspect, so the corner lands on it at any column width.
+										    Clicking also closes the picker: in the team window it would
+										    otherwise stay open over the page it opened. */}
+										{pageLinks && (
+											<span className={`pointer-events-none absolute left-[7px] right-[7px] top-[7px] ${artAspect}`}>
+												<EncyclopediaIconLink
+													href={pool === "uma" ? pages.uma(item.id) : pages.card(item.id)}
+													name={item.name}
+													onClick={onClose}
+													className="pointer-events-auto absolute bottom-0.5 right-0.5"
+												/>
+											</span>
+										)}
 									</li>
 								)
 							})}

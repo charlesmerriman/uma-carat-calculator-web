@@ -64,6 +64,7 @@ import {
 	type GalleryRow as Row,
 	type GallerySort,
 } from "../../../types/gallery"
+import { hoverCardProps } from "../../../utils/hoverCards"
 
 const SORT_PARAM = "sort"
 const UMA_PARAM = "uma"
@@ -245,7 +246,7 @@ export function GalleryView({ event, onOpenMyTeam }: { event: RaceEvent; onOpenM
 						aria-busy={feed.isPlaceholderData}
 					>
 						{rows.map((row) => (
-							<li key={row.public_id}>
+							<li key={row.public_id} data-hover-card-scope="">
 								<GalleryRow
 									row={row}
 									index={catalogue}
@@ -727,7 +728,7 @@ export function GalleryRow({ row, index, selected, link, glide = {} }: {
 						{row.umas.map((member) => {
 							const uma = index.umasById.get(member.uma)
 							return (
-								<li key={member.uma} className="flex min-w-0 flex-col items-center gap-1 text-center">
+								<li key={member.uma} className="flex min-w-0 flex-col items-center gap-1 text-center" {...hoverCardProps("uma", member.uma)}>
 									<UmaPortrait uma={uma} className="w-14" />
 									<span className="w-full truncate text-xs text-gray-200">{uma?.name ?? "Unknown uma"}</span>
 									<StyleChip style={member.style} />

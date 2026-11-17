@@ -20,6 +20,7 @@ import type {
 	AnniversaryEvent,
 	Scenario,
 	DailyLegendRaceRelease,
+	StoryEvent,
 	UserPlannedPurchase,
 	UserStepUpSelection,
 	IncomeLedgerRow,
@@ -119,6 +120,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	const [anniversaryEventData, setAnniversaryEventData] = useState<AnniversaryEvent[]>([])
 	const [scenarioData, setScenarioData] = useState<Scenario[]>([])
 	const [dailyLegendRaceData, setDailyLegendRaceData] = useState<DailyLegendRaceRelease[]>([])
+	const [storyEventData, setStoryEventData] = useState<StoryEvent[]>([])
 	const [userPlannedPurchaseData, setUserPlannedPurchaseData] = useState<UserPlannedPurchase[]>([])
 	const [userStepUpSelectionData, setUserStepUpSelectionData] = useState<UserStepUpSelection[]>([])
 	const [organizedTimelineData, setOrganizedTimelineData] = useState<OrganizedTimelineData>([])
@@ -352,6 +354,9 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 				// before the API one, and the Legend Races page must show its
 				// empty state then, not crash on undefined.
 				setDailyLegendRaceData(data.daily_legend_race_data ?? [])
+				// Defaulted like the legend races: the web deploy can land before
+				// the API's, and the Timeline then shows no story events.
+				setStoryEventData(data.story_event_data ?? [])
 				setUserPlannedPurchaseData(data.user_planned_purchase_data ?? [])
 				// Defaulted for the same reason as the two above: an API predating
 				// step-up selections omits the key entirely.
@@ -976,6 +981,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		anniversaryEventData,
 		scenarioData,
 		dailyLegendRaceData,
+		storyEventData,
 		userPlannedPurchaseData,
 		userStepUpSelectionData,
 		gameEventsData,

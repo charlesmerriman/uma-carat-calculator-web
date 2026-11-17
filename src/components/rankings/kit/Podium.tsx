@@ -23,6 +23,8 @@ export interface PodiumEntry {
 	movement?: MovementValue | null
 	/** Its Encyclopedia page (useEncyclopediaHrefs): the whole card opens it. */
 	href?: string | null
+	/** The art's hover card (utils/hoverCards.ts hoverCardProps). */
+	hover?: Record<string, string>
 }
 
 export function Podium({ entries, kicker, label }: {
@@ -35,8 +37,14 @@ export function Podium({ entries, kicker, label }: {
 	return (
 		<ol aria-label={label} className="grid gap-2.5 @min-[40rem]:grid-cols-3">
 			{entries.slice(0, 3).map((entry, index) => (
-				<li key={entry.key} className="relative flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-edge bg-gray-800 p-3">
-					<span className="flex shrink-0">{entry.art}</span>
+				<li
+					key={entry.key}
+					// The name's link is stretched over the whole card, art included, so the
+					// card is a hover scope: the layer looks under the pointer for the art.
+					data-hover-card-scope=""
+					className="relative flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-edge bg-gray-800 p-3"
+				>
+					<span className="flex shrink-0" {...entry.hover}>{entry.art}</span>
 					<span className="flex min-w-0 flex-col gap-0.5">
 						<span className="font-display text-[11px] font-bold tracking-wider text-brand">
 							#{index + 1}{kicker ? ` ${kicker}` : ""}

@@ -13,6 +13,7 @@
  */
 
 import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { ChevronDown, Handshake, Heart, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
@@ -27,6 +28,8 @@ import { FramedUma } from "../FramedUma"
 import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 /**
  * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
@@ -131,6 +134,11 @@ function MemberPanel({
 	const umaLabel = uma?.name ?? `uma ${position + 1}`
 	const starred = (pool: "uma" | "support", id: number) =>
 		member !== undefined && (isRecommended?.(pool, id, member.style) ?? false)
+	// Encyclopedia pages (early access; null for everyone else, and for a
+	// placeholder card). Every tile is already a button (pick, drag), and the
+	// corners hold the star, the flag, the badge and the x, so the NAMES are
+	// the links: the uma's in the header, each card's caption under it.
+	const pages = useEncyclopediaHrefs()
 
 	const cardTile = (slot: number) => {
 		const entry = member?.cards.find((card) => card.slot === slot)
@@ -144,6 +152,8 @@ function MemberPanel({
 				art={entry ? (card?.image ?? null) : undefined}
 				card={card}
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
+				captionHref={entry ? pages.card(entry.support_card) : null}
+				hoverCard={entry ? hoverCardProps("card", entry.support_card) : undefined}
 				disabled={!member}
 				disabledHint="Pick an uma first"
 				shape="card"
@@ -222,7 +232,9 @@ function MemberPanel({
 					{position + 1}
 				</span>
 				<div className="min-w-0 flex-1">
-					<h3 className="truncate text-sm font-semibold text-gray-100">{umaLabel}</h3>
+					<h3 className="truncate text-sm font-semibold text-gray-100">
+						<PageName href={pages.uma(member.uma)} name={umaLabel} />
+					</h3>
 					{course && uma && (
 						<AptitudeLetters
 							// Her veteran's letters once one is linked: inheritance may have fixed a D.
@@ -277,6 +289,8 @@ function MemberPanel({
 						starred={starred("uma", member.uma)}
 						flag={releaseFor?.("uma", member.uma)}
 						favorite={isFavorite?.(member.uma) ?? false}
+						// Her hover card rings what this race asks of her at the style she runs.
+						hoverCard={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
 						label={`Change uma ${position + 1}: ${umaLabel}`}
 						onClick={() => onPickUma(position)}
 						empty={null}
@@ -300,6 +314,8 @@ function Tile({
 	onClick,
 	empty,
 	caption,
+	captionHref = null,
+	hoverCard,
 	shape = "square",
 	card,
 	framed = false,
@@ -319,6 +335,10 @@ function Tile({
 	onClick: () => void
 	empty: ReactNode
 	caption?: string
+	/** The caption's Encyclopedia page: the name becomes a link. Null: plain text. */
+	captionHref?: string | null
+	/** The hover card's attributes (utils/hoverCards.ts), spread on the tile's button. */
+	hoverCard?: Record<string, string>
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
 	/** A support card: drawn as the game draws it (FramedCard), its art from the card itself. */
@@ -346,6 +366,7 @@ function Tile({
 			<div className="group relative">
 				<button
 					type="button"
+					{...hoverCard}
 					aria-label={label}
 					title={disabled ? disabledHint : caption}
 					disabled={disabled}
@@ -407,12 +428,27 @@ function Tile({
 					className={`mt-1 hidden truncate text-center text-[11px] leading-tight sm:block ${
 						filled ? "text-gray-300" : "text-gray-500"
 					}`}
-					title={caption}
+					title={captionHref ? undefined : caption}
 				>
-					{caption}
+					<PageName href={captionHref} name={caption} />
 				</p>
 			)}
 		</div>
+	)
+}
+
+/**
+ * A name that opens its Encyclopedia page when it has one (the Rankings
+ * pattern, EncyclopediaName), else the same text. It inherits the size and
+ * colour of the line it sits in, so the header and the caption keep their look
+ * and only the hover says it's a link. Shared with CompactTeamGrid.
+ */
+export function PageName({ href, name }: { href: string | null; name: string }) {
+	if (!href) return <>{name}</>
+	return (
+		<Link to={href} title={`Open ${name} in the Encyclopedia`} className="transition-colors hover:text-brand hover:underline">
+			{name}
+		</Link>
 	)
 }
 

@@ -36,6 +36,7 @@ import { setCourseFocus, useCourseFocus, useStyleTab, type StyleChoice } from ".
 import { accelRows, grade, speedRows, verdictLines, type AccelRow } from "../../utils/courseLayers"
 import { GradePill, ZoneBar } from "./CourseVerdictCard"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 const STYLES: { value: StyleChoice; label: string }[] = [
 	{ value: "all", label: "All" },
 	{ value: "front", label: "Front" },
@@ -159,7 +160,7 @@ function AccelRows({ course, rows, list, style, searching, owners, skillsById }:
 								}`}
 							>
 								{owner ? (
-									<FramedUma src={owner.uma.portrait} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-7 w-7 shrink-0" />
+									<FramedUma src={owner.uma.portrait} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-7 w-7 shrink-0" hover={hoverCardProps("uma", owner.uma.id)} />
 								) : skill?.image ? (
 									<img src={skill.image} alt="" className="mt-0.5 h-6 w-6 shrink-0" loading="lazy" decoding="async" />
 								) : (

@@ -17,15 +17,18 @@ import { InsidePopupContext } from "./pvp/hoverPopup"
  * box, never its child: a link inside a button is invalid HTML and the click
  * would do both. The caller places it with `className` (`absolute left-1 bottom-1`).
  */
-export function EncyclopediaIconLink({ href, name, className = "" }: {
+export function EncyclopediaIconLink({ href, name, className = "", onClick }: {
 	href: string | null
 	name: string
 	className?: string
+	/** Runs on the click as well as the navigation: a dialog that outlives the route closes itself. */
+	onClick?: () => void
 }) {
 	if (!href) return null
 	return (
 		<Link
 			to={href}
+			onClick={onClick}
 			aria-label={`Open ${name} in the Encyclopedia`}
 			title="Open in the Encyclopedia"
 			className={`flex h-6 w-6 items-center justify-center rounded-full border border-gray-600 bg-gray-900/90 text-gray-300 transition hover:border-brand hover:text-brand focus-visible:outline-2 focus-visible:outline-brand ${className}`}

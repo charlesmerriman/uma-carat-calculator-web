@@ -11,6 +11,7 @@ import type { CatalogueUma } from "../../../types/pvpTeam"
 import { useOshiIds } from "../../../hooks/useOshiIds"
 import { FramedUma } from "../../FramedUma"
 import { useEncyclopediaHrefs } from "../../../hooks/useEncyclopediaHrefs"
+import { hoverCardProps } from "../../../utils/hoverCards"
 
 export function Wall({ entries, start = 20, label }: {
 	entries: Array<{ uma: CatalogueUma; count: string }>
@@ -39,7 +40,7 @@ export function Wall({ entries, start = 20, label }: {
 					)
 					const tile = "flex min-w-0 flex-col items-center gap-0.5 text-center"
 					return (
-						<li key={uma.id} className={page ? "min-w-0" : tile}>
+						<li key={uma.id} className={page ? "min-w-0" : tile} {...hoverCardProps("uma", uma.id)}>
 							{page ? (
 								<Link to={page} className={`group ${tile} rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-brand`}>
 									{face}

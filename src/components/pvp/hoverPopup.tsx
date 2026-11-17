@@ -14,6 +14,7 @@ import {
 	offset,
 	safePolygon,
 	shift,
+	size,
 	useDismiss,
 	useFloating,
 	useFocus,
@@ -63,6 +64,20 @@ export interface HoverPopupOptions {
 	 * is itself a link: the tap should follow the link, not open a card over it.
 	 */
 	tap?: boolean
+	/**
+	 * A tall popup, an uma's or a card's hover card (components/hovercards):
+	 * it may flip to any side and shift to stay on screen, and when the window
+	 * is shorter than the card it scrolls inside itself. Without this, a card
+	 * flipped above a tile ran off the top of the window (2026-11-17).
+	 */
+	fit?: boolean
+	/**
+	 * A tap is the ONLY way in: hover and keyboard focus never open it. For a
+	 * tile that already opens the site's shared hover card on a computer
+	 * (HoverCardLayer, which ignores touch), so a phone still gets something
+	 * and a computer never gets two popups (the story event row, 2026-11-17).
+	 */
+	tapOnly?: boolean
 }
 
 /**
@@ -83,7 +98,10 @@ export interface HoverPopupOptions {
  * screen reader's copy is the caller's `sr-only` element, always in the DOM
  * and named by `aria-describedby`, as the old in-place popup was.
  */
-export function useHoverPopup(placement: Placement, { onOpenChange, interactive = false, tap = true }: HoverPopupOptions = {}) {
+export function useHoverPopup(
+	placement: Placement,
+	{ onOpenChange, interactive = false, tap = true, fit = false, tapOnly = false }: HoverPopupOptions = {}
+) {
 	const [open, setOpenState] = useState(false)
 	const setOpen = (next: boolean) => {
 		setOpenState(next)
@@ -94,11 +112,24 @@ export function useHoverPopup(placement: Placement, { onOpenChange, interactive 
 		open,
 		onOpenChange: setOpen,
 		placement,
-		middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+		middleware: fit
+			? [
+					offset(6),
+					flip({ fallbackPlacements: ["left-start", "bottom-start", "top-start"], padding: 8 }),
+					shift({ padding: 8 }),
+					size({
+						padding: 8,
+						apply({ availableHeight, elements }) {
+							elements.floating.style.maxHeight = `${Math.max(160, Math.floor(availableHeight))}px`
+						},
+					}),
+				]
+			: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
 		whileElementsMounted: autoUpdate,
 	})
 	const { getReferenceProps, getFloatingProps } = useInteractions([
 		useHover(context, {
+			enabled: !tapOnly,
 			mouseOnly: true,
 			delay: { open: HOVER_OPEN_DELAY_MS },
 			// safePolygon keeps it open while the pointer crosses the gap
@@ -106,7 +137,7 @@ export function useHoverPopup(placement: Placement, { onOpenChange, interactive 
 			// pointer heads anywhere else.
 			handleClose: interactive ? safePolygon() : undefined,
 		}),
-		useFocus(context, { visibleOnly: true }),
+		useFocus(context, { enabled: !tapOnly, visibleOnly: true }),
 		// Escape, or a tap anywhere else, closes it.
 		useDismiss(context),
 	])
@@ -132,7 +163,7 @@ export function useHoverPopup(placement: Placement, { onOpenChange, interactive 
 					{...(interactive ? getFloatingProps() : {})}
 					className={`z-50 max-w-[80vw] rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${
 						interactive ? "" : "pointer-events-none"
-					} ${widthClassName}`}
+					} ${fit ? "overflow-y-auto" : ""} ${widthClassName}`}
 				>
 					<InsidePopupContext.Provider value={true}>
 						<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>

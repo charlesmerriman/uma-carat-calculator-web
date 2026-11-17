@@ -34,12 +34,22 @@ async function fetchPage<T>(path: string): Promise<T | null> {
 	return (await response.json()) as T
 }
 
+/**
+ * How long a page counts as fresh. The pages themselves keep the client's
+ * default; a hover card (components/hovercards) asks for longer, so hovering
+ * the same uma again later in the session reuses what it fetched.
+ */
+interface PageOptions {
+	staleTime?: number
+}
+
 /** Asks only while `gameId` is a real id. */
-export function useUmaPage(gameId: number | null) {
+export function useUmaPage(gameId: number | null, { staleTime }: PageOptions = {}) {
 	return useQuery({
 		queryKey: encyclopediaKeys.uma(gameId ?? 0),
 		enabled: gameId !== null,
 		queryFn: () => fetchPage<UmaPageData>(`/encyclopedia/umas/${gameId}`),
+		...(staleTime === undefined ? {} : { staleTime }),
 	})
 }
 
@@ -52,11 +62,12 @@ export function useSkillPage(gameId: number | null) {
 	})
 }
 
-export function useCardPage(gameId: number | null) {
+export function useCardPage(gameId: number | null, { staleTime }: PageOptions = {}) {
 	return useQuery({
 		queryKey: encyclopediaKeys.card(gameId ?? 0),
 		enabled: gameId !== null,
 		queryFn: () => fetchPage<CardPageData>(`/encyclopedia/cards/${gameId}`),
+		...(staleTime === undefined ? {} : { staleTime }),
 	})
 }
 

@@ -28,6 +28,9 @@ import { DraggableCard, DraggableUma } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
 import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { OpenPageLink } from "../EncyclopediaLinks"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 /** One button in a pick's action row. A disabled one says why. */
 export interface PickButton {
@@ -74,6 +77,10 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 	const toggle = (key: string) => setOpenKey((current) => (current === key ? null : key))
 	const onTeamUmas = new Set(members.map((member) => member.uma))
 	const onTeamCards = new Set(members.flatMap((member) => member.cards.map((card) => card.support_card)))
+	// Each pick's Encyclopedia page (early access), linked from its action row:
+	// the tile itself is a button (and a drag handle), and at four a row it has
+	// no room for a corner button.
+	const pages = useEncyclopediaHrefs()
 
 	if (guideState.status === "loading" || guideState.status === "idle") {
 		return (
@@ -110,6 +117,8 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							actions: () => actions.uma(pick.ref.id, pick.styles),
 							emptyHint: null,
 							note: actions.note?.("uma", pick.ref.id) ?? null,
+							page: pages.uma(pick.ref.id),
+							hover: hoverCardProps("uma", pick.ref.id),
 						}))}
 						shape="square"
 						openKey={openKey}
@@ -137,6 +146,8 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							actions: () => actions.card(pick.ref.id),
 							emptyHint: actions.emptyCardHint,
 							note: actions.note?.("support", pick.ref.id) ?? null,
+							page: pages.card(pick.ref.id),
+							hover: hoverCardProps("card", pick.ref.id),
 						}))}
 						shape="card"
 						openKey={openKey}
@@ -177,6 +188,10 @@ interface PickItem {
 	emptyHint: string | null
 	/** "Out 2026/11/5, during this event", or null. */
 	note: string | null
+	/** Its Encyclopedia page (useEncyclopediaHrefs), or null for none to open. */
+	page: string | null
+	/** Its hover card's attributes (utils/hoverCards.ts), spread on the tile. */
+	hover: Record<string, string>
 }
 
 /** Four tiles a row, with the open pick's action row after its row. */
@@ -222,6 +237,7 @@ function PickTile({ item, shape, open, onClick }: {
 			<PickDrag item={item}>
 				<button
 					type="button"
+					{...item.hover}
 					aria-expanded={open}
 					title={item.detail ? `${item.name}: ${item.detail}` : item.name}
 					onClick={onClick}
@@ -288,7 +304,10 @@ function ActionRow({ item, onDone }: { item: PickItem; onDone: () => void }) {
 	const rows = item.actions()
 	return (
 		<li className="col-span-4 rounded-lg border border-brand/40 bg-gray-900/80 p-2" aria-label={`Add ${item.name}`}>
-			<p className="mb-1.5 truncate text-xs font-semibold text-gray-100">Add {item.name}</p>
+			<div className="mb-1.5 flex items-baseline gap-2">
+				<p className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-100">Add {item.name}</p>
+				<OpenPageLink href={item.page} className="shrink-0" />
+			</div>
 			{item.note && <p className="-mt-1 mb-1.5 text-[11px] font-medium text-brand">{item.note}</p>}
 			{rows.length === 0 ? (
 				<p className="text-xs text-gray-400">{item.emptyHint}</p>

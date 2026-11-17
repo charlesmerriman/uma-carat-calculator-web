@@ -24,7 +24,9 @@ import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { FramedCard } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
-import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
+import { HoverCardContent } from "../hovercards/HoverCardContent"
+import { hoverCardProps } from "../../utils/hoverCards"
 import { OpenPageLink } from "../EncyclopediaLinks"
 import { Link } from "react-router-dom"
 import { splitOutfit } from "../../utils/umaName"
@@ -221,9 +223,17 @@ function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
  * no `detail` it renders the child plainly and is not focusable.
  */
-function WithDetail({ label, detail, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false }: {
+function WithDetail({ label, detail, card, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false }: {
 	label: string
 	detail: ReactNode
+	/**
+	 * Drawn in the open popup instead of `detail`, at the hover card's width:
+	 * an uma's or a card's hover card (components/hovercards) for early access,
+	 * with the guide's words in its top slot. The screen reader's copy keeps
+	 * `detail`, which is always in the DOM; the card mounts only while open,
+	 * so a guide full of tiles fetches nothing until one is hovered.
+	 */
+	card?: ReactNode
 	children: ReactNode
 	className?: string
 	/** The detail box's width; a card's art wants a narrower box than text. */
@@ -234,7 +244,13 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 	interactive?: boolean
 }) {
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom", { onOpenChange, interactive })
+	// A hover card is tall: it opens beside the tile and fits the window, as
+	// the layer's cards do (HoverCardLayer).
+	const { referenceProps, popup } = useHoverPopup(card !== undefined ? "right-start" : "bottom", {
+		onOpenChange,
+		interactive: interactive || card !== undefined,
+		fit: card !== undefined,
+	})
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
@@ -251,7 +267,7 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 			<div id={detailId} role="tooltip" className="sr-only">
 				<InsideHoverContext.Provider value={true}>{detail}</InsideHoverContext.Provider>
 			</div>
-			{popup(detail, detailClassName)}
+			{popup(card ?? detail, card !== undefined ? "w-80" : detailClassName)}
 		</div>
 	)
 }
@@ -349,9 +365,21 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	const { base, outfit } = splitOutfit(uma.name)
 	const mentioned = FIRST_MENTION.exec(note)?.[1]
 	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
+	// For early access the popup is her hover card, with the guide's note and
+	// her unique's verdict on top (the card names her unique itself).
+	const known = useEncyclopediaLookup().uma(uma.id) !== null
+	const words = note || uma.unique
+		? (
+			<>
+				{note && <><InlineNote text={note} /><MentionedSkills text={note} /></>}
+				{uma.unique && <CourseVerdict skillId={uma.unique.id} />}
+			</>
+		)
+		: null
 	return (
 		<WithDetail
 			label={uma.name}
+			card={known ? <HoverCardContent kind="uma" id={uma.id} top={words} /> : undefined}
 			// Her unique's verdict rides in the popup, with its zone bar, so the
 			// answer is at the pointer when the map is scrolled away (owner,
 			// 2026-11-04); with no note, the unique's name is the detail.
@@ -501,11 +529,18 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
  * hover card to carry "Open its page" (SupportTile, SwapInCard). The art's
  * own alt (the card's name) names the link. No href: the art alone.
  */
-function PageArt({ href, className, children }: { href: string | null; className: string; children: ReactNode }) {
+function PageArt({ href, hover, className, children }: {
+	href: string | null
+	/** The card's hover card (utils/hoverCards.ts); like the link, early access only. */
+	hover?: Record<string, string>
+	className: string
+	children: ReactNode
+}) {
 	if (!href) return <>{children}</>
 	return (
 		<Link
 			to={href}
+			{...hover}
 			title="Open in the Encyclopedia"
 			className={`block transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${className}`}
 		>
@@ -545,7 +580,7 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null, l
 				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
 						<span className="relative block h-full">
-							<PageArt href={page} className="h-full">
+							<PageArt href={page} hover={hoverCardProps("card", card.id)} className="h-full">
 								<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
 							</PageArt>
 							{linked && <LinkBadge scenarioName={scenarioName} />}
@@ -592,7 +627,7 @@ export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
 		<div className="flex min-w-0 flex-col items-center gap-1 text-center">
 			<span className="relative block w-16">
 				{card.image || card.image_borderless ? (
-					<PageArt href={page} className="w-full">
+					<PageArt href={page} hover={hoverCardProps("card", card.id)} className="w-full">
 						<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
 					</PageArt>
 				) : (
@@ -624,6 +659,7 @@ export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
  */
 export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; note: string }) {
 	const page = useEncyclopediaHrefs().card(card?.id)
+	const known = useEncyclopediaLookup().card(card?.id) !== null
 	return (
 		<div className="text-center text-[11px] leading-tight text-gray-400">
 			{card && (
@@ -638,6 +674,7 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 								{page && <span className="mt-1 block text-center"><OpenPageLink href={page} /></span>}
 							</>
 						}
+						card={known && card ? <HoverCardContent kind="card" id={card.id} /> : undefined}
 						className="inline-block max-w-full cursor-pointer align-baseline"
 						detailClassName="w-36"
 						interactive={page !== null}
@@ -692,8 +729,26 @@ export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: nu
 			<OpenPageLink href={page} />
 		</div>
 	)
+	const known = useEncyclopediaLookup().uma(uma.id) !== null
+	const words = stars > 0 || role || note
+		? (
+			<div className="flex flex-col gap-1">
+				{stars > 0 && <div className="w-fit"><Stars count={stars} /></div>}
+				{role && <div className="font-semibold text-brand">{role}</div>}
+				{note && <InlineNote text={note} />}
+				{note && <MentionedSkills text={note} />}
+			</div>
+		)
+		: null
 	return (
-		<WithDetail label={uma.name} detail={detail} className="w-full" detailClassName="w-48" interactive={page !== null}>
+		<WithDetail
+			label={uma.name}
+			detail={detail}
+			card={known ? <HoverCardContent kind="uma" id={uma.id} top={words} /> : undefined}
+			className="w-full"
+			detailClassName="w-48"
+			interactive={page !== null}
+		>
 			<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 		</WithDetail>
 	)
@@ -726,8 +781,24 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 			<OpenPageLink href={page} />
 		</div>
 	)
+	const known = useEncyclopediaLookup().card(card.id) !== null
+	const reasons = note || extra
+		? (
+			<div className="flex flex-col items-start gap-1">
+				<SlotReasons note={note} faces />
+				{extra}
+			</div>
+		)
+		: null
 	return (
-		<WithDetail label={card.name} detail={detail} className="w-full" detailClassName="w-44" interactive={page !== null}>
+		<WithDetail
+			label={card.name}
+			detail={detail}
+			card={known ? <HoverCardContent kind="card" id={card.id} top={reasons} /> : undefined}
+			className="w-full"
+			detailClassName="w-44"
+			interactive={page !== null}
+		>
 			<BorrowTab borrow={borrow}>
 				<span className="relative block">
 					{card.image || card.image_borderless ? (

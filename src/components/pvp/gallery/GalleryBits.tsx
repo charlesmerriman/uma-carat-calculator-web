@@ -21,6 +21,7 @@ import { ProfileCard } from "./ProfileCard"
 import type { PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
 import type { GalleryPoster, GalleryRow, ProfileCardTarget } from "../../../types/gallery"
 import type { CatalogueUma, MemberStyle, PvpTeamMember } from "../../../types/pvpTeam"
+import { hoverCardProps } from "../../../utils/hoverCards"
 
 /**
  * The tier chip: the tier's NAME on the look's colours. The name is the
@@ -242,7 +243,7 @@ export function GalleryTeam({ members, index }: {
 					<li key={position} className="flex items-start gap-3">
 						<div className="flex w-20 shrink-0 flex-col items-center gap-1 text-center">
 							{umaPage ? (
-								<Link to={umaPage} className="group flex flex-col items-center gap-1 rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-brand">
+								<Link to={umaPage} className="group flex flex-col items-center gap-1 rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-brand" {...hoverCardProps("uma", member.uma)}>
 									{umaFace}
 								</Link>
 							) : (
@@ -280,7 +281,7 @@ export function GalleryTeam({ members, index }: {
 									borrowed ? <li key="divider" aria-hidden="true" className="hidden h-full w-0.5 rounded bg-gray-600 sm:block" /> : null,
 									<li key={slot} className="flex min-w-0 flex-col gap-0.5">
 										{cardPage ? (
-											<Link to={cardPage} className="group flex min-w-0 flex-col gap-0.5 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-brand">
+											<Link to={cardPage} className="group flex min-w-0 flex-col gap-0.5 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-brand" {...hoverCardProps("card", card?.support_card)}>
 												{cardFace}
 											</Link>
 										) : (

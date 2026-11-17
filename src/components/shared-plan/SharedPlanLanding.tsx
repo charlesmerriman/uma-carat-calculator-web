@@ -19,6 +19,7 @@ import { FramedUma } from "../FramedUma"
 import { useBannerProjection } from "../../hooks/useBannerResources"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 /**
  * /app/<public_id>: somebody's shared plan, and one thing to do with it.
  *
@@ -120,11 +121,11 @@ const BannerLine = ({ target, planned, max, note, counted }: {
 					)
 				) : target.type === "Uma" ? (
 					target.banner.umas.slice(0, 2).map((uma) => (
-						<FramedUma key={uma.id} src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="h-full" />
+						<FramedUma key={uma.id} src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="h-full" hover={hoverCardProps("uma", uma.id)} />
 					))
 				) : (
 					images.slice(0, 2).map((img) => (
-						<img key={img.name} src={img.image} alt={img.name} className="h-full w-auto min-w-0 object-contain" />
+						<img key={img.name} src={img.image} alt={img.name} className="h-full w-auto min-w-0 object-contain" {...hoverCardProps("card", img.id)} />
 					))
 				)}
 			</div>

@@ -23,6 +23,7 @@ import { formatDate } from "../../utils/dateFormat"
 import { formatTimeAgo } from "../../utils/relativeDate"
 import { countLabel } from "../../utils/plural"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 export function MyGalleryPosts({ className, titleClassName }: { className: string; titleClassName: string }) {
 	const posts = useMyGalleryPosts()
@@ -93,7 +94,7 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 								{post.umas.map((member) => {
 									const uma = pictures.get(member.uma)
 									return (
-										<li key={member.uma} className="flex w-16 flex-col items-center gap-0.5 text-center">
+										<li key={member.uma} className="flex w-16 flex-col items-center gap-0.5 text-center" {...hoverCardProps("uma", member.uma)}>
 											{/* The account page is an owner-named exception to the frame rule. */}
 											<UmaPortrait uma={uma} className="w-12" frame={false} />
 											<span className="w-full truncate text-[11px] text-gray-300">{uma?.name ?? ""}</span>

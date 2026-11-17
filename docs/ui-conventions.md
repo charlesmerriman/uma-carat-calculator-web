@@ -685,13 +685,14 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   (`useOshiIds`, owner 2026-10-16: a favorite Oguri Cap frames Oguri Cap (Christmas) too,
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
-  frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
-  pokes out past it. `className` only sizes the square (`w-14`, `h-full`), and it MUST size it:
-  the art is pinned to the frame's box (`position: absolute; inset: 0`), so it gives the frame
-  no size of its own. **Open:** on iOS 27 (every browser) the art shows past the frame's edge
-  on the PvP and Encyclopedia pages but not the Timeline (Daptrius, board "Issues with Uma SVG
-  Alignment on iOS", 2026-11-17). Not the art's own size (the portraits are square); cause not
-  found yet.
+  frame over the art and keeps the art (and the grey square for a missing picture) 12 units
+  INSIDE the frame's outer edge, under its 24-unit band, with its corner on the same curve.
+  Never flush: the art and the frame are separate layers the browser rounds to device pixels
+  separately, and on an iPhone at the default zoom (iOS 27, Daptrius, board "Issues with Uma
+  SVG Alignment on iOS", 2026-11-17) flush art showed past the frame on fractional-width
+  grid tiles (PvP, Encyclopedia), gone at any other zoom. A bare frame's art fills the box.
+  `className` only sizes the square (`w-14`, `h-full`), and it MUST size it: the art is
+  absolutely positioned, so it gives the frame no size of its own.
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's
@@ -1282,6 +1283,33 @@ It is there for discoverability, not decoration: nothing else on the site indica
 step-up banners exist until you press the calculator's third Add button. Because a
 step-up's FK points at the campaign **Part** it runs in, the chip lands on exactly one
 card per campaign with no filtering.
+
+### Story events sit flush beneath their banner's card
+
+`StoryEventStrip` (`components/timeline/StoryEventStrip.tsx`) draws each story event under
+the banner it runs with (`story_event_data`, grouped by `storyEventsByBanner`): the logo when
+one is uploaded, the name ("Story event" when it has no English one), "Runs with this banner.
+Claim rewards by ..." through `DateTimeRange`, the reward chips (non-zero only), and each free
+card. It is the mirror of `AnniversaryEventStrip`: outside the panel, which squares its bottom
+corners, so the art row can't grow. Plan: `notes/story-events-plan.md`.
+
+- **Display only.** The rewards are the event's own and nothing reads them for the projection.
+  The cards carry no `first_jp_date`, and the selectors build their catalogue from banners, so
+  a free card never becomes selectable.
+- **On a computer a free card opens the shared hover card** (`hoverCardProps("card", id)`,
+  drawn by `HoverCardLayer` like every other tile), and a click goes to its page.
+- **On a touch screen a tap opens the row's own details, never navigates** (owner,
+  2026-11-17, for this row; `HoverCardLayer` ignores touch). "Open its page" inside does the
+  navigating. Its popup is `useHoverPopup(..., { tapOnly: true })` (hover and focus off), so a
+  mouse or keyboard never opens it beside the shared card, and `FreeCardTile` holds the click
+  back only for a touch (a ref,
+  because the tap's own re-render lands before the click). The banner tiles still send a tap
+  to the page.
+- **Early access only**, like the Encyclopedia (`useSkillsPreview`): everyone else gets a
+  plain tile.
+- **"Must get" is the one mark**, outlined in brand, never filled (black on brand fails on the
+  light theme). No scale.
+- Search finds a banner by its story event's name and its free cards' names.
 
 ### Other Timeline rules
 
@@ -2729,6 +2757,32 @@ Left out on purpose: the planner's art cell (already a link to the banner on the
 and a link can't hold links), pickers where a click chooses, the guide editor's deck
 (`pageLink={false}`: a stray click would leave mid-edit), the share pictures, and the account
 page.
+
+### Hover cards for umas and support cards (`components/hovercards/`)
+
+The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): hovering an uma shows her
+aptitudes (the race's ringed), stats boxed with Growth and skills; hovering a support card shows
+its effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
+teaches. Both end in "Open its page". Early access only, mouse and keyboard focus only (a phone
+keeps the links above).
+
+- **A tile opts in with attributes, built by `hoverCardProps()`** (`utils/hoverCards.ts`), never
+  by hand: `{...hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}` on
+  the tile's own button or link. `data-hover-card` names the row, `data-hover-card-ring` the
+  aptitudes to ring, `data-hover-card-links="off"` drops the links where leaving would lose an
+  edit, `data-hover-card-scope` marks a container whose stretched link covers the art.
+- **One popup serves the whole app: `HoverCardLayer`**, mounted once in `AppShell` beside the
+  team window. It listens on the document, so a grid of 300 tiles costs 300 attributes and no
+  wrappers, and a tile that is a button, a link or a drag handle needs nothing else. Any press
+  closes the card (a drag or a click never leaves one behind); touch is ignored; the tile's
+  `title` is moved aside while its card is open. It draws at `z-[10001]`, above the pickers'
+  overlays, and inside an open native `<dialog>` when the tile is in one.
+- **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
+  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The layer fetches the page
+  on open (`useUmaPage` / `useCardPage` with a 30 minute `staleTime`, the same cache the pages
+  use) and draws the header from the catalogue meanwhile. `useEncyclopediaLookup()` maps the
+  row id to the game id, beside `useEncyclopediaHrefs()` on the same index.
+- **A tile inside an existing hover (`WithDetail`) is ignored**, so nothing opens two cards.
 
 ## Selectors page (`components/selectors/`)
 
