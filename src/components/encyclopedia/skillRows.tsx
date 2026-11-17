@@ -59,9 +59,11 @@ function HoverCard({ skill, wanted }: { skill: RowSkill; wanted: boolean }) {
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
-export function SkillRow({ skill, sub, after }: {
+export function SkillRow({ skill, sub, hint, after }: {
 	skill: RowSkill
 	sub?: string
+	/** Said to a screen reader only, where the page draws the same fact as a picture: "Awakening level 3" beside the track's post. */
+	hint?: string
 	/** Drawn under the row, outside its link: an evolution's unlock conditions on an uma page. */
 	after?: ReactNode
 }) {
@@ -87,6 +89,7 @@ export function SkillRow({ skill, sub, after }: {
 					<span className="enc-skill__sub">
 						<KindPill kind={kind} />
 						{line && <span>{line}</span>}
+						{hint && <span className="sr-only">{hint}</span>}
 						{skill.availability === "jp" && <span className="enc-skill__jp">JP only</span>}
 					</span>
 				</span>
@@ -96,6 +99,31 @@ export function SkillRow({ skill, sub, after }: {
 			{popup(<HoverCard skill={skill} wanted={wanted} />, "w-80")}
 			{after}
 		</li>
+	)
+}
+
+/**
+ * An uma's unique skill, leading her skills: the icon, its name and what it
+ * does, under the game's rainbow edge. A link to the skill's page, like a
+ * row. An outfit that starts below three stars has two (the weaker one until
+ * she reaches three), so `from` says which star each applies from.
+ */
+export function UniquePlate({ skill, from }: { skill: RowSkill & { description?: string }; from?: string }) {
+	return (
+		<Link to={skillHref(skill.game_id)} className="enc-uniq">
+			{skill.image
+				? <img src={skill.image} alt="" className="enc-uniq__icon" loading="lazy" decoding="async" />
+				: <span className="enc-uniq__icon bg-gray-700" aria-hidden="true" />}
+			<span className="enc-uniq__text">
+				<span className="enc-uniq__name" lang={nameLang(skill.name)}>{skill.name}</span>
+				{skill.description && <span className="enc-uniq__what">{skill.description}</span>}
+			</span>
+			<span className="enc-uniq__side">
+				{from && <span>{from}</span>}
+				{SKILL_TYPE_WORDS[skill.type ?? ""] && <b>{SKILL_TYPE_WORDS[skill.type ?? ""]}</b>}
+				{skill.availability === "jp" && <span className="enc-skill__jp">JP only</span>}
+			</span>
+		</Link>
 	)
 }
 

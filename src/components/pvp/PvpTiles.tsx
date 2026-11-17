@@ -32,6 +32,7 @@ import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckSt
 import { clearCourseFocus, setCourseFocus } from "../../services/courseMapStore"
 import CourseVerdict from "../course/CourseVerdict"
 import { nameLang } from "../../utils/skillList"
+import { STAT_ICON_PATHS } from "../../utils/statIcons"
 
 /**
  * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
@@ -408,11 +409,11 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 
 /** The game's stat icons (public/0N_CM*.png), for the stats table and an "or any Wit card" line. */
 const STAT_ICONS: Record<DeckStatType, { label: string; icon: string }> = {
-	speed: { label: DECK_STAT_LABELS.speed, icon: "/00_CMSPEED1.png" },
-	stamina: { label: DECK_STAT_LABELS.stamina, icon: "/01_CMStamina1.png" },
-	power: { label: DECK_STAT_LABELS.power, icon: "/02_CMPOWER1.png" },
-	guts: { label: DECK_STAT_LABELS.guts, icon: "/03_CMGUTS1.png" },
-	wit: { label: DECK_STAT_LABELS.wit, icon: "/04_CMWits1.png" },
+	speed: { label: DECK_STAT_LABELS.speed, icon: STAT_ICON_PATHS.speed },
+	stamina: { label: DECK_STAT_LABELS.stamina, icon: STAT_ICON_PATHS.stamina },
+	power: { label: DECK_STAT_LABELS.power, icon: STAT_ICON_PATHS.power },
+	guts: { label: DECK_STAT_LABELS.guts, icon: STAT_ICON_PATHS.guts },
+	wit: { label: DECK_STAT_LABELS.wit, icon: STAT_ICON_PATHS.wit },
 }
 
 /**

@@ -4,9 +4,15 @@
  * and dates /calculator-data already holds (utils/encyclopediaBanners.ts).
  *
  * The page is a hero (her art, name, tags and release dates), a jump bar, and
- * a card per section. A section with no data is left out, never drawn empty,
- * and the jump bar lists only the sections that are there. A JP-only outfit's
- * aptitudes and stats are the JP client's, and the page says so.
+ * a panel per section, all in her character's two colours (`uma.colours`,
+ * from the game files; the theme's accent when they hold none). A section
+ * with no data is left out, never drawn empty, and the jump bar lists only
+ * the sections that are there.
+ *
+ * Her skills read the way the game hands them out: the unique skill first
+ * with what it does, the innate ones in a row, then the awakening levels as
+ * posts along a track, each evolved skill hanging off the gold skill it
+ * comes from (notes/encyclopedia-redesign-plan.md).
  */
 
 import { useParams } from "react-router-dom"
@@ -19,23 +25,94 @@ import { umaReleases } from "../../utils/encyclopediaBanners"
 import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
-	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, Section, Stars,
+	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, Page, PageSkeleton, Section, Stars,
 	SubHeading, Tag, TranslationCredit, WhereTag, type JumpItem,
 } from "./pieces"
 import { AptitudeGrid, BannerLinks, CardList, OutfitList, ReleaseFacts, StatsSection } from "./facts"
-import { SkillList, UnlockConditions } from "./skillRows"
-import { PAGE_CONTAINER, RUNNING_STYLE_COLORS, RUNNING_STYLE_WORDS, ownedStars } from "../../utils/encyclopedia"
+import { SkillList, SkillRow, UniquePlate, UnlockConditions } from "./skillRows"
+import { PAGE_CONTAINER, RUNNING_STYLE_COLORS, RUNNING_STYLE_WORDS, ownedStars, umaEntryNumber } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
 import { usePageTitle } from "./usePageTitle"
 import { CareerObjectives } from "./CareerObjectives"
 
-/** The order and headings the game teaches skills in. */
-const SKILL_GROUPS: { source: string; title: string }[] = [
-	{ source: "unique", title: "Unique skill" },
-	{ source: "innate", title: "Innate skills" },
-	{ source: "awakening", title: "Awakening skills" },
-	{ source: "evolved", title: "Evolutions" },
-]
+/** What unlocks an evolution, under its row (Daptrius, 2026-11-13). Nothing for any other skill. */
+function unlockList(skill: PageSkill) {
+	return (skill.conditions ?? []).length > 0 ? <UnlockConditions conditions={skill.conditions ?? []} /> : null
+}
+
+/**
+ * Her skills in the order the game hands them out. `evolutions` are keyed by
+ * the game id of the skill they grow from, so each hangs off its gold on the
+ * awakening track; one whose base isn't an awakening skill on this page (the
+ * files do have a few) is listed after the track instead of being dropped.
+ */
+function UmaSkills({ skills }: { skills: PageSkill[] }) {
+	const byGameId = new Map(skills.map((skill) => [skill.game_id, skill]))
+	const of = (source: string) => skills.filter((skill) => skill.source === source)
+	const uniques = of("unique")
+	const innate = of("innate")
+	const awakening = of("awakening")
+	const awakeningIds = new Set(awakening.map((skill) => skill.game_id))
+	const hanging = (base: PageSkill) => of("evolved").filter((skill) => skill.evolves_from === base.game_id)
+	const loose = of("evolved").filter((skill) => !skill.evolves_from || !awakeningIds.has(skill.evolves_from))
+	// One post per awakening level, in order; a level with two skills shows both.
+	const levels = [...new Set(awakening.map((skill) => skill.level ?? 0))].sort((a, b) => a - b)
+	return (
+		<>
+			{uniques.length > 0 && (
+				<div className="enc-group">
+					<SubHeading>{uniques.length === 1 ? "Unique skill" : "Unique skills"}</SubHeading>
+					{uniques.map((skill) => (
+						// An outfit that starts below three stars carries a weaker unique until then.
+						<UniquePlate key={skill.game_id} skill={skill} from={uniques.length > 1 && skill.level ? `From ★${skill.level}` : undefined} />
+					))}
+				</div>
+			)}
+			{innate.length > 0 && (
+				<div className="enc-group">
+					<SubHeading>Innate skills</SubHeading>
+					<SkillList skills={innate} className="enc-skills enc-skills--row" />
+				</div>
+			)}
+			{awakening.length > 0 && (
+				<div className="enc-group">
+					<SubHeading>Awakening skills</SubHeading>
+					<ol className="enc-awake">
+						{levels.map((level) => (
+							<li key={level} className="enc-rung">
+								<span className="enc-rung__post" aria-hidden="true">Lv<b>{level}</b></span>
+								<ul className="enc-rung__skills">
+									{awakening.filter((skill) => (skill.level ?? 0) === level).map((skill) => (
+										<SkillRow
+											key={skill.game_id}
+											skill={skill}
+											// The post says the level and the elbow says what it grows
+											// from, so the row's own line stays its type.
+											hint={skillNote(skill, byGameId)}
+											after={hanging(skill).length > 0 && (
+												<ul className="enc-branches">
+													{hanging(skill).map((evolved) => (
+														<SkillRow key={evolved.game_id} skill={evolved} hint={skillNote(evolved, byGameId)} after={unlockList(evolved)} />
+													))}
+												</ul>
+											)}
+										/>
+									))}
+								</ul>
+							</li>
+						))}
+					</ol>
+				</div>
+			)}
+			{loose.length > 0 && (
+				<div className="enc-group">
+					<SubHeading>Evolutions</SubHeading>
+					<SkillList skills={loose} sub={(skill) => skillNote(skill, byGameId)} after={unlockList} />
+				</div>
+			)}
+		</>
+	)
+}
 
 export const UmaPage = () => (
 	<EncyclopediaGate>
@@ -75,12 +152,13 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 	const owned = useOwned()
 	const calculator = useCalculatorDataSafe()
 	const releases = umaReleases(calculator?.umaBannerData ?? [], uma.id)
-	const byGameId = new Map(uma.skills.map((skill) => [skill.game_id, skill]))
 	const hasApt = Object.values(uma.apt).some((value) => value != null)
 	const hasStats = hasApt && uma.star_stats.length > 0
 	const style = uma.running_style ? RUNNING_STYLE_WORDS[uma.running_style] : null
 	const goals = uma.objectives ?? []
 	const character = uma.name.split(" (")[0]
+	// "Oguri Cap (Christmas)" -> "Christmas"; "" for her original outfit.
+	const outfit = uma.name.slice(character.length).replace(/^\s*\(|\)\s*$/g, "")
 
 	// The jump bar names only the sections this outfit has.
 	const jump = ([
@@ -94,12 +172,15 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 	] as (JumpItem | false)[]).filter((item): item is JumpItem => Boolean(item))
 
 	return (
-		<article className="flex flex-col gap-4">
+		<Page colours={uma.colours}>
 			<Crumbs list="Umas" listPath={UMA_LIST_PATH} name={uma.name} />
 			<Hero
 				art={<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} alt={uma.name} className="enc-hero__art" />}
-				eyebrow="Trainee"
-				name={uma.name}
+				entry={umaEntryNumber(uma.game_id)}
+				ghost={uma.jp_name || undefined}
+				// The name is the character's; which outfit this is sits above it.
+				eyebrow={outfit ? `Trainee · ${outfit}` : "Trainee"}
+				name={character}
 				title={uma.title}
 				japanese={<JapaneseName name={uma.jp_name} title={uma.jp_title} />}
 				tags={
@@ -117,7 +198,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 
 			{hasApt && (
 				<div className="enc-two">
-					<Section id="aptitudes" title="Aptitudes">
+					<Section id="aptitudes" title="Aptitudes" aside={<span className="enc-section__key">A or better is highlighted</span>}>
 						{/* No "from the JP game" note under these or the stats: the page's JP tag
 						    already says it (Daptrius, 2026-11-13). */}
 						<AptitudeGrid apt={uma.apt} />
@@ -130,21 +211,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 
 			{uma.skills.length > 0 && (
 				<Section id="skills" title="Skills" count={uma.skills.length}>
-					{SKILL_GROUPS.map(({ source, title }) => {
-						const skills = uma.skills.filter((skill) => skill.source === source)
-						if (skills.length === 0) return null
-						return (
-							<div key={source} className="flex flex-col gap-2">
-								<SubHeading>{title}</SubHeading>
-								<SkillList
-									skills={skills}
-									sub={(skill) => skillNote(skill, byGameId)}
-									// Each evolution's unlock conditions right under it (Daptrius, 2026-11-13).
-									after={(skill) => ((skill.conditions ?? []).length > 0 ? <UnlockConditions conditions={skill.conditions ?? []} /> : null)}
-								/>
-							</div>
-						)
-					})}
+					<UmaSkills skills={uma.skills} />
 				</Section>
 			)}
 
@@ -158,17 +225,21 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 					<BannerLinks banners={releases.banners} />
 				</Section>
 			)}
-			{uma.outfits.length > 0 && (
-				<Section id="outfits" title="Other outfits" count={uma.outfits.length}>
-					<OutfitList outfits={uma.outfits} />
-				</Section>
-			)}
-			{uma.cards.length > 0 && (
-				<Section id="cards" title={`${character}'s support cards`} count={uma.cards.length}>
-					<CardList cards={uma.cards} />
-				</Section>
+			{(uma.outfits.length > 0 || uma.cards.length > 0) && (
+				<div className="enc-two">
+					{uma.outfits.length > 0 && (
+						<Section id="outfits" title="Other outfits" count={uma.outfits.length}>
+							<OutfitList outfits={uma.outfits} />
+						</Section>
+					)}
+					{uma.cards.length > 0 && (
+						<Section id="cards" title={`${character}'s support cards`} count={uma.cards.length}>
+							<CardList cards={uma.cards} />
+						</Section>
+					)}
+				</div>
 			)}
 			{uma.uses_translation && <TranslationCredit />}
-		</article>
+		</Page>
 	)
 }

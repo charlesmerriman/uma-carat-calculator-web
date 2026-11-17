@@ -12,7 +12,6 @@
 
 import { useState, type CSSProperties } from "react"
 import { Link } from "react-router-dom"
-import { ChevronRight } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
 import { FramedCard } from "../FramedCard"
 import { FramedUma } from "../FramedUma"
@@ -22,16 +21,19 @@ import type { PageCard, PageOutfit, StarStats, StatKey } from "../../types/encyc
 import type { AptitudeKey } from "../../types/pvpTeam"
 import { aptitudeLetter } from "../../utils/courseAptitude"
 import { formatDate } from "../../utils/dateFormat"
-import { bannerStatus, cardLine, isWeakAptitude } from "../../utils/encyclopedia"
+import { bannerStatus, cardLine, isTopAptitude } from "../../utils/encyclopedia"
 import type { BannerLink } from "../../utils/encyclopediaBanners"
 import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
+import { STAT_ICON_PATHS } from "../../utils/statIcons"
 import { APTITUDE_GROUPS, STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
 import { Fact, JpTag, Section, Switch } from "./pieces"
 
 /**
- * The ten aptitudes as the game groups them: surface, distance, style. Each
- * letter sits on the game's colour for it; one she can't use (D or worse)
- * steps back so the A's lead.
+ * The ten aptitudes as the game groups them: surface, distance, style. Every
+ * cell reads at full strength whatever the grade (the owner, 2026-11-17:
+ * "faded out and hard to read is generally not a good idea"); the letter
+ * wears the game's colour for it, and A or better is filled in the page's
+ * colour, so her range shows by what is lit, not by what is dimmed.
  */
 export function AptitudeGrid({ apt }: { apt: Record<AptitudeKey, number | null> }) {
 	return (
@@ -43,7 +45,7 @@ export function AptitudeGrid({ apt }: { apt: Record<AptitudeKey, number | null> 
 						{group.keys.map(({ key, label }) => {
 							const letter = aptitudeLetter(apt[key])
 							return (
-								<div key={key} className="enc-apt__cell" data-weak={isWeakAptitude(apt[key])}>
+								<div key={key} className="enc-apt__cell" data-top={isTopAptitude(apt[key])}>
 									<span>{label}</span>
 									<b className="apt-letter" data-rank={letter ?? undefined}>{letter ?? "–"}</b>
 								</div>
@@ -88,7 +90,10 @@ export function StatsSection({ id, stars, growth, initialStar }: {
 			<ul className="enc-stats">
 				{STAT_KEYS.map((key) => (
 					<li key={key} className="enc-stat" data-stat={key}>
-						<span className="enc-stat__label">{STAT_LABELS[key]}</span>
+						<span className="enc-stat__label">
+							<img src={STAT_ICON_PATHS[key]} alt="" width={20} height={20} loading="lazy" decoding="async" />
+							{STAT_LABELS[key]}
+						</span>
 						{row && <b className="enc-stat__value">{row[key]}</b>}
 						{row && (
 							<span className="enc-stat__bar" aria-hidden="true">
@@ -96,7 +101,7 @@ export function StatsSection({ id, stars, growth, initialStar }: {
 							</span>
 						)}
 						<span className="enc-stat__growth" data-bonus={Boolean(growth[key])}>
-							<i>Growth</i> +{growth[key] ?? 0}%
+							<i>Growth</i> <b>+{growth[key] ?? 0}%</b>
 						</span>
 					</li>
 				))}
@@ -130,41 +135,70 @@ export function ReleaseFacts({ jpDate, globalDate, predicted }: {
 	)
 }
 
-/** The banners this outfit or card is on, as the site already dated them, each a way into the Timeline. */
+/** How many of a banner's other faces a row draws before it says "and N more". */
+const BANNER_FACES = 7
+
+/**
+ * The banners this outfit or card is on, as the site already dated them, each
+ * a way into the Timeline: the banner's own picture, its name, who else is on
+ * it, and when. The faces are the banner's other umas (framed, as every uma
+ * is) or its other cards.
+ */
 export function BannerLinks({ banners }: { banners: BannerLink[] }) {
 	// Read once per page, never at render time: a banner's status is a fact about today.
 	const [now] = useState(() => new Date())
+	const oshiIds = useOshiIds()
 	return (
 		<ul className="enc-banners">
-			{banners.map((banner) => (
-				<li key={banner.timelineId}>
-					<Link to={banner.href} className="enc-banner">
-						<StatusPill status={bannerStatus(banner.start, banner.end, now)} />
-						<span className="enc-banner__name">{banner.name}</span>
-						<span className="enc-banner__dates">{formatDate(banner.start)} to {formatDate(banner.end)}</span>
-						{banner.predicted && <PredictedBadge />}
-					</Link>
-				</li>
-			))}
+			{banners.map((banner) => {
+				const faces = banner.featured.slice(0, BANNER_FACES)
+				const more = banner.featured.length - faces.length
+				return (
+					<li key={banner.timelineId}>
+						<Link to={banner.href} className="enc-banner">
+							{banner.image
+								? <img src={banner.image} alt="" className="enc-banner__art" loading="lazy" decoding="async" />
+								: <span className="enc-banner__art" aria-hidden="true" />}
+							<span className="enc-banner__text">
+								<span className="enc-banner__name">{banner.name}</span>
+								{faces.length > 0 && (
+									<span className="enc-banner__with">
+										With
+										{faces.map((face) => (banner.kind === "uma"
+											? <FramedUma key={face.id} src={face.art} oshi={oshiIds.has(face.id)} alt={face.name} className="enc-banner__face" />
+											: face.art && <img key={face.id} src={face.art} alt={face.name} className="enc-banner__face enc-banner__face--card" loading="lazy" decoding="async" />
+										))}
+										{more > 0 && <span>and {more} more</span>}
+									</span>
+								)}
+							</span>
+							<span className="enc-banner__when">
+								<StatusPill status={bannerStatus(banner.start, banner.end, now)} />
+								<span className="enc-banner__dates">
+									{formatDate(banner.start)} to {formatDate(banner.end)}
+									{banner.predicted && <PredictedBadge />}
+								</span>
+							</span>
+						</Link>
+					</li>
+				)
+			})}
 		</ul>
 	)
 }
 
-/** Other outfits: each a FramedUma linking to its own page. */
+/** Other outfits: each a FramedUma tile linking to its own page, the art first. */
 export function OutfitList({ outfits }: { outfits: PageOutfit[] }) {
 	const oshiIds = useOshiIds()
 	return (
-		<ul className="enc-rows">
+		<ul className="enc-tiles">
 			{outfits.map((outfit) => (
 				<li key={outfit.game_id}>
-					<Link to={umaHref(outfit.game_id)} className="enc-row">
-						<FramedUma src={outfit.portrait} oshi={oshiIds.has(outfit.id)} className="enc-row__art" />
-						<span className="enc-row__text">
-							<span className="enc-row__name">{outfit.name}</span>
-							{outfit.title && <span className="enc-row__sub">{outfit.title}</span>}
-						</span>
+					<Link to={umaHref(outfit.game_id)} className="enc-pic">
+						<FramedUma src={outfit.portrait} oshi={oshiIds.has(outfit.id)} className="enc-pic__art" />
+						<span className="enc-pic__name">{outfit.name}</span>
+						{outfit.title && <span className="enc-pic__sub">{outfit.title}</span>}
 						{!outfit.on_global && <JpTag />}
-						<ChevronRight className="enc-row__go" aria-hidden="true" />
 					</Link>
 				</li>
 			))}
@@ -172,20 +206,17 @@ export function OutfitList({ outfits }: { outfits: PageOutfit[] }) {
 	)
 }
 
-/** Support cards, each in the site's frame and linking to its page. */
+/** Support cards, each in the site's frame and linking to its page, the art first. */
 export function CardList({ cards }: { cards: PageCard[] }) {
 	return (
-		<ul className="enc-rows">
+		<ul className="enc-tiles">
 			{cards.map((card) => (
 				<li key={card.game_id}>
-					<Link to={cardHref(card.game_id)} className="enc-row">
-						<FramedCard card={card} className="enc-row__art--card" />
-						<span className="enc-row__text">
-							<span className="enc-row__name">{card.title || card.name}</span>
-							<span className="enc-row__sub">{cardLine(card)}</span>
-						</span>
+					<Link to={cardHref(card.game_id)} className="enc-pic enc-pic--card">
+						<FramedCard card={card} className="enc-pic__art" />
+						<span className="enc-pic__name">{card.title || card.name}</span>
+						<span className="enc-pic__sub">{cardLine(card)}</span>
 						{!card.on_global && <JpTag />}
-						<ChevronRight className="enc-row__go" aria-hidden="true" />
 					</Link>
 				</li>
 			))}

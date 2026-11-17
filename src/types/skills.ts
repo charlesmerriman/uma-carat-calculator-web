@@ -78,6 +78,8 @@ export interface UnlockCondition {
 }
 
 export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
+	/** The colours of the ONE character the skill belongs to, [main, sub]; null for anyone's skill. Absent from an older API. */
+	colours?: [string, string] | null
 	pair?: SkillRef | null
 	description: string
 	readable: SkillReadable
