@@ -15,6 +15,7 @@ import { TestQueryProvider } from "../test/TestQueryProvider"
 import { UmaHoverCard } from "../components/hovercards/UmaHoverCard"
 import { CardHoverCard } from "../components/hovercards/CardHoverCard"
 import { HoverCardLayer } from "../components/hovercards/HoverCardLayer"
+import { UmaTile } from "../components/pvp/PvpTiles"
 import { effectAt, effectColumns, hoverCardProps, parseHoverCard, parseRing, statRow } from "../utils/hoverCards"
 import type { CardEffect, CardPageData, PageSkill, UmaPageData } from "../types/encyclopedia"
 
@@ -207,6 +208,23 @@ describe("the hover card layer", () => {
 		const user = userEvent.setup()
 		render(shell(tiles))
 		await user.pointer({ keys: "[TouchA]", target: screen.getByRole("button", { name: "Uma" }) })
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		expect(screen.queryByText("[Special Dreamer] · ★3 · Late Surger")).toBeNull()
+	})
+
+	it("turns a guide uma tile's hover into her card, with the guide's note on top", async () => {
+		const user = userEvent.setup()
+		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />))
+		await user.hover(screen.getByRole("group", { name: "Special Week" }))
+		expect(await screen.findByText("[Special Dreamer] · ★3 · Late Surger")).toBeInTheDocument()
+		// The note sits in the card's top slot (it is also on the tile's face and in the screen reader's copy).
+		expect(document.querySelector(".hover-card .skill-card__note")).toHaveTextContent("Run her as a late surger.")
+	})
+
+	it("keeps a guide tile's old hover for everyone else", async () => {
+		const user = userEvent.setup()
+		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />, { early: false }))
+		await user.hover(screen.getByRole("group", { name: "Special Week" }))
 		await new Promise((resolve) => setTimeout(resolve, 300))
 		expect(screen.queryByText("[Special Dreamer] · ★3 · Late Surger")).toBeNull()
 	})
