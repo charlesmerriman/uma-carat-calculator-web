@@ -29,6 +29,7 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 /**
  * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
@@ -152,6 +153,7 @@ function MemberPanel({
 				card={card}
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
 				captionHref={entry ? pages.card(entry.support_card) : null}
+				hoverCard={entry ? hoverCardProps("card", entry.support_card) : undefined}
 				disabled={!member}
 				disabledHint="Pick an uma first"
 				shape="card"
@@ -287,6 +289,8 @@ function MemberPanel({
 						starred={starred("uma", member.uma)}
 						flag={releaseFor?.("uma", member.uma)}
 						favorite={isFavorite?.(member.uma) ?? false}
+						// Her hover card rings what this race asks of her at the style she runs.
+						hoverCard={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
 						label={`Change uma ${position + 1}: ${umaLabel}`}
 						onClick={() => onPickUma(position)}
 						empty={null}
@@ -311,6 +315,7 @@ function Tile({
 	empty,
 	caption,
 	captionHref = null,
+	hoverCard,
 	shape = "square",
 	card,
 	framed = false,
@@ -332,6 +337,8 @@ function Tile({
 	caption?: string
 	/** The caption's Encyclopedia page: the name becomes a link. Null: plain text. */
 	captionHref?: string | null
+	/** The hover card's attributes (utils/hoverCards.ts), spread on the tile's button. */
+	hoverCard?: Record<string, string>
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
 	/** A support card: drawn as the game draws it (FramedCard), its art from the card itself. */
@@ -359,6 +366,7 @@ function Tile({
 			<div className="group relative">
 				<button
 					type="button"
+					{...hoverCard}
 					aria-label={label}
 					title={disabled ? disabledHint : caption}
 					disabled={disabled}

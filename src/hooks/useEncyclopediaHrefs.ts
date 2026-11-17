@@ -25,7 +25,7 @@ import { useEffect, useSyncExternalStore } from "react"
 import { useSkillsPreview } from "./useSkillsPreview"
 import { loadPvpCatalogue } from "../services/pvpTeamFetchCalls"
 import { cardHref, umaHref } from "../utils/encyclopediaRoutes"
-import type { PvpCatalogue } from "../types/pvpTeam"
+import type { CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 
 export interface EncyclopediaHrefs {
 	/** An uma's page from her row id (Uma.id), or null when there isn't one to open. */
@@ -34,26 +34,53 @@ export interface EncyclopediaHrefs {
 	card: (id: number | null | undefined) => string | null
 }
 
-const NO_LINKS: EncyclopediaHrefs = { uma: () => null, card: () => null }
-
-/** Built once per catalogue. A placeholder card ("your best SSR Speed card") has no page. */
-function buildIndex(catalogue: PvpCatalogue): EncyclopediaHrefs {
-	const umaIds = new Map<number, number>()
-	for (const uma of catalogue.umas) {
-		if (uma.game_id != null) umaIds.set(uma.id, uma.game_id)
-	}
-	const cardIds = new Map<number, number>()
-	for (const card of catalogue.support_cards) {
-		if (card.game_id != null && !card.placeholder) cardIds.set(card.id, card.game_id)
-	}
-	const lookup = (ids: Map<number, number>, href: (gameId: number) => string) => (id: number | null | undefined) => {
-		const gameId = id == null ? undefined : ids.get(id)
-		return gameId === undefined ? null : href(gameId)
-	}
-	return { uma: lookup(umaIds, umaHref), card: lookup(cardIds, cardHref) }
+/**
+ * What the hover cards (components/hovercards) need for a row id: the game's
+ * id, which keys its page's fetch, and the catalogue entry, whose name and
+ * art draw the card's header while that fetch is in flight.
+ */
+export interface EncyclopediaEntry<T> {
+	gameId: number
+	entry: T
 }
 
-let index: EncyclopediaHrefs | null = null
+export interface EncyclopediaLookup {
+	uma: (id: number | null | undefined) => EncyclopediaEntry<CatalogueUma> | null
+	card: (id: number | null | undefined) => EncyclopediaEntry<CatalogueSupportCard> | null
+}
+
+const NO_LINKS: EncyclopediaHrefs = { uma: () => null, card: () => null }
+const NO_ENTRIES: EncyclopediaLookup = { uma: () => null, card: () => null }
+
+/** Both views of one catalogue: built together, so they always agree. */
+interface Index {
+	hrefs: EncyclopediaHrefs
+	entries: EncyclopediaLookup
+}
+
+/** Built once per catalogue. A placeholder card ("your best SSR Speed card") has no page. */
+function buildIndex(catalogue: PvpCatalogue): Index {
+	const umas = new Map<number, EncyclopediaEntry<CatalogueUma>>()
+	for (const uma of catalogue.umas) {
+		if (uma.game_id != null) umas.set(uma.id, { gameId: uma.game_id, entry: uma })
+	}
+	const cards = new Map<number, EncyclopediaEntry<CatalogueSupportCard>>()
+	for (const card of catalogue.support_cards) {
+		if (card.game_id != null && !card.placeholder) cards.set(card.id, { gameId: card.game_id, entry: card })
+	}
+	const find = <T,>(rows: Map<number, EncyclopediaEntry<T>>) => (id: number | null | undefined) =>
+		(id == null ? undefined : rows.get(id)) ?? null
+	const link = <T,>(rows: Map<number, EncyclopediaEntry<T>>, href: (gameId: number) => string) => (id: number | null | undefined) => {
+		const row = find(rows)(id)
+		return row === null ? null : href(row.gameId)
+	}
+	return {
+		hrefs: { uma: link(umas, umaHref), card: link(cards, cardHref) },
+		entries: { uma: find(umas), card: find(cards) },
+	}
+}
+
+let index: Index | null = null
 let loading = false
 const listeners = new Set<() => void>()
 
@@ -78,11 +105,21 @@ function subscribe(listener: () => void): () => void {
 	return () => listeners.delete(listener)
 }
 
-export function useEncyclopediaHrefs(): EncyclopediaHrefs {
+/** The shared index for early access, else null; loads the catalogue on first use. */
+function useIndex(): Index | null {
 	const early = useSkillsPreview()
 	useEffect(() => {
 		if (early) ensureLoaded()
 	}, [early])
 	const loaded = useSyncExternalStore(subscribe, () => index, () => null)
-	return early && loaded ? loaded : NO_LINKS
+	return early ? loaded : null
+}
+
+export function useEncyclopediaHrefs(): EncyclopediaHrefs {
+	return useIndex()?.hrefs ?? NO_LINKS
+}
+
+/** The game id and catalogue entry behind a row id, on the same rule as the links. */
+export function useEncyclopediaLookup(): EncyclopediaLookup {
+	return useIndex()?.entries ?? NO_ENTRIES
 }
