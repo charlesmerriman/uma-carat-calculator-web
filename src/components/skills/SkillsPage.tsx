@@ -10,9 +10,10 @@
  * more" rather than drawing them all.
  */
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 import { useSkillListState } from "../../hooks/useSkillList"
+import { reportCounts } from "../../utils/encyclopediaCounts"
 import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
@@ -87,6 +88,12 @@ const SkillsPageBody = () => {
 	const [reversedFlag, setReversed] = useRememberedFilter<string>("skills:sort-reversed", "0", REVERSED_VALUES)
 	const reversed = reversedFlag === "1"
 	const [shown, setShown] = useState(PAGE)
+
+	// The Skills tab's headline number, once the list is here.
+	const total = list.status === "ready" ? list.rows.length : null
+	useEffect(() => {
+		if (total !== null) reportCounts({ skills: total })
+	}, [total])
 
 	const rows = useMemo(() => {
 		if (list.status !== "ready") return []
@@ -174,7 +181,7 @@ const SkillsPageBody = () => {
 				<EmptyNote>No skill matches that.</EmptyNote>
 			) : (
 				<>
-					<SkillList skills={rows.slice(0, shown)} />
+					<SkillList skills={rows.slice(0, shown)} faces />
 					{rows.length > shown && (
 						<div className="enc-more">
 							<span>Showing {shown.toLocaleString("en-US")} of {rows.length.toLocaleString("en-US")}</span>

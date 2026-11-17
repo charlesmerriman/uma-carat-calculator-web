@@ -160,7 +160,7 @@ describe("SkillsPage", () => {
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
 		// The Encyclopedia's tab strip, Skills open.
-		expect(screen.getByRole("link", { name: "Skills" })).toHaveAttribute("aria-current", "page")
+		expect(screen.getByRole("link", { name: /Skills$/ })).toHaveAttribute("aria-current", "page")
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))

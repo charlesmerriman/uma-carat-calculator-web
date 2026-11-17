@@ -13,7 +13,7 @@
  * type's word is still there for a screen reader.
  */
 
-import { useMemo } from "react"
+import { Fragment, useEffect, useMemo } from "react"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedCard } from "../FramedCard"
@@ -22,6 +22,9 @@ import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { CARD_TYPE_ICONS } from "../../utils/cardTypeIcons"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
+import { LetterHeading, LetterIndex } from "./letters"
+import { lettersFor } from "../../utils/encyclopediaLetters"
+import { reportCounts } from "../../utils/encyclopediaCounts"
 import { Chips, Count, PickChips, SearchBox, SelectFilter, SortControl, Toolbar } from "./listFilters"
 import { useCardEffects } from "../../services/encyclopediaQueries"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
@@ -30,7 +33,7 @@ import { useOwned } from "../../hooks/useOwned"
 import {
 	CARD_SORT_OPTIONS, EFFECT_AT_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, RARITY_WORDS, REVERSED_VALUES,
 	SHARED_OWNED_KEY, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, TYPE_OPTIONS, WHERE_OPTIONS,
-	countLine, effectReading, effectValue, filterCards, listWhere, ownedMatches, releaseDates, sortByEffect, sortFact,
+	countLine, effectReading, effectValue, filterCards, filterUmas, listWhere, ownedMatches, releaseDates, sortByEffect, sortFact,
 	sortList, values, withGameDates,
 	type CardSortOrder, type EffectAt, type OwnedFilter, type SharedWhere,
 } from "../../utils/encyclopedia"
@@ -101,6 +104,51 @@ const CardListBody = () => {
 		[cards, effectData, effectType, limitBreakOf, reversed]
 	)
 
+	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
+	const totals = useMemo(() => (catalogue.status === "ready" ? {
+		umas: filterUmas(catalogue.catalogue.umas, "", "all", []).length,
+		cards: filterCards(catalogue.catalogue.support_cards, "", [], [], "all").length,
+	} : null), [catalogue])
+	useEffect(() => {
+		if (totals) reportCounts(totals)
+	}, [totals])
+	// Letter headings for the whole list in name order only (letters.tsx).
+	const letters = lettersFor(shown, (card) => card.name, sort === "name" && totals !== null && shown.length === totals.cards)
+
+	const tile = (card: (typeof shown)[number]) => {
+		const limitBreak = showOwned ? owned.cards.get(card.id) : undefined
+		// While sorting by an effect, the tile says what the card gives for it (owner, 2026-11-13).
+		const row = effectData?.cards[String(card.id)]
+		const at = limitBreakOf(card)
+		const reading = effectType && row && at !== null ? effectReading(row, effectType.type, at) : null
+		// Sorted by id or date, the tile says its id or date (board, 2026-11-17).
+		const fact = sortFact(sort, card, dates)
+		return (
+			<li key={card.id}>
+				<Link to={cardHref(card.game_id as number)} className="enc-tile">
+					{limitBreak !== undefined && <OwnedMark />}
+					<FramedCard card={card} limitBreaks={limitBreak ?? null} className="enc-tile__art--card" />
+					<span className="enc-tile__name">{card.name}</span>
+					{card.title && <span className="enc-tile__sub">{card.title}</span>}
+					<span className="enc-tile__facts">
+						<RarityTag rarity={card.rarity} />
+						<span className="sr-only">{CARD_TYPE_LABELS[card.card_type ?? ""]}</span>
+						{!card.on_global && <JpTag />}
+					</span>
+					{reading && effectType && (
+						<span className="enc-tile__effect">
+							{effectType.name} {effectValue(reading.value, effectType.format)}
+							{/* The unique has a part nobody has decoded yet, so it may give more. */}
+							{reading.unsure && <abbr title="Its unique effect has a part we can't read yet, so it may give more.">+?</abbr>}
+						</span>
+					)}
+					{fact && <span className="enc-tile__effect">{fact}</span>}
+				</Link>
+			</li>
+		)
+
+	}
+
 	return (
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
@@ -142,40 +190,19 @@ const CardListBody = () => {
 			) : shown.length === 0 ? (
 				<EmptyNote>No card matches that.</EmptyNote>
 			) : (
-				<ul className="enc-grid">
-					{shown.map((card) => {
-						const limitBreak = showOwned ? owned.cards.get(card.id) : undefined
-						// While sorting by an effect, the tile says what the card gives for it (owner, 2026-11-13).
-						const row = effectData?.cards[String(card.id)]
-						const at = limitBreakOf(card)
-						const reading = effectType && row && at !== null ? effectReading(row, effectType.type, at) : null
-						// Sorted by id or date, the tile says its id or date (board, 2026-11-17).
-						const fact = sortFact(sort, card, dates)
-						return (
-							<li key={card.id}>
-								<Link to={cardHref(card.game_id as number)} className="enc-tile">
-									{limitBreak !== undefined && <OwnedMark />}
-									<FramedCard card={card} limitBreaks={limitBreak ?? null} className="enc-tile__art--card" />
-									<span className="enc-tile__name">{card.name}</span>
-									{card.title && <span className="enc-tile__sub">{card.title}</span>}
-									<span className="enc-tile__facts">
-										<RarityTag rarity={card.rarity} />
-										<span className="sr-only">{CARD_TYPE_LABELS[card.card_type ?? ""]}</span>
-										{!card.on_global && <JpTag />}
-									</span>
-									{reading && effectType && (
-										<span className="enc-tile__effect">
-											{effectType.name} {effectValue(reading.value, effectType.format)}
-											{/* The unique has a part nobody has decoded yet, so it may give more. */}
-											{reading.unsure && <abbr title="Its unique effect has a part we can't read yet, so it may give more.">+?</abbr>}
-										</span>
-									)}
-									{fact && <span className="enc-tile__effect">{fact}</span>}
-								</Link>
-							</li>
-						)
-					})}
-				</ul>
+				<div className="enc-listwrap">
+					{letters && <LetterIndex scope="cards" letters={letters.map((group) => group.letter)} />}
+					<ul className="enc-grid enc-grid--cards">
+						{letters
+							? letters.map((group) => (
+								<Fragment key={group.letter}>
+									<LetterHeading scope="cards" letter={group.letter} count={group.items.length} noun={["card", "cards"]} />
+									{group.items.map(tile)}
+								</Fragment>
+							))
+							: shown.map(tile)}
+					</ul>
+				</div>
 			)}
 			{/* A JP-only card's title is UmaTL's until Global (or an editor) names it. */}
 			{shown.some((card) => !card.on_global && card.title) && <TranslationCredit what="Some JP only titles are" />}

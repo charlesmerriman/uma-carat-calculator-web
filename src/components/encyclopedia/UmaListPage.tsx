@@ -6,7 +6,7 @@
  * outfit's page.
  */
 
-import { useMemo } from "react"
+import { Fragment, useEffect, useMemo } from "react"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
@@ -15,6 +15,9 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
 import { splitOutfit } from "../../utils/umaName"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
+import { LetterHeading, LetterIndex } from "./letters"
+import { lettersFor } from "../../utils/encyclopediaLetters"
+import { reportCounts } from "../../utils/encyclopediaCounts"
 import { Chips, Count, GradeSelect, PickChips, SearchBox, SortControl, Toolbar } from "./listFilters"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { AptitudeKey } from "../../types/pvpTeam"
@@ -23,7 +26,7 @@ import { useOwned } from "../../hooks/useOwned"
 import {
 	APTITUDE_GROUPS, APTITUDE_KEYS, GRADE_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, REVERSED_VALUES, SHARED_OWNED_KEY,
 	SHARED_WHERE_KEY, SHARED_WHERE_VALUES, STAR_OPTIONS, UMA_SORT_OPTIONS, WHERE_OPTIONS,
-	aptitudeLabel, aptitudeMatches, countLine, filterUmas, gradeLetter, listWhere, ownedMatches, releaseDates, sortAptitude,
+	aptitudeLabel, aptitudeMatches, colourStyle, countLine, filterCards, filterUmas, gradeLetter, listWhere, ownedMatches, releaseDates, sortAptitude,
 	sortByValue, sortFact, sortList, sortsHighFirst, values,
 	type OwnedFilter, type SharedWhere, type UmaSortOrder,
 } from "../../utils/encyclopedia"
@@ -65,6 +68,48 @@ const UmaListBody = () => {
 			? sortByValue(found, (uma) => uma.apt[sortedAptitude] ?? null, sortsHighFirst(sort, reversed))
 			: sortList(found, sort as "name" | "release" | "game_id", dates, reversed)
 	}, [catalogue, query, where, stars, owned, ownedFilter, showOwned, aptitudes.picks, sort, sortedAptitude, dates, reversed])
+
+	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
+	const all = catalogue.status === "ready" ? catalogue.catalogue : null
+	const totals = useMemo(() => (all ? {
+		umas: filterUmas(all.umas, "", "all", []).length,
+		cards: filterCards(all.support_cards, "", [], [], "all").length,
+	} : null), [all])
+	useEffect(() => {
+		if (totals) reportCounts(totals)
+	}, [totals])
+	// Letter headings for the whole list in name order only (components/encyclopedia/letters.tsx).
+	const letters = lettersFor(umas, (uma) => uma.name, sort === "name" && totals !== null && umas.length === totals.umas)
+	const colours = all?.character_colours
+
+	const tile = (uma: (typeof umas)[number]) => {
+		// "Special Week (Summer)": her name, then the outfit on its own quiet line.
+		// Her original outfit shows its title instead ("Special Dreamer").
+		const { base, outfit } = splitOutfit(uma.name)
+		const line = outfit ?? (uma.title ?? "").replace(/^\[|\]$/g, "")
+		// What the list is sorted by, under the facts: "ID 100101", a date, "Mile A".
+		const grade = sortedAptitude ? uma.apt[sortedAptitude] : null
+		const fact = sortedAptitude
+			? (grade != null ? `${aptitudeLabel(sortedAptitude)} ${gradeLetter(grade)}` : null)
+			: sortFact(sort, uma, dates)
+		return (
+			<li key={uma.id}>
+				{/* Her character's two colours as the bar under her frame; grey for one the game files don't cover. */}
+				<Link to={umaHref(uma.game_id as number)} className="enc-tile enc-tile--uma" style={colourStyle(colours?.[String(uma.character_id)])}>
+					{showOwned && owned.umas.has(uma.id) && <OwnedMark />}
+					<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-tile__art" />
+					<span className="enc-tile__silk" aria-hidden="true" />
+					<span className="enc-tile__name">{base}</span>
+					{line && <span className="enc-tile__sub">{line}</span>}
+					<span className="enc-tile__facts">
+						<Stars count={uma.rarity ?? 3} />
+						{!uma.on_global && <JpTag />}
+					</span>
+					{fact && <span className="enc-tile__effect">{fact}</span>}
+				</Link>
+			</li>
+		)
+	}
 
 	return (
 		<div className={PAGE_CONTAINER}>
@@ -120,32 +165,19 @@ const UmaListBody = () => {
 			) : umas.length === 0 ? (
 				<EmptyNote>No uma matches that.</EmptyNote>
 			) : (
-				<ul className="enc-grid">
-					{umas.map((uma) => {
-						// "Special Week (Summer)": her name, then the outfit on its own quiet line.
-						const { base, outfit } = splitOutfit(uma.name)
-						// What the list is sorted by, under the facts: "ID 100101", a date, "Mile A".
-						const grade = sortedAptitude ? uma.apt[sortedAptitude] : null
-						const fact = sortedAptitude
-							? (grade != null ? `${aptitudeLabel(sortedAptitude)} ${gradeLetter(grade)}` : null)
-							: sortFact(sort, uma, dates)
-						return (
-							<li key={uma.id}>
-								<Link to={umaHref(uma.game_id as number)} className="enc-tile">
-									{showOwned && owned.umas.has(uma.id) && <OwnedMark />}
-									<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-tile__art" />
-									<span className="enc-tile__name">{base}</span>
-									{outfit && <span className="enc-tile__sub">{outfit}</span>}
-									<span className="enc-tile__facts">
-										<Stars count={uma.rarity ?? 3} />
-										{!uma.on_global && <JpTag />}
-									</span>
-									{fact && <span className="enc-tile__effect">{fact}</span>}
-								</Link>
-							</li>
-						)
-					})}
-				</ul>
+				<div className="enc-listwrap">
+					{letters && <LetterIndex scope="umas" letters={letters.map((group) => group.letter)} />}
+					<ul className="enc-grid enc-grid--umas">
+						{letters
+							? letters.map((group) => (
+								<Fragment key={group.letter}>
+									<LetterHeading scope="umas" letter={group.letter} count={group.items.length} noun={["uma", "umas"]} />
+									{group.items.map(tile)}
+								</Fragment>
+							))
+							: umas.map(tile)}
+					</ul>
+				</div>
 			)}
 		</div>
 	)

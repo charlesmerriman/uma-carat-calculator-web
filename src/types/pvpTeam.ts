@@ -112,6 +112,13 @@ export interface PvpCatalogue {
 	umas: CatalogueUma[]
 	support_cards: CatalogueSupportCard[]
 	skills: CatalogueSkill[]
+	/**
+	 * Every character's two colours from the game files, [main, sub], by the
+	 * game's character id (an uma's or a card's `character_id`). The
+	 * Encyclopedia paints a tile with them. Absent from an older API, and a
+	 * character the files don't cover is simply missing.
+	 */
+	character_colours?: Record<string, [string, string]>
 }
 
 // ── A team ───────────────────────────────────────────────────────────────────

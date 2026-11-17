@@ -2537,10 +2537,58 @@ workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: 
 - **The navbar**: an Encyclopedia tab beside Rankings, drawn on the same rule, so early access
   has seven tabs on a phone (icons only below 440px, so there is no phone label to choose).
 
-### The look (the visual overhaul, 2026-11-12)
+### The look (the redesign of 2026-11-17, on the 2026-11-12 overhaul)
 
-Drawn first on a canvas (https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6; the mocks and their
-generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to it.
+Drawn first on a canvas, twice: the overhaul (https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6)
+gave the pages order, and the redesign (https://claude.ai/artifact/6zATpMXYXQJzPBCfbisQr1; plan
+and mocks in the notes repo, `notes/encyclopedia-redesign-plan.md` and `notes/encyclopedia-redesign/`)
+gave them a face. The owner's rules from that second canvas: the hero's coloured background
+stays, no picture is slanted, nothing is dimmed to de-emphasise it, aptitudes sit left of the
+stats in rows of four, stats are separate boxes with Growth named, and Daptrius's filter bar
+(web #369) keeps its rows and wording.
+
+- **A page wears its character's two colours.** The API sends `colours` (`[main, sub]`, the
+  game's own pair for her; `character_colours` by character id on `/pvp-catalogue`), `Page`
+  (`pieces.tsx`) sets them as `--c1` and `--c2` on `.enc-page`, and `colourStyle`
+  (`utils/encyclopedia.ts`) is the only way a pair becomes a style: it refuses anything that is
+  not plain hex. **A colour is only ever a fill, or mixed into a theme token** (`--c1-ink`,
+  `--c1-line`): some are near-black and some pale. With no pair the page wears the theme's
+  accent. A group card and a skill that is nobody's pass an `accent` to the hero instead (the
+  card's type, the skill's kind).
+- **The hero** (`Hero`): the art standing straight on a slanted field of `--c1` with a stripe
+  of `--c2` (clipped shapes, so the slant never lands on the name), the game's own number on a
+  dark plate, and the Japanese name large and faint behind (`ghost`, decoration: the readable
+  line is `japanese`; it uses the reader's own Japanese font, none is bundled). An uma's `h1`
+  is the character's name, with the outfit in the eyebrow ("Trainee · Christmas").
+- **A section is one soft panel, no border** (`Section`), its heading flagged in the page's two
+  colours. What is inside sits on `--enc-inset`, the one inset surface, a mix of two theme
+  greys that reads on dark and light themes.
+- **An uma's page** (`UmaPage.tsx`): her unique skill first as a plate with what it does
+  (`UniquePlate`; an outfit below three stars has two), the innate skills in a row, then the
+  awakening levels as posts on a track with each evolved skill hanging off the gold it comes
+  from (one whose base isn't an awakening skill on the page is listed after). Career objectives
+  are one track with a gold post for a race to win and a chequered flag (`CareerObjectives`).
+  A track's fact that is drawn (the level, what it grows from) is said to a screen reader
+  through `SkillRow`'s `hint`.
+- **Aptitudes and stats** (`facts.tsx`): every aptitude cell at full strength, A or better
+  filled in the page's colour (`isTopAptitude`), the letter a white badge ringed in the game's
+  colour (an override inside a cell; `.apt-letter` itself is the PvP guides'). Stats are boxes
+  with the game's stat icons (`utils/statIcons.ts`).
+- **Banners** show the banner's own picture and the faces of who else is on it
+  (`utils/encyclopediaBanners.ts` adds `image`, `featured`, `kind`); related outfits and cards
+  are picture tiles (`.enc-pic`).
+- **A card's effects take the card's TYPE colour** (`--fx`, set by `CardEffects`), the level
+  is a track that marks each limit break's cap beside the steppers, and each effect is its
+  number over its name. **A skill's page** reads its steps left to right (`.enc-step`) and
+  draws its family on one line (`Family`: evolves from and other versions, this skill, evolves
+  into), with the outfit it belongs to in the hero (`owner_umas`).
+- **The lists**: a masthead whose tabs lead with how many each list holds
+  (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
+  another's data to count it). A tile is its art, no box; an uma's carries her colours as a bar.
+  A full list in name order gets letter headings and an A to Z index (`letters.tsx`,
+  `utils/encyclopediaLetters.ts`); filtered or re-sorted it is one plain grid. A letter heading
+  is a `role="presentation"` item, so the list's items stay the tiles. On the Skills list a
+  unique or evolved skill's row ends with its owner's face (`SkillList` `faces`).
 
 - **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
   in `@layer components` so a Tailwind utility at the call site still wins. Classes are
@@ -2548,8 +2596,7 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
   `.kind-pill`, `.apt-letter`, `.grade-pill`. Every colour is a theme token, except the game's
   own (aptitude letters, race grades, rarity, a gold / evolved / unique skill), which are fixed
   fills with dark ink so they read the same on all twelve themes.
-- **The frame** (`EncyclopediaTabs`): the Rankings page's shape, a display-face title, one line
-  of description, underlined tabs. **The filter bar** (`listFilters.tsx`: `Toolbar`,
+- **The filter bar** (`listFilters.tsx`: `Toolbar`,
   `SearchBox`, `Count`, `Chips`, `PickChips`, `SortControl`, `GradeSelect`): one card, each
   filter a small caps label and its chips. The group is named by `aria-label`, and the visible
   label is `aria-hidden`. Its look is Daptrius's (board "Encyclopedia Filter Changes",
@@ -2573,18 +2620,11 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
     `sortByEffect`). Sorted by id, date or an aptitude, a tile says its value (`sortFact`).
   - **A query of digits is an id** (`searchMatches`): the start of a card's or outfit's game id,
     or its character's 4-digit id (`character_id`; an outfit id starts with it).
-- **A detail page** is `Crumbs`, a `Hero` (art, eyebrow, name, tags, `Fact`s on the right), a
-  `JumpBar`, then a `Section` card per group of facts (`pieces.tsx`). `--enc-accent` on the hero
-  tints its corner: the brand by default, a card's type colour, a skill's own.
 - **The jump bar sticks**, and where depends on what scrolls: under the navbar when the
   document scrolls (a phone, a short window), at 0 inside the desktop app shell. Its offsets in
   `encyclopedia.css` are index.css's `scroll-padding-top` numbers: change them together. It
   draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
   `#hash` links, so Back leaves the page.
-- **A skill row** (`skillRows.tsx`, `.enc-skill`) is quiet on purpose: the theme's surface,
-  with the kind as a 3px spine, a faint wash and a `KindPill`. The solid gold and pink
-  (`.skill-gold`, `.skill-evolved`) stay on the PvP guides' chips. Its second line says how
-  the page's uma or card has it, else its type and owner.
 - **A card's effects** (`CardEffects.tsx`, first on the card page): a Limit break switch, a
   level stepper, the unique effect, then every effect as a value chip with the game's help text.
   The API sends one value per level (`effects[].values`, backend `support_effects.py`, which has
