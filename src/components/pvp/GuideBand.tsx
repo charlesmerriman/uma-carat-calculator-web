@@ -23,6 +23,7 @@ import { InlineNote, SkillMention } from "./PvpTiles"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
 import { STYLE_LABELS, parseStyleRanking, parseTeamComp, styleColor, umasByStars, type RankingStep } from "../../utils/pvpGuide"
 import type { PvpGuide, PvpStatConfig, PvpStyle, PvpStyleTab } from "../../types/pvpGuide"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 // Module scope, so MarkdownContent's memoised components keep one identity.
 const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
@@ -114,14 +115,17 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 							{shown.length > 0 && (
 								<span className="flex shrink-0 gap-1">
 									{shown.map((row) => (
-										<FramedUma
-											key={row.uma.id}
-											src={row.uma.portrait ?? row.uma.image}
-											alt=""
-											title={row.uma.name}
-											oshi={oshiIds.has(row.uma.id)}
-											className={first ? "w-[1.875rem] @xl:w-10" : "w-7 @xl:w-[2.125rem]"}
-										/>
+										// The span carries her hover card (early access): a box the
+										// popup can measure, around the face inside the tab's button.
+										<span key={row.uma.id} className="inline-block" {...hoverCardProps("uma", row.uma.id)}>
+											<FramedUma
+												src={row.uma.portrait ?? row.uma.image}
+												alt=""
+												title={row.uma.name}
+												oshi={oshiIds.has(row.uma.id)}
+												className={first ? "w-[1.875rem] @xl:w-10" : "w-7 @xl:w-[2.125rem]"}
+											/>
+										</span>
 									))}
 								</span>
 							)}

@@ -41,14 +41,11 @@ import {
 } from "@floating-ui/react"
 import { useReducedMotion } from "framer-motion"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
-import { useOwned } from "../../hooks/useOwned"
-import { useCardPage, useUmaPage } from "../../services/encyclopediaQueries"
+import { useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
 import { parseHoverCard, parseRing, type HoverCardKind } from "../../utils/hoverCards"
 import type { AptitudeKey } from "../../types/pvpTeam"
 import { InsideHoverContext, InsidePopupContext } from "../pvp/hoverPopup"
-import { UmaHoverCard } from "./UmaHoverCard"
-import { CardHoverCard } from "./CardHoverCard"
+import { HoverCardContent } from "./HoverCardContent"
 
 // How long the pointer rests on a tile before its card opens: the skill
 // card's delay (hoverPopup.tsx), so a mouse crossing a grid doesn't flash a
@@ -57,9 +54,6 @@ const OPEN_DELAY_MS = 120
 // How long the card waits after the pointer leaves the tile, so it can cross
 // the gap into the card (to scroll it, or click "Open its page").
 const CLOSE_GRACE_MS = 150
-// A page fetched for a hover stays fresh for the session's next hovers.
-const HOVER_STALE_MS = 30 * 60 * 1000
-
 const TILE = "[data-hover-card]"
 // WithDetail's markers: a tile inside one already has a hover of its own.
 const OWN_HOVER = '[role="group"][aria-describedby]'
@@ -268,9 +262,10 @@ function Layer() {
 }
 
 /**
- * The drawn card. Its own component so the page fetch and the Collection
- * lookup mount only while a card is open: a supporter who never hovers asks
- * for nothing.
+ * The drawn card's box. Its content (HoverCardContent) mounts only while a
+ * card is open, so a supporter who never hovers asks for nothing; it draws
+ * nothing for a row the catalogue doesn't know (a placeholder card), and then
+ * neither does the box.
  */
 function Popup({ target, setFloating, style }: {
 	target: Target
@@ -278,16 +273,8 @@ function Popup({ target, setFloating, style }: {
 	style: CSSProperties
 }) {
 	const lookup = useEncyclopediaLookup()
-	const hrefs = useEncyclopediaHrefs()
-	const owned = useOwned()
-	const uma = target.kind === "uma" ? lookup.uma(target.id) : null
-	const card = target.kind === "card" ? lookup.card(target.id) : null
-	const umaPage = useUmaPage(uma?.gameId ?? null, { staleTime: HOVER_STALE_MS })
-	const cardPage = useCardPage(card?.gameId ?? null, { staleTime: HOVER_STALE_MS })
-	// Nothing to draw until the catalogue knows the row (or never, for a
-	// placeholder card or an uma with no page).
-	if (!uma && !card) return null
-	const pageOf = <T,>(query: { data: T | null | undefined; isError: boolean }) => (query.isError ? null : query.data)
+	const known = target.kind === "uma" ? lookup.uma(target.id) : lookup.card(target.id)
+	if (!known) return null
 	return (
 		<div
 			ref={setFloating}
@@ -297,24 +284,7 @@ function Popup({ target, setFloating, style }: {
 		>
 			<InsidePopupContext.Provider value={true}>
 				<InsideHoverContext.Provider value={true}>
-					{uma ? (
-						<UmaHoverCard
-							uma={uma.entry}
-							page={pageOf(umaPage)}
-							href={target.links ? hrefs.uma(target.id) : null}
-							ring={target.ring}
-							ownedStars={owned.umas.get(target.id) ?? null}
-							links={target.links}
-						/>
-					) : card ? (
-						<CardHoverCard
-							card={card.entry}
-							page={pageOf(cardPage)}
-							href={target.links ? hrefs.card(target.id) : null}
-							ownedLimitBreak={owned.cards.get(target.id) ?? null}
-							links={target.links}
-						/>
-					) : null}
+					<HoverCardContent kind={target.kind} id={target.id} ring={target.ring} links={target.links} />
 				</InsideHoverContext.Provider>
 			</InsidePopupContext.Provider>
 		</div>
