@@ -5,6 +5,7 @@
  * the filters are testable on their own.
  */
 
+import type { CSSProperties } from "react"
 import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { Status } from "../components/rankings/kit/StatusPill"
@@ -55,6 +56,33 @@ export function effectValue(value: number, format: string): string {
 /** An aptitude a player wouldn't race her on: D or worse (the game's 1 to 4 of 8). */
 export function isWeakAptitude(value: number | null): boolean {
 	return value != null && value <= 4
+}
+
+/** An aptitude she is built for: A or S (7 or 8 of 8). The page fills these in her colour. */
+export function isTopAptitude(value: number | null): boolean {
+	return value != null && value >= 7
+}
+
+// ── A character's two colours (the redesign, notes/encyclopedia-redesign-plan.md) ──
+
+const HEX_COLOUR = /^#[0-9a-f]{6}$/i
+
+/**
+ * The style that paints a page, a tile or a row in a character's colours
+ * ([main, sub] as "#RRGGBB", from the game files: backend character_colours.py):
+ * `--c1` and `--c2`, which encyclopedia.css only ever uses as fills or mixes
+ * into a theme token. Undefined when the API has no pair for her (the CSS
+ * falls back to the theme's accent), or for anything that isn't plain hex:
+ * the value goes into a style attribute, so it is checked here too.
+ */
+export function colourStyle(colours: readonly string[] | null | undefined): CSSProperties | undefined {
+	if (!colours || colours.length !== 2 || !colours.every((value) => HEX_COLOUR.test(value))) return undefined
+	return { "--c1": colours[0], "--c2": colours[1] } as CSSProperties
+}
+
+/** "No. 1006 · 01": the game's own id for an outfit, as character and outfit. */
+export function umaEntryNumber(gameId: number): string {
+	return `No. ${Math.floor(gameId / 100)} · ${String(gameId % 100).padStart(2, "0")}`
 }
 
 // ── What the player owns (hooks/useOwned.ts) ────────────────────────────────

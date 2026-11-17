@@ -27,6 +27,8 @@ export interface PageSkill extends Omit<SkillListRow, "other_names"> {
 	 * browser's cache; read it as `conditions ?? []`.
 	 */
 	conditions?: UnlockCondition[]
+	/** What the skill does, in the game's words. On an uma page's unique skills only. */
+	description?: string
 }
 
 /** Another outfit, on an uma or card page. */
@@ -78,6 +80,8 @@ export interface UmaPageData {
 	id: number
 	game_id: number
 	name: string
+	/** Her character's two colours from the game files, [main, sub]; null when they hold none. Absent from an older API. */
+	colours?: [string, string] | null
 	title: string
 	/** Some English on the page is UmaTL's fan translation, so the page credits it. */
 	uses_translation?: boolean
@@ -159,6 +163,8 @@ export interface CardPageData {
 	id: number
 	game_id: number
 	name: string
+	/** Its character's two colours, [main, sub]; null for a group card or a character the files don't cover. Absent from an older API. */
+	colours?: [string, string] | null
 	title: string
 	/** Some English on the page is UmaTL's fan translation, so the page credits it. */
 	uses_translation?: boolean

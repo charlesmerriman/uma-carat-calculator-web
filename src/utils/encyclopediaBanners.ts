@@ -16,6 +16,19 @@ export interface BannerLink {
 	end: string
 	predicted: boolean
 	href: string
+	/** The banner's own picture, when it has one. */
+	image: string | null
+	/** Who else is on it (never the page's own subject), in the banner's order. */
+	featured: BannerFace[]
+	/** What `featured` holds, so the page draws umas framed and cards as cards. */
+	kind: "uma" | "card"
+}
+
+/** Someone else on a banner: an uma's portrait or a card's picture. */
+export interface BannerFace {
+	id: number
+	name: string
+	art: string | null
 }
 
 export interface Releases {
@@ -31,10 +44,11 @@ export interface Releases {
 
 const startOf = (link: BannerLink) => parseApiDate(link.start)?.getTime() ?? 0
 
-function releases<B extends { name: string; banner_timeline: BannerUma["banner_timeline"] }, C extends { id: number; first_jp_date: string | null }>(
+function releases<B extends { name: string; banner_timeline: BannerUma["banner_timeline"] }, C extends { id: number; name: string; image: string; portrait?: string | null; first_jp_date: string | null }>(
 	banners: B[],
 	cardsOf: (banner: B) => C[],
 	id: number,
+	kind: BannerLink["kind"],
 ): Releases {
 	let jpDate: string | null = null
 	const links: BannerLink[] = []
@@ -50,6 +64,11 @@ function releases<B extends { name: string; banner_timeline: BannerUma["banner_t
 			end: timeline.end_date,
 			predicted: timeline.is_predicted,
 			href: timelineFocusHref({ kind: "banner", id: timeline.id }),
+			image: timeline.image || null,
+			featured: cardsOf(banner)
+				.filter((entry) => entry.id !== id)
+				.map((entry) => ({ id: entry.id, name: entry.name, art: entry.portrait || entry.image || null })),
+			kind,
 		})
 	}
 	links.sort((a, b) => startOf(a) - startOf(b))
@@ -57,7 +76,7 @@ function releases<B extends { name: string; banner_timeline: BannerUma["banner_t
 }
 
 export const umaReleases = (banners: BannerUma[], umaId: number): Releases =>
-	releases(banners, (banner) => banner.umas, umaId)
+	releases(banners, (banner) => banner.umas, umaId, "uma")
 
 export const cardReleases = (banners: BannerSupport[], cardId: number): Releases =>
-	releases(banners, (banner) => banner.support_cards, cardId)
+	releases(banners, (banner) => banner.support_cards, cardId, "card")

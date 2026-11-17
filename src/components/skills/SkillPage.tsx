@@ -24,7 +24,7 @@ import { SKILL_TYPE_WORDS, UMATL_URL, skillKind } from "../../utils/skillSearch"
 import { hasCondition } from "../../utils/skillWords"
 import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
 import {
-	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag,
+	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag, Page,
 } from "../encyclopedia/pieces"
 import { SkillList, UnlockConditions } from "../encyclopedia/skillRows"
 import { usePageTitle } from "../encyclopedia/usePageTitle"
@@ -281,10 +281,12 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 	const type = SKILL_TYPE_WORDS[skill.type ?? ""]
 	const owners = skill.owners?.length ? skill.owners.join(", ") : null
 	return (
-		<article aria-labelledby="skill-page-name" className="flex flex-col gap-4">
+		<Page colours={skill.colours} labelledBy="skill-page-name">
 			<Crumbs list="Skills" listPath={SKILL_LIST_PATH} name={skill.name} />
 			<Hero
-				accent={KIND_ACCENT[kind]}
+				// A skill that is one character's wears her colours; any other keeps its kind's.
+				accent={skill.colours ? undefined : KIND_ACCENT[kind]}
+				shape="skill"
 				art={skill.image ? (
 					<img src={skill.image} alt="" className="enc-hero__art--skill" />
 				) : (
@@ -338,6 +340,6 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 					)}
 				</p>
 			)}
-		</article>
+		</Page>
 	)
 }

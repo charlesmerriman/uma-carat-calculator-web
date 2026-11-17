@@ -24,7 +24,7 @@ import { CARD_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, RarityTag, Section, SubHeading,
-	TranslationCredit, TypeTag, WhereTag, type JumpItem,
+	TranslationCredit, TypeTag, WhereTag, type JumpItem, Page,
 } from "./pieces"
 import { BannerLinks, CardList, OutfitList, ReleaseFacts } from "./facts"
 import { CardEffects } from "./CardEffects"
@@ -77,10 +77,15 @@ export function CardDetail({ card }: { card: CardPageData }) {
 	] as (JumpItem | false)[]).filter((item): item is JumpItem => Boolean(item))
 
 	return (
-		<article className="flex flex-col gap-4">
+		<Page colours={card.colours}>
 			<Crumbs list="Support cards" listPath={CARD_LIST_PATH} name={card.title || card.name} />
 			<Hero
-				accent={CARD_TYPE_COLORS[card.card_type]}
+				// Her character's colours when the game files have them; a group card,
+				// which stands for several characters, wears its type's colour.
+				accent={card.colours ? undefined : CARD_TYPE_COLORS[card.card_type]}
+				shape="card"
+				entry={`No. ${card.game_id}`}
+				ghost={card.jp_name || undefined}
 				art={<FramedCard card={card} limitBreaks={limitBreak ?? null} alt={card.name} className="enc-hero__art--card" />}
 				eyebrow="Support card"
 				name={card.name}
@@ -140,6 +145,6 @@ export function CardDetail({ card }: { card: CardPageData }) {
 				</Section>
 			)}
 			{card.uses_translation && <TranslationCredit />}
-		</article>
+		</Page>
 	)
 }
