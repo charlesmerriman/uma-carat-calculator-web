@@ -111,22 +111,25 @@ export function CardDetail({ card }: { card: CardPageData }) {
 			<JumpBar items={jump} />
 
 			{hasEffects && (
-				<CardEffects id="effects" effects={effects} caps={caps} unique={card.unique_effect ?? null} limitBreak={limitBreak} />
+				<CardEffects id="effects" accent={CARD_TYPE_COLORS[card.card_type]} effects={effects} caps={caps} unique={card.unique_effect ?? null} limitBreak={limitBreak} />
 			)}
 			{card.skills.length > 0 && (
 				<Section id="skills" title="Skills" count={card.skills.length}>
-					{hints.length > 0 && (
-						<div className="flex flex-col gap-2">
-							<SubHeading>Skill hints</SubHeading>
-							<SkillList skills={hints} />
-						</div>
-					)}
-					{events.length > 0 && (
-						<div className="flex flex-col gap-2">
-							<SubHeading>Skills from events</SubHeading>
-							<SkillList skills={events} />
-						</div>
-					)}
+					{/* What training with it can hint, beside what its events hand over. */}
+					<div className="enc-split">
+						{hints.length > 0 && (
+							<div className="enc-group">
+								<SubHeading>Skill hints</SubHeading>
+								<SkillList skills={hints} className="enc-skills enc-skills--two" />
+							</div>
+						)}
+						{events.length > 0 && (
+							<div className="enc-group">
+								<SubHeading>Skills from events</SubHeading>
+								<SkillList skills={events} className="enc-skills enc-skills--one" />
+							</div>
+						)}
+					</div>
 				</Section>
 			)}
 			{releases.banners.length > 0 && (
@@ -134,15 +137,19 @@ export function CardDetail({ card }: { card: CardPageData }) {
 					<BannerLinks banners={releases.banners} />
 				</Section>
 			)}
-			{card.outfits.length > 0 && (
-				<Section id="trainees" title={isGroup ? "Its members as trainees" : `${card.name} as a trainee`} count={card.outfits.length}>
-					<OutfitList outfits={card.outfits} />
-				</Section>
-			)}
-			{card.cards.length > 0 && (
-				<Section id="cards" title={`${card.name}'s other cards`} count={card.cards.length}>
-					<CardList cards={card.cards} />
-				</Section>
+			{(card.outfits.length > 0 || card.cards.length > 0) && (
+				<div className="enc-two">
+					{card.outfits.length > 0 && (
+						<Section id="trainees" title={isGroup ? "Its members as trainees" : `${card.name} as a trainee`} count={card.outfits.length}>
+							<OutfitList outfits={card.outfits} />
+						</Section>
+					)}
+					{card.cards.length > 0 && (
+						<Section id="cards" title={`${card.name}'s other cards`} count={card.cards.length}>
+							<CardList cards={card.cards} />
+						</Section>
+					)}
+				</div>
 			)}
 			{card.uses_translation && <TranslationCredit />}
 		</Page>
