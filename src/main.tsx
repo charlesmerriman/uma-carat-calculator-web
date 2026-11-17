@@ -12,6 +12,10 @@ import { shouldHydrate } from './hydrationTarget.ts'
 import { SiteContentProvider } from './services/SiteContentProvider.tsx'
 import { EMBED_ELEMENT_ID } from './services/siteContent.ts'
 import type { SiteContent } from './types/siteContent.ts'
+import { applyFrameTest } from './utils/frameTest.ts'
+
+// A tester's ?frametest= choice (utils/frameTest.ts), set before anything draws.
+applyFrameTest()
 
 const container = document.getElementById('root')!
 
