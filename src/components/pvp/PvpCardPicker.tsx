@@ -48,6 +48,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { whiteSkillPairs } from "../../utils/pvpTeams"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -268,6 +269,10 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		)
 
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
+	// Each tile's hover card (early access): an uma's rings this race at this
+	// place's style. Where leaving would drop an edit (no pageLinks), the card
+	// draws without its links, the book button's rule.
+	const ring = pool === "uma" ? ringFor(event, style) : []
 	// The art's own shape: an uma tile is square, a support card is 3:4 (450x600).
 	const artAspect = pool === "uma" ? "aspect-square" : "aspect-[3/4]"
 	const chips = [
@@ -448,6 +453,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 									<li key={item.id} className="relative min-w-0">
 										<button
 											type="button"
+											{...hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring, links: pageLinks })}
 											disabled={reason !== null}
 											aria-pressed={isSelected}
 											title={reason ?? item.name}

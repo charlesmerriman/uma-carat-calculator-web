@@ -27,6 +27,7 @@ import { PvpTeamsProvider } from "../services/PvpTeamsProvider"
 import { TeamDrawerProvider } from "../services/TeamDrawerProvider"
 import { useTeamDrawer } from "../services/TeamDrawerContext"
 import { TeamDrawer } from "../components/pvp/TeamDrawer"
+import { HoverCardLayer } from "../components/hovercards/HoverCardLayer"
 import { AnimatePresence } from "framer-motion"
 
 /* The page area while the initial fetch is still out. Sized to roughly fill the
@@ -172,6 +173,10 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					{/* The pinned Rankings panel: a window over the page's left side, the
 					    team window's mirror. Behind the gate for the same reason. */}
 					{!isLoading && !fetchError && <RankingsDock />}
+					{/* The uma and support card hover cards: one popup for every page,
+					    opened by any tile with data-hover-card (early access only).
+					    Behind the gate like the windows above. */}
+					{!isLoading && !fetchError && <HoverCardLayer />}
 				</div>
 			</TeamDrawerProvider>
 		</PvpTeamsProvider>

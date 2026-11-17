@@ -2731,6 +2731,32 @@ and a link can't hold links), pickers where a click chooses, the guide editor's 
 (`pageLink={false}`: a stray click would leave mid-edit), the share pictures, and the account
 page.
 
+### Hover cards for umas and support cards (`components/hovercards/`)
+
+The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): hovering an uma shows her
+aptitudes (the race's ringed), stats boxed with Growth and skills; hovering a support card shows
+its effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
+teaches. Both end in "Open its page". Early access only, mouse and keyboard focus only (a phone
+keeps the links above).
+
+- **A tile opts in with attributes, built by `hoverCardProps()`** (`utils/hoverCards.ts`), never
+  by hand: `{...hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}` on
+  the tile's own button or link. `data-hover-card` names the row, `data-hover-card-ring` the
+  aptitudes to ring, `data-hover-card-links="off"` drops the links where leaving would lose an
+  edit, `data-hover-card-scope` marks a container whose stretched link covers the art.
+- **One popup serves the whole app: `HoverCardLayer`**, mounted once in `AppShell` beside the
+  team window. It listens on the document, so a grid of 300 tiles costs 300 attributes and no
+  wrappers, and a tile that is a button, a link or a drag handle needs nothing else. Any press
+  closes the card (a drag or a click never leaves one behind); touch is ignored; the tile's
+  `title` is moved aside while its card is open. It draws at `z-[10001]`, above the pickers'
+  overlays, and inside an open native `<dialog>` when the tile is in one.
+- **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
+  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The layer fetches the page
+  on open (`useUmaPage` / `useCardPage` with a 30 minute `staleTime`, the same cache the pages
+  use) and draws the header from the catalogue meanwhile. `useEncyclopediaLookup()` maps the
+  row id to the game id, beside `useEncyclopediaHrefs()` on the same index.
+- **A tile inside an existing hover (`WithDetail`) is ignored**, so nothing opens two cards.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It

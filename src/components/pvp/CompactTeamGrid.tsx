@@ -16,6 +16,7 @@ import { PageName, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
@@ -26,6 +27,7 @@ export function CompactTeamGrid({
 	members,
 	umasById,
 	cardsById,
+	course,
 	releaseFor,
 	isFavorite,
 	isRecommended,
@@ -60,6 +62,7 @@ export function CompactTeamGrid({
 										<div className="group relative aspect-square transition hover:brightness-110">
 											<button
 												type="button"
+												{...hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
 												aria-label={`Change uma ${position + 1}: ${name}`}
 												title={uma?.name}
 												onClick={() => onPickUma(position)}
@@ -150,6 +153,8 @@ export function CompactTeamGrid({
 							<div key={slot} className="group relative aspect-[3/4] overflow-hidden rounded-md bg-gray-700 ring-1 ring-gray-600 transition hover:ring-2 hover:ring-brand/70">
 								<button
 									type="button"
+									// Its hover card tells these tiny tiles apart by more than the art.
+									{...hoverCardProps("card", entry.support_card)}
 									aria-label={`Change ${place} for ${name}: ${card?.name ?? "unknown"}`}
 									title={card?.name}
 									onClick={() => onPickCard(position, slot)}

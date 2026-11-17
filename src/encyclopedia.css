@@ -2938,6 +2938,169 @@
 		color: var(--color-brand);
 	}
 
+	/* ==========================================================================
+	   THE HOVER CARDS: an uma's and a support card's, the skill card's siblings
+	   (components/hovercards, notes/uma-card-hover-plan.md). They wear the skill
+	   card's classes and add only what a skill has no use for: a header in the
+	   character's colours, the aptitude grid, the stat boxes, the effects table.
+	   ========================================================================== */
+
+	/* The character's main colour (--c1 from colourStyle), mixed into the theme's
+	   panel so the words stay readable on every theme; the accent edge when the
+	   game files hold no colour for her. */
+	.hover-card__head {
+		background: color-mix(in srgb, var(--c1, var(--color-gray-600)) 28%, var(--color-gray-800));
+		border-bottom: 2px solid var(--c1, var(--color-edge));
+	}
+	.hover-card__art {
+		display: block;
+		width: 2.75rem;
+		flex-shrink: 0;
+	}
+	.hover-card__label {
+		display: block;
+		margin-bottom: 0.25rem;
+	}
+
+	/* Ten aptitudes, four cells a row so a group never wraps. A or better is
+	   filled; the race's three are ringed. Nothing is dimmed. */
+	.hover-card__apt {
+		display: grid;
+		gap: 0.1875rem;
+	}
+	.hover-card__apt-row {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.1875rem;
+	}
+	.hover-card__apt-cell {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.125rem;
+		height: 1.375rem;
+		padding: 0 0.3125rem;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.3125rem;
+		font-size: 0.625rem;
+		color: var(--color-gray-200);
+	}
+	.hover-card__apt-cell[data-top="true"] {
+		background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	}
+	.hover-card__apt-cell[data-race="true"] {
+		box-shadow: inset 0 0 0 1.5px var(--color-brand);
+	}
+	.hover-card__apt-cell .apt-letter {
+		font-size: 0.625rem;
+		transform: scale(0.8);
+		transform-origin: right center;
+	}
+
+	/* Five stats, each boxed with the game's icon and its Growth under it. */
+	.hover-card__stats {
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 0.1875rem;
+	}
+	.hover-card__stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 0.25rem 0;
+		border: 1px solid var(--color-edge);
+		border-radius: 0.375rem;
+		background: color-mix(in srgb, var(--color-gray-700) 45%, transparent);
+		line-height: 1.1;
+	}
+	.hover-card__stat-value {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-size: 0.875rem;
+		font-weight: 700;
+		color: var(--color-gray-100);
+	}
+	.hover-card__stat-growth {
+		font-size: 0.5625rem;
+		color: var(--color-gray-400);
+	}
+	.hover-card__stat-growth b {
+		display: block;
+		text-align: center;
+		font-size: 0.625rem;
+		font-weight: 400;
+	}
+	.hover-card__stat-growth[data-bonus="true"] b {
+		font-weight: 700;
+		color: var(--color-brand);
+	}
+
+	/* A support card's effects: a name column, then one per limit break. */
+	.hover-card__effects {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.6875rem;
+	}
+	.hover-card__effects th {
+		padding-bottom: 0.125rem;
+		text-align: right;
+		font-size: 0.5625rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.hover-card__effects th[data-yours="true"] {
+		color: var(--color-brand);
+	}
+	.hover-card__effects td {
+		padding: 0.0625rem 0 0.0625rem 0.5rem;
+		border-top: 1px solid color-mix(in srgb, var(--color-edge) 60%, transparent);
+		text-align: right;
+		white-space: nowrap;
+		color: var(--color-gray-100);
+	}
+	.hover-card__effects td:first-child {
+		padding-left: 0;
+		text-align: left;
+		white-space: normal;
+		color: var(--color-gray-200);
+	}
+	.hover-card__effects td[data-yours="true"] {
+		font-weight: 700;
+	}
+
+	/* A labelled row of skill chips: the label leads, the chips flow after it. */
+	.hover-card__chips {
+		align-items: center;
+		margin-top: 0;
+	}
+	.hover-card__chips + .hover-card__chips {
+		margin-top: 0.25rem;
+	}
+	.hover-card__chips .skill-card__label {
+		font-size: 0.5625rem;
+		margin-right: 0.125rem;
+	}
+	.hover-card__chips img {
+		width: 0.875rem;
+		height: 0.875rem;
+	}
+	a.skill-card__chip:hover {
+		border-color: var(--color-brand);
+		color: var(--color-gray-100);
+	}
+	.hover-card__level {
+		color: var(--color-gray-500);
+	}
+	.hover-card__skeleton {
+		display: block;
+		height: 0.75rem;
+		margin-top: 0.375rem;
+		border-radius: 0.25rem;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.enc-tile,
 		.enc-skill,
