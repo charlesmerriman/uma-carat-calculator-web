@@ -28,6 +28,7 @@ import { STAT_ICON_PATHS } from "../../utils/statIcons"
 import { APTITUDE_GROUPS, STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
 import { Fact, JpTag, Section, Switch } from "./pieces"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 /**
  * The ten aptitudes as the game groups them: surface, distance, style. Every
  * cell reads at full strength whatever the grade (the owner, 2026-11-17:
@@ -166,8 +167,8 @@ export function BannerLinks({ banners }: { banners: BannerLink[] }) {
 									<span className="enc-banner__with">
 										With
 										{faces.map((face) => (banner.kind === "uma"
-											? <FramedUma key={face.id} src={face.art} oshi={oshiIds.has(face.id)} alt={face.name} className="enc-banner__face" />
-											: face.art && <img key={face.id} src={face.art} alt={face.name} className="enc-banner__face enc-banner__face--card" loading="lazy" decoding="async" />
+											? <FramedUma key={face.id} src={face.art} oshi={oshiIds.has(face.id)} alt={face.name} className="enc-banner__face" hover={hoverCardProps("uma", face.id)} />
+											: face.art && <img key={face.id} src={face.art} alt={face.name} className="enc-banner__face enc-banner__face--card" loading="lazy" decoding="async" {...hoverCardProps("card", face.id)} />
 										))}
 										{more > 0 && <span>and {more} more</span>}
 									</span>
@@ -196,7 +197,7 @@ export function OutfitList({ outfits }: { outfits: PageOutfit[] }) {
 			{outfits.map((outfit) => (
 				<li key={outfit.game_id}>
 					<Link to={umaHref(outfit.game_id)} className="enc-pic">
-						<FramedUma src={outfit.portrait} oshi={oshiIds.has(outfit.id)} className="enc-pic__art" />
+						<FramedUma src={outfit.portrait} oshi={oshiIds.has(outfit.id)} className="enc-pic__art" hover={hoverCardProps("uma", outfit.id)} />
 						<span className="enc-pic__name">{outfit.name}</span>
 						{outfit.title && <span className="enc-pic__sub">{outfit.title}</span>}
 						{!outfit.on_global && <JpTag />}
@@ -214,7 +215,7 @@ export function CardList({ cards }: { cards: PageCard[] }) {
 			{cards.map((card) => (
 				<li key={card.game_id}>
 					<Link to={cardHref(card.game_id)} className="enc-pic enc-pic--card">
-						<FramedCard card={card} className="enc-pic__art" />
+						<FramedCard card={card} className="enc-pic__art" hover={hoverCardProps("card", card.id)} />
 						<span className="enc-pic__name">{card.title || card.name}</span>
 						<span className="enc-pic__sub">{cardLine(card)}</span>
 						{!card.on_global && <JpTag />}

@@ -20,6 +20,7 @@ import type {
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 interface StepUpSelectionStripProps {
 	/** This campaign's step-ups, already filtered by the caller. */
 	stepUps: BannerStepUp[]
@@ -96,9 +97,11 @@ const StepUpRow = ({
 						src={guaranteed.uma.portrait ?? guaranteed.image}
 						oshi={oshiIds.has(guaranteed.uma.id)}
 						className="h-full"
+						hover={hoverCardProps("uma", guaranteed.uma.id)}
 					/>
 				) : guaranteed ? (
 					<img
+						{...hoverCardProps("card", guaranteed.cardId)}
 						src={guaranteed.image}
 						alt=""
 						loading="lazy"

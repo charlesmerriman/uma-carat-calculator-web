@@ -244,7 +244,13 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 	interactive?: boolean
 }) {
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom", { onOpenChange, interactive: interactive || card !== undefined })
+	// A hover card is tall: it opens beside the tile and fits the window, as
+	// the layer's cards do (HoverCardLayer).
+	const { referenceProps, popup } = useHoverPopup(card !== undefined ? "right-start" : "bottom", {
+		onOpenChange,
+		interactive: interactive || card !== undefined,
+		fit: card !== undefined,
+	})
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div

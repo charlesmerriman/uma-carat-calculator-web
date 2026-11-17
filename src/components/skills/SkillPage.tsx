@@ -31,6 +31,7 @@ import { FramedCard } from "../FramedCard"
 import { FramedUma } from "../FramedUma"
 import { KindPill } from "../pvp/SkillDetail"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 /** The hero's wash, by the skill's kind: the game's gold, pink or a unique's violet; the brand otherwise. */
 const KIND_ACCENT: Record<string, string> = { gold: "#e8b51a", evolved: "#f28cbc", unique: "#c9b1ff" }
 
@@ -121,7 +122,7 @@ function OwnerFace({ uma }: { uma: SkillOwnerUma }) {
 	const oshiIds = useOshiIds()
 	const body = (
 		<>
-			<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-owner__art" />
+			<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-owner__art" hover={hoverCardProps("uma", uma.id)} />
 			<span>{uma.name}</span>
 		</>
 	)
@@ -155,7 +156,7 @@ function UmaSources({ rows }: { rows: SkillSourceUma[] }) {
 				{rows.map((row) => {
 					const body = (
 						<>
-							<FramedUma src={row.image} oshi={oshiIds.has(row.id)} className="enc-pic__art" />
+							<FramedUma src={row.image} oshi={oshiIds.has(row.id)} className="enc-pic__art" hover={hoverCardProps("uma", row.id)} />
 							<span className="enc-pic__name">{row.name}</span>
 							<span className="enc-pic__sub">{umaHow(row)}</span>
 							{!row.on_global && <JpTag />}
@@ -198,7 +199,7 @@ function CardSources({ rows }: { rows: SkillSourceCard[] }) {
 						const line = [row.title ? row.name : null, cardLine(art), row.via ? `${how} · ${row.via}` : how].filter(Boolean).join(" · ")
 						const body = (
 							<>
-								<FramedCard card={art} className="enc-pic__art" />
+								<FramedCard card={art} className="enc-pic__art" hover={hoverCardProps("card", row.id)} />
 								<span className="enc-pic__name">{row.title || row.name}</span>
 								<span className="enc-pic__sub">{line}</span>
 								{!row.on_global && <JpTag />}

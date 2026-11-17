@@ -8,6 +8,7 @@ import { ExtraCardsBadge } from "./ExtraCardsBadge"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 interface MobileBannerCardProps {
 	bannerType: BannerRowType
 	images: { id: number; name: string; image: string; portrait?: string | null }[]
@@ -151,13 +152,14 @@ const Thumbnails = ({
 								alt={img.name}
 								oshi={oshiIds.has(img.id)}
 								className="w-12"
+								hover={hoverCardProps("uma", img.id)}
 							/>
 						) : (
 							<div
 								key={img.name}
 								className={`flex h-12 min-w-0 shrink-0 items-center justify-center overflow-hidden ${thumbTileRadius} bg-black/10 ring-1 ring-white/10`}
 							>
-								<img src={img.image} alt={img.name} className="h-full w-auto object-contain" />
+								<img src={img.image} alt={img.name} className="h-full w-auto object-contain" {...hoverCardProps("card", img.id)} />
 							</div>
 						)
 					)
