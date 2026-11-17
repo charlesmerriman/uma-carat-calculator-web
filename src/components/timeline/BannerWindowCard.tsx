@@ -20,8 +20,10 @@ import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { AnniversaryEventStrip } from "./AnniversaryEventStrip"
 import { LegendRaceNote } from "./LegendRaceNote"
+import { StoryEventStrip } from "./StoryEventStrip"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import type { DatedRelease } from "../../utils/dailyLegendRaces"
+import type { StoryEvent } from "../../types"
 import {
 	CATEGORY_LABELS,
 	TIMELINE_FOCUS_HIGHLIGHT,
@@ -1101,6 +1103,8 @@ type BannerWindowCardProps = {
 	onAddBanner: (banner: BannerUma | BannerSupport, type: "Uma" | "Support") => void
 	/** Daily legend race batches arriving with a banner in this window. */
 	legendRaces?: DatedRelease[]
+	/** Story events running with a banner in this window: the row beneath the card. */
+	storyEvents?: StoryEvent[]
 } & TimelineFocusProps
 
 export function BannerWindowCard({
@@ -1110,6 +1114,7 @@ export function BannerWindowCard({
 	stagedBanners,
 	onAddBanner,
 	legendRaces = [],
+	storyEvents = [],
 	focusRef,
 	isFocused = false,
 }: BannerWindowCardProps) {
@@ -1180,7 +1185,7 @@ export function BannerWindowCard({
 			<div
 				className={`card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
 					attachedEvent ? "rounded-t-none" : ""
-				} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
+				} ${storyEvents.length > 0 ? "rounded-b-none" : ""} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
 			>
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex min-w-0 items-center gap-3">
@@ -1266,6 +1271,8 @@ export function BannerWindowCard({
 					))}
 				</div>
 			</div>
+			{/* Flush beneath the panel, outside it, so the art row above can't grow. */}
+			{storyEvents.length > 0 && <StoryEventStrip events={storyEvents} />}
 		</div>
 	)
 }

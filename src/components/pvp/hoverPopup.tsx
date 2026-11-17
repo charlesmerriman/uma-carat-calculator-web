@@ -71,6 +71,13 @@ export interface HoverPopupOptions {
 	 * flipped above a tile ran off the top of the window (2026-11-17).
 	 */
 	fit?: boolean
+	/**
+	 * A tap is the ONLY way in: hover and keyboard focus never open it. For a
+	 * tile that already opens the site's shared hover card on a computer
+	 * (HoverCardLayer, which ignores touch), so a phone still gets something
+	 * and a computer never gets two popups (the story event row, 2026-11-17).
+	 */
+	tapOnly?: boolean
 }
 
 /**
@@ -91,7 +98,10 @@ export interface HoverPopupOptions {
  * screen reader's copy is the caller's `sr-only` element, always in the DOM
  * and named by `aria-describedby`, as the old in-place popup was.
  */
-export function useHoverPopup(placement: Placement, { onOpenChange, interactive = false, tap = true, fit = false }: HoverPopupOptions = {}) {
+export function useHoverPopup(
+	placement: Placement,
+	{ onOpenChange, interactive = false, tap = true, fit = false, tapOnly = false }: HoverPopupOptions = {}
+) {
 	const [open, setOpenState] = useState(false)
 	const setOpen = (next: boolean) => {
 		setOpenState(next)
@@ -119,6 +129,7 @@ export function useHoverPopup(placement: Placement, { onOpenChange, interactive 
 	})
 	const { getReferenceProps, getFloatingProps } = useInteractions([
 		useHover(context, {
+			enabled: !tapOnly,
 			mouseOnly: true,
 			delay: { open: HOVER_OPEN_DELAY_MS },
 			// safePolygon keeps it open while the pointer crosses the gap
@@ -126,7 +137,7 @@ export function useHoverPopup(placement: Placement, { onOpenChange, interactive 
 			// pointer heads anywhere else.
 			handleClose: interactive ? safePolygon() : undefined,
 		}),
-		useFocus(context, { visibleOnly: true }),
+		useFocus(context, { enabled: !tapOnly, visibleOnly: true }),
 		// Escape, or a tap anywhere else, closes it.
 		useDismiss(context),
 	])

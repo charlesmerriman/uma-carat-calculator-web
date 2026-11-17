@@ -1284,6 +1284,33 @@ step-up banners exist until you press the calculator's third Add button. Because
 step-up's FK points at the campaign **Part** it runs in, the chip lands on exactly one
 card per campaign with no filtering.
 
+### Story events sit flush beneath their banner's card
+
+`StoryEventStrip` (`components/timeline/StoryEventStrip.tsx`) draws each story event under
+the banner it runs with (`story_event_data`, grouped by `storyEventsByBanner`): the logo when
+one is uploaded, the name ("Story event" when it has no English one), "Runs with this banner.
+Claim rewards by ..." through `DateTimeRange`, the reward chips (non-zero only), and each free
+card. It is the mirror of `AnniversaryEventStrip`: outside the panel, which squares its bottom
+corners, so the art row can't grow. Plan: `notes/story-events-plan.md`.
+
+- **Display only.** The rewards are the event's own and nothing reads them for the projection.
+  The cards carry no `first_jp_date`, and the selectors build their catalogue from banners, so
+  a free card never becomes selectable.
+- **On a computer a free card opens the shared hover card** (`hoverCardProps("card", id)`,
+  drawn by `HoverCardLayer` like every other tile), and a click goes to its page.
+- **On a touch screen a tap opens the row's own details, never navigates** (owner,
+  2026-11-17, for this row; `HoverCardLayer` ignores touch). "Open its page" inside does the
+  navigating. Its popup is `useHoverPopup(..., { tapOnly: true })` (hover and focus off), so a
+  mouse or keyboard never opens it beside the shared card, and `FreeCardTile` holds the click
+  back only for a touch (a ref,
+  because the tap's own re-render lands before the click). The banner tiles still send a tap
+  to the page.
+- **Early access only**, like the Encyclopedia (`useSkillsPreview`): everyone else gets a
+  plain tile.
+- **"Must get" is the one mark**, outlined in brand, never filled (black on brand fails on the
+  light theme). No scale.
+- Search finds a banner by its story event's name and its free cards' names.
+
 ### Other Timeline rules
 
 - **A featured tile's name breaks at a seam, never mid-word** (`withSeams` in
