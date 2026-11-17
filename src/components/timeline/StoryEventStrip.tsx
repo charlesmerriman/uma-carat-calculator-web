@@ -8,6 +8,7 @@ import { useHoverPopup } from "../pvp/hoverPopup"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { hoverCardProps } from "../../utils/hoverCards"
+import { HoverCardContent } from "../hovercards/HoverCardContent"
 import {
 	FREE_CARD_COPIES,
 	rarityLabel,
@@ -103,10 +104,12 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
  *   - on a computer, the site's shared hover card (hoverCardProps, drawn by
  *     HoverCardLayer, the same card every other tile opens), and a click goes
  *     to the card's page;
- *   - on a touch screen, which that layer ignores, a tap opens this row's own
- *     small details with "Open its page" inside, and never navigates (owner,
- *     2026-11-17, for this row). A banner tile does the opposite (a tap
- *     follows its link), which is why the click is held back only for a touch.
+ *   - on a touch screen, which that layer ignores, a tap opens the SAME card
+ *     (HoverCardContent) in this row's own popup, its "Open its page" inside,
+ *     and never navigates (owner, 2026-11-17: the Timeline's cards get the
+ *     same hover cards, and on a phone a tap opens it). A banner tile does the
+ *     opposite (a tap follows its link), which is why the click is held back
+ *     only for a touch.
  *
  * The row's popup is `tapOnly` (its hover and focus are off), so a mouse or a
  * keyboard never opens it beside the shared card.
@@ -116,7 +119,7 @@ function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: st
 	const href = linksToPages && card.game_id ? cardHref(card.game_id) : null
 	const purpose = card.purpose.trim()
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("top", { interactive: true, tapOnly: true })
+	const { referenceProps, popup } = useHoverPopup("top", { interactive: true, tapOnly: true, fit: true })
 	// A ref, not a variable: the tap's pointerup opens the popup, and that
 	// re-render lands before the click, which must still see "touch".
 	const lastPointer = useRef("")
@@ -177,7 +180,9 @@ function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: st
 	}
 	const interactiveClass = `${tileClass} transition hover:border-brand/60 focus-visible:outline-2 focus-visible:outline-brand`
 
-	const details = (
+	// Drawn only while the catalogue doesn't know the card yet; otherwise the
+	// tap opens the site's own card (below).
+	const fallback = (
 		<div className="flex flex-col gap-1.5 text-[13px]">
 			<div>
 				<div className="text-sm font-semibold text-gray-100">{card.name}</div>
@@ -214,7 +219,21 @@ function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: st
 					.filter(Boolean)
 					.join(" ")}
 			</span>
-			{popup(details, "w-64")}
+			{/* The same card a computer's hover opens (HoverCardContent, what
+			    HoverCardLayer draws), with this event's line on top. */}
+			{popup(
+				<HoverCardContent
+					kind="card"
+					id={card.id}
+					top={
+						<p className="mb-1 text-[13px] text-gray-300">
+							Free from {eventName}, {FREE_CARD_COPIES} copies.
+						</p>
+					}
+					fallback={fallback}
+				/>,
+				"w-80"
+			)}
 		</>
 	)
 }

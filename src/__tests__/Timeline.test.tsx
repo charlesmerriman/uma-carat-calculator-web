@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthContext, type AuthContextType } from '../services/AuthContext'
+import { TestQueryProvider } from '../test/TestQueryProvider'
 import { TIMELINE_FOCUS_HIGHLIGHT } from '../components/timeline/timelineShared'
 import { formatDate, formatTime, localZoneName } from '../utils/dateFormat'
 import { FOCUS_TAILROOM } from '../hooks/useFocusScroll'
@@ -1202,12 +1203,16 @@ describe('Timeline story events', () => {
       status: 'ready',
       account: { early_access: earlyAccess, oshi_uma_ids: [] },
     } as unknown as AuthContextType
+    // The tap popup draws the site's hover card, which reads TanStack Query
+    // (App.tsx's QueryProvider in the app).
     return render(
-      <AuthContext.Provider value={value}>
-        <MemoryRouter initialEntries={['/app/timeline']}>
-          <Timeline />
-        </MemoryRouter>
-      </AuthContext.Provider>
+      <TestQueryProvider>
+        <AuthContext.Provider value={value}>
+          <MemoryRouter initialEntries={['/app/timeline']}>
+            <Timeline />
+          </MemoryRouter>
+        </AuthContext.Provider>
+      </TestQueryProvider>
     )
   }
 
