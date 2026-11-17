@@ -1604,13 +1604,16 @@
 	}
 
 	/* The awakening track: a post per level, joined by a line in the page's
-	   colour, the level's skill under its post. An evolved skill hangs off the
+	   colour, the level's skills under its post. An evolved skill hangs off the
 	   gold skill it comes from, with what unlocks it. On a phone the track
-	   runs down the left. Each rung draws its own stretch of line, so the
-	   track survives wrapping onto a second row. */
+	   runs down the left; from 64rem it runs across, one column per level.
+	   Levels 2 to 5 are one row, and the 6 and 7 JP added later sit on a row
+	   of their own under an "Added later" rule, in the same columns, never
+	   squeezed onto the end of the first (the owner, 2026-11-17). Each rung
+	   draws its own stretch of line, so a row's last rung draws none. */
 	.enc-awake {
 		display: grid;
-		gap: 0.9rem 0.75rem;
+		gap: 1.1rem 0.9rem;
 	}
 	.enc-rung {
 		position: relative;
@@ -1620,7 +1623,7 @@
 	.enc-rung::before {
 		position: absolute;
 		top: 2.4rem;
-		bottom: -0.9rem;
+		bottom: -1.1rem;
 		left: 1.1rem;
 		width: 3px;
 		border-radius: 2px;
@@ -1634,6 +1637,7 @@
 		position: absolute;
 		top: 0.1rem;
 		left: 0;
+		z-index: 1;
 		display: grid;
 		width: 2.4rem;
 		height: 2.4rem;
@@ -1656,10 +1660,10 @@
 	.enc-branches {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.45rem;
 	}
 	.enc-branches {
-		margin: 0.4rem 0 0 1.1rem;
+		margin: 0.45rem 0 0 1.1rem;
 	}
 	.enc-branches > li {
 		position: relative;
@@ -1667,30 +1671,80 @@
 	/* The elbow from the gold skill down to the evolution it becomes. */
 	.enc-branches > li::before {
 		position: absolute;
-		top: -0.4rem;
+		top: -0.45rem;
 		left: -0.75rem;
 		width: 0.6rem;
-		height: 1.7rem;
+		height: 1.75rem;
 		border-bottom: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
 		border-left: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
 		border-bottom-left-radius: 8px;
 		content: "";
 	}
 	.enc-branches .enc-unlock {
-		margin: 0.3rem 0 0.2rem 0.5rem;
+		margin: 0.35rem 0 0.15rem 0.5rem;
 		font-size: 0.75rem;
 		color: var(--color-gray-300);
 	}
-	@media (min-width: 48rem) {
+	/* A row on the track is narrower than a list's, so it never cuts a name
+	   short: the name takes two lines if it needs them, and the type and the
+	   JP only tag wrap under the pill rather than being clipped. */
+	.enc-rung .enc-skill {
+		align-items: flex-start;
+	}
+	.enc-rung .enc-skill__icon {
+		margin-top: 0.05rem;
+	}
+	.enc-rung .enc-skill__name {
+		display: -webkit-box;
+		overflow: hidden;
+		white-space: normal;
+		/* Balanced, so a name's ○ or ◎ never sits alone on the second line. */
+		text-wrap: balance;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+	}
+	.enc-rung .enc-skill__sub {
+		flex-wrap: wrap;
+		row-gap: 0.2rem;
+		margin-top: 0.15rem;
+	}
+	.enc-rung .enc-skill__cost {
+		margin-top: 0.1rem;
+	}
+	/* The levels added later: a small rule naming them, then their own track. */
+	.enc-awake-later {
+		display: grid;
+		gap: 0.8rem;
+		margin-top: 1.4rem;
+	}
+	.enc-awake-later__label {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--c1-ink);
+	}
+	.enc-awake-later__label::after {
+		flex: 1;
+		border-top: 1px dashed var(--c1-line);
+		content: "";
+	}
+	@media (min-width: 64rem) {
+		/* Four columns, whatever the row holds, so 6 and 7 stand under 2 and 3.
+		   Narrower than 64rem a quarter is too tight for a skill row, so the
+		   track stays a phone's, down the left. */
 		.enc-awake {
-			grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
 		.enc-rung {
 			padding: 3rem 0 0;
 		}
 		.enc-rung::before {
 			top: 1.15rem;
-			right: -0.75rem;
+			right: -0.9rem;
 			bottom: auto;
 			left: 1.2rem;
 			width: auto;
