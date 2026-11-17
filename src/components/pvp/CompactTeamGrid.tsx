@@ -12,9 +12,10 @@ import type { ReactNode } from "react"
 import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
-import { ReleaseFlag, type TeamGridProps } from "./TeamGrid"
+import { PageName, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
@@ -36,6 +37,10 @@ export function CompactTeamGrid({
 }: TeamGridProps) {
 	const starred = (pool: "uma" | "support", id: number, member: PvpTeamMember) =>
 		isRecommended?.(pool, id, member.style) ?? false
+	// Each uma's name under her portrait opens her Encyclopedia page (early
+	// access). The cards here are too small for a corner button and have no
+	// caption; their pages are a click away in the picker (PvpCardPicker).
+	const pages = useEncyclopediaHrefs()
 
 	return (
 		<div className="flex flex-col gap-3" aria-label="Your team">
@@ -94,8 +99,8 @@ export function CompactTeamGrid({
 											</label>
 										</div>
 									</div>
-									<p className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={uma?.name}>
-										{uma?.name ?? "Unknown uma"}
+									<p className="mt-1 truncate text-center text-xs font-medium text-gray-100">
+										<PageName href={pages.uma(member.uma)} name={uma?.name ?? "Unknown uma"} />
 									</p>
 								</>
 							) : (
