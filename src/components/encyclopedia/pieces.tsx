@@ -119,7 +119,8 @@ export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, 
 			<div className="enc-hero__artbox">{art}</div>
 			<div className="enc-hero__body">
 				<span className="enc-hero__eyebrow">{eyebrow}</span>
-				<h1 id={nameId} className="enc-hero__name" lang={nameLang}>{name}</h1>
+				{/* One long word can't wrap ("Matikanetannhauser"), so it is set smaller to fit beside the facts. */}
+				<h1 id={nameId} className="enc-hero__name" data-long={longestWord(name) > 13} lang={nameLang}>{name}</h1>
 				{title && <p className="enc-hero__title">{title}</p>}
 				{japanese}
 				{tags && <div className="enc-hero__tags">{tags}</div>}
@@ -129,6 +130,11 @@ export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, 
 			{facts && <dl className="enc-hero__facts">{facts}</dl>}
 		</header>
 	)
+}
+
+/** The length of a name's longest word: what decides whether it fits the hero on one line. */
+function longestWord(name: string): number {
+	return Math.max(0, ...name.split(/\s+/).map((word) => word.length))
 }
 
 /** One fact in the hero: a small caps label over its value. */
