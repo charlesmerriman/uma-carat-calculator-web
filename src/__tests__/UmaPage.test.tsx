@@ -90,9 +90,30 @@ describe("UmaPage", () => {
 		const evolution = (await screen.findByRole("link", { name: /Gluttonous Ruler/ })).closest("li") as HTMLElement
 		expect(within(evolution).getByText("Reach 600 Stamina.")).toBeInTheDocument()
 		expect(evolution).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
-		// Only an evolution has any: the awakening row has no list under it.
+		// Only an evolution has any. It hangs off the gold skill it comes from, so
+		// the list sits inside the evolution's own row, never straight under the gold's.
 		const gold = screen.getByRole("link", { name: /^Gourmand/ }).closest("li") as HTMLElement
-		expect(gold.querySelector(".enc-unlock")).toBeNull()
+		expect(gold.querySelector(":scope > .enc-unlock")).toBeNull()
+		expect(gold).toContainElement(evolution)
+	})
+
+	it("shows both unique skills of an outfit that starts below three stars, each with what it does", async () => {
+		const twoStar: UmaPageData = {
+			...SPECIAL_WEEK,
+			skills: [
+				skill(10011, "Warning Shot!", "unique", { rarity: 3, cost: null, level: 2, description: "Slightly increase velocity." }),
+				skill(100011, "Anchors Aweigh!", "unique", { rarity: 5, cost: null, level: 3, description: "Moderately increase velocity." }),
+				// An evolution whose base isn't an awakening skill here is listed, never dropped.
+				skill(100101121, "Stray Star", "evolved", { rarity: 6, is_evolved: true, evolves_from: 999999 }),
+			],
+		}
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(twoStar), { status: 200 })))
+		renderAt("/app/umas/100101")
+		const uniques = (await screen.findByRole("heading", { name: "Unique skills" })).parentElement as HTMLElement
+		expect(within(uniques).getByRole("link", { name: /Warning Shot!.*Slightly increase velocity\..*From ★2/ })).toBeInTheDocument()
+		expect(within(uniques).getByRole("link", { name: /Anchors Aweigh!.*From ★3/ })).toBeInTheDocument()
+		const loose = screen.getByRole("heading", { name: "Evolutions" }).parentElement as HTMLElement
+		expect(within(loose).getByRole("link", { name: /Stray Star/ })).toBeInTheDocument()
 	})
 
 	it("switches the stats between star levels", async () => {

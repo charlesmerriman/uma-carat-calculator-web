@@ -19,7 +19,7 @@
  * matches nothing.
  */
 
-import { useCallback, useSyncExternalStore } from "react"
+import { useCallback, useMemo, useSyncExternalStore } from "react"
 
 const PREFIX = "enc-filter:"
 
@@ -78,6 +78,28 @@ export function useRememberedFilter<T extends string>(
 	const value = stored !== null && (!allowed || allowed.includes(stored as T)) ? (stored as T) : fallback
 	const setValue = useCallback((next: T) => write(key, next, fallback), [key, fallback])
 	return [value, setValue]
+}
+
+/**
+ * A filter that holds several picks at once (Daptrius, board "Allow
+ * Encyclopedia Filtering to select multiple items", 2026-11-17: Speed and Wit
+ * skills together, Turf A and Dirt C). `[picks, setPicks]`; no picks means
+ * "All". Kept as one comma-separated string under `key`, so the empty default
+ * leaves nothing behind and Reset clears it like any other filter. A pick no
+ * longer in `allowed` is dropped, so a value saved by an older version (a
+ * single chip, or "all") reads as the default or as that one pick.
+ */
+export function useRememberedPicks<T extends string>(key: string, allowed: readonly T[]): [T[], (picks: T[]) => void] {
+	const [stored, setStored] = useRememberedFilter<string>(key, "")
+	// The array is rebuilt only when the stored text changes, so a memo that depends on it holds.
+	const picks = useMemo(
+		() => (stored ? stored.split(",").filter((pick): pick is T => allowed.includes(pick as T)) : []),
+		// `allowed` is a fresh array on most renders; its contents never change, so the stored text decides.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[stored]
+	)
+	const setPicks = useCallback((next: T[]) => setStored([...new Set(next)].join(",")), [setStored])
+	return [picks, setPicks]
 }
 
 /**

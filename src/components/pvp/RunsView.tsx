@@ -1473,13 +1473,20 @@ function TopBody({ run, choices, shared, onWrite }: {
 	)
 }
 
-/** A row with no lineup yet: the first choice in one tap, or the whole list. */
-function LineupStart({ question, eyebrow, choices, shared, onPick }: {
+/**
+ * A row with no lineup yet (the Finals, the Top 96): the first choice in one
+ * tap, or the whole list as cards. With `everyTeam`, a button per team, the
+ * one run last first, as a ticket shows them (Daptrius, board "CM Runs, Finals
+ * Team select", 2026-11-17: the Finals offered only the last team). The Top 96
+ * keeps one button: its choices are long "Same three as..." lines.
+ */
+function LineupStart({ question, eyebrow, choices, shared, onPick, everyTeam = false }: {
 	question: string
 	eyebrow: string
 	choices: LineupChoice[]
 	shared: Shared
 	onPick: (choice: LineupChoice) => void
+	everyTeam?: boolean
 }) {
 	const [picking, setPicking] = useState(false)
 	const first = choices.at(0)
@@ -1498,6 +1505,11 @@ function LineupStart({ question, eyebrow, choices, shared, onPick }: {
 							{startLabel(first)}
 						</button>
 					)}
+					{everyTeam && choices.slice(1).map((choice) => (
+						<button key={choice.key} type="button" className={soft({ size: "min-h-11 px-3 sm:min-h-10" })} onClick={() => start(choice)}>
+							{startLabel(choice)}
+						</button>
+					))}
 					<button type="button" className={soft({ size: "min-h-11 px-3 sm:min-h-10" })} aria-expanded={picking} onClick={() => setPicking((isOpen) => !isOpen)}>
 						Pick a team
 					</button>
@@ -1520,6 +1532,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 				<LineupStart
 					question="Who ran the Finals?"
 					eyebrow="Finals"
+					everyTeam
 					choices={choices}
 					shared={shared}
 					onPick={(choice) => onWrite((current) => withLineup(current, choice.runners))}

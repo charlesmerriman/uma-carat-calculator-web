@@ -10,11 +10,11 @@ import { skillMatches, skillSearchWords } from "./skillList"
 
 // "inherited" is a unique's copy a parent passes on: white by colour, but its
 // own filter and out of White (Daptrius's list, item 10).
-export type ColourFilter = "all" | "white" | "gold" | "unique" | "inherited" | "evolved"
+export type ColourFilter = "white" | "gold" | "unique" | "inherited" | "evolved"
 export type WhereFilter = "all" | SkillAvailability
 
+/** The Color chips; several may be picked, and nothing picked is "All" (the chip row draws that one). */
 export const COLOUR_FILTERS: { value: ColourFilter; label: string }[] = [
-	{ value: "all", label: "All" },
 	{ value: "white", label: "White" },
 	{ value: "gold", label: "Gold" },
 	{ value: "unique", label: "Unique" },
@@ -92,6 +92,54 @@ export function typeMatches(rowType: string | undefined, filter: TypeFilter): bo
 	return type === filter || type.startsWith(`${filter}_`)
 }
 
+// ── Several types at once (board "Allow Encyclopedia Filtering to select
+//    multiple items", 2026-11-17: "speed and wit skills, but not guts") ──────
+//
+// The picks are a list of type keys and sub-type keys. A type picked whole is
+// its own key ("stat"); narrowed, it is its sub-types' keys instead
+// ("stat_speed", "stat_wit"), never both. A row passes when any pick matches.
+// Each picked type with sub-types gets a sub-row of its own under the Type
+// chips, so two of them (Stat boost and Debuff) can each be narrowed.
+
+/** Does a row pass the Type picks? Nothing picked passes everything. */
+export function typePicksMatch(rowType: string | undefined, picks: readonly TypeFilter[]): boolean {
+	return picks.length === 0 || picks.some((pick) => typeMatches(rowType, pick))
+}
+
+/** The picks that belong to `parent`: itself, or its sub-types. */
+function picksOf(picks: readonly TypeFilter[], parent: TypeFilter): TypeFilter[] {
+	return picks.filter((pick) => typeParent(pick).value === parent)
+}
+
+/** The parent types picked, whole or narrowed, in the chips' order. */
+export function pickedParents(picks: readonly TypeFilter[]): TypeOption[] {
+	return TYPE_FILTERS.filter((option) => option.value !== "all" && picksOf(picks, option.value).length > 0)
+}
+
+/** A Type chip: picking a type adds it whole; picking it again drops it, sub-types and all. */
+export function toggleTypePick(picks: readonly TypeFilter[], parent: TypeFilter): TypeFilter[] {
+	const mine = picksOf(picks, parent)
+	return mine.length > 0 ? picks.filter((pick) => !mine.includes(pick)) : [...picks, parent]
+}
+
+/**
+ * A sub-type chip under `parent`. Its "All" (`sub === parent`) takes the type
+ * whole again. A sub-type turns on and off; the last one off leaves the type
+ * whole, so the type's chip never turns off from down here.
+ */
+export function toggleSubTypePick(picks: readonly TypeFilter[], parent: TypeFilter, sub: TypeFilter): TypeFilter[] {
+	const others = picks.filter((pick) => typeParent(pick).value !== parent)
+	if (sub === parent) return [...others, parent]
+	const subs = picksOf(picks, parent).filter((pick) => pick !== parent)
+	const next = subs.includes(sub) ? subs.filter((pick) => pick !== sub) : [...subs, sub]
+	return [...others, ...(next.length > 0 ? next : [parent])]
+}
+
+/** The sub-types picked under `parent`; none means it is picked whole. */
+export function subTypePicks(picks: readonly TypeFilter[], parent: TypeFilter): TypeFilter[] {
+	return picksOf(picks, parent).filter((pick) => pick !== parent)
+}
+
 /**
  * A type's word by its key, for a row's second line and the skill card:
  * "velocity" -> "Speed", and a sub-type with its parent's word in front,
@@ -104,8 +152,9 @@ export const SKILL_TYPE_WORDS: Record<string, string> = Object.fromEntries(
 	]),
 )
 
+/** Where, the setting every list shares (utils/encyclopedia.ts SHARED_WHERE_KEY); only skills have "Coming to global". */
 export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
-	{ value: "all", label: "Anywhere" },
+	{ value: "all", label: "All" },
 	{ value: "global", label: "On global" },
 	{ value: "announced", label: "Coming to global" },
 	{ value: "jp", label: "JP only" },
@@ -119,15 +168,15 @@ export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
 export function filterSkills(
 	rows: SkillListRow[],
 	query: string,
-	colour: ColourFilter,
+	colours: readonly ColourFilter[],
 	where: WhereFilter,
-	type: TypeFilter = "all"
+	types: readonly TypeFilter[] = []
 ): SkillListRow[] {
 	const words = skillSearchWords(query)
 	return rows.filter((row) => {
-		if (colour !== "all" && skillKind(row) !== colour) return false
+		if (colours.length > 0 && !colours.includes(skillKind(row) as ColourFilter)) return false
 		if (where !== "all" && row.availability !== where) return false
-		if (!typeMatches(row.type, type)) return false
+		if (!typePicksMatch(row.type, types)) return false
 		return skillMatches({ ...row, other_names: [...row.other_names, ...(row.owners ?? [])] }, words)
 	})
 }

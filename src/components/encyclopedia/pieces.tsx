@@ -3,8 +3,8 @@
  * hero and its facts and tags, the jump bar, a section card, a segmented
  * switch, and the loading, missing and failed states.
  *
- * The look is encyclopedia.css (the visual overhaul, canvas of 2026-11-12:
- * https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6). This file holds
+ * The look is encyclopedia.css (the redesign of 2026-11-17, canvas
+ * https://claude.ai/artifact/6zATpMXYXQJzPBCfbisQr1). This file holds
  * structure and wording only; what an aptitude grid or a skill row looks like
  * lives beside it in facts.tsx and skillRows.tsx.
  */
@@ -14,7 +14,7 @@ import { Link } from "react-router-dom"
 import { useReducedMotion } from "framer-motion"
 import { Check, ChevronRight } from "lucide-react"
 import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "../../utils/cardTypes"
-import { RARITY_TAG_CLASS, RARITY_WORDS } from "../../utils/encyclopedia"
+import { RARITY_TAG_CLASS, RARITY_WORDS, colourStyle } from "../../utils/encyclopedia"
 import { UMA_LIST_PATH } from "../../utils/encyclopediaRoutes"
 import { UMATL_URL } from "../../utils/skillSearch"
 
@@ -67,13 +67,36 @@ export function JumpBar({ items }: { items: JumpItem[] }) {
 // ── The hero ────────────────────────────────────────────────────────────────
 
 /**
- * The top of a detail page: the art, the name, a line of tags, and the facts
- * (release dates, cost) beside them. `accent` tints the corner the art sits
- * in: the brand by default, a card's type colour, a skill's own.
+ * A detail page's root: it carries the page's two colours (`--c1`, `--c2`),
+ * which the hero, the section flags and the tracks all read. With no pair
+ * (a JP-only character the files don't cover, a skill that is nobody's) the
+ * stylesheet's defaults stand: the theme's accent and a grey.
  */
-export function Hero({ accent, art, eyebrow, name, nameId, nameLang, title, japanese, tags, lead, owned, facts }: {
+export function Page({ colours, labelledBy, children }: {
+	colours?: readonly string[] | null
+	/** The id of the heading that names the page, when the article should be named by it. */
+	labelledBy?: string
+	children: ReactNode
+}) {
+	return <article className="enc-page" aria-labelledby={labelledBy} style={colourStyle(colours)}>{children}</article>
+}
+
+/**
+ * The top of a detail page: the art standing on a slanted field of the
+ * page's main colour with a stripe of its second (racing silks), the name, a
+ * line of tags, and the facts (release dates, cost) beside them. `accent`
+ * overrides the field's colour for a page that has no character: a skill's
+ * own colour.
+ */
+export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, nameId, nameLang, title, japanese, tags, lead, owned, facts }: {
 	accent?: string
+	/** How much room the art needs: a square portrait, a tall card, a small icon. */
+	shape?: "uma" | "card" | "skill"
 	art: ReactNode
+	/** The game's own number for it, in the corner: "No. 1006 · 01". */
+	entry?: string
+	/** The Japanese name, drawn large and faint behind the hero. Decoration: the readable one is `japanese`. */
+	ghost?: string
 	/** What kind of thing this is: "Trainee", "Support card", "Skill". */
 	eyebrow: ReactNode
 	name: string
@@ -89,11 +112,15 @@ export function Hero({ accent, art, eyebrow, name, nameId, nameLang, title, japa
 	facts?: ReactNode
 }) {
 	return (
-		<header className="enc-hero" style={accent ? ({ "--enc-accent": accent } as CSSProperties) : undefined}>
-			{art}
+		<header className={`enc-hero enc-hero--${shape}`} style={accent ? ({ "--c1": accent } as CSSProperties) : undefined}>
+			<span className="enc-hero__field" aria-hidden="true"><i /><i /></span>
+			{ghost && <span className="enc-hero__ghost" lang="ja" aria-hidden="true">{ghost}</span>}
+			{entry && <span className="enc-hero__no">{entry}</span>}
+			<div className="enc-hero__artbox">{art}</div>
 			<div className="enc-hero__body">
 				<span className="enc-hero__eyebrow">{eyebrow}</span>
-				<h1 id={nameId} className="enc-hero__name" lang={nameLang}>{name}</h1>
+				{/* One long word can't wrap ("Matikanetannhauser"), so it is set smaller to fit beside the facts. */}
+				<h1 id={nameId} className="enc-hero__name" data-long={longestWord(name) > 13} lang={nameLang}>{name}</h1>
 				{title && <p className="enc-hero__title">{title}</p>}
 				{japanese}
 				{tags && <div className="enc-hero__tags">{tags}</div>}
@@ -103,6 +130,11 @@ export function Hero({ accent, art, eyebrow, name, nameId, nameLang, title, japa
 			{facts && <dl className="enc-hero__facts">{facts}</dl>}
 		</header>
 	)
+}
+
+/** The length of a name's longest word: what decides whether it fits the hero on one line. */
+function longestWord(name: string): number {
+	return Math.max(0, ...name.split(/\s+/).map((word) => word.length))
 }
 
 /** One fact in the hero: a small caps label over its value. */
@@ -181,7 +213,7 @@ export function OwnedMark() {
 
 export function Stars({ count }: { count: number | null }) {
 	if (!count) return null
-	return <span className="text-sm text-highlight" aria-label={`${count} stars`}>{"★".repeat(count)}</span>
+	return <span className="enc-stars" aria-label={`${count} stars`}>{"★".repeat(count)}</span>
 }
 
 // ── A section ───────────────────────────────────────────────────────────────

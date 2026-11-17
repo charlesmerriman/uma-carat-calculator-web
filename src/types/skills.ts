@@ -7,6 +7,14 @@
 
 import type { SkillAvailability, SkillReadable } from "./pvpGuide"
 
+/** An outfit a skill belongs to: the row's pk for the favorites frame, her game id for the link. */
+export interface SkillOwnerUma {
+	id: number
+	game_id: number | null
+	name: string
+	portrait: string | null
+}
+
 /** One row of GET /skills. */
 export interface SkillListRow {
 	id: number
@@ -30,6 +38,8 @@ export interface SkillListRow {
 	type?: string
 	/** The outfits a unique, its inherited copy or an evolution belongs to. */
 	owners?: string[]
+	/** The same outfits as rows a page can draw (her face on a row, in a hero). Absent from an older API. */
+	owner_umas?: SkillOwnerUma[]
 	/** A unique's inherited copy, or the copy's unique, by game id. */
 	pair?: number | null
 }
@@ -78,6 +88,8 @@ export interface UnlockCondition {
 }
 
 export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
+	/** The colours of the ONE character the skill belongs to, [main, sub]; null for anyone's skill. Absent from an older API. */
+	colours?: [string, string] | null
 	pair?: SkillRef | null
 	description: string
 	readable: SkillReadable

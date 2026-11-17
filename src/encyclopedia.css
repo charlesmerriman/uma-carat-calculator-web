@@ -2,8 +2,9 @@
    THE ENCYCLOPEDIA (components/encyclopedia/, components/skills/) and the
    skill card every skill hover draws (components/pvp/SkillDetail.tsx).
 
-   The look drawn on the overhaul canvas (the notes repo's
-   notes/encyclopedia-overhaul/, where the mocks and their generator are).
+   The look is the redesign of 2026-11-17 (the notes repo's
+   notes/encyclopedia-redesign-plan.md; the canvas and its mocks are in
+   notes/encyclopedia-redesign/), on top of the 2026-11-12 overhaul.
    One file because the pieces are shared across six pages and the PvP
    guide's hover: a hero, a filter bar, tiles, skill rows, the aptitude
    letters, the stat bars, the career rail and the skill card.
@@ -16,6 +17,14 @@
      they read the same on every theme.
    - A token colour never sets text on top of a fixed fill, and a fixed fill
      never sits behind theme-coloured text.
+   - A CHARACTER'S TWO COLOURS, --c1 and --c2 (set on .enc-page from the
+     API's `colours`, the game's own pair for her), are only ever a FILL, or
+     mixed into a theme token before they touch text (--c1-ink, --c1-line).
+     Some are near-black and some are pale, so neither is safe as ink.
+   - Nothing is dimmed to de-emphasise it (the owner, 2026-11-17). Point at
+     what matters with a fill; leave the rest at full strength.
+   - One inset surface, --enc-inset, for anything set into a panel. It is a
+     mix of two theme greys, so it reads on dark and light themes alike.
    - Motion is a hover lift only, and it is off under prefers-reduced-motion.
 
    IN @layer components, like .card-panel in App.css: a Tailwind utility at
@@ -24,66 +33,123 @@
    ========================================================================== */
 
 @layer components {
-	/* ---- The frame: title, tabs ------------------------------------------- */
+	/* ---- The frame: the masthead and its tabs --------------------------------
+	   The title large in the display face, one line saying what this is, and
+	   the three lists as tabs whose headline is how many each holds. The open
+	   tab is a raised panel with the brand's rule under it. */
 
 	.enc-head {
 		display: flex;
 		flex-direction: column;
 		gap: 0.625rem;
 	}
+	.enc-head--mast {
+		gap: 0.75rem;
+		border-bottom: 1px solid var(--color-edge);
+	}
 	.enc-head__title {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.6rem;
 		font-family: var(--font-display);
-		font-size: 1.5rem;
+		font-size: 2.125rem;
 		font-weight: 700;
-		line-height: 1.2;
-		color: var(--color-brand);
+		line-height: 1;
+		letter-spacing: -0.02em;
+		color: var(--color-gray-50);
 	}
 	.enc-head__title svg {
-		width: 1.375rem;
-		height: 1.375rem;
+		width: 1.75rem;
+		height: 1.75rem;
 		flex-shrink: 0;
+		color: var(--color-brand);
 	}
 	.enc-head__sub {
-		font-size: 0.875rem;
+		margin-top: 0.5rem;
+		font-size: 0.9375rem;
 		line-height: 1.5;
 		color: var(--color-gray-400);
 	}
-
-	/* Underlined tabs, the Rankings page's: the active one carries the brand
-	   rule, the strip a hairline the rule sits on. */
 	.enc-tabs {
 		display: flex;
 		gap: 0.25rem;
-		overflow-x: auto;
-		border-bottom: 1px solid var(--color-edge);
-		scrollbar-width: none;
 	}
 	.enc-tab {
-		display: inline-flex;
-		flex-shrink: 0;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: -1px;
-		padding: 0.5rem 0.875rem 0.625rem;
-		border-bottom: 2px solid transparent;
-		font-size: 0.9375rem;
+		position: relative;
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		flex-direction: column;
+		/* A tab whose count isn't known yet keeps its name on the same line as the others'. */
+		justify-content: flex-end;
+		gap: 0.1rem;
+		padding: 0.5rem 0.75rem 0.75rem;
+		border-radius: 0.9rem 0.9rem 0 0;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--color-gray-400);
 		transition: color 0.15s;
 	}
-	.enc-tab svg {
-		width: 1rem;
-		height: 1rem;
+	/* The count, once some page has known it (utils/encyclopediaCounts.ts). */
+	.enc-tab b {
+		font-family: var(--font-display);
+		font-size: 1.375rem;
+		font-weight: 700;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-300);
 	}
 	.enc-tab:hover {
-		color: var(--color-gray-200);
+		color: var(--color-gray-100);
 	}
 	.enc-tab[aria-current="page"] {
-		border-bottom-color: var(--color-brand);
+		background: var(--card-fill);
 		color: var(--color-gray-100);
+	}
+	.enc-tab[aria-current="page"] b {
+		color: var(--color-brand);
+	}
+	.enc-tab[aria-current="page"]::after {
+		position: absolute;
+		right: 0.75rem;
+		bottom: -1px;
+		left: 0.75rem;
+		height: 3px;
+		border-radius: 3px 3px 0 0;
+		background: var(--color-brand);
+		content: "";
+	}
+	@media (min-width: 48rem) {
+		.enc-head--mast {
+			flex-direction: row;
+			align-items: flex-end;
+			justify-content: space-between;
+			gap: 2rem;
+			padding-top: 0.5rem;
+		}
+		.enc-head__title {
+			font-size: 3rem;
+		}
+		.enc-head__title svg {
+			width: 2.25rem;
+			height: 2.25rem;
+		}
+		.enc-head--mast .enc-head__sub {
+			margin-bottom: 1rem;
+		}
+		.enc-tab {
+			min-width: 9.5rem;
+			flex: none;
+			padding: 0.6rem 1.1rem 0.9rem;
+			font-size: 0.875rem;
+		}
+		.enc-tab b {
+			font-size: 1.875rem;
+		}
+		.enc-tab[aria-current="page"]::after {
+			right: 1.1rem;
+			left: 1.1rem;
+		}
 	}
 
 	/* ---- The filter bar ----------------------------------------------------
@@ -94,9 +160,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.625rem;
-		padding: 0.75rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.75rem;
+		padding: 1rem 1.125rem 1.1rem;
+		border-radius: 1.125rem;
 		background: var(--card-fill);
 		box-shadow: var(--card-shadow);
 	}
@@ -167,25 +232,78 @@
 		white-space: nowrap;
 	}
 	/* One filter per row at every width (Daptrius, 2026-11-13): side by side,
-	   a sub-filter appearing (Debuff's kinds) shoved "Where" sideways. */
+	   a sub-filter appearing (Debuff's kinds) shoved "Where" sideways.
+	   The rows share one grid, so every row's chips start at the same left
+	   edge whatever its label's length (Daptrius, 2026-11-17: "left aligned
+	   rather than shifting back and forth"). Each row is a subgrid of it. On a
+	   phone the grid has one column and the label sits above its chips. */
 	.enc-filters {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.5rem 0.75rem;
+	}
+	@media (min-width: 480px) {
+		.enc-filters {
+			grid-template-columns: max-content minmax(0, 1fr);
+		}
 	}
 	.enc-filter {
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
+		display: grid;
+		grid-column: 1 / -1;
+		grid-template-columns: subgrid;
+		align-items: start;
+		row-gap: 0.25rem;
 		min-width: 0;
 	}
 	.enc-filter__label {
-		flex-shrink: 0;
+		/* Lines the label up with the text of the chips beside it. */
+		padding-top: 0.375rem;
 		font-size: 0.6875rem;
 		font-weight: 600;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--color-gray-400);
+		white-space: nowrap;
+	}
+	@media (max-width: 479px) {
+		.enc-filter__label {
+			padding-top: 0;
+		}
+	}
+	/* "Set once for every list": a dashed rule between the shared settings
+	   (Where, Collection) and the list's own filters. */
+	.enc-filters__divider {
+		display: flex;
+		grid-column: 1 / -1;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.6875rem;
+		color: var(--color-gray-500);
+	}
+	.enc-filters__divider::after {
+		content: "";
+		flex: 1;
+		border-top: 1px dashed var(--color-edge);
+	}
+	/* A word and its narrow-screen form ("Medium" / "Med."), one shown at a time. */
+	.enc-word--short {
+		display: none;
+	}
+	@media (max-width: 479px) {
+		.enc-chip .enc-word:not(.enc-word--short) {
+			display: none;
+		}
+		.enc-chip .enc-word--short {
+			display: inline;
+		}
+	}
+	@media (max-width: 359px) {
+		.enc-filter__label .enc-word:not(.enc-word--short) {
+			display: none;
+		}
+		.enc-filter__label .enc-word--short {
+			display: inline;
+		}
 	}
 	/* A filter's chips wrap onto a second line at every width. Until
 	   2026-11-13 a phone scrolled them sideways, which hid choices off the
@@ -218,6 +336,80 @@
 		border-color: var(--color-brand);
 		background: color-mix(in srgb, var(--color-brand) 15%, transparent);
 		color: var(--color-gray-100);
+	}
+	.enc-chip svg {
+		flex-shrink: 0;
+	}
+
+	/* A picked rarity lights up in its metal, the tile's tag (".enc-tag--ssr"). */
+	.enc-chip--ssr[aria-pressed="true"],
+	.enc-chip--sr[aria-pressed="true"],
+	.enc-chip--r[aria-pressed="true"] {
+		border-color: transparent;
+		font-weight: 800;
+		letter-spacing: 0.03em;
+		color: #1b1420;
+	}
+	.enc-chip--ssr[aria-pressed="true"] {
+		background: linear-gradient(120deg, #9be7ff 0%, #c9b1ff 45%, #ffb3d9 75%, #ffe08a 100%);
+	}
+	.enc-chip--sr[aria-pressed="true"] {
+		background: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+	}
+	.enc-chip--r[aria-pressed="true"] {
+		background: linear-gradient(135deg, #f3f5f9 0%, #a9b3c4 100%);
+	}
+
+	/* A card type's chip is its icon (utils/cardTypeIcons.ts): grey and
+	   faded until picked, then in its own colour with the brand's ring. */
+	.enc-chip--icon {
+		padding: 0.125rem;
+		border-color: transparent;
+		border-radius: 0.5rem;
+	}
+	.enc-chip--icon img {
+		width: 1.75rem;
+		height: 1.75rem;
+		filter: grayscale(1) brightness(0.85);
+		opacity: 0.45;
+		transition: filter 0.15s, opacity 0.15s;
+	}
+	.enc-chip--icon:hover img {
+		opacity: 0.75;
+	}
+	.enc-chip--icon[aria-pressed="true"] {
+		border-color: var(--color-brand);
+		background: transparent;
+	}
+	.enc-chip--icon[aria-pressed="true"] img {
+		filter: none;
+		opacity: 1;
+	}
+
+	/* The uma list's aptitude rows: every chip one width, so Distance's and
+	   Style's four columns line up as a grid under Surface's two
+	   (Daptrius, 2026-11-17). */
+	.enc-filter__chips--even > .enc-chip {
+		justify-content: center;
+		width: 4.25rem;
+		padding-inline: 0.25rem;
+	}
+	@media (max-width: 479px) {
+		.enc-filter__chips--even > .enc-chip {
+			width: 3.5rem;
+		}
+	}
+	/* Under an aptitude row: "Turf at least [A]" for each picked column. */
+	.enc-filter__after {
+		display: flex;
+		flex-basis: 100%;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.875rem;
+		padding-top: 0.125rem;
+	}
+	.enc-filter__after .enc-grade,
+	.enc-filter__chips > .enc-grade:first-child {
+		margin-left: 0;
 	}
 
 	/* An aptitude row's "at least [A]": quiet words, then a chip-sized select. */
@@ -252,53 +444,81 @@
 	}
 
 	/* ---- Tiles: an uma or a card in a list ---------------------------------
-	   Art on top, the name under it, one quiet line of facts. The whole tile is
+	   The art IS the tile: it fills the column, with the name and one quiet
+	   line of facts under it, and no box round the lot. An uma's tile carries
+	   her character's two colours as a bar under her frame (--c1, --c2 from
+	   the catalogue), so the list reads as a wall of silks. The whole tile is
 	   the link and lifts on hover. */
 
+	.enc-listwrap {
+		position: relative;
+	}
 	.enc-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(9.25rem, 1fr));
-		gap: 0.75rem;
+		grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr));
+		gap: 1.25rem 0.75rem;
+	}
+	.enc-grid--cards {
+		grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+	}
+	@media (min-width: 40rem) {
+		.enc-grid {
+			grid-template-columns: repeat(auto-fill, minmax(7.75rem, 1fr));
+			gap: 1.4rem 1rem;
+		}
+		.enc-grid--cards {
+			grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+			gap: 1.5rem 1.1rem;
+		}
 	}
 	.enc-tile {
+		--c1: var(--color-gray-500);
+		--c2: var(--color-gray-600);
 		position: relative;
 		display: flex;
 		height: 100%;
+		min-width: 0;
 		flex-direction: column;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.875rem 0.625rem 0.75rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.75rem;
-		background: var(--card-fill);
-		text-align: center;
-		transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+		align-items: flex-start;
+		gap: 0.15rem;
+		text-align: left;
+		transition: transform 0.15s;
 	}
 	.enc-tile:hover,
 	.enc-tile:focus-visible {
-		border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
-		box-shadow: 0 10px 24px rgb(0 0 0 / 28%);
-		transform: translateY(-2px);
+		transform: translateY(-3px);
 	}
 	.enc-tile__art {
-		width: 5.75rem;
-		height: 5.75rem;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 1;
 		flex-shrink: 0;
 	}
 	.enc-tile__art--card {
-		width: 6.5rem;
+		width: 100%;
 		height: auto;
 		aspect-ratio: 3 / 4;
+		margin-bottom: 0.35rem;
+		filter: drop-shadow(0 8px 14px rgb(0 0 0 / 30%));
+	}
+	/* Her silks: the main colour, a gap, the second. Fills only. */
+	.enc-tile__silk {
+		width: calc(100% - 0.7rem);
+		height: 5px;
+		margin: 0.35rem 0.35rem 0.25rem;
+		border-radius: 3px;
+		background: linear-gradient(90deg, var(--c1) 0 68%, transparent 68% 71%, var(--c2) 71%);
 	}
 	.enc-tile__name {
 		display: -webkit-box;
 		overflow: hidden;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		font-size: 0.875rem;
-		font-weight: 600;
-		line-height: 1.25;
-		color: var(--color-gray-100);
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--color-gray-50);
 	}
 	.enc-tile__sub {
 		overflow: hidden;
@@ -313,12 +533,82 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		justify-content: center;
 		gap: 0.25rem 0.375rem;
 		margin-top: auto;
-		padding-top: 0.125rem;
+		padding-top: 0.2rem;
 		font-size: 0.75rem;
 		color: var(--color-gray-300);
+	}
+	.enc-tile__facts .enc-stars {
+		font-size: 0.75rem;
+		letter-spacing: 0;
+	}
+	.enc-tile__facts .enc-tag {
+		padding: 0 0.4rem;
+		font-size: 0.625rem;
+		line-height: 1.1rem;
+	}
+
+	/* A letter's heading across the grid, and the thumb index down the list's
+	   left edge (letters.tsx): only on a full list in name order. */
+	.enc-letter {
+		display: flex;
+		grid-column: 1 / -1;
+		align-items: baseline;
+		gap: 0.75rem;
+		margin-top: 0.6rem;
+		scroll-margin-top: 4rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-gray-500);
+	}
+	.enc-letter:first-child {
+		margin-top: 0;
+	}
+	.enc-letter h2 {
+		font-family: var(--font-display);
+		font-size: 2.75rem;
+		font-weight: 800;
+		line-height: 0.8;
+		color: var(--color-brand);
+	}
+	.enc-letter::after {
+		height: 1px;
+		flex: 1;
+		align-self: center;
+		background: var(--color-edge);
+		content: "";
+	}
+	.enc-index {
+		display: none;
+	}
+	@media (min-width: 82rem) {
+		.enc-index {
+			position: sticky;
+			top: 1rem;
+			display: grid;
+			float: left;
+			width: 1.6rem;
+			height: 0;
+			margin-left: -3.25rem;
+			gap: 1px;
+			overflow: visible;
+		}
+		.enc-index button {
+			width: 1.6rem;
+			padding: 0.12rem 0;
+			border-radius: 6px;
+			font-family: var(--font-display);
+			font-size: 0.75rem;
+			font-weight: 700;
+			color: var(--color-gray-400);
+			transition: background-color 0.15s, color 0.15s;
+		}
+		.enc-index button:hover,
+		.enc-index button:focus-visible {
+			background: var(--color-brand);
+			color: var(--color-gray-900);
+		}
 	}
 	/* Sorting by an effect: what this card gives for it, under the facts, in
 	   the brand so the eye can run down the order. "+?" when the unique effect
@@ -327,7 +617,6 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--color-brand);
-		text-align: center;
 	}
 	.enc-tile__effect abbr {
 		margin-left: 0.25rem;
@@ -336,10 +625,12 @@
 		cursor: help;
 	}
 	/* "Owned": a tick in the tile's top right corner, clear of the art. */
+	/* Top LEFT of the art: a framed card's type icon holds the top right. */
 	.enc-tile__owned {
 		position: absolute;
+		z-index: 1;
 		top: 0.4375rem;
-		right: 0.4375rem;
+		left: 0.4375rem;
 		display: inline-flex;
 		width: 1.25rem;
 		height: 1.25rem;
@@ -355,77 +646,35 @@
 		stroke-width: 3;
 	}
 
-	/* A row-shaped link: another outfit, a card, an uma that has a skill. */
-	.enc-rows {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-		gap: 0.5rem;
-	}
-	.enc-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		min-width: 0;
-		padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
-		transition: border-color 0.15s, background-color 0.15s;
-	}
-	a.enc-row:hover,
-	a.enc-row:focus-visible {
-		border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
-		background: color-mix(in srgb, var(--color-brand) 6%, transparent);
-	}
-	.enc-row__art {
-		width: 3rem;
-		height: 3rem;
-		flex-shrink: 0;
-	}
-	.enc-row__art--card {
-		width: 2.75rem;
-		height: auto;
-		aspect-ratio: 3 / 4;
-	}
-	.enc-row__text {
-		min-width: 0;
-		flex: 1;
-	}
-	.enc-row__name {
-		display: block;
-		overflow: hidden;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--color-gray-100);
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.enc-row__sub {
-		display: block;
-		overflow: hidden;
-		font-size: 0.75rem;
-		color: var(--color-gray-400);
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.enc-row__go {
-		width: 1rem;
-		height: 1rem;
-		flex-shrink: 0;
-		color: var(--color-gray-500);
-	}
-	a.enc-row:hover .enc-row__go {
-		color: var(--color-brand);
-	}
-
 	/* ---- A detail page ------------------------------------------------------ */
+
+	/* ---- A detail page --------------------------------------------------------
+	   The root carries the page's two colours. With none set (a character the
+	   game files don't cover, a skill that is nobody's) the page wears the
+	   theme's accent and a grey. .enc-hero repeats the derived two because a
+	   hero may set its own --c1 (a skill's kind colour, a group card's type). */
+	.enc-page {
+		--c1: var(--color-brand);
+		--c2: var(--color-gray-400);
+		--enc-inset: color-mix(in oklab, var(--color-gray-900) 70%, var(--color-gray-700));
+		display: flex;
+		flex-direction: column;
+		gap: 1.125rem;
+	}
+	.enc-page,
+	.enc-hero {
+		/* Ink and lines in her colour: mixed with the theme's own, so a near-black
+		   or a pale colour still reads on every theme. */
+		--c1-ink: color-mix(in oklab, var(--c1) 55%, var(--color-gray-50));
+		--c1-line: color-mix(in oklab, var(--c1) 42%, var(--color-gray-600));
+	}
 
 	.enc-crumbs {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.375rem;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		color: var(--color-gray-400);
 	}
 	.enc-crumbs a {
@@ -441,93 +690,140 @@
 		color: var(--color-gray-500);
 	}
 
-	/* The hero: the art, the name, the facts. A wash of the page's accent in
-	   the corner the art sits in (--enc-accent: the brand by default, a card's
-	   type colour, a skill's own), over the card's fill. */
+	/* The hero. The art stands on a field of the page's main colour with a
+	   stripe of its second, cut on a slant like racing silks. On a phone the
+	   field is a band across the top; from 64rem it is the hero's left side.
+	   The field is clipped shapes, not gradients, so the slant is measured
+	   across the hero and never lands on the name. */
 	.enc-hero {
-		--enc-accent: var(--color-brand);
+		--field: 9.5rem;
 		position: relative;
+		isolation: isolate;
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		gap: 1rem 1.25rem;
+		grid-template-columns: minmax(0, 1fr);
 		overflow: hidden;
-		padding: 1.25rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 1rem;
-		background:
-			radial-gradient(60rem 22rem at 0% 0%, color-mix(in srgb, var(--enc-accent) 13%, transparent), transparent 60%),
-			var(--card-fill);
+		border-radius: 1.25rem;
+		background: var(--card-fill);
 		box-shadow: var(--card-shadow);
 	}
-	@media (min-width: 64rem) {
-		.enc-hero {
-			grid-template-columns: auto minmax(0, 1fr) auto;
-			padding: 1.5rem;
-		}
+	.enc-hero__field {
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		/* A hairline round the shapes, so a pale stripe still shows on a light theme. */
+		filter: drop-shadow(0 0 1px rgb(0 0 0 / 40%));
+	}
+	.enc-hero__field::before {
+		position: absolute;
+		inset: 0 0 auto;
+		height: var(--field);
+		background:
+			radial-gradient(20rem 13rem at 12% 0%, color-mix(in oklab, var(--c2) 30%, transparent), transparent 70%),
+			linear-gradient(165deg, var(--c1), color-mix(in oklab, var(--c1) 70%, #000));
+		clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2.6rem), 0 100%);
+		content: "";
+	}
+	.enc-hero__field i {
+		position: absolute;
+		inset: 0 0 auto;
+		background: var(--c2);
+	}
+	.enc-hero__field i:first-child {
+		height: calc(var(--field) + 0.9rem);
+		clip-path: polygon(0 calc(100% - 0.5rem), 100% calc(100% - 3.1rem), 100% calc(100% - 2.6rem), 0 100%);
+	}
+	.enc-hero__field i:last-child {
+		display: none;
+	}
+	/* Her Japanese name, large and faint behind the hero. Decoration only (the
+	   readable line is .enc-hero__jp), and only where there is room for it. */
+	.enc-hero__ghost {
+		display: none;
+	}
+	/* The game's own number for the page, on a dark plate: white ink is never
+	   left on a raw character colour. */
+	.enc-hero__no {
+		position: absolute;
+		top: 0.8rem;
+		left: 0.9rem;
+		padding: 0.15rem 0.55rem;
+		border-radius: 999px;
+		background: rgb(10 10 14 / 62%);
+		font-family: var(--font-display);
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		color: #fff;
+	}
+	.enc-hero__artbox {
+		display: flex;
+		padding: 2.5rem 0 0 1.25rem;
 	}
 	.enc-hero__art {
-		width: 6.5rem;
-		height: 6.5rem;
+		width: 9rem;
+		height: 9rem;
+		box-shadow: 0 18px 40px rgb(0 0 0 / 35%);
 	}
 	.enc-hero__art--card {
-		width: 7.5rem;
+		width: 8rem;
 		height: auto;
 		aspect-ratio: 3 / 4;
+		filter: drop-shadow(0 16px 24px rgb(0 0 0 / 45%));
 	}
-	@media (min-width: 40rem) {
-		.enc-hero__art {
-			width: 9.5rem;
-			height: 9.5rem;
-		}
-		.enc-hero__art--card {
-			width: 11.5rem;
-		}
-	}
-	/* A skill's hero art is its 64px icon at its own size, never stretched. */
 	.enc-hero__art--skill {
-		width: 4rem;
-		height: 4rem;
+		width: 5rem;
+		height: 5rem;
+		margin-top: 0.75rem;
 		border-radius: 0.75rem;
+		filter: drop-shadow(0 10px 16px rgb(0 0 0 / 40%));
 	}
 	.enc-hero__body {
 		display: flex;
 		min-width: 0;
 		flex-direction: column;
 		gap: 0.375rem;
+		padding: 0.9rem 1.25rem 1.1rem;
 	}
 	.enc-hero__eyebrow {
-		font-size: 0.6875rem;
-		font-weight: 600;
-		letter-spacing: 0.08em;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
 		text-transform: uppercase;
-		color: var(--color-gray-400);
+		color: var(--c1-ink);
 	}
 	.enc-hero__name {
 		font-family: var(--font-display);
-		font-size: 1.625rem;
+		font-size: 2.5rem;
 		font-weight: 700;
-		line-height: 1.15;
-		color: var(--color-gray-100);
+		line-height: 1.02;
+		letter-spacing: -0.02em;
+		color: var(--color-gray-50);
+		text-wrap: balance;
 	}
-	@media (min-width: 40rem) {
-		.enc-hero__name {
-			font-size: 2rem;
-		}
+	/* A name whose longest word won't fit at full size (pieces.tsx, longestWord).
+	   overflow-wrap is the net under it: a break is better than a clipped name. */
+	.enc-hero__name {
+		overflow-wrap: anywhere;
+	}
+	.enc-hero__name[data-long="true"] {
+		font-size: 1.75rem;
 	}
 	.enc-hero__title {
-		font-size: 1rem;
+		font-family: var(--font-display);
+		font-size: 1.125rem;
+		font-weight: 500;
 		color: var(--color-gray-200);
 	}
 	.enc-hero__jp {
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		color: var(--color-gray-400);
 	}
 	.enc-hero__tags {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.375rem;
-		margin-top: 0.25rem;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
 	}
 	.enc-hero__lead {
 		max-width: 46rem;
@@ -536,32 +832,29 @@
 		line-height: 1.55;
 		color: var(--color-gray-200);
 	}
-	/* The facts beside the name: release dates, cost. Full width under the
-	   name until there is room for a third column. */
+	/* A skill's icon is small, so on a phone its band is shorter than a portrait's. */
+	.enc-hero--skill {
+		--field: 6.75rem;
+	}
+	/* The facts beside the name (release dates, cost): unboxed, ruled off in
+	   the page's colour. Under the name until there is room beside it. */
 	.enc-hero__facts {
-		display: grid;
-		grid-column: 1 / -1;
-		grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-		gap: 0.5rem;
-		align-content: start;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 2rem;
+		margin: 0 1.25rem 1.25rem;
+		padding-top: 0.9rem;
+		border-top: 2px solid var(--c1-line);
 	}
-	@media (min-width: 64rem) {
-		.enc-hero__facts {
-			grid-column: auto;
-			grid-template-columns: 11.5rem;
-		}
-	}
-	.enc-fact {
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-gray-900) 55%, transparent);
+	/* An outfit on no banner has no dates: no facts, so no rule either. */
+	.enc-hero__facts:empty {
+		display: none;
 	}
 	.enc-fact__label {
 		display: block;
 		font-size: 0.6875rem;
-		font-weight: 600;
-		letter-spacing: 0.06em;
+		font-weight: 700;
+		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: var(--color-gray-400);
 	}
@@ -571,9 +864,123 @@
 		align-items: center;
 		gap: 0.375rem;
 		font-family: var(--font-display);
-		font-size: 1.0625rem;
+		font-size: 1.25rem;
 		font-weight: 600;
-		color: var(--color-gray-100);
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-50);
+	}
+	@media (min-width: 64rem) {
+		.enc-hero {
+			--slant: 6rem;
+			grid-template-columns: var(--art-col) minmax(0, 1fr) auto;
+			align-items: center;
+			min-height: var(--hero-min);
+		}
+		.enc-hero--uma {
+			--art-col: 25.5rem;
+			--field: 23.5rem;
+			--hero-min: 17.5rem;
+		}
+		.enc-hero--card {
+			--art-col: 21rem;
+			--field: 20rem;
+			--hero-min: 21rem;
+		}
+		.enc-hero--skill {
+			--art-col: 15rem;
+			--field: 14rem;
+			--hero-min: 13rem;
+			--slant: 4.5rem;
+		}
+		.enc-hero__field::before {
+			inset: 0 auto 0 0;
+			width: var(--field);
+			height: auto;
+			clip-path: polygon(0 0, 100% 0, calc(100% - var(--slant)) 100%, 0 100%);
+		}
+		.enc-hero__field i {
+			inset: 0 auto 0 0;
+			height: auto;
+		}
+		.enc-hero__field i:first-child {
+			width: calc(var(--field) + 1.8rem);
+			height: auto;
+			clip-path: polygon(calc(100% - 1.1rem) 0, 100% 0, calc(100% - var(--slant)) 100%, calc(100% - var(--slant) - 1.1rem) 100%);
+		}
+		.enc-hero__field i:last-child {
+			display: block;
+			width: calc(var(--field) + 2.7rem);
+			clip-path: polygon(calc(100% - 0.3rem) 0, 100% 0, calc(100% - var(--slant)) 100%, calc(100% - var(--slant) - 0.3rem) 100%);
+		}
+		.enc-hero__ghost {
+			position: absolute;
+			right: 1rem;
+			bottom: -1.3rem;
+			z-index: -2;
+			display: block;
+			font-size: 8rem;
+			font-weight: 900;
+			line-height: 1;
+			letter-spacing: -0.04em;
+			white-space: nowrap;
+			color: color-mix(in oklab, var(--c1) 16%, transparent);
+			pointer-events: none;
+			user-select: none;
+		}
+		.enc-hero__artbox {
+			padding: 0 0 0 3rem;
+		}
+		.enc-hero--card .enc-hero__artbox {
+			padding-left: 2.5rem;
+		}
+		.enc-hero--skill .enc-hero__artbox {
+			padding-left: 2.25rem;
+		}
+		.enc-hero__art {
+			width: 13.25rem;
+			height: 13.25rem;
+		}
+		.enc-hero__art--card {
+			width: 12.5rem;
+		}
+		.enc-hero__art--skill {
+			width: 6.5rem;
+			height: 6.5rem;
+			margin-top: 0;
+		}
+		.enc-hero__body {
+			padding: 2rem 1.5rem 2rem 2rem;
+		}
+		.enc-hero__name {
+			font-size: 3.75rem;
+		}
+		.enc-hero--card .enc-hero__name,
+		.enc-hero--skill .enc-hero__name {
+			font-size: 3.125rem;
+		}
+		.enc-hero .enc-hero__name[data-long="true"] {
+			font-size: 2.625rem;
+		}
+		.enc-hero__title {
+			font-size: 1.375rem;
+		}
+		.enc-hero__facts {
+			flex-direction: column;
+			flex-wrap: nowrap;
+			gap: 1.1rem;
+			margin: 2rem 0;
+			padding: 0.25rem 2.25rem 0.25rem 1.5rem;
+			border-top: 0;
+			border-left: 2px solid var(--c1-line);
+		}
+		.enc-fact__value {
+			font-size: 1.5rem;
+		}
+	}
+	.enc-stars {
+		font-size: 1.125rem;
+		letter-spacing: 0.08em;
+		color: color-mix(in oklab, #ffb400 82%, var(--color-gray-50));
 	}
 
 	/* A small labelled pill in a hero or on a row. */
@@ -581,17 +988,18 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
-		padding: 0.125rem 0.5rem;
-		border: 1px solid var(--color-gray-600);
+		padding: 0.1875rem 0.7rem;
 		border-radius: 999px;
-		font-size: 0.75rem;
-		font-weight: 500;
+		background: color-mix(in oklab, var(--color-gray-50) 8%, transparent);
+		font-size: 0.8125rem;
+		font-weight: 600;
 		line-height: 1.25rem;
-		color: var(--color-gray-200);
+		color: var(--color-gray-100);
 		white-space: nowrap;
 	}
 	.enc-tag--jp {
-		border-color: currentColor;
+		background: none;
+		box-shadow: inset 0 0 0 1.5px currentColor;
 		font-size: 0.6875rem;
 		font-weight: 600;
 		letter-spacing: 0.04em;
@@ -602,7 +1010,6 @@
 	.enc-tag--ssr,
 	.enc-tag--sr,
 	.enc-tag--r {
-		border-color: transparent;
 		font-weight: 800;
 		letter-spacing: 0.03em;
 		color: #1b1420;
@@ -647,7 +1054,7 @@
 		color: var(--color-brand);
 	}
 
-	/* The jump bar under the hero: one chip per section the page has. It
+	/* The jump bar under the hero: one word per section the page has. It
 	   sticks to the top of the scroller so a long page stays one tap away. */
 	/* WHERE IT STICKS depends on what scrolls. On a phone, and in a short
 	   desktop window, the document scrolls under the sticky navbar, so the bar
@@ -663,14 +1070,12 @@
 		display: flex;
 		/* Wraps on a narrow phone; it used to scroll sideways and cut "Support cards" off (2026-11-13). */
 		flex-wrap: wrap;
-		gap: 0.25rem;
+		gap: 0 1.5rem;
 		margin: -0.25rem 0;
-		padding: 0.375rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.75rem;
+		padding: 0 0.5rem;
+		border-bottom: 1px solid var(--color-edge);
 		background: color-mix(in srgb, var(--color-gray-900) 88%, transparent);
 		backdrop-filter: blur(8px);
-		scrollbar-width: none;
 	}
 	@media (min-width: 64rem) {
 		.enc-jump {
@@ -682,41 +1087,58 @@
 			top: 0;
 		}
 	}
+	/* Plain words with the page's two colours as the underline they gain. */
 	.enc-jump button {
+		position: relative;
 		flex-shrink: 0;
-		padding: 0.3125rem 0.75rem;
-		border-radius: 0.5rem;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: var(--color-gray-300);
-		transition: background-color 0.15s, color 0.15s;
+		padding: 0.6rem 0 0.7rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--color-gray-400);
+		transition: color 0.15s;
 	}
-	.enc-jump button:hover {
-		background: color-mix(in srgb, var(--color-brand) 12%, transparent);
-		color: var(--color-gray-100);
+	.enc-jump button::after {
+		position: absolute;
+		right: 0;
+		bottom: -1px;
+		left: 0;
+		height: 3px;
+		border-radius: 3px 3px 0 0;
+		background: linear-gradient(90deg, var(--c1) 0 70%, var(--c2) 70%);
+		opacity: 0;
+		transition: opacity 0.15s;
+		content: "";
+	}
+	.enc-jump button:hover,
+	.enc-jump button:focus-visible {
+		color: var(--color-gray-50);
+	}
+	.enc-jump button:hover::after,
+	.enc-jump button:focus-visible::after {
+		opacity: 1;
 	}
 	.enc-jump__count {
-		margin-left: 0.3125rem;
-		font-size: 0.6875rem;
-		color: var(--color-gray-400);
+		margin-left: 0.35rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-500);
 	}
 
-	/* A section: a card with a display-face heading, and room on the heading's
-	   right for a switch or a count. */
+	/* A section: ONE soft panel, no border. What is inside is drawn straight
+	   on it; only something that earns an edge (her unique skill) gets one. */
 	.enc-section {
 		display: flex;
+		min-width: 0;
 		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.75rem;
+		gap: 0.9rem;
+		padding: 1.1rem 1rem 1.2rem;
+		border-radius: 1.125rem;
 		background: var(--card-fill);
 		box-shadow: var(--card-shadow);
 		scroll-margin-top: 3.5rem;
 	}
 	@media (min-width: 40rem) {
 		.enc-section {
-			padding: 1.125rem 1.25rem 1.25rem;
+			padding: 1.4rem 1.5rem 1.5rem;
 		}
 	}
 	.enc-section__head {
@@ -728,17 +1150,31 @@
 	}
 	.enc-section__title {
 		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
+		align-items: center;
+		gap: 0.65rem;
 		font-family: var(--font-display);
-		font-size: 1.125rem;
-		font-weight: 700;
-		color: var(--color-gray-100);
+		font-size: 1.375rem;
+		font-weight: 650;
+		color: var(--color-gray-50);
+	}
+	/* The two-tone flag before every heading: the hero's stripe, small. */
+	.enc-section__title::before {
+		width: 11px;
+		height: 1.1rem;
+		flex-shrink: 0;
+		background: linear-gradient(90deg, var(--c1) 0 6px, transparent 6px 8px, var(--c2) 8px);
+		transform: skewX(-18deg);
+		content: "";
 	}
 	.enc-section__count {
 		font-family: var(--font-sans, inherit);
-		font-size: 0.75rem;
-		font-weight: 500;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-gray-500);
+	}
+	/* A heading's right side when it is a note, not a switch. */
+	.enc-section__key {
+		font-size: 0.8125rem;
 		color: var(--color-gray-400);
 	}
 	.enc-section__note {
@@ -746,25 +1182,24 @@
 		line-height: 1.5;
 		color: var(--color-gray-400);
 	}
-	.enc-sub {
+	.enc-group {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+	.enc-group + .enc-group {
+		margin-top: 0.35rem;
+	}
+	.enc-sub {
 		font-size: 0.6875rem;
-		font-weight: 600;
-		letter-spacing: 0.06em;
+		font-weight: 700;
+		letter-spacing: 0.16em;
 		text-transform: uppercase;
 		color: var(--color-gray-400);
 	}
-	.enc-sub::after {
-		height: 1px;
-		flex: 1;
-		background: var(--color-edge);
-		content: "";
-	}
 	.enc-two {
 		display: grid;
-		gap: 1.25rem;
+		gap: 1.125rem;
 	}
 	@media (min-width: 64rem) {
 		.enc-two {
@@ -775,30 +1210,33 @@
 	/* A segmented switch: the star level, "Hide R". */
 	.enc-switch {
 		display: inline-flex;
-		padding: 0.125rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-gray-900) 60%, transparent);
+		padding: 3px;
+		border-radius: 999px;
+		background: var(--enc-inset);
 	}
 	.enc-switch button {
-		padding: 0.1875rem 0.625rem;
-		border-radius: 0.375rem;
-		font-size: 0.75rem;
-		font-weight: 600;
+		padding: 0.2rem 0.75rem;
+		border-radius: 999px;
+		font-size: 0.8125rem;
+		font-weight: 700;
 		color: var(--color-gray-400);
 		transition: background-color 0.15s, color 0.15s;
 	}
 	.enc-switch button:hover {
-		color: var(--color-gray-100);
+		color: var(--color-gray-50);
 	}
 	.enc-switch button[aria-pressed="true"] {
-		background: color-mix(in srgb, var(--color-brand) 20%, transparent);
-		color: var(--color-gray-100);
+		background: var(--c1-ink);
+		color: var(--color-gray-900);
 	}
 
 	/* ---- Aptitudes -----------------------------------------------------------
-	   The game's letters on the game's colours: S gold, A orange, B pink,
-	   C green, D blue, E violet, F indigo, G grey. Fixed fills, dark ink. */
+	   Laid out as the game groups them (surface, distance, style), four cells
+	   to a row. Every cell reads at full strength; A or better is filled in
+	   the page's colour. The letter is a white badge ringed in the game's
+	   colour for it (S gold, A orange, B pink, C green, D blue, E violet,
+	   F indigo, G grey). .apt-letter itself is the PvP guides' too, so the
+	   badge is an override inside a cell, never a change to it. */
 
 	.enc-apt {
 		display: flex;
@@ -818,7 +1256,10 @@
 		}
 	}
 	.enc-apt__group {
-		font-size: 0.75rem;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
 		color: var(--color-gray-400);
 	}
 	/* Four to a row whenever the box has room for "Medium" and its letter
@@ -840,33 +1281,46 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.25rem;
+		gap: 0.2rem;
 		min-width: 0;
-		padding: 0.3125rem 0.375rem 0.3125rem 0.5rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
-		font-size: 0.75rem;
-		color: var(--color-gray-200);
-	}
-	@media (min-width: 40rem) {
-		.enc-apt__cell {
-			padding-left: 0.625rem;
-			font-size: 0.8125rem;
-		}
+		height: 2.75rem;
+		padding: 0 0.4rem 0 0.6rem;
+		border-radius: 0.75rem;
+		background: var(--enc-inset);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-gray-100);
 	}
 	.enc-apt__cell > span:first-child {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	/* An aptitude she can't use (D or worse) steps back, so the A's stand out. */
-	.enc-apt__cell[data-weak="true"] {
-		color: var(--color-gray-500);
+	/* A or better: her colour, mixed into the panel so the name keeps its ink. */
+	.enc-apt__cell[data-top="true"] {
+		background: color-mix(in oklab, var(--c1) 26%, var(--color-gray-800));
+		box-shadow: inset 0 0 0 1.5px var(--c1-line);
+		font-weight: 700;
+		color: var(--color-gray-50);
 	}
-	.enc-apt__cell[data-weak="true"] .apt-letter {
-		opacity: 0.55;
+	.enc-apt__cell .apt-letter,
+	.enc-apt__cell .apt-letter[data-rank] {
+		--g: #7c7c88;
+		width: 1.6rem;
+		height: 1.6rem;
+		border-radius: 50%;
+		background: #fff;
+		box-shadow: 0 0 0 2.5px var(--g), 0 2px 5px rgb(0 0 0 / 30%);
+		font-size: 0.9375rem;
+		color: var(--g);
 	}
+	.enc-apt__cell .apt-letter[data-rank="S"] { --g: #e0a400; }
+	.enc-apt__cell .apt-letter[data-rank="A"] { --g: #f0752e; }
+	.enc-apt__cell .apt-letter[data-rank="B"] { --g: #e85d9c; }
+	.enc-apt__cell .apt-letter[data-rank="C"] { --g: #3fae52; }
+	.enc-apt__cell .apt-letter[data-rank="D"] { --g: #3a8fd6; }
+	.enc-apt__cell .apt-letter[data-rank="E"] { --g: #8a63d2; }
+	.enc-apt__cell .apt-letter[data-rank="F"] { --g: #5b62b8; }
 	.apt-letter {
 		display: inline-flex;
 		width: 1.5rem;
@@ -892,25 +1346,25 @@
 	.apt-letter[data-rank="G"] { background: #a3a3ad; }
 
 	/* ---- Stats ---------------------------------------------------------------
-	   Five columns in the stats' own hues (--color-stat-*): the number, a bar
-	   scaled to the tallest stat on show, and the growth bonus under it. */
+	   A box per stat: the game's own icon and the name, the number, a bar
+	   scaled to the tallest stat on show, and Growth by name (the owner,
+	   2026-11-17: "sectioned off from each other", "the growth shouldn't be
+	   taken out"). On a phone each stat is a row. */
 
 	.enc-stats {
 		display: grid;
-		gap: 0.375rem;
+		gap: 0.4rem;
 	}
-	/* On a phone each stat is a row: name, bar, number, growth. */
 	.enc-stat {
 		--stat: var(--color-gray-400);
 		display: grid;
-		grid-template-columns: 4.25rem minmax(0, 1fr) 2.25rem 3rem;
+		grid-template-columns: 5.75rem minmax(0, 1fr) 2.5rem 4.25rem;
 		align-items: center;
 		gap: 0.5rem;
 		min-width: 0;
-		padding: 0.375rem 0.625rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		padding: 0.45rem 0.7rem;
+		border-radius: 0.75rem;
+		background: var(--enc-inset);
 	}
 	.enc-stat__value {
 		order: 3;
@@ -928,8 +1382,9 @@
 			display: flex;
 			flex-direction: column;
 			align-items: stretch;
-			gap: 0.25rem;
-			padding: 0.5rem 0.5rem 0.5625rem;
+			gap: 0.3rem;
+			padding: 0.7rem 0.6rem 0.65rem;
+			border-radius: 0.85rem;
 		}
 		.enc-stat__value,
 		.enc-stat__growth {
@@ -945,33 +1400,31 @@
 	.enc-stat__label {
 		display: flex;
 		align-items: center;
-		gap: 0.3125rem;
+		gap: 0.3rem;
 		overflow: hidden;
-		font-size: 0.6875rem;
-		font-weight: 600;
-		color: var(--color-gray-300);
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--color-gray-200);
 		white-space: nowrap;
 	}
-	.enc-stat__label::before {
-		width: 0.4375rem;
-		height: 0.4375rem;
+	.enc-stat__label img {
+		width: 1.15rem;
+		height: 1.15rem;
 		flex-shrink: 0;
-		border-radius: 999px;
-		background: var(--stat);
-		content: "";
 	}
 	.enc-stat__value {
 		font-family: var(--font-display);
 		font-size: 1.25rem;
 		font-weight: 700;
-		line-height: 1.1;
-		color: var(--color-gray-100);
+		line-height: 1.05;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-50);
 	}
 	.enc-stat__bar {
-		height: 0.25rem;
+		height: 5px;
 		overflow: hidden;
 		border-radius: 999px;
-		background: color-mix(in srgb, var(--stat) 18%, transparent);
+		background: color-mix(in oklab, var(--color-gray-50) 10%, transparent);
 	}
 	.enc-stat__bar > span {
 		display: block;
@@ -981,35 +1434,252 @@
 	}
 	.enc-stat__growth {
 		font-size: 0.6875rem;
-		color: var(--color-gray-500);
+		color: var(--color-gray-400);
+		white-space: nowrap;
 	}
 	/* "Growth" is spelled out where there is room; a phone's row has the column. */
 	.enc-stat__growth i {
 		display: none;
 		font-style: normal;
-		font-weight: 400;
-		color: var(--color-gray-500);
+	}
+	.enc-stat__growth b {
+		font-family: var(--font-display);
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: var(--color-gray-300);
+	}
+	/* A bonus is the number that matters: a chip in the stat's own colour. */
+	.enc-stat__growth[data-bonus="true"] b {
+		padding: 0 0.3rem;
+		border-radius: 5px;
+		background: color-mix(in oklab, var(--stat) 22%, transparent);
+		color: color-mix(in oklab, var(--stat) 65%, var(--color-gray-50));
 	}
 	@media (min-width: 40rem) {
+		.enc-stat__value {
+			margin-top: 0.15rem;
+			font-size: 2.125rem;
+		}
+		.enc-stat__growth {
+			margin-top: 0.15rem;
+		}
 		.enc-stat__growth i {
 			display: inline;
 		}
 	}
-	.enc-stat__growth[data-bonus="true"] {
-		font-weight: 700;
-		color: var(--color-gray-100);
-	}
 
 	/* ---- Skill rows ----------------------------------------------------------
 	   One skill as a link: its icon, its name, a line saying how it is had, and
-	   its cost. The kind shows as a 3px spine and a faint wash (gold, evolved
-	   pink, a unique's foil), never a full gradient: a list of two thousand
-	   stays readable, and the name keeps the theme's ink. */
+	   its cost. The kind shows as a 3px spine and a wash (gold, evolved pink,
+	   a unique's foil) across the inset surface, never a full gradient, and
+	   the name keeps the theme's ink. No border: a row is set into its panel. */
 
 	.enc-skills {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
 		gap: 0.4375rem;
+	}
+
+	/* An uma's innate skills: one row of them, however many she has. */
+	.enc-skills--row {
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+	}
+
+	/* Her unique skill, leading her skills: the one thing in the panel with an
+	   edge, the game's rainbow. Fixed colours mixed into the theme's surface,
+	   so the name and the text keep the theme's ink. */
+	.enc-uniq {
+		position: relative;
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: center;
+		gap: 0.5rem 1rem;
+		padding: 0.9rem 1rem;
+		border-radius: 1rem;
+		background: linear-gradient(
+			100deg,
+			color-mix(in oklab, #ff9ed2 16%, var(--color-gray-900)),
+			color-mix(in oklab, #8fc6ff 14%, var(--color-gray-900)) 55%,
+			color-mix(in oklab, #b8ffd9 10%, var(--color-gray-900))
+		);
+		transition: transform 0.15s;
+	}
+	.enc-uniq::before {
+		position: absolute;
+		inset: 0;
+		padding: 2px;
+		border-radius: inherit;
+		background: linear-gradient(100deg, #ff8fc7, #ffd76a, #86e3a5, #7cc4ff, #c79bff);
+		mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+		pointer-events: none;
+		content: "";
+	}
+	a.enc-uniq:hover,
+	a.enc-uniq:focus-visible {
+		transform: translateY(-1px);
+	}
+	.enc-uniq__icon {
+		width: 3.25rem;
+		height: 3.25rem;
+		border-radius: 0.6rem;
+		filter: drop-shadow(0 6px 10px rgb(0 0 0 / 35%));
+	}
+	.enc-uniq__text {
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+	.enc-uniq__name {
+		font-family: var(--font-display);
+		font-size: 1.25rem;
+		font-weight: 700;
+		line-height: 1.15;
+		color: var(--color-gray-50);
+	}
+	.enc-uniq__what {
+		max-width: 44rem;
+		font-size: 0.875rem;
+		line-height: 1.45;
+		color: var(--color-gray-200);
+	}
+	.enc-uniq__side {
+		display: flex;
+		grid-column: 1 / -1;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.6rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	.enc-uniq__side b {
+		font-family: var(--font-display);
+		font-size: 1rem;
+		color: var(--color-gray-100);
+	}
+	@media (min-width: 40rem) {
+		.enc-uniq {
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			gap: 1.1rem;
+			padding: 1.1rem 1.4rem;
+		}
+		.enc-uniq__icon {
+			width: 4.5rem;
+			height: 4.5rem;
+		}
+		.enc-uniq__name {
+			font-size: 1.625rem;
+		}
+		.enc-uniq__what {
+			font-size: 0.9375rem;
+		}
+		.enc-uniq__side {
+			grid-column: auto;
+			flex-direction: column;
+			align-items: flex-end;
+		}
+		.enc-uniq__side b {
+			font-size: 1.25rem;
+		}
+	}
+
+	/* The awakening track: a post per level, joined by a line in the page's
+	   colour, the level's skill under its post. An evolved skill hangs off the
+	   gold skill it comes from, with what unlocks it. On a phone the track
+	   runs down the left. Each rung draws its own stretch of line, so the
+	   track survives wrapping onto a second row. */
+	.enc-awake {
+		display: grid;
+		gap: 0.9rem 0.75rem;
+	}
+	.enc-rung {
+		position: relative;
+		min-width: 0;
+		padding-left: 3.1rem;
+	}
+	.enc-rung::before {
+		position: absolute;
+		top: 2.4rem;
+		bottom: -0.9rem;
+		left: 1.1rem;
+		width: 3px;
+		border-radius: 2px;
+		background: linear-gradient(var(--c1-line), var(--c1));
+		content: "";
+	}
+	.enc-rung:last-child::before {
+		display: none;
+	}
+	.enc-rung__post {
+		position: absolute;
+		top: 0.1rem;
+		left: 0;
+		display: grid;
+		width: 2.4rem;
+		height: 2.4rem;
+		align-content: center;
+		justify-items: center;
+		border-radius: 50%;
+		background: var(--card-fill);
+		box-shadow: inset 0 0 0 2.5px var(--c1);
+		font-family: var(--font-display);
+		font-size: 0.625rem;
+		font-weight: 700;
+		line-height: 1;
+		color: var(--color-gray-300);
+	}
+	.enc-rung__post b {
+		font-size: 1rem;
+		color: var(--color-gray-50);
+	}
+	.enc-rung__skills,
+	.enc-branches {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.enc-branches {
+		margin: 0.4rem 0 0 1.1rem;
+	}
+	.enc-branches > li {
+		position: relative;
+	}
+	/* The elbow from the gold skill down to the evolution it becomes. */
+	.enc-branches > li::before {
+		position: absolute;
+		top: -0.4rem;
+		left: -0.75rem;
+		width: 0.6rem;
+		height: 1.7rem;
+		border-bottom: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
+		border-left: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
+		border-bottom-left-radius: 8px;
+		content: "";
+	}
+	.enc-branches .enc-unlock {
+		margin: 0.3rem 0 0.2rem 0.5rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-300);
+	}
+	@media (min-width: 48rem) {
+		.enc-awake {
+			grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+		}
+		.enc-rung {
+			padding: 3rem 0 0;
+		}
+		.enc-rung::before {
+			top: 1.15rem;
+			right: -0.75rem;
+			bottom: auto;
+			left: 1.2rem;
+			width: auto;
+			height: 3px;
+			background: linear-gradient(90deg, var(--c1-line), var(--c1));
+		}
+		.enc-rung__post {
+			top: 0;
+		}
 	}
 
 	/* What unlocks an evolution: a bulleted list, on the skill's page and under
@@ -1037,13 +1707,12 @@
 		gap: 0.625rem;
 		min-width: 0;
 		overflow: hidden;
-		padding: 0.4375rem 0.625rem 0.4375rem 0.75rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
+		padding: 0.4375rem 0.7rem 0.4375rem 0.75rem;
+		border-radius: 0.75rem;
 		background:
-			linear-gradient(90deg, var(--kind-wash), transparent 70%),
-			color-mix(in srgb, var(--color-gray-900) 45%, transparent);
-		transition: border-color 0.15s, transform 0.15s;
+			linear-gradient(90deg, var(--kind-wash), transparent 75%),
+			var(--enc-inset, color-mix(in srgb, var(--color-gray-900) 45%, transparent));
+		transition: box-shadow 0.15s, transform 0.15s;
 	}
 	.enc-skill::before {
 		position: absolute;
@@ -1054,27 +1723,24 @@
 	}
 	.enc-skill[data-kind="gold"] {
 		--kind: linear-gradient(180deg, #fff4d7, #e8b51a);
-		--kind-wash: rgb(232 181 26 / 13%);
-		border-color: rgb(232 181 26 / 38%);
+		--kind-wash: rgb(232 181 26 / 24%);
 	}
 	.enc-skill[data-kind="evolved"] {
 		--kind: linear-gradient(180deg, #ffe6f2, #f28cbc);
-		--kind-wash: rgb(242 140 188 / 14%);
-		border-color: rgb(242 140 188 / 40%);
+		--kind-wash: rgb(242 140 188 / 22%);
 	}
 	.enc-skill[data-kind="unique"] {
 		--kind: linear-gradient(180deg, #9be7ff, #c9b1ff 45%, #ffb3d9 75%, #ffe08a);
-		--kind-wash: rgb(201 177 255 / 12%);
-		border-color: rgb(201 177 255 / 36%);
+		--kind-wash: rgb(201 177 255 / 20%);
 	}
 	a.enc-skill:hover,
 	a.enc-skill:focus-visible {
-		border-color: color-mix(in srgb, var(--color-brand) 60%, transparent);
+		box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-brand) 60%, transparent);
 		transform: translateX(2px);
 	}
 	.enc-skill__icon {
-		width: 2rem;
-		height: 2rem;
+		width: 2.25rem;
+		height: 2.25rem;
 		flex-shrink: 0;
 		border-radius: 0.375rem;
 	}
@@ -1130,6 +1796,12 @@
 		color: var(--color-gray-200);
 		white-space: nowrap;
 	}
+	/* Whose skill it is, on the Skills list: found by her face, not by reading. */
+	.enc-skill__face {
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+	}
 	.enc-skill__cost small {
 		margin-left: 0.125rem;
 		font-family: var(--font-sans, inherit);
@@ -1169,39 +1841,49 @@
 	}
 
 	/* ---- How a skill works ---------------------------------------------------
-	   A block per effect slot: a label down the left (When, Does, Lasts), the
-	   words on the right. Conditions and effects are chips so each clause reads
-	   on its own. */
+	   A block per effect slot, its steps reading left to right as a sentence:
+	   when it fires, what it does, how long it lasts, when it can fire again,
+	   an arrow between each. "Does" is the loudest: the effect in the display
+	   face on the page's colour. Conditions and effects are chips so each
+	   clause reads on its own. On a phone the steps stack. */
 
 	.enc-how {
 		display: flex;
 		flex-direction: column;
-		gap: 0.625rem;
+		gap: 0.75rem;
 	}
 	.enc-how__slot {
 		display: grid;
-		grid-template-columns: 5.5rem minmax(0, 1fr);
-		gap: 0.5rem 0.75rem;
-		padding: 0.75rem 0.875rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		gap: 0.5rem;
 	}
 	.enc-how__part {
 		grid-column: 1 / -1;
 		font-size: 0.6875rem;
 		font-weight: 700;
-		letter-spacing: 0.06em;
+		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		color: var(--color-brand);
+		color: var(--c1-ink);
+	}
+	.enc-step {
+		position: relative;
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 0.4rem;
+		padding: 0.8rem 1rem 0.9rem;
+		border-radius: 0.9rem;
+		background: var(--enc-inset);
+	}
+	.enc-step[data-step="does"] {
+		background: linear-gradient(140deg, color-mix(in oklab, var(--c1) 30%, var(--color-gray-900)), color-mix(in oklab, var(--c1) 10%, var(--color-gray-900)));
+		box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--c1) 55%, transparent);
 	}
 	.enc-how__label {
-		padding-top: 0.1875rem;
 		font-size: 0.6875rem;
-		font-weight: 600;
-		letter-spacing: 0.06em;
+		font-weight: 800;
+		letter-spacing: 0.16em;
 		text-transform: uppercase;
-		color: var(--color-gray-400);
+		color: var(--c1-ink);
 	}
 	.enc-how__value {
 		display: flex;
@@ -1209,28 +1891,70 @@
 		align-items: center;
 		gap: 0.3125rem;
 		min-width: 0;
-		font-size: 0.875rem;
-		color: var(--color-gray-200);
+		font-size: 0.9375rem;
+		font-weight: 600;
+		line-height: 1.4;
+		color: var(--color-gray-100);
+	}
+	.enc-step[data-step="lasts"] .enc-how__value,
+	.enc-step[data-step="cooldown"] .enc-how__value {
+		font-family: var(--font-display);
+		font-size: 1.125rem;
+		color: var(--color-gray-50);
+	}
+	/* The effect itself, as large as the page gets after its name. */
+	.enc-step[data-step="does"] .enc-clause--effect {
+		padding: 0;
+		border: 0;
+		background: none;
+		font-family: var(--font-display);
+		font-size: 1.5rem;
+		font-weight: 700;
+		line-height: 1.15;
+		color: var(--color-gray-50);
+	}
+	@media (min-width: 56rem) {
+		.enc-how__slot {
+			grid-auto-columns: minmax(0, 1fr);
+			grid-auto-flow: column;
+			gap: 1.75rem;
+		}
+		.enc-how__part {
+			grid-column: auto;
+			align-self: center;
+		}
+		/* The arrow into each step after the first. */
+		.enc-step + .enc-step::before {
+			position: absolute;
+			top: 50%;
+			left: -1.3rem;
+			width: 0.55rem;
+			height: 0.55rem;
+			border-top: 2px solid var(--color-gray-500);
+			border-right: 2px solid var(--color-gray-500);
+			transform: translateY(-50%) rotate(45deg);
+			content: "";
+		}
 	}
 	.enc-clause {
 		display: inline-flex;
 		align-items: center;
 		padding: 0.125rem 0.5rem;
-		border: 1px solid var(--color-edge);
 		border-radius: 0.375rem;
 		background: var(--card-fill);
-		font-size: 0.8125rem;
+		box-shadow: inset 0 0 0 1px var(--color-edge);
+		font-size: 0.875rem;
 		line-height: 1.35;
 		color: var(--color-gray-100);
 	}
 	.enc-clause--effect {
-		border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
-		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
-		font-weight: 600;
+		font-weight: 700;
 	}
 	/* The game's own code for a clause nobody has confirmed the meaning of. */
 	.enc-clause--raw {
-		border-style: dashed;
+		box-shadow: none;
+		outline: 1px dashed var(--color-gray-500);
+		outline-offset: -1px;
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 		font-size: 0.75rem;
 		color: var(--color-gray-400);
@@ -1242,92 +1966,242 @@
 		color: var(--color-gray-500);
 	}
 
-	/* The other versions of a skill, as steps: white, gold, evolved. */
-	.enc-ladder {
+	/* A skill's family on one line: what it grows from and its other versions,
+	   the skill itself, what it evolves into, an arrow between the columns.
+	   Stacked on a phone. */
+	.enc-family {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
-		gap: 0.5rem;
+		gap: 1rem;
+	}
+	.enc-family__col {
+		position: relative;
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.75rem;
+	}
+	.enc-ladder {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	/* The skill this page is about, ringed in the page's colour. Not a link. */
+	.enc-skill--here {
+		box-shadow: inset 0 0 0 2px var(--c1);
+	}
+	@media (min-width: 56rem) {
+		.enc-family {
+			grid-auto-columns: minmax(0, 1fr);
+			grid-auto-flow: column;
+			gap: 2.25rem;
+		}
+		.enc-family__col + .enc-family__col::before {
+			position: absolute;
+			top: 50%;
+			left: -1.55rem;
+			width: 0.6rem;
+			height: 0.6rem;
+			border-top: 2px solid var(--color-gray-500);
+			border-right: 2px solid var(--color-gray-500);
+			transform: translateY(-50%) rotate(45deg);
+			content: "";
+		}
+	}
+	/* The outfit a skill belongs to, in the hero's facts. */
+	.enc-owner {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 1.125rem;
+		transition: opacity 0.15s;
+	}
+	a.enc-owner:hover {
+		opacity: 0.8;
+	}
+	.enc-owner__art {
+		width: 3.5rem;
+		height: 3.5rem;
+	}
+	/* A card's hints beside the skills its events give. */
+	.enc-split {
+		display: grid;
+		gap: 1rem;
+	}
+	.enc-skills--one {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	@media (min-width: 64rem) {
+		.enc-split {
+			grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+			gap: 1.5rem;
+		}
+		.enc-split > :only-child {
+			grid-column: 1 / -1;
+		}
+		.enc-skills--two {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 	}
 
 	/* ---- Career objectives ---------------------------------------------------
-	   A rail per year, the goals as stops on it. The grade wears the game's
-	   colour: G1 blue, G2 pink, G3 green, an open race orange. */
+	   One track from her debut to the end of her senior year: a post per
+	   goal, the year named once over its first goal, a chequered flag after
+	   the last. A race she must win is a gold post; a goal that isn't one race
+	   (fans, placings) is a diamond. Each goal draws its own stretch of line,
+	   so the track wraps onto a second row when she has many. On a phone it
+	   runs down the left. The grade wears the game's colour: G1 blue, G2 pink,
+	   G3 green, an open race orange. */
 
 	.enc-career {
-		display: grid;
-		gap: 1rem 1.5rem;
-	}
-	@media (min-width: 56rem) {
-		.enc-career {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-	}
-	.enc-career__year {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-	.enc-career__stops {
 		position: relative;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		padding-left: 1.125rem;
+		display: grid;
+		gap: 0.9rem;
+		padding-left: 2.1rem;
 	}
-	.enc-career__stops::before {
+	.enc-career::before {
 		position: absolute;
-		top: 0.375rem;
-		bottom: 0.375rem;
-		left: 0.25rem;
-		width: 2px;
+		top: 0.5rem;
+		bottom: 1rem;
+		left: 0.55rem;
+		width: 4px;
 		border-radius: 2px;
-		background: var(--color-gray-600);
+		background: linear-gradient(var(--c1-line), var(--c1));
 		content: "";
 	}
 	.enc-stop {
 		position: relative;
 		display: flex;
+		min-width: 0;
 		flex-direction: column;
-		gap: 0.125rem;
-		padding: 0.4375rem 0.625rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
 	}
-	.enc-stop::before {
-		position: absolute;
-		top: 0.875rem;
-		left: -1.125rem;
-		width: 0.625rem;
-		height: 0.625rem;
-		border: 2px solid var(--color-gray-400);
-		border-radius: 999px;
-		background: var(--card-fill);
-		content: "";
+	.enc-stop__year {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--c1-ink);
+		white-space: nowrap;
 	}
-	.enc-stop[data-win="true"]::before {
-		border-color: var(--color-brand);
-		background: var(--color-brand);
+	.enc-stop__year:empty {
+		display: none;
+	}
+	.enc-stop__year:not(:empty) {
+		margin-bottom: 0.4rem;
 	}
 	.enc-stop__when {
-		font-size: 0.6875rem;
+		font-size: 0.75rem;
+		font-weight: 600;
 		color: var(--color-gray-400);
 	}
+	.enc-stop__post {
+		position: absolute;
+		bottom: 0.55rem;
+		left: -2rem;
+		z-index: 1;
+		width: 1.3rem;
+		height: 1.3rem;
+		border-radius: 50%;
+		background: var(--card-fill);
+		box-shadow: inset 0 0 0 3px var(--c1);
+	}
+	.enc-stop[data-kind="fans"] .enc-stop__post,
+	.enc-stop[data-kind="placings"] .enc-stop__post {
+		border-radius: 4px;
+		transform: rotate(45deg) scale(0.85);
+	}
+	/* Gold is the game's colour for a win: a fixed fill. */
+	.enc-stop[data-win="true"] .enc-stop__post {
+		background: #f2c14e;
+		box-shadow: inset 0 0 0 3px rgb(255 255 255 / 20%), 0 0 0 3px rgb(242 193 78 / 35%);
+	}
+	/* The chequered flag at the end of the track. */
+	.enc-stop:last-child::after {
+		position: absolute;
+		bottom: -1.2rem;
+		left: -2.1rem;
+		width: 1.5rem;
+		height: 0.9rem;
+		border-radius: 2px;
+		background: conic-gradient(#fff 25%, #15151b 0 50%, #fff 0 75%, #15151b 0) 0 0 / 10px 10px;
+		box-shadow: 0 0 0 1px var(--color-gray-600);
+		content: "";
+	}
 	.enc-stop__race {
+		font-size: 0.9375rem;
+		font-weight: 700;
+		line-height: 1.25;
+		color: var(--color-gray-50);
+	}
+	.enc-stop__meta {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.25rem 0.4375rem;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--color-gray-100);
+		gap: 0.4rem;
+		margin-top: 0.25rem;
 	}
 	.enc-stop__need {
-		margin-left: auto;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		font-weight: 700;
-		color: var(--color-brand);
+		color: var(--color-gray-300);
 		white-space: nowrap;
+	}
+	.enc-stop[data-win="true"] .enc-stop__need {
+		color: color-mix(in oklab, #f2c14e 70%, var(--color-gray-50));
+	}
+	@media (min-width: 48rem) {
+		.enc-career {
+			grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
+			gap: 1.25rem 0;
+			padding-left: 0;
+		}
+		.enc-career::before {
+			display: none;
+		}
+		.enc-stop {
+			padding-right: 0.75rem;
+		}
+		/* The goal's stretch of track, behind its post. */
+		.enc-stop::before {
+			position: absolute;
+			top: 3.45rem;
+			right: 0;
+			left: 0;
+			height: 4px;
+			background: color-mix(in oklab, var(--c1) 70%, var(--color-gray-600));
+			content: "";
+		}
+		.enc-stop:first-child::before {
+			border-radius: 2px 0 0 2px;
+		}
+		.enc-stop:last-child::before {
+			right: 1.3rem;
+		}
+		.enc-stop:last-child::after {
+			top: 2.55rem;
+			right: 0;
+			bottom: auto;
+			left: auto;
+			width: 1.25rem;
+			height: 2.1rem;
+		}
+		.enc-stop__year,
+		.enc-stop__year:empty,
+		.enc-stop__year:not(:empty) {
+			display: block;
+			height: 1.4rem;
+			margin: 0;
+		}
+		.enc-stop__when {
+			height: 1.6rem;
+		}
+		.enc-stop__post {
+			position: relative;
+			bottom: auto;
+			left: auto;
+		}
+		.enc-stop__race {
+			margin-top: 0.7rem;
+		}
 	}
 	.grade-pill {
 		display: inline-flex;
@@ -1346,225 +2220,446 @@
 	.grade-pill[data-grade="G3"] { background: #7fd87a; }
 
 	/* ---- A support card's effects ---------------------------------------------
-	   The level in the middle with the steppers either side, the unique effect
-	   as a brand-edged band, then every effect as a value chip beside its name
-	   and help text. An effect the card doesn't have at this level is greyed. */
+	   The level, a track that marks each limit break's cap, and the steppers;
+	   the unique effect as a plate in the page's colour; then every effect as
+	   its number over its name. An effect the card doesn't have at this level
+	   shows a lock and when it unlocks, at full strength like everything else. */
 
+	/* The effects' own colour: the card's type, else the page's. */
+	.enc-fx {
+		--fx: var(--c1);
+		--fx-ink: color-mix(in oklab, var(--fx) 55%, var(--color-gray-50));
+		--fx-line: color-mix(in oklab, var(--fx) 42%, var(--color-gray-600));
+		display: contents;
+	}
 	.enc-level {
-		display: flex;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
 		align-items: center;
-		justify-content: center;
+		gap: 0.75rem 1.5rem;
+		padding: 0.8rem 1rem 0.9rem;
+		border-radius: 1rem;
+		background: var(--enc-inset);
+	}
+	@media (min-width: 48rem) {
+		.enc-level {
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			padding: 0.9rem 1.25rem 1rem;
+		}
+	}
+	.enc-level__now {
+		display: flex;
+		flex-direction: column;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-gray-400);
+	}
+	.enc-level__now > span:first-child {
+		display: flex;
+		align-items: baseline;
 		gap: 0.5rem;
-		padding: 0.5rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+	}
+	.enc-level__now b {
+		font-family: var(--font-display);
+		font-size: 2.5rem;
+		font-weight: 700;
+		line-height: 1;
+		letter-spacing: 0;
+		color: var(--color-gray-50);
+	}
+	.enc-level__breaks {
+		margin-top: 0.15rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+	/* The track. --p is how far along the level (or a cap) sits, 0 to 1; the
+	   thumb's centre travels from half its width to the same from the end, so
+	   the fill and the cap marks use the same sum. */
+	.enc-level__track {
+		--thumb: 1.375rem;
+		position: relative;
+		height: 3rem;
+	}
+	.enc-level__track input {
+		position: absolute;
+		top: 0.2rem;
+		right: 0;
+		left: 0;
+		height: var(--thumb);
+		margin: 0;
+		appearance: none;
+		background: transparent;
+		cursor: pointer;
+	}
+	.enc-level__track input::-webkit-slider-runnable-track {
+		height: 6px;
+		border-radius: 3px;
+		background: linear-gradient(
+			90deg,
+			var(--fx) calc(var(--p) * (100% - var(--thumb)) + var(--thumb) / 2),
+			color-mix(in oklab, var(--color-gray-50) 14%, transparent) 0
+		);
+	}
+	.enc-level__track input::-moz-range-track {
+		height: 6px;
+		border-radius: 3px;
+		background: color-mix(in oklab, var(--color-gray-50) 14%, transparent);
+	}
+	.enc-level__track input::-moz-range-progress {
+		height: 6px;
+		border-radius: 3px;
+		background: var(--fx);
+	}
+	.enc-level__track input::-webkit-slider-thumb {
+		width: var(--thumb);
+		height: var(--thumb);
+		margin-top: calc((6px - var(--thumb)) / 2);
+		border: 0;
+		border-radius: 50%;
+		appearance: none;
+		background: #fff;
+		box-shadow: 0 0 0 4px color-mix(in oklab, var(--fx) 45%, transparent), 0 3px 8px rgb(0 0 0 / 40%);
+	}
+	.enc-level__track input::-moz-range-thumb {
+		width: var(--thumb);
+		height: var(--thumb);
+		border: 0;
+		border-radius: 50%;
+		background: #fff;
+		box-shadow: 0 0 0 4px color-mix(in oklab, var(--fx) 45%, transparent), 0 3px 8px rgb(0 0 0 / 40%);
+	}
+	.enc-level__track input:focus-visible {
+		outline: 2px solid var(--color-brand);
+		outline-offset: 4px;
+		border-radius: 999px;
+	}
+	/* A limit break's cap: a tick on the track and its word under it. */
+	.enc-level__cap {
+		position: absolute;
+		top: 1.85rem;
+		left: calc(var(--p) * (100% - var(--thumb)) + var(--thumb) / 2);
+		font-size: 0.6875rem;
+		font-weight: 700;
+		color: var(--color-gray-400);
+		transform: translateX(-50%);
+		white-space: nowrap;
+		pointer-events: none;
+	}
+	.enc-level__cap::before {
+		position: absolute;
+		top: -0.75rem;
+		left: 50%;
+		width: 2px;
+		height: 0.5rem;
+		margin-left: -1px;
+		background: var(--color-gray-500);
+		content: "";
+	}
+	.enc-level__cap[data-reached="true"] {
+		color: var(--color-gray-100);
 	}
 	.enc-level__steps {
 		display: flex;
-		gap: 0.375rem;
+		gap: 0.3rem;
 	}
 	.enc-level__steps button {
 		display: inline-flex;
-		min-width: 2.25rem;
+		min-width: 2.5rem;
 		align-items: center;
 		justify-content: center;
 		gap: 0.125rem;
-		padding: 0.3125rem 0.5rem;
-		border: 1px solid var(--color-gray-600);
-		border-radius: 0.5rem;
+		padding: 0.35rem 0.5rem;
+		border-radius: 999px;
+		background: var(--card-fill);
+		box-shadow: inset 0 0 0 1px var(--color-edge);
 		font-size: 0.8125rem;
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--color-gray-100);
-		transition: border-color 0.15s, background-color 0.15s;
+		transition: box-shadow 0.15s;
 	}
 	.enc-level__steps button svg {
 		width: 0.75rem;
 		height: 0.75rem;
 	}
 	.enc-level__steps button:hover:not(:disabled) {
-		border-color: var(--color-brand);
-		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
+		box-shadow: inset 0 0 0 1.5px var(--color-brand);
 	}
 	.enc-level__steps button:disabled {
 		color: var(--color-gray-500);
 		cursor: default;
 	}
-	/* Room either side of the level on anything wider than a phone. */
-	@media (min-width: 40rem) {
-		.enc-level {
-			gap: 1rem;
-			padding: 0.5rem 0.75rem;
-		}
-		.enc-level__steps button {
-			min-width: 2.75rem;
-		}
-	}
-	.enc-level__now {
-		display: flex;
-		min-width: 7.5rem;
-		flex-direction: column;
-		align-items: center;
-		font-size: 0.875rem;
-		color: var(--color-gray-300);
-	}
-	.enc-level__now b {
-		font-family: var(--font-display);
-		font-size: 1.5rem;
-		font-weight: 700;
-		line-height: 1.1;
-		color: var(--color-gray-100);
-	}
-	.enc-level__breaks {
-		font-size: 0.6875rem;
-		color: var(--color-gray-400);
-	}
 
 	.enc-unique {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		gap: 0.25rem 0.75rem;
-		padding: 0.625rem 0.875rem;
-		border: 1px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-brand) 9%, transparent);
+		display: grid;
+		align-items: center;
+		gap: 0.3rem 1.1rem;
+		padding: 0.9rem 1.1rem;
+		border-radius: 1rem;
+		background: linear-gradient(100deg, color-mix(in oklab, var(--fx) 26%, var(--color-gray-900)), color-mix(in oklab, var(--fx) 6%, var(--color-gray-900)));
+		box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--fx) 55%, transparent);
+	}
+	@media (min-width: 48rem) {
+		.enc-unique {
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			padding: 0.9rem 1.25rem;
+		}
 	}
 	.enc-unique__label {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3125rem;
 		font-size: 0.6875rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
+		font-weight: 800;
+		letter-spacing: 0.16em;
 		text-transform: uppercase;
-		color: var(--color-brand);
+		color: var(--fx-ink);
 	}
 	.enc-unique__label svg {
 		width: 0.75rem;
 		height: 0.75rem;
 	}
 	.enc-unique__text {
-		flex: 1 1 14rem;
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--color-gray-100);
+		font-family: var(--font-display);
+		font-size: 1.1875rem;
+		font-weight: 700;
+		line-height: 1.25;
+		color: var(--color-gray-50);
 	}
 	.enc-unique__amounts {
 		display: block;
-		margin-top: 0.125rem;
-		font-size: 0.8125rem;
+		margin-top: 0.15rem;
+		font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--color-gray-300);
 	}
 	.enc-unique__level {
 		font-size: 0.75rem;
+		font-weight: 600;
 		color: var(--color-gray-400);
 		white-space: nowrap;
 	}
+	/* Not unlocked at this level: the plate loses its colour, never its ink. */
 	.enc-unique[data-locked="true"] {
-		border-color: var(--color-edge);
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		background: var(--enc-inset);
+		box-shadow: inset 0 0 0 1.5px var(--color-edge);
 	}
-	.enc-unique[data-locked="true"] :is(.enc-unique__label, .enc-unique__text, .enc-unique__amounts) {
-		color: var(--color-gray-500);
+	.enc-unique[data-locked="true"] .enc-unique__label {
+		color: var(--color-gray-300);
 	}
 
 	.enc-effects {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
-		gap: 0.4375rem;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.75rem), 1fr));
+		gap: 1.4rem 1.25rem;
+		padding-top: 0.25rem;
 	}
 	.enc-effect {
 		display: flex;
-		align-items: center;
-		gap: 0.75rem;
 		min-width: 0;
-		padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
+		flex-direction: column;
 	}
 	.enc-effect__value {
-		display: inline-flex;
-		min-width: 3.75rem;
-		height: 2.25rem;
-		flex-shrink: 0;
-		align-items: center;
-		justify-content: center;
-		padding: 0 0.5rem;
-		border: 1px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
 		font-family: var(--font-display);
-		font-size: 1.0625rem;
+		font-size: 2.25rem;
 		font-weight: 700;
-		color: var(--color-gray-100);
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-50);
 	}
 	.enc-effect__value svg {
-		width: 0.875rem;
-		height: 0.875rem;
+		width: 1.5rem;
+		height: 1.5rem;
+		color: var(--color-gray-400);
 	}
 	.enc-effect__text {
-		min-width: 0;
-		flex: 1;
+		margin-top: 0.45rem;
+		padding-top: 0.45rem;
+		border-top: 2px solid var(--fx-line);
 	}
 	.enc-effect__name {
 		display: block;
 		font-size: 0.875rem;
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--color-gray-100);
 	}
 	.enc-effect__help {
 		display: block;
+		margin-top: 0.1rem;
 		font-size: 0.75rem;
 		line-height: 1.35;
 		color: var(--color-gray-400);
 	}
-	.enc-effect[data-locked="true"] .enc-effect__value {
-		border-color: var(--color-edge);
-		background: transparent;
-		color: var(--color-gray-500);
-	}
-	.enc-effect[data-locked="true"] .enc-effect__name {
-		color: var(--color-gray-500);
+	.enc-effect[data-locked="true"] .enc-effect__text {
+		border-top-color: var(--color-gray-600);
 	}
 
-	/* ---- Banners ------------------------------------------------------------- */
+	/* ---- Banners -------------------------------------------------------------
+	   A banner as the player knows it: its own picture, its name, who else is
+	   on it (faces, not a line of names), then its status and dates. */
 
 	.enc-banners {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4375rem;
+		gap: 0.5rem;
 	}
 	.enc-banner {
-		display: flex;
-		flex-wrap: wrap;
+		display: grid;
+		grid-template-columns: 5.5rem minmax(0, 1fr);
 		align-items: center;
-		gap: 0.25rem 0.75rem;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-edge);
-		border-radius: 0.625rem;
-		background: color-mix(in srgb, var(--color-gray-900) 45%, transparent);
-		transition: border-color 0.15s, background-color 0.15s;
+		gap: 0.4rem 0.9rem;
+		padding: 0.4rem;
+		border-radius: 0.9rem;
+		background: var(--enc-inset);
+		transition: box-shadow 0.15s;
 	}
 	.enc-banner:hover,
 	.enc-banner:focus-visible {
-		border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
-		background: color-mix(in srgb, var(--color-brand) 6%, transparent);
+		box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-brand) 55%, transparent);
+	}
+	/* The picture, or the page's colour for a banner that has none. */
+	.enc-banner__art {
+		display: block;
+		width: 100%;
+		height: 3.4rem;
+		border-radius: 0.65rem;
+		background: linear-gradient(120deg, var(--c1), color-mix(in oklab, var(--c1) 60%, #000));
+		object-fit: cover;
+	}
+	.enc-banner__text {
+		min-width: 0;
 	}
 	.enc-banner__name {
-		min-width: 0;
-		flex: 1 1 14rem;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--color-gray-100);
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 1;
+		line-clamp: 1;
+		font-size: 0.9375rem;
+		font-weight: 700;
+		color: var(--color-gray-50);
+	}
+	.enc-banner__with {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.3rem;
+		margin-top: 0.35rem;
+		font-size: 0.75rem;
+		color: var(--color-gray-400);
+	}
+	.enc-banner__face {
+		width: 1.75rem;
+		height: 1.75rem;
+	}
+	.enc-banner__face--card {
+		width: 1.5rem;
+		height: 2rem;
+		border-radius: 3px;
+		object-fit: cover;
+	}
+	.enc-banner__when {
+		display: flex;
+		grid-column: 1 / -1;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.3rem 0.75rem;
+		padding: 0 0.3rem 0.2rem;
 	}
 	.enc-banner__dates {
-		font-size: 0.8125rem;
-		color: var(--color-gray-300);
-		white-space: nowrap;
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+		font-family: var(--font-display);
+		font-size: 0.9375rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-100);
 	}
+	@media (min-width: 48rem) {
+		.enc-banner {
+			grid-template-columns: 11rem minmax(0, 1fr) auto;
+			gap: 1.1rem;
+			padding-right: 1rem;
+		}
+		.enc-banner__art {
+			height: 4.1rem;
+		}
+		.enc-banner__when {
+			grid-column: auto;
+			flex-direction: column;
+			flex-wrap: nowrap;
+			align-items: flex-end;
+			gap: 0.2rem;
+			padding: 0;
+		}
+		.enc-banner__dates {
+			font-size: 1.0625rem;
+		}
+	}
+
+	/* ---- Related outfits and cards: the art first ------------------------------ */
+
+	.enc-tiles {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+	.enc-pic {
+		display: flex;
+		width: 5.5rem;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.15rem;
+		transition: transform 0.15s;
+	}
+	.enc-pic--card {
+		width: 4.5rem;
+	}
+	a.enc-pic:hover,
+	a.enc-pic:focus-visible {
+		transform: translateY(-2px);
+	}
+	.enc-pic__art {
+		width: 100%;
+		height: auto;
+		aspect-ratio: 1;
+		margin-bottom: 0.35rem;
+	}
+	.enc-pic--card .enc-pic__art {
+		aspect-ratio: 3 / 4;
+	}
+	.enc-pic__name {
+		font-size: 0.875rem;
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--color-gray-50);
+	}
+	.enc-pic__sub {
+		font-size: 0.75rem;
+		line-height: 1.25;
+		color: var(--color-gray-400);
+	}
+	.enc-pic .enc-tag {
+		margin-top: 0.2rem;
+	}
+	@media (min-width: 40rem) {
+		.enc-tiles {
+			gap: 1rem;
+		}
+		.enc-pic {
+			width: 7.25rem;
+		}
+		.enc-pic--card {
+			width: 6.25rem;
+		}
+	}
+
 	/* ---- States: loading, nothing found, the supporters note ----------------- */
 
 	.enc-empty {
@@ -1775,12 +2870,16 @@
 	@media (prefers-reduced-motion: reduce) {
 		.enc-tile,
 		.enc-skill,
+		.enc-uniq,
+		.enc-pic,
 		.enc-skeleton {
 			transition: none;
 			animation: none;
 		}
 		.enc-tile:hover,
-		a.enc-skill:hover {
+		a.enc-skill:hover,
+		a.enc-uniq:hover,
+		a.enc-pic:hover {
 			transform: none;
 		}
 	}

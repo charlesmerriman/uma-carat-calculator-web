@@ -12,11 +12,10 @@
 
 import { Fragment, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ChevronRight } from "lucide-react"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useSkillPage } from "../../services/encyclopediaQueries"
 import type { SkillCondition, SkillPhrase, SkillReadable } from "../../types/pvpGuide"
-import type { SkillDetailData, SkillSourceCard, SkillSourceUma } from "../../types/skills"
+import type { SkillDetailData, SkillOwnerUma, SkillSourceCard, SkillSourceUma } from "../../types/skills"
 import { HIDE_OPTIONS, PAGE_CONTAINER, cardLine, keepCard, type HideFilter } from "../../utils/encyclopedia"
 import { SKILL_LIST_PATH, cardHref, parseGameId, umaHref } from "../../utils/encyclopediaRoutes"
 import { nameLang } from "../../utils/skillList"
@@ -24,7 +23,7 @@ import { SKILL_TYPE_WORDS, UMATL_URL, skillKind } from "../../utils/skillSearch"
 import { hasCondition } from "../../utils/skillWords"
 import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
 import {
-	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag,
+	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag, Page,
 } from "../encyclopedia/pieces"
 import { SkillList, UnlockConditions } from "../encyclopedia/skillRows"
 import { usePageTitle } from "../encyclopedia/usePageTitle"
@@ -70,13 +69,18 @@ function Clauses({ condition }: { condition: SkillCondition }) {
 	)
 }
 
-/** A row of the block: the label down the left (its colon is for a screen reader), the words on the right. */
-function HowRow({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * One step of how a skill works: its label over its words (the label's colon
+ * is for a screen reader). The steps of a slot read left to right as a
+ * sentence: when it fires, what it does, how long it lasts, when it can fire
+ * again. `step` lets the stylesheet make "Does" the loudest.
+ */
+function HowRow({ label, step, children }: { label: string; step: "after" | "when" | "does" | "lasts" | "cooldown"; children: React.ReactNode }) {
 	return (
-		<>
+		<div className="enc-step" data-step={step}>
 			<span className="enc-how__label">{label}<span className="sr-only">: </span></span>
 			<span className="enc-how__value">{children}</span>
-		</>
+		</div>
 	)
 }
 
@@ -89,17 +93,17 @@ function HowItWorks({ readable }: { readable: SkillReadable }) {
 				{readable.slots.map((slot, index) => (
 					<div key={index} className="enc-how__slot">
 						{many && <span className="enc-how__part">Part {index + 1}</span>}
-						{hasCondition(slot.after) && <HowRow label="Only after"><Clauses condition={slot.after} /></HowRow>}
-						<HowRow label="When"><Clauses condition={slot.when} /></HowRow>
+						{hasCondition(slot.after) && <HowRow label="Only after" step="after"><Clauses condition={slot.after} /></HowRow>}
+						<HowRow label="When" step="when"><Clauses condition={slot.when} /></HowRow>
 						{slot.effects.length > 0 && (
-							<HowRow label="Does">
+							<HowRow label="Does" step="does">
 								{slot.effects.map((phrase, position) => <Clause key={position} phrase={phrase} effect />)}
 							</HowRow>
 						)}
 						{/* The label already says which; the value is the game's own figure. */}
-						{slot.duration && <HowRow label="Lasts">{slot.duration === "Whole race" ? "The whole race" : slot.duration}</HowRow>}
+						{slot.duration && <HowRow label="Lasts" step="lasts">{slot.duration === "Whole race" ? "The whole race" : slot.duration}</HowRow>}
 						{slot.cooldown && (
-							<HowRow label="Cooldown">
+							<HowRow label="Cooldown" step="cooldown">
 								{slot.cooldown === "Once per race" ? slot.cooldown : `Can fire again after ${slot.cooldown}`}
 							</HowRow>
 						)}
@@ -110,6 +114,20 @@ function HowItWorks({ readable }: { readable: SkillReadable }) {
 			{readable.wit_check && <SectionNote>Rolls Wit check.</SectionNote>}
 		</>
 	)
+}
+
+/** The outfit a skill belongs to, framed as every uma is, linking to her page. */
+function OwnerFace({ uma }: { uma: SkillOwnerUma }) {
+	const oshiIds = useOshiIds()
+	const body = (
+		<>
+			<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-owner__art" />
+			<span>{uma.name}</span>
+		</>
+	)
+	return uma.game_id
+		? <Link to={umaHref(uma.game_id)} className="enc-owner">{body}</Link>
+		: <span className="enc-owner">{body}</span>
 }
 
 // ── Where it comes from ─────────────────────────────────────────────────────
@@ -132,28 +150,21 @@ function UmaSources({ rows }: { rows: SkillSourceUma[] }) {
 	if (rows.length === 0) return null
 	return (
 		<Section title="Umas with this skill" count={rows.length}>
-			<ul className="enc-rows">
+			<ul className="enc-tiles">
 				{rows.map((row) => {
 					const body = (
 						<>
-							<FramedUma src={row.image} oshi={oshiIds.has(row.id)} className="enc-row__art" />
-							<span className="enc-row__text">
-								<span className="enc-row__name">{row.name}</span>
-								<span className="enc-row__sub">{umaHow(row)}</span>
-							</span>
+							<FramedUma src={row.image} oshi={oshiIds.has(row.id)} className="enc-pic__art" />
+							<span className="enc-pic__name">{row.name}</span>
+							<span className="enc-pic__sub">{umaHow(row)}</span>
 							{!row.on_global && <JpTag />}
 						</>
 					)
 					return (
 						<li key={`${row.id}-${row.source}`}>
-							{row.game_id ? (
-								<Link to={umaHref(row.game_id)} className="enc-row">
-									{body}
-									<ChevronRight className="enc-row__go" aria-hidden="true" />
-								</Link>
-							) : (
-								<div className="enc-row">{body}</div>
-							)}
+							{row.game_id
+								? <Link to={umaHref(row.game_id)} className="enc-pic">{body}</Link>
+								: <div className="enc-pic">{body}</div>}
 						</li>
 					)
 				})}
@@ -175,7 +186,7 @@ function CardSources({ rows }: { rows: SkillSourceCard[] }) {
 			{shown.length === 0 ? (
 				<EmptyNote>Only R or SR cards teach it.</EmptyNote>
 			) : (
-				<ul className="enc-rows">
+				<ul className="enc-tiles">
 					{shown.map((row) => {
 						const art = {
 							image: row.image, image_borderless: row.image_borderless, card_type: row.card_type ?? null, rarity: row.rarity ?? null,
@@ -184,24 +195,17 @@ function CardSources({ rows }: { rows: SkillSourceCard[] }) {
 						const line = [row.title ? row.name : null, cardLine(art), CARD_SOURCE[row.source] ?? row.source].filter(Boolean).join(" · ")
 						const body = (
 							<>
-								<FramedCard card={art} className="enc-row__art--card" />
-								<span className="enc-row__text">
-									<span className="enc-row__name">{row.title || row.name}</span>
-									<span className="enc-row__sub">{line}</span>
-								</span>
+								<FramedCard card={art} className="enc-pic__art" />
+								<span className="enc-pic__name">{row.title || row.name}</span>
+								<span className="enc-pic__sub">{line}</span>
 								{!row.on_global && <JpTag />}
 							</>
 						)
 						return (
 							<li key={`${row.id}-${row.source}`}>
-								{row.game_id ? (
-									<Link to={cardHref(row.game_id)} className="enc-row">
-										{body}
-										<ChevronRight className="enc-row__go" aria-hidden="true" />
-									</Link>
-								) : (
-									<div className="enc-row">{body}</div>
-								)}
+								{row.game_id
+									? <Link to={cardHref(row.game_id)} className="enc-pic enc-pic--card">{body}</Link>
+									: <div className="enc-pic enc-pic--card">{body}</div>}
 							</li>
 						)
 					})}
@@ -211,36 +215,65 @@ function CardSources({ rows }: { rows: SkillSourceCard[] }) {
 	)
 }
 
-function Evolution({ skill }: { skill: SkillDetailData }) {
+/**
+ * The skill's family on one line, left to right: what it grows from and its
+ * other versions (a white's gold, a unique's inherited copy), the skill
+ * itself, then what it evolves into. What unlocks it, when it is an
+ * evolution, sits under the line. Three separate lists until the redesign;
+ * drawn together they show where the skill stands.
+ */
+function Family({ skill, versions }: { skill: SkillDetailData; versions: SkillDetailData["versions"] }) {
 	const { evolution } = skill
-	if (!evolution.from && evolution.into.length === 0 && evolution.conditions.length === 0) return null
-	// A skill that only evolves INTO others (most golds) gets the plain card the
-	// canvas drew: "Evolves into", counted. One with a base or unlock conditions
-	// needs the sub-headings below to tell its parts apart.
-	if (!evolution.from && evolution.conditions.length === 0) {
-		return (
-			<Section title="Evolves into" count={evolution.into.length}>
-				<SkillList skills={evolution.into} className="enc-ladder" />
-			</Section>
-		)
-	}
+	const total = (evolution.from ? 1 : 0) + versions.length + evolution.into.length
+	if (total === 0 && evolution.conditions.length === 0) return null
+	const kind = skillKind(skill)
 	return (
-		<Section title="Evolution">
-			{evolution.from && (
-				<div className="flex flex-col gap-2">
-					<SubHeading>Evolves from</SubHeading>
-					<SkillList skills={[evolution.from]} className="enc-ladder" />
-				</div>
-			)}
-			{evolution.into.length > 0 && (
-				<div className="flex flex-col gap-2">
-					<SubHeading>Evolves into</SubHeading>
-					{/* An evolution names its uma (Daptrius's list): the row's own second line does, from `owners`. */}
-					<SkillList skills={evolution.into} className="enc-ladder" />
+		<Section title="The family" count={total > 0 ? total + 1 : undefined}>
+			{total > 0 && (
+				<div className="enc-family">
+					{(evolution.from || versions.length > 0) && (
+						<div className="enc-family__col">
+							{evolution.from && (
+								<div className="enc-group">
+									<SubHeading>Evolves from</SubHeading>
+									<SkillList skills={[evolution.from]} className="enc-ladder" />
+								</div>
+							)}
+							{versions.length > 0 && (
+								<div className="enc-group">
+									<SubHeading>Other versions <span className="enc-section__count">{versions.length}</span></SubHeading>
+									<SkillList skills={versions} className="enc-ladder" />
+								</div>
+							)}
+						</div>
+					)}
+					<div className="enc-family__col enc-family__col--here">
+						<div className="enc-group">
+							<SubHeading>This skill</SubHeading>
+							<div className="enc-skill enc-skill--here" data-kind={kind}>
+								{skill.image
+									? <img src={skill.image} alt="" className="enc-skill__icon" />
+									: <span className="enc-skill__icon bg-gray-700" aria-hidden="true" />}
+								<span className="enc-skill__text">
+									<span className="enc-skill__name" lang={nameLang(skill.name)}>{skill.name}</span>
+									<span className="enc-skill__sub"><KindPill kind={kind} /></span>
+								</span>
+							</div>
+						</div>
+					</div>
+					{evolution.into.length > 0 && (
+						<div className="enc-family__col">
+							<div className="enc-group">
+								<SubHeading>Evolves into</SubHeading>
+								{/* An evolution names its uma (Daptrius's list): the row's own second line does, from `owners`. */}
+								<SkillList skills={evolution.into} className="enc-ladder" />
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 			{evolution.conditions.length > 0 && (
-				<div className="flex flex-col gap-2">
+				<div className="enc-group">
 					<SubHeading>To unlock it</SubHeading>
 					<UnlockConditions conditions={evolution.conditions} />
 				</div>
@@ -280,11 +313,15 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 	const kind = skillKind(skill)
 	const type = SKILL_TYPE_WORDS[skill.type ?? ""]
 	const owners = skill.owners?.length ? skill.owners.join(", ") : null
+	// Her face in the hero when the skill is one outfit's (a unique, an evolution).
+	const owner = skill.owner_umas?.length === 1 ? skill.owner_umas[0] : null
 	return (
-		<article aria-labelledby="skill-page-name" className="flex flex-col gap-4">
+		<Page colours={skill.colours} labelledBy="skill-page-name">
 			<Crumbs list="Skills" listPath={SKILL_LIST_PATH} name={skill.name} />
 			<Hero
-				accent={KIND_ACCENT[kind]}
+				// A skill that is one character's wears her colours; any other keeps its kind's.
+				accent={skill.colours ? undefined : KIND_ACCENT[kind]}
+				shape="skill"
 				art={skill.image ? (
 					<img src={skill.image} alt="" className="enc-hero__art--skill" />
 				) : (
@@ -302,7 +339,16 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 					</>
 				}
 				lead={skill.description || undefined}
-				facts={skill.cost != null ? <Fact label="Cost">{skill.cost} SP</Fact> : undefined}
+				facts={(skill.cost != null || owner) ? (
+					<>
+						{skill.cost != null && <Fact label="Cost">{skill.cost} SP</Fact>}
+						{owner && (
+							<Fact label={kind === "evolved" ? "Evolved by" : "Unique to"}>
+								<OwnerFace uma={owner} />
+							</Fact>
+						)}
+					</>
+				) : undefined}
 			/>
 
 			{skill.readable.slots.length > 0 && (
@@ -311,18 +357,15 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 				</Section>
 			)}
 
-			{/* Evolution straight after how it works: its unlock conditions were
-			    at the bottom, under the long uma and card lists (Daptrius, 2026-11-13). */}
-			<Evolution skill={skill} />
+			{/* The family straight after how it works: an evolution's unlock conditions
+			    were at the bottom, under the long uma and card lists (Daptrius, 2026-11-13). */}
+			<Family skill={skill} versions={versions} />
 
-			{versions.length > 0 && (
-				<Section title="Other versions" count={versions.length}>
-					<SkillList skills={versions} className="enc-ladder" />
-				</Section>
-			)}
-
-			<UmaSources rows={skill.sources.umas} />
-			<CardSources rows={skill.sources.cards} />
+			{/* Side by side when the skill has both; either one alone takes the row. */}
+			<div className={skill.sources.umas.length > 0 && skill.sources.cards.length > 0 ? "enc-two" : "contents"}>
+				<UmaSources rows={skill.sources.umas} />
+				<CardSources rows={skill.sources.cards} />
+			</div>
 
 			{/* No "also known as" line: other_names holds GameTora's names, which
 			    search may match but the site never shows (owner, 2026-11-12). */}
@@ -338,6 +381,6 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 					)}
 				</p>
 			)}
-		</article>
+		</Page>
 	)
 }

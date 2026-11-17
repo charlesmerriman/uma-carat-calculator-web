@@ -57,6 +57,8 @@ export interface CatalogueSupportCard {
 	card_type: string | null
 	rarity: number | null
 	title: string
+	/** The game's 4-digit character (1068), which an uma's outfit id starts with; the Encyclopedia's search matches it. Absent from an older API. */
+	character_id?: number | null
 	/**
 	 * A group card's umas, by name (Team Sirius's six), from the game data.
 	 * The deck rules count the card as one of each (utils/pvpTeams.ts). [] on
@@ -73,8 +75,9 @@ export interface CatalogueSupportCard {
 	placeholder?: boolean
 	/**
 	 * When it came out on Global, from the game's own table; null if it isn't
-	 * out. Only the Collection's sort reads this (utils/cardRelease.ts). Selectors
-	 * never do. Absent from an older API.
+	 * out. Only the release date sorts read this: the Collection's
+	 * (utils/cardRelease.ts) and the Encyclopedia card list's
+	 * (utils/encyclopedia.ts withGameDates). Selectors never do. Absent from an older API.
 	 */
 	released_at?: string | null
 	skills: CatalogueSkillLink[]
@@ -109,6 +112,13 @@ export interface PvpCatalogue {
 	umas: CatalogueUma[]
 	support_cards: CatalogueSupportCard[]
 	skills: CatalogueSkill[]
+	/**
+	 * Every character's two colours from the game files, [main, sub], by the
+	 * game's character id (an uma's or a card's `character_id`). The
+	 * Encyclopedia paints a tile with them. Absent from an older API, and a
+	 * character the files don't cover is simply missing.
+	 */
+	character_colours?: Record<string, [string, string]>
 }
 
 // ── A team ───────────────────────────────────────────────────────────────────
