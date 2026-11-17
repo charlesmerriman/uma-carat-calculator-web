@@ -20,7 +20,7 @@ import { HIDE_OPTIONS, PAGE_CONTAINER, cardLine, keepCard, type HideFilter } fro
 import { SKILL_LIST_PATH, cardHref, parseGameId, umaHref } from "../../utils/encyclopediaRoutes"
 import { nameLang } from "../../utils/skillList"
 import { SKILL_TYPE_WORDS, UMATL_URL, skillKind } from "../../utils/skillSearch"
-import { hasCondition } from "../../utils/skillWords"
+import { hasCondition, slotLabel } from "../../utils/skillWords"
 import { EncyclopediaGate } from "../encyclopedia/EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag, Page,
@@ -92,7 +92,7 @@ function HowItWorks({ readable }: { readable: SkillReadable }) {
 			<div className="enc-how">
 				{readable.slots.map((slot, index) => (
 					<div key={index} className="enc-how__slot">
-						{many && <span className="enc-how__part">Part {index + 1}</span>}
+						{many && <span className="enc-how__part">{slotLabel(readable, index)}</span>}
 						{hasCondition(slot.after) && <HowRow label="Only after" step="after"><Clauses condition={slot.after} /></HowRow>}
 						<HowRow label="When" step="when"><Clauses condition={slot.when} /></HowRow>
 						{slot.effects.length > 0 && (
@@ -142,7 +142,8 @@ const CARD_SOURCE: Record<string, string> = { hint: "Hint", event: "Event" }
 
 function umaHow(row: SkillSourceUma): string {
 	const how = UMA_SOURCE[row.source] ?? row.source
-	return row.level !== null && row.source !== "unique" ? `${how}, level ${row.level}` : how
+	const said = row.level !== null && row.source !== "unique" ? `${how}, level ${row.level}` : how
+	return row.via ? `${said} · ${row.via}` : said
 }
 
 function UmaSources({ rows }: { rows: SkillSourceUma[] }) {
@@ -192,7 +193,9 @@ function CardSources({ rows }: { rows: SkillSourceCard[] }) {
 							image: row.image, image_borderless: row.image_borderless, card_type: row.card_type ?? null, rarity: row.rarity ?? null,
 						}
 						// A card's name is its character's, so its title leads when the API sends one.
-						const line = [row.title ? row.name : null, cardLine(art), CARD_SOURCE[row.source] ?? row.source].filter(Boolean).join(" · ")
+						// On a ◎ page a card that teaches the ○ says so: its hint counts for the ◎ too.
+						const how = CARD_SOURCE[row.source] ?? row.source
+						const line = [row.title ? row.name : null, cardLine(art), row.via ? `${how} · ${row.via}` : how].filter(Boolean).join(" · ")
 						const body = (
 							<>
 								<FramedCard card={art} className="enc-pic__art" />

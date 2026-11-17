@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { BookOpen, CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
@@ -12,9 +13,12 @@ import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
 import { useSiteSearch } from "../../hooks/useSiteSearch"
+import { useNavbarHeight } from "../../hooks/useNavbarHeight"
 import { UMA_LIST_PATH, isEncyclopediaPath } from "../../utils/encyclopediaRoutes"
 
 export const Navbar = () => {
+	const navbarRef = useRef<HTMLDivElement>(null)
+	useNavbarHeight(navbarRef)
 	const location = useLocation()
 	// null when rendered outside CalculatorProvider (e.g. on the home page)
 	const calculatorData = useCalculatorDataSafe()
@@ -180,9 +184,10 @@ export const Navbar = () => {
 	// away. html's `scroll-padding-top` (index.css) carries this bar's height so
 	// jump links and deep links land below it rather than under it.
 	// `data-sticky-navbar` is how the PvP page measures it, to pin its own
-	// tabs under it (hooks/usePvpStickyOffsets.ts).
+	// tabs under it (hooks/usePvpStickyOffsets.ts); its height is --navbar-h
+	// for the Encyclopedia's jump bar (hooks/useNavbarHeight.ts).
 	return (
-		<div className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
+		<div ref={navbarRef} className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
 			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">

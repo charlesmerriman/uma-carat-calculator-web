@@ -27,3 +27,13 @@ export function cooldownWords(slot: SkillSlot): string | null {
 	return slot.cooldown === "Once per race" ? "Once per race" : `Again after ${slot.cooldown}`
 }
 
+
+/**
+ * A slot's heading when a skill has several (Daptrius, board, 2026-11-17).
+ * The game checks the slots in order and fires the first whose conditions
+ * hold, so they are alternatives: "Trigger 1", "Trigger 2". Only when a later
+ * slot waits for the first (`chained`) do they fire in turn: "Part 1", "Part 2".
+ */
+export function slotLabel(readable: { chained?: boolean }, index: number): string {
+	return `${readable.chained ? "Part" : "Trigger"} ${index + 1}`
+}

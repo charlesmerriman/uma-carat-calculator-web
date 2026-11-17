@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest"
 import { CareerObjectives } from "../components/encyclopedia/CareerObjectives"
 import type { CareerGoal } from "../types/encyclopedia"
 
-/** An uma's career goals on her page: one track, the year said once over its first goal. */
+/**
+ * An uma's career goals on her page: a list per year (one track on a phone, a
+ * column each on a wider screen, by CSS), the year said once over its first goal.
+ */
 
 const GOALS: CareerGoal[] = [
 	{ turn: 12, when: "Junior Year, Late Jun", race: "Junior Make Debut", grade: null, need: "Run it" },
@@ -13,18 +16,20 @@ const GOALS: CareerGoal[] = [
 ]
 
 describe("CareerObjectives", () => {
-	it("lists the goals in order on one track, naming each year once, with the race, grade and placing", () => {
+	it("lists the goals in order, a list per year, naming each year once, with the race, grade and placing", () => {
 		render(<CareerObjectives goals={GOALS} hidden={0} />)
-		const track = screen.getByRole("list")
-		expect(within(track).getAllByRole("listitem").map((row) => row.textContent)).toEqual([
+		// One list per year, named for it (Daptrius, board, 2026-11-17: by year on desktop).
+		expect(screen.getAllByRole("list").map((list) => list.getAttribute("aria-label"))).toEqual(["Junior Year", "Classic Year", "Senior Year"])
+		expect(within(screen.getByRole("list", { name: "Classic Year" })).getAllByRole("listitem")).toHaveLength(2)
+		expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual([
 			"Junior YearLate JunJunior Make DebutRun it",
 			"Classic YearEarly FebKisaragi ShoG3Top 5",
 			// The second goal of a year doesn't repeat it.
 			"Late MayTokyo Yushun (Japanese Derby)G1Top 5",
 			"Senior YearLate DecArima KinenG1Win",
 		])
-		// A race she must win is the track's gold post.
-		expect(within(track).getAllByRole("listitem").map((row) => row.getAttribute("data-win"))).toEqual(["false", "false", "false", "true"])
+		// A race she must win is a gold post.
+		expect(screen.getAllByRole("listitem").map((row) => row.getAttribute("data-win"))).toEqual(["false", "false", "false", "true"])
 		expect(screen.queryByText(/aren't shown yet/)).not.toBeInTheDocument()
 	})
 

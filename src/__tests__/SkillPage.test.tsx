@@ -158,3 +158,43 @@ describe("keepCard", () => {
 		expect(keepCard({ rarity: null }, "sr")).toBe(true)
 	})
 })
+describe("SkillPage, Daptrius's batch of 2026-11-17", () => {
+	const slot = (text: string) => ({
+		after: { all: [], any: [] }, when: { all: [{ text, raw: false }], any: [] },
+		effects: [{ text: "Velocity +0.15", raw: false }], duration: null, cooldown: null,
+	})
+	function serve(detail: SkillDetailData) {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(detail), { status: 200 })))
+	}
+	beforeEach(() => vi.stubGlobal("fetch", fetchMock))
+	afterEach(() => {
+		vi.unstubAllGlobals()
+		fetchMock.mockReset()
+	})
+
+	it("calls two slots triggers, the first that holds firing, and parts only when chained", async () => {
+		serve({ ...DETAIL, readable: { wit_check: null, complete: true, slots: [slot("Mid-race"), slot("Late-race")] } })
+		const { unmount } = renderAt("/app/skills/100101111")
+		expect(await screen.findByText("Trigger 1")).toBeInTheDocument()
+		expect(screen.getByText("Trigger 2")).toBeInTheDocument()
+		unmount()
+
+		serve({ ...DETAIL, readable: { wit_check: null, complete: true, chained: true, slots: [slot("Mid-race"), slot("After Part 1 fires")] } })
+		renderAt("/app/skills/100101111")
+		expect(await screen.findByText("Part 2")).toBeInTheDocument()
+		expect(screen.queryByText("Trigger 1")).not.toBeInTheDocument()
+	})
+
+	it("on a ◎, says which givers teach the ○", async () => {
+		serve({
+			...DETAIL,
+			sources: {
+				umas: [{ id: 7, name: "Special Week", game_id: 100101, image: null, source: "awakening", level: 2, on_global: true, via: "Mile Corners ○" }],
+				cards: [{ id: 9, name: "Kitasan Black", game_id: 30028, image: null, source: "hint", on_global: true, rarity: 3, card_type: "speed", via: "Mile Corners ○" }],
+			},
+		})
+		renderAt("/app/skills/100101111")
+		expect(await screen.findByText("Awakening, level 2 · Mile Corners ○")).toBeInTheDocument()
+		expect(screen.getByText(/Hint · Mile Corners ○$/)).toBeInTheDocument()
+	})
+})

@@ -114,7 +114,12 @@ export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, 
 	return (
 		<header className={`enc-hero enc-hero--${shape}`} style={accent ? ({ "--c1": accent } as CSSProperties) : undefined}>
 			<span className="enc-hero__field" aria-hidden="true"><i /><i /></span>
-			{ghost && <span className="enc-hero__ghost" lang="ja" aria-hidden="true">{ghost}</span>}
+			{/* Its length sizes it to fit beside the art (encyclopedia.css, .enc-hero__ghost). */}
+			{ghost && (
+				<span className="enc-hero__ghost" lang="ja" aria-hidden="true" style={{ "--chars": [...ghost].length } as CSSProperties}>
+					{ghost}
+				</span>
+			)}
 			{entry && <span className="enc-hero__no">{entry}</span>}
 			<div className="enc-hero__artbox">{art}</div>
 			<div className="enc-hero__body">
