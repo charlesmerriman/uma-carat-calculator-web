@@ -685,13 +685,14 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   (`useOshiIds`, owner 2026-10-16: a favorite Oguri Cap frames Oguri Cap (Christmas) too,
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
-  frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
-  pokes out past it. `className` only sizes the square (`w-14`, `h-full`), and it MUST size it:
-  the art is pinned to the frame's box (`position: absolute; inset: 0`), so it gives the frame
-  no size of its own. **Open:** on iOS 27 (every browser) the art shows past the frame's edge
-  on the PvP and Encyclopedia pages but not the Timeline (Daptrius, board "Issues with Uma SVG
-  Alignment on iOS", 2026-11-17). Not the art's own size (the portraits are square); cause not
-  found yet.
+  frame over the art and keeps the art (and the grey square for a missing picture) 12 units
+  INSIDE the frame's outer edge, under its 24-unit band, with its corner on the same curve.
+  Never flush: the art and the frame are separate layers the browser rounds to device pixels
+  separately, and on an iPhone at the default zoom (iOS 27, Daptrius, board "Issues with Uma
+  SVG Alignment on iOS", 2026-11-17) flush art showed past the frame on fractional-width
+  grid tiles (PvP, Encyclopedia), gone at any other zoom. A bare frame's art fills the box.
+  `className` only sizes the square (`w-14`, `h-full`), and it MUST size it: the art is
+  absolutely positioned, so it gives the frame no size of its own.
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's

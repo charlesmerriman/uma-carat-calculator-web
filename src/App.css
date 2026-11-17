@@ -1135,35 +1135,55 @@
    silver for everyone and the rainbow one for the person's favorites
    ([data-oshi]). The frame is a 762-unit SVG whose outer edge is a 4-unit
    line on an 80-unit corner, so the art underneath is clipped to the same
-   curve (82/762 of the side, as a percentage so it holds at every size) and
-   nothing pokes out past the frame's corners. The frame's 24-unit band
-   covers the art's outer edge, the way the game's own frames do. */
+   curve and nothing pokes out past the frame's corners. The frame's 24-unit
+   band covers the art's outer edge, the way the game's own frames do. */
 .uma-frame {
 	position: relative;
 	display: block;
 	aspect-ratio: 1;
 	flex-shrink: 0;
 	border-radius: 10.75%;
+}
+
+/* The art (and the grey square behind it, for a missing picture) sits
+   12 units INSIDE the frame's outer edge, under its 24-unit band, never flush
+   with it. Flush, the art and the frame are two layers (an <img> and a CSS
+   background) that the browser rounds to device pixels separately, and when
+   the box lands between pixels they can disagree by a pixel or two: on an
+   iPhone at the default zoom (3 device pixels per CSS pixel, fractional grid
+   tiles) the art showed past the frame's bottom and side, and changing the
+   zoom made it go away (Daptrius, board "Issues with Uma SVG Alignment on
+   iOS", 2026-11-17; web #376 tried the art's sizing first, which wasn't it).
+   With the edge under the band, the two layers can drift 12 units either way
+   (about 2 px on a 120 px tile) before anything shows: outward, the frame
+   still covers it; inward, the band's inner edge is 12 units further in.
+   Percentages so it holds at every size: inset 12/762 of the side (so 738/762
+   across), the corner 70/738 of the art's own box (the frame's 82-unit outer
+   curve, 12 in). Width and height are explicit, not `inset` on all four
+   sides: an absolutely positioned <img> with `width: auto` takes the
+   picture's own size instead of stretching between its insets. */
+.uma-frame > img,
+.uma-frame::before {
+	position: absolute;
+	top: 1.5748%;
+	left: 1.5748%;
+	display: block;
+	width: 96.8504%;
+	height: 96.8504%;
+	border-radius: 9.4851%;
+}
+
+.uma-frame::before {
+	content: "";
 	background-color: var(--color-gray-700);
 }
 
-/* The art is pinned to the frame's box (inset 0) rather than sized
-   `height: 100%` in flow against a box whose height comes from aspect-ratio.
-   Tried for Daptrius's report of the art hanging past the frame on iOS
-   (board "Issues with Uma SVG Alignment on iOS", 2026-11-17), but the
-   portraits are square, so a percentage height falling back to the picture's
-   own size would still fill the square: this only rules that out. The cause
-   is not found yet and needs a look on an iPhone. */
 .uma-frame > img {
-	position: absolute;
-	inset: 0;
-	display: block;
-	width: 100%;
-	height: 100%;
 	object-fit: cover;
-	border-radius: inherit;
 }
 
+/* preserveAspectRatio="none" in both SVGs: if rounding leaves the box a hair
+   off square, the frame stretches to it rather than shrinking inside it. */
 .uma-frame::after {
 	content: "";
 	position: absolute;
@@ -1177,9 +1197,19 @@
 }
 
 /* The owner's named exceptions (the navbar profile, the account page outside
-   the favorites card): the same borderless art and corner, no frame. */
+   the favorites card): the same borderless art and corner, no frame. With no
+   band to hide an edge under, the art fills the whole box. */
 .uma-frame--bare::after {
 	content: none;
+}
+
+.uma-frame--bare > img,
+.uma-frame--bare::before {
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
 }
 
 /* The course map's veterans' layer (components/course/CourseStrip.tsx): a ring
