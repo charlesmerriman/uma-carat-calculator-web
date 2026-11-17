@@ -448,6 +448,21 @@ function FeaturedTileArt({
 }
 
 /**
+ * Where a name too long for one line of a tile may break. Two names are one
+ * 18-letter word, "Matikanetannhauser" and "Matikanefukukitaru": the longest
+ * the game allows, too wide for a support tile at any readable size, so the
+ * browser broke them wherever the edge fell ("Matikanetan / nhauser";
+ * Daptrius, board "Timeline, Support Card, Longest Name Fix", 2026-11-17).
+ * Each is "Matikane" and a name, so a soft hyphen there lets the word break
+ * at that seam ("Matikane- / tannhauser") and only when it has to. Checked
+ * 2026-11-17: no other uma or card name has a word over 12 letters.
+ */
+const NAME_SEAMS = ["Matikane"]
+function withSeams(name: string): string {
+	return NAME_SEAMS.reduce((text, seam) => text.replace(new RegExp(`\\b${seam}(?=\\p{L}{4})`, "gu"), `${seam}\u00AD`), name)
+}
+
+/**
  * One featured tile: the art (with its purpose note) over the name block.
  *
  * With `href` the whole tile is a link to the card's Encyclopedia page. Only
@@ -490,7 +505,7 @@ function FeaturedTile({
 				<div
 					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
 				>
-					{item.name}
+					{withSeams(item.name)}
 				</div>
 			</div>
 		</>

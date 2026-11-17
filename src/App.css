@@ -1147,7 +1147,15 @@
 	background-color: var(--color-gray-700);
 }
 
+/* The art is pinned to the frame's box (inset 0), not sized `height: 100%`
+   in flow: the box's height comes from aspect-ratio, which Safari on iOS
+   does not always resolve a percentage height against, so the art took its
+   own proportions and hung out past the frame's bottom (and, in the shared
+   team picture, which Safari draws the same way, its side). Daptrius, board
+   "Issues with Uma SVG Alignment on iOS", 2026-11-17. */
 .uma-frame > img {
+	position: absolute;
+	inset: 0;
 	display: block;
 	width: 100%;
 	height: 100%;
