@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { aptitudeMatches, effectReading, releaseDates, sortByEffect, sortList, type ReleaseDates } from "../utils/encyclopedia"
+import {
+	aptitudeMatches, directionWords, effectReading, releaseDates, searchMatches, sortByEffect, sortByValue, sortFact, sortList,
+	withGameDates, type ReleaseDates,
+} from "../utils/encyclopedia"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { AptitudeKey } from "../types/pvpTeam"
 import { parseApiDate } from "../utils/dateFormat"
@@ -25,14 +28,73 @@ describe("sortList", () => {
 	})
 
 	it("puts Global releases first, then JP only, then undated, each way round", () => {
-		expect(names(sortList(ITEMS, "newest", DATES))).toEqual(["Bourbon", "Agnes", "Cheval", "Daiwa"])
-		expect(names(sortList(ITEMS, "oldest", DATES))).toEqual(["Agnes", "Bourbon", "Cheval", "Daiwa"])
+		// Newest first by default; the reverse button turns only the dates round.
+		expect(names(sortList(ITEMS, "release", DATES))).toEqual(["Bourbon", "Agnes", "Cheval", "Daiwa"])
+		expect(names(sortList(ITEMS, "release", DATES, true))).toEqual(["Agnes", "Bourbon", "Cheval", "Daiwa"])
+	})
+
+	it("turns names and ids round", () => {
+		expect(names(sortList(ITEMS, "name", DATES, true))).toEqual(["Daiwa", "Cheval", "Bourbon", "Agnes"])
+		expect(names(sortList(ITEMS, "game_id", DATES, true))).toEqual(["Daiwa", "Agnes", "Bourbon", "Cheval"])
+	})
+
+	it("words the direction each sort runs in", () => {
+		expect(directionWords("name", false)).toBe("A to Z")
+		expect(directionWords("release", false)).toBe("Newest first")
+		expect(directionWords("release", true)).toBe("Oldest first")
+		expect(directionWords("game_id", false)).toBe("Lowest first")
+		expect(directionWords("effect", false)).toBe("Highest first")
+		expect(directionWords("apt_mile", false)).toBe("Best first")
 	})
 
 	it("leaves the input alone", () => {
 		const before = names(ITEMS)
 		sortList(ITEMS, "game_id")
 		expect(names(ITEMS)).toEqual(before)
+	})
+})
+
+describe("sortByValue", () => {
+	it("keeps an item with no value last, both ways round", () => {
+		const rows = [{ name: "A", value: 2 }, { name: "B", value: null }, { name: "C", value: 1 }]
+		expect(names(sortByValue(rows, (row) => row.value, false))).toEqual(["C", "A", "B"])
+		expect(names(sortByValue(rows, (row) => row.value, true))).toEqual(["A", "C", "B"])
+	})
+})
+
+describe("withGameDates", () => {
+	it("dates a card on no banner by the game's own date, and never overrides a banner", () => {
+		const dates = withGameDates(DATES, [
+			{ id: 4, released_at: "2025-08-01T00:00:00Z" }, // Daiwa: no banner, a welfare card
+			{ id: 2, released_at: "2020-01-01T00:00:00Z" }, // Agnes: her banner wins
+			{ id: 1, released_at: null }, // Cheval: still JP only
+		])
+		expect(dates.get(4)?.global).toBe(Date.UTC(2025, 7, 1))
+		expect(dates.get(2)?.global).toBe(Date.UTC(2025, 5, 1))
+		expect(dates.get(1)).toEqual({ global: null, jp: Date.UTC(2026, 0, 1) })
+		expect(DATES.has(4)).toBe(false) // a copy, the banners' map untouched
+	})
+})
+
+describe("sortFact", () => {
+	it("says the id or the date a tile is sorted by, and nothing for another sort", () => {
+		const dates = new Map<number, ReleaseDates>([[1, { global: parseApiDate("2025-06-26T22:00:00Z")!.getTime(), jp: null }], [2, { global: null, jp: parseApiDate("2024-03-01T12:00:00Z")!.getTime() }]])
+		expect(sortFact("game_id", { id: 1, game_id: 30265 }, dates)).toBe("ID 30265")
+		expect(sortFact("release", { id: 1 }, dates)).toMatch(/^2025\/6\/2[67]$/)
+		expect(sortFact("release", { id: 2 }, dates)).toBe("JP 2024/3/1")
+		expect(sortFact("release", { id: 3 }, dates)).toBeNull()
+		expect(sortFact("name", { id: 1, game_id: 30265 }, dates)).toBeNull()
+	})
+})
+
+describe("searchMatches", () => {
+	it("reads a query of digits as the start of an id, anything else as words", () => {
+		// Board "Add Searchable Aliases", 2026-11-17: a card id, or a 4-digit character id in part.
+		expect(searchMatches("30265", "Admire Groove", [30265, 1068])).toBe(true)
+		expect(searchMatches("106", "Admire Groove", [30265, 1068])).toBe(true)
+		expect(searchMatches("1069", "Admire Groove", [30265, 1068])).toBe(false)
+		expect(searchMatches("admire", "Admire Groove", [30265, 1068])).toBe(true)
+		expect(searchMatches("  ", "Admire Groove", [null])).toBe(true)
 	})
 })
 
@@ -51,11 +113,10 @@ describe("releaseDates", () => {
 describe("aptitudeMatches", () => {
 	const apt = { turf: 7, dirt: 4, short: 1, mile: 5, medium: 7, long: null, front: 8, pace: 6, late: 3, end: 1 } as Record<AptitudeKey, number | null>
 
-	it("passes a column at or above the grade, and any column", () => {
+	it("passes a column at or above the grade", () => {
 		expect(aptitudeMatches(apt, "mile", "5")).toBe(true) // Mile C, at least C
 		expect(aptitudeMatches(apt, "dirt", "5")).toBe(false) // Dirt D, at least C
 		expect(aptitudeMatches(apt, "front", "7")).toBe(true) // Front S, at least A
-		expect(aptitudeMatches(apt, "any", "8")).toBe(true)
 	})
 
 	it("never passes an aptitude the data doesn't have", () => {
@@ -102,5 +163,7 @@ describe("effectReading and sortByEffect", () => {
 		const mine = (entry: { id: number }) => (entry.id === 4 ? null : 4)
 		expect(sortByEffect(cards, 15, mine, data).map((entry) => entry.id)).toEqual([2, 1, 4, 3])
 		expect(sortByEffect(cards, 15, () => 4, data).map((entry) => entry.id)).toEqual([2, 4, 1, 3])
+		// Turned round: lowest first, the unread card and the card without it still last.
+		expect(sortByEffect(cards, 15, mine, data, true).map((entry) => entry.id)).toEqual([1, 2, 4, 3])
 	})
 })

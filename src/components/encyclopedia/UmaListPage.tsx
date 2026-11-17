@@ -1,12 +1,13 @@
 /**
  * /app/umas: every trainee outfit, from the PvP catalogue the team builder and
- * Ctrl+K already load (GET /pvp-catalogue, public). Search by name, filter by
- * where it is out, starting stars and aptitudes, sort by name, release or game
- * id; a tile opens the outfit's page.
+ * Ctrl+K already load (GET /pvp-catalogue, public). Search by name or id,
+ * filter by where it is out, starting stars and aptitudes, sort by name,
+ * release, game id or one aptitude, either way round; a tile opens the
+ * outfit's page.
  */
 
 import { useMemo } from "react"
-import { useRememberedFilter } from "../../hooks/useRememberedFilter"
+import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
@@ -14,15 +15,17 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
 import { splitOutfit } from "../../utils/umaName"
 import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
-import { Chips, Count, GradeSelect, SearchBox, Toolbar } from "./listFilters"
+import { Chips, Count, GradeSelect, PickChips, SearchBox, SortControl, Toolbar } from "./listFilters"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { AptitudeKey } from "../../types/pvpTeam"
 import { EmptyNote, GridSkeleton, JpTag, OwnedMark, Stars } from "./pieces"
 import { useOwned } from "../../hooks/useOwned"
 import {
-	APTITUDE_GROUPS, GRADE_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, SORT_OPTIONS, STAR_OPTIONS, WHERE_OPTIONS,
-	aptitudeMatches, countLine, filterUmas, ownedMatches, releaseDates, sortList, values,
-	type OwnedFilter, type SortOrder, type StarFilter, type WhereFilter,
+	APTITUDE_GROUPS, APTITUDE_KEYS, GRADE_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, REVERSED_VALUES, SHARED_OWNED_KEY,
+	SHARED_WHERE_KEY, SHARED_WHERE_VALUES, STAR_OPTIONS, UMA_SORT_OPTIONS, WHERE_OPTIONS,
+	aptitudeLabel, aptitudeMatches, countLine, filterUmas, gradeLetter, listWhere, ownedMatches, releaseDates, sortAptitude,
+	sortByValue, sortFact, sortList, sortsHighFirst, values,
+	type OwnedFilter, type SharedWhere, type UmaSortOrder,
 } from "../../utils/encyclopedia"
 
 export const UmaListPage = () => (
@@ -36,63 +39,79 @@ const UmaListBody = () => {
 	const oshiIds = useOshiIds()
 	// Remembered for the tab, so a trip to an uma's page and back keeps them (useRememberedFilter).
 	const [query, setQuery] = useRememberedFilter<string>("umas:query", "")
-	const [where, setWhere] = useRememberedFilter<WhereFilter>("umas:where", "all", values(WHERE_OPTIONS))
-	const [stars, setStars] = useRememberedFilter<StarFilter>("umas:stars", "all", values(STAR_OPTIONS))
+	// Where and Collection are the settings every list shares (SHARED_WHERE_KEY).
+	const [sharedWhere, setWhere] = useRememberedFilter<SharedWhere>(SHARED_WHERE_KEY, "all", SHARED_WHERE_VALUES)
+	const where = listWhere(sharedWhere)
+	const [stars, setStars] = useRememberedPicks("umas:stars", values(STAR_OPTIONS))
 	const owned = useOwned()
-	const [ownedFilter, setOwnedFilter] = useRememberedFilter<OwnedFilter>("umas:owned", "all", values(OWNED_OPTIONS))
-	const [sort, setSort] = useRememberedFilter<SortOrder>("umas:sort", "name", values(SORT_OPTIONS))
+	const [ownedFilter, setOwnedFilter] = useRememberedFilter<OwnedFilter>(SHARED_OWNED_KEY, "all", values(OWNED_OPTIONS))
+	const [sort, setSort] = useRememberedFilter<UmaSortOrder>("umas:sort", "name", values(UMA_SORT_OPTIONS))
+	const [reversedFlag, setReversed] = useRememberedFilter<string>("umas:sort-reversed", "0", REVERSED_VALUES)
+	const reversed = reversedFlag === "1"
 	const aptitudes = useAptitudeFilter()
-	// Release dates from the banners the calculator already loaded; none yet means Newest sorts by name.
+	const sortedAptitude = sortAptitude(sort)
+	// Release dates from the banners the calculator already loaded; none yet means a date sort goes by name.
 	const banners = useCalculatorDataSafe()?.umaBannerData
 	const dates = useMemo(() => releaseDates(banners ?? [], (banner) => banner.umas), [banners])
 	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
-	const umas = useMemo(
-		() => (catalogue.status === "ready"
-			? sortList(
-				filterUmas(catalogue.catalogue.umas, query, where, stars)
-					.filter((uma) => ownedMatches(showOwned ? ownedFilter : "all", owned.umas, uma.id))
-					.filter((uma) => aptitudes.rows.every((row) => aptitudeMatches(uma.apt, row.key, row.min))),
-				sort,
-				dates,
-			)
-			: []),
-		[catalogue, query, where, stars, owned, ownedFilter, showOwned, aptitudes.rows, sort, dates]
-	)
+	const umas = useMemo(() => {
+		if (catalogue.status !== "ready") return []
+		const found = filterUmas(catalogue.catalogue.umas, query, where, stars)
+			.filter((uma) => ownedMatches(showOwned ? ownedFilter : "all", owned.umas, uma.id))
+			.filter((uma) => aptitudes.picks.every((pick) => aptitudeMatches(uma.apt, pick.key, pick.min)))
+		// An aptitude sort reads the grade, best first; an unimported one goes last.
+		return sortedAptitude
+			? sortByValue(found, (uma) => uma.apt[sortedAptitude] ?? null, sortsHighFirst(sort, reversed))
+			: sortList(found, sort as "name" | "release" | "game_id", dates, reversed)
+	}, [catalogue, query, where, stars, owned, ownedFilter, showOwned, aptitudes.picks, sort, sortedAptitude, dates, reversed])
 
 	return (
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
 			<Toolbar
 				scope="umas"
-				search={<SearchBox label="Search umas" value={query} onChange={setQuery} />}
+				search={<SearchBox label="Search umas" placeholder="Search by name or ID..." value={query} onChange={setQuery} />}
 				count={catalogue.status === "ready" && <Count>{countLine(umas.length, "uma", "umas")}</Count>}
+				settings={
+					<>
+						<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
+						{showOwned && <Chips label="Collection" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
+					</>
+				}
 			>
-				<Chips label="Where" options={WHERE_OPTIONS} value={where} onChange={setWhere} />
-				<Chips label="Stars" options={STAR_OPTIONS} value={stars} onChange={setStars} />
-				{showOwned && <Chips label="Collection" options={OWNED_OPTIONS} value={ownedFilter} onChange={setOwnedFilter} />}
-				{/* One row per kind of aptitude; the grade appears once a column is picked. */}
-				{APTITUDE_GROUPS.map((group, index) => {
-					const row = aptitudes.rows[index]
-					return (
-						<Chips
-							key={group.id}
-							label={group.label}
-							options={group.keys}
-							value={row.key}
-							onChange={row.setKey}
-							after={row.key !== "any" && (
-								<GradeSelect
-									label={`Lowest ${group.keys.find((key) => key.value === row.key)?.label} grade`}
-									options={GRADE_OPTIONS}
-									value={row.min}
-									onChange={row.setMin}
-								/>
-							)}
-						/>
-					)
-				})}
-				<Chips label="Sort" options={SORT_OPTIONS} value={sort} onChange={setSort} />
+				<PickChips label="Stars" options={STAR_OPTIONS} picks={stars} onChange={setStars} />
+				{/* One row per kind of aptitude, the chips in even columns so Distance
+				    and Style line up (Daptrius, 2026-11-17). A picked column gets its
+				    own "at least" grade under the row, and an uma must pass them all. */}
+				{APTITUDE_GROUPS.map((group) => (
+					<PickChips
+						key={group.id}
+						label={group.label}
+						short={group.short}
+						options={group.keys}
+						picks={aptitudes.columns[group.id]}
+						onChange={aptitudes.setColumns[group.id]}
+						even
+						after={aptitudes.columns[group.id].length > 0 && aptitudes.columns[group.id].map((key) => (
+							<GradeSelect
+								key={key}
+								label={`Lowest ${aptitudeLabel(key)} grade`}
+								column={aptitudeLabel(key)}
+								options={GRADE_OPTIONS}
+								value={aptitudes.mins[key]}
+								onChange={(min) => aptitudes.setMin(key, min)}
+							/>
+						))}
+					/>
+				))}
+				<SortControl
+					options={UMA_SORT_OPTIONS}
+					value={sort}
+					onChange={setSort}
+					reversed={reversed}
+					onReverse={() => setReversed(reversed ? "0" : "1")}
+				/>
 			</Toolbar>
 			{catalogue.status === "loading" ? (
 				<GridSkeleton label="Loading umas" />
@@ -105,6 +124,11 @@ const UmaListBody = () => {
 					{umas.map((uma) => {
 						// "Special Week (Summer)": her name, then the outfit on its own quiet line.
 						const { base, outfit } = splitOutfit(uma.name)
+						// What the list is sorted by, under the facts: "ID 100101", a date, "Mile A".
+						const grade = sortedAptitude ? uma.apt[sortedAptitude] : null
+						const fact = sortedAptitude
+							? (grade != null ? `${aptitudeLabel(sortedAptitude)} ${gradeLetter(grade)}` : null)
+							: sortFact(sort, uma, dates)
 						return (
 							<li key={uma.id}>
 								<Link to={umaHref(uma.game_id as number)} className="enc-tile">
@@ -116,6 +140,7 @@ const UmaListBody = () => {
 										<Stars count={uma.rarity ?? 3} />
 										{!uma.on_global && <JpTag />}
 									</span>
+									{fact && <span className="enc-tile__effect">{fact}</span>}
 								</Link>
 							</li>
 						)
@@ -127,22 +152,45 @@ const UmaListBody = () => {
 }
 
 /**
- * The three aptitude rows' remembered picks (utils/encyclopedia.ts
- * APTITUDE_GROUPS), in that order: a column or "any", and the lowest grade,
- * A by default. Spelled out hook by hook so the hooks' order never changes.
+ * The aptitude rows' remembered picks (utils/encyclopedia.ts APTITUDE_GROUPS):
+ * each row's picked columns, and each column's lowest grade, A by default.
+ * One remembered grade per column, so "Turf A and Dirt C" is two of them, and
+ * a column turned off and on again keeps its grade for the tab.
+ *
+ * All ten grades share one stored key ("umas:apt-mins"), so one hook reads
+ * them and the hooks' order never changes.
  */
 function useAptitudeFilter() {
-	const grades = values(GRADE_OPTIONS)
-	const [surface, setSurface] = useRememberedFilter<"any" | AptitudeKey>("umas:apt-surface", "any", values(APTITUDE_GROUPS[0].keys))
-	const [surfaceMin, setSurfaceMin] = useRememberedFilter<string>("umas:apt-surface-min", "7", grades)
-	const [distance, setDistance] = useRememberedFilter<"any" | AptitudeKey>("umas:apt-distance", "any", values(APTITUDE_GROUPS[1].keys))
-	const [distanceMin, setDistanceMin] = useRememberedFilter<string>("umas:apt-distance-min", "7", grades)
-	const [style, setStyle] = useRememberedFilter<"any" | AptitudeKey>("umas:apt-style", "any", values(APTITUDE_GROUPS[2].keys))
-	const [styleMin, setStyleMin] = useRememberedFilter<string>("umas:apt-style-min", "7", grades)
-	const rows = useMemo(() => [
-		{ key: surface, min: surfaceMin, setKey: setSurface, setMin: setSurfaceMin },
-		{ key: distance, min: distanceMin, setKey: setDistance, setMin: setDistanceMin },
-		{ key: style, min: styleMin, setKey: setStyle, setMin: setStyleMin },
-	], [surface, surfaceMin, setSurface, setSurfaceMin, distance, distanceMin, setDistance, setDistanceMin, style, styleMin, setStyle, setStyleMin])
-	return { rows }
+	const [surface, setSurface] = useRememberedPicks("umas:apt-surface", values(APTITUDE_GROUPS[0].keys))
+	const [distance, setDistance] = useRememberedPicks("umas:apt-distance", values(APTITUDE_GROUPS[1].keys))
+	const [style, setStyle] = useRememberedPicks("umas:apt-style", values(APTITUDE_GROUPS[2].keys))
+	const [minsText, setMinsText] = useRememberedFilter<string>("umas:apt-mins", "")
+	// "mile:5,turf:8": only the grades moved off A are kept.
+	const mins = useMemo(() => {
+		const read = Object.fromEntries(APTITUDE_KEYS.map((key) => [key, DEFAULT_GRADE])) as Record<AptitudeKey, string>
+		for (const entry of minsText.split(",")) {
+			const [key, grade] = entry.split(":")
+			if (key in read && GRADE_VALUES.includes(grade)) read[key as AptitudeKey] = grade
+		}
+		return read
+	}, [minsText])
+	const setMin = (key: AptitudeKey, grade: string) => {
+		const next = { ...mins, [key]: grade }
+		setMinsText(APTITUDE_KEYS.filter((column) => next[column] !== DEFAULT_GRADE).map((column) => `${column}:${next[column]}`).join(","))
+	}
+	const picks = useMemo(
+		() => [...surface, ...distance, ...style].map((key) => ({ key, min: mins[key] })),
+		[surface, distance, style, mins]
+	)
+	return {
+		columns: { surface, distance, style },
+		setColumns: { surface: setSurface, distance: setDistance, style: setStyle },
+		mins,
+		setMin,
+		picks,
+	}
 }
+
+/** A picked column's grade until changed: A. */
+const DEFAULT_GRADE = "7"
+const GRADE_VALUES = values(GRADE_OPTIONS)

@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { resetRememberedFilters, useHasRememberedFilters, useRememberedFilter } from "../hooks/useRememberedFilter"
+import { resetRememberedFilters, useHasRememberedFilters, useRememberedFilter, useRememberedPicks } from "../hooks/useRememberedFilter"
 
 const RARITIES = ["all", "ssr", "sr", "r"] as const
 type Rarity = (typeof RARITIES)[number]
@@ -47,5 +47,26 @@ describe("useRememberedFilter", () => {
 		expect(query.result.current[0]).toBe("")
 		expect(active.result.current).toBe(false)
 		expect(sessionStorage.getItem("enc-filter:umas:query")).toBe("oguri")
+	})
+})
+
+describe("useRememberedPicks", () => {
+	const PICKS = ["3", "2", "1"] as const
+
+	it("keeps several picks, nothing stored for none", () => {
+		const { result } = renderHook(() => useRememberedPicks("cards:rarity", PICKS))
+		expect(result.current[0]).toEqual([])
+		act(() => result.current[1](["3", "1"]))
+		expect(result.current[0]).toEqual(["3", "1"])
+		expect(sessionStorage.getItem("enc-filter:cards:rarity")).toBe("3,1")
+		act(() => result.current[1]([]))
+		expect(sessionStorage.getItem("enc-filter:cards:rarity")).toBeNull()
+	})
+
+	it("reads an older single pick as that pick, and drops what is no longer a chip", () => {
+		sessionStorage.setItem("enc-filter:cards:rarity", "2")
+		expect(renderHook(() => useRememberedPicks("cards:rarity", PICKS)).result.current[0]).toEqual(["2"])
+		sessionStorage.setItem("enc-filter:cards:rarity", "all,3,ur")
+		expect(renderHook(() => useRememberedPicks("cards:rarity", PICKS)).result.current[0]).toEqual(["3"])
 	})
 })

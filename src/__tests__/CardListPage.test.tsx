@@ -67,7 +67,7 @@ describe("CardListPage, by effect", () => {
 		await screen.findByText("Agnes Tachyon")
 		expect(fetchMock.mock.calls.some(([url]) => String(url).includes("card-effects"))).toBe(false)
 
-		fireEvent.click(screen.getByRole("button", { name: "By effect" }))
+		fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "effect" } })
 		// Race Bonus is the first type: Biko (10%) before Agnes (5%); Curren has none and goes last.
 		expect(await screen.findByText("Race Bonus 10%")).toBeInTheDocument()
 		const order = tileNames()
@@ -80,5 +80,41 @@ describe("CardListPage, by effect", () => {
 		fireEvent.change(screen.getByRole("combobox", { name: "Effect" }), { target: { value: "30" } })
 		expect(await screen.findByText("Skill Point Bonus 3")).toBeInTheDocument()
 		expect(tileNames()[0]).toContain("Curren Chan")
+	})
+
+	it("turns the effect order round, a card without the effect still last", async () => {
+		renderList()
+		await screen.findByText("Agnes Tachyon")
+		fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "effect" } })
+		await screen.findByText("Race Bonus 10%")
+		fireEvent.click(screen.getByRole("button", { name: /Highest first/ }))
+		const order = tileNames()
+		expect(order[0]).toContain("Agnes Tachyon")
+		expect(order[1]).toContain("Biko Pegasus")
+		expect(order[2]).toContain("Curren Chan")
+	})
+})
+
+describe("CardListPage, filters and sorts", () => {
+	it("shows each card's id while sorted by it, and finds a card by its id", async () => {
+		renderList()
+		await screen.findByText("Agnes Tachyon")
+		fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "game_id" } })
+		expect(screen.getByText("ID 30002")).toBeInTheDocument()
+		fireEvent.change(screen.getByRole("searchbox", { name: "Search support cards" }), { target: { value: "30003" } })
+		expect(tileNames()).toHaveLength(1)
+		expect(tileNames()[0]).toContain("Curren Chan")
+	})
+
+	it("picks several types at once by their icons, and says 'All' for none", async () => {
+		renderList()
+		await screen.findByText("Agnes Tachyon")
+		const type = within(screen.getByRole("group", { name: "Type" }))
+		expect(type.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(type.getByRole("button", { name: "Wit" }))
+		expect(screen.getByText("No card matches that.")).toBeInTheDocument()
+		fireEvent.click(type.getByRole("button", { name: "Speed" }))
+		expect(screen.getByText("3 cards")).toBeInTheDocument()
+		expect(type.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false")
 	})
 })

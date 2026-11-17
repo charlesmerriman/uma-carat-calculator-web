@@ -2550,9 +2550,29 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
   fills with dark ink so they read the same on all twelve themes.
 - **The frame** (`EncyclopediaTabs`): the Rankings page's shape, a display-face title, one line
   of description, underlined tabs. **The filter bar** (`listFilters.tsx`: `Toolbar`,
-  `SearchBox`, `Count`, `Chips`): one card, each filter a small caps label and its chips. The
-  group is named by `aria-label`, and the visible label is `aria-hidden`. On a phone a filter's
-  chips are one row that scrolls sideways.
+  `SearchBox`, `Count`, `Chips`, `PickChips`, `SortControl`, `GradeSelect`): one card, each
+  filter a small caps label and its chips. The group is named by `aria-label`, and the visible
+  label is `aria-hidden`. Its look is Daptrius's (board "Encyclopedia Filter Changes",
+  2026-11-17):
+  - **One grid** (`.enc-filters`, each row a subgrid), so every row's chips start at one left
+    edge; on a phone (under 480px) the label sits above its chips. Chips wrap, never scroll.
+  - **Where and Collection are settings every list shares** (`SHARED_WHERE_KEY`,
+    `SHARED_OWNED_KEY` in `utils/encyclopedia.ts`), drawn first in the bar above a dashed "Set
+    once for every list" rule. They live outside a list's scope, so its Reset leaves them. Only
+    skills have "Coming to global"; an uma or card list reads it as JP only (`listWhere`).
+  - **Most filters take several picks** (`PickChips`, remembered by `useRememberedPicks` as one
+    comma-separated key): its first chip is "All", pressed while nothing is picked, and any pick
+    passes. The uma list's aptitudes are the exception: each picked column gets its own "at
+    least" grade under the row, and an uma must pass them all ("Turf A and Dirt C").
+  - **A card type's chip is its icon** (`utils/cardTypeIcons.ts`, the frame overlay's corner
+    cut out), grey until picked; a rarity chip lights up in its metal; the aptitude rows' chips
+    share one width so Distance and Style line up, with "Med." / "Dist." on a narrow screen.
+  - **Sort is a menu and a reverse button** (`SortControl`) that says which way the list runs
+    ("Newest first"). Reversing flips the comparison only: whatever a sort can't place (JP only,
+    undated, no effect, no cost, no aptitude) stays last both ways (`sortList`, `sortByValue`,
+    `sortByEffect`). Sorted by id, date or an aptitude, a tile says its value (`sortFact`).
+  - **A query of digits is an id** (`searchMatches`): the start of a card's or outfit's game id,
+    or its character's 4-digit id (`character_id`; an outfit id starts with it).
 - **A detail page** is `Crumbs`, a `Hero` (art, eyebrow, name, tags, `Fact`s on the right), a
   `JumpBar`, then a `Section` card per group of facts (`pieces.tsx`). `--enc-accent` on the hero
   tints its corner: the brand by default, a card's type colour, a skill's own.
@@ -2581,7 +2601,9 @@ generator are in the notes repo, `notes/encyclopedia-overhaul/`), then built to 
 - **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
   type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
   sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole
-  type by prefix, and the page shows a second filter under Type once such a type is picked.
+  type by prefix. Several types may be picked: a type is picked whole (its own key) or narrowed
+  (its sub-types' keys, never both), and each picked type with sub-types gets a row of its own
+  under Type (`toggleTypePick`, `toggleSubTypePick`).
   The grouping and its evidence are the API's (`skill_types.py`).
 - **Loading is a skeleton** (`PageSkeleton`, `GridSkeleton`, `.enc-skeleton`), and "nothing
   matched" or "didn't load" is `EmptyNote`, a dashed box.

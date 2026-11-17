@@ -167,25 +167,78 @@
 		white-space: nowrap;
 	}
 	/* One filter per row at every width (Daptrius, 2026-11-13): side by side,
-	   a sub-filter appearing (Debuff's kinds) shoved "Where" sideways. */
+	   a sub-filter appearing (Debuff's kinds) shoved "Where" sideways.
+	   The rows share one grid, so every row's chips start at the same left
+	   edge whatever its label's length (Daptrius, 2026-11-17: "left aligned
+	   rather than shifting back and forth"). Each row is a subgrid of it. On a
+	   phone the grid has one column and the label sits above its chips. */
 	.enc-filters {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.5rem 0.75rem;
+	}
+	@media (min-width: 480px) {
+		.enc-filters {
+			grid-template-columns: max-content minmax(0, 1fr);
+		}
 	}
 	.enc-filter {
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
+		display: grid;
+		grid-column: 1 / -1;
+		grid-template-columns: subgrid;
+		align-items: start;
+		row-gap: 0.25rem;
 		min-width: 0;
 	}
 	.enc-filter__label {
-		flex-shrink: 0;
+		/* Lines the label up with the text of the chips beside it. */
+		padding-top: 0.375rem;
 		font-size: 0.6875rem;
 		font-weight: 600;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--color-gray-400);
+		white-space: nowrap;
+	}
+	@media (max-width: 479px) {
+		.enc-filter__label {
+			padding-top: 0;
+		}
+	}
+	/* "Set once for every list": a dashed rule between the shared settings
+	   (Where, Collection) and the list's own filters. */
+	.enc-filters__divider {
+		display: flex;
+		grid-column: 1 / -1;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.6875rem;
+		color: var(--color-gray-500);
+	}
+	.enc-filters__divider::after {
+		content: "";
+		flex: 1;
+		border-top: 1px dashed var(--color-edge);
+	}
+	/* A word and its narrow-screen form ("Medium" / "Med."), one shown at a time. */
+	.enc-word--short {
+		display: none;
+	}
+	@media (max-width: 479px) {
+		.enc-chip .enc-word:not(.enc-word--short) {
+			display: none;
+		}
+		.enc-chip .enc-word--short {
+			display: inline;
+		}
+	}
+	@media (max-width: 359px) {
+		.enc-filter__label .enc-word:not(.enc-word--short) {
+			display: none;
+		}
+		.enc-filter__label .enc-word--short {
+			display: inline;
+		}
 	}
 	/* A filter's chips wrap onto a second line at every width. Until
 	   2026-11-13 a phone scrolled them sideways, which hid choices off the
@@ -218,6 +271,80 @@
 		border-color: var(--color-brand);
 		background: color-mix(in srgb, var(--color-brand) 15%, transparent);
 		color: var(--color-gray-100);
+	}
+	.enc-chip svg {
+		flex-shrink: 0;
+	}
+
+	/* A picked rarity lights up in its metal, the tile's tag (".enc-tag--ssr"). */
+	.enc-chip--ssr[aria-pressed="true"],
+	.enc-chip--sr[aria-pressed="true"],
+	.enc-chip--r[aria-pressed="true"] {
+		border-color: transparent;
+		font-weight: 800;
+		letter-spacing: 0.03em;
+		color: #1b1420;
+	}
+	.enc-chip--ssr[aria-pressed="true"] {
+		background: linear-gradient(120deg, #9be7ff 0%, #c9b1ff 45%, #ffb3d9 75%, #ffe08a 100%);
+	}
+	.enc-chip--sr[aria-pressed="true"] {
+		background: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+	}
+	.enc-chip--r[aria-pressed="true"] {
+		background: linear-gradient(135deg, #f3f5f9 0%, #a9b3c4 100%);
+	}
+
+	/* A card type's chip is its icon (utils/cardTypeIcons.ts): grey and
+	   faded until picked, then in its own colour with the brand's ring. */
+	.enc-chip--icon {
+		padding: 0.125rem;
+		border-color: transparent;
+		border-radius: 0.5rem;
+	}
+	.enc-chip--icon img {
+		width: 1.75rem;
+		height: 1.75rem;
+		filter: grayscale(1) brightness(0.85);
+		opacity: 0.45;
+		transition: filter 0.15s, opacity 0.15s;
+	}
+	.enc-chip--icon:hover img {
+		opacity: 0.75;
+	}
+	.enc-chip--icon[aria-pressed="true"] {
+		border-color: var(--color-brand);
+		background: transparent;
+	}
+	.enc-chip--icon[aria-pressed="true"] img {
+		filter: none;
+		opacity: 1;
+	}
+
+	/* The uma list's aptitude rows: every chip one width, so Distance's and
+	   Style's four columns line up as a grid under Surface's two
+	   (Daptrius, 2026-11-17). */
+	.enc-filter__chips--even > .enc-chip {
+		justify-content: center;
+		width: 4.25rem;
+		padding-inline: 0.25rem;
+	}
+	@media (max-width: 479px) {
+		.enc-filter__chips--even > .enc-chip {
+			width: 3.5rem;
+		}
+	}
+	/* Under an aptitude row: "Turf at least [A]" for each picked column. */
+	.enc-filter__after {
+		display: flex;
+		flex-basis: 100%;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.875rem;
+		padding-top: 0.125rem;
+	}
+	.enc-filter__after .enc-grade,
+	.enc-filter__chips > .enc-grade:first-child {
+		margin-left: 0;
 	}
 
 	/* An aptitude row's "at least [A]": quiet words, then a chip-sized select. */

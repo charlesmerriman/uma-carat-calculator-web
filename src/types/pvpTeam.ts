@@ -57,6 +57,8 @@ export interface CatalogueSupportCard {
 	card_type: string | null
 	rarity: number | null
 	title: string
+	/** The game's 4-digit character (1068), which an uma's outfit id starts with; the Encyclopedia's search matches it. Absent from an older API. */
+	character_id?: number | null
 	/**
 	 * A group card's umas, by name (Team Sirius's six), from the game data.
 	 * The deck rules count the card as one of each (utils/pvpTeams.ts). [] on

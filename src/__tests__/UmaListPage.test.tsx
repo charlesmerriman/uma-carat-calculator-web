@@ -1,4 +1,4 @@
-import { fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -80,9 +80,58 @@ describe("useOwned", () => {
 
 describe("UmaListPage", () => {
 	it("filters by name, where it is out and stars, a blank rarity counting as ★3", () => {
-		expect(filterUmas(CATALOGUE.umas, "silence", "all", "all").map((uma) => uma.name)).toEqual(["Silence Suzuka"])
-		expect(filterUmas(CATALOGUE.umas, "", "jp", "all").map((uma) => uma.name)).toEqual(["Rice Shower"])
-		expect(filterUmas(CATALOGUE.umas, "", "all", "3")).toHaveLength(3)
+		expect(filterUmas(CATALOGUE.umas, "silence", "all", []).map((uma) => uma.name)).toEqual(["Silence Suzuka"])
+		expect(filterUmas(CATALOGUE.umas, "", "jp", []).map((uma) => uma.name)).toEqual(["Rice Shower"])
+		expect(filterUmas(CATALOGUE.umas, "", "all", ["3"])).toHaveLength(3)
+		expect(filterUmas(CATALOGUE.umas, "", "all", ["3", "1"])).toHaveLength(4)
+	})
+
+	it("finds an outfit by its id or its character's", () => {
+		expect(filterUmas(CATALOGUE.umas, "1002", "all", []).map((uma) => uma.name)).toEqual(["Silence Suzuka"])
+		expect(filterUmas(CATALOGUE.umas, "103001", "all", []).map((uma) => uma.name)).toEqual(["Rice Shower"])
+	})
+
+	it("keeps Where for every list, so the cards and skills see it too", async () => {
+		const Providers = providers(false)
+		render(<Providers><UmaListPage /></Providers>)
+		expect(await screen.findByText("4 umas")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "JP only" }))
+		expect(screen.getByText("1 uma")).toBeInTheDocument()
+		expect(sessionStorage.getItem("enc-filter:shared:where")).toBe("jp")
+		// The list's own Reset leaves the shared setting alone.
+		fireEvent.click(screen.getByRole("button", { name: "★3" }))
+		fireEvent.click(screen.getByRole("button", { name: "Reset filters" }))
+		expect(sessionStorage.getItem("enc-filter:shared:where")).toBe("jp")
+		expect(screen.getByRole("button", { name: "★3" })).toHaveAttribute("aria-pressed", "false")
+	})
+
+	it("passes every picked aptitude, each at its own grade", async () => {
+		const umas = [
+			{ id: 1, game_id: 100101, name: "Both", portrait: null, image: null, rarity: 3, on_global: true,
+				apt: { turf: 7, dirt: 5, short: 1, mile: 5, medium: 7, long: 7, front: 1, pace: 7, late: 7, end: 1 } },
+			{ id: 2, game_id: 100201, name: "Turf Only", portrait: null, image: null, rarity: 3, on_global: true,
+				apt: { turf: 7, dirt: 2, short: 1, mile: 5, medium: 7, long: 7, front: 1, pace: 7, late: 7, end: 1 } },
+		]
+		// The mocked catalogue is one shared object: swap its umas for this test only.
+		const before = CATALOGUE.umas.splice(0, CATALOGUE.umas.length, ...(umas as typeof CATALOGUE.umas))
+		try {
+			const Providers = providers(false)
+			render(<Providers><UmaListPage /></Providers>)
+			expect(await screen.findByText("2 umas")).toBeInTheDocument()
+			const surface = within(screen.getByRole("group", { name: "Surface" }))
+			fireEvent.click(surface.getByRole("button", { name: "Turf" }))
+			fireEvent.click(surface.getByRole("button", { name: "Dirt" }))
+			// Both at A: neither has Dirt A.
+			expect(screen.getByText("No uma matches that.")).toBeInTheDocument()
+			fireEvent.change(screen.getByRole("combobox", { name: "Lowest Dirt grade" }), { target: { value: "5" } })
+			expect(screen.getByText("1 uma")).toBeInTheDocument()
+			expect(screen.getByRole("link", { name: /Both/ })).toBeInTheDocument()
+			// Sorted by Dirt, the tile says its grade.
+			fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "apt_dirt" } })
+			expect(screen.getByRole("link", { name: /Both/ })).toHaveTextContent("Dirt C")
+		} finally {
+			CATALOGUE.umas.splice(0, CATALOGUE.umas.length, ...before)
+		}
 	})
 
 	it("marks what the player owns and filters to it", async () => {

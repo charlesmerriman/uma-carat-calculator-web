@@ -8,8 +8,8 @@
 import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { Status } from "../components/rankings/kit/StatusPill"
-import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "./cardTypes"
-import { parseApiDate } from "./dateFormat"
+import { CARD_TYPE_LABELS } from "./cardTypes"
+import { formatDate, parseApiDate } from "./dateFormat"
 
 export const PAGE_CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
@@ -69,6 +69,15 @@ export function limitBreakWords(limitBreak: number): string {
 	return limitBreak >= 4 ? "Max limit break" : `Limit break ${limitBreak}`
 }
 
+/**
+ * Where and Collection are SETTINGS every list shares, not one list's filters
+ * (Daptrius, board "Encyclopedia Filter Changes", 2026-11-17: "set once or
+ * twice per session"). Set on one list, they hold on the others. They sit
+ * outside each list's scope ("cards:..."), so a list's Reset leaves them.
+ */
+export const SHARED_WHERE_KEY = "shared:where"
+export const SHARED_OWNED_KEY = "shared:owned"
+
 export type OwnedFilter = "all" | "owned" | "missing"
 
 export const OWNED_OPTIONS: { value: OwnedFilter; label: string }[] = [
@@ -109,12 +118,24 @@ export function cardLine(card: { rarity: number | null; card_type: string | null
 // ── The lists' filters ──────────────────────────────────────────────────────
 
 export type WhereFilter = "all" | "global" | "jp"
+/** The shared Where: the Skills list adds "Coming to global" (utils/skillSearch.ts WHERE_FILTERS). */
+export type SharedWhere = WhereFilter | "announced"
+export const SHARED_WHERE_VALUES: SharedWhere[] = ["all", "global", "announced", "jp"]
 
 export const WHERE_OPTIONS: { value: WhereFilter; label: string }[] = [
 	{ value: "all", label: "All" },
 	{ value: "global", label: "On global" },
 	{ value: "jp", label: "JP only" },
 ]
+
+/**
+ * The shared Where as an uma or card list reads it. Only skills know
+ * "Coming to global"; an outfit or card announced for global isn't on it
+ * yet, so that pick reads as JP only here (and its chip shows pressed).
+ */
+export function listWhere(where: SharedWhere): WhereFilter {
+	return where === "announced" ? "jp" : where
+}
 
 /** Does an entry's "on global" pass the Where filter? */
 function whereMatches(where: WhereFilter, onGlobal: boolean | undefined): boolean {
@@ -127,43 +148,63 @@ function searchKey(text: string): string {
 	return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")
 }
 
+/**
+ * Does an entry match the search box? A query of digits only is an id
+ * (Daptrius, board "Add Searchable Aliases", 2026-11-17): it matches the start
+ * of any of `ids`, so "1068" finds every outfit and card of that character and
+ * "30" every card id starting 30. Anything else matches the name text.
+ */
+export function searchMatches(query: string, text: string, ids: Array<number | null | undefined>): boolean {
+	const trimmed = query.trim()
+	if (/^\d+$/.test(trimmed)) return ids.some((id) => id != null && String(id).startsWith(trimmed))
+	const key = searchKey(query)
+	return !key || searchKey(text).includes(key)
+}
+
+/** A multi-pick filter: nothing picked passes everything, else any pick does. */
+function picked<T>(picks: readonly T[], value: T): boolean {
+	return picks.length === 0 || picks.includes(value)
+}
+
 /** The list's count line: "1 uma", "112 umas". */
 export function countLine(count: number, one: string, many: string): string {
 	return count === 1 ? `1 ${one}` : `${count.toLocaleString("en-US")} ${many}`
 }
 
-export type StarFilter = "all" | "1" | "2" | "3"
+export type StarFilter = "1" | "2" | "3"
 
+/** The Stars chips; nothing picked is "All" (the chip row draws that one). */
 export const STAR_OPTIONS: { value: StarFilter; label: string }[] = [
-	{ value: "all", label: "Any" },
 	{ value: "3", label: "★3" },
 	{ value: "2", label: "★2" },
 	{ value: "1", label: "★1" },
 ]
 
-/** The outfits the list shows: those with a game id (the page's address), filtered and by name. */
-export function filterUmas(umas: CatalogueUma[], query: string, where: WhereFilter, stars: StarFilter): CatalogueUma[] {
-	const key = searchKey(query)
+/**
+ * The outfits the list shows: those with a game id (the page's address),
+ * filtered and by name. The search box also takes an outfit id (100101) or its
+ * character's (1001), which the outfit id starts with.
+ */
+export function filterUmas(umas: CatalogueUma[], query: string, where: WhereFilter, stars: readonly StarFilter[]): CatalogueUma[] {
 	return umas
 		.filter((uma) => uma.game_id != null)
-		.filter((uma) => !key || searchKey(`${uma.name} ${uma.title ?? ""}`).includes(key))
+		.filter((uma) => searchMatches(query, `${uma.name} ${uma.title ?? ""}`, [uma.game_id, uma.character_id]))
 		.filter((uma) => whereMatches(where, uma.on_global))
 		// A blank rarity counts as ★3, the rule Uma.is_three_star follows.
-		.filter((uma) => stars === "all" || String(uma.rarity ?? 3) === stars)
+		.filter((uma) => picked(stars, String(uma.rarity ?? 3) as StarFilter))
 		.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export type TypeFilter = "all" | keyof typeof CARD_TYPE_LABELS
-export type RarityFilter = "all" | "3" | "2" | "1"
+export type TypeFilter = keyof typeof CARD_TYPE_LABELS
+export type RarityFilter = "3" | "2" | "1"
 
-export const TYPE_OPTIONS: { value: TypeFilter; label: string; dot?: string }[] = [
-	{ value: "all", label: "Any" },
-	// Each type's own hue as a dot on its chip (CARD_TYPE_COLORS), beside its word.
-	...Object.entries(CARD_TYPE_LABELS).map(([value, label]) => ({ value, label, dot: CARD_TYPE_COLORS[value] })),
-]
+/** The Type chips, one per card type (the chips draw each as its icon, utils/cardTypeIcons.ts). */
+export const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = Object.entries(CARD_TYPE_LABELS).map(
+	([value, label]) => ({ value, label })
+)
 
+/** The Rarity chips; a picked one lights up in its metal, like the tag on a tile (RARITY_TAG_CLASS). */
 export const RARITY_OPTIONS: { value: RarityFilter; label: string }[] = [
-	{ value: "all", label: "Any" },
 	{ value: "3", label: "SSR" },
 	{ value: "2", label: "SR" },
 	{ value: "1", label: "R" },
@@ -172,34 +213,61 @@ export const RARITY_OPTIONS: { value: RarityFilter; label: string }[] = [
 /**
  * The cards the list shows: game cards with an id, never a placeholder ("your
  * best SSR Speed" is a stand-in with no page), filtered; by name, then rarity
- * high to low, so one character's cards sit together.
+ * high to low, so one character's cards sit together. The search box also
+ * takes a card id (30265) or its character's (1068).
  */
 export function filterCards(
-	cards: CatalogueSupportCard[], query: string, type: TypeFilter, rarity: RarityFilter, where: WhereFilter,
+	cards: CatalogueSupportCard[],
+	query: string,
+	types: readonly TypeFilter[],
+	rarities: readonly RarityFilter[],
+	where: WhereFilter,
 ): CatalogueSupportCard[] {
-	const key = searchKey(query)
 	return cards
 		.filter((card) => card.game_id != null && !card.placeholder)
-		.filter((card) => !key || searchKey(`${card.name} ${card.title}`).includes(key))
-		.filter((card) => type === "all" || card.card_type === type)
-		.filter((card) => rarity === "all" || String(card.rarity) === rarity)
+		.filter((card) => searchMatches(query, `${card.name} ${card.title}`, [card.game_id, card.character_id]))
+		.filter((card) => picked(types, card.card_type ?? ""))
+		.filter((card) => picked(rarities, String(card.rarity) as RarityFilter))
 		.filter((card) => whereMatches(where, card.on_global))
 		.sort((a, b) => a.name.localeCompare(b.name) || (b.rarity ?? 0) - (a.rarity ?? 0))
 }
 
 // ── Sorting the lists (Daptrius, board "Encyclopedia Filter Sorts", 2026-11-13) ──
+//
+// One sort is picked from a menu and a button turns it round (board "Make Sort
+// into a Dropdown with reversable directions", 2026-11-17). Each sort has the
+// direction a player wants first: names A to Z, ids low to high, dates newest
+// first, effects and aptitudes best first. The button flips the comparison
+// only: an entry the sort can't place (JP only, no date, no effect, no
+// aptitude, a unique's missing cost) stays at the end both ways round.
 
-export type SortOrder = "name" | "newest" | "oldest" | "game_id"
+export type SortOrder = "name" | "release" | "game_id"
 
 export const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
 	{ value: "name", label: "Name" },
-	{ value: "newest", label: "Newest" },
-	{ value: "oldest", label: "Oldest" },
+	{ value: "release", label: "Release date" },
 	{ value: "game_id", label: "Game ID" },
 ]
 
-/** The Skills list's sorts: a skill has no release date of its own. */
-export const SKILL_SORT_OPTIONS = SORT_OPTIONS.filter((option) => option.value === "name" || option.value === "game_id")
+/** Sorts that read best (or newest) first by default; every other sort runs low to high. */
+const HIGH_FIRST = /^(release|effect|apt_)/
+
+/** Does `order` run high to low, after the reverse button? */
+export function sortsHighFirst(order: string, reversed: boolean): boolean {
+	return HIGH_FIRST.test(order) !== reversed
+}
+
+/** The reverse button's words: the direction the list runs in now. */
+export function directionWords(order: string, reversed: boolean): string {
+	const high = sortsHighFirst(order, reversed)
+	if (order === "name") return reversed ? "Z to A" : "A to Z"
+	if (order === "release") return high ? "Newest first" : "Oldest first"
+	if (order.startsWith("apt_")) return high ? "Best first" : "Worst first"
+	return high ? "Highest first" : "Lowest first"
+}
+
+/** The remembered reverse button: "1" when turned round, the default not stored. */
+export const REVERSED_VALUES = ["0", "1"] as const
 
 /**
  * When an outfit or card came out, as epoch ms: its first Global banner (the
@@ -233,21 +301,44 @@ export function releaseDates<B extends { banner_timeline: { start_date: string }
 }
 
 /**
+ * The card list's dates: the banners' first, else the game's own date
+ * (`released_at`), which is how a welfare SSR, an SR or an R gets one (Daptrius,
+ * board "Update Support Banners", 2026-11-17: they sorted as undated). The
+ * same reading as the Collection's sort (cardRelease.collectionCardRelease).
+ * Selectors and the PvP picker never read this: they stay banners only.
+ */
+export function withGameDates(
+	dates: Map<number, ReleaseDates>,
+	cards: readonly Pick<CatalogueSupportCard, "id" | "released_at">[],
+): Map<number, ReleaseDates> {
+	const merged = new Map(dates)
+	for (const card of cards) {
+		const known = merged.get(card.id)
+		if (known?.global != null || !card.released_at) continue
+		const game = parseApiDate(card.released_at)?.getTime() ?? null
+		if (game !== null) merged.set(card.id, { global: game, jp: known?.jp ?? null })
+	}
+	return merged
+}
+
+/**
  * `items` in the chosen order, as a new array. Name is A to Z. Game ID is the
- * game's own numbering. Newest and Oldest go by the Global date; one with no
- * Global date yet (JP only) comes after every Global one, by its JP date in the
- * same direction, and one with no date at all comes last, by name. Mixing the
- * two calendars in one run would file a JP card from 2021 among Global's 2021.
+ * game's own numbering. Release date goes by the Global date, newest first;
+ * one with no Global date yet (JP only) comes after every Global one, by its
+ * JP date in the same direction, and one with no date at all comes last, by
+ * name. Mixing the two calendars in one run would file a JP card from 2021
+ * among Global's 2021. `reversed` turns the order round, buckets kept.
  */
 export function sortList<T extends { id: number; name: string; game_id?: number | null }>(
 	items: T[],
 	order: SortOrder,
 	dates: Map<number, ReleaseDates> = new Map(),
+	reversed = false,
 ): T[] {
 	const byName = (a: T, b: T) => a.name.localeCompare(b.name)
-	if (order === "name") return [...items].sort(byName)
-	if (order === "game_id") return [...items].sort((a, b) => (a.game_id ?? 0) - (b.game_id ?? 0) || byName(a, b))
-	const direction = order === "newest" ? -1 : 1
+	if (order === "name") return [...items].sort((a, b) => (reversed ? -1 : 1) * byName(a, b))
+	if (order === "game_id") return sortByValue(items, (item) => item.game_id ?? null, reversed)
+	const direction = sortsHighFirst(order, reversed) ? -1 : 1
 	// 0 = has a Global date, 1 = JP only, 2 = no date: the bucket orders first.
 	const keyOf = (item: T): [number, number] => {
 		const date = dates.get(item.id)
@@ -262,41 +353,104 @@ export function sortList<T extends { id: number; name: string; game_id?: number 
 	})
 }
 
-// ── The Umas list's aptitude filter (same post) ─────────────────────────────
+/**
+ * `items` by a number, low to high (`highFirst` turns it round), ties by
+ * name. An item with no number (null) comes last either way: a unique has no
+ * skill point cost, an unimported aptitude no grade.
+ */
+export function sortByValue<T extends { name: string }>(items: T[], valueOf: (item: T) => number | null, highFirst: boolean): T[] {
+	const direction = highFirst ? -1 : 1
+	return [...items].sort((a, b) => {
+		const valueA = valueOf(a)
+		const valueB = valueOf(b)
+		if (valueA === null || valueB === null) return (valueA === null ? 1 : 0) - (valueB === null ? 1 : 0) || a.name.localeCompare(b.name)
+		return direction * (valueA - valueB) || a.name.localeCompare(b.name)
+	})
+}
 
 /**
- * Three rows, one per kind of aptitude, so "Mile C, Dirt D and Front A or
- * better" is one pick in each. A row is a column (or "any") and the lowest
- * grade that passes; 1..8 = G..S, as the API sends them.
+ * What a tile says under its name while the list is sorted by id or date
+ * (Daptrius, board "Show what is being Sorted by on each card", 2026-11-17),
+ * as the effect sort already shows the effect: "ID 30265", the Global date,
+ * or "JP 2024/3/1" for one not on global yet. Null for any other sort, or
+ * when there is nothing to say.
  */
-export const APTITUDE_GROUPS: { id: "surface" | "distance" | "style"; label: string; keys: { value: "any" | AptitudeKey; label: string }[] }[] = [
-	{ id: "surface", label: "Surface", keys: [
-		{ value: "any", label: "Any" }, { value: "turf", label: "Turf" }, { value: "dirt", label: "Dirt" },
-	] },
-	{ id: "distance", label: "Distance", keys: [
-		{ value: "any", label: "Any" }, { value: "short", label: "Sprint" }, { value: "mile", label: "Mile" },
-		{ value: "medium", label: "Medium" }, { value: "long", label: "Long" },
+export function sortFact(order: string, item: { id: number; game_id?: number | null }, dates: Map<number, ReleaseDates>): string | null {
+	if (order === "game_id") return item.game_id != null ? `ID ${item.game_id}` : null
+	if (order !== "release") return null
+	const date = dates.get(item.id)
+	if (date?.global != null) return formatDate(new Date(date.global).toISOString())
+	if (date?.jp != null) return `JP ${formatDate(new Date(date.jp).toISOString())}`
+	return null
+}
+
+// ── The Umas list's aptitude filter and sort (same post) ────────────────────
+
+export type AptitudeGroupId = "surface" | "distance" | "style"
+
+/**
+ * Three rows, one per kind of aptitude. Several columns may be picked in a
+ * row, each with its own lowest grade, and an outfit must pass every pick
+ * (board "Allow Encyclopedia Filtering to select multiple items", 2026-11-17:
+ * "Turf A and Dirt C"); 1..8 = G..S, as the API sends them. `short` is the
+ * chip's word on a narrow screen (Daptrius: "Med.", "Dist.").
+ */
+export const APTITUDE_GROUPS: {
+	id: AptitudeGroupId
+	label: string
+	short?: string
+	keys: { value: AptitudeKey; label: string; short?: string }[]
+}[] = [
+	{ id: "surface", label: "Surface", keys: [{ value: "turf", label: "Turf" }, { value: "dirt", label: "Dirt" }] },
+	{ id: "distance", label: "Distance", short: "Dist.", keys: [
+		{ value: "short", label: "Sprint" }, { value: "mile", label: "Mile" },
+		{ value: "medium", label: "Medium", short: "Med." }, { value: "long", label: "Long" },
 	] },
 	{ id: "style", label: "Style", keys: [
-		{ value: "any", label: "Any" }, { value: "front", label: "Front" }, { value: "pace", label: "Pace" },
+		{ value: "front", label: "Front" }, { value: "pace", label: "Pace" },
 		{ value: "late", label: "Late" }, { value: "end", label: "End" },
 	] },
 ]
+
+/** Every aptitude column, in the order the groups list them. */
+export const APTITUDE_KEYS: AptitudeKey[] = APTITUDE_GROUPS.flatMap((group) => group.keys.map((key) => key.value))
+
+/** A column's word: "Mile". */
+export function aptitudeLabel(key: AptitudeKey): string {
+	return APTITUDE_GROUPS.flatMap((group) => group.keys).find((entry) => entry.value === key)?.label ?? key
+}
 
 /** The "at least" grades, best first; the value is the API's number as text (it is remembered as text). */
 export const GRADE_OPTIONS: { value: string; label: string }[] = ["S", "A", "B", "C", "D", "E", "F", "G"].map((letter, index) => ({
 	value: String(8 - index), label: letter,
 }))
 
-/** Does an outfit pass one aptitude row? An unimported (null) aptitude never passes a picked column. */
-export function aptitudeMatches(apt: Record<AptitudeKey, number | null>, key: "any" | AptitudeKey, min: string): boolean {
-	if (key === "any") return true
+/** A grade's letter: 8 -> "S", 1 -> "G". */
+export function gradeLetter(value: number): string {
+	return "GFEDCBAS"[value - 1] ?? "?"
+}
+
+/** Does an outfit pass one picked column? An unimported (null) aptitude never passes. */
+export function aptitudeMatches(apt: Record<AptitudeKey, number | null>, key: AptitudeKey, min: string): boolean {
 	return (apt[key] ?? 0) >= Number(min)
+}
+
+/** The Umas list's sorts: the shared three, then one per aptitude column, best first (Daptrius, 2026-11-17). */
+export type UmaSortOrder = SortOrder | `apt_${AptitudeKey}`
+
+export const UMA_SORT_OPTIONS: { value: UmaSortOrder; label: string; group?: string }[] = [
+	...SORT_OPTIONS,
+	...APTITUDE_KEYS.map((key) => ({ value: `apt_${key}` as UmaSortOrder, label: aptitudeLabel(key), group: "Aptitude" })),
+]
+
+/** The aptitude an uma sort reads, or null for the shared sorts. */
+export function sortAptitude(order: UmaSortOrder): AptitudeKey | null {
+	return order.startsWith("apt_") ? (order.slice(4) as AptitudeKey) : null
 }
 
 // ── Sorting the card list by an effect (notes/card-effect-sort-plan.md) ──────
 
-/** The card list's sorts: the shared four, and "By effect". */
+/** The card list's sorts: the shared three, and "By effect". */
 export type CardSortOrder = SortOrder | "effect"
 
 export const CARD_SORT_OPTIONS: { value: CardSortOrder; label: string }[] = [
@@ -353,7 +507,9 @@ export function sortByEffect<T extends { id: number; name: string }>(
 	type: number,
 	limitBreakOf: (card: T) => number | null,
 	data: CardEffectsData,
+	reversed = false,
 ): T[] {
+	const direction = reversed ? 1 : -1
 	const keyOf = (card: T): [number, number] => {
 		const row = data.cards[String(card.id)]
 		const limitBreak = limitBreakOf(card)
@@ -361,9 +517,10 @@ export function sortByEffect<T extends { id: number; name: string }>(
 		const reading = row ? effectReading(row, type, limitBreak) : null
 		return reading ? [0, reading.value] : [2, 0]
 	}
+	// Reversed, lowest first; the unread and the cards without it stay last.
 	return [...cards].sort((a, b) => {
 		const [bucketA, valueA] = keyOf(a)
 		const [bucketB, valueB] = keyOf(b)
-		return bucketA - bucketB || valueB - valueA || a.name.localeCompare(b.name)
+		return bucketA - bucketB || direction * (valueA - valueB) || a.name.localeCompare(b.name)
 	})
 }
