@@ -1680,6 +1680,18 @@
 		border-bottom-left-radius: 8px;
 		content: "";
 	}
+	/* With two or more evolutions off one gold, the spine runs on from each
+	   elbow down past its unlock list to the next one's, so they read as one
+	   branch (the owner, 2026-11-17). It starts where the elbow's curve
+	   begins and ends where the next elbow starts (the list's gap). */
+	.enc-branches > li:not(:last-child)::after {
+		position: absolute;
+		top: calc(1.3rem - 8px);
+		bottom: -0.45rem;
+		left: -0.75rem;
+		border-left: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
+		content: "";
+	}
 	.enc-branches .enc-unlock {
 		margin: 0.35rem 0 0.15rem 0.5rem;
 		font-size: 0.75rem;
