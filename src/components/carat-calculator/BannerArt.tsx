@@ -12,6 +12,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 /**
  * The card whose art a step-up row should show: the step 5 pick.
  *
@@ -87,6 +88,7 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 					alt={guaranteedCard.name}
 					oshi={oshiIds.has(guaranteedCard.uma.id)}
 					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
+					hover={hoverCardProps("uma", guaranteedCard.uma.id)}
 					className={umaSize}
 				/>
 			)
@@ -98,6 +100,7 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 					alt={guaranteedCard.name}
 					className={cardClass}
 					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
+					{...hoverCardProps("card", guaranteedCard.cardId)}
 				/>
 			)
 		}
@@ -128,10 +131,11 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 							alt={uma.name}
 							oshi={oshiIds.has(uma.id)}
 							className={umaSize}
+							hover={hoverCardProps("uma", uma.id)}
 						/>
 					))
 				: images.slice(0, 2).map((img) => (
-						<img key={img.name} src={img.image} alt={img.name} className={cardClass} />
+						<img key={img.name} src={img.image} alt={img.name} className={cardClass} {...hoverCardProps("card", img.id)} />
 					))}
 			<ExtraCardsBadge hidden={images.length - 2} />
 		</>

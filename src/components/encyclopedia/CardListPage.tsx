@@ -38,6 +38,7 @@ import {
 	type CardSortOrder, type EffectAt, type OwnedFilter, type SharedWhere,
 } from "../../utils/encyclopedia"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 // Each type chip is its icon; each rarity chip lights up in its metal once picked.
 const TYPE_PICKS = TYPE_OPTIONS.map((option) => ({ ...option, icon: CARD_TYPE_ICONS[option.value] }))
 const RARITY_PICKS = RARITY_OPTIONS.map((option) => ({ ...option, tone: RARITY_WORDS[Number(option.value)].toLowerCase() }))
@@ -129,7 +130,7 @@ const CardListBody = () => {
 			<li key={card.id}>
 				<Link to={cardHref(card.game_id as number)} className="enc-tile">
 					{limitBreak !== undefined && <OwnedMark />}
-					<FramedCard card={card} limitBreaks={limitBreak ?? null} className="enc-tile__art--card" />
+					<FramedCard card={card} limitBreaks={limitBreak ?? null} className="enc-tile__art--card" hover={hoverCardProps("card", card.id)} />
 					<span className="enc-tile__name">{card.name}</span>
 					{card.title && <span className="enc-tile__sub">{card.title}</span>}
 					<span className="enc-tile__facts">

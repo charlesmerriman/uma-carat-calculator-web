@@ -47,6 +47,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 
+import { hoverCardProps } from "../../utils/hoverCards"
 /**
  * One timeline card: a date header, then one section per banner opening in that
  * window.
@@ -364,9 +365,11 @@ function FeaturedTileArt({
 		</div>
 	)
 	const art = framed ? (
-		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" />
+		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" hover={hoverCardProps("uma", item.id)} />
 	) : (
 		<img
+			// Only the uma panel is framed, so this art is a support card.
+			{...hoverCardProps("card", item.id)}
 			src={item.image}
 			alt={item.name}
 			loading="lazy"
