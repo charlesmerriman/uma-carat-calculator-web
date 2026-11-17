@@ -576,6 +576,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 						items={index.catalogue.umas}
 						owned={ownedForPicker(mode === "account" ? roster : undefined, "uma")}
 						place="uma"
+						pageLinks
 						recommended={recommendedIds(guide, deckStyle ?? "front").umas}
 						noteFor={(id) => releaseNote(releaseFor("uma", id))}
 						blockReason={(id) => {
@@ -714,6 +715,7 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 		style,
 		selectedId: null,
 		initialSearch: target.query,
+		pageLinks: true,
 		tabs,
 		onClose,
 	}

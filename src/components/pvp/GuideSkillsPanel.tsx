@@ -37,6 +37,9 @@ import { useCourseZones } from "../../services/courseQueries"
 import { scrollToCourseMap, setCourseFocus } from "../../services/courseMapStore"
 import { verdictLines } from "../../utils/courseLayers"
 import { nameLang } from "../../utils/skillList"
+import { skillHref } from "../../utils/skillSearch"
+import { useSkillsPreview } from "../../hooks/useSkillsPreview"
+import { OpenPageLink } from "../EncyclopediaLinks"
 
 /** One team spot a skill can be searched for: "Spot 1 · Daiwa Scarlet". */
 export interface SkillSearchSpot {
@@ -244,6 +247,10 @@ function SkillRow({ pick, sources, open, onToggle, spots, onSearch, verdict }: {
 	verdict: string[]
 }) {
 	const { skill } = pick
+	// The skill's Encyclopedia page, the same rule as the guide's skill card
+	// (SkillDetail): early access, and only a skill that has a game id.
+	const preview = useSkillsPreview()
+	const page = preview && skill.game_id != null ? skillHref(skill.game_id) : null
 	return (
 		<li className={`rounded-lg border bg-gray-900/50 ${rarityClass(skill.rarity)}`}>
 			<button
@@ -307,6 +314,8 @@ function SkillRow({ pick, sources, open, onToggle, spots, onSearch, verdict }: {
 					<p className={sources ? "text-brand" : "text-gray-500"}>
 						{sources ? `Your team: ${sources.join(", ")}` : "Not on your team yet."}
 					</p>
+					{/* self-start: a flex-column child would stretch the link to the row's width. */}
+					<OpenPageLink href={page} className="self-start" />
 					<div className="mt-1 border-t border-gray-700/70 pt-1.5">
 						<p className="mb-1 text-[11px] font-medium text-gray-400">Find an uma or card with it for:</p>
 						<ul className="flex flex-col gap-1">

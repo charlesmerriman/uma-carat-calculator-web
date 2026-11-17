@@ -4,13 +4,18 @@
  * the catalogue numbers, a placeholder card gets none, and everyone else gets
  * the site as it was.
  */
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, it, expect, vi } from "vitest"
 import type { ReactNode } from "react"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { useEncyclopediaHrefs } from "../hooks/useEncyclopediaHrefs"
 import { RankRow } from "../components/rankings/kit/RankRow"
+import { TeamGrid } from "../components/pvp/TeamGrid"
+import { PvpCardPicker } from "../components/pvp/PvpCardPicker"
+import { GuidePicksBody } from "../components/pvp/GuidePicksPanel"
+import type { CatalogueSupportCard, CatalogueUma, PvpTeamMember } from "../types/pvpTeam"
+import type { PvpGuide } from "../types/pvpGuide"
 
 const CATALOGUE = {
 	umas: [
@@ -90,5 +95,111 @@ describe("RankRow with a page", () => {
 		as(true, <RankRow {...base} />)
 
 		expect(screen.queryByRole("link")).toBeNull()
+	})
+})
+
+/**
+ * My team (Daptrius, 2026-11-16: the PvP page that needed the Encyclopedia
+ * most had no way into it). The grid's names, the picker's book buttons and
+ * the guide picks' action row; the same catalogue as above.
+ */
+describe("My team's links", () => {
+	const apt = { turf: 8, dirt: 1, short: 3, mile: 7, medium: 6, long: 4, front: 5, pace: 7, late: 7, end: 3 }
+	const GOLD_SHIP: CatalogueUma = {
+		id: 1, name: "Gold Ship", image: null, portrait: null, rarity: 3, running_style: 3, character_id: 1, is_variant: false, apt, skills: [],
+	}
+	const card = (id: number, name: string, placeholder = false): CatalogueSupportCard =>
+		({ id, name, image: null, card_type: "speed", rarity: 3, title: "", skills: [], placeholder }) as CatalogueSupportCard
+	const KITASAN = card(10, "Kitasan Black")
+	const STAND_IN = card(11, "Your best SSR Speed card", true)
+	const TEAM: PvpTeamMember[] = [{ position: 0, uma: 1, style: "late", cards: [{ slot: 1, support_card: 10 }, { slot: 2, support_card: 11 }] }]
+
+	const grid = (
+		<TeamGrid
+			members={TEAM}
+			umasById={new Map([[1, GOLD_SHIP]])}
+			cardsById={new Map([[10, KITASAN], [11, STAND_IN]])}
+			onPickUma={vi.fn()}
+			onPickCard={vi.fn()}
+			onStyleChange={vi.fn()}
+			onClearUma={vi.fn()}
+			onClearCard={vi.fn()}
+		/>
+	)
+
+	it("links the uma's name and each card's caption, not a placeholder's", async () => {
+		as(true, grid)
+
+		expect(await screen.findByRole("link", { name: "Gold Ship" })).toHaveAttribute("href", "/app/umas/100701")
+		expect(screen.getByRole("link", { name: "Kitasan Black" })).toHaveAttribute("href", "/app/cards/30028")
+		expect(screen.queryByRole("link", { name: "Your best SSR Speed card" })).toBeNull()
+		// The tile is still the button that opens the picker.
+		expect(screen.getByRole("button", { name: "Change card 1 for Gold Ship: Kitasan Black" })).toBeInTheDocument()
+	})
+
+	it("draws the grid as before for everyone else", async () => {
+		as(false, grid)
+
+		await Promise.resolve()
+		expect(screen.getByText("Gold Ship")).toBeInTheDocument()
+		expect(screen.queryByRole("link")).toBeNull()
+	})
+
+	function picker(pageLinks: boolean, onClose = vi.fn()) {
+		as(
+			true,
+			<PvpCardPicker
+				pool="support"
+				items={[KITASAN, STAND_IN]}
+				title="Card 1 for Gold Ship"
+				skillsById={new Map()}
+				event={{ surface_type: "turf", distance: "medium", length: 2000 } as never}
+				style="late"
+				recommended={new Set()}
+				blockReason={() => null}
+				selectedId={null}
+				onPick={vi.fn()}
+				onClose={onClose}
+				pageLinks={pageLinks}
+			/>
+		)
+		return onClose
+	}
+
+	it("gives each picker tile a book button that closes the picker on the way out", async () => {
+		const onClose = picker(true)
+		// The placeholder shows only under its own switch, so one tile, one link.
+		const link = await screen.findByRole("link", { name: "Open Kitasan Black in the Encyclopedia" })
+		expect(link).toHaveAttribute("href", "/app/cards/30028")
+		fireEvent.click(link)
+		expect(onClose).toHaveBeenCalledTimes(1)
+	})
+
+	it("leaves the picker's links off unless asked (the guide editor, the veteran form)", async () => {
+		picker(false)
+
+		await Promise.resolve()
+		expect(screen.getByRole("button", { name: /Kitasan Black/ })).toBeInTheDocument()
+		expect(screen.queryByRole("link")).toBeNull()
+	})
+
+	it("puts the page in a guide pick's action row", async () => {
+		const guide = {
+			uma_recommendations: [{ style: "front", stars: 5, role: "", note: "", uma: { id: 1, name: "Gold Ship", image: null } }],
+			decks: [],
+		} as unknown as PvpGuide
+		as(
+			true,
+			<GuidePicksBody
+				guideState={{ status: "ready", guide }}
+				members={[]}
+				actions={{ uma: () => [], card: () => [], emptyCardHint: null }}
+			/>
+		)
+
+		fireEvent.click(screen.getByRole("button", { name: /Gold Ship/ }))
+		// findBy: the link arrives once the catalogue has loaded.
+		const row = within(screen.getByRole("listitem", { name: "Add Gold Ship" }))
+		expect(await row.findByRole("link", { name: /Open its page/ })).toHaveAttribute("href", "/app/umas/100701")
 	})
 })
