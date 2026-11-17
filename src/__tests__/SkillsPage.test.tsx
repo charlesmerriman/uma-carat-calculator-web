@@ -7,7 +7,9 @@ import { SkillsPage } from "../components/skills/SkillsPage"
 import { clearAuthToken, setAuthToken } from "../services/authToken"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
 import type { SkillListRow } from "../types/skills"
-import { SKILL_TYPE_WORDS, filterSkills, parseSkillParam, skillHref, skillKind, typeParent } from "../utils/skillSearch"
+import {
+	SKILL_TYPE_WORDS, filterSkills, parseSkillParam, skillHref, skillKind, subTypePicks, toggleSubTypePick, toggleTypePick, typeParent,
+} from "../utils/skillSearch"
 
 /** The Skills list (/app/skills): search and filters; a row opens the skill's own page. */
 
@@ -60,17 +62,17 @@ afterEach(() => {
 
 describe("filterSkills", () => {
 	it("matches every word in any name, then the filters", () => {
-		expect(filterSkills(ROWS, "corner", "all", "all").map((r) => r.name)).toEqual(["Corner Adept ○"])
-		expect(filterSkills(ROWS, "コーナー", "all", "all")).toHaveLength(1)
-		expect(filterSkills(ROWS, "", "gold", "all").map((r) => r.name)).toEqual(["Gourmand"])
-		expect(filterSkills(ROWS, "", "evolved", "all").map((r) => r.name)).toEqual(["Gluttonous Ruler"])
-		expect(filterSkills(ROWS, "", "all", "jp").map((r) => r.name)).toEqual(["Fan Skill"])
+		expect(filterSkills(ROWS, "corner", [], "all").map((r) => r.name)).toEqual(["Corner Adept ○"])
+		expect(filterSkills(ROWS, "コーナー", [], "all")).toHaveLength(1)
+		expect(filterSkills(ROWS, "", ["gold"], "all").map((r) => r.name)).toEqual(["Gourmand"])
+		expect(filterSkills(ROWS, "", ["evolved"], "all").map((r) => r.name)).toEqual(["Gluttonous Ruler"])
+		expect(filterSkills(ROWS, "", [], "jp").map((r) => r.name)).toEqual(["Fan Skill"])
 	})
 
 	it("gives inherited copies their own filter, out of White", () => {
 		const rows = [...ROWS, row(5, "Shooting Star", { game_id: 900011, owners: ["Special Week"] })]
-		expect(filterSkills(rows, "", "inherited", "all").map((r) => r.name)).toEqual(["Shooting Star"])
-		expect(filterSkills(rows, "", "white", "all").map((r) => r.name)).not.toContain("Shooting Star")
+		expect(filterSkills(rows, "", ["inherited"], "all").map((r) => r.name)).toEqual(["Shooting Star"])
+		expect(filterSkills(rows, "", ["white"], "all").map((r) => r.name)).not.toContain("Shooting Star")
 	})
 
 	it("filters by type, and finds a unique by its uma's name", () => {
@@ -78,8 +80,8 @@ describe("filterSkills", () => {
 			row(6, "Shooting Star", { game_id: 100011, rarity: 5, type: "unique", owners: ["Special Week"] }),
 			row(7, "Swinging Maestro", { type: "recovery" }),
 		]
-		expect(filterSkills(rows, "", "all", "all", "recovery").map((r) => r.name)).toEqual(["Swinging Maestro"])
-		expect(filterSkills(rows, "special week", "all", "all").map((r) => r.name)).toEqual(["Shooting Star"])
+		expect(filterSkills(rows, "", [], "all", ["recovery"]).map((r) => r.name)).toEqual(["Swinging Maestro"])
+		expect(filterSkills(rows, "special week", [], "all").map((r) => r.name)).toEqual(["Shooting Star"])
 	})
 
 	it("keeps every sub-type under its type, and one sub-type alone", () => {
@@ -91,12 +93,40 @@ describe("filterSkills", () => {
 			row(11, "Straightaway Adept", { type: "velocity" }),
 			row(12, "Pressure", { type: "current_speed" }),
 		]
-		expect(filterSkills(rows, "", "all", "all", "stat").map((r) => r.name)).toEqual(["Right-Handed ○", "Longchamp Racecourse ○"])
-		expect(filterSkills(rows, "", "all", "all", "stat_stamina").map((r) => r.name)).toEqual(["Longchamp Racecourse ○"])
-		expect(filterSkills(rows, "", "all", "all", "debuff").map((r) => r.name)).toEqual(["Stamina Eater"])
+		expect(filterSkills(rows, "", [], "all", ["stat"]).map((r) => r.name)).toEqual(["Right-Handed ○", "Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", [], "all", ["stat_stamina"]).map((r) => r.name)).toEqual(["Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", [], "all", ["debuff"]).map((r) => r.name)).toEqual(["Stamina Eater"])
 		// Current speed is a type of its own, out of Speed.
-		expect(filterSkills(rows, "", "all", "all", "velocity").map((r) => r.name)).toEqual(["Straightaway Adept"])
-		expect(filterSkills(rows, "", "all", "all", "current_speed").map((r) => r.name)).toEqual(["Pressure"])
+		expect(filterSkills(rows, "", [], "all", ["velocity"]).map((r) => r.name)).toEqual(["Straightaway Adept"])
+		expect(filterSkills(rows, "", [], "all", ["current_speed"]).map((r) => r.name)).toEqual(["Pressure"])
+	})
+
+	it("takes several colours and types at once, any of them passing", () => {
+		// Board "Allow Encyclopedia Filtering to select multiple items", 2026-11-17.
+		expect(filterSkills(ROWS, "", ["gold", "evolved"], "all").map((r) => r.name)).toEqual(["Gourmand", "Gluttonous Ruler"])
+		const rows = [
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_wit" }),
+			row(10, "Stamina Eater", { type: "debuff_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+		]
+		expect(filterSkills(rows, "", [], "all", ["velocity", "stat_wit"]).map((r) => r.name)).toEqual(["Longchamp Racecourse ○", "Straightaway Adept"])
+	})
+
+	it("picks a type whole, narrows it to sub-types, and drops it with its sub-types", () => {
+		let picks = toggleTypePick([], "stat")
+		expect(picks).toEqual(["stat"])
+		picks = toggleSubTypePick(picks, "stat", "stat_speed")
+		picks = toggleSubTypePick(picks, "stat", "stat_wit")
+		expect(picks).toEqual(["stat_speed", "stat_wit"])
+		expect(subTypePicks(picks, "stat")).toEqual(["stat_speed", "stat_wit"])
+		// Another type alongside, then the last sub-type off leaves Stat boost whole.
+		picks = toggleTypePick(picks, "velocity")
+		picks = toggleSubTypePick(toggleSubTypePick(picks, "stat", "stat_speed"), "stat", "stat_wit")
+		expect(picks).toEqual(["velocity", "stat"])
+		// Its "All" takes it whole again; its chip drops it.
+		expect(toggleSubTypePick(["stat_guts", "velocity"], "stat", "stat")).toEqual(["velocity", "stat"])
+		expect(toggleTypePick(["stat_guts", "stat_wit", "velocity"], "stat")).toEqual(["velocity"])
 	})
 
 	it("knows a sub-type's parent, and words it so it can't be read as another type", () => {
@@ -135,6 +165,22 @@ describe("SkillsPage", () => {
 		expect(screen.getByText("1 skill")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
+	})
+
+	it("sorts by skill point cost either way, a skill with no cost last both times", async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(1, "Cheap", { cost: 100 }),
+			row(2, "Unique", { cost: null }),
+			row(3, "Dear", { cost: 200 }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		const order = () => screen.getAllByRole("link").map((link) => link.textContent ?? "").filter((text) => /Cheap|Unique|Dear/.test(text))
+		fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "cost" } })
+		expect(order().map((text) => text.match(/Cheap|Unique|Dear/)?.[0])).toEqual(["Cheap", "Dear", "Unique"])
+		fireEvent.click(screen.getByRole("button", { name: /Lowest first/ }))
+		expect(screen.getByRole("button", { name: /Highest first/ })).toBeInTheDocument()
+		expect(order().map((text) => text.match(/Cheap|Unique|Dear/)?.[0])).toEqual(["Dear", "Cheap", "Unique"])
 	})
 
 	it("sends an old ?skill= link to the skill's own page", async () => {

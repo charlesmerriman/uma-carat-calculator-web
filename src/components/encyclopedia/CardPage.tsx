@@ -44,7 +44,9 @@ export const CardPage = () => (
 const CardPageBody = () => {
 	const gameId = parseGameId(useParams().gameId)
 	const page = useCardPage(gameId)
-	usePageTitle(page.data ? `${page.data.title} ${page.data.name}`.trim() : null)
+	// The character first: a tab cuts the end off, and the titles are long and niche
+	// (Daptrius, board "Support Card Tab Title", 2026-11-17).
+	usePageTitle(page.data ? `${page.data.name} ${page.data.title}`.trim() : null)
 
 	if (gameId === null || page.data === null) return <NotFound />
 	if (page.isError) return <EmptyNote>This page didn't load. Reload to try again.</EmptyNote>

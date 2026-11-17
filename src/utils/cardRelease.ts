@@ -69,7 +69,8 @@ export function cardReleases(umaBanners: BannerUma[], supportBanners: BannerSupp
  * A support card's date for the Collection's Release date sort: its first
  * banner, else the game's own date, which is how a welfare SSR, SR or R gets one.
  *
- * ONLY THE COLLECTION'S SORT. A selector judges cards on `first_jp_date`, and a
+ * ONLY THE RELEASE DATE SORTS: the Collection's here, and the Encyclopedia card
+ * list's (utils/encyclopedia.ts withGameDates). A selector judges cards on `first_jp_date`, and a
  * card on no banner being unknown there keeps it out of every selector
  * (.claude/rules/selectors.md). `cardReleases` above feeds the PvP picker's
  * release check, and stays banners only too (owner, 2026-10-30).
