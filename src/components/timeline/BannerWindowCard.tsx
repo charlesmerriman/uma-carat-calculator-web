@@ -282,6 +282,14 @@ const BANNER_ART =
 const BANNER_ART_ALONE = `${BANNER_ART} mx-auto xl:w-[var(--timeline-art-width)]`
 
 /**
+ * The art in the ordinary row. From xl it has a column of its own and sits
+ * hard left in it. Below xl it spans the card's full width, which on a tablet
+ * is wider than the 41rem cap, so it is centred there: hard left left a strip
+ * of empty card beside it, while the race cards' art (no cap) filled the row.
+ */
+const BANNER_ART_IN_ROW = `${BANNER_ART} mx-auto xl:mx-0`
+
+/**
  * The fields a featured tile actually renders. Both Uma and SupportCard
  * satisfy this structurally, which is what lets the two panels share one
  * component instead of duplicating forty lines of near-identical JSX.
@@ -1040,7 +1048,7 @@ function BannerSection({
 									alt={banner.name}
 									loading="lazy"
 									decoding="async"
-									className={BANNER_ART}
+									className={BANNER_ART_IN_ROW}
 								/>
 							) : (
 								<BannerArtPlaceholder />
