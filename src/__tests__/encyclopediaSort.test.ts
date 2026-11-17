@@ -82,6 +82,9 @@ describe("sortFact", () => {
 		expect(sortFact("game_id", { id: 1, game_id: 30265 }, dates)).toBe("ID 30265")
 		expect(sortFact("release", { id: 1 }, dates)).toMatch(/^2025\/6\/2[67]$/)
 		expect(sortFact("release", { id: 2 }, dates)).toBe("JP 2024/3/1")
+		// A date the site estimated from the JP schedule says so, as the card page's badge does.
+		dates.set(1, { ...dates.get(1)!, predicted: true })
+		expect(sortFact("release", { id: 1 }, dates)).toMatch(/^Est\. 2025\/6\/2[67]$/)
 		expect(sortFact("release", { id: 3 }, dates)).toBeNull()
 		expect(sortFact("name", { id: 1, game_id: 30265 }, dates)).toBeNull()
 	})

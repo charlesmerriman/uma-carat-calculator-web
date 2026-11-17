@@ -178,8 +178,9 @@ function encyclopediaEntries(
 			id: `uma-${uma.id}`,
 			kind: "uma",
 			title: uma.name,
-			// The outfit's title, Global's or UmaTL's, so a title finds it as a card's does.
-			keywords: uma.title ?? "",
+			// The outfit's title, Global's or UmaTL's, so a title finds it as a card's does, and
+			// its ids, as a skill's (board "Add Searchable Aliases", 2026-11-17).
+			keywords: [uma.title, uma.game_id, uma.character_id].filter((part) => part != null && part !== "").join(" "),
 			image: uma.portrait ?? uma.image,
 			umaId: uma.id,
 			detail: banners ? onBanner("Uma banner", pickBanner(banners, now)).detail : `Uma${where(uma.on_global)}`,
@@ -194,7 +195,7 @@ function encyclopediaEntries(
 			id: `card-${card.id}`,
 			kind: "card",
 			title: card.name,
-			keywords: card.title,
+			keywords: [card.title, card.game_id, card.character_id].filter((part) => part != null && part !== "").join(" "),
 			image: card.image,
 			detail: banners ? `${line} · ${onBanner("Support banner", pickBanner(banners, now)).detail}` : `${line}${where(card.on_global)}`,
 			href: cardHref(card.game_id),

@@ -279,10 +279,15 @@ export const REVERSED_VALUES = ["0", "1"] as const
 export interface ReleaseDates {
 	global: number | null
 	jp: number | null
+	/** The Global date is the site's estimate (its first banner's `is_predicted`), as the card page badges it. */
+	predicted?: boolean
 }
 
 /** Every outfit's or card's release dates, by pk, in one pass over the banners. */
-export function releaseDates<B extends { banner_timeline: { start_date: string } }, C extends { id: number; first_jp_date: string | null }>(
+export function releaseDates<
+	B extends { banner_timeline: { start_date: string; is_predicted?: boolean } },
+	C extends { id: number; first_jp_date: string | null },
+>(
 	banners: B[],
 	cardsOf: (banner: B) => C[],
 ): Map<number, ReleaseDates> {
@@ -291,7 +296,10 @@ export function releaseDates<B extends { banner_timeline: { start_date: string }
 		const start = parseApiDate(banner.banner_timeline.start_date)?.getTime() ?? null
 		for (const entry of cardsOf(banner)) {
 			const known = dates.get(entry.id) ?? { global: null, jp: null }
-			if (start !== null && (known.global === null || start < known.global)) known.global = start
+			if (start !== null && (known.global === null || start < known.global)) {
+				known.global = start
+				known.predicted = Boolean(banner.banner_timeline.is_predicted)
+			}
 			const jp = entry.first_jp_date ? parseApiDate(entry.first_jp_date)?.getTime() ?? null : null
 			if (jp !== null && (known.jp === null || jp < known.jp)) known.jp = jp
 			dates.set(entry.id, known)
@@ -316,7 +324,8 @@ export function withGameDates(
 		const known = merged.get(card.id)
 		if (known?.global != null || !card.released_at) continue
 		const game = parseApiDate(card.released_at)?.getTime() ?? null
-		if (game !== null) merged.set(card.id, { global: game, jp: known?.jp ?? null })
+		// The game's date has passed (the API sends only those), so it is never an estimate.
+		if (game !== null) merged.set(card.id, { global: game, jp: known?.jp ?? null, predicted: false })
 	}
 	return merged
 }
@@ -371,15 +380,16 @@ export function sortByValue<T extends { name: string }>(items: T[], valueOf: (it
 /**
  * What a tile says under its name while the list is sorted by id or date
  * (Daptrius, board "Show what is being Sorted by on each card", 2026-11-17),
- * as the effect sort already shows the effect: "ID 30265", the Global date,
- * or "JP 2024/3/1" for one not on global yet. Null for any other sort, or
- * when there is nothing to say.
+ * as the effect sort already shows the effect: "ID 30265", the Global date
+ * ("Est. 2029/7/1" when it is the site's estimate from the JP schedule, which
+ * the card page badges "Estimated"), or "JP 2024/3/1" for one with no Global
+ * date at all. Null for any other sort, or when there is nothing to say.
  */
 export function sortFact(order: string, item: { id: number; game_id?: number | null }, dates: Map<number, ReleaseDates>): string | null {
 	if (order === "game_id") return item.game_id != null ? `ID ${item.game_id}` : null
 	if (order !== "release") return null
 	const date = dates.get(item.id)
-	if (date?.global != null) return formatDate(new Date(date.global).toISOString())
+	if (date?.global != null) return `${date.predicted ? "Est. " : ""}${formatDate(new Date(date.global).toISOString())}`
 	if (date?.jp != null) return `JP ${formatDate(new Date(date.jp).toISOString())}`
 	return null
 }

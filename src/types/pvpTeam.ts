@@ -75,8 +75,9 @@ export interface CatalogueSupportCard {
 	placeholder?: boolean
 	/**
 	 * When it came out on Global, from the game's own table; null if it isn't
-	 * out. Only the Collection's sort reads this (utils/cardRelease.ts). Selectors
-	 * never do. Absent from an older API.
+	 * out. Only the release date sorts read this: the Collection's
+	 * (utils/cardRelease.ts) and the Encyclopedia card list's
+	 * (utils/encyclopedia.ts withGameDates). Selectors never do. Absent from an older API.
 	 */
 	released_at?: string | null
 	skills: CatalogueSkillLink[]
