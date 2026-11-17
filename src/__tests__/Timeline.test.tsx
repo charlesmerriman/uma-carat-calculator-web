@@ -13,6 +13,7 @@ import type {
   ChampionsMeeting,
   DailyLegendRaceRelease,
   Scenario,
+  StoryEvent,
   SupportCard,
   TimelineEvent,
   Uma,
@@ -255,6 +256,7 @@ function categorised(
 let scenarios: Scenario[] = []
 let campaigns: AnniversaryEvent[] = []
 let legendRaces: DailyLegendRaceRelease[] = []
+let storyEvents: StoryEvent[] = []
 
 /** A dated scenario, which is all a marker needs from one. */
 function scenario(id: number, name: string): Scenario {
@@ -314,6 +316,7 @@ vi.mock('../services/CalculatorContext', () => ({
     scenarioData: scenarios,
     anniversaryEventData: campaigns,
     dailyLegendRaceData: legendRaces,
+    storyEventData: storyEvents,
   }),
 }))
 
@@ -364,6 +367,7 @@ afterEach(() => {
   scenarios = []
   campaigns = []
   legendRaces = []
+  storyEvents = []
 })
 
 describe('Timeline infinite scroll', () => {
@@ -1163,6 +1167,130 @@ describe('Timeline legend race notes', () => {
     const card = notes[0].closest('.my-3') as HTMLElement
     expect(card).toContainElement(screen.getByAltText('Kitasan Black'))
     expect(card).not.toContainElement(screen.getByAltText('Rice Shower'))
+  })
+})
+
+describe('Timeline story events', () => {
+  function teatime(overrides: Partial<StoryEvent> = {}): StoryEvent {
+    return {
+      id: 7,
+      game_id: 1022,
+      name: 'Sweet Memories Teatime',
+      image: null,
+      banner_timeline: 2,
+      start_date: '2099-01-02T22:00:00Z',
+      end_date: '2099-02-02T21:59:59Z',
+      claim_end_date: '2099-02-05T21:59:59Z',
+      is_predicted: false,
+      applied_offset_days: 0,
+      carat_amount: 2160,
+      uma_ticket_amount: 2,
+      support_ticket_amount: 2,
+      ssr_shard_amount: 3,
+      sr_shard_amount: 0,
+      cards: [{
+        id: 90, name: 'Hishi Akebono', title: '[Fondente Smile]', image: null, rarity: 3,
+        purpose: '', game_id: 30133, must_get: true, note: '',
+      }],
+      ...overrides,
+    }
+  }
+
+  function renderAs(earlyAccess: boolean) {
+    const value = {
+      isLoggedIn: true,
+      status: 'ready',
+      account: { early_access: earlyAccess, oshi_uma_ids: [] },
+    } as unknown as AuthContextType
+    return render(
+      <AuthContext.Provider value={value}>
+        <MemoryRouter initialEntries={['/app/timeline']}>
+          <Timeline />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    )
+  }
+
+  it('puts the row under the card of the banner it runs with, and nowhere else', () => {
+    events = [
+      categorised(1, 'standard', ['Rice Shower']),
+      categorised(2, 'standard', ['Kitasan Black']),
+    ]
+    storyEvents = [teatime()]
+    renderTimeline()
+
+    const rows = screen.getAllByRole('region', { name: /^Story event:/ })
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect(row).toHaveAccessibleName('Story event: Sweet Memories Teatime')
+    const card = row.closest('.my-3') as HTMLElement
+    expect(card).toContainElement(screen.getByAltText('Kitasan Black'))
+    expect(card).not.toContainElement(screen.getByAltText('Rice Shower'))
+    // Its rewards, only the ones it pays, and the free card with its mark.
+    expect(row).toHaveTextContent('2,160 carats')
+    expect(row).toHaveTextContent('3 SSR shards')
+    expect(row).not.toHaveTextContent('SR shards0')
+    expect(row).toHaveTextContent('Must get')
+    expect(row).toHaveTextContent('SSR, free, 5 copies')
+    expect(row).toHaveTextContent(`Claim rewards by ${formatDate('2099-02-05T21:59:59Z')}`)
+  })
+
+  it('calls an event with no English name "Story event"', () => {
+    events = [categorised(2, 'standard', ['Kitasan Black'])]
+    storyEvents = [teatime({ name: '', is_predicted: true })]
+    renderTimeline()
+
+    const row = screen.getByRole('region', { name: 'Story event: Story event' })
+    expect(row).toHaveTextContent('Estimated')
+  })
+
+  it("finds the banner by a free card's name", () => {
+    events = [
+      categorised(1, 'standard', ['Rice Shower']),
+      categorised(2, 'standard', ['Kitasan Black']),
+    ]
+    storyEvents = [teatime()]
+    renderTimeline()
+
+    fireEvent.change(screen.getByPlaceholderText('Search characters or events...'), {
+      target: { value: 'akebono' },
+    })
+    expect(screen.getByAltText('Kitasan Black')).toBeInTheDocument()
+    expect(screen.queryByAltText('Rice Shower')).toBeNull()
+  })
+
+  it("links the card to its page for early access, and a tap opens its details instead", () => {
+    events = [categorised(2, 'standard', ['Kitasan Black'])]
+    storyEvents = [teatime()]
+    renderAs(true)
+
+    const tile = screen.getByRole('link', { name: /Hishi Akebono/ })
+    expect(tile).toHaveAttribute('href', '/app/cards/30133')
+    // A computer gets the site's shared hover card, the one every tile opens...
+    expect(tile).toHaveAttribute('data-hover-card', 'card:90')
+    // ...and a mouse never opens the row's own tap popup beside it.
+    fireEvent.pointerDown(tile, { pointerType: 'mouse' })
+    fireEvent.pointerUp(tile, { pointerType: 'mouse' })
+    expect(screen.queryByText('Open its page')).toBeNull()
+
+    fireEvent.pointerDown(tile, { pointerType: 'touch' })
+    fireEvent.pointerUp(tile, { pointerType: 'touch' })
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+    tile.dispatchEvent(click)
+    // The tap did not navigate; the details are open, with the way to the page.
+    expect(click.defaultPrevented).toBe(true)
+    // The drawn popup is aria-hidden (a screen reader reads the card's own
+    // description), so it is found by its text.
+    expect(screen.getByText('Open its page').closest('a')).toHaveAttribute('href', '/app/cards/30133')
+  })
+
+  it('draws a plain tile for everyone else, as the banner tiles do', () => {
+    events = [categorised(2, 'standard', ['Kitasan Black'])]
+    storyEvents = [teatime()]
+    renderAs(false)
+
+    expect(screen.queryByRole('link', { name: /Hishi Akebono/ })).toBeNull()
+    expect(screen.getByText('Hishi Akebono').closest('[data-hover-card]')).toBeNull()
   })
 })
 

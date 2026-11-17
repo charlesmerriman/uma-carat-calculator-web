@@ -47,6 +47,7 @@ import { useBackToTop } from "../../hooks/useBackToTop"
 import { TIMELINE_FOCUS_PARAM, parseTimelineFocus } from "../../utils/timelineFocus"
 import { refForRaceEvent } from "../../utils/pvpEvent"
 import { legendRacesByBanner } from "../../utils/dailyLegendRaces"
+import { storyEventMatchesSearch, storyEventsByBanner } from "../../utils/storyEvents"
 import { isRaceEvent } from "../../types"
 import type {
 	BannerCategory,
@@ -318,6 +319,7 @@ export const Timeline = () => {
 		scenarioData,
 		anniversaryEventData,
 		dailyLegendRaceData,
+		storyEventData,
 	} = useCalculatorData()
 	const [searchParams, setSearchParams] = useSearchParams()
 	/**
@@ -451,6 +453,13 @@ export const Timeline = () => {
 	const legendRacesForBanner = useMemo(
 		() => legendRacesByBanner(dailyLegendRaceData),
 		[dailyLegendRaceData]
+	)
+
+	// Story events by the banner they run with. Each shows as a row beneath
+	// that banner's card. Defaulted for test fixtures and older payloads.
+	const storyEventsForBanner = useMemo(
+		() => storyEventsByBanner(storyEventData ?? []),
+		[storyEventData]
 	)
 
 	// Banners nested inside BannerTimelineForViewing have banner_timeline omitted by the API serializer.
@@ -614,7 +623,17 @@ export const Timeline = () => {
 						? new Date(event.end_date) < today
 						: new Date(event.end_date) >= today
 				)
-				.filter((event) => searchQuery === "" || eventMatchesSearch(event, searchQuery))
+				.filter(
+					(event) =>
+						searchQuery === "" ||
+						eventMatchesSearch(event, searchQuery) ||
+						// A banner is also found by the story event running with it
+						// and its free cards ("akebono" finds Sweet Memories Teatime).
+						(!isRaceEvent(event) &&
+							(storyEventsForBanner.get(event.id) ?? []).some((storyEvent) =>
+								storyEventMatchesSearch(storyEvent, searchQuery)
+							))
+				)
 		)
 
 		if (activeFilter === "all") {
@@ -678,6 +697,7 @@ export const Timeline = () => {
 		searchQuery,
 		activeFilter,
 		today,
+		storyEventsForBanner,
 	])
 
 	/**
@@ -1189,6 +1209,9 @@ export const Timeline = () => {
 							onAddBanner={handleAddBanner}
 							legendRaces={row.group.banners.flatMap(
 								(banner) => legendRacesForBanner.get(banner.id) ?? []
+							)}
+							storyEvents={row.group.banners.flatMap(
+								(banner) => storyEventsForBanner.get(banner.id) ?? []
 							)}
 							{...focusProps}
 						/>
