@@ -18,7 +18,9 @@
  */
 
 import { useState, type ReactNode } from "react"
-import type { UnlockCondition } from "../../types/skills"
+import type { SkillOwnerUma, UnlockCondition } from "../../types/skills"
+import { FramedUma } from "../FramedUma"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import { Link } from "react-router-dom"
 import { useSkillPage } from "../../services/encyclopediaQueries"
 import { detailToCardSkill, rowToCardSkill } from "../../utils/skillCard"
@@ -41,6 +43,7 @@ export interface RowSkill {
 	cost?: number | null
 	type?: string
 	owners?: string[]
+	owner_umas?: SkillOwnerUma[]
 }
 
 /** The card's body: the full skill once fetched, the row's own header until then. */
@@ -59,8 +62,10 @@ function HoverCard({ skill, wanted }: { skill: RowSkill; wanted: boolean }) {
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
-export function SkillRow({ skill, sub, hint, after }: {
+export function SkillRow({ skill, sub, hint, face = false, after }: {
 	skill: RowSkill
+	/** Draw the outfit the skill belongs to at the end of the row (the Skills list): a unique or evolved skill is found by her face. */
+	face?: boolean
 	sub?: string
 	/** Said to a screen reader only, where the page draws the same fact as a picture: "Awakening level 3" beside the track's post. */
 	hint?: string
@@ -75,6 +80,8 @@ export function SkillRow({ skill, sub, hint, after }: {
 		onOpenChange: (open) => open && setWanted(true),
 	})
 	const kind = skillKind(skill)
+	const oshiIds = useOshiIds()
+	const owner = face ? skill.owner_umas?.[0] : undefined
 	const line = sub ?? [SKILL_TYPE_WORDS[skill.type ?? ""], skill.owners?.join(", ")].filter(Boolean).join(" · ")
 	return (
 		<li>
@@ -95,6 +102,7 @@ export function SkillRow({ skill, sub, hint, after }: {
 				</span>
 				{/* Skill points on the right (Daptrius's list, item 4); a unique has none. */}
 				{skill.cost != null && <span className="enc-skill__cost">{skill.cost} <small>SP</small></span>}
+				{owner && <FramedUma src={owner.portrait} oshi={oshiIds.has(owner.id)} className="enc-skill__face" />}
 			</Link>
 			{popup(<HoverCard skill={skill} wanted={wanted} />, "w-80")}
 			{after}
@@ -127,8 +135,10 @@ export function UniquePlate({ skill, from }: { skill: RowSkill & { description?:
 	)
 }
 
-export function SkillList<T extends RowSkill>({ skills, sub, after, className = "enc-skills" }: {
+export function SkillList<T extends RowSkill>({ skills, sub, after, faces = false, className = "enc-skills" }: {
 	skills: T[]
+	/** Each row shows the outfit its skill belongs to (see SkillRow's `face`). */
+	faces?: boolean
 	sub?: (skill: T) => string | undefined
 	after?: (skill: T) => ReactNode
 	className?: string
@@ -136,7 +146,7 @@ export function SkillList<T extends RowSkill>({ skills, sub, after, className = 
 	return (
 		<ul className={className}>
 			{skills.map((skill, index) => (
-				<SkillRow key={`${skill.game_id}-${index}`} skill={skill} sub={sub?.(skill)} after={after?.(skill)} />
+				<SkillRow key={`${skill.game_id}-${index}`} skill={skill} sub={sub?.(skill)} face={faces} after={after?.(skill)} />
 			))}
 		</ul>
 	)
