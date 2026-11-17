@@ -20,7 +20,7 @@
  * when they own the card, else at the top level.
  */
 
-import { useState } from "react"
+import { useState, type CSSProperties } from "react"
 import { Lock, Minus, Plus } from "lucide-react"
 import type { CardEffect, CardUniqueEffect } from "../../types/encyclopedia"
 import { effectValue } from "../../utils/encyclopedia"
@@ -46,8 +46,10 @@ const LIMIT_BREAK_WORDS = ["0", "1", "2", "3", "MLB"]
 
 const STEPS = [-5, -1, 1, 5]
 
-export function CardEffects({ id, effects, caps, unique, limitBreak }: {
+export function CardEffects({ id, accent, effects, caps, unique, limitBreak }: {
 	id?: string
+	/** The card's type colour: what its level track, unique effect and effect rules are drawn in. */
+	accent?: string
 	effects: CardEffect[]
 	/** The level cap at each limit break, 0 to 4. */
 	caps: number[]
@@ -63,6 +65,8 @@ export function CardEffects({ id, effects, caps, unique, limitBreak }: {
 	// The fewest limit breaks a copy needs to reach this level: how many caps sit below it.
 	const breaksNeeded = caps.filter((cap) => cap < level).length
 	const step = (by: number) => setPicked(Math.min(top, Math.max(1, level + by)))
+	// Where a level sits along the track, 0 to 1 (level 1 is the left end).
+	const portion = (at: number) => (top > 1 ? (at - 1) / (top - 1) : 1)
 
 	return (
 		<Section
@@ -78,24 +82,36 @@ export function CardEffects({ id, effects, caps, unique, limitBreak }: {
 				/>
 			}
 		>
+			{/* The effects are the card's TYPE at work, so they take its colour (the
+			    page's own is the character's). `display: contents`: only the variable. */}
+			<div className="enc-fx" style={accent ? ({ "--fx": accent } as CSSProperties) : undefined}>
+			{/* The level three ways: read it, drag it along a track that marks each
+			    limit break's cap, or step it. The arrow keys move the track by one. */}
 			<div className="enc-level">
-				<div className="enc-level__steps">
-					{STEPS.filter((by) => by < 0).map((by) => (
-						<button key={by} type="button" onClick={() => step(by)} disabled={level <= 1} aria-label={`${-by} ${by === -1 ? "level" : "levels"} down`}>
-							<Minus aria-hidden="true" />{-by}
-						</button>
-					))}
-				</div>
 				<p className="enc-level__now" aria-live="polite">
 					<span>Level <b>{level}</b></span>
 					<span className="enc-level__breaks">
 						{breaksNeeded === 0 ? "No limit break needed" : breaksNeeded === caps.length - 1 ? "Needs max limit break" : `Needs limit break ${breaksNeeded}`}
 					</span>
 				</p>
+				<div className="enc-level__track" style={{ "--p": portion(level) } as CSSProperties}>
+					<input
+						type="range" min={1} max={top} step={1} value={level} aria-label="Level"
+						onChange={(event) => setPicked(Number(event.target.value))}
+					/>
+					{caps.map((cap, index) => (
+						<span key={cap} className="enc-level__cap" data-reached={cap <= level} style={{ "--p": portion(cap) } as CSSProperties} aria-hidden="true">
+							{LIMIT_BREAK_WORDS[index] ?? index}
+						</span>
+					))}
+				</div>
 				<div className="enc-level__steps">
-					{STEPS.filter((by) => by > 0).map((by) => (
-						<button key={by} type="button" onClick={() => step(by)} disabled={level >= top} aria-label={`${by} ${by === 1 ? "level" : "levels"} up`}>
-							<Plus aria-hidden="true" />{by}
+					{STEPS.map((by) => (
+						<button
+							key={by} type="button" onClick={() => step(by)} disabled={by < 0 ? level <= 1 : level >= top}
+							aria-label={`${Math.abs(by)} ${Math.abs(by) === 1 ? "level" : "levels"} ${by < 0 ? "down" : "up"}`}
+						>
+							{by < 0 ? <Minus aria-hidden="true" /> : <Plus aria-hidden="true" />}{Math.abs(by)}
 						</button>
 					))}
 				</div>
@@ -129,6 +145,7 @@ export function CardEffects({ id, effects, caps, unique, limitBreak }: {
 					)
 				})}
 			</ul>
+			</div>
 		</Section>
 	)
 }

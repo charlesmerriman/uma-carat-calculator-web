@@ -113,4 +113,14 @@ describe("CardEffects", () => {
 		expect([effectValue(16, "percent"), effectValue(2, "level"), effectValue(21, "number"), effectValue(5, "something new")])
 			.toEqual(["16%", "Lv 2", "21", "5"])
 	})
+
+	it("moves the level along the track, by dragging or the arrow keys", () => {
+		render(<CardEffects effects={EFFECTS} caps={CAPS} unique={UNIQUE} />)
+		const track = screen.getByRole("slider", { name: "Level" })
+		expect(track).toHaveValue(String(CAPS[CAPS.length - 1]))
+		fireEvent.change(track, { target: { value: String(CAPS[2]) } })
+		expect(screen.getByText("Needs limit break 2")).toBeInTheDocument()
+		// The switch on the heading follows the track.
+		expect(within(screen.getByRole("group", { name: "Limit break" })).getByRole("button", { name: "2" })).toHaveAttribute("aria-pressed", "true")
+	})
 })
