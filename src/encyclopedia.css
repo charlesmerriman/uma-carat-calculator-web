@@ -1663,6 +1663,10 @@
 		gap: 0.45rem;
 	}
 	.enc-branches {
+		/* The branch's pink, mixed into the panel it sits on rather than
+		   see-through, so where the elbow and the spine meet the strokes
+		   overlap without doubling up the colour. */
+		--branch-line: color-mix(in srgb, #f28cbc 65%, var(--card-fill));
 		margin: 0.45rem 0 0 1.1rem;
 	}
 	.enc-branches > li {
@@ -1675,8 +1679,8 @@
 		left: -0.75rem;
 		width: 0.6rem;
 		height: 1.75rem;
-		border-bottom: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
-		border-left: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
+		border-bottom: 2px solid var(--branch-line);
+		border-left: 2px solid var(--branch-line);
 		border-bottom-left-radius: 8px;
 		content: "";
 	}
@@ -1689,7 +1693,7 @@
 		top: calc(1.3rem - 8px);
 		bottom: -0.45rem;
 		left: -0.75rem;
-		border-left: 2px solid color-mix(in srgb, #f28cbc 65%, transparent);
+		border-left: 2px solid var(--branch-line);
 		content: "";
 	}
 	.enc-branches .enc-unlock {
