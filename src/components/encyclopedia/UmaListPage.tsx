@@ -31,7 +31,6 @@ import {
 	type OwnedFilter, type SharedWhere, type UmaSortOrder,
 } from "../../utils/encyclopedia"
 
-import { hoverCardProps } from "../../utils/hoverCards"
 export const UmaListPage = () => (
 	<EncyclopediaGate>
 		<UmaListBody />
@@ -100,7 +99,7 @@ const UmaListBody = () => {
 				{/* Her character's two colours as the bar under her frame; grey for one the game files don't cover. */}
 				<Link to={umaHref(uma.game_id as number)} className="enc-tile enc-tile--uma" style={colourStyle(colours?.[String(uma.character_id)])}>
 					{showOwned && owned.umas.has(uma.id) && <OwnedMark />}
-					<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-tile__art" hover={hoverCardProps("uma", uma.id)} />
+					<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-tile__art" />
 					<span className="enc-tile__silk" aria-hidden="true" />
 					<span className="enc-tile__name">{base}</span>
 					{line && <span className="enc-tile__sub">{line}</span>}

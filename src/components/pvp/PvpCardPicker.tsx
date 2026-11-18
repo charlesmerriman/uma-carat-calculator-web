@@ -29,8 +29,9 @@
  * left, and they never empty the uma grid.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { useLocation } from "react-router-dom"
 import { Check, Search, Star, Trash2, X } from "lucide-react"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
 import type { RaceEvent } from "../../types"
@@ -134,10 +135,11 @@ type PvpCardPickerProps = {
 	/** A team slot: remembers the filters for that place. Omitted: they start fresh. */
 	place?: PickerPlace
 	/**
-	 * A book button on each tile that opens its Encyclopedia page (early
-	 * access). Only where leaving loses nothing: the team builder and the team
-	 * window save as they go. Off in the guide editor and the veteran form,
-	 * where a stray click would drop an edit in progress.
+	 * A book button on each tile that opens its card, whose "Open its page"
+	 * goes on to the Encyclopedia (early access). Only where leaving loses
+	 * nothing: the team builder and the team window save as they go. Off in
+	 * the guide editor and the veteran form, where a stray click would drop an
+	 * edit in progress.
 	 */
 	pageLinks?: boolean
 	/**
@@ -269,9 +271,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		)
 
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
-	// Each tile's hover card (early access): an uma's rings this race at this
-	// place's style. Where leaving would drop an edit (no pageLinks), the card
-	// draws without its links, the book button's rule.
+	// The card each tile's book opens (early access): an uma's rings this race
+	// at this place's style.
 	const ring = pool === "uma" ? ringFor(event, style) : []
 	// The art's own shape: an uma tile is square, a support card is 3:4 (450x600).
 	const artAspect = pool === "uma" ? "aspect-square" : "aspect-[3/4]"
@@ -290,6 +291,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				if (mouse.target === mouse.currentTarget) onClose()
 			}}
 		>
+			{pageLinks && <CloseOnLeave onClose={onClose} />}
 			<section
 				role="dialog"
 				aria-modal="true"
@@ -453,7 +455,6 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 									<li key={item.id} className="relative min-w-0">
 										<button
 											type="button"
-											{...hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring, links: pageLinks })}
 											disabled={reason !== null}
 											aria-pressed={isSelected}
 											title={reason ?? item.name}
@@ -526,14 +527,15 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 										    inside a button is invalid HTML. This box traces the art: the
 										    button's 1px border plus its p-1.5 put the art 7px in, at its
 										    own aspect, so the corner lands on it at any column width.
-										    Clicking also closes the picker: in the team window it would
-										    otherwise stay open over the page it opened. */}
+										    A click opens the card over the picker (hover); a tap or the
+										    keyboard follows the link. Leaving either way closes the
+										    picker (CloseOnLeave, below). */}
 										{pageLinks && (
 											<span className={`pointer-events-none absolute left-[7px] right-[7px] top-[7px] ${artAspect}`}>
 												<EncyclopediaIconLink
 													href={pool === "uma" ? pages.uma(item.id) : pages.card(item.id)}
 													name={item.name}
-													onClick={onClose}
+													hover={hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring })}
 													className="pointer-events-auto absolute bottom-0.5 right-0.5"
 												/>
 											</span>
@@ -548,4 +550,23 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		</div>,
 		document.body
 	)
+}
+
+/**
+ * Closes the picker when the route's page changes under it. Every way out of
+ * a picker with book buttons goes through here: the book followed as a link
+ * (a tap, the keyboard) and "Open its page" in the card a click on the book
+ * opens, which is a link outside the picker. In the team window the picker
+ * would otherwise stay open over the page it led to.
+ *
+ * Its own component because it needs the router, and a picker without books
+ * (the guide editor, the veteran form) has no reason to.
+ */
+function CloseOnLeave({ onClose }: { onClose: () => void }) {
+	const { pathname } = useLocation()
+	const openedOn = useRef(pathname)
+	useEffect(() => {
+		if (pathname !== openedOn.current) onClose()
+	}, [pathname, onClose])
+	return null
 }

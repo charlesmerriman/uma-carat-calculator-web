@@ -81,10 +81,14 @@ function SkillChip({ skill, links, level }: { skill: PageSkill; links: boolean; 
 	)
 }
 
-/** While the page is on its way: the header is already drawn from the catalogue. */
+/**
+ * While the page is on its way: the header is already drawn from the
+ * catalogue. The block holds about a card's height (.hover-card__loading), so
+ * the box is placed once and doesn't jump up the window when the facts land.
+ */
 export function Loading({ what }: { what: string }) {
 	return (
-		<div role="status" aria-label={`Loading ${what}`}>
+		<div role="status" aria-label={`Loading ${what}`} className="hover-card__loading">
 			<span className="enc-skeleton hover-card__skeleton" style={{ width: "80%" }} />
 			<span className="enc-skeleton hover-card__skeleton" style={{ width: "60%" }} />
 			<span className="enc-skeleton hover-card__skeleton" style={{ width: "70%" }} />

@@ -27,7 +27,6 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { Link } from "react-router-dom"
 
-import { hoverCardProps } from "../../utils/hoverCards"
 interface StepUpSelectionPickerProps {
 	stepUp: BannerStepUp
 	/**
@@ -117,10 +116,9 @@ export const StepUpSelectionPicker = ({
 		// The candidates below stay pick-only: there a click chooses.
 		const page = card ? (isUma ? hrefs.uma(card.value) : hrefs.card(card.value)) : null
 		const art = card?.portrait ? (
-			<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" hover={hoverCardProps("uma", card.value)} />
+			<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
 		) : card ? (
 			<img
-				{...hoverCardProps(isUma ? "uma" : "card", card.value)}
 				src={card.image}
 				alt={card.label}
 				loading="lazy"
@@ -212,10 +210,9 @@ export const StepUpSelectionPicker = ({
 				onClick={() => onChange(toggleCard(selections, stepUp, option.value))}
 			>
 				{option.portrait ? (
-					<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-24" hover={hoverCardProps("uma", option.value)} />
+					<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-24" />
 				) : (
 					<img
-						{...hoverCardProps(isUma ? "uma" : "card", option.value)}
 						src={option.image}
 						alt=""
 						loading="lazy"

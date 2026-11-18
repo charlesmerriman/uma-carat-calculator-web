@@ -14,7 +14,6 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 
-import { hoverCardProps } from "../../utils/hoverCards"
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
 	umaBannerData: BannerUma[]
@@ -138,10 +137,9 @@ export const SelectorTargetPicker = ({
 					} ${canPick ? "group-hover:border-brand group-hover:bg-gray-900/70" : ""}`}
 				>
 					{selected?.portrait ? (
-						<FramedUma src={selected.portrait} oshi={oshiIds.has(selected.value)} className="h-28" hover={hoverCardProps("uma", selected.value)} />
+						<FramedUma src={selected.portrait} oshi={oshiIds.has(selected.value)} className="h-28" />
 					) : selected ? (
 						<img
-							{...hoverCardProps(isUma ? "uma" : "card", selected.value)}
 							src={selected.image}
 							alt=""
 							loading="lazy"
@@ -268,10 +266,9 @@ export const SelectorTargetPicker = ({
 												onClick={() => choose(option)}
 											>
 												{option.portrait ? (
-													<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-28" hover={hoverCardProps("uma", option.value)} />
+													<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-28" />
 												) : (
 													<img
-														{...hoverCardProps(isUma ? "uma" : "card", option.value)}
 														src={option.image}
 														alt=""
 														loading="lazy"

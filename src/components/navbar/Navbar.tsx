@@ -116,15 +116,15 @@ export const Navbar = () => {
 	// Races" and the wordmark at 1440px, so both are icons below 2xl (1536px).
 	const desktopLabel = showEncyclopedia ? "sr-only 2xl:not-sr-only" : "sr-only xl:not-sr-only"
 	const mobileNavClass = (active: boolean) =>
-		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
+		`nav-tab flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
-				? "border-brand/50 bg-brand/10 text-brand"
+				? "nav-tab--active border-brand/50 bg-brand/10 text-brand"
 				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 		}`
 	const desktopNavClass = (active: boolean) =>
-		`flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm font-medium transition ${
+		`nav-tab flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm font-medium transition ${
 			active
-				? "border-brand/50 bg-brand/10 text-brand"
+				? "nav-tab--active border-brand/50 bg-brand/10 text-brand"
 				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 		}`
 
@@ -190,7 +190,7 @@ export const Navbar = () => {
 		<div ref={navbarRef} className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
-			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
+			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
 				<div className="flex h-14 items-center justify-between gap-3 px-3">
 					<div className="flex min-w-0 items-center">
 						{logo}
@@ -289,7 +289,7 @@ export const Navbar = () => {
 			    is the plain edge-to-edge one. One cap for the whole bar, not a
 			    per-page inset: see ui-conventions ("The wordmark sits on the bar's
 			    gutter, capped at the page column"). */}
-			<nav className="hidden border-b border-gray-700 bg-gray-900 px-5 desktop-nav:block">
+			<nav className="site-navbar hidden border-b border-gray-700 bg-gray-900 px-5 desktop-nav:block">
 				<div className="mx-auto grid h-16 max-w-[96rem] grid-cols-[1fr_auto_1fr] items-center">
 					{/* Left: Branding, on the bar's left gutter on every page. Until
 					    2026-09-13 it was indented per page to line the wordmark up with the
@@ -300,7 +300,7 @@ export const Navbar = () => {
 					</div>
 
 					{/* Center: Nav links */}
-					<div className="flex items-center justify-center gap-0.5 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
+					<div className="nav-tabs flex items-center justify-center gap-0.5 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
 						<Link to="/app" className={desktopNavClass(isCalculator)} {...prefetchOnIntent}>
 							<CalculatorIcon className="w-4 h-4" />
 							Calculator

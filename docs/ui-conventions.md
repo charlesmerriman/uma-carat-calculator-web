@@ -66,7 +66,8 @@ grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
 its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
 remains the initial default. Light (`light`) restores the original warm palette;
 Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
-each mode six themes. Purple keeps its saved `light-lilac` id.
+each mode six themes. Purple keeps its saved `light-lilac` id. Two more, Winning Live and
+Tracen, sit in their own **Special themes** group ("The palette themes" below).
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
 labels and surface tokens. Individual `data-theme` selectors override the palette,
@@ -78,6 +79,59 @@ orange on Red, on-pity blue on Green). Gilded is the amber, brown-gray dark them
 mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
+
+### The palette themes: Winning Live and Tracen
+
+Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a
+job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
+has a `palette` (the accent, then its Uma, Support and Step-Up colours): the picker lists
+those under **Special themes**, one named button per row, with a dot per colour.
+
+| | Winning Live (dark) | Tracen (light) |
+|---|---|---|
+| Idea | the concert after the race | the game's own menus |
+| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) |
+| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band |
+| Over budget | red-orange | hot pink, and pink is used for nothing else |
+| A second colour | pink, only on the wordmark's "Carat" and the panel title | none |
+| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier |
+| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px |
+
+**Their colours are tokens in `index.css` like any theme's; their shapes are in
+`src/personalityThemes.css`**, imported last in `App.tsx`. That file's header carries its
+three rules, which hold for any later theme of this kind:
+
+1. **Paint only, never size.** An edge is a `box-shadow`, a strip is a background, and
+   added padding is given back as a negative margin. The navbar's height, the pull field's
+   44px and the banner table's tracks are all load-bearing.
+2. **Hooks, never utilities.** The selectors name classes the components carry for this:
+   `site-navbar`, `nav-tabs`, `nav-tab` / `nav-tab--active`, `nav-control`,
+   `wordmark-second`, `planner-panel-title`, `planner-section-title`, `income-value` (with
+   `data-income` on its tile), `add-banner-button--{uma,support,step-up}`, `hero-cta`,
+   `forecast-shortfall`, plus the semantic classes `App.css` already had. The default
+   themes have no rule for any of them. The one utility selector is the precedent
+   `index.css` set, `.bg-brand.text-black` (the solid brand button).
+3. **Read tokens for anything colorblind mode redraws**, so that mode keeps winning.
+
+Four things a new palette theme has to get right, each learned on these two:
+
+- **The brand token is text in hundreds of places.** Tracen's lime is 1.9:1 on white, so
+  its `--color-brand` is the deep green and lime is painted on the solid brand button and
+  the named hooks only, always with dark ink.
+- **Kind and pull tokens go in the palette block, above the colorblind block**
+  (`[data-colorblind-mode="true"]` has the same specificity, so a later block would beat
+  it). What colorblind mode must also change for the theme goes in a two-attribute block
+  after it: Winning Live gets its white ink back on the deep colorblind fills.
+- **Bright kind fills flip the phone card's strip.** Its controls assume a deep fill under
+  pale ink, so Winning Live gives the strip the light themes' `--tile-*` set and a dark
+  stretch of the gray ramp, except under colorblind mode.
+- **Tailwind's `rounded-*` and `font-*` utilities read `--radius-*` and
+  `--font-weight-*`**, so a theme block can move them. Full pills stay on hooks: a pill
+  radius on a textarea is a blob.
+
+Tracen moves Support to orange (lime is the brand) and keeps on-pity green, which shares
+a hue with its brand; the Green theme moved on-pity to blue for that, and blue is Uma
+here. That one is the owner's to settle (`notes/theme-options.md`).
 
 **A theme's page glow is a `--page-glow` value, never a page background.** One
 `position: fixed` layer (`body::before`) paints it, and the page shells
@@ -685,14 +739,26 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   (`useOshiIds`, owner 2026-10-16: a favorite Oguri Cap frames Oguri Cap (Christmas) too,
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
-  frame over the art and keeps the art (and the grey square for a missing picture) 12 units
-  INSIDE the frame's outer edge, under its 24-unit band, with its corner on the same curve.
-  Never flush: the art and the frame are separate layers the browser rounds to device pixels
-  separately, and on an iPhone at the default zoom (iOS 27, Daptrius, board "Issues with Uma
-  SVG Alignment on iOS", 2026-11-17) flush art showed past the frame on fractional-width
-  grid tiles (PvP, Encyclopedia), gone at any other zoom. A bare frame's art fills the box.
+  frame over the art, and **the art fills the frame's box at exactly its size. Never shrink
+  or inset it.** The portraits are the game's cut, with rounded bottom corners baked into
+  the picture as transparency; at full size the frame's 24-unit band hides them with about
+  2 units to spare, and even at 99.5% they show. Web #379 drew the art at 96.85% and every
+  uma that reaches her bottom corners got a dark gap in both, on every device (v2.17,
+  2026-11-17). Only the grey square behind the art (a missing picture, the art's transparent
+  background) sits 12 units inside the frame's outer edge, under the band: a flat colour has
+  no corners to expose. A bare frame's square fills the box.
   `className` only sizes the square (`w-14`, `h-full`), and it MUST size it: the art is
   absolutely positioned, so it gives the frame no size of its own.
+  **The art's outer 12 units are not painted** (`clip-path` on the `<img>`; the band covers
+  that strip anyway). WebKit, so every browser on an iPhone, draws the frame (a CSS
+  background) up to one device pixel short of the box on the right and bottom when the box
+  isn't a whole number of device pixels wide, while the `<img>` fills it: a line of art
+  showed past the frame on the fluid PvP and Encyclopedia tiles at the default zoom (Daptrius,
+  board "Issues with Uma SVG Alignment on iOS", 2026-11-17). Reproduced and fixed in a Linux
+  WebKit at 402 px and 3x (2026-11-18): 29 tile widths, both frames, sizes down to 16 px and
+  the share picture. Web #376 (the art's sizing) was not the cause. A frame change gets the
+  same WebKit run before it ships (`npx playwright-core install webkit`; Chrome never shows
+  this).
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's
@@ -1296,8 +1362,8 @@ corners, so the art row can't grow. Plan: `notes/story-events-plan.md`.
 - **Display only.** The rewards are the event's own and nothing reads them for the projection.
   The cards carry no `first_jp_date`, and the selectors build their catalogue from banners, so
   a free card never becomes selectable.
-- **On a computer a free card opens the shared hover card** (`hoverCardProps("card", id)`,
-  drawn by `HoverCardLayer` like every other tile), and a click goes to its page.
+- **On a computer a click on a free card opens the shared card** (`hoverCardProps("card", id)`,
+  drawn by `HoverCardLayer` like every other tile), whose "Open its page" goes to its page.
 - **On a touch screen a tap opens the row's own details, never navigates** (owner,
   2026-11-17, for this row; `HoverCardLayer` ignores touch). "Open its page" inside does the
   navigating. Its popup is `useHoverPopup(..., { tapOnly: true })` (hover and focus off), so a
@@ -2105,8 +2171,12 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   eight then "Show all", by style with the guide tab's style first (`useStyleTab`, a store
   snapshot of the address); a unique, or its inherited white (the same name), shows the
   uma's `FramedUma` and names her on a quieter line; a tap lights one and opens the card.
-  Beside the map the column scrolls within itself past the screen's height, so "Show all"
-  never strands the map at the top of a long page. The button carries the count only once
+  Beside the map the column is as tall as the map and no taller (a floor of `20rem`, about a
+  row and a half), its rows scrolling under a header that stays put, so an open column never
+  leaves the page blank beside a short strip, and Track or Both give it more room (owner,
+  2026-11-18). "Show all" (in the column's footer, shown whenever rows are past eight or cut
+  off, measured with a `ResizeObserver`) lists every row and lets the column grow to the
+  screen's height, still scrolling within itself. The button carries the count only once
   the map is already cached; the column's title carries it once loaded.
 - **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
   track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
@@ -2738,7 +2808,9 @@ timing as chips, where it comes from, its other versions, and a footer.
 
 ### Links into the Encyclopedia from the rest of the site
 
-Umas and cards drawn elsewhere open their page for early access. **One lookup serves them
+Umas and cards drawn elsewhere link to their page for early access. Since 2026-11-18 a MOUSE
+click on most of those links opens the uma's or card's card instead, and the card's "Open its
+page" goes on to the page (next section); a tap or the keyboard still follows the link. **One lookup serves them
 all: `useEncyclopediaHrefs()`** (`hooks/useEncyclopediaHrefs.ts`), which maps the SITE's
 row id (what every team, guide, ranking, roster and gallery snapshot carries) to the page
 through the PvP catalogue's `game_id`. It answers null for everyone else, for a placeholder
@@ -2748,41 +2820,66 @@ links depends on what a click already does there:
 
 | The tile is... | The link is... | Where |
 |---|---|---|
-| display only | the tile itself (`<Link>`) | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
-| a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside | Collection names, the Selectors pick (bottom-left book) |
-| a hover card's trigger | "Open its page" in the card (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
+| display only | the tile itself (`<Link>`); a click opens the card | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
+| a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside; a click opens the card | Collection names, My team's names (`PageName`), the picker's book |
+| the same, with no card | a plain link to the page | the Selectors pick (bottom-left book), a step-up's chosen slot |
+| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
 | a ranking row that opens | "Open its page" at the top of the breakdown | `RankRow` with `detail` |
+| inside the Encyclopedia | the tile itself, straight to the page, no card | the uma and card lists, a page's outfits and cards, a skill's owners |
 
 Left out on purpose: the planner's art cell (already a link to the banner on the Timeline,
 and a link can't hold links), pickers where a click chooses, the guide editor's deck
 (`pageLink={false}`: a stray click would leave mid-edit), the share pictures, and the account
 page.
 
-### Hover cards for umas and support cards (`components/hovercards/`)
+### Cards for umas and support cards (`components/hovercards/`)
 
-The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): hovering an uma shows her
-aptitudes (the race's ringed), stats boxed with Growth and skills; hovering a support card shows
-its effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
-teaches. Both end in "Open its page". Early access only, mouse and keyboard focus only (a phone
-keeps the links above).
+The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): an uma's card shows her
+aptitudes (the race's ringed), stats boxed with Growth and skills; a support card's shows its
+effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
+teaches. Both end in "Open its page". Early access only, mouse only (a phone and the keyboard
+keep the links above). The code says "hover" because they opened on hover for one release
+(v2.17).
 
+- **They open on a click, never on hover** (owner, 2026-11-18, after Daptrius's report that a
+  card under every picture the mouse crossed felt laggy and covered the page). They are off the
+  calculator, the shared plan page, the Selectors page and the Encyclopedia's own pages.
 - **A tile opts in with attributes, built by `hoverCardProps()`** (`utils/hoverCards.ts`), never
-  by hand: `{...hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}` on
-  the tile's own button or link. `data-hover-card` names the row, `data-hover-card-ring` the
-  aptitudes to ring, `data-hover-card-links="off"` drops the links where leaving would lose an
-  edit, `data-hover-card-scope` marks a container whose stretched link covers the art.
+  by hand: `data-hover-card` names the row, `data-hover-card-ring` the aptitudes to ring. Put
+  them on plain art, or on the link to that uma's or card's Encyclopedia page (and give that
+  link `title={CARD_LINK_TITLE}`). **Never on a button or a link with another job**: the layer
+  leaves that click alone, so the attribute would do nothing. Where the tile is such a button,
+  the name or book beside it carries the card (`PageName`, the Collection's names,
+  `EncyclopediaIconLink hover`).
 - **One popup serves the whole app: `HoverCardLayer`**, mounted once in `AppShell` beside the
-  team window. It listens on the document, so a grid of 300 tiles costs 300 attributes and no
-  wrappers, and a tile that is a button, a link or a drag handle needs nothing else. Any press
-  closes the card (a drag or a click never leaves one behind); touch is ignored; the tile's
-  `title` is moved aside while its card is open. It draws at `z-[10001]`, above the pickers'
-  overlays, and inside an open native `<dialog>` when the tile is in one.
+  team window. It listens on the document for a press, a click and Escape, and does nothing
+  while the mouse moves. A click opens the card when nothing under the pointer is a link or a
+  button, or when the nearest one is a link to the tile's own page (the link then doesn't
+  navigate and its `onClick` doesn't run). A click on the tile again, anywhere else, Escape or
+  a route change closes it; touch, a keyboard click and a new-tab click are left to the link;
+  the tile's `title` is moved aside while its card is open; `[data-hover-card]` gets the pointer
+  cursor only while the layer is on. It draws at `z-[10001]`, above the pickers' overlays, and
+  inside an open native `<dialog>` when the tile is in one.
+- **Where it goes: beside the tile, right else left, top level with the tile's, slid up only as
+  far as the window needs** (`cardPopupMiddleware` in `pvp/hoverPopup.tsx`, shared with the
+  guide tiles). The side is picked by the room beside the tile alone (`flip` with
+  `crossAxis: false`): with the default, a card taller than the room under its tile counted as
+  not fitting anywhere and landed above or below, squeezed (in practice only in a narrow
+  window; beside a small picture in a wide one the two rules agree). The box is at most the
+  window's height and scrolls inside itself. **A tile wider than the card** (a ranking row, a
+  podium entry) is placed beside the POINT that was clicked instead (`anchorFor` in the
+  layer): beside the row itself there is no room on either side. While its page loads the
+  card holds about its final height (`.hover-card__loading`), so it is placed once.
 - **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
-  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The layer fetches the page
-  on open (`useUmaPage` / `useCardPage` with a 30 minute `staleTime`, the same cache the pages
-  use) and draws the header from the catalogue meanwhile. `useEncyclopediaLookup()` maps the
-  row id to the game id, beside `useEncyclopediaHrefs()` on the same index.
-- **A tile inside an existing hover (`WithDetail`) is ignored**, so nothing opens two cards.
+  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The page's fetch starts on
+  the press (`prefetchEncyclopediaPage`) and is read on open (`useUmaPage` / `useCardPage` with
+  a 30 minute `staleTime`, the same cache the pages use); the header draws from the catalogue
+  meanwhile. `useEncyclopediaLookup()` maps the row id to the game id, beside
+  `useEncyclopediaHrefs()` on the same index.
+- **A guide tile keeps its own popup** (`WithDetail`): hover shows the guide's note, as for
+  everyone, and a click pins it open as the full card with the note on top
+  (`useHoverPopup({ pin })`; a tap does the same). The layer ignores anything inside one, so
+  nothing opens two cards.
 
 ## Selectors page (`components/selectors/`)
 

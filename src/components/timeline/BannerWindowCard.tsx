@@ -282,6 +282,14 @@ const BANNER_ART =
 const BANNER_ART_ALONE = `${BANNER_ART} mx-auto xl:w-[var(--timeline-art-width)]`
 
 /**
+ * The art in the ordinary row. From xl it has a column of its own and sits
+ * hard left in it. Below xl it spans the card's full width, which on a tablet
+ * is wider than the 41rem cap, so it is centred there: hard left left a strip
+ * of empty card beside it, while the race cards' art (no cap) filled the row.
+ */
+const BANNER_ART_IN_ROW = `${BANNER_ART} mx-auto xl:mx-0`
+
+/**
  * The fields a featured tile actually renders. Both Uma and SupportCard
  * satisfy this structurally, which is what lets the two panels share one
  * component instead of duplicating forty lines of near-identical JSX.
@@ -367,11 +375,12 @@ function FeaturedTileArt({
 		</div>
 	)
 	const art = framed ? (
-		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" hover={hoverCardProps("uma", item.id)} />
+		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" hover={linked ? undefined : hoverCardProps("uma", item.id)} />
 	) : (
 		<img
-			// Only the uma panel is framed, so this art is a support card.
-			{...hoverCardProps("card", item.id)}
+			// Only the uma panel is framed, so this art is a support card. A
+			// linked tile carries the card on its link instead (FeaturedTile).
+			{...(linked ? {} : hoverCardProps("card", item.id))}
 			src={item.image}
 			alt={item.name}
 			loading="lazy"
@@ -531,6 +540,9 @@ function FeaturedTile({
 	return (
 		<Link
 			to={href}
+			// A mouse click anywhere on the tile opens the uma's or the card's
+			// card, whose "Open its page" goes on to this link's page.
+			{...hoverCardProps(framed ? "uma" : "card", item.id)}
 			aria-label={item.name}
 			aria-describedby={hasPurpose ? overlayId : undefined}
 			className={`group ${tileClass} outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand`}
@@ -1040,7 +1052,7 @@ function BannerSection({
 									alt={banner.name}
 									loading="lazy"
 									decoding="async"
-									className={BANNER_ART}
+									className={BANNER_ART_IN_ROW}
 								/>
 							) : (
 								<BannerArtPlaceholder />

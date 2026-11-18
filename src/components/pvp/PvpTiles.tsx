@@ -26,7 +26,7 @@ import { FramedCard } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
 import { HoverCardContent } from "../hovercards/HoverCardContent"
-import { hoverCardProps } from "../../utils/hoverCards"
+import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
 import { OpenPageLink } from "../EncyclopediaLinks"
 import { Link } from "react-router-dom"
 import { splitOutfit } from "../../utils/umaName"
@@ -221,17 +221,19 @@ function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
 
 /**
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
- * no `detail` it renders the child plainly and is not focusable.
+ * no `detail` it renders the child plainly and is not focusable. With a
+ * `card`, a click on the tile turns the popup into that card and keeps it open.
  */
 function WithDetail({ label, detail, card, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false }: {
 	label: string
 	detail: ReactNode
 	/**
-	 * Drawn in the open popup instead of `detail`, at the hover card's width:
-	 * an uma's or a card's hover card (components/hovercards) for early access,
-	 * with the guide's words in its top slot. The screen reader's copy keeps
-	 * `detail`, which is always in the DOM; the card mounts only while open,
-	 * so a guide full of tiles fetches nothing until one is hovered.
+	 * An uma's or a card's full card (components/hovercards) for early access,
+	 * with the guide's words in its top slot. Hover shows `detail`, the same
+	 * small note everyone gets; a CLICK on the tile draws this in the popup
+	 * instead and pins it open (useHoverPopup `pin`; owner, 2026-11-18). It
+	 * mounts only while pinned, so a guide full of tiles fetches nothing until
+	 * one is clicked. The screen reader's copy is always `detail`.
 	 */
 	card?: ReactNode
 	children: ReactNode
@@ -244,13 +246,7 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 	interactive?: boolean
 }) {
 	const detailId = useId()
-	// A hover card is tall: it opens beside the tile and fits the window, as
-	// the layer's cards do (HoverCardLayer).
-	const { referenceProps, popup } = useHoverPopup(card !== undefined ? "right-start" : "bottom", {
-		onOpenChange,
-		interactive: interactive || card !== undefined,
-		fit: card !== undefined,
-	})
+	const { referenceProps, popup, pinned } = useHoverPopup("bottom", { onOpenChange, interactive, pin: card !== undefined })
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
@@ -259,7 +255,7 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 			aria-label={label}
 			aria-describedby={detailId}
 			tabIndex={0}
-			className={`relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${className}`}
+			className={`relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${card !== undefined ? "cursor-pointer" : ""} ${className}`}
 		>
 			<InsideHoverContext.Provider value={true}>{children}</InsideHoverContext.Provider>
 			{/* The screen reader's copy, always in the DOM; the popup
@@ -267,7 +263,7 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 			<div id={detailId} role="tooltip" className="sr-only">
 				<InsideHoverContext.Provider value={true}>{detail}</InsideHoverContext.Provider>
 			</div>
-			{popup(card ?? detail, card !== undefined ? "w-80" : detailClassName)}
+			{popup(pinned && card !== undefined ? card : detail, detailClassName)}
 		</div>
 	)
 }
@@ -365,8 +361,8 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 	const { base, outfit } = splitOutfit(uma.name)
 	const mentioned = FIRST_MENTION.exec(note)?.[1]
 	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
-	// For early access the popup is her hover card, with the guide's note and
-	// her unique's verdict on top (the card names her unique itself).
+	// For early access a click turns the popup into her full card, with the
+	// guide's note and her unique's verdict on top (the card names her unique itself).
 	const known = useEncyclopediaLookup().uma(uma.id) !== null
 	const words = note || uma.unique
 		? (
@@ -525,13 +521,15 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 }
 
 /**
- * A card's art as the way into its Encyclopedia page, for the tiles with no
- * hover card to carry "Open its page" (SupportTile, SwapInCard). The art's
- * own alt (the card's name) names the link. No href: the art alone.
+ * A card's art as a link to its Encyclopedia page, for the tiles with no
+ * popup of their own (SupportTile, SwapInCard). A mouse click opens the
+ * card's card (`hover`), whose "Open its page" goes on to the page; a tap or
+ * the keyboard follows the link. The art's own alt (the card's name) names
+ * the link. No href: the art alone.
  */
 function PageArt({ href, hover, className, children }: {
 	href: string | null
-	/** The card's hover card (utils/hoverCards.ts); like the link, early access only. */
+	/** The card's card (utils/hoverCards.ts hoverCardProps); like the link, early access only. */
 	hover?: Record<string, string>
 	className: string
 	children: ReactNode
@@ -541,7 +539,7 @@ function PageArt({ href, hover, className, children }: {
 		<Link
 			to={href}
 			{...hover}
-			title="Open in the Encyclopedia"
+			title={hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"}
 			className={`block transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${className}`}
 		>
 			{children}

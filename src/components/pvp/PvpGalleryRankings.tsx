@@ -34,7 +34,6 @@ import { useReportUpdated } from "../rankings/rankingsUpdated"
 import { Panel } from "../rankings/kit/Panel"
 import { StatBand } from "../rankings/kit/StatBand"
 import { CardBuildList, UmaBuildList } from "../rankings/TeamLists"
-import { hoverCardProps } from "../../utils/hoverCards"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
@@ -148,7 +147,7 @@ function MostCopied({ posts, event, catalogue }: {
 								{post.umas.map((id) => {
 									const uma = catalogue.umasById.get(id)
 									return (
-										<span key={id} className="inline-block" {...hoverCardProps("uma", id)}>
+										<span key={id} className="inline-block">
 											<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(id)} className="w-10" />
 										</span>
 									)

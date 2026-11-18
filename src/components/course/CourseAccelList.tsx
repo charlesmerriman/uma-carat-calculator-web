@@ -12,9 +12,16 @@
  * guide visit doesn't otherwise fetch), so closed it fetches nothing. Open,
  * it reads the course's skill zones (the map the layers share) and the
  * catalogue for names, and for whose unique a skill is, drawn with her avatar
- * (FramedUma). The pills open on the guide tab's style. Beside the map it
- * scrolls within itself past the screen's height, so "Show all" never
- * strands the map at the top of a long page.
+ * (FramedUma). The pills open on the guide tab's style.
+ *
+ * Its height (owner, 2026-11-18: an open column left most of the page blank
+ * beside a short strip, "nobody asked yet"): beside the map it is as tall as
+ * the map and no taller, with a floor of about a row and a half, and its rows
+ * scroll inside it under a header that stays put. So the Strip keeps the page
+ * short, and Track or Both give the rows more room on their own. "Show all"
+ * is the reader asking for more: every row, in a column up to the screen's
+ * height that still scrolls within itself, so the map is never stranded at
+ * the top of a long page. Under the map (below lg) nothing is capped.
  *
  * A search box above the pills (Henry, 2026-11-04: "We need search function
  * for accel") narrows the rows by the skill's name or its owner uma's,
@@ -24,7 +31,7 @@
  * Henry: "Not the other spd skills?") turns the column into the speed skills,
  * ranked by the API's `speed_rank` (speedRows), the title following it.
  */
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FramedUma } from "../FramedUma"
 import type { RaceCourse } from "../../types"
 import type { CatalogueUma } from "../../types/pvpTeam"
@@ -36,7 +43,6 @@ import { setCourseFocus, useCourseFocus, useStyleTab, type StyleChoice } from ".
 import { accelRows, grade, speedRows, verdictLines, type AccelRow } from "../../utils/courseLayers"
 import { GradePill, ZoneBar } from "./CourseVerdictCard"
 
-import { hoverCardProps } from "../../utils/hoverCards"
 const STYLES: { value: StyleChoice; label: string }[] = [
 	{ value: "all", label: "All" },
 	{ value: "front", label: "Front" },
@@ -45,7 +51,8 @@ const STYLES: { value: StyleChoice; label: string }[] = [
 	{ value: "end", label: "End" },
 ]
 const STYLE_NAMES: Record<string, string> = { front: "Front", pace: "Pace", late: "Late", end: "End" }
-// Enough to see the best of a style; the rest behind "Show all".
+// Enough to see the best of a style; the rest behind "Show all", which also
+// lets the column outgrow the map (see the docblock).
 const FIRST_ROWS = 8
 
 type ListKind = "accel" | "speed"
@@ -117,9 +124,11 @@ function RankParts({ entry, list }: { entry: AccelRow["entry"]; list: ListKind }
 	)
 }
 
-function AccelRows({ course, rows, list, style, searching, owners, skillsById }: {
+function AccelRows({ course, rows, all, list, style, searching, owners, skillsById }: {
 	course: RaceCourse
 	rows: AccelRow[]
+	/** Every row, past the first eight (the column's "Show all"). */
+	all: boolean
 	list: ListKind
 	style: StyleChoice
 	/** A search is narrowing the rows: an empty list says so. */
@@ -129,72 +138,64 @@ function AccelRows({ course, rows, list, style, searching, owners, skillsById }:
 }) {
 	const oshiIds = useOshiIds()
 	const focus = useCourseFocus()
-	const [all, setAll] = useState(false)
 	if (rows.length === 0) {
 		return <p className="text-xs text-gray-400">{searching ? "No skill here matches that." : LISTS[list].none}</p>
 	}
 	const shown = all ? rows : rows.slice(0, FIRST_ROWS)
 	return (
-		<>
-			<ul className="flex flex-col gap-1" aria-label={LISTS[list].rows}>
-				{shown.map(({ skillId, entry }) => {
-					const skill = skillsById.get(skillId)
-					const name = skill?.name ?? `Skill ${skillId}`
-					const owner = owners.get(skillId)
-					const given = grade(entry)
-					const [first] = verdictLines(entry, course.distance)
-					const lit = focus?.skillId === skillId
-					return (
-						<li key={skillId}>
-							<button
-								type="button"
-								aria-pressed={lit}
-								onClick={() => setCourseFocus(lit ? null : {
-									skillId,
-									name,
-									image: skill?.image ?? null,
-									owner: owner ? { name: owner.uma.name, portrait: owner.uma.portrait, inherited: owner.inherited } : undefined,
-								})}
-								className={`flex w-full items-start gap-2 rounded-[9px] border px-2 py-1.5 text-left text-xs transition ${
-									lit ? "border-brand bg-brand/10" : "border-transparent bg-gray-800/70 hover:border-gray-500"
-								}`}
-							>
-								{owner ? (
-									<FramedUma src={owner.uma.portrait} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-7 w-7 shrink-0" hover={hoverCardProps("uma", owner.uma.id)} />
-								) : skill?.image ? (
-									<img src={skill.image} alt="" className="mt-0.5 h-6 w-6 shrink-0" loading="lazy" decoding="async" />
-								) : (
-									<span className="mt-0.5 h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-								)}
-								<span className="min-w-0 flex-1">
-									<span className="block text-[12.5px] font-bold leading-tight text-gray-100">
-										{name}
-										{style === "all" && entry.styles && (
-											<span className="font-normal text-gray-500"> · {entry.styles.map((key) => STYLE_NAMES[key] ?? key).join(", ")}</span>
-										)}
-									</span>
-									{/* Whose unique it is, on its own quieter line. */}
-									{owner && (
-										<span className="block text-[10.5px] leading-tight text-gray-400">
-											{owner.inherited ? `inherited from ${owner.uma.name}` : `unique of ${owner.uma.name}`}
-										</span>
+		<ul className="flex flex-col gap-1" aria-label={LISTS[list].rows}>
+			{shown.map(({ skillId, entry }) => {
+				const skill = skillsById.get(skillId)
+				const name = skill?.name ?? `Skill ${skillId}`
+				const owner = owners.get(skillId)
+				const given = grade(entry)
+				const [first] = verdictLines(entry, course.distance)
+				const lit = focus?.skillId === skillId
+				return (
+					<li key={skillId}>
+						<button
+							type="button"
+							aria-pressed={lit}
+							onClick={() => setCourseFocus(lit ? null : {
+								skillId,
+								name,
+								image: skill?.image ?? null,
+								owner: owner ? { name: owner.uma.name, portrait: owner.uma.portrait, inherited: owner.inherited } : undefined,
+							})}
+							className={`flex w-full items-start gap-2 rounded-[9px] border px-2 py-1.5 text-left text-xs transition ${
+								lit ? "border-brand bg-brand/10" : "border-transparent bg-gray-800/70 hover:border-gray-500"
+							}`}
+						>
+							{owner ? (
+								<FramedUma src={owner.uma.portrait} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-7 w-7 shrink-0" />
+							) : skill?.image ? (
+								<img src={skill.image} alt="" className="mt-0.5 h-6 w-6 shrink-0" loading="lazy" decoding="async" />
+							) : (
+								<span className="mt-0.5 h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+							)}
+							<span className="min-w-0 flex-1">
+								<span className="block text-[12.5px] font-bold leading-tight text-gray-100">
+									{name}
+									{style === "all" && entry.styles && (
+										<span className="font-normal text-gray-500"> · {entry.styles.map((key) => STYLE_NAMES[key] ?? key).join(", ")}</span>
 									)}
-									{first && <span className="mt-0.5 block text-[11px] leading-snug text-gray-300">{first}</span>}
-									<RankParts entry={entry} list={list} />
-									<ZoneBar entry={entry} distance={course.distance} className="mt-1.5" />
 								</span>
-								{given && <GradePill grade={given} className="mt-px shrink-0" />}
-							</button>
-						</li>
-					)
-				})}
-			</ul>
-			{rows.length > FIRST_ROWS && (
-				<button type="button" onClick={() => setAll((was) => !was)} className="mt-2 text-xs font-semibold text-brand transition hover:text-brand/75">
-					{all ? "Show fewer" : `Show all ${rows.length}`}
-				</button>
-			)}
-		</>
+								{/* Whose unique it is, on its own quieter line. */}
+								{owner && (
+									<span className="block text-[10.5px] leading-tight text-gray-400">
+										{owner.inherited ? `inherited from ${owner.uma.name}` : `unique of ${owner.uma.name}`}
+									</span>
+								)}
+								{first && <span className="mt-0.5 block text-[11px] leading-snug text-gray-300">{first}</span>}
+								<RankParts entry={entry} list={list} />
+								<ZoneBar entry={entry} distance={course.distance} className="mt-1.5" />
+							</span>
+							{given && <GradePill grade={given} className="mt-px shrink-0" />}
+						</button>
+					</li>
+				)
+			})}
+		</ul>
 	)
 }
 
@@ -202,12 +203,10 @@ function AccelRows({ course, rows, list, style, searching, owners, skillsById }:
 export default function CourseAccelList({
 	course,
 	fieldSize,
-	className = "",
 }: {
 	course: RaceCourse
 	/** Runners in the event's race, for the style pills' placing check (FIELD_SIZE). */
 	fieldSize?: number
-	className?: string
 }) {
 	// The guide tab's style until the reader picks a pill.
 	const tab = useStyleTab()
@@ -261,16 +260,46 @@ export default function CourseAccelList({
 	}, [rows, needle, ready, owners])
 	const loaded = zones.data !== undefined && ready !== null
 
+	// "Show all": every row, and a column allowed to outgrow the map. Until
+	// then the column is the map's height and the rows scroll inside it.
+	const [all, setAll] = useState(false)
+	// Whether rows are cut off by the box right now. Fewer than nine rows can
+	// still be cut beside a short strip, and "Show all" is the way to them
+	// too, so the button follows what is hidden, measured, never a guess from
+	// the count. Read in an effect, and again whenever the box (the map's
+	// height) or its content (a search, a pill) changes size. Under the map
+	// the box has no height of its own, so nothing is ever cut there.
+	const boxRef = useRef<HTMLDivElement>(null)
+	const [cut, setCut] = useState(false)
+	useEffect(() => {
+		const box = boxRef.current
+		if (!box || typeof ResizeObserver === "undefined") return
+		const measure = () => setCut(box.scrollHeight > box.clientHeight + 1)
+		const observer = new ResizeObserver(measure)
+		observer.observe(box)
+		if (box.firstElementChild) observer.observe(box.firstElementChild)
+		measure()
+		return () => observer.disconnect()
+	}, [])
+	// Shown while it has something to do: rows past the first eight, rows cut
+	// off, or a "Show all" to undo.
+	const canGrow = loaded && (all || (found.length > 0 && (cut || found.length > FIRST_ROWS)))
+
 	return (
+		// The grid stretches the column to the map's height, and the panel inside
+		// is laid over it (absolute), so the rows can never make it taller than
+		// the map: only the floor (min-h) can, beside a short strip. After "Show
+		// all" the panel is back in flow, as tall as its rows up to the screen.
 		<aside
-			className={`rounded-xl border border-gray-700 bg-gray-900/40 p-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${className}`}
+			className={`relative rounded-xl border border-gray-700 bg-gray-900/40 ${all ? "lg:self-start" : "lg:min-h-80"}`}
 			aria-label={words.title}
 		>
+		<div className={`flex flex-col p-3 ${all ? "lg:max-h-[calc(100vh-6rem)]" : "lg:absolute lg:inset-0"}`}>
 			<div className="flex items-baseline justify-between gap-2">
 				<h4 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-300">{words.title}</h4>
 				{loaded && <span className="shrink-0 text-[11px] text-gray-500">{found.length} here</span>}
 			</div>
-			<div role="group" aria-label="Which skills" className="mt-2 inline-flex rounded-full border border-gray-600 p-0.5">
+			<div role="group" aria-label="Which skills" className="mt-2 inline-flex self-start rounded-full border border-gray-600 p-0.5">
 				{(Object.keys(LISTS) as ListKind[]).map((kind) => (
 					<button
 						key={kind}
@@ -308,13 +337,26 @@ export default function CourseAccelList({
 					</button>
 				))}
 			</div>
-			{zones.isError || catalogue.status === "error" ? (
-				<p className="text-xs text-gray-400">The list didn't load.</p>
-			) : !loaded ? (
-				<p className="text-xs text-gray-400" role="status">{words.loading}</p>
-			) : (
-				<AccelRows key={list} course={course} rows={found} list={list} style={style} searching={needle !== ""} owners={owners} skillsById={ready.skillsById} />
+			{/* The rows' own scroller from lg up, its scrollbar in the panel's padding. */}
+			<div ref={boxRef} className="lg:-mr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-2">
+				{/* One steady child, so the measure above can watch the content's size. */}
+				<div>
+					{zones.isError || catalogue.status === "error" ? (
+						<p className="text-xs text-gray-400">The list didn't load.</p>
+					) : !loaded ? (
+						<p className="text-xs text-gray-400" role="status">{words.loading}</p>
+					) : (
+						<AccelRows course={course} rows={found} all={all} list={list} style={style} searching={needle !== ""} owners={owners} skillsById={ready.skillsById} />
+					)}
+				</div>
+			</div>
+			{/* Outside the scroller, so it is always in reach at the column's foot. */}
+			{canGrow && (
+				<button type="button" onClick={() => setAll((was) => !was)} className="mt-2 self-start text-xs font-semibold text-brand transition hover:text-brand/75">
+					{all ? "Show fewer" : `Show all ${found.length}`}
+				</button>
 			)}
+		</div>
 		</aside>
 	)
 }

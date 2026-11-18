@@ -14,7 +14,13 @@ const PRIMARY_THEME_IDS = new Set(["gold", "light"])
 export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 	const { activeTheme, themes, setTheme, colorblindMode, setColorblindMode } = useTheme()
 	const primaryThemes = themes.filter((theme) => PRIMARY_THEME_IDS.has(theme.id))
-	const alternateThemes = themes.filter((theme) => !PRIMARY_THEME_IDS.has(theme.id))
+	// A theme with a `palette` uses several colours with jobs of their own
+	// (themeStore.ts). They get a group and a named button each: as one more
+	// unlabelled dot in the Dark or Light row, nothing would say they are a
+	// different kind of theme from the dots beside them.
+	const paletteThemes = themes.filter((theme) => theme.palette)
+	const alternateThemes = themes.filter((theme) => !PRIMARY_THEME_IDS.has(theme.id) && !theme.palette)
+	const isLabelled = (theme: typeof themes[number]) => PRIMARY_THEME_IDS.has(theme.id) || Boolean(theme.palette)
 
 	const renderThemeButton = (theme: typeof themes[number]) => (
 		<button
@@ -25,7 +31,7 @@ export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 			aria-pressed={activeTheme === theme.id}
 			title={theme.label}
 			className={`flex items-center rounded-md transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
-				PRIMARY_THEME_IDS.has(theme.id) ? "gap-2 px-2 py-1.5 text-xs" : "h-6 w-6 justify-center"
+				isLabelled(theme) ? "gap-2 px-2 py-1.5 text-xs" : "h-6 w-6 justify-center"
 			} ${
 				activeTheme === theme.id
 					? "bg-gray-700 text-gray-100 ring-1 ring-gray-400"
@@ -35,14 +41,28 @@ export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 			{/* Static hex, not var(--color-brand): all swatches are visible at
 			    once. Two-tone, the theme's surface with its accent as a dot, so
 			    Dark, Gilded and Midnight (all gold accents) can be told apart. */}
-			<span
-				aria-hidden="true"
-				className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-500"
-				style={{ backgroundColor: theme.canvas }}
-			>
-				<span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.swatch }} />
-			</span>
-			{PRIMARY_THEME_IDS.has(theme.id) && theme.label}
+			{theme.palette ? (
+				// The same idea stretched: the theme's surface as a lozenge, with a
+				// dot for each of its colours (the accent first, then its kinds).
+				<span
+					aria-hidden="true"
+					className="flex h-4 shrink-0 items-center gap-0.5 rounded-full border border-gray-500 px-1"
+					style={{ backgroundColor: theme.canvas }}
+				>
+					{theme.palette.map((color) => (
+						<span key={color} className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+					))}
+				</span>
+			) : (
+				<span
+					aria-hidden="true"
+					className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-500"
+					style={{ backgroundColor: theme.canvas }}
+				>
+					<span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.swatch }} />
+				</span>
+			)}
+			{isLabelled(theme) && <span className="min-w-0 truncate">{theme.label}</span>}
 		</button>
 	)
 
@@ -52,6 +72,16 @@ export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 		<div role="group" aria-label="Primary themes" className="grid grid-cols-2 gap-1">
 			{primaryThemes.map(renderThemeButton)}
 		</div>
+		{paletteThemes.length > 0 && (
+			<>
+				<p className="mt-1 border-t border-gray-700 px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Special themes</p>
+				{/* One per row: beside its four-dot swatch, "Winning Live" does not
+				    fit half of the panel and was cut to "Winning...". */}
+				<div role="group" aria-label="Special themes" className="grid grid-cols-1 gap-1">
+					{paletteThemes.map(renderThemeButton)}
+				</div>
+			</>
+		)}
 		{(["dark", "light"] as const).map((mode) => (
 			<div key={mode} role="group" aria-label={`${mode === "dark" ? "Dark" : "Light"} themes`} className="mt-1 flex items-center justify-between gap-2 border-t border-gray-700 px-2 pt-2">
 				<p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-gray-500">{mode === "dark" ? "Dark themes" : "Light themes"}</p>

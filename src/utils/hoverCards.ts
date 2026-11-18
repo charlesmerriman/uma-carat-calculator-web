@@ -1,23 +1,21 @@
 /**
- * The hover cards' plain helpers (components/hovercards, notes/uma-card-hover-plan.md).
+ * The uma and support card cards' plain helpers (components/hovercards,
+ * notes/uma-card-hover-plan.md). "Hover" is their old name: they opened on
+ * hover until 2026-11-18 and open on a click now.
  *
- * A tile opts in to a hover card with data attributes, and HoverCardLayer
- * (one per app, in AppShell) reads them when the pointer or keyboard focus
- * reaches it. Building the attributes here, never by hand at a call site,
- * keeps their spelling in one place:
+ * A tile opts in with data attributes, and HoverCardLayer (one per app, in
+ * AppShell) reads them when the tile is clicked. Put them on plain art, or on
+ * the LINK to that uma's or card's Encyclopedia page (the click then opens
+ * the card, whose "Open its page" goes on to the page). Never on a button or
+ * a link with another job: the layer leaves those clicks alone, so the
+ * attribute would do nothing there. Building the attributes here, never by
+ * hand at a call site, keeps their spelling in one place:
  *
- *   <button {...hoverCardProps("uma", member.uma, { ring })}>
+ *   <Link to={page} {...hoverCardProps("uma", member.uma, { ring })} title={CARD_LINK_TITLE}>
  *
  *   data-hover-card        "uma:198" or "card:4": what to show (the site's row id)
  *   data-hover-card-ring   "turf,long,late": the aptitudes this race asks for,
  *                          ringed on an uma's card (absent: none ringed)
- *   data-hover-card-links  "off" where leaving the page would drop unsaved
- *                          work: the card draws no "Open its page" and no
- *                          skill links (the guide editor's and the veteran
- *                          form's picker)
- *   data-hover-card-scope  on a container whose stretched link covers the art
- *                          (Rankings' podium, the gallery feed): the layer
- *                          looks under the pointer for a tile instead
  */
 
 import type { RaceEvent } from "../types"
@@ -25,6 +23,13 @@ import type { CardEffect, StarStats } from "../types/encyclopedia"
 import type { AptitudeKey, MemberStyle } from "../types/pvpTeam"
 import { aptitudeKeysForEvent } from "./courseAptitude"
 import { effectValue } from "./encyclopedia"
+
+/**
+ * How long a page fetched for a card counts as fresh: opening the same uma's
+ * card again later in the session reuses it (the pages keep the client's
+ * shorter default).
+ */
+export const CARD_PAGE_STALE_MS = 30 * 60 * 1000
 
 export type HoverCardKind = "uma" | "card"
 
@@ -40,15 +45,21 @@ const APTITUDE_KEYS = new Set<AptitudeKey>(["turf", "dirt", "short", "mile", "me
 export function hoverCardProps(
 	kind: HoverCardKind,
 	id: number | null | undefined,
-	{ ring = [], links = true }: { ring?: readonly AptitudeKey[]; links?: boolean } = {}
+	{ ring = [] }: { ring?: readonly AptitudeKey[] } = {}
 ): Record<string, string> {
 	if (id == null) return {}
 	return {
 		"data-hover-card": `${kind}:${id}`,
 		...(ring.length > 0 ? { "data-hover-card-ring": ring.join(",") } : {}),
-		...(links ? {} : { "data-hover-card-links": "off" }),
 	}
 }
+
+/**
+ * The tooltip of a link whose click opens the card (it carries the
+ * attributes above). The link's accessible name still says it opens the
+ * Encyclopedia: from the keyboard or a screen reader it does.
+ */
+export const CARD_LINK_TITLE = "Show details"
 
 /** "uma:198" back into a target; null for anything else. */
 export function parseHoverCard(value: string | null | undefined): HoverCardTarget | null {

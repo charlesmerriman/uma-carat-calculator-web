@@ -947,7 +947,6 @@ function Pip({ race, run, shared }: { race: number; run: PvpRun; shared: Shared 
 			<FramedUma
 				src={uma?.portrait ?? uma?.image ?? null}
 				oshi={runner ? shared.oshiIds.has(runner.uma) : false}
-				hover={hoverCardProps("uma", runner?.uma)}
 				alt={label}
 				title={label}
 				className="w-6.5 ring-2 ring-brand sm:w-7.5"
@@ -989,7 +988,6 @@ function Faces({ runners, shared, className }: { runners: PvpRunRunner[]; shared
 						key={runner.position}
 						src={uma?.portrait ?? uma?.image ?? null}
 						oshi={shared.oshiIds.has(runner.uma)}
-						hover={hoverCardProps("uma", runner.uma)}
 						className={`${className} shadow-[0_0_0_2px_var(--card-fill)] ${index ? "-ml-2" : ""}`}
 					/>
 				)
@@ -1607,7 +1605,6 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 									<FramedUma
 										src={uma?.portrait ?? uma?.image ?? null}
 										oshi={shared.oshiIds.has(runner.uma)}
-										hover={hoverCardProps("uma", runner.uma)}
 										className="w-7.5 shrink-0 sm:w-8"
 									/>
 								) : (

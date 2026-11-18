@@ -29,7 +29,7 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
-import { hoverCardProps, ringFor } from "../../utils/hoverCards"
+import { CARD_LINK_TITLE, hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 /**
  * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
@@ -153,7 +153,7 @@ function MemberPanel({
 				card={card}
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
 				captionHref={entry ? pages.card(entry.support_card) : null}
-				hoverCard={entry ? hoverCardProps("card", entry.support_card) : undefined}
+				captionHover={entry ? hoverCardProps("card", entry.support_card) : undefined}
 				disabled={!member}
 				disabledHint="Pick an uma first"
 				shape="card"
@@ -233,7 +233,13 @@ function MemberPanel({
 				</span>
 				<div className="min-w-0 flex-1">
 					<h3 className="truncate text-sm font-semibold text-gray-100">
-						<PageName href={pages.uma(member.uma)} name={umaLabel} />
+						{/* Her tile opens the picker, so her name opens her card: it
+						    rings what this race asks of her at the style she runs. */}
+						<PageName
+							href={pages.uma(member.uma)}
+							name={umaLabel}
+							hover={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
+						/>
 					</h3>
 					{course && uma && (
 						<AptitudeLetters
@@ -289,8 +295,6 @@ function MemberPanel({
 						starred={starred("uma", member.uma)}
 						flag={releaseFor?.("uma", member.uma)}
 						favorite={isFavorite?.(member.uma) ?? false}
-						// Her hover card rings what this race asks of her at the style she runs.
-						hoverCard={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
 						label={`Change uma ${position + 1}: ${umaLabel}`}
 						onClick={() => onPickUma(position)}
 						empty={null}
@@ -315,7 +319,7 @@ function Tile({
 	empty,
 	caption,
 	captionHref = null,
-	hoverCard,
+	captionHover,
 	shape = "square",
 	card,
 	framed = false,
@@ -337,8 +341,11 @@ function Tile({
 	caption?: string
 	/** The caption's Encyclopedia page: the name becomes a link. Null: plain text. */
 	captionHref?: string | null
-	/** The hover card's attributes (utils/hoverCards.ts), spread on the tile's button. */
-	hoverCard?: Record<string, string>
+	/**
+	 * The card's attributes (utils/hoverCards.ts) for the caption's name link:
+	 * the tile's own click opens the picker, so the name opens the card.
+	 */
+	captionHover?: Record<string, string>
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
 	/** A support card: drawn as the game draws it (FramedCard), its art from the card itself. */
@@ -366,7 +373,6 @@ function Tile({
 			<div className="group relative">
 				<button
 					type="button"
-					{...hoverCard}
 					aria-label={label}
 					title={disabled ? disabledHint : caption}
 					disabled={disabled}
@@ -430,7 +436,7 @@ function Tile({
 					}`}
 					title={captionHref ? undefined : caption}
 				>
-					<PageName href={captionHref} name={caption} />
+					<PageName href={captionHref} name={caption} hover={captionHover} />
 				</p>
 			)}
 		</div>
@@ -438,15 +444,24 @@ function Tile({
 }
 
 /**
- * A name that opens its Encyclopedia page when it has one (the Rankings
+ * A name that links to its Encyclopedia page when it has one (the Rankings
  * pattern, EncyclopediaName), else the same text. It inherits the size and
  * colour of the line it sits in, so the header and the caption keep their look
  * and only the hover says it's a link. Shared with CompactTeamGrid.
+ *
+ * With `hover` (hoverCardProps) a mouse click opens the uma's or card's card
+ * instead, and the card's "Open its page" goes on to the page. The team's
+ * tiles can't open it themselves: their click opens the picker.
  */
-export function PageName({ href, name }: { href: string | null; name: string }) {
+export function PageName({ href, name, hover }: { href: string | null; name: string; hover?: Record<string, string> }) {
 	if (!href) return <>{name}</>
 	return (
-		<Link to={href} title={`Open ${name} in the Encyclopedia`} className="transition-colors hover:text-brand hover:underline">
+		<Link
+			to={href}
+			{...hover}
+			title={hover ? `${name}: ${CARD_LINK_TITLE.toLowerCase()}` : `Open ${name} in the Encyclopedia`}
+			className="transition-colors hover:text-brand hover:underline"
+		>
 			{name}
 		</Link>
 	)

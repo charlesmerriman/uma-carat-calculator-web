@@ -395,7 +395,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 						    stays funded says nothing (owner, 2026-10-29: the old
 						    "Lowest point" line read as clutter). */}
 						{lowest && lowest.after < 0 && (
-							<p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
+							<p className="forecast-shortfall mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
 								<AlertTriangle
 									className="h-3.5 w-3.5 shrink-0 text-(--color-pull-over)"
 									aria-hidden="true"
