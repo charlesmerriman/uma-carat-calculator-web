@@ -16,7 +16,18 @@
           var lightThemes = ["light", "light-blue", "light-green", "light-red", "light-lilac", "light-pearl", "tracen"];
           var theme = localStorage.getItem("uma-planner-theme");
           var root = document.documentElement;
-          root.setAttribute("data-theme", themes.indexOf(theme) >= 0 ? theme : "gold");
+          if (themes.indexOf(theme) < 0) {
+            // First visit: follow the device (Tracen in light mode, Dark otherwise)
+            // and save it, so the theme never flips if the device setting changes.
+            // An id this page doesn't know (an older cached page, a rollback) is
+            // shown as the device default but left in storage: it may be a real choice.
+            var firstVisit = theme === null;
+            theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "tracen" : "gold";
+            if (firstVisit) {
+              try { localStorage.setItem("uma-planner-theme", theme); } catch (e) {}
+            }
+          }
+          root.setAttribute("data-theme", theme);
           root.setAttribute("data-theme-mode", lightThemes.indexOf(theme) >= 0 ? "light" : "dark");
           root.setAttribute(
             "data-colorblind-mode",
