@@ -64,8 +64,10 @@ const KITASAN = {
 	outfits: [], cards: [], group_members: [], purpose: "", character_id: 1068, jp_name: "", jp_title: "",
 } as unknown as CardPageData
 
-function shell(node: ReactNode, { early = true }: { early?: boolean } = {}) {
-	const auth = { isLoggedIn: true, status: "ready", account: { early_access: early, oshi_uma_ids: [] } } as unknown as AuthContextType
+function shell(node: ReactNode, { early = true, guest = false }: { early?: boolean; guest?: boolean } = {}) {
+	const auth = (guest
+		? { isLoggedIn: false, status: "ready", account: null }
+		: { isLoggedIn: true, status: "ready", account: { early_access: early, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return (
 		<AuthContext.Provider value={auth}>
 			<TestQueryProvider>
@@ -376,6 +378,13 @@ describe("the hover card layer", () => {
 	it("draws the card without early access", async () => {
 		const user = userEvent.setup()
 		render(shell(tiles, { early: false }))
+		await user.click(screen.getByText("Uma"))
+		expect(await screen.findByText(META)).toBeInTheDocument()
+	})
+
+	it("draws the card for a guest", async () => {
+		const user = userEvent.setup()
+		render(shell(tiles, { guest: true }))
 		await user.click(screen.getByText("Uma"))
 		expect(await screen.findByText(META)).toBeInTheDocument()
 	})

@@ -72,20 +72,26 @@ const META: Record<AppPath, RouteMeta> = {
 		title: "Rankings",
 		description: "Which Uma Musume support cards and umas the PvP guides recommend most, across every guide or the next few events.",
 	},
+	// The Encyclopedia's three lists name it in the title and the description:
+	// their built documents hold the app shell, so the head is the only place
+	// a search engine reads the word (owner, 2026-11-18: "the encyclopedia
+	// itself" must be findable). The wording is the owner's to change.
 	"/app/skills": {
-		title: "Skills",
+		title: "Encyclopedia: Skills",
 		description:
-			"Every Uma Musume skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
+			"The Uma Musume Encyclopedia's skill list. Every skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
 	},
 	// The Encyclopedia's lists (these two and /app/skills above): public and
 	// prerendered like every tab since 2026-11-18.
 	"/app/umas": {
-		title: "Umas",
-		description: "Every Uma Musume trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
+		title: "Encyclopedia: Umas",
+		description:
+			"The Uma Musume Encyclopedia: a page for every uma, support card and skill. Every trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
 	},
 	"/app/cards": {
-		title: "Support Cards",
-		description: "Every Uma Musume support card on global and in JP, with the skills it teaches and its banners.",
+		title: "Encyclopedia: Support Cards",
+		description:
+			"The Uma Musume Encyclopedia's support card list. Every card on global and in JP, with its effects at every level, the skills it teaches and its banners.",
 	},
 }
 

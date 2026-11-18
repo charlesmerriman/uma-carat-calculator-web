@@ -32,9 +32,9 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	"/app/legend-races": { title: `Daily Legend Races | ${SITE_NAME}`, phrase: "Loading your plan" },
 	"/app/pvp": { title: `PvP Guides | ${SITE_NAME}`, phrase: "Loading your plan" },
 	// The Encyclopedia's lists, open to everyone since 2026-11-18.
-	"/app/umas": { title: `Umas | ${SITE_NAME}`, phrase: "Loading your plan" },
-	"/app/cards": { title: `Support Cards | ${SITE_NAME}`, phrase: "Loading your plan" },
-	"/app/skills": { title: `Skills | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/umas": { title: `Encyclopedia: Umas | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/cards": { title: `Encyclopedia: Support Cards | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/skills": { title: `Encyclopedia: Skills | ${SITE_NAME}`, phrase: "Loading your plan" },
 }
 
 describe("entry-server render()", () => {

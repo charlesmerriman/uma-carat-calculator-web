@@ -55,7 +55,6 @@ export const SelectorTargetPicker = ({
 	const isUma = product.product_type === "uma_selector"
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
-	const hrefs = useEncyclopediaHrefs()
 
 	// The catalogue rules — "(All)" exclusion, inclusive cutoff, newest-first
 	// ordering — live in the hook, shared with the step-up selection picker.
@@ -68,6 +67,11 @@ export const SelectorTargetPicker = ({
 
 	const selectedId = isUma ? targetUma : targetSupport
 	const selected = options.find((option) => option.value === selectedId) ?? null
+	// The pick's page link is all this uses the catalogue for, so it is asked
+	// for only once there is a pick (or the picker is open): a 106 KB download
+	// the Selectors page otherwise never makes (utils/hoverCards.ts,
+	// pageDrawsHoverCards, has the numbers).
+	const hrefs = useEncyclopediaHrefs({ load: isOpen || selected !== null })
 	const matchingOptions = options.filter((option) =>
 		option.label.toLocaleLowerCase().includes(search.toLocaleLowerCase())
 	)
@@ -177,7 +181,7 @@ export const SelectorTargetPicker = ({
 				</span>
 			</button>
 
-			{/* The pick's Encyclopedia page (early access), in the art's one free
+			{/* The pick's Encyclopedia page, in the art's one free
 			    corner, bottom left: the price has the top left, the pencil the
 			    bottom right. A sibling of the tile for the same reason as the
 			    clear button below. top-[6.25rem] is the h-32 art box less the

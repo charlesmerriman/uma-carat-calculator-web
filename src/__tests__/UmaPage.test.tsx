@@ -42,8 +42,10 @@ const SPECIAL_WEEK: UmaPageData = {
 
 const fetchMock = vi.fn()
 
-function renderAt(path: string, earlyAccess = true) {
-	const auth = { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } } as unknown as AuthContextType
+function renderAt(path: string, earlyAccess: boolean | "guest" = true) {
+	const auth = (earlyAccess === "guest"
+		? { isLoggedIn: false, status: "ready", account: null }
+		: { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return render(
 		<AuthContext.Provider value={auth}>
 			<TestQueryProvider>
@@ -196,5 +198,12 @@ describe("UmaPage", () => {
 		renderAt("/app/umas/100101", false)
 		expect(await screen.findByRole("heading", { level: 1, name: /Special Week/ })).toBeInTheDocument()
 		expect(screen.queryByText(/for our Patreon supporters/)).toBeNull()
+	})
+
+	it("opens for a guest", async () => {
+		renderAt("/app/umas/100101", "guest")
+		expect(await screen.findByRole("heading", { level: 1, name: /Special Week/ })).toBeInTheDocument()
+		// Nothing is hers to own: no Collection line for someone signed out.
+		expect(screen.queryByText(/You own this/)).toBeNull()
 	})
 })

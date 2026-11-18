@@ -52,8 +52,10 @@ const APTITUDE_KEYS = new Set<AptitudeKey>(["turf", "dirt", "short", "mile", "me
  * cards opened to everyone, loading it on these two pages would double what
  * the API sends each visitor on the calculator, the page a banner launch
  * crowds, for a card that page can never open
- * (notes/hot-route-capacity-plan.md). A page that gains tiles comes off this
- * list; until someone remembers to, the layer's press still loads it.
+ * (notes/hot-route-capacity-plan.md). The Selectors page still asks for it
+ * for a visitor who has made a pick, to link the pick to its page
+ * (SelectorTargetPicker). A page that gains tiles comes off this list; until
+ * someone remembers to, the layer's press still loads it.
  */
 const PAGES_WITHOUT_CARDS: ReadonlySet<string> = new Set(["/app", "/app/selectors"])
 
