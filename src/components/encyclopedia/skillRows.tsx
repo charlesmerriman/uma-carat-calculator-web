@@ -13,11 +13,17 @@
  * the list's facts, so the card's body is fetched the first time the row is
  * hovered (useSkillPage, TanStack Query: one request per skill, shared with
  * the skill's page, kept for the session). Until it lands the card shows its
- * header and a line of shimmer. The row is the link, so the card carries no
- * "Open its page" of its own and ignores the pointer; a tap follows the link.
+ * header and a line of shimmer.
+ *
+ * A CLICK OPENS THE CARD, NOT THE PAGE (Henry, 2026-11-18: "popup first like
+ * on pvp page"). Hovering still previews the card, which ignores the pointer.
+ * A click or a tap PINS it (useHoverPopup's `pin`): it stays open, takes the
+ * pointer, and ends in "Open its page". The row stays a real link, so a
+ * ctrl/cmd or middle click opens the page in a new tab, Enter on a focused
+ * row follows it, and the prerendered page still links every skill.
  */
 
-import { useState, type ReactNode } from "react"
+import { useState, type MouseEvent, type ReactNode } from "react"
 import type { SkillOwnerUma, UnlockCondition } from "../../types/skills"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
@@ -47,12 +53,13 @@ export interface RowSkill {
 }
 
 /** The card's body: the full skill once fetched, the row's own header until then. */
-function HoverCard({ skill, wanted }: { skill: RowSkill; wanted: boolean }) {
+function HoverCard({ skill, wanted, pinned }: { skill: RowSkill; wanted: boolean; pinned: boolean }) {
 	const page = useSkillPage(wanted ? skill.game_id : null)
-	if (page.data) return <SkillDetail skill={detailToCardSkill(page.data)} link={false} />
+	// Only a pinned card takes the pointer, so only it offers "Open its page".
+	if (page.data) return <SkillDetail skill={detailToCardSkill(page.data)} link={pinned} />
 	return (
 		<>
-			<SkillDetail skill={rowToCardSkill(skill)} link={false} />
+			<SkillDetail skill={rowToCardSkill(skill)} link={pinned} />
 			{!page.isError && <span className="enc-skeleton mt-1 block h-3 w-3/4 rounded" role="status" aria-label="Loading the skill" />}
 		</>
 	)
@@ -71,6 +78,19 @@ function hintedCost(cost: number, hintLevel: number | undefined): number {
 	// Every cost in the game files is a multiple of 10 (checked 2026-11-18,
 	// 1,195 skills), so a 10% step is always whole; the round only guards that.
 	return Math.round((cost * (10 - hintLevel)) / 10)
+}
+
+/**
+ * Stops a plain click or tap on a row from following its link, so the popup
+ * hook's own click and tap handlers pin the card instead. In the CAPTURE
+ * phase: react-router's Link skips navigation when the event arrives already
+ * defaultPrevented. A keyboard's Enter (`detail` 0) and a click with a
+ * modifier key still follow the link; a middle click never fires `click`.
+ */
+function keepPlainClickOnRow(event: MouseEvent<HTMLAnchorElement>) {
+	if (event.detail === 0 || event.button !== 0) return
+	if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+	event.preventDefault()
 }
 
 /**
@@ -94,8 +114,8 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, ful
 	// Fetch on the first hover and keep asking after it closes, so the card
 	// doesn't empty while it fades out.
 	const [wanted, setWanted] = useState(false)
-	const { referenceProps, popup } = useHoverPopup("bottom-start", {
-		tap: false,
+	const { referenceProps, popup, pinned } = useHoverPopup("bottom-start", {
+		pin: true,
 		onOpenChange: (open) => open && setWanted(true),
 	})
 	const kind = skillKind(skill)
@@ -106,7 +126,13 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, ful
 	const line = sub ?? [SKILL_TYPE_WORDS[skill.type ?? ""], skill.owners?.join(", ")].filter(Boolean).join(" · ")
 	return (
 		<li>
-			<Link {...referenceProps} to={skillHref(skill.game_id)} className="enc-skill" data-kind={kind}>
+			<Link
+				{...referenceProps}
+				onClickCapture={keepPlainClickOnRow}
+				to={skillHref(skill.game_id)}
+				className="enc-skill"
+				data-kind={kind}
+			>
 				{skill.image ? (
 					<img src={skill.image} alt="" className="enc-skill__icon" loading="lazy" decoding="async" />
 				) : (
@@ -136,7 +162,7 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, ful
 				)}
 				{owner && <FramedUma src={owner.portrait} oshi={oshiIds.has(owner.id)} className="enc-skill__face" />}
 			</Link>
-			{popup(<HoverCard skill={skill} wanted={wanted} />, "w-80")}
+			{popup(<HoverCard skill={skill} wanted={wanted} pinned={pinned} />, "w-80")}
 			{after}
 		</li>
 	)

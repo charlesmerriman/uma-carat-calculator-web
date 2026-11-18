@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -193,6 +194,38 @@ describe("SkillsPage", () => {
 		// While a pick is set the rows can't fold away, so nothing filters out of sight.
 		expect(screen.getByRole("button", { name: "Hide conditions and effects" })).toBeDisabled()
 		sessionStorage.clear()
+	})
+
+	it("opens a row's card on a click, with the way to its page; Enter still follows the link", async () => {
+		// Henry, 2026-11-18: "popup first like on pvp page".
+		// An open card fetches the skill's page through TanStack Query.
+		render(
+			<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+				{asReader(
+					<MemoryRouter initialEntries={["/app/skills"]}>
+						<Routes>
+							<Route path="/app/skills" element={<SkillsPage />} />
+							<Route path="/app/skills/:gameId" element={<p>The skill's own page</p>} />
+						</Routes>
+					</MemoryRouter>
+				)}
+			</QueryClientProvider>
+		)
+		const gourmand = await screen.findByRole("link", { name: /Gourmand/ })
+		fireEvent.pointerDown(gourmand, { pointerType: "mouse" })
+		fireEvent.click(gourmand, { detail: 1 })
+		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
+		const open = await screen.findByText("Open its page")
+		expect(open.closest("a")).toHaveAttribute("href", "/app/skills/200002")
+		// A tap pins it too, and the tap's click doesn't follow the link.
+		const corner = screen.getByRole("link", { name: /Corner Adept/ })
+		fireEvent.pointerDown(corner, { pointerType: "touch" })
+		fireEvent.pointerUp(corner, { pointerType: "touch" })
+		fireEvent.click(corner, { detail: 1 })
+		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
+		// The keyboard's Enter is a click with no detail: straight to the page.
+		fireEvent.click(gourmand, { detail: 0 })
+		expect(await screen.findByText("The skill's own page")).toBeInTheDocument()
 	})
 
 	it("lists the skills, tagged, and narrows on search", async () => {
