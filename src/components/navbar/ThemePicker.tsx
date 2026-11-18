@@ -40,10 +40,9 @@ const Swatch = ({ theme, large = false }: { theme: Theme; large?: boolean }) => 
 }
 
 /**
- * The theme list and the colorblind switch: the palette button's panel, and
- * a section of the gear menu on phones (SettingsMenu `withTheme`), where one
- * button does both jobs to leave the wordmark room. `onPicked` closes a panel
- * after a theme is chosen.
+ * The theme list and the colorblind switch: the palette button's panel, on
+ * desktop and phones alike (the gear menu carried it on phones until
+ * 2026-11-18). `onPicked` closes the panel after a theme is chosen.
  *
  * Laid out as two columns so the split is obvious at a glance: every dark
  * theme on the left, every light one on the right. The two defaults sit on
@@ -51,7 +50,7 @@ const Swatch = ({ theme, large = false }: { theme: Theme; large?: boolean }) => 
  * palette themes first. Every theme is a named row with the same swatch, which
  * replaced four groups that each looked different (owner, 2026-11-18).
  */
-export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
+const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 	const { activeTheme, themes, setTheme, colorblindMode, setColorblindMode } = useTheme()
 
 	// The rest of a mode's themes, palette themes first, otherwise in THEMES order.
