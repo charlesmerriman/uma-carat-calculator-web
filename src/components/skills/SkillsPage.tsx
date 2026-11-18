@@ -24,8 +24,9 @@ import {
 } from "../../utils/encyclopedia"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import {
-	COLOUR_FILTERS, SKILL_PARAM, TYPE_FILTERS, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, pickedParents,
-	skillHref, subTypePicks, toggleSubTypePick, toggleTypePick, type ColourFilter, type TypeFilter,
+	COLOUR_FILTERS, DOES_TAGS, RACE_TAGS, SKILL_PARAM, STYLE_TAGS, TYPE_FILTERS, UMATL_URL, WHEN_TAGS, WHERE_FILTERS,
+	filterSkills, parseSkillParam, pickedParents, skillHref, subTypePicks, toggleSubTypePick, toggleTypePick,
+	type ColourFilter, type SkillTag, type TagMatch, type TypeFilter,
 } from "../../utils/skillSearch"
 
 /** The Skills list's sorts: a skill has no release date of its own, but has a cost (Daptrius, 2026-11-17). */
@@ -37,6 +38,12 @@ const SKILL_SORT_OPTIONS: { value: SkillSortOrder; label: string }[] = [
 ]
 
 const PAGE = 60
+
+// "Match": a skill must carry every picked condition and effect, or any one is enough (Daptrius's list, item 2).
+const MATCH_OPTIONS: { value: TagMatch; label: string }[] = [
+	{ value: "all", label: "All of them" },
+	{ value: "any", label: "Any of them" },
+]
 
 /**
  * Each colour's dot on its filter chip, the hue its rows wear down their left
@@ -87,6 +94,18 @@ const SkillsPageBody = () => {
 	const [sort, setSort] = useRememberedFilter<SkillSortOrder>("skills:sort", "name", values(SKILL_SORT_OPTIONS))
 	const [reversedFlag, setReversed] = useRememberedFilter<string>("skills:sort-reversed", "0", REVERSED_VALUES)
 	const reversed = reversedFlag === "1"
+	// The condition and effect filters, one remembered row each so Reset clears them with the rest.
+	const [when, setWhen] = useRememberedPicks<SkillTag>("skills:when", values(WHEN_TAGS))
+	const [race, setRace] = useRememberedPicks<SkillTag>("skills:race", values(RACE_TAGS))
+	const [style, setStyle] = useRememberedPicks<SkillTag>("skills:style", values(STYLE_TAGS))
+	const [does, setDoes] = useRememberedPicks<SkillTag>("skills:does", values(DOES_TAGS))
+	const [match, setMatch] = useRememberedFilter<TagMatch>("skills:match", "all", values(MATCH_OPTIONS))
+	const tagPicks = useMemo(() => [...when, ...race, ...style, ...does], [when, race, style, does])
+	// Whether those rows are open. Kept outside the "skills:" scope, so opening
+	// them isn't a filter for Reset to clear; open whenever one is set, so a
+	// remembered pick never hides behind a closed button.
+	const [openFlag, setOpen] = useRememberedFilter<string>("skills-panel:conditions", "0", REVERSED_VALUES)
+	const conditionsOpen = openFlag === "1" || tagPicks.length > 0
 	const [shown, setShown] = useState(PAGE)
 
 	// The Skills tab's headline number, once the list is here.
@@ -97,16 +116,16 @@ const SkillsPageBody = () => {
 
 	const rows = useMemo(() => {
 		if (list.status !== "ready") return []
-		const found = filterSkills(list.rows, query, colours, where, types)
+		const found = filterSkills(list.rows, query, colours, where, types, { picks: tagPicks, match })
 		// By name the API's order stands (it sorts names the way the game does), turned round on asking.
 		if (sort === "name") return reversed ? [...found].reverse() : found
 		// A unique has no cost and goes last either way round.
 		if (sort === "cost") return sortByValue(found, (row) => row.cost ?? null, reversed)
 		return sortList(found, sort, undefined, reversed)
-	}, [list, query, colours, where, types, sort, reversed])
+	}, [list, query, colours, where, types, tagPicks, match, sort, reversed])
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${sort}|${reversed}`
+	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
@@ -162,6 +181,32 @@ const SkillsPageBody = () => {
 						</div>
 					)
 				})}
+				{/* When it fires, the race it asks for and what it does: folded away until
+				    asked for, since most visits only search (Daptrius's list, item 2). */}
+				<div role="group" aria-label="Conditions and effects" className="enc-filter">
+					<span className="enc-filter__label" aria-hidden="true">More</span>
+					<div className="enc-filter__chips">
+						<button
+							type="button"
+							className="enc-chip"
+							aria-expanded={conditionsOpen}
+							// Can't fold while a pick is set: the picks would still filter, out of sight.
+							disabled={tagPicks.length > 0}
+							onClick={() => setOpen(conditionsOpen ? "0" : "1")}
+						>
+							{conditionsOpen ? "Hide conditions and effects" : "Show conditions and effects"}
+						</button>
+					</div>
+				</div>
+				{conditionsOpen && (
+					<>
+						<PickChips label="When" options={WHEN_TAGS} picks={when} onChange={setWhen} />
+						<PickChips label="Race" options={RACE_TAGS} picks={race} onChange={setRace} />
+						<PickChips label="Strategy" options={STYLE_TAGS} picks={style} onChange={setStyle} />
+						<PickChips label="Does" options={DOES_TAGS} picks={does} onChange={setDoes} />
+						<Chips label="Match" options={MATCH_OPTIONS} value={match} onChange={setMatch} />
+					</>
+				)}
 				<SortControl
 					options={SKILL_SORT_OPTIONS}
 					value={sort}
@@ -196,7 +241,7 @@ const SkillsPageBody = () => {
 				names and descriptions are{" "}
 				<a href={UMATL_URL} target="_blank" rel="noreferrer">UmaTL</a>
 				's fan translation, shown until global has its own. A part shown as code is one we haven't confirmed the
-				meaning of yet.
+				meaning of yet. Under conditions, a strategy, distance or surface finds the skills that ask for it.
 			</p>
 		</div>
 	)

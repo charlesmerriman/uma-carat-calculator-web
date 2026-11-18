@@ -165,18 +165,73 @@ export const WHERE_FILTERS: { value: WhereFilter; label: string }[] = [
  * an evolution belongs to (`owners`, Daptrius's item 11: "Special Week" finds
  * Shooting Star), then the filters. Rows keep the API's order (by name).
  */
+/**
+ * The condition and effect filters (Daptrius's list, item 2): the chips, by
+ * the API's tag keys (backend skill_tags.py, which reads them off the game's
+ * code). A strategy, distance or surface chip finds skills that ASK for it.
+ */
+export type SkillTag = string
+export const WHEN_TAGS: { value: SkillTag; label: string }[] = [
+	{ value: "early", label: "Early-race" },
+	{ value: "mid", label: "Mid-race" },
+	{ value: "late", label: "Late-race" },
+	{ value: "spurt", label: "Last spurt" },
+	{ value: "corner", label: "Corner" },
+	{ value: "final-corner", label: "Final corner" },
+	{ value: "straight", label: "Straight" },
+	{ value: "final-straight", label: "Final straight" },
+	{ value: "uphill", label: "Uphill" },
+	{ value: "downhill", label: "Downhill" },
+]
+export const RACE_TAGS: { value: SkillTag; label: string }[] = [
+	{ value: "sprint", label: "Sprint" },
+	{ value: "mile", label: "Mile" },
+	{ value: "medium", label: "Medium" },
+	{ value: "long", label: "Long" },
+	{ value: "turf", label: "Turf" },
+	{ value: "dirt", label: "Dirt" },
+]
+export const STYLE_TAGS: { value: SkillTag; label: string }[] = [
+	{ value: "front-runner", label: "Front Runner" },
+	{ value: "pace-chaser", label: "Pace Chaser" },
+	{ value: "late-surger", label: "Late Surger" },
+	{ value: "end-closer", label: "End Closer" },
+]
+export const DOES_TAGS: { value: SkillTag; label: string }[] = [
+	{ value: "speed", label: "Speed" },
+	{ value: "current-speed", label: "Current speed" },
+	{ value: "accel", label: "Acceleration" },
+	{ value: "recovery", label: "Recovery" },
+	{ value: "stats", label: "Stats" },
+	{ value: "vision", label: "Vision" },
+	{ value: "navigation", label: "Navigation" },
+	{ value: "debuff", label: "Debuff" },
+]
+
+/** Whether a skill must carry every picked tag, or one of them is enough. */
+export type TagMatch = "all" | "any"
+
+/** True when `rowTags` satisfies the picks: no picks always does. A row from an older API has no tags. */
+export function tagsMatch(rowTags: readonly SkillTag[] | undefined, picks: readonly SkillTag[], match: TagMatch): boolean {
+	if (picks.length === 0) return true
+	const tags = new Set(rowTags ?? [])
+	return match === "all" ? picks.every((pick) => tags.has(pick)) : picks.some((pick) => tags.has(pick))
+}
+
 export function filterSkills(
 	rows: SkillListRow[],
 	query: string,
 	colours: readonly ColourFilter[],
 	where: WhereFilter,
-	types: readonly TypeFilter[] = []
+	types: readonly TypeFilter[] = [],
+	tags: { picks: readonly SkillTag[]; match: TagMatch } = { picks: [], match: "all" }
 ): SkillListRow[] {
 	const words = skillSearchWords(query)
 	return rows.filter((row) => {
 		if (colours.length > 0 && !colours.includes(skillKind(row) as ColourFilter)) return false
 		if (where !== "all" && row.availability !== where) return false
 		if (!typePicksMatch(row.type, types)) return false
+		if (!tagsMatch(row.tags, tags.picks, tags.match)) return false
 		return skillMatches({ ...row, other_names: [...row.other_names, ...(row.owners ?? [])] }, words)
 	})
 }
