@@ -61,14 +61,15 @@ export const Navbar = () => {
 			<ThemePicker />
 		</>
 	)
-	// A phone has less row than five buttons and the wordmark want, so the gear
-	// holds the theme too. The palette stands in only until the stats load,
-	// while the gear has nothing else to show.
+	// The same buttons on a phone. The gear held the theme too until 2026-11-18
+	// (web #275, to give the wordmark room); the owner wanted them as separate
+	// menus, so the palette is its own button here as well.
 	const phoneControls = (
 		<>
 			{searchButton}
 			<TeamDrawerButton />
-			{calculatorData?.userStatsData ? <SettingsMenu withTheme /> : <ThemePicker />}
+			<SettingsMenu />
+			<ThemePicker />
 		</>
 	)
 
@@ -191,12 +192,15 @@ export const Navbar = () => {
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
 			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
-				<div className="flex h-14 items-center justify-between gap-3 px-3">
+				{/* Tighter gaps under 360px: signed in, the row holds five buttons
+				    (search, team, gear, palette, profile), and at 320px the 6px gaps
+				    pushed the wordmark onto a third line, clipping "Uma". */}
+				<div className="flex h-14 items-center justify-between gap-2 px-3 min-[360px]:gap-3">
 					<div className="flex min-w-0 items-center">
 						{logo}
 					</div>
 
-					<div className="relative flex shrink-0 items-center gap-1.5">
+					<div className="relative flex shrink-0 items-center gap-1 min-[360px]:gap-1.5">
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>
