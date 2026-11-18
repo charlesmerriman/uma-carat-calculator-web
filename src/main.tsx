@@ -5,10 +5,10 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 // and keeps the app working under a strict CSP. Imported before index.css so the
 // @font-face rules are registered before the @theme token that references them.
 import '@fontsource-variable/outfit'
-// The palette themes' faces (index.css: Winning Live's headings; Tracen's and
-// Tracen Night's headings and body). Only the @font-face rules ship to
-// everyone; a browser fetches a font file when something on the page uses it,
-// so the other twelve themes never download these.
+// The palette themes' faces (index.css: Winning Live's headings; Tracen's
+// headings and body). Only the @font-face rules ship to everyone; a browser
+// fetches a font file when something on the page uses it, so the other twelve
+// themes never download these.
 import '@fontsource-variable/unbounded'
 import '@fontsource-variable/nunito'
 import './index.css'

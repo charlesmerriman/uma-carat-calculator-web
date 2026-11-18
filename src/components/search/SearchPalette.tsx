@@ -39,7 +39,7 @@ function EntryArt({ entry, oshiIds }: { entry: SearchEntry; oshiIds: ReadonlySet
 	)
 }
 
-/** A skill has no page, so picking one shows this. */
+/** A skill with no game id has no page, so picking one shows this. */
 function SkillPanel({ entry, catalogue, onBack }: { entry: SearchEntry; catalogue: PvpCatalogue | null; onBack: () => void }) {
 	const teachers = catalogue && entry.skillId !== undefined ? skillTeachers(entry.skillId, catalogue) : { umas: [], cards: [] }
 	return (

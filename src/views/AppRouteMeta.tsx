@@ -72,26 +72,36 @@ const META: Record<AppPath, RouteMeta> = {
 		title: "Rankings",
 		description: "Which Uma Musume support cards and umas the PvP guides recommend most, across every guide or the next few events.",
 	},
+	// The Encyclopedia's three lists name it in the title and the description:
+	// their built documents hold the app shell, so the head is the only place
+	// a search engine reads the word (owner, 2026-11-18: "the encyclopedia
+	// itself" must be findable). The wording is the owner's to change.
 	"/app/skills": {
-		title: "Skills",
+		title: "Encyclopedia: Skills",
 		description:
-			"Every Uma Musume skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
+			"The Uma Musume Encyclopedia's skill list. Every skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
 	},
-	// The Encyclopedia's lists: early access only, noindex below, not prerendered.
+	// The Encyclopedia's lists (these two and /app/skills above): public and
+	// prerendered like every tab since 2026-11-18.
 	"/app/umas": {
-		title: "Umas",
-		description: "Every Uma Musume trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
+		title: "Encyclopedia: Umas",
+		description:
+			"The Uma Musume Encyclopedia: a page for every uma, support card and skill. Every trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
 	},
 	"/app/cards": {
-		title: "Support Cards",
-		description: "Every Uma Musume support card on global and in JP, with the skills it teaches and its banners.",
+		title: "Encyclopedia: Support Cards",
+		description:
+			"The Uma Musume Encyclopedia's support card list. Every card on global and in JP, with its effects at every level, the skills it teaches and its banners.",
 	},
 }
 
 /**
  * An Encyclopedia page (/app/umas/<id> and its card and skill twins): one meta
  * per kind until the page has its data, when it sets the real name itself
- * (usePageTitle). About 2,650 pages, none prerendered: noindex.
+ * (usePageTitle). About 3,000 pages, open to everyone but none prerendered
+ * yet, so noindex: they join the search engines as real documents, with their
+ * own titles, in notes/encyclopedia-open-plan.md's PRs 3 and 4. Dropping the
+ * noindex before then would hand Google 3,000 identical shells.
  */
 const ENCYCLOPEDIA_PAGE_META: Record<"umas" | "cards" | "skills", RouteMeta> = {
 	umas: { title: "Uma", description: "An Uma Musume trainee: aptitudes, stats, skills and banners." },
@@ -155,16 +165,13 @@ export const AppRouteMeta = () => {
 				? SHARED_PLAN_META
 				: META[path]
 
-	// The Encyclopedia (the Skills page, the uma and card lists and every
-	// page) is supporters first (useSkillsPreview): noindex, like a shared
-	// plan, and not prerendered until it opens to everyone. The Collection is
-	// one player's account, so it never should be, and Rankings is behind
-	// early access.
+	// noindex: an Encyclopedia page until it is a real document (see
+	// ENCYCLOPEDIA_PAGE_META), a shared plan, the Collection (one player's
+	// account) and Rankings (behind early access).
 	useDocumentMeta(
 		meta.title,
 		meta.description,
-		pageKind !== null || path === "shared" || path === "/app/skills" || path === "/app/umas" || path === "/app/cards"
-			|| path === "/app/collection" || path === "/app/rankings"
+		pageKind !== null || path === "shared" || path === "/app/collection" || path === "/app/rankings"
 	)
 	return null
 }

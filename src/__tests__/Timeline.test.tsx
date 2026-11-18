@@ -1132,12 +1132,14 @@ describe('Timeline tiles link to the Encyclopedia', () => {
     expect(screen.queryByRole('link', { name: 'Any SSR' })).toBeNull()
   })
 
-  it('leaves the tiles as they were for everyone else', () => {
+  it('links the tiles for an account without early access too', () => {
     events = [withIds()]
     renderAs(false)
 
-    expect(screen.queryByRole('link', { name: 'Gold Ship' })).toBeNull()
-    expect(screen.getByRole('group', { name: 'Gold Ship' })).toHaveAccessibleDescription('Great pace parent.')
+    const uma = screen.getByRole('link', { name: 'Gold Ship' })
+    expect(uma).toHaveAttribute('href', '/app/umas/100701')
+    expect(uma).toHaveAccessibleDescription('Great pace parent.')
+    expect(screen.queryByRole('link', { name: 'Any SSR' })).toBeNull()
   })
 })
 
@@ -1266,7 +1268,7 @@ describe('Timeline story events', () => {
     expect(screen.queryByAltText('Rice Shower')).toBeNull()
   })
 
-  it("links the card to its page for early access, and a tap opens its details instead", () => {
+  it("links the card to its page, and a tap opens its details instead", () => {
     events = [categorised(2, 'standard', ['Kitasan Black'])]
     storyEvents = [teatime()]
     renderAs(true)
@@ -1291,13 +1293,14 @@ describe('Timeline story events', () => {
     expect(screen.getByText('Open its page').closest('a')).toHaveAttribute('href', '/app/cards/30133')
   })
 
-  it('draws a plain tile for everyone else, as the banner tiles do', () => {
+  it('links the card for an account without early access too, as the banner tiles do', () => {
     events = [categorised(2, 'standard', ['Kitasan Black'])]
     storyEvents = [teatime()]
     renderAs(false)
 
-    expect(screen.queryByRole('link', { name: /Hishi Akebono/ })).toBeNull()
-    expect(screen.getByText('Hishi Akebono').closest('[data-hover-card]')).toBeNull()
+    const tile = screen.getByRole('link', { name: /Hishi Akebono/ })
+    expect(tile).toHaveAttribute('href', '/app/cards/30133')
+    expect(tile).toHaveAttribute('data-hover-card', 'card:90')
   })
 })
 

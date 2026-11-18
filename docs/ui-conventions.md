@@ -59,16 +59,24 @@ color in `src/index.css`.
 `src/index.css`.** The light theme *inverts* the gray ramp, so existing utilities keep
 working unchanged. Read the comments there before adding a theme.
 
-The compact picker puts **Dark** and **Light** first as the primary choices, with
-small swatches for alternative **Dark themes** and **Light themes** underneath,
-grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
-`canvas` (its card colour on a dark theme, its page colour on a light one) with
-its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
-remains the initial default. Light (`light`) restores the original warm palette;
-Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
-each mode six themes. Purple keeps its saved `light-lilac` id. Three more, Winning Live,
-Tracen and Tracen Night, sit in their own **Special themes** group ("The palette themes"
-below).
+**The defaults (2026-11-18): Dark (`gold`) for dark, Tracen for light.** A first visit,
+with no valid theme saved, follows the device's `prefers-color-scheme`: light mode gets
+Tracen, anything else Dark. The pick is saved at once (`index.html`'s script, then
+`saveFirstVisitTheme` on mount), so a later change of device setting never moves it, and
+a saved theme is never replaced. The server render and hydration use Dark
+(`getServerTheme`); the pre-paint script is what shows the right one. A returning visitor
+who never saved a theme looks like a first visit, so on a light-mode device they moved
+from Dark to Tracen once when this shipped.
+
+The picker is two columns split by the `mode` in `themeStore.ts`: every dark theme on the
+left, every light one on the right, with a rule between. Each column leads with its
+default as a larger button (`DEFAULT_DARK_THEME`, `DEFAULT_LIGHT_THEME`), then **More
+themes** lists the rest of that mode, palette themes first. Every theme is a named row
+with the same swatch: the theme's `canvas` (its card colour on a dark theme, its page
+colour on a light one) as a disc with its accent `swatch` as a dot, so themes sharing a
+gold accent still differ. Light (`light`) is the original warm palette; Blue
+(`light-blue`), Green, Red, Purple and Pearl remain alternatives. Purple keeps its saved
+`light-lilac` id.
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
 labels and surface tokens. Individual `data-theme` selectors override the palette,
@@ -81,31 +89,31 @@ mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
 
-### The palette themes: Winning Live, Tracen and Tracen Night
+### The palette themes: Winning Live and Tracen
 
-Twelve themes keep to one accent. These three (the first two 2026-11-17, Tracen Night a day
-later) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
+Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
 has a `palette` (the accent, then its Uma, Support and Step-Up colours): the picker lists
-those under **Special themes**, one named button per row, with a dot per colour.
+it ahead of the one-accent themes in its column (Tracen leads the light column as its
+default), its swatch dot split between those colours.
 
-| | Winning Live (dark) | Tracen (light) | Tracen Night (dark) |
-|---|---|---|---|
-| Idea | the concert after the race | the game's own menus | Tracen with the lights off: the same menus under the home screen's night sky |
-| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) | the lime itself, `#8fd61a` (8.5:1 on its card) |
-| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band | the same three, as deep fills with pale ink and the same band |
-| Over budget | red-orange | hot pink, and pink is used for nothing else | the same pink, on a deep pink fill |
-| A second colour | pink, only on the wordmark's "Carat" and the panel title | none | none |
-| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier | as Tracen |
-| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px | as Tracen |
+| | Winning Live (dark) | Tracen (light) |
+|---|---|---|
+| Idea | the concert after the race | the game's own menus |
+| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) |
+| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band |
+| Over budget | red-orange | hot pink, and pink is used for nothing else |
+| A second colour | pink, only on the wordmark's "Carat" and the panel title | none |
+| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier |
+| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px |
 
-**Tracen Night has no shapes of its own.** Tracen's section of `personalityThemes.css`
-selects `[data-theme^="tracen"]` (starts with), so one set of rules draws both, and the lime
-is written once. The handful of colours those shapes need that differ by day and night (key
-face and edge, tab tray and ink, stat-box face and edge, the numerals, the shortfall pill)
-are `--tracen-*` tokens in each theme's block in `index.css`. Its only rules of its own are
-the two status pull fields, which get a deeper wash than the dark themes' 12% (that came
-out purple over a blue inset). Because Tracen's rules are shared, **a change to them is a
-change to both themes**: capture both before and after.
+**Tracen Night, Tracen's dark pair, was removed on 2026-11-18** (the owner's call, after
+Daptrius's verdict). A device with it saved moves to Winning Live and
+saves that: `RETIRED_THEMES` in `themeStore.ts`, mirrored by `index.html`'s script and held
+to it by `themeScript.test.ts`. **Removing any theme works this way**: delete its entry and
+CSS, and add its id to that map with a replacement, for good. Without the entry its users
+fall to the device default and their dead id stays stored. Tracen's colours that its shapes
+read (key face and edge, tab tray and ink, stat-box face and edge, the numerals, the
+shortfall pill) are still `--tracen-*` tokens in its `index.css` block, written for the pair.
 
 **Their colours are tokens in `index.css` like any theme's; their shapes are in
 `src/personalityThemes.css`**, imported last in `App.tsx`. That file's header carries its
@@ -141,12 +149,7 @@ Four things a new palette theme has to get right, each learned on these two:
 
 Tracen moves Support to orange (lime is the brand) and keeps on-pity green, which shares
 a hue with its brand; the Green theme moved on-pity to blue for that, and blue is Uma
-here. Tracen Night inherits both choices. That one is the owner's to settle, once for the
-pair (`notes/theme-options.md`).
-
-Tracen Night is a dark theme, so it is named in the two PAGE GLOW selector lists (Tracen
-reaches that layer through the light-mode selector), and under colorblind mode it takes the
-dark themes' deep blue and red fills with white ink and lighter bands than Tracen's.
+here. That one is the owner's to settle (`notes/theme-options.md`).
 
 **A theme's page glow is a `--page-glow` value, never a page background.** One
 `position: fixed` layer (`body::before`) paints it, and the page shells
@@ -1330,11 +1333,11 @@ and the card — so a floating tooltip would need a portal and a positioning lib
 field's 100-character cap is what keeps the text inside the narrowest tile. An empty purpose
 renders the tile exactly as before: no overlay, no tab stop, no handlers.
 
-**For early access, each tile is a link to its Encyclopedia page** (`FeaturedTile`, keyed
+**Each tile is a link to its Encyclopedia page** (`FeaturedTile`, keyed
 by the payload's `game_id`; none when it is null, as on a placeholder card). The link then
 owns the overlay's triggers: it is the one tab stop and the `group` the hover and focus
 classes answer to, and a tap follows the link, so a touch screen doesn't toggle the note.
-Opening the Encyclopedia to everyone (`useSkillsPreview` returning true) opens these too.
+For everyone since the Encyclopedia opened (2026-11-18).
 
 ### Infinite scroll — the reveal-count dependency is intentional
 
@@ -1386,8 +1389,7 @@ corners, so the art row can't grow. Plan: `notes/story-events-plan.md`.
   back only for a touch (a ref,
   because the tap's own re-render lands before the click). The banner tiles still send a tap
   to the page.
-- **Early access only**, like the Encyclopedia (`useSkillsPreview`): everyone else gets a
-  plain tile.
+- **For everyone**, like the Encyclopedia, since 2026-11-18 (early access only before).
 - **"Must get" is the one mark**, outlined in brand, never filled (black on brand fails on the
   light theme). No scale.
 - Search finds a banner by its story event's name and its free cards' names.
@@ -2005,13 +2007,15 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   a plain pill, and the popup lists the skills its note names at the bottom (`MentionedSkills`,
   under a rule, crediting UmaTL whenever their text is theirs). A skill's other versions sit on
   a bar down the left with a colour tag, so the two lists read apart.
-- **SHELVED (owner, 2026-10-23): everything about skills below is guide-editor only.**
-  `useSkillsPreview()` (`hooks/useSkillsPreview.ts`) and the API's
-  `pvp_guide_editing.sees_skills_preview` decide it: the Skills page says "not here" to
-  everyone else and is neither prerendered nor in the sitemap (and `noindex`), and the hover
-  card's readable text, sources, "JP only" tag and UmaTL credit show to editors only. Players
-  see guides as before the work. Un-shelving is both functions; the rest is in
-  workspace-root `skills-plan-4.md`.
+- **EARLY ACCESS ONLY, on a guide (owner, 2026-11-18: "Not the guides"): the skills work
+  below.** `useSkillsPreview()` (`hooks/useSkillsPreview.ts`) and the API's
+  `pvp_guide_editing.sees_skills_preview` decide it: a guide's JP-only skills, and the skill
+  card's readable text, sources, type, cost, "JP only" tag, UmaTL credit and link to the
+  skill's page, show to supporters, staff and granted accounts. Everyone else sees guides as
+  before the work. The Skills page and the rest of the Encyclopedia are public and read
+  neither function; `SkillDetail` takes `full` from the Encyclopedia's own skill rows, which
+  draw the same card. Opening the guides is both functions returning true. History:
+  workspace-root `notes/skills-plan-4.md`, `notes/encyclopedia-open-plan.md`.
 - **The Skills page is `/app/skills`** (`components/skills/SkillsPage.tsx`, 2026-10-23):
   every `GET /skills` row, searched by any name a skill answers to (`filterSkills`,
   `utils/skillSearch.ts`) and filtered by colour and by where it is, 60 rows at a time.
@@ -2636,19 +2640,21 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
 ## Encyclopedia pages (`components/encyclopedia/`, `components/skills/`)
 
 A page for every trainee outfit, support card and skill (`notes/encyclopedia-plan.md`, in the
-workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: nothing reaches
-`develop` until the owner says so, and then only early access sees it.
+workspace's notes repo). **Open to everyone since 2026-11-18** (supporters and staff had it
+first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
 
 - **Routes**: `/app/umas`, `/app/umas/:gameId`, `/app/cards`, `/app/cards/:gameId`,
   `/app/skills`, `/app/skills/:gameId` (`SkillPage`; an old `?skill=` link redirects there). A
   page is keyed by the GAME's id;
   `utils/encyclopediaRoutes.ts` is the only builder of these links (`umaHref`, `cardHref`), and
   `parseGameId` reads only the leading digits so a readable suffix can come later.
-- **The gate**: every list and page is wrapped in `EncyclopediaGate` (`useSkillsPreview()`,
-  which is `account.early_access`). Anyone else gets `SupportersFirstNote`, the note Rankings
-  shows. The API is the real gate (401 / 403). No route is prerendered or in the sitemap, and
-  `AppRouteMeta` marks them all `noindex`; a detail page has a generic title until its data lands
-  (`usePageTitle`). Opening it to everyone is the plan's "Opening it to everyone".
+- **No gate**: every list and page is wrapped in `EncyclopediaFrame`, which only adds the
+  back-to-top arrow, and the API routes are public. **Search engines:** the three lists are
+  in `PRERENDER_ROUTES` and the sitemap like every tab (the app shell and its head tags at
+  build time; their titles name the Encyclopedia because the head is all a crawler reads of
+  them). A detail page is still `noindex`, with a generic title until its data lands
+  (`usePageTitle`): the 3,000 of them become real documents in
+  `notes/encyclopedia-open-plan.md`'s PRs 3 and 4, and the tag stays until then.
 - **Data**: the lists read `/pvp-catalogue` (`usePvpCatalogue`); a page reads
   `GET /encyclopedia/<kind>/<id>` through TanStack Query (`services/encyclopediaQueries.ts`). The
   API sends no dates: banners and release dates come from `/calculator-data`
@@ -2660,8 +2666,14 @@ workspace's notes repo). **Built on `feat/encyclopedia` and supporters first**: 
   JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
   colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
   components only.
-- **The navbar**: an Encyclopedia tab beside Rankings, drawn on the same rule, so early access
-  has seven tabs on a phone (icons only below 440px, so there is no phone label to choose).
+- **The navbar**: the Encyclopedia is everyone's sixth tab, and Rankings the seventh for
+  early access. Both counts use the breakpoints the seven-tab bar was fitted at (icons only
+  below 440px on a phone; the Encyclopedia and Rankings labels are icons below 1536px),
+  because six tabs with the long "Encyclopedia" label was never measured.
+- **The catalogue is 106 KB on the wire** and the links and cards need it
+  (`useEncyclopediaHrefs`). `HoverCardLayer` sits on every `/app` page, so it skips the load
+  where no tile can open a card (`pageDrawsHoverCards`: the calculator and Selectors), and
+  `SelectorTargetPicker` asks only once there is a pick to link.
 
 ### The look (the redesign of 2026-11-17, on the 2026-11-12 overhaul)
 
@@ -3315,9 +3327,10 @@ then scrolls itself into view. Its numbers are explained in
 Ctrl+K / Cmd+K anywhere, or the navbar's search button. `hooks/useSiteSearch.ts` holds the
 open state and the key, `components/search/SiteSearch.tsx` the button and the lazy palette (its
 own chunk, cmdk and Fuse included, loaded on first opening), `utils/siteSearch.ts` what can be
-found and where it goes. An uma or card opens the Timeline on its banner, an event its guide, and
-a skill shows in the palette (no page of its own while the Skills page is shelved). A new page
-goes in `pageEntries`. Outside `/app` the banners come through `readCalculatorCatalogue`, the
+found and where it goes. An uma, a card or a skill opens its Encyclopedia page and an event its
+guide. Two fallbacks: until the catalogue loads, an uma or card opens the Timeline on its banner,
+and a skill with no game id (so no page) shows in the palette. A new page goes in `pageEntries`;
+Rankings is listed for early access only. Outside `/app` the banners come through `readCalculatorCatalogue`, the
 navbar's prefetch, so going on to the calculator costs no second request.
 
 ## Share picture (`carat-calculator/share/`, `pvp/share/`)

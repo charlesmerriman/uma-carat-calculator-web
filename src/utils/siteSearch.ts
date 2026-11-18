@@ -4,18 +4,17 @@
  *
  * WHERE A RESULT GOES
  * -------------------
- * An uma or a support card has no page of its own, so it opens the Timeline on
- * its banner: the next one still to end, else the latest. One with no banner
- * isn't listed, because there is nowhere to send anyone. A race event opens its
- * PvP guide. A skill has no page either (the Skills page is shelved), so it has
- * no `href`: the palette shows what it does and who teaches it instead.
+ * Every uma and card in the PvP catalogue is listed, banner or not, and opens
+ * its own Encyclopedia page; a banner it has stays in the detail line. A skill
+ * opens its page too. For everyone since the Encyclopedia opened (2026-11-18).
+ * A race event opens its PvP guide.
  *
- * WITH EARLY ACCESS (the Encyclopedia, supporters first, owner 2026-11-12)
- * every uma and card in the PvP catalogue is listed, banner or not, and opens
- * its own page; a banner it has stays in the detail line. A skill opens its
- * page too, and the Encyclopedia is a page result. Everyone else gets the
- * behaviour above, untouched. Opening the Encyclopedia to everyone is
- * dropping the `earlyAccess` branch here (notes/encyclopedia-plan.md).
+ * TWO FALLBACKS. Until the catalogue has loaded (or if it fails), an uma or a
+ * card is listed by its banner and opens the Timeline on it: the next one
+ * still to end, else the latest. And a skill with no game id has no page, so
+ * it has no `href`: the palette shows what it does and who teaches it.
+ *
+ * `earlyAccess` decides one thing now: whether Rankings is a page result.
  *
  * WHY FUSE
  * --------
@@ -87,13 +86,9 @@ export function pageEntries(earlyAccess: boolean): SearchEntry[] {
 		page("Selectors", "/app/selectors", "selector tickets campaign packs step-up"),
 		page("Legend Races", "/app/legend-races", "daily"),
 		page("PvP", "/app/pvp", "guides teams gallery champions meeting league of heroes"),
-		...(earlyAccess
-			? [
-				page("Rankings", "/app/rankings", "most used"),
-				page("Encyclopedia", UMA_LIST_PATH, "umas support cards skills characters wiki"),
-				page("Skills", "/app/skills", "encyclopedia"),
-			]
-			: []),
+		...(earlyAccess ? [page("Rankings", "/app/rankings", "most used")] : []),
+		page("Encyclopedia", UMA_LIST_PATH, "umas support cards skills characters wiki"),
+		page("Skills", "/app/skills", "encyclopedia"),
 		page("Collection", "/app/collection", "veterans owned cards history"),
 		page("FAQ", "/faq", "questions income help"),
 		page("Changelog", "/changelog", "patch notes updates"),
@@ -207,7 +202,7 @@ function encyclopediaEntries(
 export function buildSearchEntries(sources: SearchSources, now: Date, earlyAccess: boolean): SearchEntry[] {
 	const entries = pageEntries(earlyAccess)
 
-	if (earlyAccess && sources.umas && sources.cards) {
+	if (sources.umas && sources.cards) {
 		entries.push(...encyclopediaEntries(sources, sources.umas, sources.cards, now))
 	} else {
 		entries.push(...bannerEntries(sources, now))
@@ -263,8 +258,8 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			image: skill.image,
 			skillId: skill.id,
 			gameId: skill.game_id ?? undefined,
-			// Early access opens the skill's page; everyone else reads it in the palette.
-			...(earlyAccess && skill.game_id != null ? { href: skillHref(skill.game_id) } : {}),
+			// Its page; a skill with no game id is read in the palette instead.
+			...(skill.game_id != null ? { href: skillHref(skill.game_id) } : {}),
 		})
 	}
 	return entries

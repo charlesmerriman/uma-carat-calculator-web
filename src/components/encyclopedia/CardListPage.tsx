@@ -21,7 +21,7 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { CARD_TYPE_ICONS } from "../../utils/cardTypeIcons"
 import { cardHref } from "../../utils/encyclopediaRoutes"
-import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
+import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { LetterHeading, LetterIndex } from "./letters"
 import { lettersFor } from "../../utils/encyclopediaLetters"
 import { reportCounts } from "../../utils/encyclopediaCounts"
@@ -43,9 +43,9 @@ const TYPE_PICKS = TYPE_OPTIONS.map((option) => ({ ...option, icon: CARD_TYPE_IC
 const RARITY_PICKS = RARITY_OPTIONS.map((option) => ({ ...option, tone: RARITY_WORDS[Number(option.value)].toLowerCase() }))
 
 export const CardListPage = () => (
-	<EncyclopediaGate>
+	<EncyclopediaFrame>
 		<CardListBody />
-	</EncyclopediaGate>
+	</EncyclopediaFrame>
 )
 
 const CardListBody = () => {

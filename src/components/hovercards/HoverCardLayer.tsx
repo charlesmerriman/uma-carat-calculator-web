@@ -29,8 +29,7 @@
  * a click and a key. Nothing runs while the mouse moves (the hover version
  * listened to every pointerover and pointermove on the page).
  *
- * WHO: early access only, the Encyclopedia's rule (useSkillsPreview). For
- * everyone else this renders nothing and adds no listeners. Touch is ignored,
+ * WHO: everyone, since the Encyclopedia opened (2026-11-18). Touch is ignored,
  * and so is a click made from the keyboard or a screen reader (Enter on a
  * link): there the link goes to the page as it always did, because the card
  * is aria-hidden and its links are out of the Tab order (owner, 2026-11-17:
@@ -51,10 +50,9 @@ import { memo, useEffect, useRef, useState, type CSSProperties } from "react"
 import { autoUpdate, FloatingPortal, hide, useFloating, type ReferenceType } from "@floating-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useLocation } from "react-router-dom"
-import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
+import { loadEncyclopediaIndex, useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
 import { prefetchEncyclopediaPage } from "../../services/encyclopediaQueries"
-import { CARD_PAGE_STALE_MS, parseHoverCard, parseRing, type HoverCardKind } from "../../utils/hoverCards"
+import { CARD_PAGE_STALE_MS, pageDrawsHoverCards, parseHoverCard, parseRing, type HoverCardKind } from "../../utils/hoverCards"
 import type { AptitudeKey } from "../../types/pvpTeam"
 import { CARD_POPUP_BOX, CARD_POPUP_PLACEMENT, cardPopupMiddleware, InsideHoverContext, InsidePopupContext } from "../pvp/hoverPopup"
 import { HoverCardContent } from "./HoverCardContent"
@@ -103,14 +101,15 @@ interface Target {
 }
 
 export function HoverCardLayer() {
-	return useSkillsPreview() ? <Layer /> : null
-}
-
-function Layer() {
 	// Loaded now, not on the first click: the catalogue says which row is
 	// which page (one request a session, shared with every page's links).
-	const lookup = useEncyclopediaLookup()
-	const hrefs = useEncyclopediaHrefs()
+	// Not on a page that draws no tiles, though (pageDrawsHoverCards has the
+	// numbers): there the layer only reads it, should another page have
+	// loaded it already.
+	const { pathname } = useLocation()
+	const load = pageDrawsHoverCards(pathname)
+	const lookup = useEncyclopediaLookup({ load })
+	const hrefs = useEncyclopediaHrefs({ load })
 	// The listeners below read the catalogue through a ref, so its arrival
 	// doesn't tear them down (and with them a card opened a moment before).
 	const catalogue = useRef({ lookup, hrefs })
@@ -216,6 +215,9 @@ function Layer() {
 			touch = event.pointerType === "touch"
 			if (touch || event.button !== 0) return
 			const tile = tileFor(event.target)
+			// The safety net for a tile on a page pageDrawsHoverCards says has
+			// none: its first click finds no catalogue, the next one does.
+			if (tile) loadEncyclopediaIndex()
 			const parsed = tile && tile !== current ? parseHoverCard(tile.getAttribute("data-hover-card")) : null
 			const { lookup: rows } = catalogue.current
 			const entry = parsed && (parsed.kind === "uma" ? rows.uma(parsed.id) : rows.card(parsed.id))

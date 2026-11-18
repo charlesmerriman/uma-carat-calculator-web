@@ -8,12 +8,10 @@
  * that maps one id to the other: the PvP catalogue (GET /pvp-catalogue),
  * through the shared promise in pvpTeamFetchCalls.ts. The PvP pages, the
  * Collection, Rankings and search already load it; elsewhere it costs one
- * request per session (about 100 KB compressed), made only for the people who
- * see the links.
+ * request per session (about 100 KB compressed).
  *
- * Early access only while the Encyclopedia is supporters-first: everyone else
- * gets a lookup that answers null, and so no links (useSkillsPreview, the same
- * rule the pages use; opening them to everyone opens these too).
+ * For everyone since the Encyclopedia opened (2026-11-18); until then only
+ * early access got links.
  *
  * The index lives in a module-level store read through useSyncExternalStore,
  * so a grid of three hundred tiles shares one fetch and one index, and the
@@ -22,7 +20,6 @@
  */
 
 import { useEffect, useSyncExternalStore } from "react"
-import { useSkillsPreview } from "./useSkillsPreview"
 import { loadPvpCatalogue } from "../services/pvpTeamFetchCalls"
 import { cardHref, umaHref } from "../utils/encyclopediaRoutes"
 import type { CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
@@ -105,21 +102,33 @@ function subscribe(listener: () => void): () => void {
 	return () => listeners.delete(listener)
 }
 
-/** The shared index for early access, else null; loads the catalogue on first use. */
-function useIndex(): Index | null {
-	const early = useSkillsPreview()
-	useEffect(() => {
-		if (early) ensureLoaded()
-	}, [early])
-	const loaded = useSyncExternalStore(subscribe, () => index, () => null)
-	return early ? loaded : null
+interface IndexOptions {
+	/**
+	 * False reads the index if something else has loaded it, and asks for
+	 * nothing itself. Only the hover layer passes it: it is mounted on every
+	 * /app page, and the pages with no tiles shouldn't cost a download.
+	 */
+	load?: boolean
 }
 
-export function useEncyclopediaHrefs(): EncyclopediaHrefs {
-	return useIndex()?.hrefs ?? NO_LINKS
+/** The shared index, or null until it loads; loads the catalogue on first use. */
+function useIndex(load: boolean): Index | null {
+	useEffect(() => {
+		if (load) ensureLoaded()
+	}, [load])
+	return useSyncExternalStore(subscribe, () => index, () => null)
+}
+
+export function useEncyclopediaHrefs({ load = true }: IndexOptions = {}): EncyclopediaHrefs {
+	return useIndex(load)?.hrefs ?? NO_LINKS
 }
 
 /** The game id and catalogue entry behind a row id, on the same rule as the links. */
-export function useEncyclopediaLookup(): EncyclopediaLookup {
-	return useIndex()?.entries ?? NO_ENTRIES
+export function useEncyclopediaLookup({ load = true }: IndexOptions = {}): EncyclopediaLookup {
+	return useIndex(load)?.entries ?? NO_ENTRIES
+}
+
+/** Starts the catalogue's load from outside a render (the hover layer's press). */
+export function loadEncyclopediaIndex(): void {
+	ensureLoaded()
 }

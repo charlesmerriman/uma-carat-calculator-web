@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -25,15 +26,17 @@ const ROWS = [
 	row(4, "Fan Skill", { availability: "jp", uses_translation: true }),
 ]
 
-/** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
-function asReader(node: ReactNode, earlyAccess = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } } as unknown as AuthContextType
+/** The Skills page is open to everyone; `earlyAccess` false is an account without it. */
+function asReader(node: ReactNode, earlyAccess: boolean | "guest" = true) {
+	const value = (earlyAccess === "guest"
+		? { isLoggedIn: false, status: "ready", account: null }
+		: { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
 const fetchMock = vi.fn()
 
-function renderPage(url = "/app/skills", earlyAccess = true) {
+function renderPage(url = "/app/skills", earlyAccess: boolean | "guest" = true) {
 	return render(
 		asReader(
 			<MemoryRouter initialEntries={[url]}>
@@ -195,6 +198,38 @@ describe("SkillsPage", () => {
 		sessionStorage.clear()
 	})
 
+	it("opens a row's card on a click, with the way to its page; Enter still follows the link", async () => {
+		// Henry, 2026-11-18: "popup first like on pvp page".
+		// An open card fetches the skill's page through TanStack Query.
+		render(
+			<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+				{asReader(
+					<MemoryRouter initialEntries={["/app/skills"]}>
+						<Routes>
+							<Route path="/app/skills" element={<SkillsPage />} />
+							<Route path="/app/skills/:gameId" element={<p>The skill's own page</p>} />
+						</Routes>
+					</MemoryRouter>
+				)}
+			</QueryClientProvider>
+		)
+		const gourmand = await screen.findByRole("link", { name: /Gourmand/ })
+		fireEvent.pointerDown(gourmand, { pointerType: "mouse" })
+		fireEvent.click(gourmand, { detail: 1 })
+		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
+		const open = await screen.findByText("Open its page")
+		expect(open.closest("a")).toHaveAttribute("href", "/app/skills/200002")
+		// A tap pins it too, and the tap's click doesn't follow the link.
+		const corner = screen.getByRole("link", { name: /Corner Adept/ })
+		fireEvent.pointerDown(corner, { pointerType: "touch" })
+		fireEvent.pointerUp(corner, { pointerType: "touch" })
+		fireEvent.click(corner, { detail: 1 })
+		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
+		// The keyboard's Enter is a click with no detail: straight to the page.
+		fireEvent.click(gourmand, { detail: 0 })
+		expect(await screen.findByText("The skill's own page")).toBeInTheDocument()
+	})
+
 	it("lists the skills, tagged, and narrows on search", async () => {
 		renderPage()
 		expect(await screen.findByText("4 skills")).toBeInTheDocument()
@@ -237,10 +272,15 @@ describe("SkillsPage", () => {
 		await waitFor(() => expect(screen.getByText(/The skill list didn't load/)).toBeInTheDocument())
 	})
 
-	it("tells anyone without early access it's for supporters first", () => {
+	it("lists the skills for an account without early access (everyone, since 2026-11-18)", async () => {
 		renderPage("/app/skills", false)
-		expect(screen.getByText(/The Encyclopedia is for our Patreon supporters for now/)).toBeInTheDocument()
-		expect(fetchMock).not.toHaveBeenCalled()
+		expect(await screen.findByText("Gourmand")).toBeInTheDocument()
+		expect(screen.queryByText(/for our Patreon supporters/)).toBeNull()
+	})
+
+	it("lists the skills for a guest", async () => {
+		renderPage("/app/skills", "guest")
+		expect(await screen.findByText("Gourmand")).toBeInTheDocument()
 	})
 
 	it("opens a type's sub-types once the type is picked", async () => {

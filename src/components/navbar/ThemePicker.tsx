@@ -1,28 +1,65 @@
 import { useEffect, useId, useRef, useState } from "react"
-import { Palette } from "lucide-react"
+import { Moon, Palette, Sun } from "lucide-react"
 import { useTheme } from "../../services/ThemeContext"
+import type { ThemeConfig } from "../../services/ThemeContext"
+import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from "../../services/themeStore"
 import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 
-const PRIMARY_THEME_IDS = new Set(["gold", "light"])
+type Theme = ThemeConfig
+
+// The two columns, dark on the left and light on the right, each led by the
+// theme a first visit gets on a device in that mode (themeStore.ts).
+const COLUMNS = [
+	{ mode: "dark", label: "Dark", Icon: Moon, defaultId: DEFAULT_DARK_THEME },
+	{ mode: "light", label: "Light", Icon: Sun, defaultId: DEFAULT_LIGHT_THEME },
+] as const
 
 /**
- * The theme swatches and the colorblind switch: the palette button's panel, and
- * a section of the gear menu on phones (SettingsMenu `withTheme`), where one
- * button does both jobs to leave the wordmark room. `onPicked` closes a panel
- * after a swatch is chosen.
+ * One theme's swatch: the theme's surface as a disc with its accent as a dot,
+ * so Dark, Gilded and Midnight (all gold accents) can still be told apart.
+ * A palette theme splits the dot between its colours (the accent first, then
+ * its kinds), which is what marks it as a different kind of theme while
+ * keeping every swatch the same shape. Static hexes, not var(--color-brand):
+ * every swatch is on screen at once, each showing its own theme.
  */
-export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
-	const { activeTheme, themes, setTheme, colorblindMode, setColorblindMode } = useTheme()
-	const primaryThemes = themes.filter((theme) => PRIMARY_THEME_IDS.has(theme.id))
-	// A theme with a `palette` uses several colours with jobs of their own
-	// (themeStore.ts). They get a group and a named button each: as one more
-	// unlabelled dot in the Dark or Light row, nothing would say they are a
-	// different kind of theme from the dots beside them.
-	const paletteThemes = themes.filter((theme) => theme.palette)
-	const alternateThemes = themes.filter((theme) => !PRIMARY_THEME_IDS.has(theme.id) && !theme.palette)
-	const isLabelled = (theme: typeof themes[number]) => PRIMARY_THEME_IDS.has(theme.id) || Boolean(theme.palette)
+const Swatch = ({ theme, large = false }: { theme: Theme; large?: boolean }) => {
+	const dot = theme.palette
+		? `conic-gradient(${theme.palette
+			.map((color, i, all) => `${color} ${(i * 360) / all.length}deg ${((i + 1) * 360) / all.length}deg`)
+			.join(", ")})`
+		: theme.swatch
+	return (
+		<span
+			aria-hidden="true"
+			className={`flex shrink-0 items-center justify-center rounded-full border border-gray-500 ${large ? "h-5 w-5" : "h-4 w-4"}`}
+			style={{ backgroundColor: theme.canvas }}
+		>
+			<span className={`rounded-full ${large ? "h-2.5 w-2.5" : "h-2 w-2"}`} style={{ background: dot }} />
+		</span>
+	)
+}
 
-	const renderThemeButton = (theme: typeof themes[number]) => (
+/**
+ * The theme list and the colorblind switch: the palette button's panel, on
+ * desktop and phones alike (the gear menu carried it on phones until
+ * 2026-11-18). `onPicked` closes the panel after a theme is chosen.
+ *
+ * Laid out as two columns so the split is obvious at a glance: every dark
+ * theme on the left, every light one on the right. The two defaults sit on
+ * top as larger buttons, and "More themes" lists the rest of each mode, the
+ * palette themes first. Every theme is a named row with the same swatch, which
+ * replaced four groups that each looked different (owner, 2026-11-18).
+ */
+const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
+	const { activeTheme, themes, setTheme, colorblindMode, setColorblindMode } = useTheme()
+
+	// The rest of a mode's themes, palette themes first, otherwise in THEMES order.
+	const moreThemes = (mode: Theme["mode"], defaultId: string) => {
+		const rest = themes.filter((theme) => theme.mode === mode && theme.id !== defaultId)
+		return [...rest.filter((theme) => theme.palette), ...rest.filter((theme) => !theme.palette)]
+	}
+
+	const renderThemeButton = (theme: Theme, large = false) => (
 		<button
 			key={theme.id}
 			type="button"
@@ -30,66 +67,48 @@ export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 			aria-label={`Switch to ${theme.label} theme`}
 			aria-pressed={activeTheme === theme.id}
 			title={theme.label}
-			className={`flex items-center rounded-md transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
-				isLabelled(theme) ? "gap-2 px-2 py-1.5 text-xs" : "h-6 w-6 justify-center"
+			className={`flex w-full items-center gap-2 rounded-md text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+				large ? "px-2 py-2 text-sm font-medium" : "px-2 py-1.5 text-xs"
 			} ${
 				activeTheme === theme.id
 					? "bg-gray-700 text-gray-100 ring-1 ring-gray-400"
 					: "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
 			}`}
 		>
-			{/* Static hex, not var(--color-brand): all swatches are visible at
-			    once. Two-tone, the theme's surface with its accent as a dot, so
-			    Dark, Gilded and Midnight (all gold accents) can be told apart. */}
-			{theme.palette ? (
-				// The same idea stretched: the theme's surface as a lozenge, with a
-				// dot for each of its colours (the accent first, then its kinds).
-				<span
-					aria-hidden="true"
-					className="flex h-4 shrink-0 items-center gap-0.5 rounded-full border border-gray-500 px-1"
-					style={{ backgroundColor: theme.canvas }}
-				>
-					{theme.palette.map((color) => (
-						<span key={color} className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-					))}
-				</span>
-			) : (
-				<span
-					aria-hidden="true"
-					className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-500"
-					style={{ backgroundColor: theme.canvas }}
-				>
-					<span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.swatch }} />
-				</span>
-			)}
-			{isLabelled(theme) && <span className="min-w-0 truncate">{theme.label}</span>}
+			<Swatch theme={theme} large={large} />
+			<span className="min-w-0 truncate">{theme.label}</span>
 		</button>
 	)
 
+	// Each half of a row is one column's cell; the right one carries the rule
+	// that divides dark from light (broken only by the "More themes" line).
+	const cell = (index: number) => (index === 0 ? "pr-1" : "border-l border-gray-700 pl-1")
+	const sectionLabel = "text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+
 	return (
 		<>
-		<p className="px-2 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Primary themes</p>
-		<div role="group" aria-label="Primary themes" className="grid grid-cols-2 gap-1">
-			{primaryThemes.map(renderThemeButton)}
+		<div role="group" aria-label="Default themes" className="grid grid-cols-2">
+			{COLUMNS.map(({ mode, label, Icon, defaultId }, index) => {
+				const theme = themes.find((candidate) => candidate.id === defaultId)
+				return (
+					<div key={mode} className={`flex flex-col gap-1 ${cell(index)}`}>
+						<p className={`flex items-center gap-1 px-2 pt-0.5 ${sectionLabel}`}>
+							<Icon aria-hidden="true" className="h-3 w-3" />
+							{label}
+						</p>
+						{theme && renderThemeButton(theme, true)}
+					</div>
+				)
+			})}
 		</div>
-		{paletteThemes.length > 0 && (
-			<>
-				<p className="mt-1 border-t border-gray-700 px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Special themes</p>
-				{/* One per row: beside its four-dot swatch, "Winning Live" does not
-				    fit half of the panel and was cut to "Winning...". */}
-				<div role="group" aria-label="Special themes" className="grid grid-cols-1 gap-1">
-					{paletteThemes.map(renderThemeButton)}
+		<p className={`mt-1 border-t border-gray-700 px-2 pt-2 ${sectionLabel}`}>More themes</p>
+		<div className="grid grid-cols-2">
+			{COLUMNS.map(({ mode, label, defaultId }, index) => (
+				<div key={mode} role="group" aria-label={`More ${label.toLowerCase()} themes`} className={`flex flex-col gap-0.5 ${cell(index)}`}>
+					{moreThemes(mode, defaultId).map((theme) => renderThemeButton(theme))}
 				</div>
-			</>
-		)}
-		{(["dark", "light"] as const).map((mode) => (
-			<div key={mode} role="group" aria-label={`${mode === "dark" ? "Dark" : "Light"} themes`} className="mt-1 flex items-center justify-between gap-2 border-t border-gray-700 px-2 pt-2">
-				<p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-gray-500">{mode === "dark" ? "Dark themes" : "Light themes"}</p>
-				<div className="flex flex-wrap justify-end gap-1">
-					{alternateThemes.filter((theme) => theme.mode === mode).map(renderThemeButton)}
-				</div>
-			</div>
-		))}
+			))}
+		</div>
 		<div className="mt-1 border-t border-gray-700 pt-1">
 			<button
 				type="button"
