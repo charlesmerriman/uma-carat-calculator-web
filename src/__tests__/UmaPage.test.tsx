@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -172,6 +172,19 @@ describe("UmaPage", () => {
 		expect(await screen.findByText("Hint Lv 3 (-30%)")).toBeInTheDocument()
 		expect(screen.getByTitle("180 SP before your hint discount")).toHaveTextContent("126 SP")
 		expect(screen.queryByText(/Hint Lv 2/)).not.toBeInTheDocument()
+		// "Full cost" shows the price without hints; the level stays tagged.
+		fireEvent.click(within(screen.getByRole("group", { name: "Skill cost" })).getByRole("button", { name: "Full cost" }))
+		expect(screen.getByText("Hint Lv 3")).toBeInTheDocument()
+		expect(screen.queryByText("126")).not.toBeInTheDocument()
+		expect(screen.queryByTitle("180 SP before your hint discount")).not.toBeInTheDocument()
+		// Back to the default, so the remembered choice doesn't leak into another test.
+		fireEvent.click(within(screen.getByRole("group", { name: "Skill cost" })).getByRole("button", { name: "Your cost" }))
+	})
+
+	it("offers no cost switch without hint levels", async () => {
+		renderAt("/app/umas/100101")
+		await screen.findByRole("heading", { level: 1, name: /Special Week/ })
+		expect(screen.queryByRole("group", { name: "Skill cost" })).not.toBeInTheDocument()
 	})
 
 	it("says so for an id with no page", async () => {

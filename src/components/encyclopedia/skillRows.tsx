@@ -77,8 +77,10 @@ function hintedCost(cost: number, hintLevel: number | undefined): number {
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
-export function SkillRow({ skill, sub, hint, face = false, after, hintLevel }: {
+export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, fullCost = false }: {
 	skill: RowSkill
+	/** Show the full cost even with a hint level: the uma page's "Full cost" switch. */
+	fullCost?: boolean
 	/** The player's hint level for this skill on the uma they own, from their imported Collection. */
 	hintLevel?: number
 	/** Draw the outfit the skill belongs to at the end of the row (the Skills list): a unique or evolved skill is found by her face. */
@@ -98,7 +100,7 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel }: {
 	})
 	const kind = skillKind(skill)
 	// True when the shown cost has the player's hint discount taken off.
-	const discounted = skill.cost != null && hintedCost(skill.cost, hintLevel) !== skill.cost
+	const discounted = !fullCost && skill.cost != null && hintedCost(skill.cost, hintLevel) !== skill.cost
 	const oshiIds = useOshiIds()
 	const owner = face ? skill.owner_umas?.[0] : undefined
 	const line = sub ?? [SKILL_TYPE_WORDS[skill.type ?? ""], skill.owners?.join(", ")].filter(Boolean).join(" · ")
@@ -129,7 +131,7 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel }: {
 				    On an owned uma it is what she pays at the player's hint level. */}
 				{skill.cost != null && (
 					<span className="enc-skill__cost" title={discounted ? `${skill.cost} SP before your hint discount` : undefined}>
-						{hintedCost(skill.cost, hintLevel)} <small>SP</small>
+						{discounted ? hintedCost(skill.cost, hintLevel) : skill.cost} <small>SP</small>
 					</span>
 				)}
 				{owner && <FramedUma src={owner.portrait} oshi={oshiIds.has(owner.id)} className="enc-skill__face" />}
@@ -165,13 +167,14 @@ export function UniquePlate({ skill, from }: { skill: RowSkill & { description?:
 	)
 }
 
-export function SkillList<T extends RowSkill>({ skills, sub, after, hintLevel, faces = false, className = "enc-skills" }: {
+export function SkillList<T extends RowSkill>({ skills, sub, after, hintLevel, fullCost, faces = false, className = "enc-skills" }: {
 	skills: T[]
 	/** Each row shows the outfit its skill belongs to (see SkillRow's `face`). */
 	faces?: boolean
 	sub?: (skill: T) => string | undefined
 	after?: (skill: T) => ReactNode
 	hintLevel?: (skill: T) => number | undefined
+	fullCost?: boolean
 	className?: string
 }) {
 	return (
@@ -184,6 +187,7 @@ export function SkillList<T extends RowSkill>({ skills, sub, after, hintLevel, f
 					face={faces}
 					after={after?.(skill)}
 					hintLevel={hintLevel?.(skill)}
+					fullCost={fullCost}
 				/>
 			))}
 		</ul>
