@@ -56,10 +56,12 @@ const HOVER_OPEN_DELAY_MS = 120
  *
  *   - right of the tile, else left. `crossAxis: false` makes the room BESIDE
  *     the tile the only thing that picks the side. Left on, Floating UI also
- *     asks whether the whole card fits below the tile's top; a tall card
- *     rarely does, so every side "overflowed" and it fell to its best guess:
- *     above or below the tile, squeezed into the height left over, sometimes
- *     over the tile itself (the placement Daptrius reported, 2026-11-17).
+ *     asks whether the whole card fits below the tile's top; when no side
+ *     passed, it took its best guess among all four, and in a narrow window
+ *     that was above or below the tile, squeezed into the height left over.
+ *     (Measured 2026-11-18: beside a small picture in a wide window the old
+ *     list and this one put the card in the same place. What differs is the
+ *     narrow window, and that this list can never choose above or below.)
  *   - then slid along the tile's edge until it is inside the window.
  *     `crossAxis: true` covers a window too narrow for either side: the card
  *     stays on screen and overlaps the tile instead of leaving the window.
@@ -173,17 +175,27 @@ export function useHoverPopup(
 			: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
 		whileElementsMounted: autoUpdate,
 	})
+	// A PINNED popup answers only to the click that pinned it, Escape and a
+	// press elsewhere (useDismiss). Hover and focus are switched off for as
+	// long as it is pinned: left on, the pointer leaving the card closed it,
+	// and so did a click on the card's own text, which takes the focus the
+	// pin's click gave the tile.
+	const hovers = !tapOnly && !pinned
 	const { getReferenceProps, getFloatingProps } = useInteractions([
 		useHover(context, {
-			enabled: !tapOnly,
+			enabled: hovers,
 			mouseOnly: true,
+			// Where a click pins, only ENTERING the tile opens the hover note:
+			// with the default, the note came back at the pointer's next twitch
+			// after a second click had closed the card.
+			move: !pin,
 			delay: { open: HOVER_OPEN_DELAY_MS },
 			// safePolygon keeps it open while the pointer crosses the gap
 			// between the tile and the popup, and closes it the moment the
 			// pointer heads anywhere else.
 			handleClose: interactive ? safePolygon() : undefined,
 		}),
-		useFocus(context, { enabled: !tapOnly, visibleOnly: true }),
+		useFocus(context, { enabled: hovers, visibleOnly: true }),
 		// Escape, or a tap anywhere else, closes it.
 		useDismiss(context),
 	])
@@ -209,12 +221,10 @@ export function useHoverPopup(
 				const onTile = event.target instanceof Node && event.currentTarget.contains(event.target)
 				if (!pin || !onTile || event.detail === 0 || pressedWith !== "mouse") return
 				if (pinned) {
-					context.onOpenChange(false, event.nativeEvent, "click")
+					setOpen(false)
 				} else {
 					setPinned(true)
-					// Opened "by a click": Floating UI's hover then leaves it
-					// open when the pointer moves away.
-					context.onOpenChange(true, event.nativeEvent, "click")
+					if (!open) setOpen(true)
 				}
 			},
 		}),

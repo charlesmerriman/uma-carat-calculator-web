@@ -338,10 +338,14 @@ describe("the hover card layer", () => {
 		await user.click(tile)
 		expect(await screen.findByText(META)).toBeInTheDocument()
 		expect(document.querySelector(".hover-card .skill-card__note")).toHaveTextContent("Run her as a late surger.")
-		// Pinned: it stays when the pointer leaves, and a second click closes it.
+		// Pinned: it stays when the pointer leaves, and when the card itself is
+		// clicked (the pin's click focused the tile, and a click on the card's
+		// plain text takes that focus away again)...
 		await user.unhover(tile)
+		await user.click(screen.getByText(META))
 		await new Promise((resolve) => setTimeout(resolve, 300))
 		expect(screen.getByText(META)).toBeInTheDocument()
+		// ...and a second click on the tile closes it.
 		await user.click(tile)
 		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
 	})

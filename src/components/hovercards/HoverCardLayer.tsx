@@ -232,10 +232,14 @@ function Layer() {
 				if (current) close()
 				return
 			}
-			// The click is the card's now: the link under it doesn't navigate,
-			// and its own onClick (a picker's book closes the picker) doesn't run.
-			event.preventDefault()
-			event.stopPropagation()
+			// A click on a link is the card's now: the link doesn't navigate, and
+			// React never hears of it, so the link's own onClick doesn't run. A
+			// click on plain art had no other job; it is left to travel on, for
+			// whatever listens for clicks outside itself.
+			if (event.target instanceof Element && event.target.closest(CONTROL)) {
+				event.preventDefault()
+				event.stopPropagation()
+			}
 			if (tile === current) close()
 			else activate(tile, event.clientX)
 		}
