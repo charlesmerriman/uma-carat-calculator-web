@@ -2498,7 +2498,8 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   link (`setMemberUma`); a guest's team never holds one. The team window does not draw it.
 - **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
   starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
-  ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
+  ones are greyed out and sorted last. A story event's free card is dated by the event's
+  start, like a banner's. A card on neither is decided by the catalogue's
   `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks,
   a guide's deck.
 - **Placeholder cards** (`placeholder` in the catalogue, owner 2026-10-27): stand-ins for
