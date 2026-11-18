@@ -14,8 +14,11 @@
  * effective start among the banners featuring it, so a rerun never makes an
  * old card look new), the same reading as "New since" (newCardsBetween).
  *
- * A card on no banner at all (the launch roster, starter and event-reward
- * cards) has no date. The catalogue's `on_global` decides it: released on
+ * A story event's free card is dated by the event's start, like a banner's
+ * (see cardReleases), so it turns pickable for a CM that runs after the event.
+ *
+ * A card on no banner and in no story event (the launch roster, starter cards,
+ * collaboration rewards) has no date. The catalogue's `on_global` decides it: released on
  * global right now means out ("available"); otherwise it is "unreleased", not
  * pickable, "Not on global yet". The API decides that (the backend's
  * global_release.py: a started confirmed banner, or the game's own release
@@ -27,6 +30,7 @@
  */
 
 import type { BannerSupport, BannerUma, RaceEvent } from "../types"
+import type { StoryEvent } from "../types/storyEvent"
 import type { CatalogueSupportCard } from "../types/pvpTeam"
 import { formatDate, parseApiDate } from "./dateFormat"
 
@@ -56,12 +60,28 @@ function firstStarts<T extends { id: number }>(entries: Array<{ start: string; c
 	return first
 }
 
-export function cardReleases(umaBanners: BannerUma[], supportBanners: BannerSupport[]): CardReleases {
+/**
+ * `storyEvents` dates the free cards too: a story event's card is out from the
+ * event's start, the way a banner's cards are out from the banner's. Without it
+ * a free SSR on no banner falls to `on_global`, which is about TODAY, so every
+ * future CM refused one the player will have by then (Henry, 2026-11-18: Tokai
+ * Teio and Katsuragi Ace for CM 24). Only the PvP release check passes it; the
+ * Collection's sort keeps banners plus the game's date, and selectors never
+ * read this module.
+ */
+export function cardReleases(
+	umaBanners: BannerUma[],
+	supportBanners: BannerSupport[],
+	storyEvents: Pick<StoryEvent, "start_date" | "cards">[] = []
+): CardReleases {
 	return {
 		umas: firstStarts(umaBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.umas }))),
-		supports: firstStarts(
-			supportBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.support_cards }))
-		),
+		// Typed by the shape both sources share: banner cards and story event cards differ otherwise.
+		supports: firstStarts<{ id: number }>([
+			...supportBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.support_cards })),
+			// An event with no date yet dates nothing (firstStarts skips an unparseable start).
+			...storyEvents.map((event) => ({ start: event.start_date ?? "", cards: event.cards })),
+		]),
 	}
 }
 

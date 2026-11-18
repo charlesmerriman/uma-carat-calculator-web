@@ -22,6 +22,35 @@ describe("cardRelease", () => {
 		expect(releases.umas.has(3)).toBe(false)
 	})
 
+	it("dates a story event's free card by the event's start", () => {
+		// Henry, 2026-11-18: free SSR Tokai Teio comes from a story event before
+		// CM 24, sits on no banner and isn't on global today, so it read as
+		// "Not on global yet" for every future CM.
+		const storyEvents = [
+			{ start_date: "2026-10-25T12:00:00Z", cards: [{ id: 427 }] },
+			{ start_date: "2026-11-04T12:00:00Z", cards: [{ id: 423 }] },
+			{ start_date: null, cards: [{ id: 500 }] },
+		] as unknown as Parameters<typeof cardReleases>[2]
+		const releases = cardReleases([], [], storyEvents)
+
+		expect(releaseStatus(releases.supports.get(427), EVENT, false)).toEqual({ kind: "available" })
+		expect(releaseStatus(releases.supports.get(423), EVENT, false)).toEqual({ kind: "during", date: "2026/11/4" })
+		// No date yet: still decided by on_global.
+		expect(releases.supports.has(500)).toBe(false)
+		// Without the story events (the Collection's call), nothing changes.
+		expect(cardReleases([], []).supports.has(427)).toBe(false)
+	})
+
+	it("keeps the earlier of a banner date and a story event date", () => {
+		const supports = [
+			{ banner_timeline: { start_date: "2026-09-01T12:00:00Z" }, support_cards: [{ id: 9 }] },
+		] as unknown as BannerSupport[]
+		const storyEvents = [{ start_date: "2026-12-01T12:00:00Z", cards: [{ id: 9 }] }] as unknown as Parameters<
+			typeof cardReleases
+		>[2]
+		expect(cardReleases([], supports, storyEvents).supports.get(9)).toBe(at("2026-09-01T12:00:00Z"))
+	})
+
 	it("is available before the start, during up to the end, after past it", () => {
 		expect(releaseStatus(at("2026-10-20T12:00:00Z"), EVENT)).toEqual({ kind: "available" })
 		expect(releaseStatus(at("2026-11-01T12:00:00Z"), EVENT)).toEqual({ kind: "available" })

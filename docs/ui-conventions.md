@@ -2498,7 +2498,8 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   link (`setMemberUma`); a guest's team never holds one. The team window does not draw it.
 - **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
   starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
-  ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
+  ones are greyed out and sorted last. A story event's free card is dated by the event's
+  start, like a banner's. A card on neither is decided by the catalogue's
   `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks,
   a guide's deck.
 - **Placeholder cards** (`placeholder` in the catalogue, owner 2026-10-27): stand-ins for
@@ -2973,7 +2974,9 @@ and its checkbox always line up left to right.
 
 **Both pickers share `useEligibleCardCatalogue`** (`hooks/`), which owns the catalogue
 rules: candidates come from the calculator's past and upcoming gacha-banner catalogue
-rather than a new endpoint, spreadsheet catch-all rows such as `(All)` are excluded,
+rather than a new endpoint, spreadsheet catch-all banners named `(All)` are excluded (judged
+by the banner's own name, never its timeline's: a support-only week's real SSR banner sits on
+an `(All)` timeline),
 cards are deduplicated across reruns, filtered inclusively against the cutoff, and sorted
 newest-JP-first with a name tiebreak. It was extracted rather than copied — this repo has
 twice paid for hand-copied duplicates of exactly that kind.
