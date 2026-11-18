@@ -13,6 +13,7 @@
 import { Fragment, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import { useSkillPage } from "../../services/encyclopediaQueries"
 import type { SkillCondition, SkillPhrase, SkillReadable } from "../../types/pvpGuide"
 import type { SkillDetailData, SkillOwnerUma, SkillSourceCard, SkillSourceUma } from "../../types/skills"
@@ -84,8 +85,33 @@ function HowRow({ label, step, children }: { label: string; step: "after" | "whe
 	)
 }
 
+/**
+ * The game's own condition code, under the reworded chips in the Detailed
+ * view (Daptrius's list, item 8). `@` separates alternatives (any one fires
+ * it), so each goes on its own line; `&` joins clauses that must all hold.
+ */
+function GameCode({ code }: { code: string | undefined }) {
+	if (!code) return null
+	return (
+		<code className="enc-how__code" aria-label="The game's condition code">
+			{code.split("@").map((alternative, index) => (
+				<span key={index} className="block">{index > 0 && "or "}{alternative.split("&").join(" & ")}</span>
+			))}
+		</code>
+	)
+}
+
+/** The Detailed view's switch: the reworded clauses alone, or with the game's code under them. */
+type HowView = "plain" | "detailed"
+const HOW_VIEWS: { value: HowView; label: string }[] = [{ value: "plain", label: "Plain" }, { value: "detailed", label: "Detailed" }]
+
 /** When it fires and what it does: a block per effect slot. */
-function HowItWorks({ readable }: { readable: SkillReadable }) {
+function HowItWorks({ readable, raw, detailed }: {
+	readable: SkillReadable
+	/** The game's code per slot; shown only when `detailed`. */
+	raw?: { after: string; when: string }[]
+	detailed: boolean
+}) {
 	const many = readable.slots.length > 1
 	return (
 		<>
@@ -93,8 +119,16 @@ function HowItWorks({ readable }: { readable: SkillReadable }) {
 				{readable.slots.map((slot, index) => (
 					<div key={index} className="enc-how__slot">
 						{many && <span className="enc-how__part">{slotLabel(readable, index)}</span>}
-						{hasCondition(slot.after) && <HowRow label="Only after" step="after"><Clauses condition={slot.after} /></HowRow>}
-						<HowRow label="When" step="when"><Clauses condition={slot.when} /></HowRow>
+						{hasCondition(slot.after) && (
+							<HowRow label="Only after" step="after">
+								<Clauses condition={slot.after} />
+								{detailed && <GameCode code={raw?.[index]?.after} />}
+							</HowRow>
+						)}
+						<HowRow label="When" step="when">
+							<Clauses condition={slot.when} />
+							{detailed && <GameCode code={raw?.[index]?.when} />}
+						</HowRow>
 						{slot.effects.length > 0 && (
 							<HowRow label="Does" step="does">
 								{slot.effects.map((phrase, position) => <Clause key={position} phrase={phrase} effect />)}
@@ -315,6 +349,8 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 	const versions = skill.pair ? [skill.pair, ...skill.versions] : skill.versions
 	const kind = skillKind(skill)
 	const type = SKILL_TYPE_WORDS[skill.type ?? ""]
+	// Remembered for the tab, so a reader who wants the code keeps it from skill to skill.
+	const [howView, setHowView] = useRememberedFilter<HowView>("skill:how-view", "plain", ["plain", "detailed"])
 	const owners = skill.owners?.length ? skill.owners.join(", ") : null
 	// Her face in the hero when the skill is one outfit's (a unique, an evolution).
 	const owner = skill.owner_umas?.length === 1 ? skill.owner_umas[0] : null
@@ -355,8 +391,12 @@ export function SkillPageDetail({ skill }: { skill: SkillDetailData }) {
 			/>
 
 			{skill.readable.slots.length > 0 && (
-				<Section title="How it works">
-					<HowItWorks readable={skill.readable} />
+				<Section
+					title="How it works"
+					// Only offered when the API sent the code (an older API doesn't).
+					aside={skill.raw_conditions && <Switch label="Condition view" options={HOW_VIEWS} value={howView} onChange={setHowView} />}
+				>
+					<HowItWorks readable={skill.readable} raw={skill.raw_conditions} detailed={howView === "detailed"} />
 				</Section>
 			)}
 

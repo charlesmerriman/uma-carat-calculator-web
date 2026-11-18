@@ -97,6 +97,8 @@ export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
 	pair?: SkillRef | null
 	description: string
 	readable: SkillReadable
+	/** The game's own condition strings per slot, in `readable.slots`' order, for the Detailed view. Absent from an older API. */
+	raw_conditions?: { after: string; when: string }[]
 	sources: { umas: SkillSourceUma[]; cards: SkillSourceCard[] }
 	evolution: {
 		from: SkillRef | null

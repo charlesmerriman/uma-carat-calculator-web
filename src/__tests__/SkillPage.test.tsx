@@ -89,6 +89,21 @@ describe("SkillPage", () => {
 		expect(container).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
 	})
 
+	it("shows the game's condition code under the clauses in the Detailed view", async () => {
+		const coded = { ...DETAIL, raw_conditions: [{ after: "", when: "phase_random==1&order>=3@phase_random==1&order<=1" }] }
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(coded), { status: 200 })))
+		renderAt("/app/skills/100101111")
+		await screen.findByRole("heading", { level: 1, name: /Gluttonous Ruler/ })
+		// Plain by default: no code until asked for.
+		expect(screen.queryByLabelText("The game's condition code")).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Detailed" }))
+		const code = screen.getByLabelText("The game's condition code")
+		// Each `@` alternative on its own line, its clauses joined by " & ".
+		expect(code).toHaveTextContent("phase_random==1 & order>=3or phase_random==1 & order<=1")
+		// Back to Plain, so the remembered choice doesn't leak into the next test.
+		fireEvent.click(screen.getByRole("button", { name: "Plain" }))
+	})
+
 	it("shows a scaled time with its per 1,000 m and no note explaining it again", async () => {
 		const timed = { ...DETAIL, readable: { ...DETAIL.readable, slots: [{ ...DETAIL.readable.slots[0], duration: "2.4 s per 1,000 m" }] } }
 		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(timed), { status: 200 })))
