@@ -749,11 +749,16 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   no corners to expose. A bare frame's square fills the box.
   `className` only sizes the square (`w-14`, `h-full`), and it MUST size it: the art is
   absolutely positioned, so it gives the frame no size of its own.
-  **Open:** on an iPhone (iOS 27, every browser) at the default zoom only, about one device
-  pixel of the art shows past the frame's outer edge on the PvP and Encyclopedia tiles, not
-  the Timeline (Daptrius, board "Issues with Uma SVG Alignment on iOS", 2026-11-17). Web
-  #376 (the art's sizing) didn't fix it; whether #379's inset did is not known. A fix has to
-  hide the art's edge without resizing the art, and be seen on an iPhone before it ships.
+  **The art's outer 12 units are not painted** (`clip-path` on the `<img>`; the band covers
+  that strip anyway). WebKit, so every browser on an iPhone, draws the frame (a CSS
+  background) up to one device pixel short of the box on the right and bottom when the box
+  isn't a whole number of device pixels wide, while the `<img>` fills it: a line of art
+  showed past the frame on the fluid PvP and Encyclopedia tiles at the default zoom (Daptrius,
+  board "Issues with Uma SVG Alignment on iOS", 2026-11-17). Reproduced and fixed in a Linux
+  WebKit at 402 px and 3x (2026-11-18): 29 tile widths, both frames, sizes down to 16 px and
+  the share picture. Web #376 (the art's sizing) was not the cause. A frame change gets the
+  same WebKit run before it ships (`npx playwright-core install webkit`; Chrome never shows
+  this).
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's
