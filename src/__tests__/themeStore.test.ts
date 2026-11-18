@@ -6,8 +6,9 @@ import {
 	DEFAULT_DARK_THEME,
 	DEFAULT_LIGHT_THEME,
 	THEME_STORAGE_KEY,
+	RETIRED_THEMES,
 	readTheme,
-	saveFirstVisitTheme,
+	settleStoredTheme,
 } from "../services/themeStore"
 
 /** Stand in for the device's colour-scheme setting (jsdom has no matchMedia). */
@@ -27,7 +28,7 @@ describe("the first-visit theme", () => {
 	])("follows the device (light: $light) and is saved", ({ light, expected }) => {
 		preferLight(light)
 		expect(readTheme()).toBe(expected)
-		saveFirstVisitTheme()
+		settleStoredTheme()
 		expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe(expected)
 		// Saved, so a later change of device setting no longer moves it.
 		preferLight(!light)
@@ -37,7 +38,7 @@ describe("the first-visit theme", () => {
 	it("never replaces a theme someone already has", () => {
 		localStorage.setItem(THEME_STORAGE_KEY, "light")
 		preferLight(false)
-		saveFirstVisitTheme()
+		settleStoredTheme()
 		expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light")
 		expect(readTheme()).toBe("light")
 	})
@@ -46,8 +47,16 @@ describe("the first-visit theme", () => {
 		localStorage.setItem(THEME_STORAGE_KEY, "a-newer-theme")
 		preferLight(true)
 		expect(readTheme()).toBe(DEFAULT_LIGHT_THEME)
-		saveFirstVisitTheme()
+		settleStoredTheme()
 		expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("a-newer-theme")
+	})
+
+	it.each(Object.entries(RETIRED_THEMES))("moves %s to %s and saves the move", (removed, replacement) => {
+		localStorage.setItem(THEME_STORAGE_KEY, removed)
+		preferLight(true)
+		expect(readTheme()).toBe(replacement)
+		settleStoredTheme()
+		expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe(replacement)
 	})
 
 	it("falls back to Dark with no matchMedia at all", () => {

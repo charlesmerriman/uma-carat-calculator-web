@@ -11,6 +11,7 @@ import {
 	DEFAULT_DARK_THEME,
 	DEFAULT_LIGHT_THEME,
 	getThemeMode,
+	RETIRED_THEMES,
 	THEMES,
 	THEME_STORAGE_KEY,
 } from "../services/themeStore"
@@ -80,6 +81,18 @@ describe("the inline theme script in index.html", () => {
 		expect(attributes["data-theme"]).toBe(expected)
 		expect(attributes["data-theme-mode"]).toBe(getThemeMode(expected))
 		expect(saved).toEqual({ [THEME_STORAGE_KEY]: expected })
+	})
+
+	it("holds the same removed-theme map as the store", () => {
+		const listed = script.match(/var retired = (\{[^}]*\})/)?.[1] ?? "{}"
+		expect(JSON.parse(listed)).toEqual(RETIRED_THEMES)
+	})
+
+	it.each(Object.entries(RETIRED_THEMES))("moves a saved %s to %s, and saves the move", (removed, replacement) => {
+		const { attributes, saved } = runScript(removed, true)
+		expect(attributes["data-theme"]).toBe(replacement)
+		expect(attributes["data-theme-mode"]).toBe(getThemeMode(replacement))
+		expect(saved).toEqual({ [THEME_STORAGE_KEY]: replacement })
 	})
 
 	it("shows the device default for an id it doesn't know, but keeps it stored", () => {
