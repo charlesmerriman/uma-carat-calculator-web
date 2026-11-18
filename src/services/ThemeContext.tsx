@@ -9,6 +9,13 @@ export interface ThemeConfig {
 	swatch: string
 	/** The theme's main surface, drawn behind the swatch dot. Static hex, same reason. */
 	canvas: string
+	/**
+	 * Set on a theme that uses several colours with meanings of their own (its
+	 * kind colours, its accent) where the others keep to one. The picker lists
+	 * these in a group of their own and draws one dot per colour, since a single
+	 * accent dot would hide what makes them different. Static hexes, same reason.
+	 */
+	palette?: string[]
 }
 
 export interface ThemeContextType {

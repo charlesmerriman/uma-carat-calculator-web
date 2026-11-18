@@ -66,7 +66,8 @@ grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
 its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
 remains the initial default. Light (`light`) restores the original warm palette;
 Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
-each mode six themes. Purple keeps its saved `light-lilac` id.
+each mode six themes. Purple keeps its saved `light-lilac` id. Two more, Winning Live and
+Tracen, sit in their own **Special themes** group ("The palette themes" below).
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
 labels and surface tokens. Individual `data-theme` selectors override the palette,
@@ -78,6 +79,59 @@ orange on Red, on-pity blue on Green). Gilded is the amber, brown-gray dark them
 mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
+
+### The palette themes: Winning Live and Tracen
+
+Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a
+job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
+has a `palette` (the accent, then its Uma, Support and Step-Up colours): the picker lists
+those under **Special themes**, one named button per row, with a dot per colour.
+
+| | Winning Live (dark) | Tracen (light) |
+|---|---|---|
+| Idea | the concert after the race | the game's own menus |
+| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) |
+| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band |
+| Over budget | red-orange | hot pink, and pink is used for nothing else |
+| A second colour | pink, only on the wordmark's "Carat" and the panel title | none |
+| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier |
+| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px |
+
+**Their colours are tokens in `index.css` like any theme's; their shapes are in
+`src/personalityThemes.css`**, imported last in `App.tsx`. That file's header carries its
+three rules, which hold for any later theme of this kind:
+
+1. **Paint only, never size.** An edge is a `box-shadow`, a strip is a background, and
+   added padding is given back as a negative margin. The navbar's height, the pull field's
+   44px and the banner table's tracks are all load-bearing.
+2. **Hooks, never utilities.** The selectors name classes the components carry for this:
+   `site-navbar`, `nav-tabs`, `nav-tab` / `nav-tab--active`, `nav-control`,
+   `wordmark-second`, `planner-panel-title`, `planner-section-title`, `income-value` (with
+   `data-income` on its tile), `add-banner-button--{uma,support,step-up}`, `hero-cta`,
+   `forecast-shortfall`, plus the semantic classes `App.css` already had. The default
+   themes have no rule for any of them. The one utility selector is the precedent
+   `index.css` set, `.bg-brand.text-black` (the solid brand button).
+3. **Read tokens for anything colorblind mode redraws**, so that mode keeps winning.
+
+Four things a new palette theme has to get right, each learned on these two:
+
+- **The brand token is text in hundreds of places.** Tracen's lime is 1.9:1 on white, so
+  its `--color-brand` is the deep green and lime is painted on the solid brand button and
+  the named hooks only, always with dark ink.
+- **Kind and pull tokens go in the palette block, above the colorblind block**
+  (`[data-colorblind-mode="true"]` has the same specificity, so a later block would beat
+  it). What colorblind mode must also change for the theme goes in a two-attribute block
+  after it: Winning Live gets its white ink back on the deep colorblind fills.
+- **Bright kind fills flip the phone card's strip.** Its controls assume a deep fill under
+  pale ink, so Winning Live gives the strip the light themes' `--tile-*` set and a dark
+  stretch of the gray ramp, except under colorblind mode.
+- **Tailwind's `rounded-*` and `font-*` utilities read `--radius-*` and
+  `--font-weight-*`**, so a theme block can move them. Full pills stay on hooks: a pill
+  radius on a textarea is a blob.
+
+Tracen moves Support to orange (lime is the brand) and keeps on-pity green, which shares
+a hue with its brand; the Green theme moved on-pity to blue for that, and blue is Uma
+here. That one is the owner's to settle (`notes/theme-options.md`).
 
 **A theme's page glow is a `--page-glow` value, never a page background.** One
 `position: fixed` layer (`body::before`) paints it, and the page shells
