@@ -59,16 +59,24 @@ color in `src/index.css`.
 `src/index.css`.** The light theme *inverts* the gray ramp, so existing utilities keep
 working unchanged. Read the comments there before adding a theme.
 
-The compact picker puts **Dark** and **Light** first as the primary choices, with
-small swatches for alternative **Dark themes** and **Light themes** underneath,
-grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
-`canvas` (its card colour on a dark theme, its page colour on a light one) with
-its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
-remains the initial default. Light (`light`) restores the original warm palette;
-Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
-each mode six themes. Purple keeps its saved `light-lilac` id. Three more, Winning Live,
-Tracen and Tracen Night, sit in their own **Special themes** group ("The palette themes"
-below).
+**The defaults (2026-11-18): Dark (`gold`) for dark, Tracen for light.** A first visit,
+with no valid theme saved, follows the device's `prefers-color-scheme`: light mode gets
+Tracen, anything else Dark. The pick is saved at once (`index.html`'s script, then
+`saveFirstVisitTheme` on mount), so a later change of device setting never moves it, and
+a saved theme is never replaced. The server render and hydration use Dark
+(`getServerTheme`); the pre-paint script is what shows the right one. A returning visitor
+who never saved a theme looks like a first visit, so on a light-mode device they moved
+from Dark to Tracen once when this shipped.
+
+The picker is two columns split by the `mode` in `themeStore.ts`: every dark theme on the
+left, every light one on the right, with a rule between. Each column leads with its
+default as a larger button (`DEFAULT_DARK_THEME`, `DEFAULT_LIGHT_THEME`), then **More
+themes** lists the rest of that mode, palette themes first. Every theme is a named row
+with the same swatch: the theme's `canvas` (its card colour on a dark theme, its page
+colour on a light one) as a disc with its accent `swatch` as a dot, so themes sharing a
+gold accent still differ. Light (`light`) is the original warm palette; Blue
+(`light-blue`), Green, Red, Purple and Pearl remain alternatives. Purple keeps its saved
+`light-lilac` id.
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
 labels and surface tokens. Individual `data-theme` selectors override the palette,
@@ -86,7 +94,8 @@ the registry; `themeScript.test.ts` checks their agreement.
 Twelve themes keep to one accent. These three (the first two 2026-11-17, Tracen Night a day
 later) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
 has a `palette` (the accent, then its Uma, Support and Step-Up colours): the picker lists
-those under **Special themes**, one named button per row, with a dot per colour.
+it ahead of the one-accent themes in its column (Tracen leads the light column as its
+default), its swatch dot split between those colours.
 
 | | Winning Live (dark) | Tracen (light) | Tracen Night (dark) |
 |---|---|---|---|
