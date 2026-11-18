@@ -16,10 +16,12 @@ export function useCardReleases(
 	event: Pick<RaceEvent, "start_date" | "end_date">,
 	index: Pick<PvpCatalogueIndex, "umasById" | "cardsById">
 ): ReleaseCheck {
-	const { umaBannerData, supportBannerData } = useCalculatorData()
+	const { umaBannerData, supportBannerData, storyEventData } = useCalculatorData()
+	// Story events date their free cards, so a welfare SSR is pickable for a CM
+	// that runs after its event (utils/cardRelease.ts).
 	const releases = useMemo(
-		() => cardReleases(umaBannerData ?? [], supportBannerData ?? []),
-		[umaBannerData, supportBannerData]
+		() => cardReleases(umaBannerData ?? [], supportBannerData ?? [], storyEventData ?? []),
+		[umaBannerData, supportBannerData, storyEventData]
 	)
 	return (pool, id) =>
 		// A placeholder is a stand-in, out for every event (owner, 2026-10-27).
