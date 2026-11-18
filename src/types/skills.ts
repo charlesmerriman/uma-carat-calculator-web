@@ -36,6 +36,8 @@ export interface SkillListRow {
 	cost?: number | null
 	/** The Type filter's key, from the skill's icon family (backend skill_types.py). */
 	type?: string
+	/** The condition and effect filters' keys (backend skill_tags.py). Absent from an older API. */
+	tags?: string[]
 	/** The outfits a unique, its inherited copy or an evolution belongs to. */
 	owners?: string[]
 	/** The same outfits as rows a page can draw (her face on a row, in a hero). Absent from an older API. */
