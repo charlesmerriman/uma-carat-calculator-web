@@ -2973,7 +2973,9 @@ and its checkbox always line up left to right.
 
 **Both pickers share `useEligibleCardCatalogue`** (`hooks/`), which owns the catalogue
 rules: candidates come from the calculator's past and upcoming gacha-banner catalogue
-rather than a new endpoint, spreadsheet catch-all rows such as `(All)` are excluded,
+rather than a new endpoint, spreadsheet catch-all banners named `(All)` are excluded (judged
+by the banner's own name, never its timeline's: a support-only week's real SSR banner sits on
+an `(All)` timeline),
 cards are deduplicated across reruns, filtered inclusively against the cutoff, and sorted
 newest-JP-first with a name tiebreak. It was extracted rather than copied — this repo has
 twice paid for hand-copied duplicates of exactly that kind.

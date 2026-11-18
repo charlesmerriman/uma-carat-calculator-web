@@ -64,9 +64,14 @@ const umaBanner = (bannerName: string, umas: Uma[]): BannerUma => ({
   is_recommended: false,
 })
 
-const supportBanner = (bannerName: string, cards: SupportCard[]): BannerSupport => ({
+const supportBanner = (
+  bannerName: string,
+  cards: SupportCard[],
+  // The timeline can be named apart from its banner, as a support-only week is.
+  timelineName: string = bannerName
+): BannerSupport => ({
   id: nextId++,
-  banner_timeline: makeTimeline(bannerName),
+  banner_timeline: makeTimeline(timelineName),
   name: bannerName,
   admin_comments: '',
   support_cards: cards,
@@ -118,6 +123,21 @@ describe('buildEligibleCardCatalogue', () => {
       umaBanner('New Year 2024', [uma]),
     ])
     expect(cards.map((c) => c.label)).toEqual(['Kiseki'])
+  })
+
+  it('offers an SSR whose real support banner sits on an "(All)" timeline', () => {
+    // A support-only week: the timeline and its uma banner are both "(All)",
+    // the support banner beside them is the real one (SSR Sasami Anshinzawa,
+    // 2026-11-18). The rule reads the banner's name, not the timeline's.
+    const ssr = makeSupport('Sasami Anshinzawa', '2022-01-11')
+    const placeholder = umaBanner('(All)', [makeUma('(All)', '2022-01-11')])
+
+    expect(
+      build('support', '2022-01-31', [placeholder], [supportBanner('Sasami Anshinzawa', [ssr], '(All)')])
+        .map((c) => c.label)
+    ).toEqual(['Sasami Anshinzawa'])
+    // The "(All)" uma banner on that same week stays out.
+    expect(build('uma', null, [placeholder])).toEqual([])
   })
 
   it('deduplicates a card that reruns across several banners', () => {

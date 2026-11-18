@@ -29,9 +29,15 @@ export interface EligibleCardCatalogueInput {
 }
 
 /**
- * A spreadsheet's "(All)" row is a non-gacha catch-all, not a banner the
+ * A spreadsheet's "(All)" banner is a non-gacha catch-all, not a banner the
  * calculator presents to users. It carries card links purely for source-data
  * bookkeeping, so those links must not make their cards selectable.
+ *
+ * Judge the BANNER's own name, never its timeline's. A support-only week (a
+ * new SSR with no new uma) has its timeline and uma banner both named "(All)",
+ * while the support banner beside them is a real gacha banner under the card's
+ * name. Testing the timeline hid SSR Sasami Anshinzawa, whose only banner is
+ * one of those, from every selector and step-up (2026-11-18, Daptrius).
  *
  * Exported for the tests — this rule is invisible from outside and is exactly
  * the kind of thing a rewrite drops on the floor.
@@ -116,12 +122,12 @@ export function buildEligibleCardCatalogue({
 
 	if (pool === "uma") {
 		for (const banner of umaBannerData) {
-			if (!isGachaBanner(banner.banner_timeline.name)) continue
+			if (!isGachaBanner(banner.name)) continue
 			addEligibleCards(banner.umas, (uma) => uma.portrait ?? uma.image)
 		}
 	} else {
 		for (const banner of supportBannerData) {
-			if (!isGachaBanner(banner.banner_timeline.name)) continue
+			if (!isGachaBanner(banner.name)) continue
 			addEligibleCards(banner.support_cards, () => null)
 		}
 	}
