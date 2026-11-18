@@ -49,8 +49,17 @@ function unlockList(skill: PageSkill) {
  * awakening track; one whose base isn't an awakening skill on this page (the
  * files do have a few) is listed after the track instead of being dropped.
  */
-function UmaSkills({ skills }: { skills: PageSkill[] }) {
+function UmaSkills({ skills, hints }: {
+	skills: PageSkill[]
+	/**
+	 * The player's hint levels on this outfit (skill game id -> level), when
+	 * they own her and imported their Collection. The game keeps them for her
+	 * innate and awakening skills only, so only those rows read it.
+	 */
+	hints?: ReadonlyMap<number, number>
+}) {
 	const byGameId = new Map(skills.map((skill) => [skill.game_id, skill]))
+	const hintOf = (skill: PageSkill) => hints?.get(skill.game_id)
 	const of = (source: string) => skills.filter((skill) => skill.source === source)
 	const uniques = of("unique")
 	const innate = of("innate")
@@ -78,6 +87,7 @@ function UmaSkills({ skills }: { skills: PageSkill[] }) {
 								// The post says the level and the elbow says what it grows
 								// from, so the row's own line stays its type.
 								hint={skillNote(skill, byGameId)}
+								hintLevel={hintOf(skill)}
 								after={hanging(skill).length > 0 && (
 									<ul className="enc-branches">
 										{hanging(skill).map((evolved) => (
@@ -106,7 +116,7 @@ function UmaSkills({ skills }: { skills: PageSkill[] }) {
 			{innate.length > 0 && (
 				<div className="enc-group">
 					<SubHeading>Innate skills</SubHeading>
-					<SkillList skills={innate} className="enc-skills enc-skills--row" />
+					<SkillList skills={innate} hintLevel={hintOf} className="enc-skills enc-skills--row" />
 				</div>
 			)}
 			{awakening.length > 0 && (
@@ -235,7 +245,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 
 			{uma.skills.length > 0 && (
 				<Section id="skills" title="Skills" count={uma.skills.length}>
-					<UmaSkills skills={uma.skills} />
+					<UmaSkills skills={uma.skills} hints={owned.hints.get(uma.id)} />
 				</Section>
 			)}
 

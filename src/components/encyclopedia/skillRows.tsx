@@ -62,8 +62,10 @@ function HoverCard({ skill, wanted }: { skill: RowSkill; wanted: boolean }) {
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
-export function SkillRow({ skill, sub, hint, face = false, after }: {
+export function SkillRow({ skill, sub, hint, face = false, after, hintLevel }: {
 	skill: RowSkill
+	/** The player's hint level for this skill on the uma they own, from their imported Collection. */
+	hintLevel?: number
 	/** Draw the outfit the skill belongs to at the end of the row (the Skills list): a unique or evolved skill is found by her face. */
 	face?: boolean
 	sub?: string
@@ -98,6 +100,12 @@ export function SkillRow({ skill, sub, hint, face = false, after }: {
 						{line && <span>{line}</span>}
 						{hint && <span className="sr-only">{hint}</span>}
 						{skill.availability === "jp" && <span className="enc-skill__jp">JP only</span>}
+						{/* What the level does to the cost isn't confirmed yet, so only the level shows. */}
+						{hintLevel != null && (
+							<span className="enc-skill__hint" title="Your hint level for this skill, from your Collection">
+								Hint Lv {hintLevel}
+							</span>
+						)}
 					</span>
 				</span>
 				{/* Skill points on the right (Daptrius's list, item 4); a unique has none. */}
@@ -135,18 +143,26 @@ export function UniquePlate({ skill, from }: { skill: RowSkill & { description?:
 	)
 }
 
-export function SkillList<T extends RowSkill>({ skills, sub, after, faces = false, className = "enc-skills" }: {
+export function SkillList<T extends RowSkill>({ skills, sub, after, hintLevel, faces = false, className = "enc-skills" }: {
 	skills: T[]
 	/** Each row shows the outfit its skill belongs to (see SkillRow's `face`). */
 	faces?: boolean
 	sub?: (skill: T) => string | undefined
 	after?: (skill: T) => ReactNode
+	hintLevel?: (skill: T) => number | undefined
 	className?: string
 }) {
 	return (
 		<ul className={className}>
 			{skills.map((skill, index) => (
-				<SkillRow key={`${skill.game_id}-${index}`} skill={skill} sub={sub?.(skill)} face={faces} after={after?.(skill)} />
+				<SkillRow
+					key={`${skill.game_id}-${index}`}
+					skill={skill}
+					sub={sub?.(skill)}
+					face={faces}
+					after={after?.(skill)}
+					hintLevel={hintLevel?.(skill)}
+				/>
 			))}
 		</ul>
 	)
