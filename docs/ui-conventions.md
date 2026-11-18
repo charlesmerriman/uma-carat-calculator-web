@@ -1362,8 +1362,8 @@ corners, so the art row can't grow. Plan: `notes/story-events-plan.md`.
 - **Display only.** The rewards are the event's own and nothing reads them for the projection.
   The cards carry no `first_jp_date`, and the selectors build their catalogue from banners, so
   a free card never becomes selectable.
-- **On a computer a free card opens the shared hover card** (`hoverCardProps("card", id)`,
-  drawn by `HoverCardLayer` like every other tile), and a click goes to its page.
+- **On a computer a click on a free card opens the shared card** (`hoverCardProps("card", id)`,
+  drawn by `HoverCardLayer` like every other tile), whose "Open its page" goes to its page.
 - **On a touch screen a tap opens the row's own details, never navigates** (owner,
   2026-11-17, for this row; `HoverCardLayer` ignores touch). "Open its page" inside does the
   navigating. Its popup is `useHoverPopup(..., { tapOnly: true })` (hover and focus off), so a
@@ -2804,7 +2804,9 @@ timing as chips, where it comes from, its other versions, and a footer.
 
 ### Links into the Encyclopedia from the rest of the site
 
-Umas and cards drawn elsewhere open their page for early access. **One lookup serves them
+Umas and cards drawn elsewhere link to their page for early access. Since 2026-11-18 a MOUSE
+click on most of those links opens the uma's or card's card instead, and the card's "Open its
+page" goes on to the page (next section); a tap or the keyboard still follows the link. **One lookup serves them
 all: `useEncyclopediaHrefs()`** (`hooks/useEncyclopediaHrefs.ts`), which maps the SITE's
 row id (what every team, guide, ranking, roster and gallery snapshot carries) to the page
 through the PvP catalogue's `game_id`. It answers null for everyone else, for a placeholder
@@ -2814,41 +2816,66 @@ links depends on what a click already does there:
 
 | The tile is... | The link is... | Where |
 |---|---|---|
-| display only | the tile itself (`<Link>`) | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
-| a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside | Collection names, the Selectors pick (bottom-left book) |
-| a hover card's trigger | "Open its page" in the card (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
+| display only | the tile itself (`<Link>`); a click opens the card | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
+| a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside; a click opens the card | Collection names, My team's names (`PageName`), the picker's book |
+| the same, with no card | a plain link to the page | the Selectors pick (bottom-left book), a step-up's chosen slot |
+| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
 | a ranking row that opens | "Open its page" at the top of the breakdown | `RankRow` with `detail` |
+| inside the Encyclopedia | the tile itself, straight to the page, no card | the uma and card lists, a page's outfits and cards, a skill's owners |
 
 Left out on purpose: the planner's art cell (already a link to the banner on the Timeline,
 and a link can't hold links), pickers where a click chooses, the guide editor's deck
 (`pageLink={false}`: a stray click would leave mid-edit), the share pictures, and the account
 page.
 
-### Hover cards for umas and support cards (`components/hovercards/`)
+### Cards for umas and support cards (`components/hovercards/`)
 
-The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): hovering an uma shows her
-aptitudes (the race's ringed), stats boxed with Growth and skills; hovering a support card shows
-its effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
-teaches. Both end in "Open its page". Early access only, mouse and keyboard focus only (a phone
-keeps the links above).
+The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): an uma's card shows her
+aptitudes (the race's ringed), stats boxed with Growth and skills; a support card's shows its
+effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
+teaches. Both end in "Open its page". Early access only, mouse only (a phone and the keyboard
+keep the links above). The code says "hover" because they opened on hover for one release
+(v2.17).
 
+- **They open on a click, never on hover** (owner, 2026-11-18, after Daptrius's report that a
+  card under every picture the mouse crossed felt laggy and covered the page). They are off the
+  calculator, the shared plan page, the Selectors page and the Encyclopedia's own pages.
 - **A tile opts in with attributes, built by `hoverCardProps()`** (`utils/hoverCards.ts`), never
-  by hand: `{...hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}` on
-  the tile's own button or link. `data-hover-card` names the row, `data-hover-card-ring` the
-  aptitudes to ring, `data-hover-card-links="off"` drops the links where leaving would lose an
-  edit, `data-hover-card-scope` marks a container whose stretched link covers the art.
+  by hand: `data-hover-card` names the row, `data-hover-card-ring` the aptitudes to ring. Put
+  them on plain art, or on the link to that uma's or card's Encyclopedia page (and give that
+  link `title={CARD_LINK_TITLE}`). **Never on a button or a link with another job**: the layer
+  leaves that click alone, so the attribute would do nothing. Where the tile is such a button,
+  the name or book beside it carries the card (`PageName`, the Collection's names,
+  `EncyclopediaIconLink hover`).
 - **One popup serves the whole app: `HoverCardLayer`**, mounted once in `AppShell` beside the
-  team window. It listens on the document, so a grid of 300 tiles costs 300 attributes and no
-  wrappers, and a tile that is a button, a link or a drag handle needs nothing else. Any press
-  closes the card (a drag or a click never leaves one behind); touch is ignored; the tile's
-  `title` is moved aside while its card is open. It draws at `z-[10001]`, above the pickers'
-  overlays, and inside an open native `<dialog>` when the tile is in one.
+  team window. It listens on the document for a press, a click and Escape, and does nothing
+  while the mouse moves. A click opens the card when nothing under the pointer is a link or a
+  button, or when the nearest one is a link to the tile's own page (the link then doesn't
+  navigate and its `onClick` doesn't run). A click on the tile again, anywhere else, Escape or
+  a route change closes it; touch, a keyboard click and a new-tab click are left to the link;
+  the tile's `title` is moved aside while its card is open; `[data-hover-card]` gets the pointer
+  cursor only while the layer is on. It draws at `z-[10001]`, above the pickers' overlays, and
+  inside an open native `<dialog>` when the tile is in one.
+- **Where it goes: beside the tile, right else left, top level with the tile's, slid up only as
+  far as the window needs** (`cardPopupMiddleware` in `pvp/hoverPopup.tsx`, shared with the
+  guide tiles). The side is picked by the room beside the tile alone (`flip` with
+  `crossAxis: false`): with the default, a card taller than the room under its tile counted as
+  not fitting anywhere and landed above or below, squeezed (in practice only in a narrow
+  window; beside a small picture in a wide one the two rules agree). The box is at most the
+  window's height and scrolls inside itself. **A tile wider than the card** (a ranking row, a
+  podium entry) is placed beside the POINT that was clicked instead (`anchorFor` in the
+  layer): beside the row itself there is no room on either side. While its page loads the
+  card holds about its final height (`.hover-card__loading`), so it is placed once.
 - **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
-  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The layer fetches the page
-  on open (`useUmaPage` / `useCardPage` with a 30 minute `staleTime`, the same cache the pages
-  use) and draws the header from the catalogue meanwhile. `useEncyclopediaLookup()` maps the
-  row id to the game id, beside `useEncyclopediaHrefs()` on the same index.
-- **A tile inside an existing hover (`WithDetail`) is ignored**, so nothing opens two cards.
+  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The page's fetch starts on
+  the press (`prefetchEncyclopediaPage`) and is read on open (`useUmaPage` / `useCardPage` with
+  a 30 minute `staleTime`, the same cache the pages use); the header draws from the catalogue
+  meanwhile. `useEncyclopediaLookup()` maps the row id to the game id, beside
+  `useEncyclopediaHrefs()` on the same index.
+- **A guide tile keeps its own popup** (`WithDetail`): hover shows the guide's note, as for
+  everyone, and a click pins it open as the full card with the note on top
+  (`useHoverPopup({ pin })`; a tap does the same). The layer ignores anything inside one, so
+  nothing opens two cards.
 
 ## Selectors page (`components/selectors/`)
 

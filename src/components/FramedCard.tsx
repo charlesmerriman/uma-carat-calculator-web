@@ -76,7 +76,7 @@ export function FramedCard({ card, limitBreaks = null, alt = "", className = "",
 	limitBreaks?: number | null
 	alt?: string
 	className?: string
-	/** The card's hover card attributes (utils/hoverCards.ts hoverCardProps), for art with no tile of its own. */
+	/** The card's card attributes (utils/hoverCards.ts hoverCardProps), for plain art with no tile of its own: a click on it opens the card. */
 	hover?: Record<string, string>
 }) {
 	const art = card.image_borderless ?? null

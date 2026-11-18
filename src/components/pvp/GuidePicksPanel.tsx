@@ -30,7 +30,6 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { OpenPageLink } from "../EncyclopediaLinks"
-import { hoverCardProps } from "../../utils/hoverCards"
 
 /** One button in a pick's action row. A disabled one says why. */
 export interface PickButton {
@@ -118,7 +117,6 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							emptyHint: null,
 							note: actions.note?.("uma", pick.ref.id) ?? null,
 							page: pages.uma(pick.ref.id),
-							hover: hoverCardProps("uma", pick.ref.id),
 						}))}
 						shape="square"
 						openKey={openKey}
@@ -147,7 +145,6 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							emptyHint: actions.emptyCardHint,
 							note: actions.note?.("support", pick.ref.id) ?? null,
 							page: pages.card(pick.ref.id),
-							hover: hoverCardProps("card", pick.ref.id),
 						}))}
 						shape="card"
 						openKey={openKey}
@@ -190,8 +187,6 @@ interface PickItem {
 	note: string | null
 	/** Its Encyclopedia page (useEncyclopediaHrefs), or null for none to open. */
 	page: string | null
-	/** Its hover card's attributes (utils/hoverCards.ts), spread on the tile. */
-	hover: Record<string, string>
 }
 
 /** Four tiles a row, with the open pick's action row after its row. */
@@ -237,7 +232,6 @@ function PickTile({ item, shape, open, onClick }: {
 			<PickDrag item={item}>
 				<button
 					type="button"
-					{...item.hover}
 					aria-expanded={open}
 					title={item.detail ? `${item.name}: ${item.detail}` : item.name}
 					onClick={onClick}

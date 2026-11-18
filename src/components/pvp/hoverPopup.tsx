@@ -49,6 +49,32 @@ export const InsidePopupContext = createContext(false)
 // open it at once.
 const HOVER_OPEN_DELAY_MS = 120
 
+/**
+ * WHERE AN UMA'S OR A SUPPORT CARD'S FULL CARD GOES (components/hovercards):
+ * beside its tile, its top level with the tile's. One rule for the app's
+ * shared popup (HoverCardLayer) and a guide tile's pinned one (`pinTo`).
+ *
+ *   - right of the tile, else left. `crossAxis: false` makes the room BESIDE
+ *     the tile the only thing that picks the side. Left on, Floating UI also
+ *     asks whether the whole card fits below the tile's top; a tall card
+ *     rarely does, so every side "overflowed" and it fell to its best guess:
+ *     above or below the tile, squeezed into the height left over, sometimes
+ *     over the tile itself (the placement Daptrius reported, 2026-11-17).
+ *   - then slid along the tile's edge until it is inside the window.
+ *     `crossAxis: true` covers a window too narrow for either side: the card
+ *     stays on screen and overlaps the tile instead of leaving the window.
+ *
+ * The box is never taller than the window (CARD_POPUP_BOX) and scrolls inside
+ * itself, so the slide always has room to work.
+ */
+export const CARD_POPUP_PLACEMENT: Placement = "right-start"
+export const cardPopupMiddleware = () => [
+	offset(8),
+	flip({ crossAxis: false, fallbackPlacements: ["left-start"], padding: 8 }),
+	shift({ crossAxis: true, padding: 8 }),
+]
+export const CARD_POPUP_BOX = "max-h-[calc(100dvh-1rem)] w-80 max-w-[calc(100vw-1rem)] overflow-y-auto"
+
 export interface HoverPopupOptions {
 	/** Hears every open and close (a skill's card lights the course map). */
 	onOpenChange?: (open: boolean) => void
@@ -73,11 +99,22 @@ export interface HoverPopupOptions {
 	fit?: boolean
 	/**
 	 * A tap is the ONLY way in: hover and keyboard focus never open it. For a
-	 * tile that already opens the site's shared hover card on a computer
+	 * tile whose click already opens the site's shared card on a computer
 	 * (HoverCardLayer, which ignores touch), so a phone still gets something
 	 * and a computer never gets two popups (the story event row, 2026-11-17).
 	 */
 	tapOnly?: boolean
+	/**
+	 * A mouse click on the tile PINS the popup: it moves to the full card's
+	 * place (CARD_POPUP_PLACEMENT), stays open when the pointer leaves, and
+	 * closes on a second click, a click elsewhere or Escape. The hook answers
+	 * `pinned`, and the caller draws something fuller while it is true: a
+	 * guide tile's hover shows the guide's note, and a click turns it into the
+	 * uma's or the card's full card (owner, 2026-11-18: the cards open on a
+	 * click, never on hover). A tap pins too, so a phone opens the full card
+	 * in one tap as it did before.
+	 */
+	pin?: boolean
 }
 
 /**
@@ -100,19 +137,28 @@ export interface HoverPopupOptions {
  */
 export function useHoverPopup(
 	placement: Placement,
-	{ onOpenChange, interactive = false, tap = true, fit = false, tapOnly = false }: HoverPopupOptions = {}
+	{ onOpenChange, interactive = false, tap = true, fit = false, tapOnly = false, pin = false }: HoverPopupOptions = {}
 ) {
 	const [open, setOpenState] = useState(false)
+	const [pinned, setPinned] = useState(false)
 	const setOpen = (next: boolean) => {
 		setOpenState(next)
+		if (!next) setPinned(false)
 		onOpenChange?.(next)
 	}
+	// A pinned popup holds links, so it takes the pointer like an interactive one.
+	const takesPointer = interactive || pinned
+	// What the last press on the tile came from: only a mouse's click pins.
+	// State, not a ref: the handlers below are built during render.
+	const [pressedWith, setPressedWith] = useState("")
 	const reducedMotion = useReducedMotion()
 	const { refs, floatingStyles, context } = useFloating({
 		open,
 		onOpenChange: setOpen,
-		placement,
-		middleware: fit
+		placement: pinned ? CARD_POPUP_PLACEMENT : placement,
+		middleware: pinned
+			? cardPopupMiddleware()
+			: fit
 			? [
 					offset(6),
 					flip({ fallbackPlacements: ["left-start", "bottom-start", "top-start"], padding: 8 }),
@@ -146,10 +192,30 @@ export function useHoverPopup(
 	const referenceProps = {
 		ref: refs.setReference,
 		...getReferenceProps({
+			onPointerDown(event) {
+				setPressedWith(event.pointerType)
+			},
 			// A touch screen has no hover, and a tap's focus isn't
 			// :focus-visible, so a tap toggles it.
 			onPointerUp(event) {
-				if (tap && event.pointerType === "touch") setOpen(!open)
+				if (!tap || event.pointerType !== "touch") return
+				if (pin && !open) setPinned(true)
+				setOpen(!open)
+			},
+			onClick(event) {
+				// Only a real mouse click on the tile itself: not a tap (above),
+				// not Enter, and not a click inside the popup, which React
+				// bubbles here through the portal.
+				const onTile = event.target instanceof Node && event.currentTarget.contains(event.target)
+				if (!pin || !onTile || event.detail === 0 || pressedWith !== "mouse") return
+				if (pinned) {
+					context.onOpenChange(false, event.nativeEvent, "click")
+				} else {
+					setPinned(true)
+					// Opened "by a click": Floating UI's hover then leaves it
+					// open when the pointer moves away.
+					context.onOpenChange(true, event.nativeEvent, "click")
+				}
 			},
 		}),
 	}
@@ -160,10 +226,10 @@ export function useHoverPopup(
 					ref={refs.setFloating}
 					aria-hidden="true"
 					style={{ ...floatingStyles, ...styles }}
-					{...(interactive ? getFloatingProps() : {})}
-					className={`z-50 max-w-[80vw] rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${
-						interactive ? "" : "pointer-events-none"
-					} ${fit ? "overflow-y-auto" : ""} ${widthClassName}`}
+					{...(takesPointer ? getFloatingProps() : {})}
+					className={`z-50 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${
+						takesPointer ? "" : "pointer-events-none"
+					} ${pinned ? CARD_POPUP_BOX : `max-w-[80vw] ${fit ? "overflow-y-auto" : ""} ${widthClassName}`}`}
 				>
 					<InsidePopupContext.Provider value={true}>
 						<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>
@@ -171,5 +237,5 @@ export function useHoverPopup(
 				</div>
 			</FloatingPortal>
 		)
-	return { referenceProps, popup }
+	return { referenceProps, popup, pinned }
 }

@@ -8,6 +8,7 @@
 
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
+import { CARD_LINK_TITLE } from "../../../utils/hoverCards"
 import { Movement, type MovementValue } from "./Movement"
 
 export interface PodiumEntry {
@@ -23,7 +24,7 @@ export interface PodiumEntry {
 	movement?: MovementValue | null
 	/** Its Encyclopedia page (useEncyclopediaHrefs): the whole card opens it. */
 	href?: string | null
-	/** The art's hover card (utils/hoverCards.ts hoverCardProps). */
+	/** Its card (utils/hoverCards.ts hoverCardProps): a mouse click anywhere on the entry opens it. */
 	hover?: Record<string, string>
 }
 
@@ -39,24 +40,25 @@ export function Podium({ entries, kicker, label }: {
 			{entries.slice(0, 3).map((entry, index) => (
 				<li
 					key={entry.key}
-					// The name's link is stretched over the whole card, art included, so the
-					// card is a hover scope: the layer looks under the pointer for the art.
-					data-hover-card-scope=""
+					// The name's link is stretched over the whole entry, art included, so
+					// the entry itself carries the card: a click anywhere on it lands on
+					// that link, and the layer opens the card in its place.
+					{...entry.hover}
 					className="relative flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-edge bg-gray-800 p-3"
 				>
-					<span className="flex shrink-0" {...entry.hover}>{entry.art}</span>
+					<span className="flex shrink-0">{entry.art}</span>
 					<span className="flex min-w-0 flex-col gap-0.5">
 						<span className="font-display text-[11px] font-bold tracking-wider text-brand">
 							#{index + 1}{kicker ? ` ${kicker}` : ""}
 						</span>
 						<span className="flex min-w-0 items-center gap-1.5">
 							{entry.href ? (
-								// A stretched link: its ::after covers the card (the li is
-								// `relative`), so the whole card opens the page and the
-								// link's name is the entry's name alone.
+								// A stretched link: its ::after covers the entry (the li is
+								// `relative`), so the whole entry is one click target and
+								// the link's name is the entry's name alone.
 								<Link
 									to={entry.href}
-									title="Open in the Encyclopedia"
+									title={entry.hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"}
 									className="truncate text-sm font-semibold text-gray-100 transition-colors after:absolute after:inset-0 after:rounded-xl hover:text-brand focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand"
 								>
 									{entry.name}

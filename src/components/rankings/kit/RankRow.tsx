@@ -19,6 +19,7 @@
 import { useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { OpenPageLink } from "../../EncyclopediaLinks"
+import { CARD_LINK_TITLE } from "../../../utils/hoverCards"
 import { ChevronDown } from "lucide-react"
 import { Bar, type BarPart } from "./Bar"
 import { Movement, type MovementValue } from "./Movement"
@@ -53,7 +54,12 @@ export interface RankRowProps {
 	 * the link itself.
 	 */
 	href?: string | null
-	/** The art's hover card (utils/hoverCards.ts hoverCardProps): the uma's or card's facts on hover. */
+	/**
+	 * The uma's or card's card (utils/hoverCards.ts hoverCardProps), for a row
+	 * that is a link: a mouse click on it opens the card, whose "Open its
+	 * page" goes on to the page. A row that opens a breakdown ignores this;
+	 * its click has that job, and the breakdown has the link.
+	 */
 	hover?: Record<string, string>
 }
 
@@ -82,7 +88,7 @@ export function RankRow(props: RankRowProps) {
 		const cells = (
 			<>
 				{placeCell}
-				<span className="flex" {...hover}>{art}</span>
+				<span className="flex">{art}</span>
 				<span className="flex min-w-0 flex-col gap-1">
 					<span className="flex min-w-0 items-center gap-1.5">
 						<span className={`truncate text-[13px] font-semibold ${nameInk}`}>{name}</span>
@@ -94,7 +100,7 @@ export function RankRow(props: RankRowProps) {
 			</>
 		)
 		return href ? (
-			<Link to={href} title="Open in the Encyclopedia" className={`${compactGrid} transition hover:bg-gray-700`}>
+			<Link to={href} {...hover} title={hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"} className={`${compactGrid} transition hover:bg-gray-700`}>
 				{cells}
 			</Link>
 		) : (
@@ -105,7 +111,7 @@ export function RankRow(props: RankRowProps) {
 	const head = (
 		<>
 			{placeCell}
-			<span className="flex" {...hover}>{art}</span>
+			<span className="flex">{art}</span>
 			<span className="flex min-w-0 flex-col gap-0.5">
 				<span className="flex min-w-0 items-center gap-1.5">
 					<span className={`truncate text-[13px] font-semibold ${nameInk}`}>{name}</span>
@@ -130,7 +136,7 @@ export function RankRow(props: RankRowProps) {
 
 	if (!detail) {
 		return href ? (
-			<Link to={href} title="Open in the Encyclopedia" className={`${grid} transition hover:bg-gray-700`}>
+			<Link to={href} {...hover} title={hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"} className={`${grid} transition hover:bg-gray-700`}>
 				{head}
 			</Link>
 		) : (

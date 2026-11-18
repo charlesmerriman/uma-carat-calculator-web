@@ -203,8 +203,6 @@ export interface SelectedCardArt {
 	 * support card, which keeps its own art.
 	 */
 	uma: { id: number; portrait: string | null } | null
-	/** Set when the pick is a support card: its row id, for its hover card. Null for an uma (see `uma.id`). */
-	cardId: number | null
 }
 
 /** The step 5 pick, tagged with the pool it came from. */
@@ -267,8 +265,8 @@ export function findGuaranteedCardArt(
 	if (!pick) return null
 	const { name, image } = pick.card
 	return pick.pool === "uma"
-		? { name, image, uma: { id: pick.card.id, portrait: pick.card.portrait ?? null }, cardId: null }
-		: { name, image, uma: null, cardId: pick.card.id }
+		? { name, image, uma: { id: pick.card.id, portrait: pick.card.portrait ?? null } }
+		: { name, image, uma: null }
 }
 
 /**

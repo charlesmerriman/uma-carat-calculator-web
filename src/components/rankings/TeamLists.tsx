@@ -32,7 +32,7 @@ import { RankedList } from "./kit/RankedList"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
-import { hoverCardProps } from "../../utils/hoverCards"
+import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
 
 export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
@@ -147,9 +147,9 @@ export function TrioList({ trios, catalogue }: {
 								{umas.map((uma) => {
 									const face = <FramedUma key={uma.id} src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-9" />
 									const page = hrefs.uma(uma.id)
-									// Each face opens her page; the names beside them stay text.
+									// Each face opens her card; the names beside them stay text.
 									return page ? (
-										<Link key={uma.id} to={page} aria-label={uma.name} title="Open in the Encyclopedia" className="transition hover:brightness-110" {...hoverCardProps("uma", uma.id)}>
+										<Link key={uma.id} to={page} aria-label={uma.name} title={CARD_LINK_TITLE} className="transition hover:brightness-110" {...hoverCardProps("uma", uma.id)}>
 											{face}
 										</Link>
 									) : (

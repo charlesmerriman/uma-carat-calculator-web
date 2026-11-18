@@ -256,7 +256,6 @@ describe('findGuaranteedCardArt', () => {
       name: 'Kiseki',
       image: 'kiseki.png',
       uma: { id: 101, portrait: null },
-      cardId: null,
     })
   })
 
@@ -266,7 +265,6 @@ describe('findGuaranteedCardArt', () => {
       name: 'Matikanefukukitaru',
       image: 'fuku.png',
       uma: null,
-      cardId: 201,
     })
   })
 

@@ -44,7 +44,7 @@ import { parseApiDate } from "../../utils/dateFormat"
 import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import type { CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
 import type { OwnedCardRow, OwnedUmaRow, RosterChanges } from "../../types/roster"
-import { hoverCardProps } from "../../utils/hoverCards"
+import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
 
 const CARD_TYPES = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
 const CARD_TYPE_LABELS: Record<string, string> = {
@@ -426,7 +426,6 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 				aria-haspopup={row ? "dialog" : undefined}
 				aria-expanded={row ? open : undefined}
 				title={row ? "Tap to change her stars or potential." : "Tap to add her."}
-				{...hoverCardProps("uma", uma.id)}
 				onClick={() => (row ? onToggle(!open) : onEdit({ umas: [{ uma: uma.id, owned: true, stars: baseStars(uma) }] }))}
 				className={`relative w-full rounded-[10.75%] transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
@@ -451,9 +450,11 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 				)}
 			</button>
 			{page ? (
+				// The tile's click edits her, so her name is what opens her card.
 				<Link
 					to={page}
-					title="Open in the Encyclopedia"
+					{...hoverCardProps("uma", uma.id)}
+					title={CARD_LINK_TITLE}
 					className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight transition-colors hover:text-brand hover:underline ${row ? "text-gray-100" : "text-gray-400"}`}
 				>
 					{uma.name}
@@ -613,7 +614,6 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 				aria-haspopup={row ? "dialog" : undefined}
 				aria-expanded={row ? open : undefined}
 				title={row ? "Tap to change its limit break or spare copies." : "Tap to add it."}
-				{...hoverCardProps("card", card.id)}
 				onClick={() => (row ? onToggle(!open) : onEdit({ support_cards: [{ support_card: card.id, owned: true }] }))}
 				className={`relative block w-full rounded-md transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
@@ -645,7 +645,7 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 				<span className={`flex min-w-0 items-center gap-1.5 text-xs font-semibold ${row ? "text-gray-100" : "text-gray-400"}`}>
 					<span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CARD_TYPE_COLORS[card.card_type ?? ""] ?? "var(--color-gray-500)" }} aria-hidden="true" />
 					{page ? (
-						<Link to={page} title="Open in the Encyclopedia" className="min-w-0 truncate transition-colors hover:text-brand hover:underline">
+						<Link to={page} {...hoverCardProps("card", card.id)} title={CARD_LINK_TITLE} className="min-w-0 truncate transition-colors hover:text-brand hover:underline">
 							{card.name}
 						</Link>
 					) : (

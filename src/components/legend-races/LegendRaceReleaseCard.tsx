@@ -32,7 +32,7 @@ const UmaTile = ({ uma, isOshi, href }: { uma: DailyLegendRaceUma; isOshi: boole
 		<>
 			{/* The borderless art in the site's frame; a favorite gets the
 			    rainbow one. */}
-			<FramedUma src={uma.portrait ?? uma.image} oshi={isOshi} className="w-full" hover={hoverCardProps("uma", uma.id)} />
+			<FramedUma src={uma.portrait ?? uma.image} oshi={isOshi} className="w-full" hover={href ? undefined : hoverCardProps("uma", uma.id)} />
 			<span className={`text-center text-xs leading-tight text-gray-300 ${href ? "transition-colors group-hover:text-brand" : ""}`}>
 				<span className="line-clamp-2">{base}</span>
 				{outfit && <span className="line-clamp-2 text-[0.6875rem] text-gray-400">{outfit}</span>}
@@ -45,9 +45,10 @@ const UmaTile = ({ uma, isOshi, href }: { uma: DailyLegendRaceUma; isOshi: boole
 	const tileClass = "flex min-w-0 flex-col items-center gap-1"
 	return (
 		<li title={uma.name} className={`min-w-0 sm:w-22 ${href ? "" : tileClass}`}>
-			{/* Her Encyclopedia page, for early access (useEncyclopediaHrefs). */}
+			{/* For early access (useEncyclopediaHrefs) the tile links to her
+			    Encyclopedia page, and a mouse click on it opens her card. */}
 			{href ? (
-				<Link to={href} className={`group ${tileClass} rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}>
+				<Link to={href} {...hoverCardProps("uma", uma.id)} className={`group ${tileClass} rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand`}>
 					{face}
 				</Link>
 			) : (

@@ -1271,7 +1271,7 @@ describe('Timeline story events', () => {
 
     const tile = screen.getByRole('link', { name: /Hishi Akebono/ })
     expect(tile).toHaveAttribute('href', '/app/cards/30133')
-    // A computer gets the site's shared hover card, the one every tile opens...
+    // A computer gets the site's shared card on a click, the one every tile opens...
     expect(tile).toHaveAttribute('data-hover-card', 'card:90')
     // ...and a mouse never opens the row's own tap popup beside it.
     fireEvent.pointerDown(tile, { pointerType: 'mouse' })

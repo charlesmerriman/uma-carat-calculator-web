@@ -2939,11 +2939,19 @@
 	}
 
 	/* ==========================================================================
-	   THE HOVER CARDS: an uma's and a support card's, the skill card's siblings
-	   (components/hovercards, notes/uma-card-hover-plan.md). They wear the skill
-	   card's classes and add only what a skill has no use for: a header in the
-	   character's colours, the aptitude grid, the stat boxes, the effects table.
+	   THE UMA AND SUPPORT CARD CARDS, the skill card's siblings
+	   (components/hovercards, notes/uma-card-hover-plan.md; "hover" is their old
+	   name, they open on a click). They wear the skill card's classes and add
+	   only what a skill has no use for: a header in the character's colours, the
+	   aptitude grid, the stat boxes, the effects table.
 	   ========================================================================== */
+
+	/* A tile that opens a card on a click says so with the cursor. Only while
+	   the layer is on (HoverCardLayer sets the attribute on <html> for early
+	   access): for everyone else the same tile does nothing on a click. */
+	:root[data-hover-cards] [data-hover-card] {
+		cursor: pointer;
+	}
 
 	/* The character's main colour (--c1 from colourStyle), mixed into the theme's
 	   panel so the words stay readable on every theme; the accent edge when the
@@ -3093,6 +3101,12 @@
 	}
 	.hover-card__level {
 		color: var(--color-gray-500);
+	}
+	/* Roughly an uma's card body. Near the bottom of the window the box slides
+	   up to fit, and without this it would slide a second time, by the body's
+	   whole height, the moment the page arrived. */
+	.hover-card__loading {
+		min-height: 18rem;
 	}
 	.hover-card__skeleton {
 		display: block;

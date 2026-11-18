@@ -375,11 +375,12 @@ function FeaturedTileArt({
 		</div>
 	)
 	const art = framed ? (
-		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" hover={hoverCardProps("uma", item.id)} />
+		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" hover={linked ? undefined : hoverCardProps("uma", item.id)} />
 	) : (
 		<img
-			// Only the uma panel is framed, so this art is a support card.
-			{...hoverCardProps("card", item.id)}
+			// Only the uma panel is framed, so this art is a support card. A
+			// linked tile carries the card on its link instead (FeaturedTile).
+			{...(linked ? {} : hoverCardProps("card", item.id))}
 			src={item.image}
 			alt={item.name}
 			loading="lazy"
@@ -539,6 +540,9 @@ function FeaturedTile({
 	return (
 		<Link
 			to={href}
+			// A mouse click anywhere on the tile opens the uma's or the card's
+			// card, whose "Open its page" goes on to this link's page.
+			{...hoverCardProps(framed ? "uma" : "card", item.id)}
 			aria-label={item.name}
 			aria-describedby={hasPurpose ? overlayId : undefined}
 			className={`group ${tileClass} outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand`}

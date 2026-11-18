@@ -115,8 +115,9 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 							{shown.length > 0 && (
 								<span className="flex shrink-0 gap-1">
 									{shown.map((row) => (
-										// The span carries her hover card (early access): a box the
-										// popup can measure, around the face inside the tab's button.
+										// The span carries her card (early access): a box the popup
+										// can measure. It opens on a click only where the step is
+										// plain; inside a style's button the click switches the tab.
 										<span key={row.uma.id} className="inline-block" {...hoverCardProps("uma", row.uma.id)}>
 											<FramedUma
 												src={row.uma.portrait ?? row.uma.image}
