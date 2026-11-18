@@ -488,14 +488,14 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				)}
 			</div>
 			</div>
-			{/* Beside the map from lg up, under it below; mounted only while open. */}
+			{/* Beside the map from lg up, under it below; mounted only while open.
+			    Beside it, the column takes the map's height until "Show all". */}
 			{accelsOpen && (
 				<CourseAccelList
 					course={course}
 					// A place ("in the lead") becomes a share of the field by the
 					// event's field size; with no event (a test), a CM's.
 					fieldSize={event?.event_type === "league_of_heroes" ? FIELD_SIZE.loh : FIELD_SIZE.cm}
-					className="self-start"
 				/>
 			)}
 			</div>
