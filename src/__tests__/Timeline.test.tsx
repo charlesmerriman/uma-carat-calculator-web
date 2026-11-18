@@ -1237,7 +1237,9 @@ describe('Timeline story events', () => {
     expect(row).not.toHaveTextContent('SR shards0')
     expect(row).toHaveTextContent('Must get')
     expect(row).toHaveTextContent('SSR, free, 5 copies')
-    expect(row).toHaveTextContent(`Claim rewards by ${formatDate('2099-02-05T21:59:59Z')}`)
+    // No claim date: players misread it as the start.
+    expect(row).toHaveTextContent('Runs with this banner.')
+    expect(row).not.toHaveTextContent('Claim rewards')
   })
 
   it('calls an event with no English name "Story event"', () => {

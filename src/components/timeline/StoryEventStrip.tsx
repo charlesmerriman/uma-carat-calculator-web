@@ -2,7 +2,6 @@ import { useId, useRef, type MouseEvent, type PointerEvent } from "react"
 import { Link } from "react-router-dom"
 import { ArrowUpRight } from "lucide-react"
 import type { StoryEvent, StoryEventCard } from "../../types"
-import { DateTimeRange } from "./DateTimeRange"
 import PredictedBadge from "../PredictedBadge"
 import { useHoverPopup } from "../pvp/hoverPopup"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
@@ -18,8 +17,7 @@ import {
 
 /**
  * The row that sits flush BENEATH a banner's Timeline card: the story event
- * running with that banner, its logo, the last day to claim its rewards, what
- * it pays, and the free card(s) it gives. notes/story-events-plan.md, and the
+ * running with that banner, its logo, what it pays, and the free card(s) it gives. notes/story-events-plan.md, and the
  * mocks in notes/story-events/mocks/.
  *
  * The mirror of AnniversaryEventStrip, which sits flush ABOVE: outside the
@@ -64,11 +62,9 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
 					{event.is_predicted && <PredictedBadge />}
 				</div>
 				<h4 className="mt-1 text-lg leading-snug font-semibold text-balance text-gray-100">{name}</h4>
-				{event.claim_end_date && (
-					<p className="mt-0.5 text-sm text-gray-400">
-						Runs with this banner. Claim rewards by <DateTimeRange start={event.claim_end_date} />
-					</p>
-				)}
+				{/* No claim date here: players read it as the event's start (Daptrius,
+				    2026-11-18). The strip sits under its banner, which carries the dates. */}
+				<p className="mt-0.5 text-sm text-gray-400">Runs with this banner.</p>
 				{rewards.length > 0 && (
 					<div className="mt-2 flex flex-wrap items-center gap-1.5">
 						<span className="mr-0.5 text-xs font-semibold text-gray-400">Event rewards</span>
