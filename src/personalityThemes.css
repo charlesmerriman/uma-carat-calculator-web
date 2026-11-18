@@ -1,9 +1,10 @@
 /* ===== THE PALETTE THEMES' SHAPES =====
 
-   Winning Live and Tracen are the two themes that change more than colour
-   (notes/theme-options.md). Their COLOURS are tokens in index.css like every
-   other theme's; this file is the rest: pills, the strip under the navbar,
-   the filled add-banner buttons, Tracen's key buttons and header pill.
+   Winning Live, Tracen and Tracen Night are the themes that change more than
+   colour (notes/theme-options.md). Their COLOURS are tokens in index.css like
+   every other theme's; this file is the rest: pills, the strip under the
+   navbar, the filled add-banner buttons, Tracen's key buttons and header
+   pill. Tracen Night has no shapes of its own: it wears Tracen's.
 
    THREE RULES for anything added here.
 
@@ -180,21 +181,34 @@
 }
 
 
-/* ───────────────────────────── TRACEN ───────────────────────────── */
+/* ───────────────────── TRACEN AND TRACEN NIGHT ───────────────────── */
+
+/* One set of shapes for the pair. Every selector in this section starts
+   `[data-theme^="tracen"]`: `^=` is "the attribute STARTS WITH", so it matches
+   both `tracen` and `tracen-night` at the specificity of the plain
+   `[data-theme="tracen"]` it replaced (one attribute), and the cascade order
+   against index.css is what it was. A third id beginning "tracen" would pick
+   these rules up too, which is the point of the prefix.
+
+   The lime is the same in both themes, so it stays written out here. What
+   differs between day and night (the key face and edge, the tab tray and ink,
+   the stat box, the numerals, the shortfall pill) is a --tracen-* token set
+   in each theme's block in index.css. */
 
 /* Body text a step heavier, with the font-weight tokens the theme block
    raises (index.css). An element that names a weight still gets its own. */
-[data-theme="tracen"] body {
+[data-theme^="tracen"] body {
 	font-weight: 500;
 }
 
-/* Lime, the game's button green. --color-brand is the DEEP green on this
-   theme (lime is 1.9:1 on white and the brand is text in hundreds of places),
+/* Lime, the game's button green. --color-brand is the DEEP green on Tracen
+   (lime is 1.9:1 on white and the brand is text in hundreds of places),
    so the solid brand button is repainted here: lime with the dark brown ink,
    which measures 6.3:1 or better down the gradient, and a deep green rim so
-   the button still has an edge on a white card. Later than the shared rule in
+   the button still has an edge on a white card. On Tracen Night the brand
+   token is already the lime; this gives it the same gradient, ink and rim. Later than the shared rule in
    index.css that turns this label white on a light theme. */
-[data-theme="tracen"] .bg-brand.text-black {
+[data-theme^="tracen"] .bg-brand.text-black {
 	background-color: #7ecf12;
 	background-image: linear-gradient(180deg, #8fd61a, #76c80e);
 	color: #4f2504;
@@ -202,42 +216,43 @@
 }
 
 /* The home page's main button also gets the game's thicker bottom edge. */
-[data-theme="tracen"] .hero-cta {
+[data-theme^="tracen"] .hero-cta {
 	box-shadow: inset 0 0 0 1.5px #4f9a00, 0 3px 0 #3f8200;
 }
 
 /* The navbar's controls as the game's menu buttons: a white face, a slate
-   outline and a thicker bottom edge. The edge is a shadow, so the 36px
+   outline and a thicker bottom edge (a deep blue face and a lavender edge at
+   night). The edge is a shadow, so the 36px
    control keeps its height inside the 64px bar. */
-[data-theme="tracen"] .nav-control {
-	border-color: #6b6788;
-	background-color: #ffffff;
+[data-theme^="tracen"] .nav-control {
+	border-color: var(--tracen-key-line);
+	background-color: var(--tracen-key-face);
 	color: var(--color-gray-100);
-	box-shadow: 0 2px 0 #6b6788;
+	box-shadow: 0 2px 0 var(--tracen-key-line);
 }
 
-[data-theme="tracen"] .nav-control:hover {
+[data-theme^="tracen"] .nav-control:hover {
 	background-color: var(--color-gray-700);
 }
 
 /* The tabs sit in a grey tray, like the game's side menu, and the one you are
    on is lime. */
-[data-theme="tracen"] .nav-tabs {
+[data-theme^="tracen"] .nav-tabs {
 	border-color: transparent;
-	background-color: #e2e1ec;
+	background-color: var(--tracen-tab-tray);
 }
 
-[data-theme="tracen"] .nav-tab {
-	color: #38354a;
+[data-theme^="tracen"] .nav-tab {
+	color: var(--tracen-tab-ink);
 }
 
 /* The tab's own hover colour is a utility, which the rule above outranks, so
    the hover is restated here. */
-[data-theme="tracen"] .nav-tab:not(.nav-tab--active):hover {
+[data-theme^="tracen"] .nav-tab:not(.nav-tab--active):hover {
 	color: var(--color-gray-100);
 }
 
-[data-theme="tracen"] .nav-tab--active {
+[data-theme^="tracen"] .nav-tab--active {
 	border-color: #4f9a00;
 	background-color: #7ecf12;
 	background-image: linear-gradient(180deg, #8fd61a, #76c80e);
@@ -250,7 +265,7 @@
    the header row is the height it always was. The lattice is two crossed
    stripe layers confined to the pill's first 2.75rem, and the left padding
    starts the words past it: over the lettering it read as noise. */
-[data-theme="tracen"] .planner-panel-title {
+[data-theme^="tracen"] .planner-panel-title {
 	margin: -0.25rem 0;
 	padding: 0.25rem 1.25rem 0.25rem 3.25rem;
 	border-radius: 9999px;
@@ -271,18 +286,18 @@
    its sliver are absolutely placed pseudo-elements behind the text, 3px
    taller than the line each way, so the title's own box (and the centred
    text in it) doesn't move. Without clip-path they are plain rectangles. */
-[data-theme="tracen"] .planner-section-title {
+[data-theme^="tracen"] .planner-section-title {
 	position: relative;
 	z-index: 0;
 	color: #4f2504;
 }
 
-[data-theme="tracen"] .planner-section-title svg {
+[data-theme^="tracen"] .planner-section-title svg {
 	color: #4f2504;
 }
 
-[data-theme="tracen"] .planner-section-title::before,
-[data-theme="tracen"] .planner-section-title::after {
+[data-theme^="tracen"] .planner-section-title::before,
+[data-theme^="tracen"] .planner-section-title::after {
 	content: "";
 	position: absolute;
 	z-index: -1;
@@ -291,14 +306,14 @@
 	background-color: #7ecf12;
 }
 
-[data-theme="tracen"] .planner-section-title::before {
+[data-theme^="tracen"] .planner-section-title::before {
 	left: 0;
 	right: 20px;
 	border-radius: 5px 0 0 5px;
 	clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
 }
 
-[data-theme="tracen"] .planner-section-title::after {
+[data-theme^="tracen"] .planner-section-title::after {
 	right: 0;
 	width: 17px;
 	clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
@@ -308,70 +323,91 @@
    and the saturated colour as the rim and the bottom edge, after the game's
    action buttons. Two classes on each rule so they outrank the lime rule
    above, which the Uma button (a solid brand button elsewhere) also matches. */
-[data-theme="tracen"] .add-banner-button.add-banner-button {
+[data-theme^="tracen"] .add-banner-button.add-banner-button {
 	border-color: transparent;
 	background-image: none;
 	font-weight: 800;
 }
 
-[data-theme="tracen"] .add-banner-button.add-banner-button--uma {
+[data-theme^="tracen"] .add-banner-button.add-banner-button--uma {
 	background-color: var(--color-type-uma);
 	color: var(--color-type-uma-ink);
 	box-shadow: inset 0 0 0 2px var(--kind-uma-band), 0 3px 0 var(--kind-uma-band);
 }
 
-[data-theme="tracen"] .add-banner-button.add-banner-button--support {
+[data-theme^="tracen"] .add-banner-button.add-banner-button--support {
 	background-color: var(--color-type-support);
 	color: var(--color-type-support-ink);
 	box-shadow: inset 0 0 0 2px var(--kind-support-band), 0 3px 0 var(--kind-support-band);
 }
 
-[data-theme="tracen"] .add-banner-button.add-banner-button--step-up {
+[data-theme^="tracen"] .add-banner-button.add-banner-button--step-up {
 	background-color: var(--color-type-step-up);
 	color: var(--color-type-step-up-ink);
 	box-shadow: inset 0 0 0 2px var(--kind-step-up-band), 0 3px 0 var(--kind-step-up-band);
 }
 
-[data-theme="tracen"] .add-banner-button:hover {
+[data-theme^="tracen"] .add-banner-button:hover {
 	filter: brightness(0.97);
 }
 
 /* A type tile's band: the kind's saturated colour along the bottom of its
    tint, on the desktop badge and the phone card's label alike. Inset, so the
    tile is the size it was. */
-[data-theme="tracen"] .banner-type-tab--uma {
+[data-theme^="tracen"] .banner-type-tab--uma {
 	box-shadow: inset 0 -4px 0 var(--kind-uma-band);
 }
 
-[data-theme="tracen"] .banner-type-tab--support {
+[data-theme^="tracen"] .banner-type-tab--support {
 	box-shadow: inset 0 -4px 0 var(--kind-support-band);
 }
 
-[data-theme="tracen"] .banner-type-tab--step-up {
+[data-theme^="tracen"] .banner-type-tab--step-up {
 	box-shadow: inset 0 -4px 0 var(--kind-step-up-band);
 }
 
 /* The derived-stats boxes as the game's stat panel: a white face with a slate
-   edge and the warm brown numerals. */
-[data-theme="tracen"] .banner-stat-box {
-	border-color: #8f8cab;
-	background-color: #ffffff;
+   edge and the warm brown numerals (the page's navy and a warm cream at
+   night). */
+[data-theme^="tracen"] .banner-stat-box {
+	border-color: var(--tracen-stat-line);
+	background-color: var(--tracen-stat-face);
 }
 
-[data-theme="tracen"] .banner-stat-box-value,
-[data-theme="tracen"] .income-value {
-	color: #8a4a1c;
+[data-theme^="tracen"] .banner-stat-box-value,
+[data-theme^="tracen"] .income-value {
+	color: var(--tracen-numeral);
 }
 
 /* The forecast's "Short by" line. Brown body text and the deep pink warning
    are close in lightness (1.7:1), so colour alone doesn't carry it: the line
    sits in a pale pink pill. Padding given back as margin, as above. */
-[data-theme="tracen"] .forecast-shortfall {
+[data-theme^="tracen"] .forecast-shortfall {
 	width: fit-content;
 	max-width: 100%;
 	margin: 0 -0.5rem -0.125rem;
 	padding: 0.125rem 0.5rem;
 	border-radius: 9999px;
-	background-color: #ffd6e2;
+	background-color: var(--tracen-shortfall-fill);
 	color: var(--color-pull-over);
+}
+
+
+/* ─────────────────────── TRACEN NIGHT, ALONE ─────────────────────── */
+
+/* The two status fields. Every dark theme washes them with 12% of the status
+   colour over the inset (App.css), and over this theme's blue inset 12% of
+   the pink comes out a purple-blue that reads as neither. A deeper wash over
+   the near-black of the ramp gives the deep pink and deep green of the mock,
+   with the pale ink at 9:1 or better on both. Read from the pull tokens, so
+   colorblind mode's orange and blue arrive by themselves, and behind the same
+   @supports guard as App.css, for the reason given there. */
+@supports (background-color: color-mix(in srgb, red 12%, blue)) {
+	[data-theme="tracen-night"] .pull-input--over {
+		background-color: color-mix(in srgb, var(--color-pull-over-border) 26%, var(--color-gray-950));
+	}
+
+	[data-theme="tracen-night"] .pull-input--ok {
+		background-color: color-mix(in srgb, var(--color-pull-ok-border) 22%, var(--color-gray-950));
+	}
 }
