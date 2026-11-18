@@ -223,15 +223,20 @@ function SkillVersions({ skill }: { skill: PvpSkillRef }) {
  * `link` false leaves out "Open its page" where the thing hovered is already
  * the link (an Encyclopedia row).
  */
-export function SkillDetail({ skill, note, link = true }: {
+export function SkillDetail({ skill, note, link = true, full = false }: {
 	skill: PvpSkillRef
 	note?: ReactNode
 	link?: boolean
+	/** The whole card for everyone: set by the Encyclopedia, which is public. */
+	full?: boolean
 }) {
-	// The skills work shows to early access only (useSkillsPreview, the
-	// Encyclopedia's supporters-first rule); everyone else gets the card with
-	// its header, text and versions, as before.
-	const preview = useSkillsPreview()
+	// ON A GUIDE the skills work shows to early access only (useSkillsPreview;
+	// the owner kept the guides supporters first on 2026-11-18): everyone else
+	// gets the card with its header, text and versions, as before. The
+	// Encyclopedia's own skill rows draw this card too and pass `full`, because
+	// there the same facts are one click away on a public page.
+	const earlyAccess = useSkillsPreview()
+	const preview = full || earlyAccess
 	// The drawn popup is aria-hidden, so its link is for the pointer only (hoverPopup.tsx).
 	const inPopup = useContext(InsidePopupContext)
 	const kind = skill.is_inherited ? "inherited" : skill.game_id != null ? skillKind({ ...skill, game_id: skill.game_id }) : skillColour(skill)

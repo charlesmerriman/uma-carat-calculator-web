@@ -46,7 +46,6 @@ import type {
 import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
-import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 
 import { hoverCardProps } from "../../utils/hoverCards"
@@ -479,11 +478,8 @@ function withSeams(name: string): string {
 /**
  * One featured tile: the art (with its purpose note) over the name block.
  *
- * With `href` the whole tile is a link to the card's Encyclopedia page. Only
- * early access gets one (`useSkillsPreview`, decided by FeaturePanel): the
- * pages are supporters-first, and a link everyone else could follow would
- * only open the "for supporters" note. Opening the Encyclopedia to everyone
- * is that hook returning true, and these links follow with no change here.
+ * With `href` the whole tile is a link to the card's Encyclopedia page:
+ * every tile whose uma or card has a game id (FeaturePanel decides).
  */
 function FeaturedTile({
 	item,
@@ -655,8 +651,6 @@ function FeaturePanel({
 	// so. A card that grows taller — or a line that scrolls — is the right trade.
 	const isBand = layout === "band"
 	const oshiIds = useOshiIds()
-	// Early access only, while the Encyclopedia is supporters-first (FeaturedTile).
-	const linksToPages = useSkillsPreview()
 
 	// A band tile is narrower than a column tile, so its name gets a smaller
 	// size and a third line. Both tiers were measured against real banners: at
@@ -673,7 +667,7 @@ function FeaturePanel({
 		const tile = (
 			<FeaturedTile
 				item={item}
-				href={linksToPages && item.game_id ? pageHref(item.game_id) : null}
+				href={item.game_id ? pageHref(item.game_id) : null}
 				tileAspectClass={tileAspectClass}
 				tileWidthClass={tileWidthClass}
 				nameClass={nameClass}

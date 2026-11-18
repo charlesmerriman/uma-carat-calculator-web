@@ -23,7 +23,7 @@ import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { PageSkill, UmaPageData } from "../../types/encyclopedia"
 import { umaReleases } from "../../utils/encyclopediaBanners"
 import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
-import { EncyclopediaGate } from "./EncyclopediaTabs"
+import { EncyclopediaFrame } from "./EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, Page, PageSkeleton, Section, Stars,
 	SubHeading, Switch, Tag, TranslationCredit, WhereTag, type JumpItem,
@@ -154,11 +154,11 @@ function UmaSkills({ skills, hints, fullCost = false }: {
 }
 
 export const UmaPage = () => (
-	<EncyclopediaGate>
+	<EncyclopediaFrame>
 		<div className={PAGE_CONTAINER}>
 			<UmaPageBody />
 		</div>
-	</EncyclopediaGate>
+	</EncyclopediaFrame>
 )
 
 const UmaPageBody = () => {

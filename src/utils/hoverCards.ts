@@ -42,6 +42,25 @@ export interface HoverCardTarget {
 const APTITUDE_KEYS = new Set<AptitudeKey>(["turf", "dirt", "short", "mile", "medium", "long", "front", "pace", "late", "end"])
 
 /** The attributes a tile spreads to opt in. Undefined ids give none, so a tile with no row stays plain. */
+/**
+ * The /app pages that draw no tile with a card to open: the calculator and
+ * the Selectors page (owner, 2026-11-18: no cards there).
+ *
+ * WHY IT MATTERS: the hover layer is mounted on every /app page, and the
+ * catalogue behind the cards is about 106 KB on the wire, nearly as much as
+ * /calculator-data itself (123 KB, measured on prod 2026-11-18). Since the
+ * cards opened to everyone, loading it on these two pages would double what
+ * the API sends each visitor on the calculator, the page a banner launch
+ * crowds, for a card that page can never open
+ * (notes/hot-route-capacity-plan.md). A page that gains tiles comes off this
+ * list; until someone remembers to, the layer's press still loads it.
+ */
+const PAGES_WITHOUT_CARDS: ReadonlySet<string> = new Set(["/app", "/app/selectors"])
+
+export function pageDrawsHoverCards(pathname: string): boolean {
+	return !PAGES_WITHOUT_CARDS.has(pathname.replace(/\/+$/, ""))
+}
+
 export function hoverCardProps(
 	kind: HoverCardKind,
 	id: number | null | undefined,

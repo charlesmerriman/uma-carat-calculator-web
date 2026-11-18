@@ -77,7 +77,8 @@ const META: Record<AppPath, RouteMeta> = {
 		description:
 			"Every Uma Musume skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
 	},
-	// The Encyclopedia's lists: early access only, noindex below, not prerendered.
+	// The Encyclopedia's lists (these two and /app/skills above): public and
+	// prerendered like every tab since 2026-11-18.
 	"/app/umas": {
 		title: "Umas",
 		description: "Every Uma Musume trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
@@ -91,7 +92,10 @@ const META: Record<AppPath, RouteMeta> = {
 /**
  * An Encyclopedia page (/app/umas/<id> and its card and skill twins): one meta
  * per kind until the page has its data, when it sets the real name itself
- * (usePageTitle). About 2,650 pages, none prerendered: noindex.
+ * (usePageTitle). About 3,000 pages, open to everyone but none prerendered
+ * yet, so noindex: they join the search engines as real documents, with their
+ * own titles, in notes/encyclopedia-open-plan.md's PRs 3 and 4. Dropping the
+ * noindex before then would hand Google 3,000 identical shells.
  */
 const ENCYCLOPEDIA_PAGE_META: Record<"umas" | "cards" | "skills", RouteMeta> = {
 	umas: { title: "Uma", description: "An Uma Musume trainee: aptitudes, stats, skills and banners." },
@@ -155,16 +159,13 @@ export const AppRouteMeta = () => {
 				? SHARED_PLAN_META
 				: META[path]
 
-	// The Encyclopedia (the Skills page, the uma and card lists and every
-	// page) is supporters first (useSkillsPreview): noindex, like a shared
-	// plan, and not prerendered until it opens to everyone. The Collection is
-	// one player's account, so it never should be, and Rankings is behind
-	// early access.
+	// noindex: an Encyclopedia page until it is a real document (see
+	// ENCYCLOPEDIA_PAGE_META), a shared plan, the Collection (one player's
+	// account) and Rankings (behind early access).
 	useDocumentMeta(
 		meta.title,
 		meta.description,
-		pageKind !== null || path === "shared" || path === "/app/skills" || path === "/app/umas" || path === "/app/cards"
-			|| path === "/app/collection" || path === "/app/rankings"
+		pageKind !== null || path === "shared" || path === "/app/collection" || path === "/app/rankings"
 	)
 	return null
 }

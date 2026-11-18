@@ -22,7 +22,7 @@ const READABLE: SkillReadable = {
 	}],
 }
 
-/** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
+/** On a guide the skills work shows to early access only (useSkillsPreview): supporters and staff first. */
 function asEditor(node: ReactNode, editor = true) {
 	const value = { isLoggedIn: true, status: "ready", account: { early_access: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
@@ -81,5 +81,16 @@ describe("SkillDetail", () => {
 			expect(container).not.toHaveTextContent("UmaTL")
 			unmount()
 		}
+	})
+
+	it("shows everyone the whole card when the Encyclopedia draws it", () => {
+		// The Encyclopedia is public, so its skill rows pass `full`; a guide never does.
+		const whole = skill({ readable: READABLE, availability: "jp", uses_translation: true,
+			sources: { umas: [{ name: "Special Week", source: "unique", level: null, on_global: true }], uma_count: 1, cards: [], card_count: 0 } })
+		const { container } = render(asEditor(<SkillDetail skill={whole} full />, false))
+		expect(container).toHaveTextContent("When:")
+		expect(container).toHaveTextContent("Umas:")
+		expect(container).toHaveTextContent("JP only")
+		expect(container).toHaveTextContent("UmaTL")
 	})
 })

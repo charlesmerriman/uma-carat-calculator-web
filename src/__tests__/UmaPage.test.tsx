@@ -192,9 +192,9 @@ describe("UmaPage", () => {
 		expect(await screen.findByText(/There's no page for that/)).toBeInTheDocument()
 	})
 
-	it("is for supporters first, and asks the API nothing for anyone else", () => {
+	it("opens for an account without early access (everyone, since 2026-11-18)", async () => {
 		renderAt("/app/umas/100101", false)
-		expect(screen.getByText(/The Encyclopedia is for our Patreon supporters for now/)).toBeInTheDocument()
-		expect(fetchMock).not.toHaveBeenCalled()
+		expect(await screen.findByRole("heading", { level: 1, name: /Special Week/ })).toBeInTheDocument()
+		expect(screen.queryByText(/for our Patreon supporters/)).toBeNull()
 	})
 })

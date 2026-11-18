@@ -174,7 +174,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					    team window's mirror. Behind the gate for the same reason. */}
 					{!isLoading && !fetchError && <RankingsDock />}
 					{/* The uma and support card hover cards: one popup for every page,
-					    opened by any tile with data-hover-card (early access only).
+					    opened by any tile with data-hover-card.
 					    Behind the gate like the windows above. */}
 					{!isLoading && !fetchError && <HoverCardLayer />}
 				</div>
@@ -214,9 +214,10 @@ export const ApplicationViews = () => (
 			<Route path="selectors" element={<Selectors />}/>
 			<Route path="legend-races" element={<DailyLegendRaces />}/>
 			<Route path="skills" element={<SkillsPage />}/>
-			{/* The Encyclopedia (notes/encyclopedia-plan.md): early access only,
-			    noindex and not prerendered while it is supporters first. A page
-			    is keyed by the game's id (utils/encyclopediaRoutes.ts). */}
+			{/* The Encyclopedia (notes/encyclopedia-plan.md), open to everyone.
+			    A page is keyed by the game's id (utils/encyclopediaRoutes.ts)
+			    and stays noindex until it is a real document
+			    (notes/encyclopedia-open-plan.md). */}
 			<Route path="skills/:gameId" element={<SkillPage />}/>
 			<Route path="umas" element={<UmaListPage />}/>
 			<Route path="umas/:gameId" element={<UmaPage />}/>

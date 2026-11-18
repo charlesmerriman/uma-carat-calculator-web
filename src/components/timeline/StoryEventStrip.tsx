@@ -4,7 +4,6 @@ import { ArrowUpRight } from "lucide-react"
 import type { StoryEvent, StoryEventCard } from "../../types"
 import PredictedBadge from "../PredictedBadge"
 import { useHoverPopup } from "../pvp/hoverPopup"
-import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { hoverCardProps } from "../../utils/hoverCards"
 import { HoverCardContent } from "../hovercards/HoverCardContent"
@@ -94,8 +93,8 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
  * One free card: compact, art on the left. Bordered `image`, not FramedCard:
  * Timeline tiles keep their bordered art (frontend-ui.md, "Card frames").
  *
- * EARLY ACCESS ONLY gets more than the tile, while the Encyclopedia is
- * supporters first (useSkillsPreview, the rule every tile follows). Then:
+ * A card with a game id gets more than the tile (for everyone, since the
+ * Encyclopedia opened on 2026-11-18):
  *
  *   - on a computer, a click opens the site's shared card (hoverCardProps,
  *     drawn by HoverCardLayer, the same card every other tile opens), whose
@@ -114,8 +113,7 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
  * the keyboard.
  */
 function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: string }) {
-	const linksToPages = useSkillsPreview()
-	const href = linksToPages && card.game_id ? cardHref(card.game_id) : null
+	const href = card.game_id ? cardHref(card.game_id) : null
 	const purpose = card.purpose.trim()
 	const detailId = useId()
 	const { referenceProps, popup } = useHoverPopup("top", { interactive: true, tapOnly: true, fit: true })

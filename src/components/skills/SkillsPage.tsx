@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 import { useSkillListState } from "../../hooks/useSkillList"
 import { reportCounts } from "../../utils/encyclopediaCounts"
-import { EncyclopediaGate, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
+import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
 import { SkillList } from "../encyclopedia/skillRows"
@@ -67,9 +67,9 @@ const TYPE_OPTIONS = TYPE_FILTERS.filter(({ value }) => value !== "all" && value
 const TYPE_VALUES = TYPE_OPTIONS.flatMap(({ value, subs }) => [value, ...(subs ?? []).map((sub) => sub.value)])
 
 /**
- * Part of the Encyclopedia, so supporters and staff first (EncyclopediaGate,
- * owner 2026-11-12): anyone else gets the supporters note, and the route is
- * neither prerendered nor in the sitemap until it opens to everyone.
+ * Part of the Encyclopedia, open to everyone since 2026-11-18. The route is
+ * prerendered and in the sitemap like every /app tab: the shell and its head
+ * tags at build time, the list itself in the browser.
  */
 export const SkillsPage = () => {
 	// An old link (Discord, a bookmark) named the skill as ?skill=<id>; its page is its own address now.
@@ -77,9 +77,9 @@ export const SkillsPage = () => {
 	const oldLink = parseSkillParam(searchParams.get(SKILL_PARAM))
 	if (oldLink !== null) return <Navigate to={skillHref(oldLink)} replace />
 	return (
-		<EncyclopediaGate>
+		<EncyclopediaFrame>
 			<SkillsPageBody />
-		</EncyclopediaGate>
+		</EncyclopediaFrame>
 	)
 }
 

@@ -21,7 +21,7 @@ import type { CardPageData } from "../../types/encyclopedia"
 import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import { cardReleases } from "../../utils/encyclopediaBanners"
 import { CARD_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
-import { EncyclopediaGate } from "./EncyclopediaTabs"
+import { EncyclopediaFrame } from "./EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, PageSkeleton, RarityTag, Section, SubHeading,
 	TranslationCredit, TypeTag, WhereTag, type JumpItem, Page,
@@ -34,11 +34,11 @@ import { useOwned } from "../../hooks/useOwned"
 import { usePageTitle } from "./usePageTitle"
 
 export const CardPage = () => (
-	<EncyclopediaGate>
+	<EncyclopediaFrame>
 		<div className={PAGE_CONTAINER}>
 			<CardPageBody />
 		</div>
-	</EncyclopediaGate>
+	</EncyclopediaFrame>
 )
 
 const CardPageBody = () => {

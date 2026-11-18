@@ -45,9 +45,6 @@ export const Navbar = () => {
 	// for early access alone. The account is unknown during the prerender and
 	// while it loads, so the item appears after load and never flashes.
 	const showRankings = Boolean(account?.early_access)
-	// The Encyclopedia is supporters first too (owner, 2026-11-12), on the same
-	// rule, so the two tabs always come and go together.
-	const showEncyclopedia = showRankings
 
 	// Search + team drawer + settings gear + theme picker, grouped so the desktop
 	// nav's branches render the same controls. TeamDrawerButton and SettingsMenu
@@ -99,22 +96,15 @@ export const Navbar = () => {
 	// 360px even that truncates, so the words hide there and the icons carry
 	// the bar; the label stays in the accessibility tree (sr-only).
 	//
-	// A sixth tab (Rankings, early access only) takes each cell to about 54px
-	// at 375px, where "Calculator" no longer fits, so with six the words hide
-	// below 390px instead. Both strings are literal so Tailwind sees them.
-	//
-	// The seventh (the Encyclopedia, with Rankings: early access only) takes a
-	// cell to about 46px at 375px, so with seven the words hide below 440px.
-	// Its short phone label and the fit are the visual overhaul's to settle
-	// (notes/encyclopedia-plan.md); this keeps it working until then.
-	const mobileLabel = showEncyclopedia
-		? "truncate max-[439px]:sr-only"
-		: showRankings ? "truncate max-[389px]:sr-only" : "truncate max-[359px]:sr-only"
-	const mobileColumns = showEncyclopedia ? "grid-cols-7" : showRankings ? "grid-cols-6" : "grid-cols-5"
-	// The desktop bar: a sixth label overflows it at 1024px, so Rankings is an
-	// icon below xl. With the seventh (the Encyclopedia) the bar wrapped "Legend
-	// Races" and the wordmark at 1440px, so both are icons below 2xl (1536px).
-	const desktopLabel = showEncyclopedia ? "sr-only 2xl:not-sr-only" : "sr-only xl:not-sr-only"
+	// Everyone has six tabs since the Encyclopedia opened (2026-11-18), and
+	// early access a seventh (Rankings). The words hide below 440px and the
+	// Encyclopedia and Rankings labels below 2xl (1536px): the breakpoints
+	// the seven-tab bar was fitted at, kept for six because "Encyclopedia"
+	// is the long label in both and six with it was never measured. Loosen
+	// them for the six-tab bar only after measuring it.
+	const mobileLabel = "truncate max-[439px]:sr-only"
+	const mobileColumns = showRankings ? "grid-cols-7" : "grid-cols-6"
+	const desktopLabel = "sr-only 2xl:not-sr-only"
 	const mobileNavClass = (active: boolean) =>
 		`nav-tab flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
@@ -261,12 +251,10 @@ export const Navbar = () => {
 						<Swords className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>PvP</span>
 					</Link>
-					{showEncyclopedia && (
-						<Link to={UMA_LIST_PATH} className={mobileNavClass(isEncyclopedia)} {...prefetchOnIntent}>
-							<BookOpen className="h-4 w-4 shrink-0" />
-							<span className={mobileLabel}>Encyclopedia</span>
-						</Link>
-					)}
+					<Link to={UMA_LIST_PATH} className={mobileNavClass(isEncyclopedia)} {...prefetchOnIntent}>
+						<BookOpen className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Encyclopedia</span>
+					</Link>
 					{showRankings && (
 						<Link to="/app/rankings" className={mobileNavClass(isRankings)} {...prefetchOnIntent}>
 							<ListOrdered className="h-4 w-4 shrink-0" />
@@ -321,14 +309,12 @@ export const Navbar = () => {
 							<Swords className="h-4 w-4" />
 							PvP
 						</Link>
-						{/* Icon only below xl, like Rankings: a sixth label overflows the bar at 1024px. */}
-						{showEncyclopedia && (
-							<Link to={UMA_LIST_PATH} className={desktopNavClass(isEncyclopedia)} title="Encyclopedia" {...prefetchOnIntent}>
-								<BookOpen className="h-4 w-4" />
-								<span className={desktopLabel}>Encyclopedia</span>
-							</Link>
-						)}
-						{/* Icon only below xl: a sixth label overflows the bar at 1024px. */}
+						{/* Icon only below 2xl: with its label the bar wrapped at 1440px. */}
+						<Link to={UMA_LIST_PATH} className={desktopNavClass(isEncyclopedia)} title="Encyclopedia" {...prefetchOnIntent}>
+							<BookOpen className="h-4 w-4" />
+							<span className={desktopLabel}>Encyclopedia</span>
+						</Link>
+						{/* The seventh, early access only; an icon below 2xl. */}
 						{showRankings && (
 							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
 								<ListOrdered className="h-4 w-4" />

@@ -7,8 +7,8 @@
  * request. The skill LIST keeps its module-level promise (skillsFetchCalls.ts):
  * the guide editor shares it.
  *
- * Early access only: the fetch sends the token, and the API answers 401 / 403
- * to anyone else. The QueryProvider resets every query on a sign-in change.
+ * Public: the API answers the same bytes to everyone. The fetch still sends
+ * the token when there is one, as every call does.
  */
 
 import { useQuery, type QueryClient } from "@tanstack/react-query"

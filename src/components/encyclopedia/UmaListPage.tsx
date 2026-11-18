@@ -14,7 +14,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
 import { splitOutfit } from "../../utils/umaName"
-import { EncyclopediaGate, EncyclopediaTabs } from "./EncyclopediaTabs"
+import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { LetterHeading, LetterIndex } from "./letters"
 import { lettersFor } from "../../utils/encyclopediaLetters"
 import { reportCounts } from "../../utils/encyclopediaCounts"
@@ -32,9 +32,9 @@ import {
 } from "../../utils/encyclopedia"
 
 export const UmaListPage = () => (
-	<EncyclopediaGate>
+	<EncyclopediaFrame>
 		<UmaListBody />
-	</EncyclopediaGate>
+	</EncyclopediaFrame>
 )
 
 const UmaListBody = () => {
