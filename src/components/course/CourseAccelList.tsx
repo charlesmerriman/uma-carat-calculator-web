@@ -291,7 +291,7 @@ export default function CourseAccelList({
 		// the map: only the floor (min-h) can, beside a short strip. After "Show
 		// all" the panel is back in flow, as tall as its rows up to the screen.
 		<aside
-			className={`relative rounded-xl border border-gray-700 bg-gray-900/40 ${all ? "lg:self-start" : "lg:min-h-[20rem]"}`}
+			className={`relative rounded-xl border border-gray-700 bg-gray-900/40 ${all ? "lg:self-start" : "lg:min-h-80"}`}
 			aria-label={words.title}
 		>
 		<div className={`flex flex-col p-3 ${all ? "lg:max-h-[calc(100vh-6rem)]" : "lg:absolute lg:inset-0"}`}>
@@ -299,7 +299,7 @@ export default function CourseAccelList({
 				<h4 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-300">{words.title}</h4>
 				{loaded && <span className="shrink-0 text-[11px] text-gray-500">{found.length} here</span>}
 			</div>
-			<div role="group" aria-label="Which skills" className="mt-2 inline-flex rounded-full border border-gray-600 p-0.5">
+			<div role="group" aria-label="Which skills" className="mt-2 inline-flex self-start rounded-full border border-gray-600 p-0.5">
 				{(Object.keys(LISTS) as ListKind[]).map((kind) => (
 					<button
 						key={kind}
