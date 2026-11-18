@@ -1159,12 +1159,20 @@
    absolutely positioned <img> with `width: auto` takes the picture's own size
    instead of stretching between its insets.
 
-   STILL OPEN, the report that board post began with: on an iPhone (iOS 27,
-   every browser) at the default zoom only, about one device pixel of the art
-   shows past the frame's outer edge on the PvP and Encyclopedia tiles. Web
-   #376 (the art's sizing) didn't fix it; whether #379's inset did is not
-   known. A fix has to hide the art's edge without resizing the art, and has
-   to be seen on an iPhone before it ships. */
+   Its outer 12 units are NOT PAINTED (the clip-path): the art keeps its size
+   and place, and the band, 24 units wide, covers that strip anyway. This is
+   the fix for the report that board post began with. WebKit (every browser on
+   an iPhone) draws the frame, a CSS background, up to one device pixel short
+   of the box on the right and bottom when the box isn't a whole number of
+   device pixels wide, while the <img> fills the box: a line of art showed
+   past the frame on the fluid PvP and Encyclopedia tiles, at the default zoom
+   only. Measured in WebKit at 402 px wide and 3x (2026-11-18): flush art
+   showed past the band at every one of 29 tile widths, a full line at widths
+   ending .656; clipped, at none, for both frames, down to 16 px, and in the
+   share picture (html-to-image). The inside of the frame is pixel-identical
+   with and without the clip. The corner is 70/762 of the box (the frame's
+   82-unit outer curve, 12 in): an inset() shape's radius is measured against
+   the element's box, not the inset one. */
 .uma-frame > img {
 	position: absolute;
 	inset: 0;
@@ -1173,6 +1181,7 @@
 	height: 100%;
 	object-fit: cover;
 	border-radius: inherit;
+	clip-path: inset(1.5748% round 9.1864%);
 }
 
 /* The grey square behind the art, for a missing picture and for the art's
@@ -1210,9 +1219,14 @@
 
 /* The owner's named exceptions (the navbar profile, the account page outside
    the favorites card): the same borderless art and corner, no frame. With no
-   band to hide an edge under, the grey square fills the whole box too. */
+   band to hide an edge under, the art is painted whole and the grey square
+   fills the box too. */
 .uma-frame--bare::after {
 	content: none;
+}
+
+.uma-frame--bare > img {
+	clip-path: none;
 }
 
 .uma-frame--bare::before {
