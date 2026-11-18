@@ -25,7 +25,7 @@ function HeroActions({ isLoggedIn, onPrefetch }: HeroProps) {
 		<div className="flex shrink-0 flex-col gap-2 sm:flex-row">
 			<Link
 				to="/app"
-				className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-bold text-black transition hover:brightness-110"
+				className="hero-cta inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-bold text-black transition hover:brightness-110"
 				onMouseEnter={onPrefetch}
 				onFocus={onPrefetch}
 			>

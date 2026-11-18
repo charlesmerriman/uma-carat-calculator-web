@@ -628,6 +628,90 @@ html {
 	--color-gray-950: #031012;
 }
 
+/* Winning Live: the concert after the race. The first dark theme with several
+   colours instead of one accent, each with one job (owner, 2026-11-17;
+   notes/theme-options.md has the mock and the palette by role):
+
+     yellow  the brand: active tabs, toggles, chips, section icons, carats
+     cyan    Uma       lime  Support and on-pity       violet  Step-Up
+     pink    ONLY the wordmark's "Carat" and the planner's panel title
+
+   Pink stays off everything else on purpose. It has the same lightness as the
+   over-budget red-orange below (about 1:1 between them), so pink beside a
+   warning reads as a warning; the first draft's pink scenario divider and
+   forecast tab were moved to yellow for that reason.
+
+   The kind fills are bright with DARK ink, the reverse of every other dark
+   theme's deep fill with white ink. Two things follow from that further down:
+   colorblind mode swaps in its own deep fills, so it gets the white ink back
+   ([data-theme="winning-live"][data-colorblind-mode="true"]), and the phone
+   card's controls, which sit on the fill, take the light themes' values
+   (personalityThemes.css).
+
+   Here beside the other dark palettes and ABOVE the colorblind block: that
+   block has the same specificity, so a kind or pull token set any later would
+   beat colorblind mode. Its shapes (pills, the penlight strip, the filled add
+   buttons) are in personalityThemes.css.
+
+   Measured on the card fill (#221642): gray-100 15.1:1, gray-300 10.9:1,
+   gray-400 7.5:1, the brand 13.1:1, pink 7.1:1; dark ink on the three kind
+   fills 9.4:1 or better. Every inherited text token (staging, the statuses,
+   the highlight red) is 6:1 or better on the card. */
+[data-theme="winning-live"] {
+	--color-brand: #ffe45c;
+	--color-gray-50:  #fbf9ff;
+	--color-gray-100: #f6f2ff;
+	--color-gray-200: #e4dbfa;
+	--color-gray-300: #d6ccf2;
+	--color-gray-400: #b3a6e0;
+	--color-gray-500: #8577bd;
+	--color-gray-600: #4a3785;
+	--color-gray-700: #2a1d52;
+	--color-gray-800: #1c1238;
+	--color-gray-900: #120a26;
+	--color-gray-950: #0b0618;
+	/* A solid edge: the shared low-alpha white one is tinted 5% by the brand,
+	   and a yellow tint on violet reads muddy. */
+	--color-edge: #4a3785;
+
+	--color-pull-ok: #a6f06a;
+	--color-pull-ok-border: #7fd43a;
+	--color-pull-over: #ffb7a6;
+	--color-pull-over-border: #ff6b4a;
+
+	--color-type-uma: #5ad7ff;
+	--color-type-uma-ink: #1a0f2e;
+	--color-type-support: #a6f06a;
+	--color-type-support-ink: #1a0f2e;
+	--color-type-step-up: #cfaaff;
+	--color-type-step-up-ink: #1a0f2e;
+	--color-step-up: #cfaaff;
+	--color-step-up-border: #b78cff;
+
+	/* The kind colours as TEXT (the income tiles' ticket counts). Separate from
+	   the fills above because colorblind mode turns those deep, and a deep fill
+	   is unreadable as text on a dark card. */
+	--kind-uma-accent: #5ad7ff;
+	--kind-support-accent: #a6f06a;
+	/* The wordmark's "Carat" and the planner's panel title, nothing else. */
+	--accent-second: #ff7acb;
+
+	/* Unbounded is wide: about 40% wider than Outfit at the same size (the
+	   navbar's wordmark measured 265px against 192px), which is why that
+	   wordmark is scaled down in personalityThemes.css. Bundled like Outfit
+	   (main.tsx); the file is fetched only on this theme. */
+	--font-display: "Unbounded Variable", ui-sans-serif, system-ui, sans-serif;
+
+	/* Rounder than the site's 6px controls and 12px cards. Tailwind's rounded-*
+	   utilities read these, so every control and card follows; full pills are
+	   only on the named hooks in personalityThemes.css, because a pill radius
+	   on a textarea or a tall box is a blob. */
+	--radius-md: 0.75rem;
+	--radius-lg: 0.875rem;
+	--radius-xl: 1.25rem;
+	--radius-2xl: 1.5rem;
+}
+
 /* Shared light themes. The app uses the gray ramp semantically: 900/800/700 are page,
    card, and inset surfaces, while 100/300/400 are progressively quieter text.
    White cards sit above a cool slate canvas, with darker insets for controls.
@@ -840,6 +924,99 @@ html {
 	/* No page glow: Pearl stays out of the PAGE GLOW layer's theme list. */
 }
 
+/* Tracen: the light theme in the game's own menu language (owner, 2026-11-17:
+   "a light theme that is umamusume theme'd"; notes/theme-options.md). The
+   colours were measured off the game's public store screenshots, then
+   deepened wherever one had to carry text:
+
+     lime     the game's header and button green. It is 1.9:1 on white, so it
+              is never text and never the brand TOKEN: the brand is the deep
+              green below, and lime is painted only on solid brand buttons and
+              the named hooks in personalityThemes.css, always with dark ink.
+     brown    the game's text colour, as the gray ramp's ink.
+     pink     the game spends it only on alert badges, so here it is the
+              over-budget colour and nothing else.
+     blue     Uma        orange  Support        violet  Step-Up
+
+   Support is ORANGE on this theme, not green: lime is the brand, so the kind
+   moved to the game's orange. On-pity stays green, which shares a hue with
+   the brand; the Green theme moved it to blue for that reason, and blue is
+   Uma here. Left as it is, for the owner to decide.
+
+   Above the colorblind block for the same reason as Winning Live.
+
+   Measured on white: gray-100 11.4:1, gray-300 7.4:1, gray-400 5.9:1,
+   gray-500 5.4:1, the brand 5.7:1 (4.8:1 on an inset); the kind inks 6.4:1
+   or better on their tints and 4.6:1 or better on the phone card's darkened
+   label column, which is what set how deep they are; the over-budget ink
+   5.0:1 on its fill. */
+[data-theme="tracen"] {
+	--color-brand: #367500;
+	--color-gray-50:  #3d1b02;
+	--color-gray-100: #5f2c07;
+	--color-gray-200: #6e3d1a;
+	--color-gray-300: #7a4a2a;
+	--color-gray-400: #75605a;
+	--color-gray-500: #6b6788;
+	--color-gray-600: #c9c7dc;
+	--color-gray-700: #eeedf7;
+	--color-gray-800: #ffffff;
+	--color-gray-900: #f4f4fc;
+	--color-gray-950: #fafaff;
+	--color-edge: #c9c7dc;
+	/* A card sits on a thin solid edge, like the game's buttons, instead of a
+	   soft drop shadow. */
+	--card-shadow: 0 2px 0 #dddbea;
+
+	--color-pull-ok: #2f5c00;
+	--color-pull-ok-border: #4f9a00;
+	--color-pull-over: #a50d44;
+	--color-pull-over-border: #fc3074;
+
+	--color-type-uma: #e3f3ff;
+	--color-type-uma-ink: #0a5594;
+	--color-type-support: #fff0d9;
+	--color-type-support-ink: #874400;
+	--color-type-step-up: #efe8ff;
+	--color-type-step-up-ink: #5a35c2;
+	--color-step-up: #5a35c2;
+	--color-step-up-border: #8a63e6;
+	/* Each kind's saturated colour: the band under a type tile and the edge of
+	   an add-banner button. A token beside the fills so colorblind mode can
+	   move it with them (further down). */
+	--kind-uma-band: #20a0f4;
+	--kind-support-band: #f4940c;
+	--kind-step-up-band: #8a63e6;
+
+	/* The shared light values for these are deep amber-browns, which all but
+	   vanish beside brown body text. Lighter and more saturated here, and
+	   still 4.5:1 or better on an inset (5.6:1 or better on white). The
+	   shared "predicted" status was 4.3:1 on white, so it is deepened too. */
+	--color-staging: #a94d07;
+	--color-legend-race: #b83c0a;
+	--color-status-predicted: #9c5310;
+
+	/* Rounded type throughout, like the game. Nunito for headings AND body.
+	   It is narrower than the system faces, so it is the safe direction for
+	   the banner table: measured at 1340px, just past where the table
+	   replaces the cards, no row was wider than its tracks and the only
+	   clipped text was the banner names the Light theme also ellipsises
+	   (and less of them). Bundled (main.tsx). */
+	--font-display: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+	/* One step heavier across the board: Nunito's 600 reads like most faces'
+	   500, and the game's lettering is bold. Tailwind's font-* utilities read
+	   these, and personalityThemes.css sets the body's own weight to match. */
+	--font-weight-medium: 600;
+	--font-weight-semibold: 700;
+	--font-weight-bold: 800;
+
+	--radius-md: 0.625rem;
+	--radius-lg: 0.75rem;
+	--radius-xl: 1.125rem;
+	--radius-2xl: 1.375rem;
+}
+
 /* Blue/orange is distinguishable for the common red-green colour vision
    deficiencies. The mode only remaps status colours; labels, borders and
    tooltips continue to communicate the state independently of hue. */
@@ -889,6 +1066,31 @@ html {
 	--color-step-up-border: #b91c1c;
 }
 
+/* The two palette themes under colorblind mode. Two attributes each, so they
+   beat both their own theme block and the colorblind blocks above.
+
+   Winning Live's kind fills carry dark ink, and colorblind mode swaps in the
+   deep blue and red fills every dark theme shares: white ink comes back with
+   them. Its kind colours as text follow the same blue / red split, in tones
+   that read on a dark card.
+
+   Tracen keeps its tints' deep inks (the light colorblind block above already
+   redraws the fills and inks); only the saturated bands need moving. */
+[data-theme="winning-live"][data-colorblind-mode="true"] {
+	--color-type-uma-ink: #ffffff;
+	--color-type-support-ink: #ffffff;
+	--color-type-step-up-ink: #ffffff;
+	--kind-uma-accent: #60a5fa;
+	--kind-support-accent: #fca5a5;
+}
+
+[data-theme="tracen"][data-colorblind-mode="true"] {
+	--color-type-uma-ink: #1e3a8a;
+	--kind-uma-band: #2563eb;
+	--kind-support-band: #dc2626;
+	--kind-step-up-band: #dc2626;
+}
+
 /* ===== PAGE GLOW =====
    The soft colour blooms behind the page. A theme that has them sets
    --page-glow to its gradients in its polish block below, AND is listed in the
@@ -925,7 +1127,8 @@ html {
 	[data-theme="midnight"],
 	[data-theme="race-day"],
 	[data-theme="violet"],
-	[data-theme="teal"]
+	[data-theme="teal"],
+	[data-theme="winning-live"]
 ) body::before {
 	content: "";
 	position: fixed;
@@ -941,7 +1144,8 @@ html {
 	[data-theme="midnight"],
 	[data-theme="race-day"],
 	[data-theme="violet"],
-	[data-theme="teal"]
+	[data-theme="teal"],
+	[data-theme="winning-live"]
 ) #root > .bg-gray-900 {
 	background-color: transparent;
 }
@@ -1032,6 +1236,30 @@ html {
 		radial-gradient(circle at 7% -12%, rgb(211 154 48 / 25%), transparent 31rem),
 		radial-gradient(circle at 97% 4%, rgb(151 88 33 / 15%), transparent 25rem);
 	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(242 181 68 / 6%) inset;
+}
+
+/* Winning Live's stage: three spotlight beams across the page, hard-edged on
+   purpose (a beam, not a wash), in three of its penlight colours. Painted by
+   the PAGE GLOW layer, so it is one fixed layer like every other glow. The
+   card shadow carries a hair of the pink on its top edge. */
+[data-theme="winning-live"] {
+	--page-glow:
+		linear-gradient(108deg,
+			transparent 0 4%, rgb(255 122 203 / 15%) 4% 11%,
+			transparent 11% 58%, rgb(90 215 255 / 12%) 58% 66%,
+			transparent 66% 84%, rgb(255 228 92 / 10%) 84% 89%,
+			transparent 89%);
+	--card-shadow: 0 14px 34px rgb(0 0 0 / 30%), 0 1px 0 rgb(255 122 203 / 6%) inset;
+}
+
+/* Tracen's ground: the game's pale faceted background, as three large flat
+   facets. After the light polish block above, which would otherwise put the
+   shared light glow back (same specificity, later wins). */
+[data-theme="tracen"] {
+	--page-glow:
+		linear-gradient(118deg, rgb(255 255 255 / 85%) 0 16%, transparent 16%),
+		linear-gradient(242deg, #ebebf7 0 12%, transparent 12%),
+		linear-gradient(62deg, transparent 0 78%, rgb(255 255 255 / 85%) 78%);
 }
 
 [data-theme="gilded"] .font-display .text-brand {

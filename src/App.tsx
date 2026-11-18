@@ -1,5 +1,7 @@
 import "./App.css"
 import "./encyclopedia.css"
+// Last on purpose: the palette themes' shape rules outrank App.css by order.
+import "./personalityThemes.css"
 import { useEffect } from "react"
 import { Route, Routes } from "react-router-dom"
 import { Toaster } from "sonner"

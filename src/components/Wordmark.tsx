@@ -36,7 +36,7 @@ export const Wordmark: React.FC<WordmarkProps> = ({ size = "nav" }) => {
 		return (
 			<div className="flex flex-col items-center gap-1.5 py-1 text-center select-none">
 				<span className="font-display text-3xl leading-none font-semibold tracking-tight text-gray-100">
-					<span className="text-brand">Uma</span> Carat
+					<span className="text-brand">Uma</span> <span className="wordmark-second">Carat</span>
 				</span>
 				<span className="font-display text-xs leading-none font-medium tracking-[0.38em] text-gray-400 uppercase">
 					{/* Trailing space offsets the last letter's tracking so the word
@@ -50,10 +50,10 @@ export const Wordmark: React.FC<WordmarkProps> = ({ size = "nav" }) => {
 	return (
 		<Link
 			to="/"
-			className="font-display flex flex-col leading-none font-semibold tracking-tight text-gray-100 transition hover:text-gray-50 lg:flex-row lg:gap-[0.28em]"
+			className="wordmark-nav font-display flex flex-col leading-none font-semibold tracking-tight text-gray-100 transition hover:text-gray-50 lg:flex-row lg:gap-[0.28em]"
 		>
 			<span className="text-base lg:text-xl">
-				<span className="text-brand">Uma</span> Carat
+				<span className="text-brand">Uma</span> <span className="wordmark-second">Carat</span>
 			</span>
 			<span className="text-base lg:text-xl">Calculator</span>
 		</Link>
