@@ -48,11 +48,13 @@ export const THEMES: ThemeConfig[] = [
 	{ id: "light-red",      label: "Red",      mode: "light", swatch: "#b91c1c", canvas: "#fcf4f5" },
 	{ id: "light-lilac",    label: "Purple",   mode: "light", swatch: "#6d28d9", canvas: "#f7f4fc" },
 	{ id: "light-pearl",    label: "Pearl",    mode: "light", swatch: "#292524", canvas: "#f8f7f5" },
-	// The two themes with a `palette`: several colours, each with a job (the
+	// The themes with a `palette`: several colours, each with a job (the
 	// accent, then Uma, Support and Step-Up), and shapes of their own
 	// (src/personalityThemes.css). The picker gives them their own group.
+	// Tracen Night is Tracen's dark pair and sits straight after it.
 	{ id: "winning-live",   label: "Winning Live", mode: "dark",  swatch: "#ffe45c", canvas: "#1c1238", palette: ["#ffe45c", "#5ad7ff", "#a6f06a", "#cfaaff"] },
 	{ id: "tracen",         label: "Tracen",       mode: "light", swatch: "#7ecf12", canvas: "#ffffff", palette: ["#7ecf12", "#20a0f4", "#f4940c", "#8a63e6"] },
+	{ id: "tracen-night",   label: "Tracen Night", mode: "dark",  swatch: "#8fd61a", canvas: "#14244a", palette: ["#8fd61a", "#20a0f4", "#f4940c", "#8a63e6"] },
 ]
 
 export function getThemeMode(id: string): ThemeConfig["mode"] {

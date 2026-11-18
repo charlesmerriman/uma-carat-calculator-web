@@ -36,6 +36,8 @@ export interface SkillListRow {
 	cost?: number | null
 	/** The Type filter's key, from the skill's icon family (backend skill_types.py). */
 	type?: string
+	/** The condition and effect filters' keys (backend skill_tags.py). Absent from an older API. */
+	tags?: string[]
 	/** The outfits a unique, its inherited copy or an evolution belongs to. */
 	owners?: string[]
 	/** The same outfits as rows a page can draw (her face on a row, in a hero). Absent from an older API. */
@@ -97,6 +99,8 @@ export interface SkillDetailData extends Omit<SkillListRow, "pair"> {
 	pair?: SkillRef | null
 	description: string
 	readable: SkillReadable
+	/** The game's own condition strings per slot, in `readable.slots`' order, for the Detailed view. Absent from an older API. */
+	raw_conditions?: { after: string; when: string }[]
 	sources: { umas: SkillSourceUma[]; cards: SkillSourceCard[] }
 	evolution: {
 		from: SkillRef | null

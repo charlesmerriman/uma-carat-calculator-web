@@ -30,6 +30,9 @@ export function applyRosterChanges(roster: Roster, changes: RosterChanges): Rost
 			talent_level: change.talent_level !== undefined ? change.talent_level : (current?.talent_level ?? null),
 			source: "manual",
 			obtained_at: current?.obtained_at ?? null,
+			// A hand edit keeps the imported hint levels on the server too
+			// (roster.py's _edit never touches game_data), so keep them here.
+			...(current?.hint_levels && { hint_levels: current.hint_levels }),
 		}
 		umas = [...umas, next]
 	}

@@ -152,7 +152,49 @@ describe("filterSkills", () => {
 	})
 })
 
+describe("filterSkills by conditions and effects", () => {
+	const TAGGED = [
+		row(21, "Corner Speed", { tags: ["corner", "mid", "speed"] }),
+		row(22, "Final Accel", { tags: ["accel", "final-corner", "front-runner"] }),
+		row(23, "Untagged"),
+	]
+	const names = (picks: string[], match: "all" | "any") =>
+		filterSkills(TAGGED, "", [], "all", [], { picks, match }).map((r) => r.name)
+
+	it("keeps a skill with every pick under All, any one pick under Any", () => {
+		expect(names([], "all")).toHaveLength(3)
+		expect(names(["corner", "speed"], "all")).toEqual(["Corner Speed"])
+		expect(names(["speed", "accel"], "all")).toEqual([])
+		expect(names(["speed", "accel"], "any")).toEqual(["Corner Speed", "Final Accel"])
+		// A row from an older API has no tags, so it never matches a pick.
+		expect(names(["front-runner"], "any")).toEqual(["Final Accel"])
+	})
+})
+
 describe("SkillsPage", () => {
+	it("filters by conditions and effects, all or any of them", async () => {
+		sessionStorage.clear()
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(21, "Corner Speed", { tags: ["corner", "mid", "speed"] }),
+			row(22, "Final Accel", { tags: ["accel", "final-corner", "front-runner"] }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("2 skills")).toBeInTheDocument()
+		// Folded away until asked for.
+		expect(screen.queryByRole("group", { name: "When" })).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Show conditions and effects" }))
+		fireEvent.click(within(screen.getByRole("group", { name: "Does" })).getByRole("button", { name: "Speed" }))
+		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		fireEvent.click(within(screen.getByRole("group", { name: "Strategy" })).getByRole("button", { name: "Front Runner" }))
+		// All of them: no skill is both.
+		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
+		fireEvent.click(within(screen.getByRole("group", { name: "Match" })).getByRole("button", { name: "Any of them" }))
+		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		// While a pick is set the rows can't fold away, so nothing filters out of sight.
+		expect(screen.getByRole("button", { name: "Hide conditions and effects" })).toBeDisabled()
+		sessionStorage.clear()
+	})
+
 	it("lists the skills, tagged, and narrows on search", async () => {
 		renderPage()
 		expect(await screen.findByText("4 skills")).toBeInTheDocument()

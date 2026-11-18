@@ -13,6 +13,13 @@ export interface OwnedUmaRow {
 	/** Where the values last came from; the next import overwrites either. */
 	source: "import" | "manual"
 	obtained_at: string | null
+	/**
+	 * The game's hint level for each of her own innate and awakening skills,
+	 * keyed by the skill's GAME id (as a string, the way JSON keys arrive).
+	 * Only an imported uma has any; `{}` otherwise. Optional because a row
+	 * built in the browser (an optimistic grid edit) may not carry it.
+	 */
+	hint_levels?: Record<string, number>
 }
 
 export interface OwnedCardRow {

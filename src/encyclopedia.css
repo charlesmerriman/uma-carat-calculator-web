@@ -1866,6 +1866,20 @@
 		flex-shrink: 0;
 	}
 	/* "JP only" at the end of the name line: small, in the line's own ink. */
+	/* The player's hint level on an owned uma: the JP pill's shape, in the brand
+	   colour, since it is about them and not the skill. */
+	.enc-skill__hint {
+		flex-shrink: 0;
+		padding: 0 0.3125rem;
+		border: 1px solid currentColor;
+		border-radius: 0.25rem;
+		font-size: 0.625rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		line-height: 1rem;
+		text-transform: uppercase;
+		color: var(--color-brand);
+	}
 	.enc-skill__jp {
 		flex-shrink: 0;
 		padding: 0 0.3125rem;
@@ -1985,6 +1999,18 @@
 		font-weight: 600;
 		line-height: 1.4;
 		color: var(--color-gray-100);
+	}
+	/* The Detailed view's game code: its own line under the chips, breaking
+	   anywhere, since one clause can be longer than a phone is wide. */
+	.enc-how__code {
+		flex-basis: 100%;
+		margin-top: 0.15rem;
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.75rem;
+		font-weight: 500;
+		line-height: 1.5;
+		overflow-wrap: anywhere;
+		color: var(--color-gray-300);
 	}
 	.enc-step[data-step="lasts"] .enc-how__value,
 	.enc-step[data-step="cooldown"] .enc-how__value {

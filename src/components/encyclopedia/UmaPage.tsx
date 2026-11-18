@@ -26,14 +26,23 @@ import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaGate } from "./EncyclopediaTabs"
 import {
 	Crumbs, EmptyNote, Hero, JapaneseName, JumpBar, NotFound, OwnedLine, Page, PageSkeleton, Section, Stars,
-	SubHeading, Tag, TranslationCredit, WhereTag, type JumpItem,
+	SubHeading, Switch, Tag, TranslationCredit, WhereTag, type JumpItem,
 } from "./pieces"
 import { AptitudeGrid, BannerLinks, CardList, OutfitList, ReleaseFacts, StatsSection } from "./facts"
 import { SkillList, SkillRow, UniquePlate, UnlockConditions } from "./skillRows"
 import { PAGE_CONTAINER, RUNNING_STYLE_COLORS, RUNNING_STYLE_WORDS, ownedStars, umaEntryNumber } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
+import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import { usePageTitle } from "./usePageTitle"
 import { CareerObjectives } from "./CareerObjectives"
+
+/**
+ * Which cost an owned uma's skill rows show: what she pays at the player's hint
+ * levels, or the full price (the owner, 2026-11-18: someone with hints may still
+ * want to see what a skill costs without them).
+ */
+type CostView = "yours" | "full"
+const COST_VIEWS: { value: CostView; label: string }[] = [{ value: "yours", label: "Your cost" }, { value: "full", label: "Full cost" }]
 
 /** The highest awakening level every outfit has; JP's 6 and 7 came later. */
 const BASE_TOP_LEVEL = 5
@@ -49,8 +58,19 @@ function unlockList(skill: PageSkill) {
  * awakening track; one whose base isn't an awakening skill on this page (the
  * files do have a few) is listed after the track instead of being dropped.
  */
-function UmaSkills({ skills }: { skills: PageSkill[] }) {
+function UmaSkills({ skills, hints, fullCost = false }: {
+	skills: PageSkill[]
+	/** Show every cost at full price, the hint levels still tagged. */
+	fullCost?: boolean
+	/**
+	 * The player's hint levels on this outfit (skill game id -> level), when
+	 * they own her and imported their Collection. The game keeps them for her
+	 * innate and awakening skills only, so only those rows read it.
+	 */
+	hints?: ReadonlyMap<number, number>
+}) {
 	const byGameId = new Map(skills.map((skill) => [skill.game_id, skill]))
+	const hintOf = (skill: PageSkill) => hints?.get(skill.game_id)
 	const of = (source: string) => skills.filter((skill) => skill.source === source)
 	const uniques = of("unique")
 	const innate = of("innate")
@@ -78,6 +98,8 @@ function UmaSkills({ skills }: { skills: PageSkill[] }) {
 								// The post says the level and the elbow says what it grows
 								// from, so the row's own line stays its type.
 								hint={skillNote(skill, byGameId)}
+								hintLevel={hintOf(skill)}
+								fullCost={fullCost}
 								after={hanging(skill).length > 0 && (
 									<ul className="enc-branches">
 										{hanging(skill).map((evolved) => (
@@ -106,7 +128,7 @@ function UmaSkills({ skills }: { skills: PageSkill[] }) {
 			{innate.length > 0 && (
 				<div className="enc-group">
 					<SubHeading>Innate skills</SubHeading>
-					<SkillList skills={innate} className="enc-skills enc-skills--row" />
+					<SkillList skills={innate} hintLevel={hintOf} fullCost={fullCost} className="enc-skills enc-skills--row" />
 				</div>
 			)}
 			{awakening.length > 0 && (
@@ -167,6 +189,9 @@ function skillNote(skill: PageSkill, byGameId: Map<number, PageSkill>): string |
 export function UmaDetail({ uma }: { uma: UmaPageData }) {
 	const oshiIds = useOshiIds()
 	const owned = useOwned()
+	const hints = owned.hints.get(uma.id)
+	// Kept outside the uma list's "umas:" scope, so Reset filters there leaves it.
+	const [costView, setCostView] = useRememberedFilter<CostView>("uma-page:cost", "yours", ["yours", "full"])
 	const calculator = useCalculatorDataSafe()
 	const releases = umaReleases(calculator?.umaBannerData ?? [], uma.id)
 	const hasApt = Object.values(uma.apt).some((value) => value != null)
@@ -234,8 +259,14 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 			)}
 
 			{uma.skills.length > 0 && (
-				<Section id="skills" title="Skills" count={uma.skills.length}>
-					<UmaSkills skills={uma.skills} />
+				<Section
+					id="skills"
+					title="Skills"
+					count={uma.skills.length}
+					// Only an owned uma with hint levels has two costs to choose between.
+					aside={hints && <Switch label="Skill cost" options={COST_VIEWS} value={costView} onChange={setCostView} />}
+				>
+					<UmaSkills skills={uma.skills} hints={hints} fullCost={costView === "full"} />
 				</Section>
 			)}
 
