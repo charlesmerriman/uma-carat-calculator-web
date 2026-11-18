@@ -2171,8 +2171,12 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   eight then "Show all", by style with the guide tab's style first (`useStyleTab`, a store
   snapshot of the address); a unique, or its inherited white (the same name), shows the
   uma's `FramedUma` and names her on a quieter line; a tap lights one and opens the card.
-  Beside the map the column scrolls within itself past the screen's height, so "Show all"
-  never strands the map at the top of a long page. The button carries the count only once
+  Beside the map the column is as tall as the map and no taller (a floor of `20rem`, about a
+  row and a half), its rows scrolling under a header that stays put, so an open column never
+  leaves the page blank beside a short strip, and Track or Both give it more room (owner,
+  2026-11-18). "Show all" (in the column's footer, shown whenever rows are past eight or cut
+  off, measured with a `ResizeObserver`) lists every row and lets the column grow to the
+  screen's height, still scrolling within itself. The button carries the count only once
   the map is already cached; the column's title carries it once loaded.
 - **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
   track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
