@@ -137,6 +137,19 @@ describe("My team's links", () => {
 		expect(screen.getByRole("button", { name: "Change card 1 for Gold Ship: Kitasan Black" })).toBeInTheDocument()
 	})
 
+	it("puts the card on the names, since a click on a tile opens the picker", async () => {
+		as(true, grid)
+
+		// A mouse click on a name opens the uma's or the card's card (HoverCardLayer).
+		const uma = await screen.findByRole("link", { name: "Gold Ship" })
+		expect(uma).toHaveAttribute("data-hover-card", "uma:1")
+		expect(uma).toHaveAttribute("title", "Gold Ship: show details")
+		expect(screen.getByRole("link", { name: "Kitasan Black" })).toHaveAttribute("data-hover-card", "card:10")
+		// The tiles themselves carry none: the layer would leave a button's click alone anyway.
+		expect(screen.getByRole("button", { name: "Change card 1 for Gold Ship: Kitasan Black" })).not.toHaveAttribute("data-hover-card")
+		expect(screen.getByRole("button", { name: /Change uma 1/ })).not.toHaveAttribute("data-hover-card")
+	})
+
 	it("draws the grid as before for everyone else", async () => {
 		as(false, grid)
 
@@ -171,6 +184,10 @@ describe("My team's links", () => {
 		// The placeholder shows only under its own switch, so one tile, one link.
 		const link = await screen.findByRole("link", { name: "Open Kitasan Black in the Encyclopedia" })
 		expect(link).toHaveAttribute("href", "/app/cards/30028")
+		// With a mouse the book opens the card over the picker (HoverCardLayer)...
+		expect(link).toHaveAttribute("data-hover-card", "card:10")
+		expect(link).toHaveAttribute("title", "Show details")
+		// ...and followed as a link, leaving the page closes the picker.
 		fireEvent.click(link)
 		expect(onClose).toHaveBeenCalledTimes(1)
 	})

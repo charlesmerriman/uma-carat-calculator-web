@@ -101,9 +101,10 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
  * EARLY ACCESS ONLY gets more than the tile, while the Encyclopedia is
  * supporters first (useSkillsPreview, the rule every tile follows). Then:
  *
- *   - on a computer, the site's shared hover card (hoverCardProps, drawn by
- *     HoverCardLayer, the same card every other tile opens), and a click goes
- *     to the card's page;
+ *   - on a computer, a click opens the site's shared card (hoverCardProps,
+ *     drawn by HoverCardLayer, the same card every other tile opens), whose
+ *     "Open its page" goes to the card's page; from the keyboard the link
+ *     goes straight there;
  *   - on a touch screen, which that layer ignores, a tap opens the SAME card
  *     (HoverCardContent) in this row's own popup, its "Open its page" inside,
  *     and never navigates (owner, 2026-11-17: the Timeline's cards get the
@@ -112,7 +113,9 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
  *     only for a touch.
  *
  * The row's popup is `tapOnly` (its hover and focus are off), so a mouse or a
- * keyboard never opens it beside the shared card.
+ * keyboard never opens it beside the shared card. The layer takes a mouse's
+ * click before React sees it, so `onClick` below only ever runs for a tap or
+ * the keyboard.
  */
 function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: string }) {
 	const linksToPages = useSkillsPreview()

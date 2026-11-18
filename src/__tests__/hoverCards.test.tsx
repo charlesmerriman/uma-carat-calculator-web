@@ -1,13 +1,13 @@
 /**
  * The uma and support card hover cards (notes/uma-card-hover-plan.md): the
  * helpers that build and read a tile's attributes and a card's columns, the
- * two cards drawn from a page, and the one layer that opens them for any tile
- * with `data-hover-card`, for early access only and never on touch.
+ * two cards drawn from a page, and the one layer that opens them on a click
+ * of any tile with `data-hover-card`, for early access only and never on touch.
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { MemoryRouter } from "react-router-dom"
+import { Link, MemoryRouter, useLocation } from "react-router-dom"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
@@ -77,8 +77,8 @@ function shell(node: ReactNode, { early = true }: { early?: boolean } = {}) {
 
 describe("hover card helpers", () => {
 	it("builds a tile's attributes and reads them back", () => {
-		const props = hoverCardProps("uma", 198, { ring: ["turf", "long", "late"], links: false })
-		expect(props).toEqual({ "data-hover-card": "uma:198", "data-hover-card-ring": "turf,long,late", "data-hover-card-links": "off" })
+		const props = hoverCardProps("uma", 198, { ring: ["turf", "long", "late"] })
+		expect(props).toEqual({ "data-hover-card": "uma:198", "data-hover-card-ring": "turf,long,late" })
 		expect(parseHoverCard(props["data-hover-card"])).toEqual({ kind: "uma", id: 198 })
 		expect(parseRing(props["data-hover-card-ring"])).toEqual(["turf", "long", "late"])
 		expect(hoverCardProps("card", null)).toEqual({})
@@ -170,71 +170,203 @@ describe("the hover card layer", () => {
 		vi.unstubAllGlobals()
 	})
 
+	// Shows where the router is, so a test can tell a click that opened a card
+	// from one that followed its link.
+	function Where() {
+		return <output aria-label="route">{useLocation().pathname}</output>
+	}
+
+	const META = "[Special Dreamer] · ★3 · Late Surger"
 	const tiles = (
 		<>
-			<button type="button" title="Special Week" {...hoverCardProps("uma", 1, { ring: ["long"] })}>Uma</button>
-			<button type="button" {...hoverCardProps("card", 4)}>Card</button>
-			<button type="button" {...hoverCardProps("card", 11)}>Placeholder</button>
+			<span title="Special Week" {...hoverCardProps("uma", 1, { ring: ["long"] })}>Uma</span>
+			<span {...hoverCardProps("card", 4)}>Card</span>
+			<span {...hoverCardProps("card", 11)}>Placeholder</span>
 			<span>Elsewhere</span>
 			<HoverCardLayer />
 		</>
 	)
 
-	it("opens the card for a hovered tile, moves the tile's title aside, and closes on a press", async () => {
+	it("opens the card on a click of plain art, moves the tile's title aside, and closes on a second click", async () => {
 		const user = userEvent.setup()
 		render(shell(tiles))
-		const uma = screen.getByRole("button", { name: "Uma" })
-		await user.hover(uma)
-		expect(await screen.findByText("[Special Dreamer] · ★3 · Late Surger")).toBeInTheDocument()
+		const uma = screen.getByText("Uma")
+		await user.click(uma)
+		expect(await screen.findByText(META)).toBeInTheDocument()
 		expect(uma).not.toHaveAttribute("title")
-		await user.pointer({ keys: "[MouseLeft>]", target: uma })
-		await waitFor(() => expect(screen.queryByText("[Special Dreamer] · ★3 · Late Surger")).toBeNull())
+		await user.click(uma)
+		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
 		expect(uma).toHaveAttribute("title", "Special Week")
 	})
 
-	it("opens a support card's card, and nothing for a placeholder", async () => {
+	it("never opens on hover", async () => {
 		const user = userEvent.setup()
 		render(shell(tiles))
-		await user.hover(screen.getByRole("button", { name: "Card" }))
+		await user.hover(screen.getByText("Uma"))
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		expect(screen.queryByText(META)).toBeNull()
+		expect(screen.getByText("Uma")).toHaveAttribute("title", "Special Week")
+	})
+
+	it("opens a support card's card, closes on a click elsewhere or Escape, and opens nothing for a placeholder", async () => {
+		const user = userEvent.setup()
+		render(shell(tiles))
+		await user.click(screen.getByText("Card"))
 		expect(await screen.findByText("Training Effectiveness 5%")).toBeInTheDocument()
-		await user.hover(screen.getByText("Elsewhere"))
+		await user.click(screen.getByText("Elsewhere"))
 		await waitFor(() => expect(screen.queryByText("Training Effectiveness 5%")).toBeNull())
-		await user.hover(screen.getByRole("button", { name: "Placeholder" }))
+		await user.click(screen.getByText("Card"))
+		expect(await screen.findByText("Training Effectiveness 5%")).toBeInTheDocument()
+		await user.keyboard("{Escape}")
+		await waitFor(() => expect(screen.queryByText("Training Effectiveness 5%")).toBeNull())
+		await user.click(screen.getByText("Placeholder"))
 		await new Promise((resolve) => setTimeout(resolve, 300))
 		expect(screen.queryByRole("table")).toBeNull()
+	})
+
+	it("moves from one tile's card to another's on one click", async () => {
+		const user = userEvent.setup()
+		render(shell(tiles))
+		await user.click(screen.getByText("Uma"))
+		expect(await screen.findByText(META)).toBeInTheDocument()
+		await user.click(screen.getByText("Card"))
+		expect(await screen.findByText("Training Effectiveness 5%")).toBeInTheDocument()
+		expect(screen.queryByText(META)).toBeNull()
+		expect(screen.getByText("Uma")).toHaveAttribute("title", "Special Week")
+	})
+
+	it("opens the card in place of a link to that uma's own page, and the card's link goes there", async () => {
+		const user = userEvent.setup()
+		const ran = vi.fn()
+		render(shell(
+			<>
+				<span {...hoverCardProps("card", 4)}>Card</span>
+				<Link to="/app/umas/100101" onClick={ran}>
+					<span {...hoverCardProps("uma", 1)}>Art</span>
+				</Link>
+				<Where />
+				<HoverCardLayer />
+			</>
+		))
+		// A first card proves the catalogue is in: it is what names an uma's page.
+		await user.click(screen.getByText("Card"))
+		expect(await screen.findByText("Training Effectiveness 5%")).toBeInTheDocument()
+		await user.click(screen.getByText("Art"))
+		expect(await screen.findByText(META)).toBeInTheDocument()
+		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent(/^\/$/)
+		// The link's own onClick (a picker's book closes its picker) stays out of it too.
+		expect(ran).not.toHaveBeenCalled()
+		// By its words: the popup is aria-hidden, so it has no role to ask for.
+		await user.click(screen.getByText("Open its page"))
+		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent("/app/umas/100101")
+		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
+	})
+
+	it("leaves a click alone when it already has a job: a button, or a link that goes somewhere else", async () => {
+		const user = userEvent.setup()
+		const picked = vi.fn()
+		render(shell(
+			<>
+				<button type="button" onClick={picked} {...hoverCardProps("uma", 1)}>Pick her</button>
+				<Link to="/app/timeline">
+					<span {...hoverCardProps("uma", 1)}>Banner face</span>
+				</Link>
+				<span {...hoverCardProps("card", 4)}>Card</span>
+				<Where />
+				<HoverCardLayer />
+			</>
+		))
+		// Prove the layer is live first, so "no card" below means something.
+		await user.click(screen.getByText("Card"))
+		expect(await screen.findByText("Training Effectiveness 5%")).toBeInTheDocument()
+		await user.click(screen.getByRole("button", { name: "Pick her" }))
+		expect(picked).toHaveBeenCalledTimes(1)
+		await waitFor(() => expect(screen.queryByText("Training Effectiveness 5%")).toBeNull())
+		expect(screen.queryByText(META)).toBeNull()
+		await user.click(screen.getByText("Banner face"))
+		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent("/app/timeline")
+		expect(screen.queryByText(META)).toBeNull()
+	})
+
+	it("lets the keyboard and a new-tab click keep the link", async () => {
+		const user = userEvent.setup()
+		render(shell(
+			<>
+				<Link to="/app/cards/30028" {...hoverCardProps("card", 4)}>Kitasan</Link>
+				<span {...hoverCardProps("uma", 1)}>Uma</span>
+				<Where />
+				<HoverCardLayer />
+			</>
+		))
+		await user.click(screen.getByText("Uma"))
+		expect(await screen.findByText(META)).toBeInTheDocument()
+		// Ctrl+click opens a tab in a browser; here it must reach the link untouched.
+		const link = screen.getByRole("link", { name: "Kitasan" })
+		const reached = vi.fn((event: MouseEvent) => event.preventDefault())
+		link.addEventListener("click", reached)
+		await user.keyboard("{Control>}")
+		await user.click(link)
+		await user.keyboard("{/Control}")
+		expect(reached).toHaveBeenCalledTimes(1)
+		expect(screen.queryByText("Training Effectiveness 5%")).toBeNull()
+		link.removeEventListener("click", reached)
+		// Enter on the focused link follows it: the card is out of a keyboard's reach.
+		link.focus()
+		await user.keyboard("{Enter}")
+		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent("/app/cards/30028")
+		expect(screen.queryByText("Training Effectiveness 5%")).toBeNull()
 	})
 
 	it("ignores touch", async () => {
 		const user = userEvent.setup()
 		render(shell(tiles))
-		await user.pointer({ keys: "[TouchA]", target: screen.getByRole("button", { name: "Uma" }) })
+		await user.pointer({ keys: "[TouchA]", target: screen.getByText("Uma") })
 		await new Promise((resolve) => setTimeout(resolve, 300))
-		expect(screen.queryByText("[Special Dreamer] · ★3 · Late Surger")).toBeNull()
+		expect(screen.queryByText(META)).toBeNull()
 	})
 
-	it("turns a guide uma tile's hover into her card, with the guide's note on top", async () => {
+	it("shows a guide uma tile's note on hover, and her card with the note on top on a click", async () => {
 		const user = userEvent.setup()
 		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />))
-		await user.hover(screen.getByRole("group", { name: "Special Week" }))
-		expect(await screen.findByText("[Special Dreamer] · ★3 · Late Surger")).toBeInTheDocument()
-		// The note sits in the card's top slot (it is also on the tile's face and in the screen reader's copy).
+		const tile = screen.getByRole("group", { name: "Special Week" })
+		const popup = () => document.querySelector("[data-floating-ui-portal]")
+		// The catalogue knows her, so the tile offers her card (and says so with the cursor).
+		await waitFor(() => expect(tile).toHaveClass("cursor-pointer"))
+		await user.hover(tile)
+		await waitFor(() => expect(popup()).toHaveTextContent("Run her as a late surger."))
+		expect(screen.queryByText(META)).toBeNull()
+		await user.click(tile)
+		expect(await screen.findByText(META)).toBeInTheDocument()
 		expect(document.querySelector(".hover-card .skill-card__note")).toHaveTextContent("Run her as a late surger.")
+		// Pinned: it stays when the pointer leaves, and when the card itself is
+		// clicked (the pin's click focused the tile, and a click on the card's
+		// plain text takes that focus away again)...
+		await user.unhover(tile)
+		await user.click(screen.getByText(META))
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		expect(screen.getByText(META)).toBeInTheDocument()
+		// ...and a second click on the tile closes it.
+		await user.click(tile)
+		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
 	})
 
-	it("keeps a guide tile's old hover for everyone else", async () => {
+	it("keeps a guide tile's note, and no card, for everyone else", async () => {
 		const user = userEvent.setup()
 		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />, { early: false }))
-		await user.hover(screen.getByRole("group", { name: "Special Week" }))
+		const tile = screen.getByRole("group", { name: "Special Week" })
+		await user.hover(tile)
+		await waitFor(() => expect(document.querySelector("[data-floating-ui-portal]")).toHaveTextContent("Run her as a late surger."))
+		await user.click(tile)
 		await new Promise((resolve) => setTimeout(resolve, 300))
-		expect(screen.queryByText("[Special Dreamer] · ★3 · Late Surger")).toBeNull()
+		expect(screen.queryByText(META)).toBeNull()
 	})
 
 	it("draws nothing without early access", async () => {
 		const user = userEvent.setup()
 		render(shell(tiles, { early: false }))
-		await user.hover(screen.getByRole("button", { name: "Uma" }))
+		await user.click(screen.getByText("Uma"))
 		await new Promise((resolve) => setTimeout(resolve, 300))
-		expect(screen.queryByText("[Special Dreamer] · ★3 · Late Surger")).toBeNull()
-		expect(screen.getByRole("button", { name: "Uma" })).toHaveAttribute("title", "Special Week")
+		expect(screen.queryByText(META)).toBeNull()
+		expect(screen.getByText("Uma")).toHaveAttribute("title", "Special Week")
 	})
 })

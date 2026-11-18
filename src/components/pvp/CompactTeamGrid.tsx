@@ -39,9 +39,10 @@ export function CompactTeamGrid({
 }: TeamGridProps) {
 	const starred = (pool: "uma" | "support", id: number, member: PvpTeamMember) =>
 		isRecommended?.(pool, id, member.style) ?? false
-	// Each uma's name under her portrait opens her Encyclopedia page (early
-	// access). The cards here are too small for a corner button and have no
-	// caption; their pages are a click away in the picker (PvpCardPicker).
+	// Each uma's name under her portrait opens her card (early access), since
+	// her tile opens the picker. The cards here are too small for a corner
+	// button and have no caption; their cards are a click away in the picker
+	// (PvpCardPicker's book).
 	const pages = useEncyclopediaHrefs()
 
 	return (
@@ -62,7 +63,6 @@ export function CompactTeamGrid({
 										<div className="group relative aspect-square transition hover:brightness-110">
 											<button
 												type="button"
-												{...hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
 												aria-label={`Change uma ${position + 1}: ${name}`}
 												title={uma?.name}
 												onClick={() => onPickUma(position)}
@@ -103,7 +103,11 @@ export function CompactTeamGrid({
 										</div>
 									</div>
 									<p className="mt-1 truncate text-center text-xs font-medium text-gray-100">
-										<PageName href={pages.uma(member.uma)} name={uma?.name ?? "Unknown uma"} />
+										<PageName
+										href={pages.uma(member.uma)}
+										name={uma?.name ?? "Unknown uma"}
+										hover={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
+									/>
 									</p>
 								</>
 							) : (
@@ -153,8 +157,6 @@ export function CompactTeamGrid({
 							<div key={slot} className="group relative aspect-[3/4] overflow-hidden rounded-md bg-gray-700 ring-1 ring-gray-600 transition hover:ring-2 hover:ring-brand/70">
 								<button
 									type="button"
-									// Its hover card tells these tiny tiles apart by more than the art.
-									{...hoverCardProps("card", entry.support_card)}
 									aria-label={`Change ${place} for ${name}: ${card?.name ?? "unknown"}`}
 									title={card?.name}
 									onClick={() => onPickCard(position, slot)}

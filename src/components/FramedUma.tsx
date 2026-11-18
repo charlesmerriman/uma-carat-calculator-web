@@ -31,8 +31,9 @@ export function FramedUma({ src, oshi = false, frame = true, alt = "", title, cl
 	/** The picture failed to load (Avatar swaps in its silhouette). */
 	onError?: () => void
 	/**
-	 * Her hover card's attributes (utils/hoverCards.ts hoverCardProps), for a
-	 * face that is plain art with no tile of its own to carry them.
+	 * Her card's attributes (utils/hoverCards.ts hoverCardProps), for a face
+	 * that is plain art with no tile of its own to carry them: a click on it
+	 * opens the card.
 	 */
 	hover?: Record<string, string>
 }) {

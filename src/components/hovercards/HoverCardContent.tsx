@@ -18,12 +18,9 @@ import { useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncy
 import { useOwned } from "../../hooks/useOwned"
 import { useCardPage, useUmaPage } from "../../services/encyclopediaQueries"
 import type { AptitudeKey } from "../../types/pvpTeam"
-import type { HoverCardKind } from "../../utils/hoverCards"
+import { CARD_PAGE_STALE_MS, type HoverCardKind } from "../../utils/hoverCards"
 import { UmaHoverCard } from "./UmaHoverCard"
 import { CardHoverCard } from "./CardHoverCard"
-
-// A page fetched for a hover stays fresh for the session's next hovers.
-const HOVER_STALE_MS = 30 * 60 * 1000
 
 export function HoverCardContent({ kind, id, ring = [], links = true, top = null, fallback = null }: {
 	kind: HoverCardKind
@@ -39,8 +36,8 @@ export function HoverCardContent({ kind, id, ring = [], links = true, top = null
 	const owned = useOwned()
 	const uma = kind === "uma" ? lookup.uma(id) : null
 	const card = kind === "card" ? lookup.card(id) : null
-	const umaPage = useUmaPage(uma?.gameId ?? null, { staleTime: HOVER_STALE_MS })
-	const cardPage = useCardPage(card?.gameId ?? null, { staleTime: HOVER_STALE_MS })
+	const umaPage = useUmaPage(uma?.gameId ?? null, { staleTime: CARD_PAGE_STALE_MS })
+	const cardPage = useCardPage(card?.gameId ?? null, { staleTime: CARD_PAGE_STALE_MS })
 	// An error draws the header and the link only (page null), never a spinner forever.
 	const pageOf = <T,>(query: { data: T | null | undefined; isError: boolean }) => (query.isError ? null : query.data)
 	if (uma) {

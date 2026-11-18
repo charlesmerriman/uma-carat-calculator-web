@@ -245,7 +245,6 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={rank.alternatives} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard />}
 				href={hrefs.card(rank.card)}
-				hover={hoverCardProps("card", rank.card)}
 			/>
 		)
 	}
@@ -262,7 +261,6 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={0} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard={false} />}
 				href={hrefs.uma(rank.uma)}
-				hover={hoverCardProps("uma", rank.uma)}
 			/>
 		)
 	}

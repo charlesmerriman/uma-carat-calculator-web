@@ -11,7 +11,7 @@
  * to anyone else. The QueryProvider resets every query on a sign-in change.
  */
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, type QueryClient } from "@tanstack/react-query"
 import { authHeaders } from "./authToken"
 import { HttpError } from "./queryClient"
 import { fetchSkillDetail } from "./skillsFetchCalls"
@@ -43,12 +43,33 @@ interface PageOptions {
 	staleTime?: number
 }
 
+// A page's key and fetch, in one place: the hooks below and the prefetch
+// must ask the same question to share one cache entry.
+const umaPageQuery = (gameId: number) => ({
+	queryKey: encyclopediaKeys.uma(gameId),
+	queryFn: () => fetchPage<UmaPageData>(`/encyclopedia/umas/${gameId}`),
+})
+const cardPageQuery = (gameId: number) => ({
+	queryKey: encyclopediaKeys.card(gameId),
+	queryFn: () => fetchPage<CardPageData>(`/encyclopedia/cards/${gameId}`),
+})
+
+/**
+ * Starts a page's fetch ahead of the component that will read it: the uma and
+ * card popup (components/hovercards) calls this on the press, so the page is
+ * usually in the cache by the click. Does nothing when a copy younger than
+ * `staleTime` is already there, and a failure is left for the hook to report.
+ */
+export function prefetchEncyclopediaPage(client: QueryClient, kind: "uma" | "card", gameId: number, staleTime: number): void {
+	if (kind === "uma") void client.prefetchQuery({ ...umaPageQuery(gameId), staleTime })
+	else void client.prefetchQuery({ ...cardPageQuery(gameId), staleTime })
+}
+
 /** Asks only while `gameId` is a real id. */
 export function useUmaPage(gameId: number | null, { staleTime }: PageOptions = {}) {
 	return useQuery({
-		queryKey: encyclopediaKeys.uma(gameId ?? 0),
+		...umaPageQuery(gameId ?? 0),
 		enabled: gameId !== null,
-		queryFn: () => fetchPage<UmaPageData>(`/encyclopedia/umas/${gameId}`),
 		...(staleTime === undefined ? {} : { staleTime }),
 	})
 }
@@ -64,9 +85,8 @@ export function useSkillPage(gameId: number | null) {
 
 export function useCardPage(gameId: number | null, { staleTime }: PageOptions = {}) {
 	return useQuery({
-		queryKey: encyclopediaKeys.card(gameId ?? 0),
+		...cardPageQuery(gameId ?? 0),
 		enabled: gameId !== null,
-		queryFn: () => fetchPage<CardPageData>(`/encyclopedia/cards/${gameId}`),
 		...(staleTime === undefined ? {} : { staleTime }),
 	})
 }

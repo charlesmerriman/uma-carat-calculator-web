@@ -46,7 +46,6 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { BannerTypeBadge } from "./BannerTypeBadge"
 import { TrashIcon } from "./TrashIcon"
 
-import { hoverCardProps } from "../../utils/hoverCards"
 // Static, so built once rather than per render.
 const copyChips = buildCopyChips()
 
@@ -215,11 +214,10 @@ export const StagedBannerRow = ({
 								alt={uma.name}
 								oshi={oshiIds.has(uma.id)}
 								className="w-14"
-								hover={hoverCardProps("uma", uma.id)}
 							/>
 						))
 					: images.slice(0, 2).map((img) => (
-							<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" {...hoverCardProps("card", img.id)} />
+							<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" />
 						))}
 				<ExtraCardsBadge hidden={images.length - 2} />
 			</>
