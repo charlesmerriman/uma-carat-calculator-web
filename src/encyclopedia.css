@@ -1866,6 +1866,20 @@
 		flex-shrink: 0;
 	}
 	/* "JP only" at the end of the name line: small, in the line's own ink. */
+	/* The player's hint level on an owned uma: the JP pill's shape, in the brand
+	   colour, since it is about them and not the skill. */
+	.enc-skill__hint {
+		flex-shrink: 0;
+		padding: 0 0.3125rem;
+		border: 1px solid currentColor;
+		border-radius: 0.25rem;
+		font-size: 0.625rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		line-height: 1rem;
+		text-transform: uppercase;
+		color: var(--color-brand);
+	}
 	.enc-skill__jp {
 		flex-shrink: 0;
 		padding: 0 0.3125rem;

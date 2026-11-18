@@ -23,6 +23,12 @@ export interface Owned {
 	umas: ReadonlyMap<number, number | null>
 	/** card pk -> limit break, 0..4. */
 	cards: ReadonlyMap<number, number>
+	/**
+	 * uma pk -> (skill GAME id -> hint level), from an imported Collection
+	 * (Daptrius, board, 2026-11-17). An uma with no hints has no entry.
+	 * Kept apart from `umas` so that map's stars-only shape stays as it is.
+	 */
+	hints: ReadonlyMap<number, ReadonlyMap<number, number>>
 	/** True while there is nothing to show: a guest, or an empty Collection. */
 	empty: boolean
 }
@@ -33,6 +39,12 @@ export function useOwned(): Owned {
 	return useMemo(() => {
 		const umas = new Map((roster.data?.umas ?? []).map((row) => [row.uma, row.stars] as const))
 		const cards = new Map((roster.data?.support_cards ?? []).map((row) => [row.support_card, row.limit_break] as const))
-		return { signedIn, umas, cards, empty: umas.size === 0 && cards.size === 0 }
+		const hints = new Map<number, ReadonlyMap<number, number>>()
+		for (const row of roster.data?.umas ?? []) {
+			const entries = Object.entries(row.hint_levels ?? {})
+			// The wire's keys are strings; the Encyclopedia's skills carry numeric game ids.
+			if (entries.length > 0) hints.set(row.uma, new Map(entries.map(([id, level]) => [Number(id), level])))
+		}
+		return { signedIn, umas, cards, hints, empty: umas.size === 0 && cards.size === 0 }
 	}, [signedIn, roster.data])
 }

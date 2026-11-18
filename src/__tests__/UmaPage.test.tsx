@@ -160,6 +160,18 @@ describe("UmaPage", () => {
 		expect(screen.getByRole("link", { name: "Open your Collection" })).toHaveAttribute("href", "/app/collection?tab=umas")
 	})
 
+	it("shows your hint levels on her own skills, from your imported Collection", async () => {
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(url.endsWith("/roster")
+				// The evolution's id is in there too: only innate and awakening rows read it.
+				? new Response(JSON.stringify({ umas: [{ uma: 7, stars: 5, hint_levels: { "200011": 3, "100101111": 2 } }], support_cards: [] }), { status: 200 })
+				: new Response(JSON.stringify(SPECIAL_WEEK), { status: 200 }))
+		)
+		renderAt("/app/umas/100101")
+		expect(await screen.findByText("Hint Lv 3")).toBeInTheDocument()
+		expect(screen.queryByText("Hint Lv 2")).not.toBeInTheDocument()
+	})
+
 	it("says so for an id with no page", async () => {
 		renderAt("/app/umas/999999")
 		expect(await screen.findByText(/There's no page for that/)).toBeInTheDocument()
