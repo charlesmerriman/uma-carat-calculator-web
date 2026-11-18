@@ -8,7 +8,7 @@ import {
 	getServerTheme,
 	readColorblindMode,
 	readTheme,
-	saveFirstVisitTheme,
+	settleStoredTheme,
 	subscribeToTheme,
 	writeColorblindMode,
 	writeTheme,
@@ -38,10 +38,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 	// work for anyone with a saved theme. Reading the store is idempotent with
 	// the script, and it is what puts the attributes in place under test, where
 	// index.html's script never ran.
-	// A first visit's device-picked theme is saved before that, so it is what
-	// the visitor keeps.
+	// A first visit's device-picked theme, or a removed theme's replacement, is
+	// saved before that, so it is what the visitor keeps.
 	useEffect(() => {
-		saveFirstVisitTheme()
+		settleStoredTheme()
 		applyThemeAttributes(readTheme(), readColorblindMode())
 	}, [])
 

@@ -89,32 +89,31 @@ mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
 
-### The palette themes: Winning Live, Tracen and Tracen Night
+### The palette themes: Winning Live and Tracen
 
-Twelve themes keep to one accent. These three (the first two 2026-11-17, Tracen Night a day
-later) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
+Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
 has a `palette` (the accent, then its Uma, Support and Step-Up colours): the picker lists
 it ahead of the one-accent themes in its column (Tracen leads the light column as its
 default), its swatch dot split between those colours.
 
-| | Winning Live (dark) | Tracen (light) | Tracen Night (dark) |
-|---|---|---|---|
-| Idea | the concert after the race | the game's own menus | Tracen with the lights off: the same menus under the home screen's night sky |
-| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) | the lime itself, `#8fd61a` (8.5:1 on its card) |
-| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band | the same three, as deep fills with pale ink and the same band |
-| Over budget | red-orange | hot pink, and pink is used for nothing else | the same pink, on a deep pink fill |
-| A second colour | pink, only on the wordmark's "Carat" and the panel title | none | none |
-| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier | as Tracen |
-| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px | as Tracen |
+| | Winning Live (dark) | Tracen (light) |
+|---|---|---|
+| Idea | the concert after the race | the game's own menus |
+| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) |
+| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band |
+| Over budget | red-orange | hot pink, and pink is used for nothing else |
+| A second colour | pink, only on the wordmark's "Carat" and the panel title | none |
+| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier |
+| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px |
 
-**Tracen Night has no shapes of its own.** Tracen's section of `personalityThemes.css`
-selects `[data-theme^="tracen"]` (starts with), so one set of rules draws both, and the lime
-is written once. The handful of colours those shapes need that differ by day and night (key
-face and edge, tab tray and ink, stat-box face and edge, the numerals, the shortfall pill)
-are `--tracen-*` tokens in each theme's block in `index.css`. Its only rules of its own are
-the two status pull fields, which get a deeper wash than the dark themes' 12% (that came
-out purple over a blue inset). Because Tracen's rules are shared, **a change to them is a
-change to both themes**: capture both before and after.
+**Tracen Night, Tracen's dark pair, was removed on 2026-11-18** (the owner's call, after
+Daptrius's verdict). A device with it saved moves to Winning Live and
+saves that: `RETIRED_THEMES` in `themeStore.ts`, mirrored by `index.html`'s script and held
+to it by `themeScript.test.ts`. **Removing any theme works this way**: delete its entry and
+CSS, and add its id to that map with a replacement, for good. Without the entry its users
+fall to the device default and their dead id stays stored. Tracen's colours that its shapes
+read (key face and edge, tab tray and ink, stat-box face and edge, the numerals, the
+shortfall pill) are still `--tracen-*` tokens in its `index.css` block, written for the pair.
 
 **Their colours are tokens in `index.css` like any theme's; their shapes are in
 `src/personalityThemes.css`**, imported last in `App.tsx`. That file's header carries its
@@ -150,12 +149,7 @@ Four things a new palette theme has to get right, each learned on these two:
 
 Tracen moves Support to orange (lime is the brand) and keeps on-pity green, which shares
 a hue with its brand; the Green theme moved on-pity to blue for that, and blue is Uma
-here. Tracen Night inherits both choices. That one is the owner's to settle, once for the
-pair (`notes/theme-options.md`).
-
-Tracen Night is a dark theme, so it is named in the two PAGE GLOW selector lists (Tracen
-reaches that layer through the light-mode selector), and under colorblind mode it takes the
-dark themes' deep blue and red fills with white ink and lighter bands than Tracen's.
+here. That one is the owner's to settle (`notes/theme-options.md`).
 
 **A theme's page glow is a `--page-glow` value, never a page background.** One
 `position: fixed` layer (`body::before`) paints it, and the page shells
