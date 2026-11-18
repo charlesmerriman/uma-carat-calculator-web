@@ -1169,7 +1169,7 @@ html {
 	--color-step-up-border: #b91c1c;
 }
 
-/* The two palette themes under colorblind mode. Two attributes each, so they
+/* The palette themes under colorblind mode. Two attributes each, so they
    beat both their own theme block and the colorblind blocks above.
 
    Winning Live's kind fills carry dark ink, and colorblind mode swaps in the
