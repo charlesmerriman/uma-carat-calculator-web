@@ -168,8 +168,10 @@ describe("UmaPage", () => {
 				: new Response(JSON.stringify(SPECIAL_WEEK), { status: 200 }))
 		)
 		renderAt("/app/umas/100101")
-		expect(await screen.findByText("Hint Lv 3")).toBeInTheDocument()
-		expect(screen.queryByText("Hint Lv 2")).not.toBeInTheDocument()
+		// Gourmand's 180 SP, 30% off at level 3 (Daptrius: 10% a level, off the base cost).
+		expect(await screen.findByText("Hint Lv 3 (-30%)")).toBeInTheDocument()
+		expect(screen.getByTitle("180 SP before your hint discount")).toHaveTextContent("126 SP")
+		expect(screen.queryByText(/Hint Lv 2/)).not.toBeInTheDocument()
 	})
 
 	it("says so for an id with no page", async () => {

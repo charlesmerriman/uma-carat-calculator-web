@@ -59,6 +59,21 @@ function HoverCard({ skill, wanted }: { skill: RowSkill; wanted: boolean }) {
 }
 
 /**
+ * The highest hint level whose discount we know. Daptrius, Discord, 2026-11-18:
+ * "Each discount level is a 10% discount", off the BASE cost (not compounding),
+ * so Left-Handed's 90 SP is 81 at 1, 72 at 2 and "at the max 3, 63".
+ */
+const TOP_HINT_LEVEL = 3
+
+/** What a skill costs at the player's hint level, or the plain cost when the level's discount isn't known. */
+function hintedCost(cost: number, hintLevel: number | undefined): number {
+	if (hintLevel == null || hintLevel < 1 || hintLevel > TOP_HINT_LEVEL) return cost
+	// Every cost in the game files is a multiple of 10 (checked 2026-11-18,
+	// 1,195 skills), so a 10% step is always whole; the round only guards that.
+	return Math.round((cost * (10 - hintLevel)) / 10)
+}
+
+/**
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
@@ -82,6 +97,8 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel }: {
 		onOpenChange: (open) => open && setWanted(true),
 	})
 	const kind = skillKind(skill)
+	// True when the shown cost has the player's hint discount taken off.
+	const discounted = skill.cost != null && hintedCost(skill.cost, hintLevel) !== skill.cost
 	const oshiIds = useOshiIds()
 	const owner = face ? skill.owner_umas?.[0] : undefined
 	const line = sub ?? [SKILL_TYPE_WORDS[skill.type ?? ""], skill.owners?.join(", ")].filter(Boolean).join(" · ")
@@ -100,16 +117,21 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel }: {
 						{line && <span>{line}</span>}
 						{hint && <span className="sr-only">{hint}</span>}
 						{skill.availability === "jp" && <span className="enc-skill__jp">JP only</span>}
-						{/* What the level does to the cost isn't confirmed yet, so only the level shows. */}
 						{hintLevel != null && (
 							<span className="enc-skill__hint" title="Your hint level for this skill, from your Collection">
 								Hint Lv {hintLevel}
+								{discounted && ` (-${hintLevel * 10}%)`}
 							</span>
 						)}
 					</span>
 				</span>
-				{/* Skill points on the right (Daptrius's list, item 4); a unique has none. */}
-				{skill.cost != null && <span className="enc-skill__cost">{skill.cost} <small>SP</small></span>}
+				{/* Skill points on the right (Daptrius's list, item 4); a unique has none.
+				    On an owned uma it is what she pays at the player's hint level. */}
+				{skill.cost != null && (
+					<span className="enc-skill__cost" title={discounted ? `${skill.cost} SP before your hint discount` : undefined}>
+						{hintedCost(skill.cost, hintLevel)} <small>SP</small>
+					</span>
+				)}
 				{owner && <FramedUma src={owner.portrait} oshi={oshiIds.has(owner.id)} className="enc-skill__face" />}
 			</Link>
 			{popup(<HoverCard skill={skill} wanted={wanted} />, "w-80")}
