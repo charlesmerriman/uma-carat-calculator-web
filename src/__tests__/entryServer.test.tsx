@@ -23,7 +23,7 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	"/changelog": { title: `Changelog | ${SITE_NAME}`, phrase: "Changelog" },
 	"/feedback": { title: `Feedback | ${SITE_NAME}`, phrase: "Open our Discord" },
 	// The tool itself renders behind the data gate, so a build-time render of these
-	// four is the app shell: navbar, the loading state, footer. The route identity
+	// tabs is the app shell: navbar, the loading state, footer. The route identity
 	// is in the head tags (asserted below), not in the body.
 	"/app": { title: `Calculator | ${SITE_NAME}`, phrase: "Loading your plan" },
 	"/app/timeline": { title: `Banner Timeline | ${SITE_NAME}`, phrase: "Loading your plan" },
@@ -31,6 +31,10 @@ const EXPECTED: Record<(typeof PRERENDER_ROUTES)[number], { title: string; phras
 	// The title is the admin page row's (snapshot.json carries the seed's).
 	"/app/legend-races": { title: `Daily Legend Races | ${SITE_NAME}`, phrase: "Loading your plan" },
 	"/app/pvp": { title: `PvP Guides | ${SITE_NAME}`, phrase: "Loading your plan" },
+	// The Encyclopedia's lists, open to everyone since 2026-11-18.
+	"/app/umas": { title: `Encyclopedia: Umas | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/cards": { title: `Encyclopedia: Support Cards | ${SITE_NAME}`, phrase: "Loading your plan" },
+	"/app/skills": { title: `Encyclopedia: Skills | ${SITE_NAME}`, phrase: "Loading your plan" },
 }
 
 describe("entry-server render()", () => {

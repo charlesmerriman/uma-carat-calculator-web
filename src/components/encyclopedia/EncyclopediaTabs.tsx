@@ -1,25 +1,21 @@
 /**
  * The Encyclopedia's frame: its title and the three lists' tabs (Umas,
- * Support cards, Skills), and the supporters-first gate every Encyclopedia
- * page sits behind. A masthead: the title large, one line saying what this
- * is, and the three lists as tabs whose headline is how many each holds
- * ("270 Umas"), once some page this session has counted them
- * (utils/encyclopediaCounts.ts).
+ * Support cards, Skills), and the wrapper every Encyclopedia page renders
+ * through. A masthead: the title large, one line saying what this is, and the
+ * three lists as tabs whose headline is how many each holds ("270 Umas"),
+ * once some page this session has counted them (utils/encyclopediaCounts.ts).
  *
- * THE GATE (owner, 2026-11-12: supporters and staff first): early access
- * draws the page; anyone else gets SupportersFirstNote, as Rankings does. The
- * API refuses them too (401 / 403); this only decides what to draw.
+ * OPEN TO EVERYONE since 2026-11-18 (the owner; supporters and staff had it
+ * first, from 2026-11-12). The wrapper was the supporters-first gate until
+ * then; it only adds the back-to-top arrow now.
  */
 
 import type { ReactNode } from "react"
 import { NavLink } from "react-router-dom"
 import { BookOpen } from "lucide-react"
-import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { CARD_LIST_PATH, SKILL_LIST_PATH, UMA_LIST_PATH } from "../../utils/encyclopediaRoutes"
-import { SupportersFirstNote } from "../SupportersFirstNote"
 import { FloatingBackToTop } from "../BackToTop"
 import { useBackToTop } from "../../hooks/useBackToTop"
-import { PAGE_CONTAINER } from "../../utils/encyclopedia"
 import { useEncyclopediaCounts, type EncyclopediaKind } from "../../utils/encyclopediaCounts"
 
 const TABS: { to: string; label: string; kind: EncyclopediaKind }[] = [
@@ -37,30 +33,14 @@ function Title() {
 	)
 }
 
-/** Children only for early access; the note for anyone else. */
-export function EncyclopediaGate({ children }: { children: ReactNode }) {
-	const allowed = useSkillsPreview()
-	if (!allowed) {
-		return (
-			<div className={PAGE_CONTAINER}>
-				<header className="enc-head">
-					<Title />
-				</header>
-				<SupportersFirstNote feature="The Encyclopedia is" className="card-panel p-4" />
-			</div>
-		)
-	}
-	return <WithBackToTop>{children}</WithBackToTop>
-}
-
 /**
- * The floating "back to top" arrow every Encyclopedia page gets (Daptrius,
- * board "Mobile UI issues on Encyclopedia", 2026-11-13). It lives here
- * because every list and every uma, card and skill page renders through the
- * gate. The anchor is an empty node above the page; useBackToTop measures it
- * and scrolls it into view, whichever element is the live scroller.
+ * What every list and every uma, card and skill page renders through: the
+ * page, plus the floating "back to top" arrow (Daptrius, board "Mobile UI
+ * issues on Encyclopedia", 2026-11-13). The anchor is an empty node above the
+ * page; useBackToTop measures it and scrolls it into view, whichever element
+ * is the live scroller.
  */
-function WithBackToTop({ children }: { children: ReactNode }) {
+export function EncyclopediaFrame({ children }: { children: ReactNode }) {
 	const { topRef, isAwayFromTop, scrollToTop } = useBackToTop()
 	return (
 		<>

@@ -80,13 +80,16 @@ describe("the site search", () => {
 		expect(titles("200012")).toEqual([])
 	})
 
-	it("sends a skill nowhere for anyone without early access: it opens in the palette", () => {
-		expect(entries.find((entry) => entry.kind === "skill")?.href).toBeUndefined()
+	it("opens a skill's page for everyone, and the palette for a skill with no game id", () => {
+		expect(entries.find((entry) => entry.kind === "skill")?.href).toBe("/app/skills/200011")
+		const noId = buildSearchEntries({ ...SOURCES, skills: SOURCES.skills.map((skill) => ({ ...skill, game_id: null })) }, NOW, false)
+		expect(noId.find((entry) => entry.kind === "skill")?.href).toBeUndefined()
 	})
 
-	it("lists only umas and cards on a banner for anyone without early access", () => {
+	it("lists every uma in the catalogue for everyone, and only those on a banner until it loads", () => {
 		const withCatalogue = buildSearchEntries({ ...SOURCES, umas: CATALOGUE_UMAS, cards: CATALOGUE_CARDS }, NOW, false)
-		expect(withCatalogue.some((entry) => entry.title === "Rice Shower")).toBe(false)
+		expect(withCatalogue.some((entry) => entry.title === "Rice Shower")).toBe(true)
+		expect(entries.some((entry) => entry.title === "Rice Shower")).toBe(false)
 	})
 
 	it("offers Rankings to early access only", () => {
@@ -94,9 +97,9 @@ describe("the site search", () => {
 		expect(pageEntries(true).some((entry) => entry.title === "Rankings")).toBe(true)
 	})
 
-	it("offers the Encyclopedia and the Skills page to early access only", () => {
-		expect(pageEntries(false).some((entry) => entry.title === "Encyclopedia")).toBe(false)
-		expect(pageEntries(true).find((entry) => entry.title === "Encyclopedia")?.href).toBe("/app/umas")
+	it("offers the Encyclopedia and the Skills page to everyone", () => {
+		expect(pageEntries(false).find((entry) => entry.title === "Encyclopedia")?.href).toBe("/app/umas")
+		expect(pageEntries(false).find((entry) => entry.title === "Skills")?.href).toBe("/app/skills")
 	})
 
 	it("names who teaches a skill, each once", () => {

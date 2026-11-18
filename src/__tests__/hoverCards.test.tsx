@@ -16,7 +16,7 @@ import { UmaHoverCard } from "../components/hovercards/UmaHoverCard"
 import { CardHoverCard } from "../components/hovercards/CardHoverCard"
 import { HoverCardLayer } from "../components/hovercards/HoverCardLayer"
 import { UmaTile } from "../components/pvp/PvpTiles"
-import { effectAt, effectColumns, hoverCardProps, parseHoverCard, parseRing, statRow } from "../utils/hoverCards"
+import { effectAt, effectColumns, hoverCardProps, pageDrawsHoverCards, parseHoverCard, parseRing, statRow } from "../utils/hoverCards"
 import type { CardEffect, CardPageData, PageSkill, UmaPageData } from "../types/encyclopedia"
 
 const CATALOGUE = {
@@ -64,8 +64,10 @@ const KITASAN = {
 	outfits: [], cards: [], group_members: [], purpose: "", character_id: 1068, jp_name: "", jp_title: "",
 } as unknown as CardPageData
 
-function shell(node: ReactNode, { early = true }: { early?: boolean } = {}) {
-	const auth = { isLoggedIn: true, status: "ready", account: { early_access: early, oshi_uma_ids: [] } } as unknown as AuthContextType
+function shell(node: ReactNode, { early = true, guest = false }: { early?: boolean; guest?: boolean } = {}) {
+	const auth = (guest
+		? { isLoggedIn: false, status: "ready", account: null }
+		: { isLoggedIn: true, status: "ready", account: { early_access: early, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return (
 		<AuthContext.Provider value={auth}>
 			<TestQueryProvider>
@@ -84,6 +86,16 @@ describe("hover card helpers", () => {
 		expect(hoverCardProps("card", null)).toEqual({})
 		expect(parseHoverCard("skill:3")).toBeNull()
 		expect(parseRing("turf,banana")).toEqual(["turf"])
+	})
+
+	it("knows the two pages with no cards, so the layer downloads no catalogue for them", () => {
+		// The calculator is the page a banner launch crowds; the catalogue is 106 KB.
+		expect(pageDrawsHoverCards("/app")).toBe(false)
+		expect(pageDrawsHoverCards("/app/")).toBe(false)
+		expect(pageDrawsHoverCards("/app/selectors")).toBe(false)
+		for (const path of ["/app/timeline", "/app/pvp", "/app/umas", "/app/umas/100101", "/app/collection"]) {
+			expect(pageDrawsHoverCards(path), path).toBe(true)
+		}
 	})
 
 	it("shows 0LB and MLB, adds the player's own limit break, and marks 0 or 4 instead of repeating it", () => {
@@ -350,23 +362,30 @@ describe("the hover card layer", () => {
 		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
 	})
 
-	it("keeps a guide tile's note, and no card, for everyone else", async () => {
+	// The cards were early access only until the Encyclopedia opened to
+	// everyone (2026-11-18). `early: false` is an account without it.
+	it("opens a guide tile's card on a click for an account without early access too", async () => {
 		const user = userEvent.setup()
 		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />, { early: false }))
 		const tile = screen.getByRole("group", { name: "Special Week" })
+		await waitFor(() => expect(tile).toHaveClass("cursor-pointer"))
 		await user.hover(tile)
 		await waitFor(() => expect(document.querySelector("[data-floating-ui-portal]")).toHaveTextContent("Run her as a late surger."))
 		await user.click(tile)
-		await new Promise((resolve) => setTimeout(resolve, 300))
-		expect(screen.queryByText(META)).toBeNull()
+		expect(await screen.findByText(META)).toBeInTheDocument()
 	})
 
-	it("draws nothing without early access", async () => {
+	it("draws the card without early access", async () => {
 		const user = userEvent.setup()
 		render(shell(tiles, { early: false }))
 		await user.click(screen.getByText("Uma"))
-		await new Promise((resolve) => setTimeout(resolve, 300))
-		expect(screen.queryByText(META)).toBeNull()
-		expect(screen.getByText("Uma")).toHaveAttribute("title", "Special Week")
+		expect(await screen.findByText(META)).toBeInTheDocument()
+	})
+
+	it("draws the card for a guest", async () => {
+		const user = userEvent.setup()
+		render(shell(tiles, { guest: true }))
+		await user.click(screen.getByText("Uma"))
+		expect(await screen.findByText(META)).toBeInTheDocument()
 	})
 })

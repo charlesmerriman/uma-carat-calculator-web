@@ -7,7 +7,8 @@ import { useSiteSearch } from "../hooks/useSiteSearch"
 
 /**
  * The palette's own part: it loads on opening, the keyboard reaches a result,
- * and a skill opens in place. The matching is siteSearch.test.ts.
+ * a result opens its Encyclopedia page, and a skill with no page opens in
+ * place. The matching is siteSearch.test.ts.
  */
 
 const CALCULATOR = {
@@ -20,9 +21,13 @@ const CALCULATOR = {
 	anniversary_event_data: [],
 }
 const CATALOGUE = {
-	umas: [{ id: 41, name: "Kitasan Black", skills: [{ skill: 7 }] }],
+	umas: [{ id: 41, name: "Kitasan Black", game_id: 106801, portrait: null, image: "/k.png", on_global: true, skills: [{ skill: 7 }] }],
 	support_cards: [],
-	skills: [{ id: 7, name: "Groundwork", description: "Speed up early on.", image: null }],
+	skills: [
+		// No game id, so no page: it opens in the palette.
+		{ id: 7, name: "Groundwork", description: "Speed up early on.", image: null },
+		{ id: 8, name: "Gourmand", description: "Recover endurance mid-race.", image: null, game_id: 201351 },
+	],
 }
 
 vi.mock("../services/AuthContext", () => ({ useAccount: () => ({ account: null }) }))
@@ -67,11 +72,20 @@ describe("SearchPalette", () => {
 		fireEvent.change(box(), { target: { value: "kitsan" } })
 		expect(await screen.findByText("Kitasan Black")).toBeTruthy()
 		fireEvent.keyDown(box(), { key: "Enter" })
-		expect(await screen.findByText("at /app/timeline?focus=banner-90")).toBeTruthy()
+		// Her own page, for a guest too (the Encyclopedia is open to everyone).
+		expect(await screen.findByText("at /app/umas/106801")).toBeTruthy()
 		expect(onClose).toHaveBeenCalled()
 	})
 
-	it("opens a skill in place, with who teaches it", async () => {
+	it("goes to a skill's page", async () => {
+		const onClose = show()
+		fireEvent.change(box(), { target: { value: "gourmand" } })
+		fireEvent.click(await screen.findByText("Gourmand"))
+		expect(await screen.findByText("at /app/skills/201351")).toBeTruthy()
+		expect(onClose).toHaveBeenCalled()
+	})
+
+	it("opens a skill with no page in place, with who teaches it", async () => {
 		const onClose = show()
 		fireEvent.change(box(), { target: { value: "groundwork" } })
 		fireEvent.click(await screen.findByText("Groundwork"))

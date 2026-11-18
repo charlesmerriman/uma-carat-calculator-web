@@ -56,10 +56,10 @@ export interface RowSkill {
 function HoverCard({ skill, wanted, pinned }: { skill: RowSkill; wanted: boolean; pinned: boolean }) {
 	const page = useSkillPage(wanted ? skill.game_id : null)
 	// Only a pinned card takes the pointer, so only it offers "Open its page".
-	if (page.data) return <SkillDetail skill={detailToCardSkill(page.data)} link={pinned} />
+	if (page.data) return <SkillDetail skill={detailToCardSkill(page.data)} link={pinned} full />
 	return (
 		<>
-			<SkillDetail skill={rowToCardSkill(skill)} link={pinned} />
+			<SkillDetail skill={rowToCardSkill(skill)} link={pinned} full />
 			{!page.isError && <span className="enc-skeleton mt-1 block h-3 w-3/4 rounded" role="status" aria-label="Loading the skill" />}
 		</>
 	)

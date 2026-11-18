@@ -1,8 +1,8 @@
 /**
  * The Encyclopedia links outside the Encyclopedia (useEncyclopediaHrefs and
- * the pieces that draw them): early access gets a page for every uma and card
- * the catalogue numbers, a placeholder card gets none, and everyone else gets
- * the site as it was.
+ * the pieces that draw them): everyone gets a page for every uma and card the
+ * catalogue numbers, and a placeholder card gets none. (Early access only
+ * until 2026-11-18; `as(false, ...)` is an account without it.)
  */
 import { render, screen, fireEvent, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
@@ -54,7 +54,7 @@ function Probe() {
 }
 
 describe("useEncyclopediaHrefs", () => {
-	it("maps a row id to its page for early access, and nothing it can't open", async () => {
+	it("maps a row id to its page, and nothing it can't open", async () => {
 		as(true, <Probe />)
 
 		expect(await screen.findByText("/app/umas/100701")).toBeInTheDocument()
@@ -64,13 +64,12 @@ describe("useEncyclopediaHrefs", () => {
 		expect(screen.getByTestId("unknown")).toHaveTextContent("none")
 	})
 
-	it("gives everyone else no links", async () => {
+	it("gives an account without early access the same links", async () => {
 		as(false, <Probe />)
 
-		// Let the (shared, already loaded) catalogue settle before asserting nothing.
-		await Promise.resolve()
-		expect(screen.getByTestId("uma")).toHaveTextContent("none")
-		expect(screen.getByTestId("card")).toHaveTextContent("none")
+		expect(await screen.findByText("/app/umas/100701")).toBeInTheDocument()
+		expect(screen.getByTestId("card")).toHaveTextContent("/app/cards/30028")
+		expect(screen.getByTestId("placeholder")).toHaveTextContent("none")
 	})
 })
 
@@ -150,12 +149,11 @@ describe("My team's links", () => {
 		expect(screen.getByRole("button", { name: /Change uma 1/ })).not.toHaveAttribute("data-hover-card")
 	})
 
-	it("draws the grid as before for everyone else", async () => {
+	it("links the grid for an account without early access too", async () => {
 		as(false, grid)
 
-		await Promise.resolve()
-		expect(screen.getByText("Gold Ship")).toBeInTheDocument()
-		expect(screen.queryByRole("link")).toBeNull()
+		expect(await screen.findByRole("link", { name: "Gold Ship" })).toHaveAttribute("href", "/app/umas/100701")
+		expect(screen.getByRole("link", { name: "Kitasan Black" })).toHaveAttribute("href", "/app/cards/30028")
 	})
 
 	function picker(pageLinks: boolean, onClose = vi.fn()) {

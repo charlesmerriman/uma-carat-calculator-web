@@ -32,4 +32,9 @@ export const PRERENDER_ROUTES = [
 	"/app/selectors",
 	"/app/legend-races",
 	"/app/pvp",
+	// The Encyclopedia's three lists. Its uma, card and skill pages are not
+	// here: there are about 3,000, listed by the API, not by hand.
+	"/app/umas",
+	"/app/cards",
+	"/app/skills",
 ] as const

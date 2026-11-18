@@ -26,15 +26,17 @@ const ROWS = [
 	row(4, "Fan Skill", { availability: "jp", uses_translation: true }),
 ]
 
-/** The skills work shows to early access only (useSkillsPreview): supporters and staff first. */
-function asReader(node: ReactNode, earlyAccess = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } } as unknown as AuthContextType
+/** The Skills page is open to everyone; `earlyAccess` false is an account without it. */
+function asReader(node: ReactNode, earlyAccess: boolean | "guest" = true) {
+	const value = (earlyAccess === "guest"
+		? { isLoggedIn: false, status: "ready", account: null }
+		: { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
 const fetchMock = vi.fn()
 
-function renderPage(url = "/app/skills", earlyAccess = true) {
+function renderPage(url = "/app/skills", earlyAccess: boolean | "guest" = true) {
 	return render(
 		asReader(
 			<MemoryRouter initialEntries={[url]}>
@@ -270,10 +272,15 @@ describe("SkillsPage", () => {
 		await waitFor(() => expect(screen.getByText(/The skill list didn't load/)).toBeInTheDocument())
 	})
 
-	it("tells anyone without early access it's for supporters first", () => {
+	it("lists the skills for an account without early access (everyone, since 2026-11-18)", async () => {
 		renderPage("/app/skills", false)
-		expect(screen.getByText(/The Encyclopedia is for our Patreon supporters for now/)).toBeInTheDocument()
-		expect(fetchMock).not.toHaveBeenCalled()
+		expect(await screen.findByText("Gourmand")).toBeInTheDocument()
+		expect(screen.queryByText(/for our Patreon supporters/)).toBeNull()
+	})
+
+	it("lists the skills for a guest", async () => {
+		renderPage("/app/skills", "guest")
+		expect(await screen.findByText("Gourmand")).toBeInTheDocument()
 	})
 
 	it("opens a type's sub-types once the type is picked", async () => {
