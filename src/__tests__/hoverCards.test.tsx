@@ -15,7 +15,7 @@ import { TestQueryProvider } from "../test/TestQueryProvider"
 import { UmaHoverCard } from "../components/hovercards/UmaHoverCard"
 import { CardHoverCard } from "../components/hovercards/CardHoverCard"
 import { HoverCardLayer } from "../components/hovercards/HoverCardLayer"
-import { UmaTile } from "../components/pvp/PvpTiles"
+import { SupportTile, UmaTile } from "../components/pvp/PvpTiles"
 import { effectAt, effectColumns, hoverCardProps, pageDrawsHoverCards, parseHoverCard, parseRing, statRow } from "../utils/hoverCards"
 import type { CardEffect, CardPageData, PageSkill, UmaPageData } from "../types/encyclopedia"
 
@@ -337,7 +337,48 @@ describe("the hover card layer", () => {
 		expect(screen.queryByText(META)).toBeNull()
 	})
 
-	it("shows a guide uma tile's note on hover, and her card with the note on top on a click", async () => {
+	// Henry, 2026-11-19: a style tab's deck card went to its page on a tap,
+	// where the All tab's opens a popup. Only that tile takes a tap.
+	it("opens a style tab's deck card on a tap, where other tiles keep their link", async () => {
+		const user = userEvent.setup()
+		render(shell(
+			<>
+				<SupportTile card={{ id: 4, name: "Kitasan Black", image: "kitasan.png", image_borderless: null, card_type: "speed", rarity: 3 } as never} note="" />
+				<Link to="/app/umas/100101" {...hoverCardProps("uma", 1)}>Special Week</Link>
+				<Where />
+				<HoverCardLayer />
+			</>
+		))
+		const art = await screen.findByRole("link", { name: /Kitasan Black/ })
+		await user.pointer({ keys: "[TouchA]", target: art })
+		expect(await screen.findByText("Training Effectiveness 5%")).toBeInTheDocument()
+		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent(/^\/$/)
+		await user.pointer({ keys: "[TouchA]", target: screen.getByRole("link", { name: "Special Week" }) })
+		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent("/app/umas/100101")
+	})
+
+	// A guide tile draws its card inside itself (WithDetail), and React hands
+	// a tap in the portalled card to the tile's own handlers: the tile's tap
+	// toggle closed the card under the finger, and the browser's click then
+	// fell through to the page behind it.
+	it("keeps a guide tile's card open when a tap lands inside it", async () => {
+		const user = userEvent.setup()
+		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />))
+		const tile = screen.getByRole("group", { name: "Special Week" })
+		await waitFor(() => expect(tile).toHaveClass("cursor-pointer"))
+		await user.pointer({ keys: "[TouchA]", target: tile })
+		expect(await screen.findByText(META)).toBeInTheDocument()
+		await user.pointer({ keys: "[TouchA]", target: screen.getByText(META) })
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		expect(screen.getByText(META)).toBeInTheDocument()
+		// A tap on the tile itself still closes it.
+		await user.pointer({ keys: "[TouchA]", target: tile })
+		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
+	})
+
+	// Daptrius, 2026-11-19: no hover popup on a guide uma tile whose click
+	// opens her card; everything the hover said is on the card.
+	it("shows nothing on a guide uma tile's hover, and her card with the note on top on a click", async () => {
 		const user = userEvent.setup()
 		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />))
 		const tile = screen.getByRole("group", { name: "Special Week" })
@@ -345,8 +386,8 @@ describe("the hover card layer", () => {
 		// The catalogue knows her, so the tile offers her card (and says so with the cursor).
 		await waitFor(() => expect(tile).toHaveClass("cursor-pointer"))
 		await user.hover(tile)
-		await waitFor(() => expect(popup()).toHaveTextContent("Run her as a late surger."))
-		expect(screen.queryByText(META)).toBeNull()
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		expect(popup()).toBeNull()
 		await user.click(tile)
 		expect(await screen.findByText(META)).toBeInTheDocument()
 		expect(document.querySelector(".hover-card .skill-card__note")).toHaveTextContent("Run her as a late surger.")
@@ -369,8 +410,6 @@ describe("the hover card layer", () => {
 		render(shell(<UmaTile uma={{ id: 1, name: "Special Week", image: null }} stars={0} role="" note="Run her as a late surger." />, { early: false }))
 		const tile = screen.getByRole("group", { name: "Special Week" })
 		await waitFor(() => expect(tile).toHaveClass("cursor-pointer"))
-		await user.hover(tile)
-		await waitFor(() => expect(document.querySelector("[data-floating-ui-portal]")).toHaveTextContent("Run her as a late surger."))
 		await user.click(tile)
 		expect(await screen.findByText(META)).toBeInTheDocument()
 	})

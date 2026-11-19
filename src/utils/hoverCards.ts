@@ -16,6 +16,8 @@
  *   data-hover-card        "uma:198" or "card:4": what to show (the site's row id)
  *   data-hover-card-ring   "turf,long,late": the aptitudes this race asks for,
  *                          ringed on an uma's card (absent: none ringed)
+ *   data-hover-card-tap    "on": a tap on a phone opens the card too (absent:
+ *                          a tap follows the tile's link, as before)
  */
 
 import type { RaceEvent } from "../types"
@@ -66,14 +68,29 @@ export function pageDrawsHoverCards(pathname: string): boolean {
 export function hoverCardProps(
 	kind: HoverCardKind,
 	id: number | null | undefined,
-	{ ring = [] }: { ring?: readonly AptitudeKey[] } = {}
+	{ ring = [], tap = false }: {
+		ring?: readonly AptitudeKey[]
+		/**
+		 * A tap on a phone opens the card as a click does, instead of
+		 * following the tile's link. Off everywhere but a PvP guide's deck
+		 * cards on a style tab (Henry, 2026-11-19: the All tab's cards open a
+		 * popup on a tap and a style tab's went to the page; "only fix this
+		 * one instance"). Phones otherwise keep the links (owner, 2026-11-17;
+		 * Daptrius prefers links for umas and cards).
+		 */
+		tap?: boolean
+	} = {}
 ): Record<string, string> {
 	if (id == null) return {}
 	return {
 		"data-hover-card": `${kind}:${id}`,
 		...(ring.length > 0 ? { "data-hover-card-ring": ring.join(",") } : {}),
+		...(tap ? { [TAP_ATTRIBUTE]: "on" } : {}),
 	}
 }
+
+/** Marks a tile a tap opens the card for (hoverCardProps `tap`). */
+export const TAP_ATTRIBUTE = "data-hover-card-tap"
 
 /**
  * The tooltip of a link whose click opens the card (it carries the
