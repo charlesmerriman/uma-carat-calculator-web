@@ -22,6 +22,7 @@ import {
 	useInteractions,
 	useTransitionStyles,
 	type Placement,
+	type ReferenceElement,
 } from "@floating-ui/react"
 import { useReducedMotion } from "framer-motion"
 
@@ -72,9 +73,90 @@ const HOVER_OPEN_DELAY_MS = 120
 export const CARD_POPUP_PLACEMENT: Placement = "right-start"
 export const cardPopupMiddleware = () => [
 	offset(8),
-	flip({ crossAxis: false, fallbackPlacements: ["left-start"], padding: 8 }),
-	shift({ crossAxis: true, padding: 8 }),
+	flip(() => ({ crossAxis: false, fallbackPlacements: ["left-start"], padding: popupEdges() })),
+	shift(() => ({ crossAxis: true, padding: popupEdges() })),
+	// The box's height limit, less the ad (CARD_POPUP_BOX's own limit can't
+	// know it). A card that grows shorter here is measured again by Floating
+	// UI before the slide above runs on it.
+	size({
+		apply({ elements }) {
+			elements.floating.style.maxHeight = `calc(100dvh - 1rem - ${footerAdInset()}px)`
+		},
+	}),
 ]
+
+/**
+ * RAPTIVE'S STICKY FOOTER AD (notes/raptive-install-plan.md) is fixed to the
+ * bottom of the window at z-index 1000001: 50px tall on a phone, 90px on a
+ * computer (measured on the live site, 2026-11-19). A card is often taller
+ * than the room under its tile, so it slides down to the window's bottom
+ * edge, and its foot ("Open its page") ended up under the ad: a tap or a
+ * click there opened the ad (Daptrius, 2026-11-19).
+ *
+ * The popups keep clear of it instead of drawing over it: covering an ad
+ * breaks the ad network's rules. Read on every positioning, because the ad
+ * loads late, changes size and can be closed. The selector is the one
+ * BackToTop and index.css already dodge.
+ */
+const FOOTER_AD = ".adthrive-sticky.adthrive-footer"
+
+/** How much of the window's bottom the footer ad covers, in px; 0 when there is none. */
+function footerAdInset(): number {
+	if (typeof document === "undefined") return 0
+	const ad = document.querySelector(FOOTER_AD)
+	if (!ad) return 0
+	const box = ad.getBoundingClientRect()
+	// A closed or hidden ad measures 0 tall (and its top reads 0, which must
+	// not count as covering the whole window).
+	if (box.height === 0) return 0
+	return Math.max(0, Math.min(box.height, window.innerHeight - box.top))
+}
+
+/** The edges a popup stays inside: 8px from the window's, and above the footer ad. */
+function popupEdges() {
+	return { top: 8, right: 8, left: 8, bottom: 8 + footerAdInset() }
+}
+
+// How often an open popup checks where the footer ad is.
+const AD_CHECK_MS = 250
+
+/**
+ * Places an open popup again whenever the footer ad arrives, moves, changes
+ * size or goes. Reading the ad on each positioning isn't enough on its own:
+ * Raptive slides the ad in a while after the page loads (often on the first
+ * scroll), and nothing tells Floating UI, so a card opened before it stayed
+ * under it (seen in WebKit, 2026-11-19).
+ *
+ * WHY A TIMER AND NOT AN OBSERVER: the first build watched <body> for the ad
+ * being added and the ad for a change of size. It missed about half the time
+ * in WebKit, because Raptive can also bring the ad in by moving it or by
+ * changing its classes, which neither observer hears, and its markup is
+ * theirs to change. Asking "how much does the ad cover now?" four times a
+ * second catches every way it can arrive. It runs only while a popup is open,
+ * and each check is one lookup and one measurement; the popup is placed again
+ * only when the answer changes.
+ */
+export function watchFooterAd(update: () => void): () => void {
+	if (typeof window === "undefined") return () => {}
+	let covered = footerAdInset()
+	const timer = window.setInterval(() => {
+		const now = footerAdInset()
+		if (now === covered) return
+		covered = now
+		update()
+	}, AD_CHECK_MS)
+	return () => window.clearInterval(timer)
+}
+
+/** Floating UI's autoUpdate, plus a fresh placement when the footer ad comes, resizes or goes. */
+function autoUpdateClearOfAds(reference: ReferenceElement, floating: HTMLElement, update: () => void): () => void {
+	const stopFollowing = autoUpdate(reference, floating, update)
+	const stopWatching = watchFooterAd(update)
+	return () => {
+		stopFollowing()
+		stopWatching()
+	}
+}
 export const CARD_POPUP_BOX = "max-h-[calc(100dvh-1rem)] w-80 max-w-[calc(100vw-1rem)] overflow-y-auto"
 
 export interface HoverPopupOptions {
@@ -117,6 +199,13 @@ export interface HoverPopupOptions {
 	 * in one tap as it did before.
 	 */
 	pin?: boolean
+	/**
+	 * False: the pointer resting on the tile opens nothing; focus, a tap and
+	 * a click still do. For a tile whose click card already holds everything
+	 * its hover showed: a guide's uma tile (Daptrius, 2026-11-19, "kill this
+	 * on hover popup, since it is in the on tap popup").
+	 */
+	hover?: boolean
 }
 
 /**
@@ -139,7 +228,7 @@ export interface HoverPopupOptions {
  */
 export function useHoverPopup(
 	placement: Placement,
-	{ onOpenChange, interactive = false, tap = true, fit = false, tapOnly = false, pin = false }: HoverPopupOptions = {}
+	{ onOpenChange, interactive = false, tap = true, fit = false, tapOnly = false, pin = false, hover = true }: HoverPopupOptions = {}
 ) {
 	const [open, setOpenState] = useState(false)
 	const [pinned, setPinned] = useState(false)
@@ -163,17 +252,17 @@ export function useHoverPopup(
 			: fit
 			? [
 					offset(6),
-					flip({ fallbackPlacements: ["left-start", "bottom-start", "top-start"], padding: 8 }),
-					shift({ padding: 8 }),
-					size({
-						padding: 8,
+					flip(() => ({ fallbackPlacements: ["left-start", "bottom-start", "top-start"], padding: popupEdges() })),
+					shift(() => ({ padding: popupEdges() })),
+					size(() => ({
+						padding: popupEdges(),
 						apply({ availableHeight, elements }) {
 							elements.floating.style.maxHeight = `${Math.max(160, Math.floor(availableHeight))}px`
 						},
-					}),
+					})),
 				]
-			: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
-		whileElementsMounted: autoUpdate,
+			: [offset(4), flip(() => ({ padding: popupEdges() })), shift(() => ({ padding: popupEdges() }))],
+		whileElementsMounted: autoUpdateClearOfAds,
 	})
 	// A PINNED popup answers only to the click that pinned it, Escape and a
 	// press elsewhere (useDismiss). Hover and focus are switched off for as
@@ -183,7 +272,7 @@ export function useHoverPopup(
 	const hovers = !tapOnly && !pinned
 	const { getReferenceProps, getFloatingProps } = useInteractions([
 		useHover(context, {
-			enabled: hovers,
+			enabled: hovers && hover,
 			mouseOnly: true,
 			// Where a click pins, only ENTERING the tile opens the hover note:
 			// with the default, the note came back at the pointer's next twitch
@@ -211,6 +300,13 @@ export function useHoverPopup(
 			// :focus-visible, so a tap toggles it.
 			onPointerUp(event) {
 				if (!tap || event.pointerType !== "touch") return
+				// A tap INSIDE the drawn popup lands here too: React bubbles a
+				// portal's events through the component tree, and WithDetail
+				// draws its popup inside the tile. Toggling then closed the card
+				// under the finger, and the browser's click, which comes after
+				// the finger lifts, fell through to the page behind it (a guide
+				// card's "Open its page" did nothing on a phone, 2026-11-19).
+				if (!(event.target instanceof Node && event.currentTarget.contains(event.target))) return
 				if (pin && !open) setPinned(true)
 				setOpen(!open)
 			},

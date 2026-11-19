@@ -2838,7 +2838,8 @@ timing as chips, where it comes from, its other versions, and a footer.
 
 Umas and cards drawn elsewhere link to their page for early access. Since 2026-11-18 a MOUSE
 click on most of those links opens the uma's or card's card instead, and the card's "Open its
-page" goes on to the page (next section); a tap or the keyboard still follows the link. **One lookup serves them
+page" goes on to the page (next section); a tap or the keyboard still follows the link (bar a
+guide style tab's deck card, which a tap opens too). **One lookup serves them
 all: `useEncyclopediaHrefs()`** (`hooks/useEncyclopediaHrefs.ts`), which maps the SITE's
 row id (what every team, guide, ranking, roster and gallery snapshot carries) to the page
 through the PvP catalogue's `game_id`. It answers null for everyone else, for a placeholder
@@ -2851,7 +2852,7 @@ links depends on what a click already does there:
 | display only | the tile itself (`<Link>`); a click opens the card | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
 | a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside; a click opens the card | Collection names, My team's names (`PageName`), the picker's book |
 | the same, with no card | a plain link to the page | the Selectors pick (bottom-left book), a step-up's chosen slot |
-| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
+| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`). A guide uma tile with a card has no hover, only the click | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
 | a ranking row that opens | "Open its page" at the top of the breakdown | `RankRow` with `detail` |
 | inside the Encyclopedia | the tile itself, straight to the page, no card | the uma and card lists, a page's outfits and cards, a skill's owners |
 
@@ -2884,7 +2885,9 @@ keep the links above). The code says "hover" because they opened on hover for on
   while the mouse moves. A click opens the card when nothing under the pointer is a link or a
   button, or when the nearest one is a link to the tile's own page (the link then doesn't
   navigate and its `onClick` doesn't run). A click on the tile again, anywhere else, Escape or
-  a route change closes it; touch, a keyboard click and a new-tab click are left to the link;
+  a route change closes it; a keyboard click and a new-tab click are left to the link, and so is
+  a tap, except on a tile built with `hoverCardProps(..., { tap: true })` (a guide style tab's
+  deck card, `SupportTile`; Henry 2026-11-19, the one place phones get the shared card);
   the tile's `title` is moved aside while its card is open; `[data-hover-card]` gets the pointer
   cursor only while the layer is on. It draws at `z-[10001]`, above the pickers' overlays, and
   inside an open native `<dialog>` when the tile is in one.
@@ -2898,6 +2901,12 @@ keep the links above). The code says "hover" because they opened on hover for on
   podium entry) is placed beside the POINT that was clicked instead (`anchorFor` in the
   layer): beside the row itself there is no room on either side. While its page loads the
   card holds about its final height (`.hover-card__loading`), so it is placed once.
+- **Every popup keeps clear of Raptive's sticky footer ad** (`.adthrive-sticky.adthrive-footer`,
+  fixed at z-index 1000001, 50px on a phone and 90px on a computer): `popupEdges()` adds the
+  ad's height to the bottom padding and the card's max height, and `watchFooterAd` checks the
+  ad four times a second while a popup is open, since Raptive slides it in late. Never raise a
+  popup over the ad instead: covering an ad breaks the network's rules. Before this (2026-11-19)
+  a tall card slid under the ad and "Open its page" opened the ad.
 - **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
   wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The page's fetch starts on
   the press (`prefetchEncyclopediaPage`) and is read on open (`useUmaPage` / `useCardPage` with
@@ -2907,7 +2916,9 @@ keep the links above). The code says "hover" because they opened on hover for on
 - **A guide tile keeps its own popup** (`WithDetail`): hover shows the guide's note, as for
   everyone, and a click pins it open as the full card with the note on top
   (`useHoverPopup({ pin })`; a tap does the same). The layer ignores anything inside one, so
-  nothing opens two cards.
+  nothing opens two cards. **A guide uma tile (`UmaTile`) has no hover** when her card exists
+  (`hover={false}`; Daptrius, 2026-11-19): the card already holds the note and the unique's
+  verdict, and opening it lights the course map. Keyboard focus still opens the small popup.
 
 ## Selectors page (`components/selectors/`)
 

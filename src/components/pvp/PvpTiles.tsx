@@ -224,7 +224,7 @@ function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
  * no `detail` it renders the child plainly and is not focusable. With a
  * `card`, a click on the tile turns the popup into that card and keeps it open.
  */
-function WithDetail({ label, detail, card, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false }: {
+function WithDetail({ label, detail, card, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false, hover = true }: {
 	label: string
 	detail: ReactNode
 	/**
@@ -244,9 +244,11 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 	onOpenChange?: (open: boolean) => void
 	/** The detail holds a link (a skill card's "Open its page"): let the pointer reach it. */
 	interactive?: boolean
+	/** False: resting the pointer on the tile opens nothing (useHoverPopup `hover`). */
+	hover?: boolean
 }) {
 	const detailId = useId()
-	const { referenceProps, popup, pinned } = useHoverPopup("bottom", { onOpenChange, interactive, pin: card !== undefined })
+	const { referenceProps, popup, pinned } = useHoverPopup("bottom", { onOpenChange, interactive, pin: card !== undefined, hover })
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
@@ -392,6 +394,11 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 			className={className}
 			onOpenChange={(open) => lightUniqueOnCourseMap(uma, open)}
 			interactive={page !== null}
+			// No hover popup when a click opens her card: the card has the
+			// note and the unique's verdict on top, and opening it lights the
+			// course map too (Daptrius, 2026-11-19: "On tap just works better
+			// for the map"). Focus still opens the small one for the keyboard.
+			hover={!known}
 		>
 			{/* h-full: in a grid the tile fills its row, so when one tile's
 			    letters wrap the others grow with it and every note slot, pinned
@@ -523,8 +530,9 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 /**
  * A card's art as a link to its Encyclopedia page, for the tiles with no
  * popup of their own (SupportTile, SwapInCard). A mouse click opens the
- * card's card (`hover`), whose "Open its page" goes on to the page; a tap or
- * the keyboard follows the link. The art's own alt (the card's name) names
+ * card's card (`hover`), whose "Open its page" goes on to the page; the
+ * keyboard follows the link, and so does a tap unless `hover` was built with
+ * `tap` (SupportTile's). The art's own alt (the card's name) names
  * the link. No href: the art alone.
  */
 function PageArt({ href, hover, className, children }: {
@@ -578,7 +586,9 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null, l
 				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
 						<span className="relative block h-full">
-							<PageArt href={page} hover={hoverCardProps("card", card.id)} className="h-full">
+							{/* `tap`: a phone's tap opens the card here too, as the All
+							    tab's MiniCard does (Henry, 2026-11-19). */}
+							<PageArt href={page} hover={hoverCardProps("card", card.id, { tap: true })} className="h-full">
 								<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
 							</PageArt>
 							{linked && <LinkBadge scenarioName={scenarioName} />}
