@@ -2838,7 +2838,8 @@ timing as chips, where it comes from, its other versions, and a footer.
 
 Umas and cards drawn elsewhere link to their page for early access. Since 2026-11-18 a MOUSE
 click on most of those links opens the uma's or card's card instead, and the card's "Open its
-page" goes on to the page (next section); a tap or the keyboard still follows the link. **One lookup serves them
+page" goes on to the page (next section); a tap or the keyboard still follows the link (bar a
+guide style tab's deck card, which a tap opens too). **One lookup serves them
 all: `useEncyclopediaHrefs()`** (`hooks/useEncyclopediaHrefs.ts`), which maps the SITE's
 row id (what every team, guide, ranking, roster and gallery snapshot carries) to the page
 through the PvP catalogue's `game_id`. It answers null for everyone else, for a placeholder
@@ -2851,7 +2852,7 @@ links depends on what a click already does there:
 | display only | the tile itself (`<Link>`); a click opens the card | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
 | a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside; a click opens the card | Collection names, My team's names (`PageName`), the picker's book |
 | the same, with no card | a plain link to the page | the Selectors pick (bottom-left book), a step-up's chosen slot |
-| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`) | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
+| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`). A guide uma tile with a card has no hover, only the click | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
 | a ranking row that opens | "Open its page" at the top of the breakdown | `RankRow` with `detail` |
 | inside the Encyclopedia | the tile itself, straight to the page, no card | the uma and card lists, a page's outfits and cards, a skill's owners |
 
