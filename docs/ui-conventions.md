@@ -2884,7 +2884,9 @@ keep the links above). The code says "hover" because they opened on hover for on
   while the mouse moves. A click opens the card when nothing under the pointer is a link or a
   button, or when the nearest one is a link to the tile's own page (the link then doesn't
   navigate and its `onClick` doesn't run). A click on the tile again, anywhere else, Escape or
-  a route change closes it; touch, a keyboard click and a new-tab click are left to the link;
+  a route change closes it; a keyboard click and a new-tab click are left to the link, and so is
+  a tap, except on a tile built with `hoverCardProps(..., { tap: true })` (a guide style tab's
+  deck card, `SupportTile`; Henry 2026-11-19, the one place phones get the shared card);
   the tile's `title` is moved aside while its card is open; `[data-hover-card]` gets the pointer
   cursor only while the layer is on. It draws at `z-[10001]`, above the pickers' overlays, and
   inside an open native `<dialog>` when the tile is in one.
@@ -2898,6 +2900,12 @@ keep the links above). The code says "hover" because they opened on hover for on
   podium entry) is placed beside the POINT that was clicked instead (`anchorFor` in the
   layer): beside the row itself there is no room on either side. While its page loads the
   card holds about its final height (`.hover-card__loading`), so it is placed once.
+- **Every popup keeps clear of Raptive's sticky footer ad** (`.adthrive-sticky.adthrive-footer`,
+  fixed at z-index 1000001, 50px on a phone and 90px on a computer): `popupEdges()` adds the
+  ad's height to the bottom padding and the card's max height, and `watchFooterAd` checks the
+  ad four times a second while a popup is open, since Raptive slides it in late. Never raise a
+  popup over the ad instead: covering an ad breaks the network's rules. Before this (2026-11-19)
+  a tall card slid under the ad and "Open its page" opened the ad.
 - **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
   wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The page's fetch starts on
   the press (`prefetchEncyclopediaPage`) and is read on open (`useUmaPage` / `useCardPage` with
@@ -2907,7 +2915,9 @@ keep the links above). The code says "hover" because they opened on hover for on
 - **A guide tile keeps its own popup** (`WithDetail`): hover shows the guide's note, as for
   everyone, and a click pins it open as the full card with the note on top
   (`useHoverPopup({ pin })`; a tap does the same). The layer ignores anything inside one, so
-  nothing opens two cards.
+  nothing opens two cards. **A guide uma tile (`UmaTile`) has no hover** when her card exists
+  (`hover={false}`; Daptrius, 2026-11-19): the card already holds the note and the unique's
+  verdict, and opening it lights the course map. Keyboard focus still opens the small popup.
 
 ## Selectors page (`components/selectors/`)
 

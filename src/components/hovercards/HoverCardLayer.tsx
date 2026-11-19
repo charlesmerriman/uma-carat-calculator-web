@@ -33,7 +33,9 @@
  * and so is a click made from the keyboard or a screen reader (Enter on a
  * link): there the link goes to the page as it always did, because the card
  * is aria-hidden and its links are out of the Tab order (owner, 2026-11-17:
- * phones keep the links).
+ * phones keep the links). The one exception to touch is a tile marked
+ * `tap: true` (hoverCardProps): a PvP guide's deck card on a style tab
+ * (Henry, 2026-11-19), where a tap opens the card like the All tab's.
  *
  * WHERE IT DRAWS: beside the tile, right if there is room and left if not,
  * its top level with the tile's and slid up only as far as the window needs
@@ -52,9 +54,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useLocation } from "react-router-dom"
 import { loadEncyclopediaIndex, useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
 import { prefetchEncyclopediaPage } from "../../services/encyclopediaQueries"
-import { CARD_PAGE_STALE_MS, pageDrawsHoverCards, parseHoverCard, parseRing, type HoverCardKind } from "../../utils/hoverCards"
+import { CARD_PAGE_STALE_MS, pageDrawsHoverCards, parseHoverCard, parseRing, TAP_ATTRIBUTE, type HoverCardKind } from "../../utils/hoverCards"
 import type { AptitudeKey } from "../../types/pvpTeam"
-import { CARD_POPUP_BOX, CARD_POPUP_PLACEMENT, cardPopupMiddleware, InsideHoverContext, InsidePopupContext } from "../pvp/hoverPopup"
+import { CARD_POPUP_BOX, CARD_POPUP_PLACEMENT, cardPopupMiddleware, InsideHoverContext, InsidePopupContext, watchFooterAd } from "../pvp/hoverPopup"
 import { HoverCardContent } from "./HoverCardContent"
 
 const TILE = "[data-hover-card]"
@@ -132,12 +134,19 @@ export function HoverCardLayer() {
 		strategy: "fixed",
 		middleware: [...cardPopupMiddleware(), hide()],
 		// The tile can leave the page under the card (a list re-sorts): then
-		// the card goes too.
-		whileElementsMounted: (reference, floating, update) =>
-			autoUpdate(reference, floating, () => {
+		// the card goes too. The ad watcher (`watchFooterAd`) places the card
+		// again when Raptive's footer ad slides in after it opened.
+		whileElementsMounted: (reference, floating, update) => {
+			const stopFollowing = autoUpdate(reference, floating, () => {
 				if (tileRef.current && !tileRef.current.isConnected) closeRef.current()
 				else update()
-			}),
+			})
+			const stopWatching = watchFooterAd(update)
+			return () => {
+				stopFollowing()
+				stopWatching()
+			}
+		},
 	})
 
 	useEffect(() => {
@@ -199,10 +208,12 @@ export function HoverCardLayer() {
 		 * Encyclopedia page gives way to the card; anything else is a job the
 		 * click keeps.
 		 */
-		const tileFor = (node: EventTarget | null): Element | null => {
+		const tileFor = (node: EventTarget | null, tapped = false): Element | null => {
 			if (!(node instanceof Element) || inCard(node)) return null
 			const tile = node.closest(TILE)
 			if (!tile || tile.closest(OWN_HOVER)) return null
+			// A tap opens only a tile that asks for it; elsewhere it follows the link.
+			if (tapped && tile.getAttribute(TAP_ATTRIBUTE) !== "on") return null
 			const control = node.closest(CONTROL)
 			if (!control) return tile
 			return control instanceof HTMLAnchorElement && control.pathname === pageOf(tile) ? tile : null
@@ -227,9 +238,10 @@ export function HoverCardLayer() {
 			// The card's own links ("Open its page", a skill) are ordinary links.
 			if (inCard(event.target)) return
 			// A new-tab click (Ctrl, a middle button) and a keyboard or screen
-			// reader click (detail 0) keep the link's meaning; so does a tap.
+			// reader click (detail 0) keep the link's meaning; so does a tap,
+			// except on a tile marked `tap` (tileFor).
 			const ordinary = event.button === 0 && event.detail > 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
-			const tile = ordinary && !touch ? tileFor(event.target) : null
+			const tile = ordinary ? tileFor(event.target, touch) : null
 			if (!tile) {
 				if (current) close()
 				return
