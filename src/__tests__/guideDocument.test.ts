@@ -9,6 +9,7 @@ import {
 	editorTabsFor,
 	errorsByTab,
 	hydrateGuide,
+	mentionName,
 	mentionsIn,
 	missingSummary,
 	rowsByTab,
@@ -134,6 +135,23 @@ describe("hydrateGuide", () => {
 		])
 		// Every [[mention]] in any text resolves, by lower-case name.
 		expect(Object.keys(guide.skill_mentions ?? {})).toEqual(["groundwork", "left-handed ○"])
+	})
+
+	it("reads [[Name (inherited)]] as a unique's inherited copy, the bare name as the unique (Henry, 2026-11-20)", () => {
+		const unique = { ...skill(10, "Angling and Scheming", "unique"), rarity: 5, game_id: 100201 }
+		const copy = { ...skill(11, "Angling and Scheming", "◎ white"), game_id: 900201 }
+		const catalogue = { ...CATALOGUE, skills: [...CATALOGUE.skills, copy, unique] }
+		const index = { ...INDEX, catalogue, skillsById: new Map(catalogue.skills.map((row) => [row.id, row])) }
+		expect(mentionName(copy)).toBe("Angling and Scheming (inherited)")
+		expect(mentionName(unique)).toBe("Angling and Scheming")
+		const doc = { ...document(), meta_analysis: "[[Angling and Scheming]] or [[angling and scheming (Inherited)]]" }
+		const guide = hydrateGuide(doc, index, SCENARIOS, null)
+		expect(guide.skill_mentions?.["angling and scheming"]?.id).toBe(10)
+		expect(guide.skill_mentions?.["angling and scheming (inherited)"]?.id).toBe(11)
+		expect(validateDocument(doc, index)).toEqual([])
+		// A skill with no inherited copy has no such name.
+		const typo = validateDocument({ ...document(), meta_analysis: "[[Groundwork (inherited)]]" }, index)
+		expect(typo.map((error) => error.message)).toEqual(["No skill has this name: [[Groundwork (inherited)]]"])
 	})
 
 	it("takes versions and uniques from the server's last answer when it has them", () => {
