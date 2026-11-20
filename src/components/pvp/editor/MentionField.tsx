@@ -17,6 +17,20 @@ import { SkillMention } from "../PvpTiles"
 import { useGuideEditor } from "./GuideEditorContext"
 import { skillMatches, skillSearchWords } from "../../../utils/skillList"
 import { FIELD_ERROR, ICON_BUTTON, INPUT } from "./editorStyles"
+import { isInheritedCopy, mentionName } from "../../../utils/guideDocument"
+import type { CatalogueSkill } from "../../../types/pvpTeam"
+
+/** A `[[` suggestion: what it inserts, and the skill it names (for the icon and the kind). */
+interface Suggestion {
+	insert: string
+	skill: CatalogueSkill
+}
+
+/** The grey word that tells a unique from its inherited copy in the list; nothing for other skills. */
+function kindWord(skill: CatalogueSkill): string {
+	if (isInheritedCopy(skill)) return "inherited"
+	return skill.rarity >= 3 && skill.rarity <= 5 ? "unique" : ""
+}
 
 const MAX_SUGGESTIONS = 8
 
@@ -79,15 +93,18 @@ export function MentionField({
 	const suggestions = useMemo(() => {
 		if (!mention) return []
 		const words = skillSearchWords(mention.query)
-		const names: string[] = []
+		const found: Suggestion[] = []
 		for (const skill of index.catalogue.skills) {
-			// Matched by any name or the id, but always suggested by the
-			// shown name: that is what the guide should say.
+			// Matched by any name or the id, but always suggested by the shown
+			// name: that is what the guide should say. A unique and its
+			// inherited copy share a name, so each is offered, the copy
+			// written with " (inherited)" (Henry, 2026-11-20).
 			if (!skillMatches(skill, words)) continue
-			if (!names.includes(skill.name)) names.push(skill.name)
-			if (names.length >= MAX_SUGGESTIONS) break
+			const insert = mentionName(skill)
+			if (!found.some((suggestion) => suggestion.insert === insert)) found.push({ insert, skill })
+			if (found.length >= MAX_SUGGESTIONS) break
 		}
-		return names
+		return found
 	}, [index.catalogue.skills, mention])
 
 	const setValue = (next: string, nextCaret: number) => {
@@ -102,7 +119,7 @@ export function MentionField({
 		})
 	}
 
-	const insertMention = (name: string) => {
+	const insertMention = ({ insert: name }: Suggestion) => {
 		if (!mention || caret === null) return
 		const next = `${value.slice(0, mention.start)}[[${name}]]${value.slice(caret)}`
 		setValue(next, mention.start + name.length + 4)
@@ -223,19 +240,27 @@ export function MentionField({
 							aria-label="Skill names"
 							className="absolute left-0 top-full z-30 mt-1 max-h-56 w-72 max-w-full overflow-y-auto rounded-lg border border-gray-600 bg-gray-900 py-1 text-sm shadow-lg"
 						>
-							{suggestions.map((name, position) => (
+							{suggestions.map((suggestion, position) => (
 								<li
-									key={name}
+									key={suggestion.insert}
 									role="option"
 									aria-selected={position === highlighted}
 									// mousedown, so the field's blur (which hides the list) comes after.
 									onMouseDown={(mouse) => {
 										mouse.preventDefault()
-										insertMention(name)
+										insertMention(suggestion)
 									}}
-									className={`cursor-pointer px-3 py-1 ${position === highlighted ? "bg-gray-700 text-brand" : "text-gray-200 hover:bg-gray-800"}`}
+									className={`flex cursor-pointer items-center gap-2 px-3 py-1 ${position === highlighted ? "bg-gray-700 text-brand" : "text-gray-200 hover:bg-gray-800"}`}
 								>
-									{name}
+									{suggestion.skill.image ? (
+										<img src={suggestion.skill.image} alt="" className="h-4 w-4 shrink-0" loading="lazy" decoding="async" />
+									) : (
+										<span className="h-4 w-4 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
+									)}
+									<span className="min-w-0 flex-1 truncate">{suggestion.skill.name}</span>
+									{kindWord(suggestion.skill) && (
+										<span className="shrink-0 text-xs text-gray-400">{kindWord(suggestion.skill)}</span>
+									)}
 								</li>
 							))}
 						</ul>
