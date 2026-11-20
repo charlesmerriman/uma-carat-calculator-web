@@ -38,6 +38,7 @@ function mockAccelFetch() {
 					effects: ["accel"], spread: [550, 788], spurt: { from: -250, to: -12, useful: 0.096 } },
 				"89": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
 					effects: ["accel", "speed"], fires_at: 800, spurt: { from: 0, to: 0, useful: 1.2, accel: 0.85, carry: 0.35 },
+					effect_words: ["Acceleration +0.4", "Target speed +0.35"],
 					carry_window: [740, 791], carry_speed: 0.35, carry_seconds: 3.2,
 					speed_kind: "target", speed_rank: { useful: 0.35, speed: 0, carry: 0.35, accelerating: 1 } },
 				"90": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null,
@@ -54,7 +55,7 @@ function mockAccelFetch() {
 					speed_rank: { useful: 0.15, speed: 0.15, carry: 0 } },
 				// ...one raising current speed at the late-race start, uncut...
 				"94": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null, effects: ["speed"],
-					fires_at: 800, spurt: { from: 0, to: 0 }, speed_kind: "current", speed_rank: { useful: 0.55, speed: 0.55, carry: 0 } },
+					fires_at: 800, spurt: { from: 0, to: 0 }, speed_kind: "current", speed_rank: { useful: 0.55, speed: 0.55, carry: 0 }, effect_words: ["Current speed +0.55"] },
 				// ...and a target-speed one there, worth nothing: not listed.
 				"95": { kind: "place", zones: [{ start: 800, end: 1200, kind: "fixed" }], styles: null, effects: ["speed"],
 					fires_at: 800, spurt: { from: 0, to: 0 }, speed_kind: "target",
@@ -132,9 +133,9 @@ describe("the course map's layers", () => {
 	it("lists the accels useful at the spurt start, most useful first, and lights one on a tap", async () => {
 		mockAccelFetch()
 		const { container } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-		// The Accels button is in the bar and, for a phone, under the headline: one column either way.
-		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
-		expect(screen.getAllByRole("complementary", { name: "Accels that land at the spurt" })).toHaveLength(1)
+		// The Skills button is in the bar and, for a phone, under the headline: one column either way.
+		fireEvent.click(screen.getAllByRole("button", { name: "Skills" })[0])
+		expect(screen.getAllByRole("complementary", { name: "Skills on this course" })).toHaveLength(1)
 		const list = within(await screen.findByRole("list", { name: "Accels on this course" }))
 		const rows = list.getAllByRole("button")
 		expect(rows).toHaveLength(3)
@@ -142,11 +143,13 @@ describe("the course map's layers", () => {
 		expect(rows[0]).toHaveTextContent("Angling and Scheming")
 		expect(rows[0]).toHaveTextContent("unique of Seiun Sky")
 		expect(rows[0]).toHaveTextContent("Fires as the late race starts")
-		// The rank's two parts, and the carry in the game's terms (owner, 2026-11-04).
-		expect(rows[0]).toHaveTextContent("Accel 0.85")
-		expect(rows[0]).toHaveTextContent("Carry 0.35")
+		// The skill's own effect in its card's words, and the carry in the game's
+		// terms; the rank's computed parts are not shown (Henry, 2026-11-20).
+		expect(rows[0]).toHaveTextContent("Acceleration +0.4")
+		expect(rows[0]).toHaveTextContent("Target speed +0.35")
+		expect(rows[0]).not.toHaveTextContent("Accel 0.85")
 		expect(rows[0]).toHaveTextContent("+0.35 m/s into the late race for 3.2 s")
-		expect(rows[1]).not.toHaveTextContent("Carry")
+		expect(rows[1]).not.toHaveTextContent("into the late race")
 		expect(rows[1]).toHaveTextContent("inherited from Seiun Sky")
 		// "All" says whose style a style-gated accel is.
 		expect(rows[2]).toHaveTextContent("Final Push · Front")
@@ -168,7 +171,7 @@ describe("the course map's layers", () => {
 	it("searches the accels by skill name and by the owner uma's name", async () => {
 		mockAccelFetch()
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		fireEvent.click(screen.getAllByRole("button", { name: "Skills" })[0])
 		const list = within(await screen.findByRole("list", { name: "Accels on this course" }))
 		const search = screen.getByRole("searchbox", { name: "Search the accels" })
 		// Her name finds her unique and its inherited white, in rank order.
@@ -192,7 +195,7 @@ describe("the course map's layers", () => {
 	it("offers Show all once the map's height cuts the rows off, and Show fewer after", async () => {
 		mockAccelFetch()
 		const { unmount } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		fireEvent.click(screen.getAllByRole("button", { name: "Skills" })[0])
 		await screen.findByRole("list", { name: "Accels on this course" })
 		// Three rows that all fit: nothing to show more of.
 		expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull()
@@ -204,7 +207,7 @@ describe("the course map's layers", () => {
 		vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(500)
 		try {
 			render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-			fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+			fireEvent.click(screen.getAllByRole("button", { name: "Skills" })[0])
 			await screen.findByRole("list", { name: "Accels on this course" })
 			// Fewer than the first eight, yet cut off: the button is the way to them.
 			fireEvent.click(screen.getByRole("button", { name: "Show all 3" }))
@@ -217,13 +220,13 @@ describe("the course map's layers", () => {
 	it("switches to the speed skills, ranked by the API's speed score", async () => {
 		mockAccelFetch()
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
-		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		fireEvent.click(screen.getAllByRole("button", { name: "Skills" })[0])
 		await screen.findByRole("list", { name: "Accels on this course" })
 		const lists = within(screen.getByRole("group", { name: "Which skills" }))
 		expect(lists.getByRole("button", { name: "Accels" })).toHaveAttribute("aria-pressed", "true")
 		fireEvent.click(lists.getByRole("button", { name: "Speed" }))
-		// The title follows the switch.
-		expect(screen.getByRole("complementary", { name: "Speed skills on this course" })).toBeInTheDocument()
+		// One title for both lists; the switch says which is showing.
+		expect(screen.getByRole("complementary", { name: "Skills on this course" })).toBeInTheDocument()
 		const list = within(await screen.findByRole("list", { name: "Speed skills on this course" }))
 		const rows = list.getAllByRole("button")
 		expect(rows.map((row) => row.textContent?.split(/unique|inherited|Fires|At a|Not tied/)[0])).toEqual([
@@ -231,9 +234,8 @@ describe("the course map's layers", () => {
 		])
 		expect(screen.getByText("4 here")).toBeInTheDocument()
 		// Current speed says why it takes no cut; the carry keeps its chip and words.
-		expect(rows[0]).toHaveTextContent("Speed 0.55")
+		expect(rows[0]).toHaveTextContent("Current speed +0.55")
 		expect(rows[0]).toHaveTextContent("Raises current speed")
-		expect(rows[1]).toHaveTextContent("Carry 0.35")
 		expect(rows[1]).toHaveTextContent("+0.35 m/s into the late race for 3.2 s")
 		expect(rows[1]).toHaveTextContent("Always fires while still speeding up")
 		expect(rows[2]).toHaveTextContent("Fires while still speeding up 25% of the time")

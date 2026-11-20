@@ -188,7 +188,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			}`}
 		>
 			<Zap className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
-			Accels
+			{/* Skills: the column holds the speed skills too (Henry, board "Accels -> Skills", 2026-11-20). */}
+			Skills
 			{accelCount !== null && !accelsOpen && (
 				<span className="rounded-full bg-brand px-1.5 text-[10px] font-extrabold text-black">{accelCount}</span>
 			)}
