@@ -21,7 +21,7 @@ import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { InlineNote, SkillMention } from "./PvpTiles"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
-import { STYLE_LABELS, parseStyleRanking, parseTeamComp, styleColor, umasByStars, type RankingStep } from "../../utils/pvpGuide"
+import { STYLE_LABELS, compPlaceColor, compPlaceLetter, parseStyleRanking, parseTeamComp, styleColor, umasByStars, type RankingStep } from "../../utils/pvpGuide"
 import type { PvpGuide, PvpStatConfig, PvpStyle, PvpStyleTab } from "../../types/pvpGuide"
 import { hoverCardProps } from "../../utils/hoverCards"
 
@@ -328,7 +328,7 @@ function Stats({ rows }: { rows: PvpStatConfig[] }) {
 	)
 }
 
-/** A comp's places, each in its style's colour; a place two styles share is split corner to corner. */
+/** A comp's places, each in its style's colour (a debuffer in its red); a place two share is split corner to corner. */
 function CompPlaces({ text }: { text: string }) {
 	const places = parseTeamComp(text)
 	if (!places) return null
@@ -341,11 +341,11 @@ function CompPlaces({ text }: { text: string }) {
 					style={{
 						background:
 							styles.length > 1
-								? `linear-gradient(135deg, ${styleColor(styles[0])} 50%, ${styleColor(styles[1])} 50%)`
-								: styleColor(styles[0]),
+								? `linear-gradient(135deg, ${compPlaceColor(styles[0])} 50%, ${compPlaceColor(styles[1])} 50%)`
+								: compPlaceColor(styles[0]),
 					}}
 				>
-					{styles.map((style) => STYLE_LABELS[style][0]).join("")}
+					{styles.map(compPlaceLetter).join("")}
 				</span>
 			))}
 		</span>

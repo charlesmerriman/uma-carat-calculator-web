@@ -407,6 +407,10 @@ html {
 	--color-style-pace: #a4db22;
 	--color-style-late: #fdde34;
 	--color-style-end: #ffb231;
+	/* A team comp's debuffer place (a role, not a style; utils/pvpGuide.ts
+	   CompPlace): Hakuraku's red, lifted to this set's brightness so the
+	   chips' dark ink reads on it as it does on the five styles. */
+	--color-role-debuffer: #e0524a;
 
 	/* THE COURSE MAP (components/course/*; notes/course-map-visual-plan.md,
 	   "Tokens"). The four phases are one heat ramp, the race warming up: blue,
@@ -1057,6 +1061,9 @@ html {
 	--color-style-pace: #dc267f;
 	--color-style-late: #fe6100;
 	--color-style-end: #ffb000;
+	/* IBM's five colour-blind-safe hues are taken: a neutral grey, told apart
+	   by lightness, under the same dark ink. */
+	--color-role-debuffer: #9a9a9a;
 }
 
 /* Every token the block above sets must be restated here: it comes later than
