@@ -262,6 +262,23 @@ describe("logging a ticket", () => {
 		expect(toastSuccess).toHaveBeenCalledWith("Plan B is on Day 1's tickets.", expect.anything())
 	})
 
+	it("names the team a ticket is filled from, and says it follows it until raced", async () => {
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Use Team 1" }))
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].body.team).toBe(1)
+	})
+
+	it("shows which team an unraced ticket follows, and nothing once it is raced", async () => {
+		runs.list = [logged(1, [], { team: 1 }), logged(2, [{ race: 1, winner: 0 }], { team: 1 })]
+		show()
+		const first = await screen.findByRole("region", { name: "Ticket 1" })
+		expect(within(first).getByText(/follows Team 1/)).toBeTruthy()
+		fireEvent.click(within(screen.getByRole("region", { name: "Ticket 2" })).getByRole("button", { name: /^Ticket 2/ }))
+		expect(within(screen.getByRole("region", { name: "Ticket 2" })).queryByText(/follows/)).toBeNull()
+	})
+
 	it("clears a race with a second tap", async () => {
 		runs.list = [logged(1, [{ race: 1, winner: 0 }, { race: 2, winner: 1 }])]
 		show()
