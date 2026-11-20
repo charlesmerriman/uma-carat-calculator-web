@@ -2660,8 +2660,9 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   without waiting for `/calculator-data`. Its banners and the hero's dates draw when that
   lands; until then `ReleaseFacts pending` holds the dates' place with blank bars, so the
   page doesn't jump. Its title and description are `AppRouteMeta`'s, built from the same
-  cache entry by `utils/encyclopediaMeta.ts` (no UmaTL text in a description: a snippet
-  can't carry the credit; a card with no title gets its type and "No." so it never shares
+  cache entry by `utils/encyclopediaMeta.ts` (no UmaTL text in a title or description: a
+  search result or link preview can't carry the credit, so a bracket title the API marks
+  `title_translated` stays out; a card without a showable title gets its type and "No." so it never shares
   its uma's title; a unique and its inherited copy say which they are). `entry-server.ts`
   `render(url, content, pageData)` primes a fresh query client (`primeEncyclopediaPage`,
   through `PrimedQueryClientContext`), so the build renders the page itself, and `main.tsx`
