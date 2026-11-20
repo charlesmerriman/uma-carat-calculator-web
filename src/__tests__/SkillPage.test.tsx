@@ -113,6 +113,25 @@ describe("SkillPage", () => {
 		expect(container).not.toHaveTextContent("Times are for every 1,000 m")
 	})
 
+	it("puts the bands behind a scaled effect and time in a table under each", async () => {
+		const scaled = { ...DETAIL, readable: { ...DETAIL.readable, slots: [{
+			...DETAIL.readable.slots[0],
+			effects: [{ text: "Velocity +0.28 to +0.42, by fan count", raw: false, scaling: { heading: "Fans", rows: [
+				{ when: "Under 20,000", value: "+0.28" }, { when: "160,000 or more", value: "+0.42" },
+			] } }],
+			duration: "5 to 20 s per 1,000 m, by HP left when it fires",
+			duration_scaling: { heading: "HP left", rows: [{ when: "Under 2,000", value: "5 s" }, { when: "3,500 or more", value: "20 s" }] },
+		}] } }
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(scaled), { status: 200 })))
+		renderAt("/app/skills/100101111")
+		await screen.findByRole("heading", { level: 1, name: /Gluttonous Ruler/ })
+		const [effect, time] = screen.getAllByRole("table")
+		expect(within(effect).getByRole("columnheader", { name: "Fans" })).toBeInTheDocument()
+		expect(within(effect).getByRole("row", { name: "160,000 or more +0.42" })).toBeInTheDocument()
+		expect(within(time).getByRole("columnheader", { name: "Lasts" })).toBeInTheDocument()
+		expect(within(time).getByRole("row", { name: "3,500 or more 20 s" })).toBeInTheDocument()
+	})
+
 	it("links its base, its umas and its cards to their pages", async () => {
 		renderAt("/app/skills/100101111")
 		expect(await screen.findByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")

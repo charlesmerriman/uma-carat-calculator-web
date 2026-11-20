@@ -15,7 +15,7 @@ import { Link, useParams } from "react-router-dom"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useRememberedFilter } from "../../hooks/useRememberedFilter"
 import { useSkillPage } from "../../services/encyclopediaQueries"
-import type { SkillCondition, SkillPhrase, SkillReadable } from "../../types/pvpGuide"
+import type { SkillCondition, SkillPhrase, SkillReadable, SkillScaling } from "../../types/pvpGuide"
 import type { SkillDetailData, SkillOwnerUma, SkillSourceCard, SkillSourceUma } from "../../types/skills"
 import { HIDE_OPTIONS, PAGE_CONTAINER, cardLine, keepCard, type HideFilter } from "../../utils/encyclopedia"
 import { SKILL_LIST_PATH, cardHref, parseGameId, umaHref } from "../../utils/encyclopediaRoutes"
@@ -86,6 +86,27 @@ function HowRow({ label, step, children }: { label: string; step: "after" | "whe
 }
 
 /**
+ * The bands behind a number or time that scales, under its line ("Velocity
+ * +0.28 to +0.42, by fan count"): what it depends on, and this skill's value
+ * in each band (board, "Skill Effect and Duration Scaling": Daptrius asked
+ * for the table, 2026-11-19). The values come worked out from the API.
+ */
+function ScalingTable({ scaling, column }: { scaling: SkillScaling; column: string }) {
+	return (
+		<table className="enc-scale">
+			<thead>
+				<tr><th scope="col">{scaling.heading}</th><th scope="col">{column}</th></tr>
+			</thead>
+			<tbody>
+				{scaling.rows.map((row) => (
+					<tr key={row.when}><td>{row.when}</td><td>{row.value}</td></tr>
+				))}
+			</tbody>
+		</table>
+	)
+}
+
+/**
  * The game's own condition code, under the reworded chips in the Detailed
  * view (Daptrius's list, item 8). `@` separates alternatives (any one fires
  * it), so each goes on its own line; `&` joins clauses that must all hold.
@@ -131,11 +152,21 @@ function HowItWorks({ readable, raw, detailed }: {
 						</HowRow>
 						{slot.effects.length > 0 && (
 							<HowRow label="Does" step="does">
-								{slot.effects.map((phrase, position) => <Clause key={position} phrase={phrase} effect />)}
+								{slot.effects.map((phrase, position) => (
+									<Fragment key={position}>
+										<Clause phrase={phrase} effect />
+										{phrase.scaling && <ScalingTable scaling={phrase.scaling} column="Value" />}
+									</Fragment>
+								))}
 							</HowRow>
 						)}
 						{/* The label already says which; the value is the game's own figure. */}
-						{slot.duration && <HowRow label="Lasts" step="lasts">{slot.duration === "Whole race" ? "The whole race" : slot.duration}</HowRow>}
+						{slot.duration && (
+							<HowRow label="Lasts" step="lasts">
+								{slot.duration === "Whole race" ? "The whole race" : slot.duration}
+								{slot.duration_scaling && <ScalingTable scaling={slot.duration_scaling} column="Lasts" />}
+							</HowRow>
+						)}
 						{slot.cooldown && (
 							<HowRow label="Cooldown" step="cooldown">
 								{slot.cooldown === "Once per race" ? slot.cooldown : `Can fire again after ${slot.cooldown}`}

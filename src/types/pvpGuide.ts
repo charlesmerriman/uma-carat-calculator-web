@@ -87,6 +87,18 @@ export type SkillAvailability = "global" | "announced" | "jp"
 export interface SkillPhrase {
 	text: string
 	raw: boolean
+	/** An effect whose number scales: the bands behind its range, for the skill page's table. */
+	scaling?: SkillScaling
+}
+
+/**
+ * What a scaling number or duration depends on, band by band (the API's
+ * skill_scaling.py): `heading` names the left column ("Fans"), each row the
+ * band ("Under 20,000") and the skill's number in it ("+0.28", "5 s").
+ */
+export interface SkillScaling {
+	heading: string
+	rows: { when: string; value: string }[]
 }
 
 /** A condition: every phrase in `all`, and one of the `any` lists (none when empty). */
@@ -103,6 +115,8 @@ export interface SkillSlot {
 	effects: SkillPhrase[]
 	/** "2.4 s", "Whole race", or null for an instant effect. */
 	duration: string | null
+	/** The bands behind a duration that scales; absent when the time is fixed. */
+	duration_scaling?: SkillScaling
 	/** "Once per race", "30 s", or null. */
 	cooldown: string | null
 }
