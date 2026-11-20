@@ -82,11 +82,18 @@ export function cardPageMeta(card: CardPageData): PageMeta {
 		card.skills.some((skill) => skill.source === "hint") && "the skills it hints",
 		card.skills.some((skill) => skill.source === "event") && "the skills its events give",
 	].filter((item): item is string => Boolean(item))
-	const name = `${card.name} ${card.title}`.trim()
-	const described = card.uses_translation ? card.name : name
+	// A card with no title yet (some JP-only ones) would share its <title> with
+	// the character's uma page and her other untitled cards, and Google reads
+	// shared titles as copies. Its type and the game's number, the "No." its
+	// hero shows, tell it apart. Name first still, so a tab cut short keeps it.
+	const number = `(No. ${card.game_id})`
+	const title = card.title ? `${card.name} ${card.title}` : `${card.name} ${what ? `${what} ` : ""}Support Card ${number}`
+	// Without its bracket title (none, or maybe UmaTL's), the number keeps
+	// one character's cards from sharing a description.
+	const described = card.title && !card.uses_translation ? title : `${card.name} ${number}`
 	const first = `${described} is ${kind} in Uma Musume${jpOnly(card.on_global)}.`
 	return {
-		title: name,
+		title,
 		description: has.length > 0 ? `${first} Its page has ${listWords(has)}.` : first,
 	}
 }
@@ -103,8 +110,11 @@ export function skillPageMeta(skill: SkillDetailData): PageMeta {
 	].filter((item): item is string => Boolean(item))
 	// "Coming to global" is not on global yet either.
 	const onGlobal = skill.availability === "global"
+	// A unique and its inherited copy share a name ("Shooting Star" is 100011
+	// and 900011), so their titles say which one each is.
+	const label = kind === "unique" ? "Unique Skill" : kind === "inherited" ? "Inherited Skill" : "Skill"
 	return {
-		title: `${skill.name} (Skill)`,
+		title: `${skill.name} (${label})`,
 		description:
 			`${lead}${skill.name} is ${article(kind)} ${kind} skill in Uma Musume${jpOnly(onGlobal)}. ` +
 			`Its page has ${listWords(has)}.`,

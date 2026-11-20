@@ -49,6 +49,18 @@ export interface EncyclopediaPageRef {
 const KIND_OF_LIST: Record<string, EncyclopediaPageKind> = { umas: "uma", cards: "card", skills: "skill" }
 
 /**
+ * A detail page's address by kind, for code that holds a kind rather than
+ * calling umaHref/cardHref directly: the build writes one document per page
+ * at this path (scripts/prerender.mjs). The skill path matches
+ * skillSearch.skillHref.
+ */
+export function encyclopediaHref(kind: EncyclopediaPageKind, gameId: number): string {
+	if (kind === "uma") return umaHref(gameId)
+	if (kind === "card") return cardHref(gameId)
+	return `${SKILL_LIST_PATH}/${gameId}`
+}
+
+/**
  * The detail page a pathname names, or null for anything else (a list, a tab).
  * The one reader of a detail path's shape: the app shell lets these pages past
  * its loading gate, the route meta titles them, and the build-time render primes

@@ -42,6 +42,10 @@ export { SITE_NAME, SITE_ORIGIN } from "./hooks/useDocumentMeta"
 // The API this bundle was built against, so the prerender script fetches content
 // from the same place the bundle will. Vite inlines VITE_API_URL at build time.
 export { API_URL } from "./config/apiSource"
+// The Encyclopedia's detail pages: which exist, where each one's payload is, and
+// where its document goes, from the same helpers the pages and their links use.
+export { ENCYCLOPEDIA_INDEX_PATH, PAGE_DATA_ELEMENT_ID, encyclopediaApiPath } from "./services/encyclopediaQueries"
+export { encyclopediaHref } from "./utils/encyclopediaRoutes"
 
 export interface RenderResult {
 	/** The markup for #root — everything inside the div, not the div itself. */

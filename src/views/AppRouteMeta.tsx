@@ -121,15 +121,6 @@ const MISSING_PAGE_META: RouteMeta = {
 	description: "There's no Encyclopedia page at this address.",
 }
 
-/**
- * Whether the detail pages may be indexed yet. False until
- * notes/encyclopedia-open-plan.md's PR 4 writes them as real documents with a
- * sitemap: before that a crawler gets the spa.html shell, and dropping the
- * noindex would hand Google 3,000 identical shells. PR 4 deletes this, and a
- * missing page stays noindex.
- */
-const DETAIL_PAGES_INDEXED = false
-
 function encyclopediaMeta(state: EncyclopediaPageState): RouteMeta {
 	if (state.data === null) return MISSING_PAGE_META
 	if (state.data === undefined) return ENCYCLOPEDIA_PAGE_META[state.kind]
@@ -190,10 +181,13 @@ export const AppRouteMeta = () => {
 				? SHARED_PLAN_META
 				: META[path]
 
-	// noindex: an Encyclopedia page with no page behind it, every Encyclopedia
-	// page until it is a real document (DETAIL_PAGES_INDEXED), a shared plan,
+	// noindex: an Encyclopedia address with no page behind it, a shared plan,
 	// the Collection (one player's account) and Rankings (behind early access).
-	const encyclopediaNoindex = encyclopedia !== null && (encyclopedia.data === null || !DETAIL_PAGES_INDEXED)
+	// Every real Encyclopedia page is indexed: the build writes each one as a
+	// document with its own title and lists it in sitemap-encyclopedia.xml
+	// (scripts/prerender.mjs). A page newer than the last build rides the
+	// spa.html shell until the next one, unblocked.
+	const encyclopediaNoindex = encyclopedia !== null && encyclopedia.data === null
 	useDocumentMeta(
 		meta.title,
 		meta.description,

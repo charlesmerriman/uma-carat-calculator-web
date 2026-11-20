@@ -7,8 +7,13 @@ import { describe, expect, it } from "vitest"
 import {
 	assertContent,
 	assertTemplate,
+	buildDetailPage,
 	buildPage,
+	buildSitemap,
+	encyclopediaJobs,
 	escapeHtml,
+	injectPageData,
+	withoutOtherNames,
 	injectContent,
 	injectRoot,
 	normaliseRoute,
@@ -242,5 +247,68 @@ describe("assertContent", () => {
 		expect(() => assertContent({ pages: [{}] }, "src")).toThrow(/"pages" and "faq"/)
 		expect(() => assertContent({ pages: [], faq: [{}] }, "src")).toThrow(/no pages/)
 		expect(() => assertContent({ pages: [{}], faq: [] }, "src")).toThrow(/no FAQ/)
+	})
+})
+
+describe("the Encyclopedia's detail pages", () => {
+	const href = (kind, id) => `/app/${kind}s/${id}`
+	const apiPath = (kind, id) => `/${kind}/${id}`
+	const PAGE = { name: "Ines Fujin", other_names: ["GameTora's"], skills: [{ name: "x", other_names: ["y"] }], note: "</script><b>" }
+	const detail = (overrides = {}) =>
+		rendered({
+			html: "<div><nav>nav</nav><h1 class=\"enc-hero__name\">Ines Fujin</h1><footer>foot</footer></div>",
+			meta: meta({ title: "Ines Fujin | Site", canonical: "https://example.test/app/umas/103101" }),
+			...overrides,
+		})
+
+	it("turns the index into one job per page, with the app's own paths", () => {
+		const jobs = encyclopediaJobs({ umas: [103101], cards: [30011, 30012], skills: [200013] }, { href, apiPath })
+		expect(jobs).toEqual([
+			{ kind: "uma", gameId: 103101, route: "/app/umas/103101", apiPath: "/uma/103101" },
+			{ kind: "card", gameId: 30011, route: "/app/cards/30011", apiPath: "/card/30011" },
+			{ kind: "card", gameId: 30012, route: "/app/cards/30012", apiPath: "/card/30012" },
+			{ kind: "skill", gameId: 200013, route: "/app/skills/200013", apiPath: "/skill/200013" },
+		])
+	})
+
+	it("refuses an index that would quietly write no pages, or a bad id", () => {
+		expect(() => encyclopediaJobs(null, { href, apiPath })).toThrow(/not an object/)
+		expect(() => encyclopediaJobs({ umas: [1], cards: [], skills: [1] }, { href, apiPath })).toThrow(/no "cards"/)
+		expect(() => encyclopediaJobs({ umas: [1], cards: [1] }, { href, apiPath })).toThrow(/no "skills"/)
+		expect(() => encyclopediaJobs({ umas: ["1"], cards: [1], skills: [1] }, { href, apiPath })).toThrow(/bad uma id/)
+	})
+
+	it("embeds the payload without GameTora's names, at any depth, and can't be closed early", () => {
+		const html = injectPageData(TEMPLATE, PAGE)
+		const block = html.match(/<script id="page-data" type="application\/json">(.*)<\/script>/)[1]
+		expect(block).not.toContain("</script>")
+		expect(JSON.parse(block)).toEqual({ name: "Ines Fujin", skills: [{ name: "x" }], note: "</script><b>" })
+		expect(html).not.toContain("GameTora")
+		expect(withoutOtherNames([{ other_names: [] }, 1, null])).toEqual([{}, 1, null])
+	})
+
+	it("builds a page document with its tags, its marker and its payload", () => {
+		const html = buildDetailPage(TEMPLATE, "/app/umas/103101", detail(), PAGE, SITE)
+		expect(html).toContain('data-prerendered="/app/umas/103101"')
+		expect(html).toContain("<title>Ines Fujin | Site</title>")
+		expect(html).toContain('<link rel="canonical" href="https://example.test/app/umas/103101" />')
+		expect(html).toContain('<script id="page-data"')
+		expect(html).not.toContain('name="robots"')
+	})
+
+	it("refuses a page's loading state, a missing page, a generic title or a noindex", () => {
+		const build = (rendered, data = PAGE) => () => buildDetailPage(TEMPLATE, "/app/umas/103101", rendered, data, SITE)
+		expect(build(detail({ html: "<div><div role=\"status\"></div><footer>f</footer></div>" }))).toThrow(/no <h1>/)
+		expect(build(detail(), null)).toThrow(/no payload/)
+		expect(build(detail({ meta: meta({ title: "Uma | Site", canonical: "https://example.test/app/umas/103101" }) }))).toThrow(/does not name the page/)
+		expect(build(detail({ meta: meta({ title: "Ines Fujin | Site", canonical: "https://example.test/app/umas/103101", noindex: true }) }))).toThrow(/noindex/)
+	})
+
+	it("writes a sitemap of exactly the URLs given, escaped", () => {
+		const xml = buildSitemap(["https://example.test/app/umas/1", "https://example.test/a&b"])
+		expect(xml).toMatch(/^<\?xml version="1.0" encoding="UTF-8"\?>/)
+		expect(xml.match(/<loc>/g)).toHaveLength(2)
+		expect(xml).toContain("<loc>https://example.test/app/umas/1</loc>")
+		expect(xml).toContain("<loc>https://example.test/a&amp;b</loc>")
 	})
 })

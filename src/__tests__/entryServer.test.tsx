@@ -141,8 +141,8 @@ describe("entry-server render()", () => {
 			expect(meta.title).toBe(`${title} | ${SITE_NAME}`)
 			expect(meta.description).toContain(h1)
 			expect(meta.canonical).toBe(`${SITE_ORIGIN}${path}`)
-			// Until PR 4 writes them as documents with a sitemap.
-			expect(meta.noindex).toBe(true)
+			// Each is a document in sitemap-encyclopedia.xml (scripts/prerender.mjs).
+			expect(meta.noindex).toBe(false)
 			// The page, not the loading gate's spinner or the page's skeleton.
 			expect(html).toMatch(new RegExp(`<h1[^>]*>${h1}</h1>`))
 			expect(html).not.toContain("Loading your plan")
@@ -184,9 +184,11 @@ describe("entry-server render()", () => {
 		})
 
 		it("renders its loading state, with its kind's title, when no payload is handed over", () => {
+			// Never written to a document: the build hands every page its payload,
+			// and buildDetailPage refuses a render with no <h1>.
 			const { html, meta } = render(`/app/cards/${SAMPLE.card.game_id}`, CONTENT)
 			expect(meta.title).toBe(`Support Card | ${SITE_NAME}`)
-			expect(meta.noindex).toBe(true)
+			expect(html).not.toContain("<h1")
 			expect(html).not.toContain("Loading your plan")
 		})
 	})

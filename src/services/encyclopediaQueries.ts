@@ -45,15 +45,37 @@ interface PageOptions {
 	staleTime?: number
 }
 
+/**
+ * The id of the JSON block a built detail page carries: its payload as the
+ * build rendered it, read back by main.tsx before hydrating. Mirrors
+ * PAGE_DATA_ELEMENT_ID in scripts/prerender-html.mjs.
+ */
+export const PAGE_DATA_ELEMENT_ID = "page-data"
+
+/** The API route listing every detail page there is, by game id per kind (what the build writes). */
+export const ENCYCLOPEDIA_INDEX_PATH = "/encyclopedia/index"
+
+/**
+ * Where the API serves a detail page's payload. The build fetches each page
+ * from here too (scripts/prerender.mjs, through entry-server.ts), so what a
+ * built document carries is what the page itself asks for. A skill's is the
+ * skills route, which the guide editor shares (skillsFetchCalls.ts).
+ */
+export function encyclopediaApiPath(kind: EncyclopediaPageKind, gameId: number): string {
+	if (kind === "uma") return `/encyclopedia/umas/${gameId}`
+	if (kind === "card") return `/encyclopedia/cards/${gameId}`
+	return `/skills/${gameId}`
+}
+
 // A page's key and fetch, in one place: the hooks below and the prefetch
 // must ask the same question to share one cache entry.
 const umaPageQuery = (gameId: number) => ({
 	queryKey: encyclopediaKeys.uma(gameId),
-	queryFn: () => fetchPage<UmaPageData>(`/encyclopedia/umas/${gameId}`),
+	queryFn: () => fetchPage<UmaPageData>(encyclopediaApiPath("uma", gameId)),
 })
 const cardPageQuery = (gameId: number) => ({
 	queryKey: encyclopediaKeys.card(gameId),
-	queryFn: () => fetchPage<CardPageData>(`/encyclopedia/cards/${gameId}`),
+	queryFn: () => fetchPage<CardPageData>(encyclopediaApiPath("card", gameId)),
 })
 
 /**

@@ -226,9 +226,9 @@ export const ApplicationViews = () => (
 			<Route path="skills" element={<SkillsPage />}/>
 			{/* The Encyclopedia (notes/encyclopedia-plan.md), open to everyone.
 			    A page is keyed by the game's id (utils/encyclopediaRoutes.ts),
-			    renders outside the loading gate (AppShell's `ungated`), and
-			    stays noindex until it is a real document
-			    (notes/encyclopedia-open-plan.md, PR 4). */}
+			    renders outside the loading gate (AppShell's `ungated`), and is
+			    prerendered from the API's index, not PRERENDER_ROUTES
+			    (scripts/prerender.mjs; notes/encyclopedia-open-plan.md). */}
 			<Route path="skills/:gameId" element={<SkillPage />}/>
 			<Route path="umas" element={<UmaListPage />}/>
 			<Route path="umas/:gameId" element={<UmaPage />}/>

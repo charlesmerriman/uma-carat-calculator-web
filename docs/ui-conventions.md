@@ -2652,17 +2652,20 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   back-to-top arrow, and the API routes are public. **Search engines:** the three lists are
   in `PRERENDER_ROUTES` and the sitemap like every tab (the app shell and its head tags at
   build time; their titles name the Encyclopedia because the head is all a crawler reads of
-  them). A detail page is still `noindex` until `notes/encyclopedia-open-plan.md`'s PR 4
-  writes the 3,000 of them as real documents (`DETAIL_PAGES_INDEXED` in `AppRouteMeta`).
+  them). Every detail page is a prerendered document in `sitemap-encyclopedia.xml`, built
+  from the API's index ("Every public route is prerendered" below); only an address with no
+  page behind it is `noindex`.
 - **Renders without a browser** (PR 3): a detail page sits OUTSIDE the `/app` loading gate
   (`AppShell`'s `ungated`, from `encyclopediaPageOf`), so it draws from its own payload
   without waiting for `/calculator-data`. Its banners and the hero's dates draw when that
   lands; until then `ReleaseFacts pending` holds the dates' place with blank bars, so the
   page doesn't jump. Its title and description are `AppRouteMeta`'s, built from the same
   cache entry by `utils/encyclopediaMeta.ts` (no UmaTL text in a description: a snippet
-  can't carry the credit). `entry-server.ts` `render(url, content, pageData)` primes a
-  fresh query client (`primeEncyclopediaPage`, through `PrimedQueryClientContext`), so the
-  build renders the page itself. Render-time code on these pages follows the outside-the-gate
+  can't carry the credit; a card with no title gets its type and "No." so it never shares
+  its uma's title; a unique and its inherited copy say which they are). `entry-server.ts`
+  `render(url, content, pageData)` primes a fresh query client (`primeEncyclopediaPage`,
+  through `PrimedQueryClientContext`), so the build renders the page itself, and `main.tsx`
+  primes the browser's from the document's `#page-data`. Render-time code on these pages follows the outside-the-gate
   rule: no `window`, `document`, `localStorage` or clock. `entryServer.test.tsx` and
   `hydration.test.tsx` render and hydrate the committed sample
   (`src/content/encyclopedia-sample.json`, refreshed by `npm run content:pull`).
@@ -3093,6 +3096,27 @@ nothing, because a Disallow stops the crawl before the crawler can read the tag 
 is what earned the "Indexed, though blocked by robots.txt" warning on 2026-09-08). A
 static host answers every unmatched path with the catch-all and a **200**, so for
 `NotFound` the tag is load-bearing rather than tidiness.
+
+**The Encyclopedia's detail pages are prerendered from the API, not from
+`PRERENDER_ROUTES`** (`notes/encyclopedia-open-plan.md`, web #408 and PR 4). After the fixed
+routes, `prerenderEncyclopedia` in `scripts/prerender.mjs` fetches `GET /encyclopedia/index`
+from the API the bundle was built against, then each page's payload (two requests at a
+time, three retries, then the build fails and the old site stays up), renders it through
+`render(route, content, pageData)`, and writes `dist/<route>/index.html` with the payload
+embedded as `#page-data` (`other_names` stripped: GameTora's names never reach page
+source). `main.tsx` primes the query cache from that block before hydrating, marked stale so
+the page refetches at once. It writes the **`dir` layout only**: on 2026-11-20 the live host
+served the `spa.html` shell for `/index` and `/app/index`, whose files exist only as
+`index.html`, so App Platform never appends `.html`, and a second copy of 3,000 files would
+never be served. Then `dist/sitemap-encyclopedia.xml` lists exactly the documents written,
+and `public/robots.txt` names it. `buildDetailPage` refuses a page with no `<h1>`, a title
+without the page's name, or `noindex`. Sizes at the first full build (local data, 3,056
+pages): 175 MB, 53 to 84 s, umas about 72 KB a document, cards 67 KB, skills 53 KB.
+**Every web build therefore asks the live API for about 3,080 pages**: deploy the web
+after the API is live and not at the 15:00 UTC peak (`/push-live`). A page added after
+the last build has no document and no sitemap entry until the next one; its address
+still works through the shell and is not `noindex`. `PRERENDER_CONTENT=snapshot` (CI)
+renders the committed sample, `src/content/encyclopedia-sample.json`.
 
 **One public route cannot be prerendered: a shared plan's link, `/app/<public_id>`.** The
 id is per plan, so no build can list it. It rides the `spa.html` shell, reports
