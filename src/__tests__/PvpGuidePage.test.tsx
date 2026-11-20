@@ -847,7 +847,7 @@ describe("PvpGuidePage umas", () => {
 })
 
 describe("PvpGuidePage recommended skills", () => {
-	it("folds the general skills on a narrow screen, with their count", async () => {
+	it("opens the general skills on a narrow screen too, with their count and a fold", async () => {
 		const original = window.matchMedia
 		window.matchMedia = ((query: string) => ({ ...original(query), matches: query.includes("max-width") })) as typeof window.matchMedia
 		try {
@@ -855,8 +855,26 @@ describe("PvpGuidePage recommended skills", () => {
 			renderPage()
 			await screen.findByText("Recommended stats")
 			const details = screen.getByRole("region", { name: "General skills" }).querySelector("details")
-			expect(details).not.toHaveAttribute("open")
+			expect(details).toHaveAttribute("open")
 			expect(within(details as HTMLElement).getByText(/^1 skill ·/)).toBeInTheDocument()
+		} finally {
+			window.matchMedia = original
+		}
+	})
+
+	it("puts the general skills under the style tabs on a phone's All tab (Henry, 2026-11-17)", async () => {
+		const original = window.matchMedia
+		window.matchMedia = ((query: string) => ({ ...original(query), matches: query.includes("max-width") })) as typeof window.matchMedia
+		try {
+			respond(200, GUIDE)
+			renderPage()
+			await screen.findByText("Recommended stats")
+			fireEvent.click(within(screen.getByRole("tablist", { name: "Running style" })).getByRole("tab", { name: /^All/ }))
+			const general = screen.getByRole("region", { name: "General skills" })
+			// Inside the style column, after its tabs: not in the side column at the end.
+			expect(general.closest('[aria-label="For every position"]')).toBeNull()
+			const tabs = screen.getByRole("tablist", { name: "Running style" })
+			expect(tabs.compareDocumentPosition(general) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 		} finally {
 			window.matchMedia = original
 		}
