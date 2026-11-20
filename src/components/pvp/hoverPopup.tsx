@@ -45,6 +45,18 @@ export const InsideHoverContext = createContext(false)
  */
 export const InsidePopupContext = createContext(false)
 
+/**
+ * Inside a drawn popup: HOLDS it. The popup stays on the side and at the
+ * corner it opened at (no flip), stays open when the pointer leaves, and
+ * scrolls inside itself when what it shows grows. For content that changes
+ * under the reader's click: a skill card's name turning the popup into her
+ * card (SkillDetail, Henry's board post, 2026-11-19). Unheld, a taller card
+ * flipped above the chip, ran off the window and left the pointer on the next
+ * chip, which opened a second popup (the canvas mock, 2026-11-20). Null
+ * outside a popup.
+ */
+export const PopupHoldContext = createContext<(() => void) | null>(null)
+
 // How long the pointer rests on a tile before its popup opens, so a mouse
 // crossing a grid of skills doesn't flash a popup per cell. Focus and a tap
 // open it at once.
@@ -232,22 +244,39 @@ export function useHoverPopup(
 ) {
 	const [open, setOpenState] = useState(false)
 	const [pinned, setPinned] = useState(false)
+	// Held (PopupHoldContext): the placement it had when held, else null.
+	const [held, setHeld] = useState<Placement | null>(null)
 	const setOpen = (next: boolean) => {
 		setOpenState(next)
-		if (!next) setPinned(false)
+		if (!next) {
+			setPinned(false)
+			setHeld(null)
+		}
 		onOpenChange?.(next)
 	}
-	// A pinned popup holds links, so it takes the pointer like an interactive one.
-	const takesPointer = interactive || pinned
+	// A pinned or held popup holds links, so it takes the pointer like an interactive one.
+	const takesPointer = interactive || pinned || held !== null
 	// What the last press on the tile came from: only a mouse's click pins.
 	// State, not a ref: the handlers below are built during render.
 	const [pressedWith, setPressedWith] = useState("")
 	const reducedMotion = useReducedMotion()
-	const { refs, floatingStyles, context } = useFloating({
+	const { refs, floatingStyles, context, placement: shownPlacement } = useFloating({
 		open,
 		onOpenChange: setOpen,
-		placement: pinned ? CARD_POPUP_PLACEMENT : placement,
-		middleware: pinned
+		placement: held ?? (pinned ? CARD_POPUP_PLACEMENT : placement),
+		middleware: held
+			? [
+					offset(4),
+					// Kept on screen sideways only: no flip, so it never jumps to the other side.
+					shift(() => ({ crossAxis: false, padding: popupEdges() })),
+					size(() => ({
+						padding: popupEdges(),
+						apply({ availableHeight, elements }) {
+							elements.floating.style.maxHeight = `${Math.max(160, Math.floor(availableHeight))}px`
+						},
+					})),
+				]
+			: pinned
 			? cardPopupMiddleware()
 			: fit
 			? [
@@ -269,7 +298,7 @@ export function useHoverPopup(
 	// long as it is pinned: left on, the pointer leaving the card closed it,
 	// and so did a click on the card's own text, which takes the focus the
 	// pin's click gave the tile.
-	const hovers = !tapOnly && !pinned
+	const hovers = !tapOnly && !pinned && held === null
 	const { getReferenceProps, getFloatingProps } = useInteractions([
 		useHover(context, {
 			enabled: hovers && hover,
@@ -325,6 +354,7 @@ export function useHoverPopup(
 			},
 		}),
 	}
+	const hold = () => setHeld((was) => was ?? shownPlacement)
 	const popup = (content: ReactNode, widthClassName: string) =>
 		isMounted && (
 			<FloatingPortal>
@@ -335,10 +365,12 @@ export function useHoverPopup(
 					{...(takesPointer ? getFloatingProps() : {})}
 					className={`z-50 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${
 						takesPointer ? "" : "pointer-events-none"
-					} ${pinned ? CARD_POPUP_BOX : `max-w-[80vw] ${fit ? "overflow-y-auto" : ""} ${widthClassName}`}`}
+					} ${pinned ? CARD_POPUP_BOX : `max-w-[80vw] ${fit || held ? "overflow-y-auto" : ""} ${widthClassName}`}`}
 				>
 					<InsidePopupContext.Provider value={true}>
-						<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>
+						<PopupHoldContext.Provider value={hold}>
+							<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>
+						</PopupHoldContext.Provider>
 					</InsidePopupContext.Provider>
 				</div>
 			</FloatingPortal>

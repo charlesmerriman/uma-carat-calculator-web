@@ -3070,6 +3070,53 @@
 		font-size: 0.6875rem;
 		color: var(--color-gray-500);
 	}
+	/* A source's name in a skill card's popup opens her card (SkillDetail):
+	   a faint underline, the brand colour under the pointer. */
+	.skill-card__source {
+		font: inherit;
+		color: inherit;
+		text-decoration: underline;
+		text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+		text-underline-offset: 2px;
+		cursor: pointer;
+		transition: color 0.15s;
+	}
+	.skill-card__source:hover {
+		color: var(--color-brand);
+		text-decoration-color: currentColor;
+	}
+	/* Her card, swapped into the popup, under a row back to the skill: the
+	   row sits flush with the popup's edges like a card's head does. */
+	.skill-card-stack {
+		display: block;
+	}
+	/* The popup shows her card alone: a chip's other blocks under the skill
+	   card (the skills its note names, "On this course") step aside. */
+	.skill-card-stack ~ * {
+		display: none;
+	}
+	.skill-card-back {
+		display: flex;
+		width: calc(100% + 1rem);
+		align-items: center;
+		gap: 0.375rem;
+		margin: -0.5rem -0.5rem 0;
+		padding: 0.375rem 0.625rem;
+		border-bottom: 1px solid var(--color-edge);
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: var(--color-gray-300);
+		text-align: left;
+		cursor: pointer;
+		transition: color 0.15s;
+	}
+	.skill-card-back:hover {
+		color: var(--color-brand);
+	}
+	.skill-card-back + .skill-card .skill-card__head {
+		margin-top: 0;
+		border-radius: 0;
+	}
 	.skill-card__open {
 		margin-left: auto;
 		font-weight: 600;
