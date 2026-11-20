@@ -50,6 +50,7 @@ import { whiteSkillPairs } from "../../utils/pvpTeams"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -83,6 +84,8 @@ interface PickerItem {
 	image: string | null
 	/** An uma's borderless art, drawn in the site's frame (FramedUma); null for a support card. */
 	portrait: string | null
+	/** An uma's layered art (FramedUma `layers`); null for a support card. */
+	portrait_layers: PortraitLayers | null
 	/** A support card, drawn as the game draws it (FramedCard); null for an uma. */
 	card: FramedCardArt | null
 	skills: CatalogueSkillLink[]
@@ -159,6 +162,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 			alias: "",
 			image: uma.image,
 			portrait: uma.portrait ?? uma.image,
+			portrait_layers: uma.portrait_layers ?? null,
 			card: null,
 			skills: uma.skills,
 			cardType: null,
@@ -173,6 +177,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 		alias: card.title,
 		image: card.image,
 		portrait: null,
+		portrait_layers: null,
 		card,
 		skills: card.skills,
 		cardType: card.card_type,
@@ -467,7 +472,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 										>
 											<span className="relative block w-full">
 												{item.portrait ? (
-													<FramedUma src={item.portrait} oshi={oshiIds.has(item.id)} className="w-full" />
+													<FramedUma src={item.portrait} layers={item.portrait_layers} oshi={oshiIds.has(item.id)} className="w-full" />
 												) : item.card ? (
 													<FramedCard card={item.card} className="w-full" />
 												) : item.image ? (

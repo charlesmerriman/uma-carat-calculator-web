@@ -8,6 +8,7 @@
 
 import type { PvpEventKind } from "../utils/pvpEvent"
 import type { MemberStyle, PvpTeamMember } from "./pvpTeam"
+import type { PortraitLayers } from "./portraitLayers"
 
 /**
  * A supporter's look on a post, by tier: the game's rarity ladder at the top
@@ -29,6 +30,8 @@ export interface GalleryPoster {
 	/** "" once they blank it: the UI says "Unnamed trainer". */
 	display_name: string
 	portrait: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	/** Their Patreon tier's name, or null (no pledge, or they hid it). */
 	tier_name: string | null
 	gallery_style: GalleryStyle | null
@@ -44,7 +47,7 @@ export type ProfileCardTarget = { kind: "post"; id: string } | { kind: "comment"
  */
 export interface ProfileCardData {
 	/** Every favorite their tier covers, in their order. */
-	favorites: { uma: number; label: string; image: string }[]
+	favorites: { uma: number; label: string; image: string; layers?: PortraitLayers | null }[]
 	/** Their visible posts, newest first, ten at most. */
 	posts: {
 		public_id: string

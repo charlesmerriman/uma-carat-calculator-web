@@ -8,6 +8,7 @@ import type {
 } from "../types"
 import { formatDate } from "./dateFormat"
 import type { PlannedBannerTarget } from "./bannerHelpers"
+import type { PortraitLayers } from "../types/portraitLayers"
 
 /**
  * The ten cards a player picks before climbing a Select Step-Up's ladder.
@@ -202,7 +203,7 @@ export interface SelectedCardArt {
 	 * borderless art, so the planner row draws it in FramedUma. Null for a
 	 * support card, which keeps its own art.
 	 */
-	uma: { id: number; portrait: string | null } | null
+	uma: { id: number; portrait: string | null; portrait_layers?: PortraitLayers | null } | null
 }
 
 /** The step 5 pick, tagged with the pool it came from. */
@@ -265,7 +266,7 @@ export function findGuaranteedCardArt(
 	if (!pick) return null
 	const { name, image } = pick.card
 	return pick.pool === "uma"
-		? { name, image, uma: { id: pick.card.id, portrait: pick.card.portrait ?? null } }
+		? { name, image, uma: { id: pick.card.id, portrait: pick.card.portrait ?? null, portrait_layers: pick.card.portrait_layers ?? null } }
 		: { name, image, uma: null }
 }
 

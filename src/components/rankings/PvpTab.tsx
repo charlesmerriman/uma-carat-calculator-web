@@ -244,7 +244,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 				place={place}
 				muted={place === null}
 				movement={place === null ? undefined : moves.get(`${entry.uma}-${entry.style}`)}
-				art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(entry.uma)} className={`w-12 ${place === null ? "opacity-60" : ""}`} />}
+				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(entry.uma)} className={`w-12 ${place === null ? "opacity-60" : ""}`} />}
 				name={uma?.name ?? "Unknown uma"}
 				sub={
 					<span>

@@ -221,7 +221,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 		<Page colours={uma.colours}>
 			<Crumbs list="Umas" listPath={UMA_LIST_PATH} name={uma.name} />
 			<Hero
-				art={<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} alt={uma.name} className="enc-hero__art" />}
+				art={<FramedUma src={uma.portrait} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} alt={uma.name} className="enc-hero__art" />}
 				entry={umaEntryNumber(uma.game_id)}
 				ghost={uma.jp_name || undefined}
 				// The name is the character's; which outfit this is sits above it.

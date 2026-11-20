@@ -83,7 +83,7 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 		if (guaranteedCard?.uma) {
 			return (
 				<FramedUma
-					src={guaranteedCard.uma.portrait ?? guaranteedCard.image}
+					src={guaranteedCard.uma.portrait ?? guaranteedCard.image} layers={guaranteedCard.uma.portrait_layers}
 					alt={guaranteedCard.name}
 					oshi={oshiIds.has(guaranteedCard.uma.id)}
 					title={`Guaranteed at step 5: ${guaranteedCard.name}`}
@@ -124,7 +124,7 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 				? target.banner.umas.slice(0, 2).map((uma) => (
 						<FramedUma
 							key={uma.id}
-							src={uma.portrait ?? uma.image}
+							src={uma.portrait ?? uma.image} layers={uma.portrait_layers}
 							alt={uma.name}
 							oshi={oshiIds.has(uma.id)}
 							className={umaSize}

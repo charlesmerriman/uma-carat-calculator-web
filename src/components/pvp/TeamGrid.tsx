@@ -30,6 +30,7 @@ import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { CARD_LINK_TITLE, hoverCardProps, ringFor } from "../../utils/hoverCards"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 /**
  * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
@@ -224,7 +225,8 @@ function MemberPanel({
 
 	return (
 		<section className="card-panel p-2.5 sm:p-3" aria-label={umaLabel}>
-			<header className="mb-2.5 flex items-center gap-2">
+			{/* mb-6: the big tile's layered ears (a sixth of it, FramedUma) rise into this gap. */}
+			<header className={`${uma?.portrait_layers ? "mb-6" : "mb-2.5"} flex items-center gap-2`}>
 				<span
 					className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-black"
 					aria-hidden="true"
@@ -290,6 +292,7 @@ function MemberPanel({
 				<UmaDropSpot position={position} className="row-span-2 min-w-0 sm:row-span-1">
 					<Tile
 						art={uma?.portrait ?? uma?.image ?? null}
+						layers={uma?.portrait_layers}
 						framed
 						large
 						starred={starred("uma", member.uma)}
@@ -314,6 +317,7 @@ function MemberPanel({
  */
 function Tile({
 	art,
+	layers,
 	label,
 	onClick,
 	empty,
@@ -335,6 +339,8 @@ function Tile({
 	className = "",
 }: {
 	art: string | null | undefined
+	/** A framed uma's layered art (FramedUma `layers`). */
+	layers?: PortraitLayers | null
 	label: string
 	onClick: () => void
 	empty: ReactNode
@@ -391,7 +397,7 @@ function Tile({
 					}`}
 				>
 					{filled && framed ? (
-						<FramedUma src={art} oshi={favorite} className="w-full" />
+						<FramedUma src={art} layers={layers} oshi={favorite} className="w-full" />
 					) : filled && card ? (
 						<FramedCard card={card} className="h-full w-full" />
 					) : filled ? (

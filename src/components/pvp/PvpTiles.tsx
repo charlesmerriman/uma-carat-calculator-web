@@ -404,8 +404,10 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 			    letters wrap the others grow with it and every note slot, pinned
 			    to the bottom (mt-auto), stays level. */}
 			<div className="flex h-full flex-col gap-0.5 overflow-hidden rounded-lg border border-gray-600 bg-gray-700 p-1.5 text-center">
+				{/* Her layered art's ears (FramedUma) land in this strip, inside the tile. */}
+				{uma.portrait_layers && <div aria-hidden="true" className="-mb-0.5 aspect-[6/1] w-full shrink-0" />}
 				<div className="relative">
-					<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
+					<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 					{role && (
 						<span className="absolute left-0.5 top-0.5 max-w-[calc(100%-0.25rem)] truncate rounded border border-gray-600 bg-gray-800/95 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
 							{role}
@@ -757,7 +759,7 @@ export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: nu
 			detailClassName="w-48"
 			interactive={page !== null}
 		>
-			<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
+			<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 		</WithDetail>
 	)
 }

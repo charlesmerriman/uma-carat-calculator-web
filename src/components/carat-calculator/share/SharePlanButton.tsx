@@ -67,6 +67,7 @@ export function SharePlanButton({ plannerRows, bannerResources, umaBannerData, s
 					userStepUpSelectionData={userStepUpSelectionData}
 					ownerName={showName ? name : null}
 					ownerPicture={showName ? avatar : null}
+					ownerPictureLayers={showName ? account?.avatar_layers ?? null : null}
 					hideSpend={hideSpend}
 					now={now}
 				/>

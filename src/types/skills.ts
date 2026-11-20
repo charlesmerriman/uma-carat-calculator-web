@@ -6,6 +6,7 @@
  */
 
 import type { SkillAvailability, SkillReadable } from "./pvpGuide"
+import type { PortraitLayers } from "./portraitLayers"
 
 /** An outfit a skill belongs to: the row's pk for the favorites frame, her game id for the link. */
 export interface SkillOwnerUma {
@@ -13,6 +14,8 @@ export interface SkillOwnerUma {
 	game_id: number | null
 	name: string
 	portrait: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 }
 
 /** One row of GET /skills. */
@@ -52,6 +55,8 @@ export interface SkillSourceUma {
 	game_id: number | null
 	/** The borderless art, drawn as FramedUma. */
 	image: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	/** unique / innate / awakening / evolved */
 	source: string
 	level: number | null

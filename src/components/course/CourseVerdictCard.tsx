@@ -87,7 +87,7 @@ export default function CourseVerdictCard({ course, focus, entry, onClear, class
 		<div className={`w-full max-w-[380px] rounded-[10px] border border-gray-600 bg-gray-900/70 px-3 py-2.5 ${className}`} aria-label={`${focus.name} on this course`}>
 			<div className="flex items-center gap-2.5">
 				{owner ? (
-					<FramedUma src={owner.portrait} alt="" title={owner.name} className="h-9 w-9 shrink-0" />
+					<FramedUma src={owner.portrait} layers={owner.portrait_layers} alt="" title={owner.name} className="h-9 w-9 shrink-0" />
 				) : focus.image ? (
 					<img src={focus.image} alt="" className="h-7 w-7 shrink-0" loading="lazy" decoding="async" />
 				) : (

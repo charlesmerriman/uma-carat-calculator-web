@@ -32,7 +32,7 @@ const UmaTile = ({ uma, isOshi, href }: { uma: DailyLegendRaceUma; isOshi: boole
 		<>
 			{/* The borderless art in the site's frame; a favorite gets the
 			    rainbow one. */}
-			<FramedUma src={uma.portrait ?? uma.image} oshi={isOshi} className="w-full" hover={href ? undefined : hoverCardProps("uma", uma.id)} />
+			<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={isOshi} className="w-full" hover={href ? undefined : hoverCardProps("uma", uma.id)} />
 			<span className={`text-center text-xs leading-tight text-gray-300 ${href ? "transition-colors group-hover:text-brand" : ""}`}>
 				<span className="line-clamp-2">{base}</span>
 				{outfit && <span className="line-clamp-2 text-[0.6875rem] text-gray-400">{outfit}</span>}

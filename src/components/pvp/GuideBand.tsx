@@ -120,7 +120,7 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 										// plain; inside a style's button the click switches the tab.
 										<span key={row.uma.id} className="inline-block" {...hoverCardProps("uma", row.uma.id)}>
 											<FramedUma
-												src={row.uma.portrait ?? row.uma.image}
+												src={row.uma.portrait ?? row.uma.image} layers={row.uma.portrait_layers}
 												alt=""
 												title={row.uma.name}
 												oshi={oshiIds.has(row.uma.id)}

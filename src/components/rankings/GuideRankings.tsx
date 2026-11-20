@@ -253,7 +253,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 		return (
 			<RankRow
 				place={index + 1}
-				art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? oshiIds.has(uma.id) : false} className="w-12" />}
+				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-12" />}
 				name={uma?.name ?? "Unknown uma"}
 				movement={moves.get(rank.uma)}
 				fill={fillOf(rank.picks)}
@@ -270,7 +270,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 					const uma = umasById.get(rank.uma)
 					return {
 						key: rank.uma,
-						art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? oshiIds.has(uma.id) : false} className="w-16" />,
+						art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-16" />,
 						name: uma?.name ?? "Unknown uma",
 						count: plural(rank.picks, "pick"),
 						share: formatShare(rank.share),
@@ -624,7 +624,7 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 							</li>
 						) : (
 							<li key={`uma-${entry.uma.id}`} className="flex items-center gap-2.5" {...hoverCardProps("uma", entry.uma.id)}>
-								<FramedUma src={entry.uma.portrait ?? entry.uma.image} oshi={oshiIds.has(entry.uma.id)} className="w-10" />
+								<FramedUma src={entry.uma.portrait ?? entry.uma.image} layers={entry.uma.portrait_layers} oshi={oshiIds.has(entry.uma.id)} className="w-10" />
 								<span className="flex min-w-0 flex-col gap-0.5">
 									<EncyclopediaName href={hrefs.uma(entry.uma.id)} name={entry.uma.name} className={RESULT_NAME} />
 									<span className="text-[11px] tabular-nums text-gray-400">

@@ -11,6 +11,7 @@
  */
 
 import type { AptitudeKey } from "./pvpTeam"
+import type { PortraitLayers } from "./portraitLayers"
 
 /** A running style as a guide uses it. "everyone" is the whole team. */
 export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end"
@@ -32,6 +33,8 @@ export interface PvpUmaRef {
 	image: string | null
 	/** The borderless art, drawn in the site's frame (FramedUma). Optional for older fixtures. */
 	portrait?: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	/**
 	 * Its ten aptitudes, 1..8 (G..S) or null, as /pvp-catalogue sends them: the
 	 * guide prints this course's distance and the row's style as letters.
