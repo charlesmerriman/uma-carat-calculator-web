@@ -27,7 +27,6 @@ import {
 	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag, Page,
 } from "../encyclopedia/pieces"
 import { SkillList, UnlockConditions } from "../encyclopedia/skillRows"
-import { usePageTitle } from "../encyclopedia/usePageTitle"
 import { FramedCard } from "../FramedCard"
 import { FramedUma } from "../FramedUma"
 import { ScalingPopover } from "./ScalingPopover"
@@ -348,8 +347,8 @@ export const SkillPage = () => (
 
 const SkillPageBody = () => {
 	const gameId = parseGameId(useParams().gameId)
+	// Its title and description are AppRouteMeta's, from the same cache entry.
 	const page = useSkillPage(gameId)
-	usePageTitle(page.data?.name)
 
 	if (gameId === null || page.data === null) return <NotFound />
 	if (page.isError) return <EmptyNote>The skill didn't load. Reload to try again.</EmptyNote>

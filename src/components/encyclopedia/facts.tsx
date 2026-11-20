@@ -116,12 +116,26 @@ export function StatsSection({ id, stars, growth, initialStar }: {
  * banner, and "Global release" from the first banner's date, with the site's
  * badge when that date is predicted. A card on no banner shows its own Global
  * date. Only what is known: null when neither is.
+ *
+ * `pending` while /calculator-data is still loading: both facts are drawn
+ * with a blank bar for a value, so the dates landing don't push the page down
+ * (on a phone the facts are a row under the name). A built document carries
+ * this state too, because a build-time render has no calculator data.
  */
-export function ReleaseFacts({ jpDate, globalDate, predicted }: {
+export function ReleaseFacts({ jpDate, globalDate, predicted, pending = false }: {
 	jpDate: string | null
 	globalDate: string | null
 	predicted: boolean
+	pending?: boolean
 }) {
+	if (pending) {
+		return (
+			<>
+				<Fact label="JP release"><PendingValue /></Fact>
+				<Fact label="Global release"><PendingValue /></Fact>
+			</>
+		)
+	}
 	if (!jpDate && !globalDate) return null
 	return (
 		<>
@@ -134,6 +148,11 @@ export function ReleaseFacts({ jpDate, globalDate, predicted }: {
 			)}
 		</>
 	)
+}
+
+/** A fact's value still on its way: a blank bar one line tall (the no-break space gives it the line's height). */
+function PendingValue() {
+	return <span className="enc-skeleton inline-block w-28 rounded-md" aria-hidden="true">{" "}</span>
 }
 
 /** How many of a banner's other faces a row draws before it says "and N more". */

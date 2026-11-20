@@ -2652,9 +2652,20 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   back-to-top arrow, and the API routes are public. **Search engines:** the three lists are
   in `PRERENDER_ROUTES` and the sitemap like every tab (the app shell and its head tags at
   build time; their titles name the Encyclopedia because the head is all a crawler reads of
-  them). A detail page is still `noindex`, with a generic title until its data lands
-  (`usePageTitle`): the 3,000 of them become real documents in
-  `notes/encyclopedia-open-plan.md`'s PRs 3 and 4, and the tag stays until then.
+  them). A detail page is still `noindex` until `notes/encyclopedia-open-plan.md`'s PR 4
+  writes the 3,000 of them as real documents (`DETAIL_PAGES_INDEXED` in `AppRouteMeta`).
+- **Renders without a browser** (PR 3): a detail page sits OUTSIDE the `/app` loading gate
+  (`AppShell`'s `ungated`, from `encyclopediaPageOf`), so it draws from its own payload
+  without waiting for `/calculator-data`. Its banners and the hero's dates draw when that
+  lands; until then `ReleaseFacts pending` holds the dates' place with blank bars, so the
+  page doesn't jump. Its title and description are `AppRouteMeta`'s, built from the same
+  cache entry by `utils/encyclopediaMeta.ts` (no UmaTL text in a description: a snippet
+  can't carry the credit). `entry-server.ts` `render(url, content, pageData)` primes a
+  fresh query client (`primeEncyclopediaPage`, through `PrimedQueryClientContext`), so the
+  build renders the page itself. Render-time code on these pages follows the outside-the-gate
+  rule: no `window`, `document`, `localStorage` or clock. `entryServer.test.tsx` and
+  `hydration.test.tsx` render and hydrate the committed sample
+  (`src/content/encyclopedia-sample.json`, refreshed by `npm run content:pull`).
 - **Data**: the lists read `/pvp-catalogue` (`usePvpCatalogue`); a page reads
   `GET /encyclopedia/<kind>/<id>` through TanStack Query (`services/encyclopediaQueries.ts`). The
   API sends no dates: banners and release dates come from `/calculator-data`
