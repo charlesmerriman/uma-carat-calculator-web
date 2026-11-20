@@ -124,6 +124,29 @@ const CATEGORY_CHROME: Partial<Record<BannerCategory, CategoryChrome>> = {
 const COLUMN_TILE_CAPACITY = 2
 
 /**
+ * THE SUPPORT CAP IS 0.875 OF THE UMA CAP, SO THE TWO PANELS' TILES ARE THE
+ * SAME HEIGHT.
+ *
+ * A layered uma tile is 7/6 of its width tall (the square portrait plus the
+ * ear strip, a sixth); a card is 4/3. Equal heights need card = uma × 7/8:
+ *
+ *                 uma cap   card cap   art height, both
+ *   xl            10rem     8.75rem    ~187px
+ *   2xl           13.5rem   11.75rem   ~252px (card 11.8125 rounded down)
+ *
+ * The old caps (7.75 / 9.5rem) were ~25px shorter than a cell, so the slack
+ * showed as a wide gutter between the two cards, and the card panel, ~40px
+ * shorter than the uma panel beside it, centred its tiles and left a gap above
+ * its button. The panels split their width 0.88 : 0.78 (0.886), close enough
+ * to 7/8 that when both tiles fill their cells instead of hitting the cap,
+ * the heights still land within a few pixels.
+ *
+ * Column layout only: a band keeps the old caps (bandTileWidthClass), so a
+ * full-width row of cards doesn't grow.
+ */
+const SUPPORT_COLUMN_TILE_WIDTH = "max-w-[8.75rem] 2xl:max-w-[11.75rem]"
+
+/**
  * A BAND IS ONE LINE AT EVERY WIDTH. Nothing about it is breakpoint-driven.
  *
  * The first attempt built the line out of `xl:grid-cols-${n}` classes, which
@@ -519,7 +542,10 @@ function FeaturedTile({
 				linked={href !== null}
 				overlayId={overlayId}
 			/>
-			<div className={`flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2 ${framed ? "rounded-b-lg" : ""}`}>
+			{/* No minimum height: it used to reserve two lines (min-h-16) so
+			    neighbours matched, which left a one-line name floating in empty
+			    space. The grid's items-stretch keeps neighbours level now. */}
+			<div className={`flex flex-1 items-center justify-center bg-gray-700 p-2 ${framed ? "rounded-b-lg" : ""}`}>
 				<div
 					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
 				>
@@ -594,8 +620,13 @@ type FeaturePanelProps = {
 	/** Uma tiles: drawn in the site's frame (FramedUma). Support art keeps its own. */
 	framed?: boolean
 	emptyText: string
-	/** Widest a tile grows to. Uma art is portrait and wider; support art is smaller. */
+	/**
+	 * Widest a tile grows to in the two-across column. The two panels' caps are
+	 * paired, see SUPPORT_COLUMN_TILE_WIDTH.
+	 */
 	tileWidthClass: string
+	/** Widest a tile grows to in a band. Defaults to `tileWidthClass`. */
+	bandTileWidthClass?: string
 	/**
 	 * The tile art's intrinsic ratio, reserved before the image loads. Uma
 	 * portraits are square (360×360) and support cards are 3:4 (450×600),
@@ -642,6 +673,7 @@ function FeaturePanel({
 	framed = false,
 	emptyText,
 	tileWidthClass,
+	bandTileWidthClass = tileWidthClass,
 	tileAspectClass,
 	bandMinWidthClass,
 	layout = "column",
@@ -680,7 +712,7 @@ function FeaturePanel({
 				item={item}
 				href={item.game_id ? pageHref(item.game_id) : null}
 				tileAspectClass={tileAspectClass}
-				tileWidthClass={tileWidthClass}
+				tileWidthClass={isBand ? bandTileWidthClass : tileWidthClass}
 				nameClass={nameClass}
 				framed={framed}
 				oshi={framed && oshiIds.has(item.id)}
@@ -813,7 +845,10 @@ function FeaturePanel({
 						</div>
 					) : (
 						<div
-							className={`grid flex-1 content-center items-center gap-1.5 ${
+							// items-stretch: the two tiles in a row share its height, so a
+							// one-line name beside a two-line one still ends level (the
+							// name block takes up the difference).
+							className={`grid flex-1 content-center items-stretch gap-1.5 ${
 								items.length === 1 ? "grid-cols-1" : "grid-cols-2"
 							}`}
 						>
@@ -979,7 +1014,8 @@ function BannerSection({
 			pageHref={cardHref}
 			hasBanner={!!supportBanner}
 			emptyText="No Support Banner"
-			tileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
+			tileWidthClass={SUPPORT_COLUMN_TILE_WIDTH}
+			bandTileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
 			tileAspectClass="aspect-[3/4]"
 			// A race-prep batch's ten cards fit unscrolled from about 1050px up.
 			// The launch banner's twenty scroll on any realistic screen, which is
