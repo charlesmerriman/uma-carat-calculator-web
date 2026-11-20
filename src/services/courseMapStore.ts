@@ -16,6 +16,7 @@
 import { useSyncExternalStore } from "react"
 import type { RaceCourse } from "../types"
 import type { MemberStyle } from "../types/pvpTeam"
+import type { PortraitLayers } from "../types/portraitLayers"
 
 export interface CourseFocus {
 	skillId: number
@@ -23,7 +24,7 @@ export interface CourseFocus {
 	/** The skill's picture, for the verdict card (whoever lights it has it). */
 	image?: string | null
 	/** Whose unique it is, or whose unique it is inherited from (the accels column knows). */
-	owner?: { name: string; portrait: string | null; inherited: boolean }
+	owner?: { name: string; portrait: string | null; portrait_layers?: PortraitLayers | null; inherited: boolean }
 }
 
 export interface CourseLayers {

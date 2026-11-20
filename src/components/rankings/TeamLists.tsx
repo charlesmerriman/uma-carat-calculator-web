@@ -63,7 +63,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 				return (
 					<RankRow
 						place={index + 1}
-						art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-12" />}
+						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-12" />}
 						name={uma?.name ?? "Unknown uma"}
 						movement={moves?.get(row.uma)}
 						sub={sub?.(row.uma)}
@@ -145,7 +145,7 @@ export function TrioList({ trios, catalogue }: {
 							<span className="w-4 shrink-0 text-right font-mono text-xs tabular-nums text-gray-400">{index + 1}</span>
 							<span className="flex shrink-0 gap-1">
 								{umas.map((uma) => {
-									const face = <FramedUma key={uma.id} src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-9" />
+									const face = <FramedUma key={uma.id} src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-9" />
 									const page = hrefs.uma(uma.id)
 									// Each face opens her card; the names beside them stay text.
 									return page ? (

@@ -30,6 +30,7 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { OpenPageLink } from "../EncyclopediaLinks"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 /** One button in a pick's action row. A disabled one says why. */
 export interface PickButton {
@@ -108,7 +109,7 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							umaDrag: draggable ? { umaId: pick.ref.id, style: memberStyleFrom(pick.styles) } : undefined,
 							name: pick.ref.name,
 							image: pick.ref.image,
-							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image },
+							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image, portrait_layers: pick.ref.portrait_layers },
 							card: null,
 							detail: describe(pick.styles, pick.notes),
 							stars: pick.stars,
@@ -174,7 +175,7 @@ interface PickItem {
 	name: string
 	image: string | null
 	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
-	uma: { id: number; portrait: string | null } | null
+	uma: { id: number; portrait: string | null; portrait_layers?: PortraitLayers | null } | null
 	/** Set for a support card: drawn as the game draws it (FramedCard). */
 	card: FramedCardArt | null
 	detail: string
@@ -201,7 +202,8 @@ function PickGrid({ items, shape, openKey, onToggle, onDone }: {
 	// The last tile of the open pick's row (or of the list, on a short last row).
 	const rowEnd = openIndex < 0 ? -1 : Math.min(Math.floor(openIndex / COLUMNS) * COLUMNS + COLUMNS - 1, items.length - 1)
 	return (
-		<ul className="grid grid-cols-4 gap-1.5">
+		// gap-y-3.5 for umas: a row's layered ears (a sixth of the tile, FramedUma) rise into the gap.
+		<ul className={`grid grid-cols-4 gap-x-1.5 ${shape === "square" ? "gap-y-3.5" : "gap-y-1.5"}`}>
 			{items.map((item, index) => (
 				<Fragment key={item.key}>
 					<PickTile item={item} shape={shape} open={item.key === openKey} onClick={() => onToggle(item.key)} />
@@ -247,7 +249,7 @@ function PickTile({ item, shape, open, onClick }: {
 						}
 					>
 						{item.uma ? (
-							<FramedUma src={item.uma.portrait} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
+							<FramedUma src={item.uma.portrait} layers={item.uma.portrait_layers} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
 						) : item.card ? (
 							<FramedCard card={item.card} alt={item.name} className="w-full" />
 						) : item.image ? (

@@ -116,12 +116,26 @@ export function StatsSection({ id, stars, growth, initialStar }: {
  * banner, and "Global release" from the first banner's date, with the site's
  * badge when that date is predicted. A card on no banner shows its own Global
  * date. Only what is known: null when neither is.
+ *
+ * `pending` while /calculator-data is still loading: both facts are drawn
+ * with a blank bar for a value, so the dates landing don't push the page down
+ * (on a phone the facts are a row under the name). A built document carries
+ * this state too, because a build-time render has no calculator data.
  */
-export function ReleaseFacts({ jpDate, globalDate, predicted }: {
+export function ReleaseFacts({ jpDate, globalDate, predicted, pending = false }: {
 	jpDate: string | null
 	globalDate: string | null
 	predicted: boolean
+	pending?: boolean
 }) {
+	if (pending) {
+		return (
+			<>
+				<Fact label="JP release"><PendingValue /></Fact>
+				<Fact label="Global release"><PendingValue /></Fact>
+			</>
+		)
+	}
 	if (!jpDate && !globalDate) return null
 	return (
 		<>
@@ -134,6 +148,11 @@ export function ReleaseFacts({ jpDate, globalDate, predicted }: {
 			)}
 		</>
 	)
+}
+
+/** A fact's value still on its way: a blank bar one line tall (the no-break space gives it the line's height). */
+function PendingValue() {
+	return <span className="enc-skeleton inline-block w-28 rounded-md" aria-hidden="true">{" "}</span>
 }
 
 /** How many of a banner's other faces a row draws before it says "and N more". */
@@ -166,7 +185,7 @@ export function BannerLinks({ banners }: { banners: BannerLink[] }) {
 									<span className="enc-banner__with">
 										With
 										{faces.map((face) => (banner.kind === "uma"
-											? <FramedUma key={face.id} src={face.art} oshi={oshiIds.has(face.id)} alt={face.name} className="enc-banner__face" />
+											? <FramedUma key={face.id} src={face.art} layers={face.layers} oshi={oshiIds.has(face.id)} alt={face.name} className="enc-banner__face" />
 											: face.art && <img key={face.id} src={face.art} alt={face.name} className="enc-banner__face enc-banner__face--card" loading="lazy" decoding="async" />
 										))}
 										{more > 0 && <span>and {more} more</span>}
@@ -196,7 +215,7 @@ export function OutfitList({ outfits }: { outfits: PageOutfit[] }) {
 			{outfits.map((outfit) => (
 				<li key={outfit.game_id}>
 					<Link to={umaHref(outfit.game_id)} className="enc-pic">
-						<FramedUma src={outfit.portrait} oshi={oshiIds.has(outfit.id)} className="enc-pic__art" />
+						<FramedUma src={outfit.portrait} layers={outfit.portrait_layers} oshi={oshiIds.has(outfit.id)} className="enc-pic__art" />
 						<span className="enc-pic__name">{outfit.name}</span>
 						{outfit.title && <span className="enc-pic__sub">{outfit.title}</span>}
 						{!outfit.on_global && <JpTag />}

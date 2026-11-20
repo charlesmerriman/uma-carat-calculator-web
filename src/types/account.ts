@@ -1,3 +1,4 @@
+import type { PortraitLayers } from "./portraitLayers"
 /**
  * Types for GET /account — the signed-in user's identity and entitlement.
  *
@@ -33,6 +34,8 @@ export interface Oshi {
 	name: string
 	/** The storage URL of the uma's art, or "" if an editor has since cleared it. */
 	image: string
+	/** The same uma's layered art, or null: the favorites card frames her. */
+	layers?: PortraitLayers | null
 }
 
 /**
@@ -87,6 +90,8 @@ export interface Account {
 	 * provider picture is ever held or served.
 	 */
 	avatar_url: string | null
+	/** The picture's layered art, or null; drawn only where it is framed. */
+	avatar_layers?: PortraitLayers | null
 	/** Every favorite they hold, first to last. Empty until they pick one. */
 	oshis: Oshi[]
 	/**
@@ -163,6 +168,8 @@ export interface OshiOption {
 	id: number
 	name: string
 	image: string
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	is_variant: boolean
 }
 

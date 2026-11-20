@@ -74,4 +74,36 @@ describe("an owner-named exception", () => {
 		expect(container.firstElementChild).not.toHaveAttribute("data-oshi")
 		expect(screen.getByRole("img", { name: "Oguri Cap" })).toHaveAttribute("src", "p.png")
 	})
+
+	it("keeps the borderless art even when the uma has layered art", () => {
+		const { container } = render(<FramedUma src="p.png" layers={LAYERS} alt="Oguri Cap" frame={false} />)
+		expect(container.firstElementChild).not.toHaveClass("uma-frame--layered")
+		expect(container.querySelectorAll("img")).toHaveLength(1)
+		expect(screen.getByRole("img", { name: "Oguri Cap" })).toHaveAttribute("src", "p.png")
+	})
+})
+
+const LAYERS = { base: "base.webp", foreground: "fg.webp" }
+
+describe("layered art", () => {
+	it("draws the base, then the foreground over the frame, in place of the portrait", () => {
+		const { container } = render(<FramedUma src="p.png" layers={LAYERS} alt="Oguri Cap" oshi />)
+		const frame = container.firstElementChild
+		expect(frame).toHaveClass("uma-frame", "uma-frame--layered")
+		expect(frame).toHaveAttribute("data-oshi")
+		const [base, over] = container.querySelectorAll("img")
+		expect(base).toHaveAttribute("src", "base.webp")
+		expect(over).toHaveAttribute("src", "fg.webp")
+		expect(over).toHaveClass("uma-frame__over")
+		// One picture to a screen reader: the base carries the name, the foreground is decoration.
+		expect(screen.getAllByRole("img", { name: "Oguri Cap" })).toHaveLength(1)
+		expect(over).toHaveAttribute("aria-hidden", "true")
+	})
+
+	it("draws the portrait as before when the uma has no layered art", () => {
+		const { container } = render(<FramedUma src="p.png" layers={null} alt="Oguri Cap" />)
+		expect(container.firstElementChild).not.toHaveClass("uma-frame--layered")
+		expect(container.querySelectorAll("img")).toHaveLength(1)
+		expect(screen.getByRole("img", { name: "Oguri Cap" })).toHaveAttribute("src", "p.png")
+	})
 })

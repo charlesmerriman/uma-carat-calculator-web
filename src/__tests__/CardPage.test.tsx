@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
+import { CalculatorContext } from "../services/CalculatorContext"
+import type { CalculatorContextType } from "../types"
 import { CardPage } from "../components/encyclopedia/CardPage"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { CardPageData, PageSkill } from "../types/encyclopedia"
@@ -25,17 +27,19 @@ const CARD: CardPageData = {
 
 const fetchMock = vi.fn()
 
-function renderAt(path: string) {
+function renderAt(path: string, calculator?: CalculatorContextType) {
 	const auth = { isLoggedIn: true, status: "ready", account: { early_access: true, oshi_uma_ids: [] } } as unknown as AuthContextType
 	return render(
 		<AuthContext.Provider value={auth}>
-			<TestQueryProvider>
-				<MemoryRouter initialEntries={[path]}>
-					<Routes>
-						<Route path="/app/cards/:gameId" element={<CardPage />} />
-					</Routes>
-				</MemoryRouter>
-			</TestQueryProvider>
+			<CalculatorContext.Provider value={calculator}>
+				<TestQueryProvider>
+					<MemoryRouter initialEntries={[path]}>
+						<Routes>
+							<Route path="/app/cards/:gameId" element={<CardPage />} />
+						</Routes>
+					</MemoryRouter>
+				</TestQueryProvider>
+			</CalculatorContext.Provider>
 		</AuthContext.Provider>
 	)
 }
@@ -65,6 +69,18 @@ describe("CardPage", () => {
 	it("dates a card on no banner by the game's own Global date", async () => {
 		renderAt("/app/cards/30001")
 		expect(await screen.findByText(/^Global /)).toBeInTheDocument()
+	})
+
+	it("draws before the calculator data lands, holding both dates' place", async () => {
+		// Not even its own Global date yet: the banner's date wins once it lands,
+		// so showing one and then the other would change under the reader.
+		const loading = { isLoading: true, umaBannerData: [], supportBannerData: [] } as unknown as CalculatorContextType
+		renderAt("/app/cards/30001", loading)
+		expect(await screen.findByRole("heading", { level: 1, name: "Special Week" })).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: /Corner Adept/ })).toBeInTheDocument()
+		expect(screen.getByText("JP release")).toBeInTheDocument()
+		expect(screen.getByText("Global release")).toBeInTheDocument()
+		expect(screen.queryByText(/2025/)).toBeNull()
 	})
 
 	it("credits UmaTL only when the page shows its text", async () => {

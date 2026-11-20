@@ -16,7 +16,10 @@
 User-agent: *
 Allow: /
 
-# NOTE: absolute URL required by the sitemap spec, so this line does not survive
-# a domain move. Update it together with public/sitemap.xml and the og:url /
+# NOTE: absolute URL required by the sitemap spec, so these lines do not survive
+# a domain move. Update them together with public/sitemap.xml and the og:url /
 # og:image / twitter:image tags in index.html.
 Sitemap: https://umacaratcalculator.com/sitemap.xml
+# Every Encyclopedia uma, support card and skill page, written by the build from
+# the API's index (scripts/prerender.mjs), so it lists exactly the pages built.
+Sitemap: https://umacaratcalculator.com/sitemap-encyclopedia.xml

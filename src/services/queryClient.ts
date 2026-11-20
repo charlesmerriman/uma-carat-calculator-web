@@ -17,7 +17,18 @@
  * is a choice to make per feature, not a rule.
  */
 
+import { createContext } from "react"
 import { QueryClient } from "@tanstack/react-query"
+
+/**
+ * A client the caller made and filled before the first render, for
+ * QueryProvider to use in place of a fresh one. The build-time render
+ * (entry-server.ts) puts an Encyclopedia page's payload in it, so the page
+ * draws itself instead of a skeleton; the browser (main.tsx) does the same with
+ * the copy a prerendered document carries, so hydration sees the same markup.
+ * Null everywhere else, which is the normal case.
+ */
+export const PrimedQueryClientContext = createContext<QueryClient | null>(null)
 
 /**
  * A failed request, with the status the server answered. `message` is the

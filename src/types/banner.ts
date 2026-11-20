@@ -8,6 +8,7 @@
  */
 
 import type { AttachedAnniversaryEvent } from "./anniversary"
+import type { PortraitLayers } from "./portraitLayers"
 
 /**
  * What kind of banner window a BannerTimeline is — the backend's
@@ -81,6 +82,8 @@ export interface Uma extends JpDated {
 	 * before it existed: the API always sends it.
 	 */
 	portrait?: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	admin_comments: string
 	recommendation: string
 	/**

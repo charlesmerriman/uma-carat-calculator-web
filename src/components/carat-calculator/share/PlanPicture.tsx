@@ -14,6 +14,7 @@ import { Wordmark } from "../../Wordmark"
 import { Avatar } from "../../account/Avatar"
 import { BannerArt } from "../BannerArt"
 import { BannerTypeChip } from "../BannerTypeBadge"
+import type { PortraitLayers } from "../../../types/portraitLayers"
 
 /**
  * The pull plan as a picture, made to be posted (notes/share-plan-image-plan.md).
@@ -50,6 +51,7 @@ export function PlanPicture({
 	userStepUpSelectionData,
 	ownerName,
 	ownerPicture,
+	ownerPictureLayers = null,
 	hideSpend,
 	now,
 }: {
@@ -64,6 +66,8 @@ export function PlanPicture({
 	/** The account's picture (its first favorite uma), shown beside the name
 	 *  under the same box. The player's own favorite, so the rainbow frame. */
 	ownerPicture: string | null
+	/** The same picture's layered art (FramedUma `layers`). */
+	ownerPictureLayers?: PortraitLayers | null
 	/** Blanks the paid carat figures, for players who'd rather not show spend. */
 	hideSpend: boolean
 	now: Date
@@ -112,7 +116,7 @@ export function PlanPicture({
 			<header className="relative px-10 pt-9 pb-8">
 				<div className="flex items-start justify-between gap-8">
 					<div className="flex min-w-0 items-center gap-4">
-						{ownerPicture && <Avatar src={ownerPicture} size="lg" oshi />}
+						{ownerPicture && <Avatar src={ownerPicture} layers={ownerPictureLayers} size="lg" oshi />}
 						<div className="min-w-0">
 							<h2 className="font-display text-[2.625rem] leading-[1.1] font-bold tracking-tight text-gray-50">
 								{ownerName ? `${ownerName}'s pull plan` : "My pull plan"}

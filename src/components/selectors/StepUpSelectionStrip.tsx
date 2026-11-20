@@ -89,11 +89,11 @@ const StepUpRow = ({
 			<span
 				className={`flex ${
 					isUma ? "h-12 w-12" : "h-12 w-9"
-				} shrink-0 items-center justify-center overflow-hidden rounded border border-gray-600 bg-gray-900/50`}
+				} shrink-0 items-center justify-center ${guaranteed?.uma ? "" : "overflow-hidden"} rounded border border-gray-600 bg-gray-900/50`}
 			>
 				{guaranteed?.uma ? (
 					<FramedUma
-						src={guaranteed.uma.portrait ?? guaranteed.image}
+						src={guaranteed.uma.portrait ?? guaranteed.image} layers={guaranteed.uma.portrait_layers}
 						oshi={oshiIds.has(guaranteed.uma.id)}
 						className="h-full"
 					/>

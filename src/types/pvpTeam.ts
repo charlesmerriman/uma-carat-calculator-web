@@ -9,6 +9,7 @@
 import type { SkillAvailability } from "./pvpGuide"
 import type { PvpEventKind } from "../utils/pvpEvent"
 import type { PvpStyle } from "./pvpGuide"
+import type { PortraitLayers } from "./portraitLayers"
 
 // ── The catalogue ────────────────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ export interface CatalogueUma {
 	image: string | null
 	/** The borderless art when there is one, else the bordered art. */
 	portrait: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	/** The outfit's title: Global's or an editor's, else UmaTL's. Search matches it. Absent from an older API. */
 	title?: string
 	rarity: number | null

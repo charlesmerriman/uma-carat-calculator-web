@@ -24,10 +24,11 @@ import { statRow } from "../../utils/hoverCards"
 import { STAT_ICON_PATHS } from "../../utils/statIcons"
 import { APTITUDE_GROUPS, STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
 import { CardFoot, CardHead, ChipRow, Label, Loading } from "./parts"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 export interface UmaHoverCardProps {
 	/** The catalogue's entry: draws the header before the page arrives. */
-	uma: { id: number; name: string; portrait: string | null; image: string | null }
+	uma: { id: number; name: string; portrait: string | null; portrait_layers?: PortraitLayers | null; image: string | null }
 	/** Her page (GET /encyclopedia/umas/<game_id>); undefined while loading, null when there is none. */
 	page: UmaPageData | null | undefined
 	/** Her page's address, or null to draw no link (links off, or no page). */
@@ -56,7 +57,7 @@ export function UmaHoverCard({ uma, page, href, ring = [], ownedStars = null, li
 				name={name}
 				meta={meta}
 				style={colourStyle(page?.colours)}
-				art={<FramedUma src={page?.portrait ?? uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-full" />}
+				art={<FramedUma src={page?.portrait ?? uma.portrait ?? uma.image} layers={page ? page.portrait_layers : uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-full" />}
 			/>
 			{top && <div className="skill-card__note">{top}</div>}
 			{page === undefined ? (

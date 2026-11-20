@@ -31,7 +31,6 @@ import { CardEffects } from "./CardEffects"
 import { SkillList } from "./skillRows"
 import { PAGE_CONTAINER, limitBreakWords } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
-import { usePageTitle } from "./usePageTitle"
 
 export const CardPage = () => (
 	<EncyclopediaFrame>
@@ -43,10 +42,9 @@ export const CardPage = () => (
 
 const CardPageBody = () => {
 	const gameId = parseGameId(useParams().gameId)
+	// Its title and description are AppRouteMeta's, from the same cache entry
+	// (utils/encyclopediaMeta.ts).
 	const page = useCardPage(gameId)
-	// The character first: a tab cuts the end off, and the titles are long and niche
-	// (Daptrius, board "Support Card Tab Title", 2026-11-17).
-	usePageTitle(page.data ? `${page.data.name} ${page.data.title}`.trim() : null)
 
 	if (gameId === null || page.data === null) return <NotFound />
 	if (page.isError) return <EmptyNote>This page didn't load. Reload to try again.</EmptyNote>
@@ -55,7 +53,11 @@ const CardPageBody = () => {
 }
 
 export function CardDetail({ card }: { card: CardPageData }) {
+	// The banners and the hero's dates come from /calculator-data, which this
+	// page doesn't wait for (it renders outside the /app loading gate). They
+	// draw once it lands; until then the dates hold their place.
 	const calculator = useCalculatorDataSafe()
+	const datesPending = calculator?.isLoading ?? false
 	const limitBreak = useOwned().cards.get(card.id)
 	const releases = cardReleases(calculator?.supportBannerData ?? [], card.id)
 	const isGroup = card.card_type === "group"
@@ -102,6 +104,7 @@ export function CardDetail({ card }: { card: CardPageData }) {
 				owned={limitBreak !== undefined && <OwnedLine tab="cards" detail={limitBreakWords(limitBreak)} />}
 				facts={
 					<ReleaseFacts
+						pending={datesPending}
 						jpDate={releases.jpDate}
 						globalDate={globalDate}
 						predicted={releases.globalDate !== null && releases.predicted}

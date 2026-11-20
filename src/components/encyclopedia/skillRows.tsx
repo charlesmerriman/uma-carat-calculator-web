@@ -160,7 +160,7 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, ful
 						{discounted ? hintedCost(skill.cost, hintLevel) : skill.cost} <small>SP</small>
 					</span>
 				)}
-				{owner && <FramedUma src={owner.portrait} oshi={oshiIds.has(owner.id)} className="enc-skill__face" />}
+				{owner && <FramedUma src={owner.portrait} layers={owner.portrait_layers} oshi={oshiIds.has(owner.id)} className="enc-skill__face" />}
 			</Link>
 			{popup(<HoverCard skill={skill} wanted={wanted} pinned={pinned} />, "w-80")}
 			{after}

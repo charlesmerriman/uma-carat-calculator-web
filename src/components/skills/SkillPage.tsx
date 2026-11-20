@@ -27,9 +27,9 @@ import {
 	Crumbs, EmptyNote, Fact, Hero, JpTag, NotFound, PageSkeleton, Section, SectionNote, SubHeading, Switch, Tag, WhereTag, Page,
 } from "../encyclopedia/pieces"
 import { SkillList, UnlockConditions } from "../encyclopedia/skillRows"
-import { usePageTitle } from "../encyclopedia/usePageTitle"
 import { FramedCard } from "../FramedCard"
 import { FramedUma } from "../FramedUma"
+import { ScalingPopover } from "./ScalingPopover"
 import { KindPill } from "../pvp/SkillDetail"
 
 /** The hero's wash, by the skill's kind: the game's gold, pink or a unique's violet; the brand otherwise. */
@@ -131,11 +131,27 @@ function HowItWorks({ readable, raw, detailed }: {
 						</HowRow>
 						{slot.effects.length > 0 && (
 							<HowRow label="Does" step="does">
-								{slot.effects.map((phrase, position) => <Clause key={position} phrase={phrase} effect />)}
+								{slot.effects.map((phrase, position) => phrase.scaling ? (
+									// A scaled effect and its button stay together as one line, so
+									// a second effect never lands beside the first one's button.
+									<span key={position} className="enc-scaled">
+										<Clause phrase={phrase} effect />
+										<ScalingPopover scaling={phrase.scaling} title={phrase.text} column="Value" />
+									</span>
+								) : (
+									<Clause key={position} phrase={phrase} effect />
+								))}
 							</HowRow>
 						)}
 						{/* The label already says which; the value is the game's own figure. */}
-						{slot.duration && <HowRow label="Lasts" step="lasts">{slot.duration === "Whole race" ? "The whole race" : slot.duration}</HowRow>}
+						{slot.duration && (
+							<HowRow label="Lasts" step="lasts">
+								{slot.duration === "Whole race" ? "The whole race" : slot.duration}
+								{slot.duration_scaling && (
+									<ScalingPopover scaling={slot.duration_scaling} title={`Lasts ${slot.duration}`} column="Lasts" />
+								)}
+							</HowRow>
+						)}
 						{slot.cooldown && (
 							<HowRow label="Cooldown" step="cooldown">
 								{slot.cooldown === "Once per race" ? slot.cooldown : `Can fire again after ${slot.cooldown}`}
@@ -155,7 +171,7 @@ function OwnerFace({ uma }: { uma: SkillOwnerUma }) {
 	const oshiIds = useOshiIds()
 	const body = (
 		<>
-			<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-owner__art" />
+			<FramedUma src={uma.portrait} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="enc-owner__art" />
 			<span>{uma.name}</span>
 		</>
 	)
@@ -189,7 +205,7 @@ function UmaSources({ rows }: { rows: SkillSourceUma[] }) {
 				{rows.map((row) => {
 					const body = (
 						<>
-							<FramedUma src={row.image} oshi={oshiIds.has(row.id)} className="enc-pic__art" />
+							<FramedUma src={row.image} layers={row.portrait_layers} oshi={oshiIds.has(row.id)} className="enc-pic__art" />
 							<span className="enc-pic__name">{row.name}</span>
 							<span className="enc-pic__sub">{umaHow(row)}</span>
 							{!row.on_global && <JpTag />}
@@ -331,8 +347,8 @@ export const SkillPage = () => (
 
 const SkillPageBody = () => {
 	const gameId = parseGameId(useParams().gameId)
+	// Its title and description are AppRouteMeta's, from the same cache entry.
 	const page = useSkillPage(gameId)
-	usePageTitle(page.data?.name)
 
 	if (gameId === null || page.data === null) return <NotFound />
 	if (page.isError) return <EmptyNote>The skill didn't load. Reload to try again.</EmptyNote>

@@ -129,7 +129,7 @@ export function texts(document: GuideDocument): Array<[string, string]> {
 // ── Hydration: the document as the reader draws it ──────────────────────────
 
 function umaRef(uma: CatalogueUma): PvpUmaRef {
-	return { id: uma.id, name: uma.name, image: uma.image, portrait: uma.portrait, apt: uma.apt }
+	return { id: uma.id, name: uma.name, image: uma.image, portrait: uma.portrait, portrait_layers: uma.portrait_layers, apt: uma.apt }
 }
 
 function cardRef(card: CatalogueSupportCard): PvpSupportCardRef {

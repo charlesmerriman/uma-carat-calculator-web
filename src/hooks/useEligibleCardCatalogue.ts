@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { isCardEligible, isCardSelectable } from "../utils/selectorTickets"
 import type { BannerUma, BannerSupport, Uma, SupportCard } from "../types"
+import type { PortraitLayers } from "../types/portraitLayers"
 
 /** One selectable card, flattened out of the banner catalogues. */
 export interface EligibleCard {
@@ -13,6 +14,8 @@ export interface EligibleCard {
 	 * a support card, which keeps its own art.
 	 */
 	portrait: string | null
+	/** The uma's layered art (FramedUma `layers`); null for a support card. */
+	portrait_layers: PortraitLayers | null
 	/** First JP banner date — the ordering key, and what eligibility is judged on. */
 	firstJpDate: string | null
 }
@@ -102,7 +105,8 @@ export function buildEligibleCardCatalogue({
 
 	const addEligibleCards = <Card extends Uma | SupportCard>(
 		cards: Card[],
-		portraitOf: (card: Card) => string | null
+		portraitOf: (card: Card) => string | null,
+		layersOf: (card: Card) => PortraitLayers | null = () => null
 	): void => {
 		for (const card of cards) {
 			if (seen.has(card.id)) continue
@@ -115,6 +119,7 @@ export function buildEligibleCardCatalogue({
 				label: card.name,
 				image: card.image,
 				portrait: portraitOf(card),
+				portrait_layers: layersOf(card),
 				firstJpDate: card.first_jp_date,
 			})
 		}
@@ -123,7 +128,7 @@ export function buildEligibleCardCatalogue({
 	if (pool === "uma") {
 		for (const banner of umaBannerData) {
 			if (!isGachaBanner(banner.name)) continue
-			addEligibleCards(banner.umas, (uma) => uma.portrait ?? uma.image)
+			addEligibleCards(banner.umas, (uma) => uma.portrait ?? uma.image, (uma) => uma.portrait_layers ?? null)
 		}
 	} else {
 		for (const banner of supportBannerData) {

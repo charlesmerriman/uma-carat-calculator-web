@@ -47,7 +47,8 @@ export function CompactTeamGrid({
 
 	return (
 		<div className="flex flex-col gap-3" aria-label="Your team">
-			<ul className="grid grid-cols-3 gap-2" aria-label="Umas">
+			{/* mt-1.5: a layered uma's ears (a sixth of the tile, FramedUma) clear the dates line above. */}
+			<ul className="mt-1.5 grid grid-cols-3 gap-2" aria-label="Umas">
 				{POSITIONS.map((position) => {
 					const member = memberAt(members, position)
 					const uma = member ? umasById.get(member.uma) : undefined
@@ -68,7 +69,7 @@ export function CompactTeamGrid({
 												onClick={() => onPickUma(position)}
 												className="block h-full w-full rounded-[10.75%] outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={favorite} className="w-full" />
+												<FramedUma src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers} oshi={favorite} className="w-full" />
 											</button>
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}

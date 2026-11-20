@@ -20,6 +20,7 @@ import { STAT_KEYS, STAT_LABELS } from "../../utils/trainedUmas"
 import { GOOD_AT, VETERAN_SORTS, umaChoices, type VeteranFilter, type VeteranSort } from "../../utils/veteranList"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import type { TrainedUma } from "../../types/trainedUma"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 const CONTROL =
 	"min-h-9 rounded-lg border border-gray-600 bg-gray-800 px-2.5 text-sm text-gray-100 focus:border-brand focus:outline-none"
@@ -118,6 +119,7 @@ export function VeteranList({ veterans, shown, filter, onFilter, index, oshiIds,
 								veteran={veteran}
 								umaName={umaName(veteran.uma)}
 								portrait={index.umasById.get(veteran.uma)?.portrait ?? null}
+								layers={index.umasById.get(veteran.uma)?.portrait_layers}
 								oshi={oshiIds.has(veteran.uma)}
 								open={veteran.id === openId}
 								onOpen={() => onOpen(veteran)}
@@ -130,10 +132,11 @@ export function VeteranList({ veterans, shown, filter, onFilter, index, oshiIds,
 	)
 }
 
-function VeteranTile({ veteran, umaName, portrait, oshi, open, onOpen }: {
+function VeteranTile({ veteran, umaName, portrait, layers, oshi, open, onOpen }: {
 	veteran: TrainedUma
 	umaName: string
 	portrait: string | null
+	layers?: PortraitLayers | null
 	oshi: boolean
 	open: boolean
 	onOpen: () => void
@@ -153,7 +156,7 @@ function VeteranTile({ veteran, umaName, portrait, oshi, open, onOpen }: {
 		>
 			<span className="flex min-w-0 items-center gap-3">
 				<span className="relative shrink-0">
-					<FramedUma src={portrait} oshi={oshi} alt="" className="w-15" />
+					<FramedUma src={portrait} layers={layers} oshi={oshi} alt="" className="w-15" />
 					{grade && (
 						<GradeBadge
 							grade={grade}

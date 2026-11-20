@@ -2,6 +2,7 @@ import { useState } from "react"
 import type React from "react"
 import { UserRound } from "lucide-react"
 import { FramedUma } from "../FramedUma"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 /**
  * The account's picture, or the quiet default when there is none.
@@ -59,6 +60,8 @@ const FRAME_WIDTHS: Record<AvatarSize, string> = {
 
 interface AvatarProps {
 	src: string | null | undefined
+	/** The same uma's layered art; drawn only when framed (FramedUma). */
+	layers?: PortraitLayers | null
 	size?: AvatarSize
 	/** The picture is the viewer's own favorite: the rainbow frame. */
 	oshi?: boolean
@@ -67,7 +70,7 @@ interface AvatarProps {
 	className?: string
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ src, size = "sm", oshi = false, framed = true, className = "" }) => {
+export const Avatar: React.FC<AvatarProps> = ({ src, layers, size = "sm", oshi = false, framed = true, className = "" }) => {
 	const [failedSrc, setFailedSrc] = useState<string | null>(null)
 	const base = `shrink-0 ${SIZE_CLASSES[size]} ${className}`
 
@@ -75,6 +78,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, size = "sm", oshi = false, 
 		return (
 			<FramedUma
 				src={src}
+				layers={layers}
 				oshi={oshi}
 				frame={framed}
 				onError={() => setFailedSrc(src)}

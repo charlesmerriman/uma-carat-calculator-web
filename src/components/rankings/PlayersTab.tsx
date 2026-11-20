@@ -270,7 +270,7 @@ function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue:
 						className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3"
 						{...(uma ? hoverCardProps("uma", uma.id) : hoverCardProps("card", card?.id))}
 					>
-						{uma ? <FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
+						{uma ? <FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
 						<span className="flex min-w-0 flex-col">
 							<EncyclopediaName
 								href={uma ? hrefs.uma(uma.id) : hrefs.card(card?.id)}

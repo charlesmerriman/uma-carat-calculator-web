@@ -72,7 +72,7 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 					<ul className="flex flex-wrap gap-2">
 						{card.favorites.map((favorite) => (
 							<li key={favorite.uma} {...hoverCardProps("uma", favorite.uma)}>
-								<FramedUma src={favorite.image} oshi={oshiIds.has(favorite.uma)} alt={favorite.label} title={favorite.label} className="w-14" />
+								<FramedUma src={favorite.image} layers={favorite.layers} oshi={oshiIds.has(favorite.uma)} alt={favorite.label} title={favorite.label} className="w-14" />
 							</li>
 						))}
 					</ul>

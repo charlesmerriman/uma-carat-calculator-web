@@ -69,7 +69,7 @@ export function PosterLine({ poster, extra, mine = false, card, avatarClassName 
 	const [cardOpen, setCardOpen] = useState(false)
 	const who = (
 		<>
-			<Avatar src={poster.portrait} size="sm" oshi={mine} className={avatarClassName} />
+			<Avatar src={poster.portrait} layers={poster.portrait_layers} size="sm" oshi={mine} className={avatarClassName} />
 			<span className={`min-w-0 truncate text-sm font-semibold text-gray-100 ${nameClassName}`}>{posterName(poster)}</span>
 		</>
 	)
@@ -106,7 +106,7 @@ export function PosterLine({ poster, extra, mine = false, card, avatarClassName 
  * first) or a /umas entry (`image`, already the borderless cut).
  */
 export function UmaPortrait({ uma, className, frame = true }: {
-	uma: (Pick<CatalogueUma, "id" | "image"> & Partial<Pick<CatalogueUma, "portrait">>) | undefined
+	uma: (Pick<CatalogueUma, "id" | "image"> & Partial<Pick<CatalogueUma, "portrait" | "portrait_layers">>) | undefined
 	className: string
 	/** False only for the owner's named exceptions (the account page's posts list). */
 	frame?: boolean
@@ -115,6 +115,7 @@ export function UmaPortrait({ uma, className, frame = true }: {
 	return (
 		<FramedUma
 			src={uma?.portrait ?? uma?.image}
+			layers={uma?.portrait_layers}
 			oshi={uma !== undefined && oshiIds.has(uma.id)}
 			frame={frame}
 			className={className}

@@ -95,7 +95,7 @@ export function VeteranCard({ veteran, index, byGameId, oshiIds, onBack, onEdit,
 			</div>
 
 			<div className="flex items-start gap-4 px-4 pb-3 pt-4 sm:px-5">
-				<FramedUma src={uma?.portrait ?? null} oshi={oshiIds.has(veteran.uma)} alt="" className="w-20 shrink-0 sm:w-26" />
+				<FramedUma src={uma?.portrait ?? null} layers={uma?.portrait_layers} oshi={oshiIds.has(veteran.uma)} alt="" className="w-20 shrink-0 sm:w-26" />
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
 					<h2 id={`${ids}-name`} className="font-display text-xl font-bold leading-tight text-gray-100 sm:text-2xl">
 						{name}
@@ -404,7 +404,7 @@ function ParentCard({ parent, byGameId, oshiIds }: { parent: Parent; byGameId: G
 	return (
 		<div className={`flex min-w-0 flex-col gap-2 rounded-xl p-2.5 ${INSET}`}>
 			<div className="flex min-w-0 items-center gap-2.5">
-				<FramedUma src={uma?.portrait ?? null} oshi={uma ? oshiIds.has(uma.id) : false} alt="" className="w-11 shrink-0" hover={hoverCardProps("uma", uma?.id)} />
+				<FramedUma src={uma?.portrait ?? null} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} alt="" className="w-11 shrink-0" hover={hoverCardProps("uma", uma?.id)} />
 				<span className="flex min-w-0 flex-col">
 					<span className="truncate text-sm font-semibold text-gray-100">{uma?.name ?? "Unknown uma"}</span>
 					<span className="text-xs text-gray-400">{grade ? `Parent · ${grade}` : "Parent"}</span>
@@ -423,7 +423,7 @@ function ParentCard({ parent, byGameId, oshiIds }: { parent: Parent; byGameId: G
 						const blue = statSpark(grandparent)
 						return (
 							<li key={grandparent.position} className="flex min-w-0 items-center gap-2 text-xs text-gray-300">
-								<FramedUma src={gpUma?.portrait ?? null} oshi={gpUma ? oshiIds.has(gpUma.id) : false} alt="" className="w-6.5 shrink-0" hover={hoverCardProps("uma", gpUma?.id)} />
+								<FramedUma src={gpUma?.portrait ?? null} layers={gpUma?.portrait_layers} oshi={gpUma ? oshiIds.has(gpUma.id) : false} alt="" className="w-6.5 shrink-0" hover={hoverCardProps("uma", gpUma?.id)} />
 								<span className="min-w-0 flex-1 truncate">{gpUma?.name ?? "Unknown uma"}</span>
 								{blue && (
 									<span className="shrink-0 whitespace-nowrap">

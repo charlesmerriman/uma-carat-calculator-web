@@ -49,6 +49,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 
 import { hoverCardProps } from "../../utils/hoverCards"
+import type { PortraitLayers } from "../../types/portraitLayers"
 /**
  * One timeline card: a date header, then one section per banner opening in that
  * window.
@@ -299,6 +300,7 @@ type FeaturedCard = {
 	image: string
 	/** An uma's borderless art (the API's `portrait`); support cards have none. */
 	portrait?: string | null
+	portrait_layers?: PortraitLayers | null
 	recommendation: string
 	/**
 	 * The card's public one-liner, shown over its art on hover, focus or tap.
@@ -374,7 +376,7 @@ function FeaturedTileArt({
 		</div>
 	)
 	const art = framed ? (
-		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" hover={linked ? undefined : hoverCardProps("uma", item.id)} />
+		<FramedUma src={item.portrait ?? item.image} layers={item.portrait_layers} alt={item.name} oshi={oshi} className="w-full" hover={linked ? undefined : hoverCardProps("uma", item.id)} />
 	) : (
 		<img
 			// Only the uma panel is framed, so this art is a support card. A
@@ -397,6 +399,9 @@ function FeaturedTileArt({
 	// the art's lower half with the tile's colour, so its round bottom corners
 	// meet the name block without a notch.
 	const surface = framed ? "rounded-[10.75%]" : "rounded-[8.3%_/_6.25%]"
+	// A framed uma's layered art reaches past the frame (FramedUma), so her box
+	// doesn't clip; the overlay rounds itself instead (rounded-[inherit]).
+	const clip = framed ? "" : "overflow-hidden"
 	const withSkirt = (box: ReactNode) => (
 		<div className="relative shrink-0">
 			<div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gray-700" />
@@ -406,7 +411,7 @@ function FeaturedTileArt({
 
 	if (!purpose) {
 		return withSkirt(
-			<div className={`relative shrink-0 overflow-hidden ${surface}`}>
+			<div className={`relative shrink-0 ${clip} ${surface}`}>
 				{recommendationBadge}
 				{art}
 			</div>
@@ -421,7 +426,7 @@ function FeaturedTileArt({
 		<div
 			id={overlayId}
 			role="tooltip"
-			className={`pointer-events-none absolute inset-0 z-20 flex items-end bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+			className={`pointer-events-none absolute inset-0 z-20 flex items-end rounded-[inherit] bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
 				tapped ? "opacity-100" : "opacity-0"
 			}`}
 		>
@@ -431,7 +436,7 @@ function FeaturedTileArt({
 
 	if (linked) {
 		return withSkirt(
-			<div className={`relative shrink-0 overflow-hidden ${surface}`}>
+			<div className={`relative shrink-0 ${clip} ${surface}`}>
 				{recommendationBadge}
 				{art}
 				{overlay}
@@ -451,7 +456,7 @@ function FeaturedTileArt({
 			onBlur={() => setTapped(false)}
 			// ring-inset: the tile clips its overflow, so an outset ring would be
 			// shaved off at the rounded corners.
-			className={`group relative shrink-0 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
+			className={`group relative shrink-0 ${clip} outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
 		>
 			{recommendationBadge}
 			{art}
@@ -503,6 +508,9 @@ function FeaturedTile({
 
 	const body = (
 		<>
+			{/* The layered art's ears, a sixth of the tile above her frame
+			    (FramedUma), land in this strip instead of being cut off. */}
+			{framed && item.portrait_layers && <div aria-hidden="true" className="aspect-[6/1] w-full shrink-0" />}
 			<FeaturedTileArt
 				item={item}
 				tileAspectClass={tileAspectClass}
@@ -511,7 +519,7 @@ function FeaturedTile({
 				linked={href !== null}
 				overlayId={overlayId}
 			/>
-			<div className="flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2">
+			<div className={`flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2 ${framed ? "rounded-b-lg" : ""}`}>
 				<div
 					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
 				>
@@ -523,7 +531,10 @@ function FeaturedTile({
 
 	// No fill or shadow of its own: either would show past the art's round top
 	// corners (FeaturedTileArt). The name block carries the tile's colour instead.
-	const tileClass = `flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg text-left ${tileWidthClass}`
+	// A framed tile doesn't clip, or a layered uma's side accessories (16/360
+	// of the tile, Daptrius's wide canvas) would be shaved off; its name block
+	// rounds the bottom corners itself.
+	const tileClass = `flex h-full w-full min-w-0 flex-col ${framed ? "" : "overflow-hidden"} rounded-lg text-left ${tileWidthClass}`
 
 	if (!href) return <div className={tileClass}>{body}</div>
 

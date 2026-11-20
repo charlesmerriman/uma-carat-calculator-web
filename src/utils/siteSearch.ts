@@ -33,6 +33,7 @@ import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue }
 import { cardLine } from "./encyclopedia"
 import { UMA_LIST_PATH, cardHref, umaHref } from "./encyclopediaRoutes"
 import { skillHref } from "./skillSearch"
+import type { PortraitLayers } from "../types/portraitLayers"
 
 export type SearchKind = "page" | "uma" | "card" | "banner" | "event" | "skill"
 
@@ -50,6 +51,8 @@ export interface SearchEntry {
 	image?: string | null
 	/** Set on an uma, so the palette can draw it in the site's frame. */
 	umaId?: number
+	/** An uma's layered art, drawn in her frame (FramedUma `layers`). */
+	layers?: PortraitLayers | null
 	/** Set on a skill: its row in the PvP catalogue. */
 	skillId?: number
 	/** Set on a skill: the game's id, which a query of just that number finds. */
@@ -137,6 +140,7 @@ function bannerEntries(sources: SearchSources, now: Date): SearchEntry[] {
 			title: uma.name,
 			keywords: "",
 			image: uma.portrait ?? uma.image,
+			layers: uma.portrait_layers,
 			umaId: uma.id,
 			...onBanner("Uma banner", pickBanner(banners, now)),
 		})
@@ -177,6 +181,7 @@ function encyclopediaEntries(
 			// its ids, as a skill's (board "Add Searchable Aliases", 2026-11-17).
 			keywords: [uma.title, uma.game_id, uma.character_id].filter((part) => part != null && part !== "").join(" "),
 			image: uma.portrait ?? uma.image,
+			layers: uma.portrait_layers,
 			umaId: uma.id,
 			detail: banners ? onBanner("Uma banner", pickBanner(banners, now)).detail : `Uma${where(uma.on_global)}`,
 			href: umaHref(uma.game_id),
