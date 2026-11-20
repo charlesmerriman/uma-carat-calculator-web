@@ -16,6 +16,8 @@ import { authHeaders } from "./authToken"
 import { HttpError } from "./queryClient"
 import { fetchSkillDetail } from "./skillsFetchCalls"
 import type { CardEffectsData, CardPageData, UmaPageData } from "../types/encyclopedia"
+import type { SkillDetailData } from "../types/skills"
+import type { EncyclopediaPageKind, EncyclopediaPageRef } from "../utils/encyclopediaRoutes"
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -65,6 +67,63 @@ export function prefetchEncyclopediaPage(client: QueryClient, kind: "uma" | "car
 	else void client.prefetchQuery({ ...cardPageQuery(gameId), staleTime })
 }
 
+const skillPageQuery = (gameId: number) => ({
+	queryKey: encyclopediaKeys.skill(gameId),
+	queryFn: () => fetchSkillDetail(gameId),
+})
+
+function pageQuery(kind: EncyclopediaPageKind, gameId: number) {
+	if (kind === "uma") return umaPageQuery(gameId)
+	if (kind === "card") return cardPageQuery(gameId)
+	return skillPageQuery(gameId)
+}
+
+/**
+ * A detail page's payload with its kind as the tag, so a reader narrows on
+ * `kind`: undefined while it loads, null when the API has no such page.
+ */
+export type EncyclopediaPageState =
+	| { kind: "uma"; data: UmaPageData | null | undefined }
+	| { kind: "card"; data: CardPageData | null | undefined }
+	| { kind: "skill"; data: SkillDetailData | null | undefined }
+
+/**
+ * Puts a page's payload in the cache before anything renders, under the key the
+ * page's own hook reads, so the page draws itself on the first render. The
+ * build-time render does this with the payload it fetched (entry-server.ts),
+ * and the browser will do it with the copy a prerendered document carries.
+ *
+ * `updatedAt: 0` marks the copy as old, so the page's hook refetches in the
+ * background as soon as it mounts and anything changed since the build lands.
+ * Null is a real answer (the API has no such page), the same as a 404.
+ */
+export function primeEncyclopediaPage(
+	client: QueryClient,
+	page: { kind: EncyclopediaPageKind; gameId: number },
+	data: unknown,
+	{ updatedAt }: { updatedAt?: number } = {},
+): void {
+	client.setQueryData(pageQuery(page.kind, page.gameId).queryKey, data, updatedAt === undefined ? undefined : { updatedAt })
+}
+
+/**
+ * The detail page a route names, read from the same cache entry the page
+ * reads, so the two share one request (AppRouteMeta titles the page from it).
+ * Null for a route that isn't a detail page.
+ */
+export function useEncyclopediaPage(page: EncyclopediaPageRef | null): EncyclopediaPageState | null {
+	const kind = page?.kind ?? "uma"
+	const query = useQuery<unknown>({
+		...pageQuery(kind, page?.gameId ?? 0),
+		enabled: page !== null && page.gameId !== null,
+	})
+	if (page === null) return null
+	// A segment that isn't an id has no page, the same as an id the API doesn't know.
+	const data = page.gameId === null ? null : query.data
+	// The kind picked the query, so the data is that kind's payload.
+	return { kind, data } as EncyclopediaPageState
+}
+
 /** Asks only while `gameId` is a real id. */
 export function useUmaPage(gameId: number | null, { staleTime }: PageOptions = {}) {
 	return useQuery({
@@ -77,9 +136,8 @@ export function useUmaPage(gameId: number | null, { staleTime }: PageOptions = {
 /** One skill's page, through the fetch the guide editor already uses. */
 export function useSkillPage(gameId: number | null) {
 	return useQuery({
-		queryKey: encyclopediaKeys.skill(gameId ?? 0),
+		...skillPageQuery(gameId ?? 0),
 		enabled: gameId !== null,
-		queryFn: () => fetchSkillDetail(gameId as number),
 	})
 }
 

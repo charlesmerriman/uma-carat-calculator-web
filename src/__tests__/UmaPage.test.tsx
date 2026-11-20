@@ -2,6 +2,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
+import { CalculatorContext } from "../services/CalculatorContext"
+import type { CalculatorContextType } from "../types"
 import { UmaPage } from "../components/encyclopedia/UmaPage"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { PageSkill, UmaPageData } from "../types/encyclopedia"
@@ -42,19 +44,21 @@ const SPECIAL_WEEK: UmaPageData = {
 
 const fetchMock = vi.fn()
 
-function renderAt(path: string, earlyAccess: boolean | "guest" = true) {
+function renderAt(path: string, earlyAccess: boolean | "guest" = true, calculator?: CalculatorContextType) {
 	const auth = (earlyAccess === "guest"
 		? { isLoggedIn: false, status: "ready", account: null }
 		: { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return render(
 		<AuthContext.Provider value={auth}>
-			<TestQueryProvider>
-				<MemoryRouter initialEntries={[path]}>
-					<Routes>
-						<Route path="/app/umas/:gameId" element={<UmaPage />} />
-					</Routes>
-				</MemoryRouter>
-			</TestQueryProvider>
+			<CalculatorContext.Provider value={calculator}>
+				<TestQueryProvider>
+					<MemoryRouter initialEntries={[path]}>
+						<Routes>
+							<Route path="/app/umas/:gameId" element={<UmaPage />} />
+						</Routes>
+					</MemoryRouter>
+				</TestQueryProvider>
+			</CalculatorContext.Provider>
 		</AuthContext.Provider>
 	)
 }
@@ -187,6 +191,19 @@ describe("UmaPage", () => {
 		renderAt("/app/umas/100101")
 		await screen.findByRole("heading", { level: 1, name: /Special Week/ })
 		expect(screen.queryByRole("group", { name: "Skill cost" })).not.toBeInTheDocument()
+	})
+
+	it("draws before the calculator data lands, holding the release dates' place", async () => {
+		// The page renders outside the /app loading gate (and at build time,
+		// where the calculator data never comes), so everything but the banners
+		// and the dates draws from its own payload.
+		const loading = { isLoading: true, umaBannerData: [], supportBannerData: [] } as unknown as CalculatorContextType
+		renderAt("/app/umas/100101", true, loading)
+		expect(await screen.findByRole("heading", { level: 1, name: "Special Week" })).toBeInTheDocument()
+		expect(screen.getByRole("link", { name: /Shooting Star/ })).toBeInTheDocument()
+		expect(screen.getByText("JP release")).toBeInTheDocument()
+		expect(screen.getByText("Global release")).toBeInTheDocument()
+		expect(screen.queryByText("Banners")).toBeNull()
 	})
 
 	it("says so for an id with no page", async () => {

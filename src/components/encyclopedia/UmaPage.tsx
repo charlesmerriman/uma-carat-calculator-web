@@ -33,7 +33,6 @@ import { SkillList, SkillRow, UniquePlate, UnlockConditions } from "./skillRows"
 import { PAGE_CONTAINER, RUNNING_STYLE_COLORS, RUNNING_STYLE_WORDS, ownedStars, umaEntryNumber } from "../../utils/encyclopedia"
 import { useOwned } from "../../hooks/useOwned"
 import { useRememberedFilter } from "../../hooks/useRememberedFilter"
-import { usePageTitle } from "./usePageTitle"
 import { CareerObjectives } from "./CareerObjectives"
 
 /**
@@ -163,8 +162,9 @@ export const UmaPage = () => (
 
 const UmaPageBody = () => {
 	const gameId = parseGameId(useParams().gameId)
+	// Its title and description are AppRouteMeta's, from the same cache entry
+	// (utils/encyclopediaMeta.ts).
 	const page = useUmaPage(gameId)
-	usePageTitle(page.data?.name)
 
 	if (gameId === null || page.data === null) return <NotFound />
 	if (page.isError) return <EmptyNote>This page didn't load. Reload to try again.</EmptyNote>
@@ -192,7 +192,11 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 	const hints = owned.hints.get(uma.id)
 	// Kept outside the uma list's "umas:" scope, so Reset filters there leaves it.
 	const [costView, setCostView] = useRememberedFilter<CostView>("uma-page:cost", "yours", ["yours", "full"])
+	// The banners and the hero's dates come from /calculator-data, which this
+	// page doesn't wait for (it renders outside the /app loading gate). They
+	// draw once it lands; until then the dates hold their place.
 	const calculator = useCalculatorDataSafe()
+	const datesPending = calculator?.isLoading ?? false
 	const releases = umaReleases(calculator?.umaBannerData ?? [], uma.id)
 	const hasApt = Object.values(uma.apt).some((value) => value != null)
 	const hasStats = hasApt && uma.star_stats.length > 0
@@ -234,7 +238,7 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 				}
 				lead={uma.purpose || undefined}
 				owned={owned.umas.has(uma.id) && <OwnedLine tab="umas" detail={ownedStars(owned.umas.get(uma.id))} />}
-				facts={<ReleaseFacts jpDate={releases.jpDate} globalDate={releases.globalDate} predicted={releases.predicted} />}
+				facts={<ReleaseFacts pending={datesPending} jpDate={releases.jpDate} globalDate={releases.globalDate} predicted={releases.predicted} />}
 			/>
 			<JumpBar items={jump} />
 

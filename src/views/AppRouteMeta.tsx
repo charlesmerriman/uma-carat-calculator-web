@@ -2,6 +2,9 @@ import { useLocation } from "react-router-dom"
 import { useDocumentMeta } from "../hooks/useDocumentMeta"
 import { useSiteContent } from "../services/SiteContentContext"
 import { isPublicId } from "../utils/appRoutes"
+import { useEncyclopediaPage, type EncyclopediaPageState } from "../services/encyclopediaQueries"
+import { encyclopediaPageOf, type EncyclopediaPageKind } from "../utils/encyclopediaRoutes"
+import { cardPageMeta, skillPageMeta, umaPageMeta } from "../utils/encyclopediaMeta"
 
 /**
  * The owner of the /app routes' document titles and descriptions. Renders nothing.
@@ -16,6 +19,10 @@ import { isPublicId } from "../utils/appRoutes"
  * four with one mount. (The tab used to read "Uma Musume Carat Calculator" for
  * the whole of the loading spinner; now it reads "Calculator | …" from the
  * first frame.)
+ *
+ * The Encyclopedia's detail pages render outside that gate (they need nothing
+ * from /calculator-data to draw), but their titles live here too, built from
+ * the page's own cached payload, so a build-time render carries them.
  *
  * Until 2026-09-13 this component also rendered a short "how to read this"
  * block under each page. That prose was removed at the owner's request; the
@@ -96,22 +103,39 @@ const META: Record<AppPath, RouteMeta> = {
 }
 
 /**
- * An Encyclopedia page (/app/umas/<id> and its card and skill twins): one meta
- * per kind until the page has its data, when it sets the real name itself
- * (usePageTitle). About 3,000 pages, open to everyone but none prerendered
- * yet, so noindex: they join the search engines as real documents, with their
- * own titles, in notes/encyclopedia-open-plan.md's PRs 3 and 4. Dropping the
- * noindex before then would hand Google 3,000 identical shells.
+ * An Encyclopedia page (/app/umas/<id> and its card and skill twins) while its
+ * payload loads: one meta per kind. Once the payload is in the cache the page
+ * gets its own (utils/encyclopediaMeta.ts). A build-time render has it before
+ * the first render (entry-server.ts primes the cache), so a built document
+ * carries the page's own title from the start.
  */
-const ENCYCLOPEDIA_PAGE_META: Record<"umas" | "cards" | "skills", RouteMeta> = {
-	umas: { title: "Uma", description: "An Uma Musume trainee: aptitudes, stats, skills and banners." },
-	cards: { title: "Support Card", description: "An Uma Musume support card: the skills it teaches and its banners." },
-	skills: { title: "Skill", description: "An Uma Musume skill: when it activates, what it does, and who gives it." },
+const ENCYCLOPEDIA_PAGE_META: Record<EncyclopediaPageKind, RouteMeta> = {
+	uma: { title: "Uma", description: "An Uma Musume trainee: aptitudes, stats, skills and banners." },
+	card: { title: "Support Card", description: "An Uma Musume support card: the skills it teaches and its banners." },
+	skill: { title: "Skill", description: "An Uma Musume skill: when it activates, what it does, and who gives it." },
 }
 
-function encyclopediaPageKind(pathname: string): keyof typeof ENCYCLOPEDIA_PAGE_META | null {
-	const kind = /^\/app\/(umas|cards|skills)\/\d+/.exec(pathname)?.[1]
-	return (kind as keyof typeof ENCYCLOPEDIA_PAGE_META | undefined) ?? null
+/** A detail path the API has no page for. Always noindex: the static host answers it with a 200. */
+const MISSING_PAGE_META: RouteMeta = {
+	title: "No such page",
+	description: "There's no Encyclopedia page at this address.",
+}
+
+/**
+ * Whether the detail pages may be indexed yet. False until
+ * notes/encyclopedia-open-plan.md's PR 4 writes them as real documents with a
+ * sitemap: before that a crawler gets the spa.html shell, and dropping the
+ * noindex would hand Google 3,000 identical shells. PR 4 deletes this, and a
+ * missing page stays noindex.
+ */
+const DETAIL_PAGES_INDEXED = false
+
+function encyclopediaMeta(state: EncyclopediaPageState): RouteMeta {
+	if (state.data === null) return MISSING_PAGE_META
+	if (state.data === undefined) return ENCYCLOPEDIA_PAGE_META[state.kind]
+	if (state.kind === "uma") return umaPageMeta(state.data)
+	if (state.kind === "card") return cardPageMeta(state.data)
+	return skillPageMeta(state.data)
 }
 
 /**
@@ -139,7 +163,8 @@ function appPathFor(pathname: string): AppPath | "shared" {
 export const AppRouteMeta = () => {
 	const { pathname } = useLocation()
 	const content = useSiteContent()
-	const pageKind = encyclopediaPageKind(pathname)
+	// The same cache entry the detail page reads, so the two share one request.
+	const encyclopedia = useEncyclopediaPage(encyclopediaPageOf(pathname))
 	const path = appPathFor(pathname)
 
 	// The Legend Races tab's title and description are the team's to write,
@@ -157,21 +182,22 @@ export const AppRouteMeta = () => {
 			: path === "/app/pvp"
 				? content.page("pvp-guides", { optional: true })
 				: null
-	const meta = pageKind
-		? ENCYCLOPEDIA_PAGE_META[pageKind]
+	const meta = encyclopedia
+		? encyclopediaMeta(encyclopedia)
 		: page
 			? { title: page.title, description: page.meta_description }
 			: path === "shared"
 				? SHARED_PLAN_META
 				: META[path]
 
-	// noindex: an Encyclopedia page until it is a real document (see
-	// ENCYCLOPEDIA_PAGE_META), a shared plan, the Collection (one player's
-	// account) and Rankings (behind early access).
+	// noindex: an Encyclopedia page with no page behind it, every Encyclopedia
+	// page until it is a real document (DETAIL_PAGES_INDEXED), a shared plan,
+	// the Collection (one player's account) and Rankings (behind early access).
+	const encyclopediaNoindex = encyclopedia !== null && (encyclopedia.data === null || !DETAIL_PAGES_INDEXED)
 	useDocumentMeta(
 		meta.title,
 		meta.description,
-		pageKind !== null || path === "shared" || path === "/app/collection" || path === "/app/rankings"
+		encyclopediaNoindex || path === "shared" || path === "/app/collection" || path === "/app/rankings"
 	)
 	return null
 }
