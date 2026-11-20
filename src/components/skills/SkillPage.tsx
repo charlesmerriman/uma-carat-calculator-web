@@ -171,7 +171,7 @@ function OwnerFace({ uma }: { uma: SkillOwnerUma }) {
 	const oshiIds = useOshiIds()
 	const body = (
 		<>
-			<FramedUma src={uma.portrait} oshi={oshiIds.has(uma.id)} className="enc-owner__art" />
+			<FramedUma src={uma.portrait} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="enc-owner__art" />
 			<span>{uma.name}</span>
 		</>
 	)
@@ -205,7 +205,7 @@ function UmaSources({ rows }: { rows: SkillSourceUma[] }) {
 				{rows.map((row) => {
 					const body = (
 						<>
-							<FramedUma src={row.image} oshi={oshiIds.has(row.id)} className="enc-pic__art" />
+							<FramedUma src={row.image} layers={row.portrait_layers} oshi={oshiIds.has(row.id)} className="enc-pic__art" />
 							<span className="enc-pic__name">{row.name}</span>
 							<span className="enc-pic__sub">{umaHow(row)}</span>
 							{!row.on_global && <JpTag />}

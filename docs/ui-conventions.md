@@ -777,6 +777,20 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   the share picture. Web #376 (the art's sizing) was not the cause. A frame change gets the
   same WebKit run before it ships (`npx playwright-core install webkit`; Chrome never shows
   this).
+- **Layered art** (`layers`, the API's `portrait_layers`; notes/layered-uma-art-plan.md,
+  2026-11-20). An uma with Daptrius's layered art is three layers: his base, the frame, then
+  a foreground with whatever sticks out past the frame (ears, hair, hats), drawn OVER it.
+  The foreground's canvas is the frame's box plus a sixth above and 16/360 each side
+  (`.uma-frame__over`, App.css), and it sits outside the tile's box on purpose: layout never
+  grows, so a caller that clips or packs rows tight leaves the room itself. The ones that do:
+  the Timeline's featured tiles and the guide's uma tiles (a headroom strip, `aspect-[6/1]`),
+  the selector pick tile and the step-up slots (no clip on an uma), My team's spot header,
+  Guide picks' row gap, the team window, the share picture's columns, and the phone
+  Encyclopedia hero (`:has(.uma-frame--layered)`). Without `layers`, or with the frame off,
+  `FramedUma` draws `src` as before: the frameless places keep the borderless art (owner,
+  2026-11-18). The base keeps the img clip above: it sits under the opaque band, so it
+  hides nothing and keeps the WebKit fix. A route that sends `portrait` sends
+  `portrait_layers` beside it; pass it wherever the `src` comes from (`layers={x.portrait_layers}`).
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's

@@ -29,7 +29,7 @@ const ICONS = { page: FileText, banner: CalendarDays, event: Swords, skill: Spar
 const ITEM = "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left data-[selected=true]:bg-gray-700"
 
 function EntryArt({ entry, oshiIds }: { entry: SearchEntry; oshiIds: ReadonlySet<number> }) {
-	if (entry.umaId !== undefined) return <FramedUma src={entry.image ?? null} oshi={oshiIds.has(entry.umaId)} alt="" className="w-9 shrink-0" />
+	if (entry.umaId !== undefined) return <FramedUma src={entry.image ?? null} layers={entry.layers} oshi={oshiIds.has(entry.umaId)} alt="" className="w-9 shrink-0" />
 	if (entry.image) return <img src={entry.image} alt="" loading="lazy" decoding="async" className="h-9 w-9 shrink-0 rounded-md object-contain" />
 	const Icon = ICONS[entry.kind]
 	return (

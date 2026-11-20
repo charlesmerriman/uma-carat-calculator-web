@@ -74,6 +74,7 @@ export function ShareTeamButton({ event, team, umasById, cardsById, veterans }: 
 					veterans={showVeterans && linked && veterans ? veterans : null}
 					ownerName={showName ? name : null}
 					ownerPicture={showName ? avatar : null}
+					ownerPictureLayers={showName ? account?.avatar_layers ?? null : null}
 					now={now}
 				/>
 			)}

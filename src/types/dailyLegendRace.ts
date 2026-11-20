@@ -1,3 +1,4 @@
+import type { PortraitLayers } from "./portraitLayers"
 /**
  * Daily legend race types.
  *
@@ -17,6 +18,8 @@ export interface DailyLegendRaceUma {
 	image: string | null
 	/** The borderless art (else the bordered), for FramedUma. Optional for older fixtures. */
 	portrait?: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	/**
 	 * Initial star count, 1-3. Resolved on the server (a blank rarity counts
 	 * as 3), so the client groups on it as-is and never repeats that rule.

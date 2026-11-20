@@ -139,7 +139,7 @@ function GuidesSource({ children }: { children: Render }) {
 				return {
 					id: `uma-${rank.uma}`,
 					name: uma?.name ?? "Unknown uma",
-					art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(rank.uma)} className="w-8" />,
+					art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(rank.uma)} className="w-8" />,
 					href: hrefs.uma(rank.uma),
 					hover: hoverCardProps("uma", rank.uma),
 					fill,
@@ -279,7 +279,7 @@ function PvpEventSource({ event, options, list, children }: { event: RaceEvent; 
 			return {
 				id: `uma-${row.uma}`,
 				name: uma?.name ?? "Unknown uma",
-				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
+				art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				href: hrefs.uma(row.uma),
 				hover: hoverCardProps("uma", row.uma),
 				fill,
@@ -329,7 +329,7 @@ function PlayersSource({ children }: { children: Render }) {
 			return {
 				id: `uma-${row.uma}`,
 				name: uma?.name ?? "Unknown uma",
-				art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-8" />,
+				art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-8" />,
 				href: hrefs.uma(row.uma),
 				hover: hoverCardProps("uma", row.uma),
 				fill,

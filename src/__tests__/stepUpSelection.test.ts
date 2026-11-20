@@ -255,7 +255,7 @@ describe('findGuaranteedCardArt', () => {
     expect(findGuaranteedCardArt(selections, umaBanners, supportBanners)).toEqual({
       name: 'Kiseki',
       image: 'kiseki.png',
-      uma: { id: 101, portrait: null },
+      uma: { id: 101, portrait: null, portrait_layers: null },
     })
   })
 

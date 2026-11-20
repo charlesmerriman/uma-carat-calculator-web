@@ -160,14 +160,14 @@ function AccelRows({ course, rows, all, list, style, searching, owners, skillsBy
 								skillId,
 								name,
 								image: skill?.image ?? null,
-								owner: owner ? { name: owner.uma.name, portrait: owner.uma.portrait, inherited: owner.inherited } : undefined,
+								owner: owner ? { name: owner.uma.name, portrait: owner.uma.portrait, portrait_layers: owner.uma.portrait_layers, inherited: owner.inherited } : undefined,
 							})}
 							className={`flex w-full items-start gap-2 rounded-[9px] border px-2 py-1.5 text-left text-xs transition ${
 								lit ? "border-brand bg-brand/10" : "border-transparent bg-gray-800/70 hover:border-gray-500"
 							}`}
 						>
 							{owner ? (
-								<FramedUma src={owner.uma.portrait} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-7 w-7 shrink-0" />
+								<FramedUma src={owner.uma.portrait} layers={owner.uma.portrait_layers} oshi={oshiIds.has(owner.uma.id)} alt="" title={owner.uma.name} className="h-7 w-7 shrink-0" />
 							) : skill?.image ? (
 								<img src={skill.image} alt="" className="mt-0.5 h-6 w-6 shrink-0" loading="lazy" decoding="async" />
 							) : (

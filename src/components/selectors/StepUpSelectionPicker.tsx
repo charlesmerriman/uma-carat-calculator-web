@@ -116,7 +116,7 @@ export const StepUpSelectionPicker = ({
 		// The candidates below stay pick-only: there a click chooses.
 		const page = card ? (isUma ? hrefs.uma(card.value) : hrefs.card(card.value)) : null
 		const art = card?.portrait ? (
-			<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
+			<FramedUma src={card.portrait} layers={card.portrait_layers} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
 		) : card ? (
 			<img
 				src={card.image}
@@ -128,13 +128,13 @@ export const StepUpSelectionPicker = ({
 		) : null
 
 		return (
-			<div key={slotNumber} className="flex min-w-0 flex-col items-center gap-1">
+			<div key={slotNumber} className={`flex min-w-0 flex-col items-center ${card?.portrait ? "gap-3" : "gap-1"}`}>
 				<span className="flex items-center gap-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-gray-500">
 					{slotNumber}
 					{isTargetSlot && <Star className="h-3 w-3 fill-brand text-brand" />}
 				</span>
 				<div
-					className={`flex ${slotSizeClass} items-center justify-center overflow-hidden rounded border ${
+					className={`flex ${slotSizeClass} items-center justify-center ${card?.portrait ? "" : "overflow-hidden"} rounded border ${
 						isTargetSlot
 							? "border-brand bg-brand/10"
 							: "border-gray-600 bg-gray-900/50"
@@ -210,7 +210,7 @@ export const StepUpSelectionPicker = ({
 				onClick={() => onChange(toggleCard(selections, stepUp, option.value))}
 			>
 				{option.portrait ? (
-					<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-24" />
+					<FramedUma src={option.portrait} layers={option.portrait_layers} oshi={oshiIds.has(option.value)} className="w-24" />
 				) : (
 					<img
 						src={option.image}

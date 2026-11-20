@@ -7,6 +7,7 @@
 
 import type { AptitudeKey } from "./pvpTeam"
 import type { SkillListRow, UnlockCondition } from "./skills"
+import type { PortraitLayers } from "./portraitLayers"
 
 export type StatKey = "speed" | "stamina" | "power" | "guts" | "wit"
 
@@ -40,6 +41,8 @@ export interface PageOutfit {
 	/** The title is UmaTL's fan translation (Global has none yet). Absent from an older API. */
 	title_translated?: boolean
 	portrait: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	rarity: number | null
 	on_global: boolean
 }
@@ -90,6 +93,8 @@ export interface UmaPageData {
 	jp_name: string
 	jp_title: string
 	portrait: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	image: string | null
 	rarity: number | null
 	running_style: number | null

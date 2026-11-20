@@ -429,7 +429,7 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 				onClick={() => (row ? onToggle(!open) : onEdit({ umas: [{ uma: uma.id, owned: true, stars: baseStars(uma) }] }))}
 				className={`relative w-full rounded-[10.75%] transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
-				<FramedUma src={uma.portrait ?? uma.image} oshi={oshi} alt="" className={`w-full transition ${row ? "" : "opacity-40 grayscale hover:opacity-70"}`} />
+				<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshi} alt="" className={`w-full transition ${row ? "" : "opacity-40 grayscale hover:opacity-70"}`} />
 				{row ? (
 					<>
 						<span className="art-badge absolute inset-x-[9%] bottom-[8%] flex justify-center rounded-md text-xs leading-4 tracking-tighter" aria-hidden="true">

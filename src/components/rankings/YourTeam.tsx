@@ -54,7 +54,7 @@ export function YourTeam({ event, ranked, catalogue }: {
 						const place = ranked.indexOf(member.uma) + 1
 						return (
 							<li key={member.position} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3" {...hoverCardProps("uma", member.uma)}>
-								<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(member.uma)} className="w-10" />
+								<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(member.uma)} className="w-10" />
 								<span className="flex min-w-0 flex-col">
 									<EncyclopediaName href={hrefs.uma(member.uma)} name={uma?.name ?? "Unknown uma"} className="truncate text-[13px] font-semibold text-gray-100" />
 									<span className="text-[11px] tabular-nums text-gray-400">

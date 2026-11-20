@@ -210,7 +210,7 @@ export const StagedBannerRow = ({
 					? target.banner.umas.slice(0, 2).map((uma) => (
 							<FramedUma
 								key={uma.id}
-								src={uma.portrait ?? uma.image}
+								src={uma.portrait ?? uma.image} layers={uma.portrait_layers}
 								alt={uma.name}
 								oshi={oshiIds.has(uma.id)}
 								className="w-14"

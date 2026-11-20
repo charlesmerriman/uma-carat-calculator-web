@@ -134,14 +134,14 @@ export const SelectorTargetPicker = ({
 				onClick={open}
 			>
 				<span
-					className={`relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md border-2 bg-gray-900/40 transition ${
+					className={`relative flex h-32 w-full items-center justify-center ${selected?.portrait ? "" : "overflow-hidden"} rounded-md border-2 bg-gray-900/40 transition ${
 						selected
 							? "border-gray-600"
 							: "border-dashed border-gray-500 text-gray-500"
 					} ${canPick ? "group-hover:border-brand group-hover:bg-gray-900/70" : ""}`}
 				>
 					{selected?.portrait ? (
-						<FramedUma src={selected.portrait} oshi={oshiIds.has(selected.value)} className="h-28" />
+						<FramedUma src={selected.portrait} layers={selected.portrait_layers} oshi={oshiIds.has(selected.value)} className="h-28" />
 					) : selected ? (
 						<img
 							src={selected.image}
@@ -157,7 +157,7 @@ export const SelectorTargetPicker = ({
 					{/* Which ticket this tile belongs to. Overlaid rather than given
 					    its own line: the tiles sit in the same order as the checkbox
 					    column beside them, so this is a confirmation, not the label. */}
-					<span className="pointer-events-none absolute left-0 top-0 rounded-br-md bg-gray-950/85 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-gray-200">
+					<span className="pointer-events-none absolute left-0 top-0 z-10 rounded-tl-[4px] rounded-br-md bg-gray-950/85 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-gray-200">
 						{priceLabel}
 					</span>
 
@@ -270,7 +270,7 @@ export const SelectorTargetPicker = ({
 												onClick={() => choose(option)}
 											>
 												{option.portrait ? (
-													<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-28" />
+													<FramedUma src={option.portrait} layers={option.portrait_layers} oshi={oshiIds.has(option.value)} className="w-28" />
 												) : (
 													<img
 														src={option.image}

@@ -945,7 +945,7 @@ function Pip({ race, run, shared }: { race: number; run: PvpRun; shared: Shared 
 		const label = `Race ${race}: ${umaName(shared.umasById, runner)} won`
 		return (
 			<FramedUma
-				src={uma?.portrait ?? uma?.image ?? null}
+				src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 				oshi={runner ? shared.oshiIds.has(runner.uma) : false}
 				alt={label}
 				title={label}
@@ -986,7 +986,7 @@ function Faces({ runners, shared, className }: { runners: PvpRunRunner[]; shared
 				return (
 					<FramedUma
 						key={runner.position}
-						src={uma?.portrait ?? uma?.image ?? null}
+						src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 						oshi={shared.oshiIds.has(runner.uma)}
 						className={`${className} shadow-[0_0_0_2px_var(--card-fill)] ${index ? "-ml-2" : ""}`}
 					/>
@@ -1126,7 +1126,7 @@ function LineupBlock({ title, eyebrow, run, choices, shared, onWrite }: {
 							className={`${INSET} flex min-w-0 flex-col items-center gap-1.5 p-1.5 pb-2 text-center sm:flex-row sm:gap-3 sm:pb-1.5 sm:text-left`}
 						>
 							<FramedUma
-								src={uma?.portrait ?? uma?.image ?? null}
+								src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 								oshi={shared.oshiIds.has(runner.uma)}
 								hover={hoverCardProps("uma", runner.uma)}
 								alt={uma?.name ?? ""}
@@ -1216,7 +1216,7 @@ function RaceGrid({ title, run, shared, onWrite }: {
 					return (
 						<div key={runner.position} className="flex min-w-0 flex-col items-center gap-0.75 sm:flex-row sm:gap-2 sm:px-0.5">
 							<FramedUma
-								src={uma?.portrait ?? uma?.image ?? null}
+								src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 								oshi={shared.oshiIds.has(runner.uma)}
 								hover={hoverCardProps("uma", runner.uma)}
 								alt=""
@@ -1603,7 +1603,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 							>
 								{runner ? (
 									<FramedUma
-										src={uma?.portrait ?? uma?.image ?? null}
+										src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 										oshi={shared.oshiIds.has(runner.uma)}
 										className="w-7.5 shrink-0 sm:w-8"
 									/>
@@ -1803,7 +1803,7 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 							return (
 								<li key={key} className="flex items-center gap-2.5 sm:gap-3">
 									<FramedUma
-										src={uma?.portrait ?? uma?.image ?? null}
+										src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 										oshi={oshiIds.has(tally.uma)}
 										hover={hoverCardProps("uma", tally.uma)}
 										alt=""

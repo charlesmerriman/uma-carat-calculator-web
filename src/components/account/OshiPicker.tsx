@@ -186,6 +186,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 							    get; the ones already picked wear the favorite's rainbow. */}
 							<FramedUma
 								src={option.image}
+								layers={option.portrait_layers}
 								oshi={oshiIds.has(option.id)}
 								className={`w-20 ${isSaving ? "opacity-50" : ""}`}
 							/>

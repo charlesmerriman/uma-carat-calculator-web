@@ -8,6 +8,7 @@
 import type { BannerSupport, BannerUma } from "../types"
 import { parseApiDate } from "./dateFormat"
 import { timelineFocusHref } from "./timelineFocus"
+import type { PortraitLayers } from "../types/portraitLayers"
 
 export interface BannerLink {
 	timelineId: number
@@ -29,6 +30,8 @@ export interface BannerFace {
 	id: number
 	name: string
 	art: string | null
+	/** An uma's layered art (FramedUma `layers`); a card has none. */
+	layers?: PortraitLayers | null
 }
 
 export interface Releases {
@@ -44,7 +47,7 @@ export interface Releases {
 
 const startOf = (link: BannerLink) => parseApiDate(link.start)?.getTime() ?? 0
 
-function releases<B extends { name: string; banner_timeline: BannerUma["banner_timeline"] }, C extends { id: number; name: string; image: string; portrait?: string | null; first_jp_date: string | null }>(
+function releases<B extends { name: string; banner_timeline: BannerUma["banner_timeline"] }, C extends { id: number; name: string; image: string; portrait?: string | null; portrait_layers?: PortraitLayers | null; first_jp_date: string | null }>(
 	banners: B[],
 	cardsOf: (banner: B) => C[],
 	id: number,
@@ -67,7 +70,7 @@ function releases<B extends { name: string; banner_timeline: BannerUma["banner_t
 			image: timeline.image || null,
 			featured: cardsOf(banner)
 				.filter((entry) => entry.id !== id)
-				.map((entry) => ({ id: entry.id, name: entry.name, art: entry.portrait || entry.image || null })),
+				.map((entry) => ({ id: entry.id, name: entry.name, art: entry.portrait || entry.image || null, layers: entry.portrait_layers })),
 			kind,
 		})
 	}

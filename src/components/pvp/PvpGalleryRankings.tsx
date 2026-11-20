@@ -148,7 +148,7 @@ function MostCopied({ posts, event, catalogue }: {
 									const uma = catalogue.umasById.get(id)
 									return (
 										<span key={id} className="inline-block">
-											<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(id)} className="w-10" />
+											<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(id)} className="w-10" />
 										</span>
 									)
 								})}

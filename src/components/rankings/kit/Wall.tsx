@@ -30,7 +30,7 @@ export function Wall({ entries, start = 20, label }: {
 					const page = hrefs.uma(uma.id)
 					const face = (
 						<>
-							<FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-14" alt="" />
+							<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-14" alt="" />
 							<span className={`w-full truncate text-[11px] font-semibold text-gray-100 ${page ? "transition-colors group-hover:text-brand" : ""}`} title={uma.name}>
 								<span className="sr-only">{index + 1}. </span>
 								{uma.name}

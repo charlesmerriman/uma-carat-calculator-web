@@ -759,6 +759,11 @@
 		display: flex;
 		padding: 2.5rem 0 0 1.25rem;
 	}
+	/* A layered uma's ears reach a sixth of the 9rem art (1.5rem) above her
+	   frame (FramedUma); the extra room keeps them clear of the number plate. */
+	.enc-hero__artbox:has(.uma-frame--layered) {
+		padding-top: 3.75rem;
+	}
 	.enc-hero__art {
 		width: 9rem;
 		height: 9rem;
@@ -937,7 +942,8 @@
 			pointer-events: none;
 			user-select: none;
 		}
-		.enc-hero__artbox {
+		.enc-hero__artbox,
+		.enc-hero__artbox:has(.uma-frame--layered) {
 			padding: 0 0 0 3rem;
 		}
 		.enc-hero--card .enc-hero__artbox {

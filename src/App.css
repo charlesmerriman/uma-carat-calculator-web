@@ -1237,6 +1237,43 @@
 	border-radius: inherit;
 }
 
+/* Layered art (FramedUma `layers`, notes/layered-uma-art-plan.md): base, frame,
+   then the foreground over the frame. `isolation` keeps the three z-indexes
+   inside the tile, so a foreground never rises over a neighbour's popup.
+
+   The base keeps the img rule above, clip included. Daptrius's spec says not to
+   clip the base again, meaning not to the frame's inner opening; this clip is
+   12 units into a 24-unit band that is opaque, so it hides nothing anyone can
+   see, and it keeps the WebKit fix (the frame drawn a device pixel short) for
+   the base as well.
+
+   The foreground is Daptrius's 392 x 420 canvas over the frame's 360 box: 60
+   above and 16 each side, so 116.667% tall and 108.889% wide, starting
+   16.667% above and 4.444% left of the box. It sits OUTSIDE the box on
+   purpose: the tile's layout size doesn't change, and each caller leaves the
+   room it needs. */
+.uma-frame--layered {
+	isolation: isolate;
+}
+
+.uma-frame--layered::after {
+	z-index: 1;
+}
+
+.uma-frame--layered > .uma-frame__over {
+	inset: auto;
+	top: -16.6667%;
+	left: -4.4444%;
+	width: 108.8889%;
+	height: 116.6667%;
+	max-width: none;
+	object-fit: fill;
+	border-radius: 0;
+	clip-path: none;
+	z-index: 2;
+	pointer-events: none;
+}
+
 /* The course map's veterans' layer (components/course/CourseStrip.tsx): a ring
    in her colour round her avatar at the head of her rows, outside the frame,
    never in place of it. */
