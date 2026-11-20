@@ -10,7 +10,7 @@ import CourseSection from "../components/course/CourseSection"
 import CourseTrack from "../components/course/CourseTrack"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import { schematicShape } from "../utils/courseSchematic"
-import { shapeBounds, withLapRings } from "../utils/courseGeometry"
+import { layerLanes, shapeBounds, withLapRings } from "../utils/courseGeometry"
 import { CHUKYO_1200, NAKAYAMA_2500, NAKAYAMA_3600, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 /** The shape endpoint answers with `shape` (null: a course with no path file). */
@@ -291,5 +291,27 @@ describe("CourseSection's switches", () => {
 		expect(screen.getByRole("button", { name: "Show the track's labels" })).toBeInTheDocument()
 		expect(localStorage.getItem("uma-course-map-colours")).toBe("course")
 		fireEvent.click(within(colours).getByRole("button", { name: "Phase" }))
+	})
+})
+
+describe("the layer arcs on a course drawn as rings (Henry, 2026-11-20)", () => {
+	// The air between a ring's kerb and the next ring's, in track widths.
+	const KERB = 0.775
+	const NEXT_KERB = 2.4 - 0.775
+
+	it("keeps every lane's stroke between its own lap's kerb and the next lap's", () => {
+		for (const groups of [1, 2, 3, 4]) {
+			const { offset, stroke } = layerLanes(true, groups)
+			for (let lane = 0; lane < groups; lane++) {
+				expect(offset(lane) - stroke / 2).toBeGreaterThan(KERB)
+				expect(offset(lane) + stroke / 2).toBeLessThan(NEXT_KERB)
+			}
+		}
+	})
+
+	it("leaves a one-lap course's lanes as they were", () => {
+		const { offset, stroke } = layerLanes(false, 3)
+		expect([offset(0), offset(1), offset(2)]).toEqual([1.85, 2.47, 3.09].map((value) => expect.closeTo(value, 5)))
+		expect(stroke).toBe(0.34)
 	})
 })

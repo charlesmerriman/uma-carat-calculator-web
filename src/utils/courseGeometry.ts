@@ -719,3 +719,22 @@ export function placeLabels(
 	}
 	return result
 }
+
+/**
+ * Where the layer arcs run (one lane per group: the lit skill, each veteran),
+ * in track widths out from the centre line, and how thick.
+ *
+ * One lap: the visual plan's lanes, 1.85 out and 0.62 apart, outside the hill
+ * brackets. A course drawn as rings: 1.85 out is on the next lap, 2.4 track
+ * widths away (CourseTrack's RING_GAP_TRACKS), so the arc read as that lap's (Henry, board, 2026-11-20, Kyoto
+ * 3,200 m). There the lanes share the air between the ring's kerb (0.775, CourseTrack's KERB_HALF)
+ * and the next ring's: one lane at 1.2, several spread from 1.0 to 1.42 and
+ * thinner, so no stroke reaches either kerb. Only the ringed case moves (the
+ * owner, 2026-11-20).
+ */
+export function layerLanes(ringed: boolean, groups: number): { offset: (lane: number) => number; stroke: number } {
+	if (!ringed) return { offset: (lane) => 1.85 + lane * 0.62, stroke: 0.34 }
+	if (groups <= 1) return { offset: () => 1.2, stroke: 0.34 }
+	const step = 0.42 / (groups - 1)
+	return { offset: (lane) => 1.0 + lane * step, stroke: Math.min(0.3, step * 0.8) }
+}

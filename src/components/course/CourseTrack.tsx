@@ -39,6 +39,7 @@ import {
 	slopeParts,
 	trackParts,
 	withLapRings,
+	layerLanes,
 	type CourseOverlays,
 	type CourseSpan,
 	type Shape,
@@ -295,9 +296,9 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		const box = { x: bounds.minX - pad.x, y: bounds.minY - pad.top, width: bounds.width + 2 * pad.x, height: bounds.height + pad.top + pad.bottom }
 		const centre = [bounds.minX + bounds.width / 2, bounds.minY + bounds.height / 2] as const
 		const clockwise = (cumulativeTurn(shape).at(-1) ?? 0) >= 0
-		return { shape, box, size, centre, clockwise, track }
+		return { shape, box, size, centre, clockwise, track, ringed }
 	}, [baseShape, course, compact])
-	const { shape, box, size, centre, clockwise, track } = drawing
+	const { shape, box, size, centre, clockwise, track, ringed } = drawing
 	// The outside of the track is the left of travel on a clockwise course.
 	const outside = clockwise ? 1 : -1
 	const unitsPerPx = box.width / widthPx
@@ -368,7 +369,11 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const quiet = (span: { key?: string }, base: number) => (previewing && span.key !== preview ? 0.25 : base)
 	const groups = [...new Set(layerSpans.map((span) => span.group ?? "lit"))]
 	const laneOf = (span: CourseSpan) => groups.indexOf(span.group ?? "lit")
-	const laneOffset = (lane: number) => track * (1.85 + lane * 0.62) * outside
+	// The lanes' distance out and stroke, in track widths (layerLanes): beside
+	// its own lap on a course drawn as rings.
+	const lanes = layerLanes(ringed, groups.length)
+	const laneOffset = (lane: number) => track * lanes.offset(lane) * outside
+	const laneStroke = lanes.stroke
 	const outermost = groups.length - 1
 
 	// One callout per spot, most important first (they're placed in order).
@@ -746,7 +751,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 							points={points(parallel(section, offset))}
 							fill="none"
 							stroke={colour}
-							strokeWidth={(span.kind === "window" ? track * 0.16 : track * 0.34) * Math.max(1, emphasis(span))}
+							strokeWidth={(span.kind === "window" ? track * laneStroke * 0.47 : track * laneStroke) * Math.max(1, emphasis(span))}
 							strokeDasharray={span.kind === "random" ? `${track * 0.5} ${track * 0.32}` : span.kind === "window" ? `${track * 0.12} ${track * 0.22}` : undefined}
 							strokeLinecap="round"
 							opacity={quiet(span, span.kind === "window" ? 0.8 : 1)}
