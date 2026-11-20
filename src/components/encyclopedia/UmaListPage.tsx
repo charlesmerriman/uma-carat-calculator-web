@@ -6,7 +6,7 @@
  * outfit's page.
  */
 
-import { Fragment, useEffect, useMemo } from "react"
+import { Fragment, useMemo } from "react"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
@@ -17,7 +17,7 @@ import { splitOutfit } from "../../utils/umaName"
 import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { LetterHeading, LetterIndex } from "./letters"
 import { lettersFor } from "../../utils/encyclopediaLetters"
-import { reportCounts } from "../../utils/encyclopediaCounts"
+import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { Chips, Count, GradeSelect, PickChips, SearchBox, SortControl, Toolbar } from "./listFilters"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { AptitudeKey } from "../../types/pvpTeam"
@@ -26,7 +26,7 @@ import { useOwned } from "../../hooks/useOwned"
 import {
 	APTITUDE_GROUPS, APTITUDE_KEYS, GRADE_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, REVERSED_VALUES, SHARED_OWNED_KEY,
 	SHARED_WHERE_KEY, SHARED_WHERE_VALUES, STAR_OPTIONS, UMA_SORT_OPTIONS, WHERE_OPTIONS,
-	aptitudeLabel, aptitudeMatches, colourStyle, countLine, filterCards, filterUmas, gradeLetter, listWhere, ownedMatches, releaseDates, sortAptitude,
+	aptitudeLabel, aptitudeMatches, colourStyle, countLine, filterUmas, gradeLetter, listWhere, ownedMatches, releaseDates, sortAptitude,
 	sortByValue, sortFact, sortList, sortsHighFirst, values,
 	type OwnedFilter, type SharedWhere, type UmaSortOrder,
 } from "../../utils/encyclopedia"
@@ -71,15 +71,7 @@ const UmaListBody = () => {
 
 	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
 	const all = catalogue.status === "ready" ? catalogue.catalogue : null
-	const totals = useMemo(() => (all ? {
-		umas: filterUmas(all.umas, "", "all", []).length,
-		cards: filterCards(all.support_cards, "", [], [], "all").length,
-		// The Skills tab's number before its list is opened (Daptrius, board, 2026-11-17).
-		...(all.skill_count !== undefined && { skills: all.skill_count }),
-	} : null), [all])
-	useEffect(() => {
-		if (totals) reportCounts(totals)
-	}, [totals])
+	const totals = useCatalogueCounts(catalogue)
 	// Letter headings for the whole list in name order only (components/encyclopedia/letters.tsx).
 	const letters = lettersFor(umas, (uma) => uma.name, sort === "name" && totals !== null && umas.length === totals.umas)
 	const colours = all?.character_colours

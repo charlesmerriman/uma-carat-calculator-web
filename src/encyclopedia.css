@@ -82,6 +82,9 @@
 		flex-direction: column;
 		/* A tab whose count isn't known yet keeps its name on the same line as the others'. */
 		justify-content: flex-end;
+		/* And the count's line is held from the first paint (padding, the count, the gap and
+		   the name), so the masthead doesn't grow when the numbers arrive a beat after the page. */
+		min-height: calc(1.25rem + 1.375rem + 0.1rem + 1.21875rem);
 		gap: 0.1rem;
 		padding: 0.5rem 0.75rem 0.75rem;
 		border-radius: 0.9rem 0.9rem 0 0;
