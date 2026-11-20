@@ -46,6 +46,14 @@ describe("SkillDetail", () => {
 		expect(screen.getByText("is_overtake==1").tagName).toBe("CODE")
 	})
 
+	it("names a unique's owner on its inherited copy (Henry, 2026-11-19)", () => {
+		const { container } = render(asEditor(<SkillDetail skill={skill({
+			is_inherited: true,
+			sources: { umas: [{ id: 12, name: "Seiun Sky", source: "inherited", level: null, on_global: true }], uma_count: 1, cards: [], card_count: 0 },
+		})} />))
+		expect(container).toHaveTextContent("Umas: Seiun Sky (inherited)")
+	})
+
 	it("names where a player gets it, global first, and counts the rest", () => {
 		const { container } = render(asEditor(<SkillDetail skill={skill({
 			sources: {

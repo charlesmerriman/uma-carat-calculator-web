@@ -196,7 +196,17 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
  * (notes/course-map-plan-2.md, section 8).
  */
 function lightOnCourseMap(skill: PvpSkillRef, open: boolean) {
-	if (open) setCourseFocus({ skillId: skill.id, name: skill.name, image: skill.image })
+	// A unique, or its inherited copy, says whose it is on the verdict card, as
+	// the Skills list does (Henry, board "Two types of popup", 2026-11-19).
+	const owner = skill.sources?.umas.find((row) => row.source === "unique" || row.source === "inherited")
+	if (open) {
+		setCourseFocus({
+			skillId: skill.id,
+			name: skill.name,
+			image: skill.image,
+			...(owner && { owner: { name: owner.name, portrait: null, inherited: owner.source === "inherited", id: owner.id } }),
+		})
+	}
 	else clearCourseFocus(skill.id)
 }
 
