@@ -36,7 +36,25 @@ export const DECK_SLOTS = 6
 /** The editor's tab for everything that is not a running style. */
 export type EditorTab = "guide" | Exclude<PvpStyle, "everyone">
 export const STYLE_TABS: Array<Exclude<PvpStyle, "everyone">> = ["runaway", "front", "pace", "late", "end"]
-export const EDITOR_TABS: EditorTab[] = ["guide", ...STYLE_TABS]
+
+/**
+ * The styles the editor offers a tab for. Runaway only when the guide already
+ * has a runaway row: no guide uses it, and an empty tab with its "Nothing yet
+ * for Runaway" nag was clutter (Henry, board "Remove runaway section from pvp
+ * guide", 2026-11-17: "just remove from edit option altogether"). A guide that
+ * does have one keeps the tab, so no row is ever out of reach. Readers and
+ * teams keep the Runaway style; this is the editor's tab strip only.
+ */
+export function editorStyleTabs(document: GuideDocument): Array<Exclude<PvpStyle, "everyone">> {
+	const hasRunaway = [document.uma_recommendations, document.style_notes, document.skill_recommendations, document.decks]
+		.some((rows) => rows.some((row) => row.style === "runaway"))
+	return STYLE_TABS.filter((style) => style !== "runaway" || hasRunaway)
+}
+
+/** The editor's tabs: Guide, then the styles it offers. */
+export function editorTabsFor(document: GuideDocument): EditorTab[] {
+	return ["guide", ...editorStyleTabs(document)]
+}
 
 // The column lengths, the server's (calculatorapi/models/pvp_guide.py).
 export const MAX_LENGTH = {
@@ -501,8 +519,9 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 	for (const row of document.style_notes) mark(row.style, "advice")
 	for (const row of document.skill_recommendations) mark(row.style, "skills")
 	for (const row of document.decks) mark(row.style, "decks")
-	const empty = STYLE_TABS.filter((style) => !present.has(style))
-	for (const style of STYLE_TABS) {
+	const styles = editorStyleTabs(document)
+	const empty = styles.filter((style) => !present.has(style))
+	for (const style of styles) {
 		const tables = present.get(style)
 		if (!tables) continue
 		const gaps = (["umas", "advice", "decks"] as const).filter((name) => !tables.has(name))
@@ -511,7 +530,7 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 			items.push({ text: `${STYLE_LABELS[style]}: no ${gaps.join(", no ")}.`, tab: style, section: sectionOf[gaps[0]] })
 		}
 	}
-	if (empty.length === STYLE_TABS.length) {
+	if (empty.length === styles.length) {
 		items.push({ text: "No style has anything yet. Pick a tab and add rows.", tab: "front", section: "any" })
 	} else if (empty.length > 0) {
 		items.push({ text: `Nothing yet for ${empty.map((style) => STYLE_LABELS[style]).join(", ")}.`, tab: empty[0], section: "any" })
