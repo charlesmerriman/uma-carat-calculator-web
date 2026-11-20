@@ -1179,7 +1179,7 @@
 		content: "";
 	}
 	.enc-section__count {
-		font-family: var(--font-sans, inherit);
+		font-family: var(--font-sans);
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--color-gray-500);
@@ -1908,7 +1908,7 @@
 	}
 	.enc-skill__cost small {
 		margin-left: 0.125rem;
-		font-family: var(--font-sans, inherit);
+		font-family: var(--font-sans);
 		font-size: 0.625rem;
 		font-weight: 600;
 		letter-spacing: 0.04em;
@@ -2011,6 +2011,38 @@
 		line-height: 1.5;
 		overflow-wrap: anywhere;
 		color: var(--color-gray-300);
+	}
+	/* The bands behind a scaled number or time: its own line under the
+	   effect, in body type even inside the display-type rows. */
+	.enc-scale {
+		flex-basis: 100%;
+		max-width: 22rem;
+		margin-top: 0.25rem;
+		border-collapse: collapse;
+		font-family: var(--font-sans);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1.4;
+		color: var(--color-gray-100);
+	}
+	.enc-scale th {
+		padding: 0.2rem 0.5rem;
+		border-bottom: 1px solid var(--color-edge);
+		font-size: 0.6875rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-align: left;
+		text-transform: uppercase;
+		color: var(--c1-ink);
+	}
+	.enc-scale td {
+		padding: 0.2rem 0.5rem;
+		border-bottom: 1px solid var(--color-edge);
+	}
+	.enc-scale td:last-child,
+	.enc-scale th:last-child {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 	.enc-step[data-step="lasts"] .enc-how__value,
 	.enc-step[data-step="cooldown"] .enc-how__value {
