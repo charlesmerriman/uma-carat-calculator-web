@@ -228,20 +228,48 @@ export function styleColor(style: Exclude<PvpStyle, "everyone">): string {
 }
 
 /**
- * A team comp as its three places: "2 Pace + 1 End/Late" -> [pace], [pace],
- * [end, late]. Each place is the style or styles it may run. Null when the
- * text is not a count of styles adding up to one to three places, so the comp
- * shows as its words alone.
+ * A team comp's place: a running style, or the debuffer role (Henry, board
+ * "Add debuffer symbol for team comp rec", 2026-11-17: a red "D", in
+ * Hakuraku's colour). A role, not a style: it has no tab, decks or aptitude
+ * column, so it never joins `PvpStyle`.
  */
-export function parseTeamComp(text: string): Array<Array<Exclude<PvpStyle, "everyone">>> | null {
-	const places: Array<Array<Exclude<PvpStyle, "everyone">>> = []
+export type CompPlace = Exclude<PvpStyle, "everyone"> | "debuffer"
+
+const DEBUFFER_WORDS = new Set(["debuffer", "debuffers", "debuff"])
+
+function compPlaceForWord(word: string): CompPlace | null {
+	const trimmed = word.trim().toLowerCase()
+	if (DEBUFFER_WORDS.has(trimmed)) return "debuffer"
+	// "2 Fronts": a plural style reads as the style.
+	return styleForWord(trimmed) ?? styleForWord(trimmed.replace(/s$/, ""))
+}
+
+/** A comp place's colour, as a CSS value: the style's, or the debuffer's (--color-role-debuffer, index.css). */
+export function compPlaceColor(place: CompPlace): string {
+	return place === "debuffer" ? "var(--color-role-debuffer)" : styleColor(place)
+}
+
+/** A comp place's letter on its chip: the style's first, "D" for a debuffer. */
+export function compPlaceLetter(place: CompPlace): string {
+	return place === "debuffer" ? "D" : STYLE_LABELS[place][0]
+}
+
+/**
+ * A team comp as its three places: "2 Pace + 1 End/Late" -> [pace], [pace],
+ * [end, late]; "1 Front + 2 Debuffer" -> [front], [debuffer], [debuffer].
+ * Each place is the style (or role) or styles it may run. Null when the text
+ * is not a count of places adding up to one to three, so the comp shows as
+ * its words alone.
+ */
+export function parseTeamComp(text: string): CompPlace[][] | null {
+	const places: CompPlace[][] = []
 	const parts = text.split("+").map((part) => part.trim()).filter(Boolean)
 	for (const part of parts) {
 		const match = /^(\d)\s*(.+)$/.exec(part)
 		if (!match) return null
-		const styles = match[2].split("/").map(styleForWord)
+		const styles = match[2].split("/").map(compPlaceForWord)
 		if (styles.some((style) => style === null)) return null
-		for (let i = 0; i < Number(match[1]); i += 1) places.push(styles as Array<Exclude<PvpStyle, "everyone">>)
+		for (let i = 0; i < Number(match[1]); i += 1) places.push(styles as CompPlace[])
 	}
 	return places.length >= 1 && places.length <= 3 ? places : null
 }

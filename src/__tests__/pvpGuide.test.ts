@@ -17,6 +17,8 @@ import {
 	parsePvpStyle,
 	parseStyleRanking,
 	parseTeamComp,
+	compPlaceColor,
+	compPlaceLetter,
 	guideUmaAptitudes,
 	isAptitudeOnlyRole,
 	pickStyle,
@@ -518,6 +520,17 @@ describe("team comps and style colours", () => {
 		expect(parseTeamComp("3 Pace")).toEqual([["pace"], ["pace"], ["pace"]])
 		expect(parseTeamComp("2 Pace + 1 End/Late")).toEqual([["pace"], ["pace"], ["end", "late"]])
 		expect(parseTeamComp("1 Front Runner + 2 Pace Chaser")).toEqual([["front"], ["pace"], ["pace"]])
+	})
+
+	it("counts a debuffer as a place of its own (Henry, 2026-11-17)", () => {
+		expect(parseTeamComp("1 Front + 2 Debuffer")).toEqual([["front"], ["debuffer"], ["debuffer"]])
+		expect(parseTeamComp("3 Debuffers")).toEqual([["debuffer"], ["debuffer"], ["debuffer"]])
+		expect(parseTeamComp("1 End/Debuffer + 2 Pace")).toEqual([["end", "debuffer"], ["pace"], ["pace"]])
+		expect(parseTeamComp("2 Fronts + 1 End")).toEqual([["front"], ["front"], ["end"]])
+		expect(parseTeamComp("2 Fron + 1 End")).toBeNull()
+		expect(compPlaceLetter("debuffer")).toBe("D")
+		expect(compPlaceLetter("front")).toBe("F")
+		expect(compPlaceColor("debuffer")).toBe("var(--color-role-debuffer)")
 	})
 
 	it("leaves a comp it cannot count as words alone", () => {
