@@ -24,6 +24,13 @@ describe("encyclopediaMeta", () => {
 		expect(description).toMatch(/^Ines Fujin \[Watch My Star Fly!\] is an SSR Guts support card in Uma Musume\. Its page has its effects at every level/)
 	})
 
+	it("titles a card with no title by its type and number, never as its uma", () => {
+		const { title, description } = cardPageMeta({ ...SAMPLE.card, title: "" })
+		expect(title).toBe("Ines Fujin SSR Guts Support Card (No. 30011)")
+		expect(title).not.toBe(umaPageMeta(SAMPLE.uma).title)
+		expect(description).toMatch(/^Ines Fujin \(No\. 30011\) is an SSR Guts support card/)
+	})
+
 	it("leads a skill with the game's own sentence", () => {
 		const { title, description } = skillPageMeta(SAMPLE.skill)
 		expect(title).toBe("Right-Handed × (Skill)")
@@ -33,6 +40,13 @@ describe("encyclopediaMeta", () => {
 	it("says a unique, not an unique", () => {
 		const unique = { ...SAMPLE.skill, game_id: 100031, rarity: 5, version: "unique" }
 		expect(skillPageMeta(unique).description).toContain("is a unique skill in Uma Musume")
+	})
+
+	it("titles a unique and its inherited copy apart, though they share a name", () => {
+		const unique = { ...SAMPLE.skill, name: "Shooting Star", game_id: 100011, rarity: 5 }
+		const inherited = { ...SAMPLE.skill, name: "Shooting Star", game_id: 900011, rarity: 1 }
+		expect(skillPageMeta(unique).title).toBe("Shooting Star (Unique Skill)")
+		expect(skillPageMeta(inherited).title).toBe("Shooting Star (Inherited Skill)")
 	})
 
 	it("says when the page is about something not on global yet", () => {
@@ -47,12 +61,23 @@ describe("encyclopediaMeta", () => {
 			expect(description).toMatch(/^Right-Handed × is a white skill/)
 		})
 
-		it("names an uma or card without its title, which may be UmaTL's", () => {
-			expect(umaPageMeta({ ...SAMPLE.uma, uses_translation: true }).description).toMatch(/^Ines Fujin is a 3★/)
-			const card = cardPageMeta({ ...SAMPLE.card, uses_translation: true })
-			expect(card.description).toMatch(/^Ines Fujin is an SSR Guts/)
-			// The tab title keeps it: the page under it carries the credit.
+		it("names an uma or card without its own title when that title is UmaTL's", () => {
+			expect(umaPageMeta({ ...SAMPLE.uma, title_translated: true }).description).toMatch(/^Ines Fujin is a 3★/)
+			const card = cardPageMeta({ ...SAMPLE.card, title_translated: true, uses_translation: true })
+			// Its type and the game's number tell it apart instead, in the title too.
+			expect(card.title).toBe("Ines Fujin SSR Guts Support Card (No. 30011)")
+			expect(card.description).toMatch(/^Ines Fujin \(No\. 30011\) is an SSR Guts/)
+		})
+
+		it("keeps Global's title when only other text on the page is UmaTL's", () => {
+			// A related outfit's or card's row can be UmaTL's while this title is Global's.
+			const card = cardPageMeta({ ...SAMPLE.card, title_translated: false, uses_translation: true })
 			expect(card.title).toBe("Ines Fujin [Watch My Star Fly!]")
+		})
+
+		it("leaves the title out on an API too old to say whose it is, when the page uses UmaTL text", () => {
+			const card = cardPageMeta({ ...SAMPLE.card, title_translated: undefined, uses_translation: true })
+			expect(card.title).toBe("Ines Fujin SSR Guts Support Card (No. 30011)")
 		})
 	})
 

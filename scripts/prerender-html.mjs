@@ -203,6 +203,98 @@ export function buildPage(template, route, rendered, site) {
 	return injectContent(rewriteHeadTags(withRoot, rendered.meta), rendered.content ?? {})
 }
 
+// ── The Encyclopedia's detail pages ─────────────────────────────────────────
+//
+// notes/encyclopedia-open-plan.md: one document per uma, card and skill page,
+// from the API's index rather than PRERENDER_ROUTES, plus a sitemap of exactly
+// the documents written.
+
+/** The id of the payload block a detail document carries. Mirrors PAGE_DATA_ELEMENT_ID in src/services/encyclopediaQueries.ts. */
+export const PAGE_DATA_ELEMENT_ID = 'page-data'
+
+/** The kinds the API's index lists, by its keys, and the kind each one is in the app. */
+const INDEX_KINDS = [
+	['umas', 'uma'],
+	['cards', 'card'],
+	['skills', 'skill'],
+]
+
+/**
+ * Every `other_names` dropped, at any depth. It holds GameTora's names, which
+ * search may match but the site never shows (owner, 2026-11-12); the page
+ * draws none of them, and embedding the payload would put them in the page
+ * source.
+ */
+export function withoutOtherNames(value) {
+	if (Array.isArray(value)) return value.map(withoutOtherNames)
+	if (value === null || typeof value !== 'object') return value
+	return Object.fromEntries(
+		Object.entries(value)
+			.filter(([key]) => key !== 'other_names')
+			.map(([key, inner]) => [key, withoutOtherNames(inner)]),
+	)
+}
+
+/**
+ * Embeds a detail page's payload just before </body>, escaped like the site
+ * content (injectContent), so the browser primes its query cache with it and
+ * hydration sees the markup the build made (main.tsx).
+ */
+export function injectPageData(html, data) {
+	const json = JSON.stringify(withoutOtherNames(data)).replace(/</g, '\\u003c')
+	return html.replace(
+		'</body>',
+		() => `<script id="${PAGE_DATA_ELEMENT_ID}" type="application/json">${json}</script>\n  </body>`,
+	)
+}
+
+/**
+ * The index's game ids as jobs: which page, where its payload is, where its
+ * document goes. `href` and `apiPath` are the app's own builders
+ * (encyclopediaHref, encyclopediaApiPath), so the build can't drift from the
+ * links. Refuses an index that isn't three non-empty lists of ids: a build
+ * that quietly wrote no pages would drop them all from the sitemap.
+ */
+export function encyclopediaJobs(index, { href, apiPath }) {
+	if (!index || typeof index !== 'object') throw new Error('the encyclopedia index is not an object')
+	const jobs = []
+	for (const [key, kind] of INDEX_KINDS) {
+		const ids = index[key]
+		if (!Array.isArray(ids) || ids.length === 0) throw new Error(`the encyclopedia index has no "${key}"`)
+		for (const gameId of ids) {
+			if (!Number.isSafeInteger(gameId) || gameId <= 0) throw new Error(`the encyclopedia index lists a bad ${kind} id: ${gameId}`)
+			jobs.push({ kind, gameId, route: href(kind, gameId), apiPath: apiPath(kind, gameId) })
+		}
+	}
+	return jobs
+}
+
+/**
+ * What a detail document must have, on top of validateRendered (footer, its
+ * own canonical, no noindex): the page itself, not its skeleton or the
+ * "no page for that" note, under its own title.
+ */
+export function validateDetailPage(route, rendered, data) {
+	const clean = normaliseRoute(route)
+	if (!data || typeof data.name !== 'string' || data.name === '') throw new Error(`${clean}: no payload to render`)
+	if (!rendered.meta.title.includes(data.name)) {
+		throw new Error(`${clean}: title "${rendered.meta.title}" does not name the page (${data.name})`)
+	}
+	if (!/<h1[\s>]/.test(rendered.html)) throw new Error(`${clean}: rendered no <h1>; is it the page, or its loading state?`)
+}
+
+/** One detail page, start to finish: buildPage's checks and tags, the detail checks, then its payload. */
+export function buildDetailPage(template, route, rendered, data, site) {
+	validateDetailPage(route, rendered, data)
+	return injectPageData(buildPage(template, route, rendered, site), data)
+}
+
+/** A sitemap of absolute URLs, one <url> each, escaped. */
+export function buildSitemap(urls) {
+	const entries = urls.map((url) => `  <url><loc>${escapeHtml(url)}</loc></url>`).join('\n')
+	return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`
+}
+
 /**
  * Where the prerender gets its site content from, given the environment.
  *

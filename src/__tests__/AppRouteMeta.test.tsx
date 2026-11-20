@@ -92,10 +92,12 @@ describe("AppRouteMeta", () => {
 		expect(document.title).toBe("Right-Handed × (Skill) | Uma Musume Carat Calculator")
 	})
 
-	it("keeps Encyclopedia pages out of search until they are real documents", () => {
+	it("lets an Encyclopedia page into search, and one still loading (a page newer than the build)", () => {
 		const { uma } = ENCYCLOPEDIA_SAMPLE
 		renderAt(`/app/umas/${uma.game_id}`, null, false, primedWith("uma", uma.game_id, uma))
-		expect(document.querySelector('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow")
+		expect(document.querySelector('meta[name="robots"]')).toBeNull()
+		renderAt("/app/skills/123456")
+		expect(document.querySelector('meta[name="robots"]')).toBeNull()
 	})
 
 	it("says there is no such page, out of search, for an id the API doesn't know", () => {

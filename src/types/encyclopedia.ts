@@ -85,6 +85,8 @@ export interface UmaPageData {
 	title: string
 	/** Some English on the page is UmaTL's fan translation, so the page credits it. */
 	uses_translation?: boolean
+	/** Her own `title` is UmaTL's (utils/encyclopediaMeta.ts keeps it out of search). Absent from an older API. */
+	title_translated?: boolean
 	jp_name: string
 	jp_title: string
 	portrait: string | null
@@ -168,6 +170,8 @@ export interface CardPageData {
 	title: string
 	/** Some English on the page is UmaTL's fan translation, so the page credits it. */
 	uses_translation?: boolean
+	/** Its own `title` is UmaTL's (utils/encyclopediaMeta.ts keeps it out of search). Absent from an older API. */
+	title_translated?: boolean
 	jp_name: string
 	jp_title: string
 	image: string | null
