@@ -222,6 +222,37 @@ export function setAccelsOpen(open: boolean) {
 	notify()
 }
 
+/**
+ * "Stick to top": the course strip docks under the event bar once the map
+ * reaches it, and stays while the guide scrolls (owner, 2026-11-20, in place
+ * of a floating window; the slim strip). Remembered on the device; off until
+ * the reader turns it on.
+ */
+const STICKY_KEY = "uma-course-map-sticky"
+let stickyMap: boolean | null = null
+
+function readStickyMap(): boolean {
+	try {
+		return localStorage.getItem(STICKY_KEY) === "on"
+	} catch {
+		return false
+	}
+}
+
+export function useStickyMap(): boolean {
+	return useSyncExternalStore(subscribe, () => (stickyMap ??= readStickyMap()), () => false)
+}
+
+export function setStickyMap(on: boolean) {
+	stickyMap = on
+	try {
+		localStorage.setItem(STICKY_KEY, on ? "on" : "off")
+	} catch {
+		// Storage blocked: the choice lasts this page's life.
+	}
+	notify()
+}
+
 /** The guide's course block (CourseSection): one per page. */
 export const COURSE_MAP_ID = "course-map"
 

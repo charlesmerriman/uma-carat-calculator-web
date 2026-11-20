@@ -18,7 +18,13 @@
  * A sticky `top` counts from the scroller's top edge in both: the inner div's
  * in the shell, the viewport's in the document.
  *
+ * The course map's stuck strip (CourseSection, "Stick to top") docks under
+ * the band, so while it is there the View tabs and everything under them stick
+ * lower by its height: it is found by `data-course-stuck` and measured on the
+ * `pvp-sticky-change` event its block sends when it docks or leaves.
+ *
  * Sets on `root`, for everything inside it:
+ *   --pvp-stick-line  the band's bottom edge, where the course strip docks
  *   --pvp-tabs-top    where the View tabs stick
  *   --pvp-below-tabs  the View tabs' bottom edge: where the rows under them stick
  *   --pvp-viewport-h  the scroller's visible height, so a pinned column can be
@@ -29,6 +35,9 @@
 
 import { useEffect, type RefObject } from "react"
 import { APP_SCROLLER_SELECTOR } from "./useScrollReset"
+
+/** Sent on `window` by the course block when its strip docks, leaves or changes height. */
+export const STICKY_CHANGE = "pvp-sticky-change"
 
 export function usePvpStickyOffsets(
 	root: RefObject<HTMLElement | null>,
@@ -49,9 +58,12 @@ export function usePvpStickyOffsets(
 			// The band is sticky only in the desktop shell (its app-shell:sticky),
 			// which makes its computed position the test for which set-up is live.
 			const shell = getComputedStyle(bandElement).position === "sticky"
-			const top = shell ? bandElement.offsetHeight : (navbar?.offsetHeight ?? 0)
+			const line = shell ? bandElement.offsetHeight : (navbar?.offsetHeight ?? 0)
+			const stuck = document.querySelector<HTMLElement>("[data-course-stuck]")?.offsetHeight ?? 0
+			const top = line + stuck
 			// The shell's scroller (views/ApplicationViews.tsx); the document otherwise.
 			const scroller = shell ? rootElement.closest<HTMLElement>(APP_SCROLLER_SELECTOR) : null
+			rootElement.style.setProperty("--pvp-stick-line", `${line}px`)
 			rootElement.style.setProperty("--pvp-tabs-top", `${top}px`)
 			rootElement.style.setProperty("--pvp-below-tabs", `${top + tabsElement.offsetHeight}px`)
 			rootElement.style.setProperty("--pvp-viewport-h", `${scroller?.clientHeight ?? window.innerHeight}px`)
@@ -64,9 +76,11 @@ export function usePvpStickyOffsets(
 		const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update)
 		for (const element of [bandElement, tabsElement, navbar]) if (element) observer?.observe(element)
 		window.addEventListener("resize", update)
+		window.addEventListener(STICKY_CHANGE, update)
 		return () => {
 			observer?.disconnect()
 			window.removeEventListener("resize", update)
+			window.removeEventListener(STICKY_CHANGE, update)
 		}
 	}, [root, band, tabs, hasTabs])
 }

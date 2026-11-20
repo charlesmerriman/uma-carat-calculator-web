@@ -7,7 +7,7 @@ import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@te
 import { afterEach, describe, expect, it, vi } from "vitest"
 import CourseLayersMenu from "../components/course/CourseLayersMenu"
 import CourseSection from "../components/course/CourseSection"
-import { setAccelsOpen, setCourseFocus, setCourseLayers, useVeteranPicks } from "../services/courseMapStore"
+import { setAccelsOpen, setCourseFocus, setCourseLayers, setStickyMap, useVeteranPicks } from "../services/courseMapStore"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { SkillZoneMap } from "../utils/courseLayers"
 import { CHUKYO_1200 } from "./courseFixtures"
@@ -20,6 +20,7 @@ afterEach(() => {
 	act(() => {
 		setCourseFocus(null)
 		setAccelsOpen(false)
+		setStickyMap(false)
 	})
 	vi.restoreAllMocks()
 })
@@ -273,5 +274,41 @@ describe("the course map's layers", () => {
 		expect(box).not.toBeChecked()
 		expect(box).toBeDisabled()
 		expect(screen.getByText("Sign in to show your team's veterans.")).toBeInTheDocument()
+	})
+})
+
+describe("Stick to top (owner, 2026-11-20)", () => {
+	// The PvP page's root carries the line the strip docks on (usePvpStickyOffsets).
+	const onPage = (anchorTop: number) => {
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+			const top = this.hasAttribute("data-strip-anchor") ? anchorTop : 0
+			return { x: 0, y: top, top, left: 16, right: 1016, width: 1000, height: 300, bottom: top + 300, toJSON: () => ({}) } as DOMRect
+		})
+		return render(
+			<div style={{ "--pvp-stick-line": "120px" } as React.CSSProperties}>
+				<CourseSection course={CHUKYO_1200} />
+			</div>,
+			{ wrapper: TestQueryProvider }
+		)
+	}
+
+	it("docks the slim strip once the map's strip reaches the line, and Unstick turns it off", async () => {
+		onPage(80)
+		expect(screen.queryByRole("region", { name: "Course map, stuck to the top" })).toBeNull()
+		fireEvent.click(screen.getAllByRole("button", { name: "Stick to top" })[0])
+		const bar = await screen.findByRole("region", { name: "Course map, stuck to the top" })
+		// Docked on the line, the block's width; the slim strip has no height or section rows.
+		expect(bar).toHaveStyle({ top: "120px", width: "1000px" })
+		expect(within(bar).queryByText("Height")).toBeNull()
+		expect(within(bar).queryByText("Section")).toBeNull()
+		expect(within(bar).getByText("Phase")).toBeInTheDocument()
+		fireEvent.click(within(bar).getByRole("button", { name: "Unstick" }))
+		await waitFor(() => expect(screen.queryByRole("region", { name: "Course map, stuck to the top" })).toBeNull())
+	})
+
+	it("stays in place while the strip is still below the line", () => {
+		act(() => setStickyMap(true))
+		onPage(400)
+		expect(screen.queryByRole("region", { name: "Course map, stuck to the top" })).toBeNull()
 	})
 })

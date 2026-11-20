@@ -17,7 +17,8 @@
  */
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { Loader2, Zap } from "lucide-react"
+import { Loader2, Pin, PinOff, Zap } from "lucide-react"
+import { createPortal } from "react-dom"
 import type { RaceCourse, RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
 import { AuthContext } from "../../services/AuthContext"
@@ -26,9 +27,11 @@ import { setCourseShapeChoice, setTrackColours, useCourseShapeChoice, useTrackCo
 import {
 	COURSE_MAP_ID,
 	setAccelsOpen,
+	setStickyMap,
 	setCourseFocus,
 	setPageCourse,
 	useAccelsOpen,
+	useStickyMap,
 	subscribeCourseMap,
 	useCourseFocus,
 	useStyleTab,
@@ -50,6 +53,8 @@ import type { CourseMarker } from "../../utils/courseGeometry"
 import { schematicShape } from "../../utils/courseSchematic"
 import { heldSkillMeetsPick } from "../../utils/pvpGuide"
 import { useRememberedOpen } from "../../hooks/useRememberedOpen"
+import { APP_SCROLLER_SELECTOR } from "../../hooks/useScrollReset"
+import { STICKY_CHANGE } from "../../hooks/usePvpStickyOffsets"
 import CourseAccelList from "./CourseAccelList"
 import CourseFactsList from "./CourseFactsList"
 import CourseHeadline from "./CourseHeadline"
@@ -314,6 +319,109 @@ export default function CourseSection({ course, event = null, guide = null }: {
 		scrollerOf(block).scrollBy(0, shift)
 	})
 
+	// STICK TO TOP (owner, 2026-11-20, in place of a floating window): the
+	// strip docks under the event bar the moment it reaches it and stays there
+	// while the guide scrolls; the View tabs and the style tabs stick under it
+	// (usePvpStickyOffsets counts its height), so the stuck rows keep the
+	// page's own order. The map sits in the guide's header, which scrolls away,
+	// so CSS sticky can't carry it: the docked strip is a fixed copy on <body>
+	// (a fixed box under this block's framer-motion transforms would be placed
+	// against them), shown while the real strip is above the line. The slim
+	// strip (no height or section rows) and the lit skill's card beside it,
+	// where it sits in place, so the strip keeps its width when it docks. Not
+	// on a phone, where a stuck strip would take most of the screen.
+	const sticky = useStickyMap()
+	const stripAnchorRef = useRef<HTMLDivElement>(null)
+	const [docked, setDocked] = useState<{ top: number; left: number; width: number } | null>(null)
+	// Only while it's on and the screen is wide; a stale measurement is replaced on the next frame.
+	const stuck = sticky && !narrow ? docked : null
+	useEffect(() => {
+		if (!sticky || narrow) return
+		let frame = 0
+		const measure = () => {
+			frame = 0
+			const block = blockRef.current
+			const root = block?.closest<HTMLElement>("[style*='--pvp-stick-line']")
+			if (!block || !root) return
+			// In the desktop shell an inner div scrolls; the line is measured from its top.
+			const scroller = root.closest<HTMLElement>(APP_SCROLLER_SELECTOR)
+			const line = (scroller ? scroller.getBoundingClientRect().top : 0) + (parseFloat(root.style.getPropertyValue("--pvp-stick-line")) || 0)
+			const box = block.getBoundingClientRect()
+			// The strip's top in Strip or Both; in Track view the block's bottom, once the track has gone.
+			const anchor = stripAnchorRef.current
+			const reached = anchor ? anchor.getBoundingClientRect().top <= line : box.bottom <= line
+			setDocked((was) => {
+				if (!reached) return null
+				return was && was.top === line && was.left === box.left && was.width === box.width ? was : { top: line, left: box.left, width: box.width }
+			})
+		}
+		const schedule = () => {
+			if (!frame) frame = requestAnimationFrame(measure)
+		}
+		schedule()
+		// Scroll events don't bubble: caught on the document in the capture phase.
+		document.addEventListener("scroll", schedule, true)
+		window.addEventListener("resize", schedule)
+		return () => {
+			cancelAnimationFrame(frame)
+			document.removeEventListener("scroll", schedule, true)
+			window.removeEventListener("resize", schedule)
+		}
+	}, [sticky, narrow, view])
+	// The page's sticky rows move when the strip docks, leaves or grows (a lit skill's card beside it).
+	const stuckOn = stuck !== null
+	useLayoutEffect(() => {
+		window.dispatchEvent(new Event(STICKY_CHANGE))
+	}, [stuckOn, focus])
+	useEffect(() => () => {
+		window.dispatchEvent(new Event(STICKY_CHANGE))
+	}, [])
+	const stickyButton = (
+		<button
+			type="button"
+			aria-pressed={sticky}
+			onClick={() => setStickyMap(!sticky)}
+			title="Keep the course strip at the top of the page while you scroll the guide"
+			className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+				sticky ? "border-brand bg-brand/15 text-gray-100" : "border-gray-600 text-gray-200 hover:bg-gray-700/60"
+			}`}
+		>
+			<Pin className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+			Stick to top
+		</button>
+	)
+	const stuckBar = stuck && createPortal(
+		<div
+			data-course-stuck=""
+			role="region"
+			aria-label="Course map, stuck to the top"
+			className="fixed z-30 rounded-b-xl border-x border-b border-gray-700/70 bg-gray-900 px-4 pb-3 pt-2 shadow-lg"
+			style={{ top: stuck.top, left: stuck.left, width: stuck.width }}
+		>
+			<div className="mb-1 flex items-center gap-3">
+				<h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Course map</h3>
+				<span className="truncate text-xs text-gray-300">{courseName(course)}</span>
+				<button
+					type="button"
+					onClick={() => setStickyMap(false)}
+					className="ml-auto flex shrink-0 items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+				>
+					<PinOff className="h-3.5 w-3.5" aria-hidden="true" />
+					Unstick
+				</button>
+			</div>
+			<div className="flex items-start gap-4">
+				<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
+				{focus && (
+					<div className="w-[380px] shrink-0">
+						<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
+					</div>
+				)}
+			</div>
+		</div>,
+		document.body
+	)
+
 	return (
 		// The id is what "See it on the map" scrolls to (GuideSkillsPanel); one
 		// course block per page.
@@ -324,6 +432,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 				<span className="text-sm text-gray-300">{courseName(course)}</span>
 				<div className="ml-auto hidden flex-wrap items-center gap-2 sm:flex">
 					{accelsButton}
+					{stickyButton}
 					<CourseLayersMenu signedIn={signedIn} veteransNote={veteranData?.note ?? null} veterans={layer.menu} />
 					{/* Walk the course was shelved (owner, 2026-11-03): a runner on the
 					    course belongs to the run view, once the race logic exists. */}
@@ -405,6 +514,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 								))}
 							</ul>
 						)}
+						{/* Where the strip starts: "Stick to top" docks it once this reaches the line. */}
+						{view !== "track" && <div ref={stripAnchorRef} data-strip-anchor="" aria-hidden="true" />}
 						{view !== "track" && (
 							<CourseStrip
 								course={course}
@@ -502,6 +613,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			</div>
 			<CourseFactsList course={course} />
 			{veteransOn && event && <VeteranLayerSource event={event} onData={setVeteranData} />}
+			{stuckBar}
 		</div>
 	)
 }
