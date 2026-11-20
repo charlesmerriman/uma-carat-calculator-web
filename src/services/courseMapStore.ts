@@ -23,8 +23,12 @@ export interface CourseFocus {
 	name: string
 	/** The skill's picture, for the verdict card (whoever lights it has it). */
 	image?: string | null
-	/** Whose unique it is, or whose unique it is inherited from (the accels column knows). */
-	owner?: { name: string; portrait: string | null; portrait_layers?: PortraitLayers | null; inherited: boolean }
+	/**
+	 * Whose unique it is, or whose unique it is inherited from: the Skills list
+	 * knows her portrait; a guide's chip knows her row id (`id`, from the
+	 * skill's sources) and the verdict card looks the portrait up.
+	 */
+	owner?: { name: string; portrait: string | null; portrait_layers?: PortraitLayers | null; inherited: boolean; id?: number }
 }
 
 export interface CourseLayers {

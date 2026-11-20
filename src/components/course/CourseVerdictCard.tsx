@@ -16,6 +16,7 @@ import type { RaceCourse } from "../../types"
 import type { CourseFocus } from "../../services/courseMapStore"
 import { grade, verdictLines, type Grade, type SkillZoneEntry } from "../../utils/courseLayers"
 import { metreToFraction, phaseStarts } from "../../utils/courseGeometry"
+import { useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
 
 const TONES: Record<Grade["tone"], string> = {
 	great: "bg-brand text-black",
@@ -82,11 +83,18 @@ export default function CourseVerdictCard({ course, focus, entry, onClear, class
 }) {
 	const lines = verdictLines(entry, course.distance)
 	const given = grade(entry)
-	const owner = focus.owner
+	// An owner named by a guide chip comes with her id, not her picture: the
+	// catalogue the PvP page already loads has it (useEncyclopediaLookup).
+	const lookup = useEncyclopediaLookup({ load: false })
+	const known = focus.owner?.id != null ? lookup.uma(focus.owner.id)?.entry : undefined
+	const owner = focus.owner && known && !focus.owner.portrait
+		? { ...focus.owner, portrait: known.portrait ?? known.image ?? null, portrait_layers: known.portrait_layers }
+		: focus.owner
 	return (
 		<div className={`w-full max-w-[380px] rounded-[10px] border border-gray-600 bg-gray-900/70 px-3 py-2.5 ${className}`} aria-label={`${focus.name} on this course`}>
 			<div className="flex items-center gap-2.5">
-				{owner ? (
+				{/* Her portrait once known; the skill's icon until then, never an empty frame. */}
+				{owner?.portrait ? (
 					<FramedUma src={owner.portrait} layers={owner.portrait_layers} alt="" title={owner.name} className="h-9 w-9 shrink-0" />
 				) : focus.image ? (
 					<img src={focus.image} alt="" className="h-7 w-7 shrink-0" loading="lazy" decoding="async" />

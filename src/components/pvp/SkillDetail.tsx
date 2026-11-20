@@ -132,6 +132,7 @@ function ReadableChips({ readable, single }: { readable: SkillReadable; single: 
 
 const SOURCE_WORDS: Record<string, string> = {
 	unique: "unique",
+	inherited: "inherited",
 	innate: "innate",
 	awakening: "awakening",
 	evolved: "evolution",
