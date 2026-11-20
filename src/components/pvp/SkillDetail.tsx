@@ -20,16 +20,25 @@
  * and hidden from sight, where the small caps label already reads as one.
  */
 
-import { useContext, type ReactNode } from "react"
+import { useContext, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import { SKILL_TYPE_WORDS, skillHref, skillKind } from "../../utils/skillSearch"
 import type { PvpSkillRef, PvpSkillSources, SkillCondition, SkillPhrase, SkillReadable } from "../../types/pvpGuide"
 import { skillColour } from "../../utils/pvpGuide"
 import { cooldownWords, durationWords, hasCondition, slotLabel } from "../../utils/skillWords"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { nameLang } from "../../utils/skillList"
-import { InsidePopupContext } from "./hoverPopup"
+import { InsidePopupContext, PopupHoldContext } from "./hoverPopup"
+import { HoverCardContent } from "../hovercards/HoverCardContent"
+import { Loading } from "../hovercards/parts"
+
+/** A name in a skill's card that its popup can turn into: an outfit or a card, by row id. */
+interface Viewing {
+	kind: "uma" | "card"
+	id: number
+	name: string
+}
 
 /** The game's own code for a clause, in a quiet code box. */
 function Phrase({ phrase }: { phrase: SkillPhrase }) {
@@ -149,8 +158,22 @@ function more(shown: number, total: number): string {
 	return total > shown ? `, +${total - shown} more` : ""
 }
 
-/** "Umas: Special Week (evolution, level 3)" and "Cards: Kitasan Black (hint), +11 more". */
-export function SourcesText({ sources }: { sources: PvpSkillSources }) {
+/**
+ * "Umas: Special Week (evolution, level 3)" and "Cards: Kitasan Black (hint), +11 more".
+ * With `onOpen` (inside a popup that can hold), each name with an id is a
+ * button that opens its card there (Henry, board "Hyper link the uma and
+ * support card", 2026-11-19); "+N more" stays words, and the skill's page
+ * lists them all.
+ */
+export function SourcesText({ sources, onOpen }: { sources: PvpSkillSources; onOpen?: (viewing: Viewing) => void }) {
+	const nameOf = (kind: Viewing["kind"], row: { id?: number; name: string }) =>
+		onOpen && row.id !== undefined ? (
+			<button type="button" className="skill-card__source" onClick={() => onOpen({ kind, id: row.id as number, name: row.name })}>
+				{row.name}
+			</button>
+		) : (
+			row.name
+		)
 	if (sources.uma_count === 0 && sources.card_count === 0) return null
 	return (
 		<span className="skill-card__rows">
@@ -158,7 +181,12 @@ export function SourcesText({ sources }: { sources: PvpSkillSources }) {
 				<>
 					<Label>Umas</Label>
 					<span>
-						{sources.umas.map((row) => `${row.name} (${sourceLabel(row.source, row.level)}${row.on_global ? "" : ", JP"})`).join(", ")}
+							{sources.umas.map((row, index) => (
+								<span key={index}>
+									{index > 0 && ", "}
+									{nameOf("uma", row)} ({sourceLabel(row.source, row.level)}{row.on_global ? "" : ", JP"})
+								</span>
+							))}
 						{more(sources.umas.length, sources.uma_count)}
 					</span>
 				</>
@@ -167,7 +195,12 @@ export function SourcesText({ sources }: { sources: PvpSkillSources }) {
 				<>
 					<Label>Cards</Label>
 					<span>
-						{sources.cards.map((row) => `${row.name} (${sourceLabel(row.source, null)}${row.on_global ? "" : ", JP"})`).join(", ")}
+							{sources.cards.map((row, index) => (
+								<span key={index}>
+									{index > 0 && ", "}
+									{nameOf("card", row)} ({sourceLabel(row.source, null)}{row.on_global ? "" : ", JP"})
+								</span>
+							))}
 						{more(sources.cards.length, sources.card_count)}
 					</span>
 				</>
@@ -240,6 +273,14 @@ export function SkillDetail({ skill, note, link = true, full = false }: {
 	const preview = full || earlyAccess
 	// The drawn popup is aria-hidden, so its link is for the pointer only (hoverPopup.tsx).
 	const inPopup = useContext(InsidePopupContext)
+	// A name clicked in the drawn popup: the popup holds still and shows her
+	// card, with a row back to the skill. The screen reader's copy keeps plain names.
+	const hold = useContext(PopupHoldContext)
+	const [viewing, setViewing] = useState<Viewing | null>(null)
+	const open = inPopup && hold ? (next: Viewing) => {
+		hold()
+		setViewing(next)
+	} : undefined
 	const kind = skill.is_inherited ? "inherited" : skill.game_id != null ? skillKind({ ...skill, game_id: skill.game_id }) : skillColour(skill)
 	// The type and the cost are part of the skills work, so early access only,
 	// like the readable text below them.
@@ -251,6 +292,18 @@ export function SkillDetail({ skill, note, link = true, full = false }: {
 	].filter(Boolean).join(" · ")
 	const credit = preview && skill.uses_translation
 	const page = preview && link && skill.game_id != null
+	if (viewing) {
+		return (
+			<span className="skill-card-stack">
+				<button type="button" className="skill-card-back" onClick={() => setViewing(null)}>
+					<ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+					{skill.image && <img src={skill.image} alt="" className="h-4 w-4 shrink-0" />}
+					<span className="truncate" lang={nameLang(skill.name)}>{skill.name}</span>
+				</button>
+				<HoverCardContent kind={viewing.kind} id={viewing.id} fallback={<Loading what={viewing.name} />} />
+			</span>
+		)
+	}
 	return (
 		<span className="skill-card">
 			<span className="skill-card__head" data-kind={kind}>
@@ -276,7 +329,7 @@ export function SkillDetail({ skill, note, link = true, full = false }: {
 			)}
 			{preview && skill.sources && (skill.sources.uma_count > 0 || skill.sources.card_count > 0) && (
 				<span className="skill-card__block">
-					<SourcesText sources={skill.sources} />
+					<SourcesText sources={skill.sources} onOpen={open} />
 				</span>
 			)}
 			<SkillVersions skill={skill} />
