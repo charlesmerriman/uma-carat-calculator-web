@@ -113,7 +113,7 @@ describe("SkillPage", () => {
 		expect(container).not.toHaveTextContent("Times are for every 1,000 m")
 	})
 
-	it("puts the bands behind a scaled effect and time in a table under each", async () => {
+	it("keeps the bands behind a scaled effect and time in a popover each, closed until asked", async () => {
 		const scaled = { ...DETAIL, readable: { ...DETAIL.readable, slots: [{
 			...DETAIL.readable.slots[0],
 			effects: [{ text: "Velocity +0.28 to +0.42, by fan count", raw: false, scaling: { heading: "Fans", rows: [
@@ -125,9 +125,16 @@ describe("SkillPage", () => {
 		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(scaled), { status: 200 })))
 		renderAt("/app/skills/100101111")
 		await screen.findByRole("heading", { level: 1, name: /Gluttonous Ruler/ })
-		const [effect, time] = screen.getAllByRole("table")
+		// Closed: the page is no longer for the bands.
+		expect(screen.queryByRole("table")).not.toBeInTheDocument()
+
+		fireEvent.click(screen.getByRole("button", { name: "Every value (Fans)" }))
+		const effect = await screen.findByRole("dialog", { name: "Velocity +0.28 to +0.42, by fan count" })
 		expect(within(effect).getByRole("columnheader", { name: "Fans" })).toBeInTheDocument()
 		expect(within(effect).getByRole("row", { name: "160,000 or more +0.42" })).toBeInTheDocument()
+
+		fireEvent.click(screen.getByRole("button", { name: "Every value (HP left)" }))
+		const time = await screen.findByRole("dialog", { name: "Lasts 5 to 20 s per 1,000 m, by HP left when it fires" })
 		expect(within(time).getByRole("columnheader", { name: "Lasts" })).toBeInTheDocument()
 		expect(within(time).getByRole("row", { name: "3,500 or more 20 s" })).toBeInTheDocument()
 	})

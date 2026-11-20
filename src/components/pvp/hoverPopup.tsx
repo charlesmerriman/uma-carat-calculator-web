@@ -113,7 +113,7 @@ function footerAdInset(): number {
 }
 
 /** The edges a popup stays inside: 8px from the window's, and above the footer ad. */
-function popupEdges() {
+export function popupEdges() {
 	return { top: 8, right: 8, left: 8, bottom: 8 + footerAdInset() }
 }
 
@@ -149,7 +149,7 @@ export function watchFooterAd(update: () => void): () => void {
 }
 
 /** Floating UI's autoUpdate, plus a fresh placement when the footer ad comes, resizes or goes. */
-function autoUpdateClearOfAds(reference: ReferenceElement, floating: HTMLElement, update: () => void): () => void {
+export function autoUpdateClearOfAds(reference: ReferenceElement, floating: HTMLElement, update: () => void): () => void {
 	const stopFollowing = autoUpdate(reference, floating, update)
 	const stopWatching = watchFooterAd(update)
 	return () => {
