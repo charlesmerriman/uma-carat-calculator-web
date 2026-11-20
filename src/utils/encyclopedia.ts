@@ -11,6 +11,7 @@ import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { Status } from "../components/rankings/kit/StatusPill"
 import { CARD_TYPE_LABELS } from "./cardTypes"
 import { formatDate, parseApiDate } from "./dateFormat"
+import { nameMatches } from "./searchText"
 
 export const PAGE_CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
@@ -171,10 +172,6 @@ function whereMatches(where: WhereFilter, onGlobal: boolean | undefined): boolea
 	return (where === "global") === Boolean(onGlobal)
 }
 
-/** Lowercase letters and digits only, so "T.M. Opera O" finds "TM Opera O". */
-function searchKey(text: string): string {
-	return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")
-}
 
 /**
  * Does an entry match the search box? A query of digits only is an id
@@ -185,8 +182,7 @@ function searchKey(text: string): string {
 export function searchMatches(query: string, text: string, ids: Array<number | null | undefined>): boolean {
 	const trimmed = query.trim()
 	if (/^\d+$/.test(trimmed)) return ids.some((id) => id != null && String(id).startsWith(trimmed))
-	const key = searchKey(query)
-	return !key || searchKey(text).includes(key)
+	return nameMatches(query, text)
 }
 
 /** A multi-pick filter: nothing picked passes everything, else any pick does. */

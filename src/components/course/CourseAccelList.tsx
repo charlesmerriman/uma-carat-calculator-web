@@ -42,6 +42,7 @@ import { useCourseZones } from "../../services/courseQueries"
 import { setCourseFocus, useCourseFocus, useStyleTab, type StyleChoice } from "../../services/courseMapStore"
 import { accelRows, grade, speedRows, verdictLines, type AccelRow } from "../../utils/courseLayers"
 import { GradePill, ZoneBar } from "./CourseVerdictCard"
+import { nameMatches } from "../../utils/searchText"
 
 const STYLES: { value: StyleChoice; label: string }[] = [
 	{ value: "all", label: "All" },
@@ -255,7 +256,7 @@ export default function CourseAccelList({
 		return rows.filter(({ skillId }) => {
 			const skill = ready?.skillsById.get(skillId) ?? { name: `Skill ${skillId}` }
 			const owner = owners.get(skillId)?.uma.name ?? ""
-			return skillMatches(skill, words) || foldText(owner).includes(needle)
+			return skillMatches(skill, words) || nameMatches(needle, owner)
 		})
 	}, [rows, needle, ready, owners])
 	const loaded = zones.data !== undefined && ready !== null

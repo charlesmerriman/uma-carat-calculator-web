@@ -51,6 +51,7 @@ import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 import type { PortraitLayers } from "../../types/portraitLayers"
+import { nameMatches } from "../../utils/searchText"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -263,8 +264,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				} else if (item.placeholder || (rarity !== null && (item.rarity ?? 3) !== rarity)) return false
 			}
 			if (!query) return true
-			if (item.name.toLocaleLowerCase().includes(query)) return true
-			if (item.alias.toLocaleLowerCase().includes(query)) return true
+			if (nameMatches(query, item.name, item.alias)) return true
 			return item.skills.some((link) => matchingSkillIds.has(link.skill))
 		})
 		// Stable: what can be picked before what can't, the guide's picks

@@ -26,6 +26,7 @@ import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { Link } from "react-router-dom"
+import { nameMatches } from "../../utils/searchText"
 
 interface StepUpSelectionPickerProps {
 	stepUp: BannerStepUp
@@ -101,9 +102,7 @@ export const StepUpSelectionPicker = ({
 		(selection) => !cardsById.has(cardIdOf(selection) ?? -1)
 	).length
 
-	const matchingOptions = options.filter((option) =>
-		option.label.toLocaleLowerCase().includes(search.toLocaleLowerCase())
-	)
+	const matchingOptions = options.filter((option) => nameMatches(search, option.label))
 
 	const cardSizeClass = isUma ? "h-24 w-24" : "h-24 w-[4.5rem]"
 	const slotSizeClass = isUma ? "h-16 w-16" : "h-16 w-12"

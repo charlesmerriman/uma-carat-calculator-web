@@ -34,6 +34,7 @@ import { cardLine } from "./encyclopedia"
 import { UMA_LIST_PATH, cardHref, umaHref } from "./encyclopediaRoutes"
 import { skillHref } from "./skillSearch"
 import type { PortraitLayers } from "../types/portraitLayers"
+import { nameMatches } from "./searchText"
 
 export type SearchKind = "page" | "uma" | "card" | "banner" | "event" | "skill"
 
@@ -285,7 +286,12 @@ export function createSearcher(entries: SearchEntry[]): (query: string) => Searc
 		// A skill id: that skill alone. Fuse would score near-miss ids as hits.
 		const id = query.trim()
 		if (/^\d+$/.test(id)) return entries.filter((entry) => entry.gameId === Number(id))
-		return fuse.search(query, { limit: MAX_RESULTS }).map((result) => result.item)
+		// Fuse's ranking first, then any name the shared rule finds that Fuse's
+		// fuzzy score missed ("mr cb" is "Mr. C.B.", utils/searchText.ts).
+		const fuzzy = fuse.search(query, { limit: MAX_RESULTS }).map((result) => result.item)
+		const seen = new Set(fuzzy)
+		const missed = entries.filter((entry) => !seen.has(entry) && nameMatches(query, entry.title))
+		return [...fuzzy, ...missed].slice(0, MAX_RESULTS)
 	}
 }
 

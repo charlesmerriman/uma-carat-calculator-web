@@ -6,6 +6,7 @@ import { umasFetch } from "../../services/umasFetchCalls"
 import type { OshiOption } from "../../types/account"
 import { FramedUma } from "../FramedUma"
 import { useOshiPickIds } from "../../hooks/useOshiIds"
+import { nameMatches } from "../../utils/searchText"
 
 /**
  * The modal for choosing a favorite uma ("oshi" in the code and on the wire;
@@ -127,7 +128,7 @@ export const OshiPicker: React.FC<OshiPickerProps> = ({
 
 	const options = catalogue.state === "ready" ? catalogue.options : []
 	const needle = search.trim().toLocaleLowerCase()
-	const matching = needle ? options.filter((option) => option.name.toLocaleLowerCase().includes(needle)) : options
+	const matching = needle ? options.filter((option) => nameMatches(needle, option.name)) : options
 
 	let body: React.ReactNode
 	if (catalogue.state === "loading" || catalogue.state === "idle") {
