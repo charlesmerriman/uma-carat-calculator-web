@@ -22,6 +22,7 @@ import {
 } from "../../utils/dailyLegendRaces"
 import type { DailyLegendRaceRelease } from "../../types"
 import { LegendRaceReleaseCard } from "./LegendRaceReleaseCard"
+import { nameMatches } from "../../utils/searchText"
 
 /** The heading while the page's admin row has not loaded. Mirrors the seed's title. */
 const FALLBACK_TITLE = "Daily Legend Races"
@@ -100,7 +101,7 @@ export const DailyLegendRaces = () => {
 			: releases
 				.map((release) => ({
 					...release,
-					umas: release.umas.filter((uma) => uma.name.toLowerCase().includes(search)),
+					umas: release.umas.filter((uma) => nameMatches(search, uma.name)),
 				}))
 				.filter((release) => release.umas.length > 0)
 	const shownUpcoming = narrow(upcoming)

@@ -7,6 +7,7 @@
 import { STAT_KEYS, STAT_LABELS } from "./trainedUmas"
 import type { AptitudeKey } from "../types/pvpTeam"
 import type { StatKey, TrainedUma } from "../types/trainedUma"
+import { nameMatches } from "./searchText"
 
 export type VeteranSort = "trained" | "score" | StatKey
 
@@ -51,8 +52,7 @@ export function shownVeterans(veterans: TrainedUma[], filter: VeteranFilter, uma
 		if (filter.uma !== null && veteran.uma !== filter.uma) return false
 		if (filter.goodAt !== null && (veteran.apt[filter.goodAt] ?? 0) < A_GRADE) return false
 		if (words.length === 0) return true
-		const text = [umaName(veteran.uma), veteran.label, veteran.memo].join(" ").toLocaleLowerCase()
-		return words.every((word) => text.includes(word))
+		return nameMatches(filter.query, [umaName(veteran.uma), veteran.label, veteran.memo].join(" "))
 	})
 	const { sort } = filter
 	if (sort === "trained") return shown

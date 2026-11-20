@@ -21,6 +21,7 @@ import { ChevronDown, Search, Users, X } from "lucide-react"
 import { UmaPortrait } from "./GalleryBits"
 import { countLabel } from "../../../utils/plural"
 import type { PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
+import { nameMatches } from "../../../utils/searchText"
 
 type TallyEntry = { uma: number; count: number }
 
@@ -113,7 +114,7 @@ function UmaFilterDialog({ uma, options, nameOf, index, onPick, onClose }: {
 	}, [onClose])
 
 	const needle = search.trim().toLocaleLowerCase()
-	const matching = needle ? options.filter((entry) => nameOf(entry.uma).toLocaleLowerCase().includes(needle)) : options
+	const matching = needle ? options.filter((entry) => nameMatches(needle, nameOf(entry.uma))) : options
 
 	// Shared by the "Any uma" tile and the uma tiles: the applied one wears
 	// the brand border, the way OshiPicker marks the uma already in a slot.

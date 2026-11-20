@@ -4,6 +4,7 @@
  */
 
 import type { StoryEvent } from "../types"
+import { nameMatches } from "./searchText"
 
 /** What the row calls an event no one has named in English yet. */
 export const UNNAMED_STORY_EVENT = "Story event"
@@ -48,9 +49,5 @@ export function rarityLabel(rarity: number | null): string {
 
 /** Does a Timeline search match this event, by its name or a free card's? */
 export function storyEventMatchesSearch(event: StoryEvent, query: string): boolean {
-	const q = query.toLowerCase()
-	return (
-		storyEventName(event).toLowerCase().includes(q) ||
-		event.cards.some((card) => card.name.toLowerCase().includes(q))
-	)
+	return nameMatches(query, storyEventName(event)) || event.cards.some((card) => nameMatches(query, card.name))
 }
