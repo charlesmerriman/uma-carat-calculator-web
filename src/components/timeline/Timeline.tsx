@@ -47,6 +47,7 @@ import { useBackToTop } from "../../hooks/useBackToTop"
 import { TIMELINE_FOCUS_PARAM, parseTimelineFocus } from "../../utils/timelineFocus"
 import { refForRaceEvent } from "../../utils/pvpEvent"
 import { legendRacesByBanner } from "../../utils/dailyLegendRaces"
+import { storyEventMatchesSearch, storyEventsByBanner } from "../../utils/storyEvents"
 import { isRaceEvent } from "../../types"
 import type {
 	BannerCategory,
@@ -56,6 +57,7 @@ import type {
 	UserPlannedBanner,
 	TimelineEvent,
 } from "../../types"
+import { nameMatches } from "../../utils/searchText"
 
 const PAGE_SIZE = 10
 
@@ -288,20 +290,17 @@ function PaginationControls({
 }
 
 function eventMatchesSearch(event: TimelineEvent, query: string): boolean {
-	const q = query.toLowerCase()
-	if (isRaceEvent(event)) {
-		return event.name.toLowerCase().includes(q) || event.track.toLowerCase().includes(q)
-	}
+	if (isRaceEvent(event)) return nameMatches(query, event.name, event.track)
 	const bannerEvent = event
-	if (bannerEvent.name.toLowerCase().includes(q)) return true
+	if (nameMatches(query, bannerEvent.name)) return true
 	for (const banner of bannerEvent.banner_umas) {
 		for (const uma of banner.umas) {
-			if (uma.name.toLowerCase().includes(q)) return true
+			if (nameMatches(query, uma.name)) return true
 		}
 	}
 	for (const banner of bannerEvent.banner_supports) {
 		for (const card of banner.support_cards) {
-			if (card.name.toLowerCase().includes(q)) return true
+			if (nameMatches(query, card.name)) return true
 		}
 	}
 	return false
@@ -318,6 +317,7 @@ export const Timeline = () => {
 		scenarioData,
 		anniversaryEventData,
 		dailyLegendRaceData,
+		storyEventData,
 	} = useCalculatorData()
 	const [searchParams, setSearchParams] = useSearchParams()
 	/**
@@ -451,6 +451,13 @@ export const Timeline = () => {
 	const legendRacesForBanner = useMemo(
 		() => legendRacesByBanner(dailyLegendRaceData),
 		[dailyLegendRaceData]
+	)
+
+	// Story events by the banner they run with. Each shows as a row beneath
+	// that banner's card. Defaulted for test fixtures and older payloads.
+	const storyEventsForBanner = useMemo(
+		() => storyEventsByBanner(storyEventData ?? []),
+		[storyEventData]
 	)
 
 	// Banners nested inside BannerTimelineForViewing have banner_timeline omitted by the API serializer.
@@ -614,7 +621,17 @@ export const Timeline = () => {
 						? new Date(event.end_date) < today
 						: new Date(event.end_date) >= today
 				)
-				.filter((event) => searchQuery === "" || eventMatchesSearch(event, searchQuery))
+				.filter(
+					(event) =>
+						searchQuery === "" ||
+						eventMatchesSearch(event, searchQuery) ||
+						// A banner is also found by the story event running with it
+						// and its free cards ("akebono" finds Sweet Memories Teatime).
+						(!isRaceEvent(event) &&
+							(storyEventsForBanner.get(event.id) ?? []).some((storyEvent) =>
+								storyEventMatchesSearch(storyEvent, searchQuery)
+							))
+				)
 		)
 
 		if (activeFilter === "all") {
@@ -678,6 +695,7 @@ export const Timeline = () => {
 		searchQuery,
 		activeFilter,
 		today,
+		storyEventsForBanner,
 	])
 
 	/**
@@ -1189,6 +1207,9 @@ export const Timeline = () => {
 							onAddBanner={handleAddBanner}
 							legendRaces={row.group.banners.flatMap(
 								(banner) => legendRacesForBanner.get(banner.id) ?? []
+							)}
+							storyEvents={row.group.banners.flatMap(
+								(banner) => storyEventsForBanner.get(banner.id) ?? []
 							)}
 							{...focusProps}
 						/>

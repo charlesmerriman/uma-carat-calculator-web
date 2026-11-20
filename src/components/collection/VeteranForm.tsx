@@ -93,7 +93,7 @@ export function VeteranForm({ title, initial, fromGame, index, oshiIds, saving, 
 					>
 						{uma ? (
 							<>
-								<FramedUma src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} alt="" className="w-8" />
+								<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} alt="" className="w-8" />
 								{uma.name}
 							</>
 						) : (

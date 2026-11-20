@@ -120,7 +120,7 @@ const BannerLine = ({ target, planned, max, note, counted }: {
 					)
 				) : target.type === "Uma" ? (
 					target.banner.umas.slice(0, 2).map((uma) => (
-						<FramedUma key={uma.id} src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="h-full" />
+						<FramedUma key={uma.id} src={uma.portrait ?? uma.image} layers={uma.portrait_layers} alt={uma.name} oshi={oshiIds.has(uma.id)} className="h-full" />
 					))
 				) : (
 					images.slice(0, 2).map((img) => (

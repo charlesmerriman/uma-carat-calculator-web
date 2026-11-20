@@ -77,7 +77,7 @@ export function CardDragProvider({ cardsById, umasById, onDrop, onDropUma, child
 					(card ? (
 						<FramedCard card={card} className="w-20 drop-shadow-2xl" />
 					) : uma ? (
-						<FramedUma src={uma.portrait ?? uma.image} className="w-20 drop-shadow-2xl" />
+						<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} className="w-20 drop-shadow-2xl" />
 					) : (
 						<div className="aspect-[3/4] w-20 rounded-lg bg-gray-700 shadow-2xl ring-2 ring-brand" />
 					))}

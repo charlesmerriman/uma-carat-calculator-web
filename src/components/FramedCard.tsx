@@ -70,12 +70,14 @@ export interface FramedCardArt {
 	rarity: number | null
 }
 
-export function FramedCard({ card, limitBreaks = null, alt = "", className = "" }: {
+export function FramedCard({ card, limitBreaks = null, alt = "", className = "", hover }: {
 	card: FramedCardArt
 	/** 0..4 on an owned card (the Collection); null draws no diamonds. */
 	limitBreaks?: number | null
 	alt?: string
 	className?: string
+	/** The card's card attributes (utils/hoverCards.ts hoverCardProps), for plain art with no tile of its own: a click on it opens the card. */
+	hover?: Record<string, string>
 }) {
 	const art = card.image_borderless ?? null
 	const frame = card.rarity === null ? undefined : FRAMES[card.rarity]
@@ -83,7 +85,7 @@ export function FramedCard({ card, limitBreaks = null, alt = "", className = "" 
 	// Clamped, so a bad value draws the nearest real overlay, never nothing.
 	const diamonds = limitBreaks === null ? undefined : LIMIT_BREAKS[Math.min(4, Math.max(0, Math.round(limitBreaks)))]
 	return (
-		<span className={`card-frame ${className}`}>
+		<span className={`card-frame ${className}`} {...hover}>
 			{art ? (
 				<>
 					<img src={art} alt={alt} loading="lazy" decoding="async" className="card-frame__art" />

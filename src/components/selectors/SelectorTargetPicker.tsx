@@ -11,6 +11,9 @@ import type {
 } from "../../types"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaIconLink } from "../EncyclopediaLinks"
+import { nameMatches } from "../../utils/searchText"
 
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
@@ -65,9 +68,12 @@ export const SelectorTargetPicker = ({
 
 	const selectedId = isUma ? targetUma : targetSupport
 	const selected = options.find((option) => option.value === selectedId) ?? null
-	const matchingOptions = options.filter((option) =>
-		option.label.toLocaleLowerCase().includes(search.toLocaleLowerCase())
-	)
+	// The pick's page link is all this uses the catalogue for, so it is asked
+	// for only once there is a pick (or the picker is open): a 106 KB download
+	// the Selectors page otherwise never makes (utils/hoverCards.ts,
+	// pageDrawsHoverCards, has the numbers).
+	const hrefs = useEncyclopediaHrefs({ load: isOpen || selected !== null })
+	const matchingOptions = options.filter((option) => nameMatches(search, option.label))
 
 	useEffect(() => {
 		if (!isOpen) return undefined
@@ -127,14 +133,14 @@ export const SelectorTargetPicker = ({
 				onClick={open}
 			>
 				<span
-					className={`relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md border-2 bg-gray-900/40 transition ${
+					className={`relative flex h-32 w-full items-center justify-center ${selected?.portrait ? "" : "overflow-hidden"} rounded-md border-2 bg-gray-900/40 transition ${
 						selected
 							? "border-gray-600"
 							: "border-dashed border-gray-500 text-gray-500"
 					} ${canPick ? "group-hover:border-brand group-hover:bg-gray-900/70" : ""}`}
 				>
 					{selected?.portrait ? (
-						<FramedUma src={selected.portrait} oshi={oshiIds.has(selected.value)} className="h-28" />
+						<FramedUma src={selected.portrait} layers={selected.portrait_layers} oshi={oshiIds.has(selected.value)} className="h-28" />
 					) : selected ? (
 						<img
 							src={selected.image}
@@ -150,7 +156,7 @@ export const SelectorTargetPicker = ({
 					{/* Which ticket this tile belongs to. Overlaid rather than given
 					    its own line: the tiles sit in the same order as the checkbox
 					    column beside them, so this is a confirmation, not the label. */}
-					<span className="pointer-events-none absolute left-0 top-0 rounded-br-md bg-gray-950/85 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-gray-200">
+					<span className="pointer-events-none absolute left-0 top-0 z-10 rounded-tl-[4px] rounded-br-md bg-gray-950/85 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-gray-200">
 						{priceLabel}
 					</span>
 
@@ -173,6 +179,19 @@ export const SelectorTargetPicker = ({
 						(options.length === 0 ? "No eligible cards" : `Choose ${poolNoun}`)}
 				</span>
 			</button>
+
+			{/* The pick's Encyclopedia page, in the art's one free
+			    corner, bottom left: the price has the top left, the pencil the
+			    bottom right. A sibling of the tile for the same reason as the
+			    clear button below. top-[6.25rem] is the h-32 art box less the
+			    icon and a 4px inset. */}
+			{selected && (
+				<EncyclopediaIconLink
+					href={isUma ? hrefs.uma(selected.value) : hrefs.card(selected.value)}
+					name={selected.label}
+					className="absolute left-1 top-[6.25rem]"
+				/>
+			)}
 
 			{/* A sibling of the tile, not a child — a button inside a button is
 			    invalid, and the tile is the button now. */}
@@ -205,7 +224,7 @@ export const SelectorTargetPicker = ({
 								<h5 className="text-base font-semibold text-gray-100">
 									Choose {isUma ? "an Uma" : "a support card"}
 								</h5>
-								<p className="text-xs text-gray-400">{options.length} eligible cards</p>
+								<p className="text-xs text-gray-400">{options.length} eligible {isUma ? "umas" : "cards"}</p>
 							</div>
 							<label className="relative w-full sm:w-64">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -214,7 +233,7 @@ export const SelectorTargetPicker = ({
 									type="search"
 									value={search}
 									onChange={(event) => setSearch(event.target.value)}
-									placeholder="Search cards…"
+									placeholder={isUma ? "Search umas…" : "Search cards…"}
 									className="w-full rounded border border-gray-600 bg-gray-900 py-2 pl-9 pr-3 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-brand"
 								/>
 							</label>
@@ -250,7 +269,7 @@ export const SelectorTargetPicker = ({
 												onClick={() => choose(option)}
 											>
 												{option.portrait ? (
-													<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-28" />
+													<FramedUma src={option.portrait} layers={option.portrait_layers} oshi={oshiIds.has(option.value)} className="w-28" />
 												) : (
 													<img
 														src={option.image}

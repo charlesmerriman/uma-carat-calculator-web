@@ -124,6 +124,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					items={index.catalogue.umas}
 					owned={ownedForPicker(roster, "uma")}
 					place="uma"
+					pageLinks
 					title={`Uma ${picker.position + 1}`}
 					skillsById={index.skillsById}
 					event={event}
@@ -153,6 +154,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					items={index.catalogue.support_cards}
 					owned={ownedForPicker(roster, "support")}
 					place={picker.slot === PVP_BORROW_SLOT ? "borrow" : "card"}
+					pageLinks
 					title={`${picker.slot === PVP_BORROW_SLOT ? "Borrowed card" : `Card ${picker.slot}`} for ${umaName(picker.position)}`}
 					skillsById={index.skillsById}
 					event={event}

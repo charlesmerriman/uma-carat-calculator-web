@@ -30,13 +30,31 @@ import type {
 import type { PvpCatalogueIndex } from "../hooks/usePvpCatalogue"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { Scenario } from "../types"
-import { SKILL_CATEGORY_LABELS, STYLE_LABELS, STYLE_ORDER } from "./pvpGuide"
+import { SKILL_CATEGORY_LABELS, SKILL_CATEGORY_ORDER, STYLE_LABELS, STYLE_ORDER } from "./pvpGuide"
 
 export const DECK_SLOTS = 6
 /** The editor's tab for everything that is not a running style. */
 export type EditorTab = "guide" | Exclude<PvpStyle, "everyone">
 export const STYLE_TABS: Array<Exclude<PvpStyle, "everyone">> = ["runaway", "front", "pace", "late", "end"]
-export const EDITOR_TABS: EditorTab[] = ["guide", ...STYLE_TABS]
+
+/**
+ * The styles the editor offers a tab for. Runaway only when the guide already
+ * has a runaway row: no guide uses it, and an empty tab with its "Nothing yet
+ * for Runaway" nag was clutter (Henry, board "Remove runaway section from pvp
+ * guide", 2026-11-17: "just remove from edit option altogether"). A guide that
+ * does have one keeps the tab, so no row is ever out of reach. Readers and
+ * teams keep the Runaway style; this is the editor's tab strip only.
+ */
+export function editorStyleTabs(document: GuideDocument): Array<Exclude<PvpStyle, "everyone">> {
+	const hasRunaway = [document.uma_recommendations, document.style_notes, document.skill_recommendations, document.decks]
+		.some((rows) => rows.some((row) => row.style === "runaway"))
+	return STYLE_TABS.filter((style) => style !== "runaway" || hasRunaway)
+}
+
+/** The editor's tabs: Guide, then the styles it offers. */
+export function editorTabsFor(document: GuideDocument): EditorTab[] {
+	return ["guide", ...editorStyleTabs(document)]
+}
 
 // The column lengths, the server's (calculatorapi/models/pvp_guide.py).
 export const MAX_LENGTH = {
@@ -129,7 +147,7 @@ export function texts(document: GuideDocument): Array<[string, string]> {
 // ── Hydration: the document as the reader draws it ──────────────────────────
 
 function umaRef(uma: CatalogueUma): PvpUmaRef {
-	return { id: uma.id, name: uma.name, image: uma.image, portrait: uma.portrait, apt: uma.apt }
+	return { id: uma.id, name: uma.name, image: uma.image, portrait: uma.portrait, portrait_layers: uma.portrait_layers, apt: uma.apt }
 }
 
 function cardRef(card: CatalogueSupportCard): PvpSupportCardRef {
@@ -145,10 +163,15 @@ function cardRef(card: CatalogueSupportCard): PvpSupportCardRef {
 	}
 }
 
+/** A unique's inherited copy is its game id with the leading 1 made a 9 (100011 -> 900011). */
+const INHERITED_OFFSET = 800000
+
 /**
  * Which outfit each unique skill belongs to, read off the catalogue's uma
  * skill links (source "unique"), the same answer the API's `unique_of`
- * gives. The lowest uma id wins a tie, as on the server.
+ * gives. The lowest uma id wins a tie, as on the server. A unique's inherited
+ * copy names the same outfit (Daptrius, 2026-11-12), matched by game id as
+ * the server matches it.
  */
 export function uniqueOwners(index: PvpCatalogueIndex): Map<number, string> {
 	const owners = new Map<number, string>()
@@ -157,6 +180,14 @@ export function uniqueOwners(index: PvpCatalogueIndex): Map<number, string> {
 		for (const link of uma.skills) {
 			if (link.source === "unique" && !owners.has(link.skill)) owners.set(link.skill, uma.name)
 		}
+	}
+	const idByGameId = new Map(index.catalogue.skills.filter((skill) => skill.game_id != null).map((skill) => [skill.game_id, skill.id]))
+	for (const skill of index.catalogue.skills) {
+		const gameId = skill.game_id ?? 0
+		if (gameId < 900000 || gameId >= 1000000 || owners.has(skill.id)) continue
+		const uniqueId = idByGameId.get(gameId - INHERITED_OFFSET)
+		const owner = uniqueId === undefined ? undefined : owners.get(uniqueId)
+		if (owner) owners.set(skill.id, owner)
 	}
 	return owners
 }
@@ -488,8 +519,9 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 	for (const row of document.style_notes) mark(row.style, "advice")
 	for (const row of document.skill_recommendations) mark(row.style, "skills")
 	for (const row of document.decks) mark(row.style, "decks")
-	const empty = STYLE_TABS.filter((style) => !present.has(style))
-	for (const style of STYLE_TABS) {
+	const styles = editorStyleTabs(document)
+	const empty = styles.filter((style) => !present.has(style))
+	for (const style of styles) {
 		const tables = present.get(style)
 		if (!tables) continue
 		const gaps = (["umas", "advice", "decks"] as const).filter((name) => !tables.has(name))
@@ -498,7 +530,7 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 			items.push({ text: `${STYLE_LABELS[style]}: no ${gaps.join(", no ")}.`, tab: style, section: sectionOf[gaps[0]] })
 		}
 	}
-	if (empty.length === STYLE_TABS.length) {
+	if (empty.length === styles.length) {
 		items.push({ text: "No style has anything yet. Pick a tab and add rows.", tab: "front", section: "any" })
 	} else if (empty.length > 0) {
 		items.push({ text: `Nothing yet for ${empty.map((style) => STYLE_LABELS[style]).join(", ")}.`, tab: empty[0], section: "any" })
@@ -507,7 +539,8 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 }
 
 /** The category a "+ Add skill" button under a group starts the picker on. */
-export const CATEGORY_CHOICES: PvpSkillCategory[] = ["acceleration", "other", "speed", "recovery", "green", "debuff"]
+// Every group, in the reader's order: the editor offers them all (owner, 2026-11-13).
+export const CATEGORY_CHOICES: PvpSkillCategory[] = SKILL_CATEGORY_ORDER
 
 /** A skill row's tier, as the pickers and dialogs offer it. */
 export const TIER_CHOICES: Array<{ value: number | null; label: string }> = [

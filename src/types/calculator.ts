@@ -28,6 +28,7 @@ import type { GameEvent, ChampionsMeeting, LeagueOfHeroes, RaceEvent } from "./e
 import type { AnniversaryEvent, UserPlannedPurchase } from "./anniversary"
 import type { Scenario } from "./scenario"
 import type { DailyLegendRaceRelease } from "./dailyLegendRace"
+import type { StoryEvent } from "./storyEvent"
 import type { Plan, PlanSharingChanges, SharedPlanCopyOptions } from "./plan"
 import type { IncomeLedgerRow } from "./ledger"
 import type { CalculationConstants } from "./constants"
@@ -69,6 +70,12 @@ export interface CalculatorData {
 	 * defaults it to [] so the page shows its empty state instead of crashing.
 	 */
 	daily_legend_race_data?: DailyLegendRaceRelease[]
+	/**
+	 * Public reference data: story events and their free cards, the row under a
+	 * banner on the Timeline. Display only. Optional because an API from
+	 * before the feature omits it; the provider defaults it to [].
+	 */
+	story_event_data?: StoryEvent[]
 	/** User-scoped; `[]` for guests, same as user_planned_banner_data. */
 	user_planned_purchase_data: UserPlannedPurchase[]
 	/** User-scoped. The ten cards picked at each step-up; `[]` for guests. */
@@ -147,6 +154,8 @@ export interface CalculatorContextType {
 	anniversaryEventData: AnniversaryEvent[]
 	scenarioData: Scenario[]
 	dailyLegendRaceData: DailyLegendRaceRelease[]
+	/** Story events for the Timeline's rows. Display only; never income. */
+	storyEventData: StoryEvent[]
 	userPlannedPurchaseData: UserPlannedPurchase[]
 	userStepUpSelectionData: UserStepUpSelection[]
 	/**

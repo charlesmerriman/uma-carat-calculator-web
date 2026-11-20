@@ -88,7 +88,7 @@ const PVP: PvpRankingsPayload = {
 
 const PLAYERS: PlayersRankingsPayload = {
 	generated_at: "2026-10-27T20:00:00Z",
-	favourites: [{ uma: 41, share: 0.25 }],
+	favourites: [{ uma: 41, people: 12 }],
 	ranks: [{ label: "Team Trials", share: 0.5, rows: [{ name: "Class 6", share: 0.38 }] }],
 	income: [{ key: "daily_carat", label: "Daily Carat Pack", share: 0.42, default_on: false }],
 	budget: [{ name: "Class 6", carats: 24000, pulls: 150 }],
@@ -297,8 +297,8 @@ describe("RankingsPage", () => {
 
 	it("shows the players' ranks, favourites, income options and selectors", async () => {
 		renderPage(true, { url: "/app/rankings?view=players" })
-		const favourites = await screen.findByRole("region", { name: "Favourite umas" })
-		expect(within(favourites).getByText("25%")).toBeInTheDocument()
+		const favourites = await screen.findByRole("region", { name: "Favorite umas" })
+		expect(within(favourites).getByText("12")).toBeInTheDocument()
 		expect(screen.getByRole("region", { name: "Who plays here" })).not.toHaveTextContent("200")
 		expect(within(screen.getByRole("region", { name: "Ranks" })).getByRole("img", { name: "Team Trials: Class 6 38%" })).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()

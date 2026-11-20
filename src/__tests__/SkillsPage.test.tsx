@@ -1,15 +1,18 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { SkillsPage } from "../components/skills/SkillsPage"
 import { clearAuthToken, setAuthToken } from "../services/authToken"
 import { resetSkillListForTests } from "../services/skillsFetchCalls"
-import type { SkillDetailData, SkillListRow } from "../types/skills"
-import { filterSkills, parseSkillParam, skillKind } from "../utils/skillSearch"
+import type { SkillListRow } from "../types/skills"
+import {
+	SKILL_TYPE_WORDS, filterSkills, parseSkillParam, skillHref, skillKind, subTypePicks, toggleSubTypePick, toggleTypePick, typeParent,
+} from "../utils/skillSearch"
 
-/** The Skills page (/app/skills): the list, search and filters, and one skill opened in full. */
+/** The Skills list (/app/skills): search and filters; a row opens the skill's own page. */
 
 const row = (id: number, name: string, overrides: Partial<SkillListRow> = {}): SkillListRow => ({
 	id, game_id: 200000 + id, name, image: null, rarity: 1, tier: 1, group_id: id, version: "○ white",
@@ -18,57 +21,31 @@ const row = (id: number, name: string, overrides: Partial<SkillListRow> = {}): S
 
 const ROWS = [
 	row(1, "Corner Adept ○", { other_names: ["コーナー巧者○"] }),
-	row(2, "Gourmand", { rarity: 2, version: "◎ gold" }),
+	row(2, "Gourmand", { rarity: 2, version: "◎ gold", cost: 180 }),
 	row(3, "Gluttonous Ruler", { game_id: 100101111, rarity: 6, is_evolved: true, version: "evolved", availability: "announced" }),
 	row(4, "Fan Skill", { availability: "jp", uses_translation: true }),
 ]
 
-const DETAIL: SkillDetailData = {
-	...ROWS[2],
-	description: "Recover endurance mid-race.",
-	readable: {
-		wit_check: true, complete: true,
-		slots: [{ after: { all: [], any: [] }, when: { all: [{ text: "At a random moment mid-race", raw: false }], any: [] },
-			effects: [{ text: "Recovers 5.5% endurance", raw: false }], duration: null, cooldown: "Once per race" }],
-	},
-	sources: {
-		umas: [{ id: 7, name: "Special Week", game_id: 100101, image: null, source: "evolved", level: 3, on_global: true }],
-		cards: [],
-	},
-	evolution: {
-		from: { ...ROWS[1] },
-		into: [],
-		conditions: [
-			{ text: "Attain at least 600 Stamina", uses_translation: false, is_japanese: false },
-			{ text: "スキルを3個", uses_translation: false, is_japanese: true },
-		],
-		scenario: null,
-	},
-	versions: [],
-}
-
-/** The shelved skills work shows to guide editors only (useSkillsPreview). */
-function asEditor(node: ReactNode, editor = true) {
-	const value = { isLoggedIn: true, status: "ready", account: { guide_editor: editor, oshi_uma_ids: [] } } as unknown as AuthContextType
+/** The Skills page is open to everyone; `earlyAccess` false is an account without it. */
+function asReader(node: ReactNode, earlyAccess: boolean | "guest" = true) {
+	const value = (earlyAccess === "guest"
+		? { isLoggedIn: false, status: "ready", account: null }
+		: { isLoggedIn: true, status: "ready", account: { early_access: earlyAccess, oshi_uma_ids: [] } }) as unknown as AuthContextType
 	return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>
 }
 
 const fetchMock = vi.fn()
 
-function serve() {
-	fetchMock.mockImplementation((url: string) => {
-		const body = url.endsWith("/skills") ? ROWS : url.endsWith("/skills/100101111") ? DETAIL : null
-		return Promise.resolve(new Response(JSON.stringify(body ?? {}), { status: body ? 200 : 404 }))
-	})
-}
-
-function renderPage(url = "/app/skills", editor = true) {
+function renderPage(url = "/app/skills", earlyAccess: boolean | "guest" = true) {
 	return render(
-		asEditor(
+		asReader(
 			<MemoryRouter initialEntries={[url]}>
-				<SkillsPage />
+				<Routes>
+					<Route path="/app/skills" element={<SkillsPage />} />
+					<Route path="/app/skills/:gameId" element={<p>The skill's own page</p>} />
+				</Routes>
 			</MemoryRouter>,
-			editor
+			earlyAccess
 		)
 	)
 }
@@ -77,7 +54,9 @@ beforeEach(() => {
 	resetSkillListForTests()
 	fetchMock.mockReset()
 	vi.stubGlobal("fetch", fetchMock)
-	serve()
+	fetchMock.mockImplementation((url: string) =>
+		Promise.resolve(url.endsWith("/skills") ? new Response(JSON.stringify(ROWS), { status: 200 }) : new Response("{}", { status: 404 }))
+	)
 })
 
 afterEach(() => {
@@ -86,11 +65,80 @@ afterEach(() => {
 
 describe("filterSkills", () => {
 	it("matches every word in any name, then the filters", () => {
-		expect(filterSkills(ROWS, "corner", "all", "all").map((r) => r.name)).toEqual(["Corner Adept ○"])
-		expect(filterSkills(ROWS, "コーナー", "all", "all")).toHaveLength(1)
-		expect(filterSkills(ROWS, "", "gold", "all").map((r) => r.name)).toEqual(["Gourmand"])
-		expect(filterSkills(ROWS, "", "evolved", "all").map((r) => r.name)).toEqual(["Gluttonous Ruler"])
-		expect(filterSkills(ROWS, "", "all", "jp").map((r) => r.name)).toEqual(["Fan Skill"])
+		expect(filterSkills(ROWS, "corner", [], "all").map((r) => r.name)).toEqual(["Corner Adept ○"])
+		expect(filterSkills(ROWS, "コーナー", [], "all")).toHaveLength(1)
+		expect(filterSkills(ROWS, "", ["gold"], "all").map((r) => r.name)).toEqual(["Gourmand"])
+		expect(filterSkills(ROWS, "", ["evolved"], "all").map((r) => r.name)).toEqual(["Gluttonous Ruler"])
+		expect(filterSkills(ROWS, "", [], "jp").map((r) => r.name)).toEqual(["Fan Skill"])
+	})
+
+	it("gives inherited copies their own filter, out of White", () => {
+		const rows = [...ROWS, row(5, "Shooting Star", { game_id: 900011, owners: ["Special Week"] })]
+		expect(filterSkills(rows, "", ["inherited"], "all").map((r) => r.name)).toEqual(["Shooting Star"])
+		expect(filterSkills(rows, "", ["white"], "all").map((r) => r.name)).not.toContain("Shooting Star")
+	})
+
+	it("filters by type, and finds a unique by its uma's name", () => {
+		const rows = [
+			row(6, "Shooting Star", { game_id: 100011, rarity: 5, type: "unique", owners: ["Special Week"] }),
+			row(7, "Swinging Maestro", { type: "recovery" }),
+		]
+		expect(filterSkills(rows, "", [], "all", ["recovery"]).map((r) => r.name)).toEqual(["Swinging Maestro"])
+		expect(filterSkills(rows, "special week", [], "all").map((r) => r.name)).toEqual(["Shooting Star"])
+	})
+
+	it("keeps every sub-type under its type, and one sub-type alone", () => {
+		// Daptrius, 2026-11-12: the greens and the debuffs split into their sub-types.
+		const rows = [
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_stamina" }),
+			row(10, "Stamina Eater", { type: "debuff_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+			row(12, "Pressure", { type: "current_speed" }),
+		]
+		expect(filterSkills(rows, "", [], "all", ["stat"]).map((r) => r.name)).toEqual(["Right-Handed ○", "Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", [], "all", ["stat_stamina"]).map((r) => r.name)).toEqual(["Longchamp Racecourse ○"])
+		expect(filterSkills(rows, "", [], "all", ["debuff"]).map((r) => r.name)).toEqual(["Stamina Eater"])
+		// Current speed is a type of its own, out of Speed.
+		expect(filterSkills(rows, "", [], "all", ["velocity"]).map((r) => r.name)).toEqual(["Straightaway Adept"])
+		expect(filterSkills(rows, "", [], "all", ["current_speed"]).map((r) => r.name)).toEqual(["Pressure"])
+	})
+
+	it("takes several colours and types at once, any of them passing", () => {
+		// Board "Allow Encyclopedia Filtering to select multiple items", 2026-11-17.
+		expect(filterSkills(ROWS, "", ["gold", "evolved"], "all").map((r) => r.name)).toEqual(["Gourmand", "Gluttonous Ruler"])
+		const rows = [
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_wit" }),
+			row(10, "Stamina Eater", { type: "debuff_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+		]
+		expect(filterSkills(rows, "", [], "all", ["velocity", "stat_wit"]).map((r) => r.name)).toEqual(["Longchamp Racecourse ○", "Straightaway Adept"])
+	})
+
+	it("picks a type whole, narrows it to sub-types, and drops it with its sub-types", () => {
+		let picks = toggleTypePick([], "stat")
+		expect(picks).toEqual(["stat"])
+		picks = toggleSubTypePick(picks, "stat", "stat_speed")
+		picks = toggleSubTypePick(picks, "stat", "stat_wit")
+		expect(picks).toEqual(["stat_speed", "stat_wit"])
+		expect(subTypePicks(picks, "stat")).toEqual(["stat_speed", "stat_wit"])
+		// Another type alongside, then the last sub-type off leaves Stat boost whole.
+		picks = toggleTypePick(picks, "velocity")
+		picks = toggleSubTypePick(toggleSubTypePick(picks, "stat", "stat_speed"), "stat", "stat_wit")
+		expect(picks).toEqual(["velocity", "stat"])
+		// Its "All" takes it whole again; its chip drops it.
+		expect(toggleSubTypePick(["stat_guts", "velocity"], "stat", "stat")).toEqual(["velocity", "stat"])
+		expect(toggleTypePick(["stat_guts", "stat_wit", "velocity"], "stat")).toEqual(["velocity"])
+	})
+
+	it("knows a sub-type's parent, and words it so it can't be read as another type", () => {
+		expect(typeParent("stat_guts").value).toBe("stat")
+		expect(typeParent("velocity").value).toBe("velocity")
+		expect(typeParent("no such type").value).toBe("all")
+		expect(SKILL_TYPE_WORDS.stat_speed).toBe("Stat boost: Speed")
+		expect(SKILL_TYPE_WORDS.debuff_stamina).toBe("Debuff: Stamina drain")
+		expect(SKILL_TYPE_WORDS.velocity).toBe("Speed")
 	})
 
 	it("labels a unique's inherited copy, which shares its name", () => {
@@ -99,41 +147,122 @@ describe("filterSkills", () => {
 		expect(skillKind({ game_id: 100661, rarity: 5, is_evolved: false })).toBe("unique")
 	})
 
-	it("reads only a game id from the link", () => {
+	it("reads only a game id from an old link, and links to the skill's own page", () => {
 		expect(parseSkillParam("100101111")).toBe(100101111)
 		expect(parseSkillParam("abc")).toBeNull()
 		expect(parseSkillParam(null)).toBeNull()
+		expect(skillHref(100101111)).toBe("/app/skills/100101111")
+	})
+})
+
+describe("filterSkills by conditions and effects", () => {
+	const TAGGED = [
+		row(21, "Corner Speed", { tags: ["corner", "mid", "speed"] }),
+		row(22, "Final Accel", { tags: ["accel", "final-corner", "front-runner"] }),
+		row(23, "Untagged"),
+	]
+	const names = (picks: string[], match: "all" | "any") =>
+		filterSkills(TAGGED, "", [], "all", [], { picks, match }).map((r) => r.name)
+
+	it("keeps a skill with every pick under All, any one pick under Any", () => {
+		expect(names([], "all")).toHaveLength(3)
+		expect(names(["corner", "speed"], "all")).toEqual(["Corner Speed"])
+		expect(names(["speed", "accel"], "all")).toEqual([])
+		expect(names(["speed", "accel"], "any")).toEqual(["Corner Speed", "Final Accel"])
+		// A row from an older API has no tags, so it never matches a pick.
+		expect(names(["front-runner"], "any")).toEqual(["Final Accel"])
 	})
 })
 
 describe("SkillsPage", () => {
+	it("filters by conditions and effects, all or any of them", async () => {
+		sessionStorage.clear()
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(21, "Corner Speed", { tags: ["corner", "mid", "speed"] }),
+			row(22, "Final Accel", { tags: ["accel", "final-corner", "front-runner"] }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("2 skills")).toBeInTheDocument()
+		// Folded away until asked for.
+		expect(screen.queryByRole("group", { name: "When" })).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Show conditions and effects" }))
+		fireEvent.click(within(screen.getByRole("group", { name: "Does" })).getByRole("button", { name: "Speed" }))
+		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		fireEvent.click(within(screen.getByRole("group", { name: "Strategy" })).getByRole("button", { name: "Front Runner" }))
+		// All of them: no skill is both.
+		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
+		fireEvent.click(within(screen.getByRole("group", { name: "Match" })).getByRole("button", { name: "Any of them" }))
+		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		// While a pick is set the rows can't fold away, so nothing filters out of sight.
+		expect(screen.getByRole("button", { name: "Hide conditions and effects" })).toBeDisabled()
+		sessionStorage.clear()
+	})
+
+	it("opens a row's card on a click, with the way to its page; Enter still follows the link", async () => {
+		// Henry, 2026-11-18: "popup first like on pvp page".
+		// An open card fetches the skill's page through TanStack Query.
+		render(
+			<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+				{asReader(
+					<MemoryRouter initialEntries={["/app/skills"]}>
+						<Routes>
+							<Route path="/app/skills" element={<SkillsPage />} />
+							<Route path="/app/skills/:gameId" element={<p>The skill's own page</p>} />
+						</Routes>
+					</MemoryRouter>
+				)}
+			</QueryClientProvider>
+		)
+		const gourmand = await screen.findByRole("link", { name: /Gourmand/ })
+		fireEvent.pointerDown(gourmand, { pointerType: "mouse" })
+		fireEvent.click(gourmand, { detail: 1 })
+		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
+		const open = await screen.findByText("Open its page")
+		expect(open.closest("a")).toHaveAttribute("href", "/app/skills/200002")
+		// A tap pins it too, and the tap's click doesn't follow the link.
+		const corner = screen.getByRole("link", { name: /Corner Adept/ })
+		fireEvent.pointerDown(corner, { pointerType: "touch" })
+		fireEvent.pointerUp(corner, { pointerType: "touch" })
+		fireEvent.click(corner, { detail: 1 })
+		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
+		// The keyboard's Enter is a click with no detail: straight to the page.
+		fireEvent.click(gourmand, { detail: 0 })
+		expect(await screen.findByText("The skill's own page")).toBeInTheDocument()
+	})
+
 	it("lists the skills, tagged, and narrows on search", async () => {
 		renderPage()
 		expect(await screen.findByText("4 skills")).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
+		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
+		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
+		// The Encyclopedia's tab strip, Skills open.
+		expect(screen.getByRole("link", { name: /Skills$/ })).toHaveAttribute("aria-current", "page")
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
 	})
 
-	it("opens the skill a link names, in full", async () => {
-		const { container } = renderPage("/app/skills?skill=100101111")
-		expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
-		expect(container).toHaveTextContent("When: At a random moment mid-race")
-		expect(container).toHaveTextContent("Does: Recovers 5.5% endurance once per race")
-		expect(container).toHaveTextContent("Coming to global")
-		expect(screen.getByText("Special Week")).toBeInTheDocument()
-		expect(screen.getByText("Evolution, level 3")).toBeInTheDocument()
-		// Its base links to the base's own page (the list has a Gourmand link too).
-		const card = screen.getByRole("article")
-		expect(within(card).getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills?skill=200002")
-		expect(container).toHaveTextContent("スキルを3個 (in Japanese, no translation yet)")
+	it("sorts by skill point cost either way, a skill with no cost last both times", async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(1, "Cheap", { cost: 100 }),
+			row(2, "Unique", { cost: null }),
+			row(3, "Dear", { cost: 200 }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		const order = () => screen.getAllByRole("link").map((link) => link.textContent ?? "").filter((text) => /Cheap|Unique|Dear/.test(text))
+		fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "cost" } })
+		expect(order().map((text) => text.match(/Cheap|Unique|Dear/)?.[0])).toEqual(["Cheap", "Dear", "Unique"])
+		fireEvent.click(screen.getByRole("button", { name: /Lowest first/ }))
+		expect(screen.getByRole("button", { name: /Highest first/ })).toBeInTheDocument()
+		expect(order().map((text) => text.match(/Cheap|Unique|Dear/)?.[0])).toEqual(["Dear", "Cheap", "Unique"])
 	})
 
-	it("says so when a link names no skill", async () => {
-		renderPage("/app/skills?skill=999999")
-		expect(await screen.findByText("There's no skill with that link.")).toBeInTheDocument()
+	it("sends an old ?skill= link to the skill's own page", async () => {
+		renderPage("/app/skills?skill=100101111")
+		expect(await screen.findByText("The skill's own page")).toBeInTheDocument()
 	})
 
 	it("says so when the list doesn't load", async () => {
@@ -143,20 +272,44 @@ describe("SkillsPage", () => {
 		await waitFor(() => expect(screen.getByText(/The skill list didn't load/)).toBeInTheDocument())
 	})
 
-	it("isn't there for anyone but a guide editor while it's shelved", () => {
+	it("lists the skills for an account without early access (everyone, since 2026-11-18)", async () => {
 		renderPage("/app/skills", false)
-		expect(screen.getByText(/This page isn't here/)).toBeInTheDocument()
-		expect(fetchMock).not.toHaveBeenCalled()
+		expect(await screen.findByText("Gourmand")).toBeInTheDocument()
+		expect(screen.queryByText(/for our Patreon supporters/)).toBeNull()
 	})
 
-	it("sends the editor's token: the API answers guide editors only while it's shelved", async () => {
-		setAuthToken("editor-token")
+	it("lists the skills for a guest", async () => {
+		renderPage("/app/skills", "guest")
+		expect(await screen.findByText("Gourmand")).toBeInTheDocument()
+	})
+
+	it("opens a type's sub-types once the type is picked", async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
+			row(8, "Right-Handed ○", { type: "stat_speed" }),
+			row(9, "Longchamp Racecourse ○", { type: "stat_stamina" }),
+			row(11, "Straightaway Adept", { type: "velocity" }),
+		]), { status: 200 })))
+		renderPage()
+		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		expect(screen.queryByRole("group", { name: "Stat boost" })).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Stat boost" }))
+		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		const subs = within(screen.getByRole("group", { name: "Stat boost" }))
+		expect(subs.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
+		fireEvent.click(subs.getByRole("button", { name: "Stamina" }))
+		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		// The type's own chip stays lit while one of its sub-types is picked.
+		expect(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Stat boost" })).toHaveAttribute("aria-pressed", "true")
+		expect(screen.getByRole("link", { name: /Longchamp Racecourse/ })).toHaveTextContent("Stat boost: Stamina")
+	})
+
+	it("sends the token: the API answers early access only", async () => {
+		setAuthToken("reader-token")
 		try {
-			renderPage("/app/skills?skill=100101111")
-			expect(await screen.findByRole("heading", { name: /Gluttonous Ruler/ })).toBeInTheDocument()
+			renderPage()
+			expect(await screen.findByText("4 skills")).toBeInTheDocument()
 			const sent = fetchMock.mock.calls.map(([url, init]) => [String(url).replace(/^.*(\/skills.*)$/, "$1"), init?.headers])
-			expect(sent).toContainEqual(["/skills", { Authorization: "Token editor-token" }])
-			expect(sent).toContainEqual(["/skills/100101111", { Authorization: "Token editor-token" }])
+			expect(sent).toContainEqual(["/skills", { Authorization: "Token reader-token" }])
 		} finally {
 			clearAuthToken()
 		}

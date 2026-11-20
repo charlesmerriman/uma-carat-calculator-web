@@ -8,40 +8,33 @@
  * on touch screens. Written fresh here rather than shared, so the Timeline's
  * tile stays untouched by guide work. The popup is drawn on <body>
  * (useHoverPopup), and nothing inside a tile with a detail opens a detail of
- * its own (InsideHoverContext).
+ * its own (InsideHoverContext). The popup itself lives in hoverPopup.tsx,
+ * which the Encyclopedia's skill rows share.
  */
 
-import { createContext, useContext, useId, useState, type ReactNode } from "react"
-import {
-	autoUpdate,
-	flip,
-	FloatingPortal,
-	offset,
-	shift,
-	useDismiss,
-	useFloating,
-	useFocus,
-	useHover,
-	useInteractions,
-	useTransitionStyles,
-	type Placement,
-} from "@floating-ui/react"
-import { useReducedMotion } from "framer-motion"
+import { useContext, useId, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
 import { useSkillMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { GOLD_SKILL_RARITY, type UmaAptitude } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
+import { InsideHoverContext, useHoverPopup } from "./hoverPopup"
 import { useSkillsPreview } from "../../hooks/useSkillsPreview"
 import { FramedUma } from "../FramedUma"
 import { FramedCard } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs, useEncyclopediaLookup } from "../../hooks/useEncyclopediaHrefs"
+import { HoverCardContent } from "../hovercards/HoverCardContent"
+import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
+import { OpenPageLink } from "../EncyclopediaLinks"
+import { Link } from "react-router-dom"
 import { splitOutfit } from "../../utils/umaName"
 import { DECK_STAT_LABELS, noteOnlyType, parseSlotNote, rarityLabel, type DeckStatType } from "../../utils/deckNotes"
 import { clearCourseFocus, setCourseFocus } from "../../services/courseMapStore"
 import CourseVerdict from "../course/CourseVerdict"
 import { nameLang } from "../../utils/skillList"
+import { STAT_ICON_PATHS } from "../../utils/statIcons"
 
 /**
  * A skill name with its trailing mark (○ ◎ × ☆ ♡) held to the word before it
@@ -78,91 +71,6 @@ export function InlineNote({ text, className = "" }: { text: string; className?:
 			<NotePieces pieces={splitNoteText(text)} />
 		</span>
 	)
-}
-
-/**
- * True inside a tile or chip that has a hover detail (WithDetail), on its face
- * and in its detail alike. Tailwind's `group-hover:` answers to ANY hovered
- * `.group` above it, not the nearest, so a [[mention]] in a tile's note opened
- * its own popup the moment the tile was hovered, drawn over the tile's: two
- * at once for "Activate [[A]] with [[B]]" (2026-11-02). A mention on a chip's
- * face did the same. Inside one, a mention draws its pill alone, and the
- * detail lists what the note names at its bottom (MentionedSkills).
- */
-const InsideHoverContext = createContext(false)
-
-// How long the pointer rests on a tile before its popup opens, so a mouse
-// crossing a grid of skills doesn't flash a popup per cell. Focus and a tap
-// open it at once.
-const HOVER_OPEN_DELAY_MS = 120
-
-/**
- * The popup of a hover detail (WithDetail, SkillMention): opened by hover,
- * keyboard focus (`:focus-visible` only, as before) or a tap on a touch
- * screen, and drawn in a portal on <body> by Floating UI (2026-11-02).
- *
- * Why a portal: drawn inside its tile, a popup could rise only as high as the
- * tile's stacking context, and the guide makes several. The General skills
- * column is `position: sticky` and each deck cell is a framer-motion `layout`
- * box, so a popup from that column slid under the cards beside it (the
- * owner's "Perfect Spot!" screenshot). On <body> nothing covers it. Floating
- * UI also opens it above when there's no room below (`flip`), keeps it on
- * screen (`shift`) and follows the tile while the page scrolls (`autoUpdate`,
- * only while it's open).
- *
- * The popup is in the DOM only while open, so it is `aria-hidden`: the
- * screen reader's copy is the caller's `sr-only` element, always in the DOM
- * and named by `aria-describedby`, as the old in-place popup was.
- *
- * `onOpenChange` hears every open and close: a skill's card lights the skill
- * on the course map while it is open (notes/course-map-plan-2.md, section 8).
- */
-function useHoverPopup(placement: Placement, onOpenChange?: (open: boolean) => void) {
-	const [open, setOpenState] = useState(false)
-	const setOpen = (next: boolean) => {
-		setOpenState(next)
-		onOpenChange?.(next)
-	}
-	const reducedMotion = useReducedMotion()
-	const { refs, floatingStyles, context } = useFloating({
-		open,
-		onOpenChange: setOpen,
-		placement,
-		middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
-		whileElementsMounted: autoUpdate,
-	})
-	const { getReferenceProps } = useInteractions([
-		useHover(context, { mouseOnly: true, delay: { open: HOVER_OPEN_DELAY_MS } }),
-		useFocus(context, { visibleOnly: true }),
-		// Escape, or a tap anywhere else, closes it.
-		useDismiss(context),
-	])
-	// A short fade in and out; none for a reader who asked for less motion.
-	const { isMounted, styles } = useTransitionStyles(context, { duration: reducedMotion ? 0 : 150 })
-	const referenceProps = {
-		ref: refs.setReference,
-		...getReferenceProps({
-			// A touch screen has no hover, and a tap's focus isn't
-			// :focus-visible, so a tap toggles it.
-			onPointerUp(event) {
-				if (event.pointerType === "touch") setOpen(!open)
-			},
-		}),
-	}
-	const popup = (content: ReactNode, widthClassName: string) =>
-		isMounted && (
-			<FloatingPortal>
-				<div
-					ref={refs.setFloating}
-					aria-hidden="true"
-					style={{ ...floatingStyles, ...styles }}
-					className={`pointer-events-none z-50 max-w-[80vw] rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${widthClassName}`}
-				>
-					<InsideHoverContext.Provider value={true}>{content}</InsideHoverContext.Provider>
-				</div>
-			</FloatingPortal>
-		)
-	return { referenceProps, popup }
 }
 
 // The skills a note's pieces mention that the guide's map holds, each once,
@@ -241,7 +149,13 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 	const skill = useSkillMentions()[name.toLowerCase()]
 	const insideHover = useContext(InsideHoverContext)
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom-start", (open) => skill && lightOnCourseMap(skill, open))
+	// For early access the card ends in a link to the skill's page, so it has
+	// to be reachable with the pointer (hoverPopup.tsx, `interactive`).
+	const preview = useSkillsPreview()
+	const { referenceProps, popup } = useHoverPopup("bottom-start", {
+		onOpenChange: (open) => skill && lightOnCourseMap(skill, open),
+		interactive: preview && skill?.game_id != null,
+	})
 	if (!skill) return <>{name}</>
 	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
@@ -271,7 +185,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 			<span id={detailId} role="tooltip" className="sr-only">
 				<SkillDetail skill={skill} />
 			</span>
-			{popup(<><SkillDetail skill={skill} /><CourseVerdict skillId={skill.id} /></>, "w-72")}
+			{popup(<><SkillDetail skill={skill} /><CourseVerdict skillId={skill.id} /></>, "w-80")}
 		</span>
 	)
 }
@@ -307,20 +221,34 @@ function lightUniqueOnCourseMap(uma: PvpUmaRef, open: boolean) {
 
 /**
  * Wraps a tile or chip whose extra detail shows on hover, focus or tap. With
- * no `detail` it renders the child plainly and is not focusable.
+ * no `detail` it renders the child plainly and is not focusable. With a
+ * `card`, a click on the tile turns the popup into that card and keeps it open.
  */
-function WithDetail({ label, detail, children, className = "", detailClassName = "w-64", onOpenChange }: {
+function WithDetail({ label, detail, card, children, className = "", detailClassName = "w-64", onOpenChange, interactive = false, hover = true }: {
 	label: string
 	detail: ReactNode
+	/**
+	 * An uma's or a card's full card (components/hovercards) for early access,
+	 * with the guide's words in its top slot. Hover shows `detail`, the same
+	 * small note everyone gets; a CLICK on the tile draws this in the popup
+	 * instead and pins it open (useHoverPopup `pin`; owner, 2026-11-18). It
+	 * mounts only while pinned, so a guide full of tiles fetches nothing until
+	 * one is clicked. The screen reader's copy is always `detail`.
+	 */
+	card?: ReactNode
 	children: ReactNode
 	className?: string
 	/** The detail box's width; a card's art wants a narrower box than text. */
 	detailClassName?: string
 	/** Hears the detail open and close (a skill chip lights the course map). */
 	onOpenChange?: (open: boolean) => void
+	/** The detail holds a link (a skill card's "Open its page"): let the pointer reach it. */
+	interactive?: boolean
+	/** False: resting the pointer on the tile opens nothing (useHoverPopup `hover`). */
+	hover?: boolean
 }) {
 	const detailId = useId()
-	const { referenceProps, popup } = useHoverPopup("bottom", onOpenChange)
+	const { referenceProps, popup, pinned } = useHoverPopup("bottom", { onOpenChange, interactive, pin: card !== undefined, hover })
 	if (!detail) return <div className={`relative ${className}`}>{children}</div>
 	return (
 		<div
@@ -329,7 +257,7 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 			aria-label={label}
 			aria-describedby={detailId}
 			tabIndex={0}
-			className={`relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${className}`}
+			className={`relative outline-none focus-visible:ring-2 focus-visible:ring-brand ${card !== undefined ? "cursor-pointer" : ""} ${className}`}
 		>
 			<InsideHoverContext.Provider value={true}>{children}</InsideHoverContext.Provider>
 			{/* The screen reader's copy, always in the DOM; the popup
@@ -337,7 +265,7 @@ function WithDetail({ label, detail, children, className = "", detailClassName =
 			<div id={detailId} role="tooltip" className="sr-only">
 				<InsideHoverContext.Provider value={true}>{detail}</InsideHoverContext.Provider>
 			</div>
-			{popup(detail, detailClassName)}
+			{popup(pinned && card !== undefined ? card : detail, detailClassName)}
 		</div>
 	)
 }
@@ -429,33 +357,57 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 }) {
 	const oshiIds = useOshiIds()
 	const mentions = useSkillMentions()
+	// Her Encyclopedia page, for early access: "Open its page" ends the popup,
+	// as on a skill card, since the tile itself opens the popup.
+	const page = useEncyclopediaHrefs().uma(uma.id)
 	const { base, outfit } = splitOutfit(uma.name)
 	const mentioned = FIRST_MENTION.exec(note)?.[1]
 	const skill = mentioned ? mentions[mentioned.trim().toLowerCase()] : undefined
+	// For early access a click turns the popup into her full card, with the
+	// guide's note and her unique's verdict on top (the card names her unique itself).
+	const known = useEncyclopediaLookup().uma(uma.id) !== null
+	const words = note || uma.unique
+		? (
+			<>
+				{note && <><InlineNote text={note} /><MentionedSkills text={note} /></>}
+				{uma.unique && <CourseVerdict skillId={uma.unique.id} />}
+			</>
+		)
+		: null
 	return (
 		<WithDetail
 			label={uma.name}
+			card={known ? <HoverCardContent kind="uma" id={uma.id} top={words} /> : undefined}
 			// Her unique's verdict rides in the popup, with its zone bar, so the
 			// answer is at the pointer when the map is scrolled away (owner,
 			// 2026-11-04); with no note, the unique's name is the detail.
-			detail={note || uma.unique
+			detail={note || uma.unique || page
 				? (
 					<>
 						{note && <><InlineNote text={note} /><MentionedSkills text={note} /></>}
 						{uma.unique && <p className={`text-xs text-gray-300 ${note ? "mt-1.5" : ""}`}>Unique: {uma.unique.name}</p>}
 						{uma.unique && <CourseVerdict skillId={uma.unique.id} />}
+						{page && <OpenPageLink href={page} className={note || uma.unique ? "mt-1.5" : ""} />}
 					</>
 				)
 				: null}
 			className={className}
 			onOpenChange={(open) => lightUniqueOnCourseMap(uma, open)}
+			interactive={page !== null}
+			// No hover popup when a click opens her card: the card has the
+			// note and the unique's verdict on top, and opening it lights the
+			// course map too (Daptrius, 2026-11-19: "On tap just works better
+			// for the map"). Focus still opens the small one for the keyboard.
+			hover={!known}
 		>
 			{/* h-full: in a grid the tile fills its row, so when one tile's
 			    letters wrap the others grow with it and every note slot, pinned
 			    to the bottom (mt-auto), stays level. */}
 			<div className="flex h-full flex-col gap-0.5 overflow-hidden rounded-lg border border-gray-600 bg-gray-700 p-1.5 text-center">
+				{/* Her layered art's ears (FramedUma) land in this strip, inside the tile. */}
+				{uma.portrait_layers && <div aria-hidden="true" className="-mb-0.5 aspect-[6/1] w-full shrink-0" />}
 				<div className="relative">
-					<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
+					<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 					{role && (
 						<span className="absolute left-0.5 top-0.5 max-w-[calc(100%-0.25rem)] truncate rounded border border-gray-600 bg-gray-800/95 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
 							{role}
@@ -490,11 +442,11 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 
 /** The game's stat icons (public/0N_CM*.png), for the stats table and an "or any Wit card" line. */
 const STAT_ICONS: Record<DeckStatType, { label: string; icon: string }> = {
-	speed: { label: DECK_STAT_LABELS.speed, icon: "/00_CMSPEED1.png" },
-	stamina: { label: DECK_STAT_LABELS.stamina, icon: "/01_CMStamina1.png" },
-	power: { label: DECK_STAT_LABELS.power, icon: "/02_CMPOWER1.png" },
-	guts: { label: DECK_STAT_LABELS.guts, icon: "/03_CMGUTS1.png" },
-	wit: { label: DECK_STAT_LABELS.wit, icon: "/04_CMWits1.png" },
+	speed: { label: DECK_STAT_LABELS.speed, icon: STAT_ICON_PATHS.speed },
+	stamina: { label: DECK_STAT_LABELS.stamina, icon: STAT_ICON_PATHS.stamina },
+	power: { label: DECK_STAT_LABELS.power, icon: STAT_ICON_PATHS.power },
+	guts: { label: DECK_STAT_LABELS.guts, icon: STAT_ICON_PATHS.guts },
+	wit: { label: DECK_STAT_LABELS.wit, icon: STAT_ICON_PATHS.wit },
 }
 
 /**
@@ -578,19 +530,54 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 }
 
 /**
+ * A card's art as a link to its Encyclopedia page, for the tiles with no
+ * popup of their own (SupportTile, SwapInCard). A mouse click opens the
+ * card's card (`hover`), whose "Open its page" goes on to the page; the
+ * keyboard follows the link, and so does a tap unless `hover` was built with
+ * `tap` (SupportTile's). The art's own alt (the card's name) names
+ * the link. No href: the art alone.
+ */
+function PageArt({ href, hover, className, children }: {
+	href: string | null
+	/** The card's card (utils/hoverCards.ts hoverCardProps); like the link, early access only. */
+	hover?: Record<string, string>
+	className: string
+	children: ReactNode
+}) {
+	if (!href) return <>{children}</>
+	return (
+		<Link
+			to={href}
+			{...hover}
+			title={hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"}
+			className={`block transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${className}`}
+		>
+			{children}
+		</Link>
+	)
+}
+
+/**
  * A support card in a deck slot: art (with the Link badge when the note says
  * "Scenario Link"), name, then the note's reasons (SlotReasons). `scenarioName`
  * is the guide's scenario, for the badge's words. `limitBreak` is the least the
  * guide recommends, drawn as the game's diamonds on the card.
  */
-export function SupportTile({ card, note, borrow = false, scenarioName = null, limitBreak = null }: {
+export function SupportTile({ card, note, borrow = false, scenarioName = null, limitBreak = null, pageLink = true }: {
 	card: PvpSupportCardRef
 	note: string
 	borrow?: boolean
 	scenarioName?: string | null
 	limitBreak?: number | null
+	/**
+	 * The art opens the card's Encyclopedia page (early access). False in the
+	 * guide editor, where a stray click would leave the guide mid-edit.
+	 */
+	pageLink?: boolean
 }) {
 	const linked = parseSlotNote(note).scenarioLink
+	const hrefs = useEncyclopediaHrefs()
+	const page = pageLink ? hrefs.card(card.id) : null
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1">
 			{/* The card is its own frame (FramedCard), so no box of ours round it:
@@ -601,7 +588,11 @@ export function SupportTile({ card, note, borrow = false, scenarioName = null, l
 				<div className="flex aspect-square w-full justify-center">
 					<BorrowTab borrow={borrow} className="h-full">
 						<span className="relative block h-full">
-							<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
+							{/* `tap`: a phone's tap opens the card here too, as the All
+							    tab's MiniCard does (Henry, 2026-11-19). */}
+							<PageArt href={page} hover={hoverCardProps("card", card.id, { tap: true })} className="h-full">
+								<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="h-full" />
+							</PageArt>
 							{linked && <LinkBadge scenarioName={scenarioName} />}
 						</span>
 					</BorrowTab>
@@ -641,11 +632,14 @@ export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
 	limitBreak?: number | null
 }) {
 	const linked = parseSlotNote(note).scenarioLink
+	const page = useEncyclopediaHrefs().card(card.id)
 	return (
 		<div className="flex min-w-0 flex-col items-center gap-1 text-center">
 			<span className="relative block w-16">
 				{card.image || card.image_borderless ? (
-					<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
+					<PageArt href={page} hover={hoverCardProps("card", card.id)} className="w-full">
+						<FramedCard card={card} limitBreaks={limitBreak} alt={card.name} className="w-full" />
+					</PageArt>
 				) : (
 					<span className="block aspect-[3/4] w-full rounded-lg border border-gray-600 bg-gray-700" aria-hidden="true" />
 				)}
@@ -674,6 +668,8 @@ export function SwapInCard({ card, note, scenarioName, limitBreak = null }: {
  * over a two-line skill mention above it).
  */
 export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; note: string }) {
+	const page = useEncyclopediaHrefs().card(card?.id)
+	const known = useEncyclopediaLookup().card(card?.id) !== null
 	return (
 		<div className="text-center text-[11px] leading-tight text-gray-400">
 			{card && (
@@ -685,10 +681,13 @@ export function AlternateCard({ card, note }: { card: PvpSupportCardRef | null; 
 							<>
 								<FramedCard card={card} className="mx-auto w-3/4" />
 								<span className="mt-1 block text-center font-medium text-gray-100">{card.name}</span>
+								{page && <span className="mt-1 block text-center"><OpenPageLink href={page} /></span>}
 							</>
 						}
+						card={known && card ? <HoverCardContent kind="card" id={card.id} /> : undefined}
 						className="inline-block max-w-full cursor-pointer align-baseline"
 						detailClassName="w-36"
+						interactive={page !== null}
 					>
 						<span className="text-gray-200 underline decoration-gray-500 decoration-dotted underline-offset-2">{card.name}</span>
 					</WithDetail>
@@ -721,6 +720,7 @@ export function NoteOnlyTile({ note, borrow = false }: { note: string; borrow?: 
 /** An uma as her framed face, everything else in the hover. */
 export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: number; role: string; note: string }) {
 	const oshiIds = useOshiIds()
+	const page = useEncyclopediaHrefs().uma(uma.id)
 	const { base, outfit } = splitOutfit(uma.name)
 	const detail = (
 		<div className="flex flex-col gap-1">
@@ -736,11 +736,30 @@ export function FaceTile({ uma, stars, role, note }: { uma: PvpUmaRef; stars: nu
 			{role && <div className="font-semibold text-brand">{role}</div>}
 			{note && <InlineNote text={note} />}
 			{note && <MentionedSkills text={note} />}
+			<OpenPageLink href={page} />
 		</div>
 	)
+	const known = useEncyclopediaLookup().uma(uma.id) !== null
+	const words = stars > 0 || role || note
+		? (
+			<div className="flex flex-col gap-1">
+				{stars > 0 && <div className="w-fit"><Stars count={stars} /></div>}
+				{role && <div className="font-semibold text-brand">{role}</div>}
+				{note && <InlineNote text={note} />}
+				{note && <MentionedSkills text={note} />}
+			</div>
+		)
+		: null
 	return (
-		<WithDetail label={uma.name} detail={detail} className="w-full" detailClassName="w-48">
-			<FramedUma src={uma.portrait ?? uma.image} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
+		<WithDetail
+			label={uma.name}
+			detail={detail}
+			card={known ? <HoverCardContent kind="uma" id={uma.id} top={words} /> : undefined}
+			className="w-full"
+			detailClassName="w-48"
+			interactive={page !== null}
+		>
+			<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} alt={uma.name} oshi={oshiIds.has(uma.id)} className="w-full" />
 		</WithDetail>
 	)
 }
@@ -759,6 +778,7 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 	limitBreak?: number | null
 }) {
 	const linked = parseSlotNote(note).scenarioLink
+	const page = useEncyclopediaHrefs().card(card.id)
 	const rarity = rarityLabel(card.rarity)
 	const detail = (
 		<div className="flex flex-col items-center gap-1 text-center">
@@ -768,10 +788,27 @@ export function MiniCard({ card, note, borrow = false, scenarioName, extra = nul
 			</div>
 			<SlotReasons note={note} faces />
 			{extra}
+			<OpenPageLink href={page} />
 		</div>
 	)
+	const known = useEncyclopediaLookup().card(card.id) !== null
+	const reasons = note || extra
+		? (
+			<div className="flex flex-col items-start gap-1">
+				<SlotReasons note={note} faces />
+				{extra}
+			</div>
+		)
+		: null
 	return (
-		<WithDetail label={card.name} detail={detail} className="w-full" detailClassName="w-44">
+		<WithDetail
+			label={card.name}
+			detail={detail}
+			card={known ? <HoverCardContent kind="card" id={card.id} top={reasons} /> : undefined}
+			className="w-full"
+			detailClassName="w-44"
+			interactive={page !== null}
+		>
 			<BorrowTab borrow={borrow}>
 				<span className="relative block">
 					{card.image || card.image_borderless ? (
@@ -913,6 +950,7 @@ export function SkillFace({ skill, sub = "", size = "regular" }: { skill: PvpSki
 }
 
 export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRef; note: string; size?: "regular" | "small" }) {
+	const preview = useSkillsPreview()
 	const detail = (
 		<>
 			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
@@ -922,7 +960,7 @@ export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRe
 	// A small cell (under a deck card) has no room for a caption.
 	const sub = size === "small" ? "" : skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
 	return (
-		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-72">
+		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-80" interactive={preview && skill.game_id != null}>
 			<SkillFace skill={skill} sub={sub} size={size} />
 		</WithDetail>
 	)
@@ -942,7 +980,13 @@ export function SkillChip({ skill, note }: { skill: PvpSkillRef; note: string })
 	// the grey text classes step aside and the note dims with opacity instead.
 	const gold = skill.rarity === GOLD_SKILL_RARITY
 	return (
-		<WithDetail label={skill.name} detail={detail} detailClassName="w-72" onOpenChange={(open) => lightOnCourseMap(skill, open)}>
+		<WithDetail
+			label={skill.name}
+			detail={detail}
+			detailClassName="w-80"
+			onOpenChange={(open) => lightOnCourseMap(skill, open)}
+			interactive={preview && skill.game_id != null}
+		>
 			{/* rounded-lg, not a capsule: the square icon's corners stuck out
 			    through a capsule's round ends. The skills panel's rows and the
 			    mention pill are rounded rectangles too. */}

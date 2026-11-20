@@ -7,10 +7,11 @@ import { ReservedColumnIcons, RESERVED_COLUMN_TITLE } from "./ReservedColumnIcon
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 interface MobileBannerCardProps {
 	bannerType: BannerRowType
-	images: { id: number; name: string; image: string; portrait?: string | null }[]
+	images: { id: number; name: string; image: string; portrait?: string | null; portrait_layers?: PortraitLayers | null }[]
 	/**
 	 * Replaces the thumbnail strip entirely. A step-up row has no featured cards
 	 * to thumbnail — the player picks their own from the back catalogue — so it
@@ -134,7 +135,7 @@ const Thumbnails = ({
 }: {
 	href?: string | null
 	slot?: ReactNode
-	images: { id: number; name: string; image: string; portrait?: string | null }[]
+	images: { id: number; name: string; image: string; portrait?: string | null; portrait_layers?: PortraitLayers | null }[]
 	/** An uma row: the borderless art in the site's frame (FramedUma). */
 	framed: boolean
 	thumbTileRadius: string
@@ -147,7 +148,7 @@ const Thumbnails = ({
 						framed ? (
 							<FramedUma
 								key={img.id}
-								src={img.portrait ?? img.image}
+								src={img.portrait ?? img.image} layers={img.portrait_layers}
 								alt={img.name}
 								oshi={oshiIds.has(img.id)}
 								className="w-12"

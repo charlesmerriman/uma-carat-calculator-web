@@ -29,7 +29,7 @@ const ICONS = { page: FileText, banner: CalendarDays, event: Swords, skill: Spar
 const ITEM = "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left data-[selected=true]:bg-gray-700"
 
 function EntryArt({ entry, oshiIds }: { entry: SearchEntry; oshiIds: ReadonlySet<number> }) {
-	if (entry.umaId !== undefined) return <FramedUma src={entry.image ?? null} oshi={oshiIds.has(entry.umaId)} alt="" className="w-9 shrink-0" />
+	if (entry.umaId !== undefined) return <FramedUma src={entry.image ?? null} layers={entry.layers} oshi={oshiIds.has(entry.umaId)} alt="" className="w-9 shrink-0" />
 	if (entry.image) return <img src={entry.image} alt="" loading="lazy" decoding="async" className="h-9 w-9 shrink-0 rounded-md object-contain" />
 	const Icon = ICONS[entry.kind]
 	return (
@@ -39,7 +39,7 @@ function EntryArt({ entry, oshiIds }: { entry: SearchEntry; oshiIds: ReadonlySet
 	)
 }
 
-/** A skill has no page, so picking one shows this. */
+/** A skill with no game id has no page, so picking one shows this. */
 function SkillPanel({ entry, catalogue, onBack }: { entry: SearchEntry; catalogue: PvpCatalogue | null; onBack: () => void }) {
 	const teachers = catalogue && entry.skillId !== undefined ? skillTeachers(entry.skillId, catalogue) : { umas: [], cards: [] }
 	return (
@@ -106,6 +106,8 @@ export default function SearchPalette({ onClose }: { onClose: () => void }) {
 			scenarios: inApp?.scenarioData ?? payload?.scenario_data ?? [],
 			campaigns: inApp?.anniversaryEventData ?? payload?.anniversary_event_data ?? [],
 			skills: catalogue?.skills ?? [],
+			umas: catalogue?.umas,
+			cards: catalogue?.support_cards,
 		}
 		return createSearcher(buildSearchEntries(sources, new Date(), earlyAccess))
 	}, [inApp, payload, catalogue, earlyAccess])

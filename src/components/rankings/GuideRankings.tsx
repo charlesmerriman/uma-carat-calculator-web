@@ -30,6 +30,10 @@ import { chooseRankings, useRankingsChoices, type GuideLens } from "../../servic
 import { useGuideRankings } from "../../hooks/useGuideRankings"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaName } from "../EncyclopediaLinks"
+
+const RESULT_NAME = "truncate text-[13px] font-semibold text-gray-100"
 import { FramedUma } from "../FramedUma"
 import { STYLE_LABELS, defaultPvpEvent, hasEnded, isRunning, raceEventsInOrder } from "../../utils/pvpGuide"
 import { pvpEventHref, refForRaceEvent, sameEvent, shortEventName, type PvpEventKind } from "../../utils/pvpEvent"
@@ -71,6 +75,8 @@ import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
+import { hoverCardProps } from "../../utils/hoverCards"
+import { nameMatches } from "../../utils/searchText"
 
 const STYLES: PvpStyle[] = ["runaway", "front", "pace", "late", "end"]
 const KINDS: Array<{ id: PvpEventKind; label: string }> = [
@@ -123,6 +129,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 }) {
 	useReportUpdated(payload.generated_at)
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const defaults = useMemo(() => allFilters(payload, STYLES, CARD_TYPE_IDS), [payload])
 	const [filters, setFilters] = useState<GuideFilters>(defaults)
 	const guided = useMemo(() => eventsWithGuide(events, payload), [events, payload])
@@ -238,6 +245,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				count={plural(rank.decks, "deck")}
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={rank.alternatives} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard />}
+				href={hrefs.card(rank.card)}
 			/>
 		)
 	}
@@ -246,13 +254,14 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 		return (
 			<RankRow
 				place={index + 1}
-				art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? oshiIds.has(uma.id) : false} className="w-12" />}
+				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-12" />}
 				name={uma?.name ?? "Unknown uma"}
 				movement={moves.get(rank.uma)}
 				fill={fillOf(rank.picks)}
 				count={plural(rank.picks, "pick")}
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={0} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard={false} />}
+				href={hrefs.uma(rank.uma)}
 			/>
 		)
 	}
@@ -262,12 +271,14 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 					const uma = umasById.get(rank.uma)
 					return {
 						key: rank.uma,
-						art: <FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? oshiIds.has(uma.id) : false} className="w-16" />,
+						art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-16" />,
 						name: uma?.name ?? "Unknown uma",
 						count: plural(rank.picks, "pick"),
 						share: formatShare(rank.share),
 						fill: fillOf(rank.picks),
 						movement: moves.get(rank.uma),
+						href: hrefs.uma(rank.uma),
+						hover: hoverCardProps("uma", rank.uma),
 					}
 				})
 			: lensCards.slice(0, 3).map((rank) => {
@@ -280,6 +291,8 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 						share: formatShare(rank.share),
 						fill: fillOf(rank.decks),
 						movement: moves.get(rank.card),
+						href: hrefs.card(rank.card),
+						hover: hoverCardProps("card", rank.card),
 					}
 				})
 	const lensLabel = lensOptions.find((option) => option.id === lens)?.label ?? "Overall"
@@ -564,6 +577,7 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 	umasById: Map<number, CatalogueUma>
 	oshiIds: ReadonlySet<number>
 }) {
+	const hrefs = useEncyclopediaHrefs()
 	const needle = query.trim().toLowerCase()
 	const searching = needle.length >= 2
 	const results = useMemo(() => {
@@ -572,10 +586,10 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 		const umaPlaces = new Map(umas.map((rank, index) => [rank.uma, { rank, place: index + 1 }]))
 		const found = [
 			...[...cardsById.values()]
-				.filter((card) => !card.placeholder && card.name.toLowerCase().includes(needle))
+				.filter((card) => !card.placeholder && nameMatches(needle, card.name))
 				.map((card) => ({ kind: "card" as const, card, hit: cardPlaces.get(card.id) ?? null })),
 			...[...umasById.values()]
-				.filter((uma) => uma.name.toLowerCase().includes(needle))
+				.filter((uma) => nameMatches(needle, uma.name))
 				.map((uma) => ({ kind: "uma" as const, uma, hit: umaPlaces.get(uma.id) ?? null })),
 		]
 		const nameOf = (entry: (typeof found)[number]) => (entry.kind === "card" ? entry.card.name : entry.uma.name)
@@ -595,10 +609,10 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 				<ul className="flex flex-col gap-2.5">
 					{results.map((entry) =>
 						entry.kind === "card" ? (
-							<li key={`card-${entry.card.id}`} className="flex items-center gap-2.5">
+							<li key={`card-${entry.card.id}`} className="flex items-center gap-2.5" {...hoverCardProps("card", entry.card.id)}>
 								<CardArt card={entry.card} />
 								<span className="flex min-w-0 flex-col gap-0.5">
-									<b className="truncate text-[13px] font-semibold text-gray-100">{entry.card.name}</b>
+									<EncyclopediaName href={hrefs.card(entry.card.id)} name={entry.card.name} className={RESULT_NAME} />
 									<span className="text-[11px] tabular-nums text-gray-400">
 										{entry.hit
 											? `#${entry.hit.place} overall · ${plural(entry.hit.rank.decks, "deck")} · ${formatShare(entry.hit.rank.share)}`
@@ -610,10 +624,10 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 								</span>
 							</li>
 						) : (
-							<li key={`uma-${entry.uma.id}`} className="flex items-center gap-2.5">
-								<FramedUma src={entry.uma.portrait ?? entry.uma.image} oshi={oshiIds.has(entry.uma.id)} className="w-10" />
+							<li key={`uma-${entry.uma.id}`} className="flex items-center gap-2.5" {...hoverCardProps("uma", entry.uma.id)}>
+								<FramedUma src={entry.uma.portrait ?? entry.uma.image} layers={entry.uma.portrait_layers} oshi={oshiIds.has(entry.uma.id)} className="w-10" />
 								<span className="flex min-w-0 flex-col gap-0.5">
-									<b className="truncate text-[13px] font-semibold text-gray-100">{entry.uma.name}</b>
+									<EncyclopediaName href={hrefs.uma(entry.uma.id)} name={entry.uma.name} className={RESULT_NAME} />
 									<span className="text-[11px] tabular-nums text-gray-400">
 										{entry.hit
 											? `#${entry.hit.place} of the umas · ${plural(entry.hit.rank.picks, "pick")} · ${formatShare(entry.hit.rank.share)}`

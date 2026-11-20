@@ -42,18 +42,22 @@ const ADD_BANNER_BUTTONS: {
 	short: string
 	full: string
 	className: string
+	/** The theme hook for this kind (personalityThemes.css). */
+	hook: string
 }[] = [
 	{
 		type: "Uma",
 		short: "Uma",
 		full: "New Uma Banner",
 		className: "bg-brand text-black hover:bg-brand/90",
+		hook: "add-banner-button--uma",
 	},
 	{
 		type: "Support",
 		short: "Support",
 		full: "New Support Banner",
 		className: "border border-brand bg-transparent text-brand hover:bg-brand/10",
+		hook: "add-banner-button--support",
 	},
 	{
 		type: "StepUp",
@@ -61,6 +65,7 @@ const ADD_BANNER_BUTTONS: {
 		short: "Step Up",
 		full: "New Step-Up Banner",
 		className: "step-up-add-button border bg-transparent",
+		hook: "add-banner-button--step-up",
 	},
 ]
 
@@ -319,7 +324,7 @@ export const CaratCalculator: React.FC = () => {
 											<div className="hidden w-px bg-gray-700 self-stretch sm:block" />
 										)}
 										<button
-											className={`flex-1 rounded-md py-2.5 font-medium transition ${button.className}`}
+											className={`add-banner-button ${button.hook} flex-1 rounded-md py-2.5 font-medium transition ${button.className}`}
 											onClick={() => handleAddBanner(button.type)}
 										>
 											⊕{" "}

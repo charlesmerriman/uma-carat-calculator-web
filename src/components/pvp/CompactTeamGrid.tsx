@@ -12,9 +12,11 @@ import type { ReactNode } from "react"
 import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
-import { ReleaseFlag, type TeamGridProps } from "./TeamGrid"
+import { PageName, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
 import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
@@ -25,6 +27,7 @@ export function CompactTeamGrid({
 	members,
 	umasById,
 	cardsById,
+	course,
 	releaseFor,
 	isFavorite,
 	isRecommended,
@@ -36,10 +39,16 @@ export function CompactTeamGrid({
 }: TeamGridProps) {
 	const starred = (pool: "uma" | "support", id: number, member: PvpTeamMember) =>
 		isRecommended?.(pool, id, member.style) ?? false
+	// Each uma's name under her portrait opens her card (early access), since
+	// her tile opens the picker. The cards here are too small for a corner
+	// button and have no caption; their cards are a click away in the picker
+	// (PvpCardPicker's book).
+	const pages = useEncyclopediaHrefs()
 
 	return (
 		<div className="flex flex-col gap-3" aria-label="Your team">
-			<ul className="grid grid-cols-3 gap-2" aria-label="Umas">
+			{/* mt-1.5: a layered uma's ears (a sixth of the tile, FramedUma) clear the dates line above. */}
+			<ul className="mt-1.5 grid grid-cols-3 gap-2" aria-label="Umas">
 				{POSITIONS.map((position) => {
 					const member = memberAt(members, position)
 					const uma = member ? umasById.get(member.uma) : undefined
@@ -60,7 +69,7 @@ export function CompactTeamGrid({
 												onClick={() => onPickUma(position)}
 												className="block h-full w-full rounded-[10.75%] outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={favorite} className="w-full" />
+												<FramedUma src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers} oshi={favorite} className="w-full" />
 											</button>
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}
@@ -94,8 +103,12 @@ export function CompactTeamGrid({
 											</label>
 										</div>
 									</div>
-									<p className="mt-1 truncate text-center text-xs font-medium text-gray-100" title={uma?.name}>
-										{uma?.name ?? "Unknown uma"}
+									<p className="mt-1 truncate text-center text-xs font-medium text-gray-100">
+										<PageName
+										href={pages.uma(member.uma)}
+										name={uma?.name ?? "Unknown uma"}
+										hover={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
+									/>
 									</p>
 								</>
 							) : (

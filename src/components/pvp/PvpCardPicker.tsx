@@ -29,8 +29,9 @@
  * left, and they never empty the uma grid.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { useLocation } from "react-router-dom"
 import { Check, Search, Star, Trash2, X } from "lucide-react"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
 import type { RaceEvent } from "../../types"
@@ -46,6 +47,11 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { limitBreakLabel, type OwnedForPicker } from "../../utils/roster"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { whiteSkillPairs } from "../../utils/pvpTeams"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { EncyclopediaIconLink } from "../EncyclopediaLinks"
+import { hoverCardProps, ringFor } from "../../utils/hoverCards"
+import type { PortraitLayers } from "../../types/portraitLayers"
+import { nameMatches } from "../../utils/searchText"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -79,6 +85,8 @@ interface PickerItem {
 	image: string | null
 	/** An uma's borderless art, drawn in the site's frame (FramedUma); null for a support card. */
 	portrait: string | null
+	/** An uma's layered art (FramedUma `layers`); null for a support card. */
+	portrait_layers: PortraitLayers | null
 	/** A support card, drawn as the game draws it (FramedCard); null for an uma. */
 	card: FramedCardArt | null
 	skills: CatalogueSkillLink[]
@@ -131,6 +139,14 @@ type PvpCardPickerProps = {
 	/** A team slot: remembers the filters for that place. Omitted: they start fresh. */
 	place?: PickerPlace
 	/**
+	 * A book button on each tile that opens its card, whose "Open its page"
+	 * goes on to the Encyclopedia (early access). Only where leaving loses
+	 * nothing: the team builder and the team window save as they go. Off in
+	 * the guide editor and the veteran form, where a stray click would drop an
+	 * edit in progress.
+	 */
+	pageLinks?: boolean
+	/**
 	 * Drawn under the header: the Umas / Support cards switch of a skill
 	 * search. Switching changes `pool` and `items` on this same mounted
 	 * picker, so the search and the pinned skills carry across.
@@ -147,6 +163,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 			alias: "",
 			image: uma.image,
 			portrait: uma.portrait ?? uma.image,
+			portrait_layers: uma.portrait_layers ?? null,
 			card: null,
 			skills: uma.skills,
 			cardType: null,
@@ -161,6 +178,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 		alias: card.title,
 		image: card.image,
 		portrait: null,
+		portrait_layers: null,
 		card,
 		skills: card.skills,
 		cardType: card.card_type,
@@ -171,10 +189,12 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place } = props
+	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place, pageLinks = false } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	// Each tile's Encyclopedia page (early access; none for a placeholder card).
+	const pages = useEncyclopediaHrefs()
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(place ? rememberedCardFilters.cardType : null)
 	const [rarity, setRarity] = useState<RarityFilter>(place ? rememberedCardFilters.rarity : null)
@@ -244,8 +264,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				} else if (item.placeholder || (rarity !== null && (item.rarity ?? 3) !== rarity)) return false
 			}
 			if (!query) return true
-			if (item.name.toLocaleLowerCase().includes(query)) return true
-			if (item.alias.toLocaleLowerCase().includes(query)) return true
+			if (nameMatches(query, item.name, item.alias)) return true
 			return item.skills.some((link) => matchingSkillIds.has(link.skill))
 		})
 		// Stable: what can be picked before what can't, the guide's picks
@@ -257,6 +276,9 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		)
 
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
+	// The card each tile's book opens (early access): an uma's rings this race
+	// at this place's style.
+	const ring = pool === "uma" ? ringFor(event, style) : []
 	// The art's own shape: an uma tile is square, a support card is 3:4 (450x600).
 	const artAspect = pool === "uma" ? "aspect-square" : "aspect-[3/4]"
 	const chips = [
@@ -274,6 +296,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				if (mouse.target === mouse.currentTarget) onClose()
 			}}
 		>
+			{pageLinks && <CloseOnLeave onClose={onClose} />}
 			<section
 				role="dialog"
 				aria-modal="true"
@@ -434,7 +457,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 								const isRecommended = recommended.has(item.id)
 								const isSelected = item.id === selectedId
 								return (
-									<li key={item.id} className="min-w-0">
+									<li key={item.id} className="relative min-w-0">
 										<button
 											type="button"
 											disabled={reason !== null}
@@ -449,7 +472,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 										>
 											<span className="relative block w-full">
 												{item.portrait ? (
-													<FramedUma src={item.portrait} oshi={oshiIds.has(item.id)} className="w-full" />
+													<FramedUma src={item.portrait} layers={item.portrait_layers} oshi={oshiIds.has(item.id)} className="w-full" />
 												) : item.card ? (
 													<FramedCard card={item.card} className="w-full" />
 												) : item.image ? (
@@ -502,6 +525,26 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 												</span>
 											)}
 										</button>
+										{/* The tile's Encyclopedia page, on the art's bottom-right
+										    corner, the one corner the art leaves free (the star is top
+										    left, the owned tick and the card's type icon top right, the
+										    limit breaks bottom left). A SIBLING of the tile, since a link
+										    inside a button is invalid HTML. This box traces the art: the
+										    button's 1px border plus its p-1.5 put the art 7px in, at its
+										    own aspect, so the corner lands on it at any column width.
+										    A click opens the card over the picker (hover); a tap or the
+										    keyboard follows the link. Leaving either way closes the
+										    picker (CloseOnLeave, below). */}
+										{pageLinks && (
+											<span className={`pointer-events-none absolute left-[7px] right-[7px] top-[7px] ${artAspect}`}>
+												<EncyclopediaIconLink
+													href={pool === "uma" ? pages.uma(item.id) : pages.card(item.id)}
+													name={item.name}
+													hover={hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring })}
+													className="pointer-events-auto absolute bottom-0.5 right-0.5"
+												/>
+											</span>
+										)}
 									</li>
 								)
 							})}
@@ -512,4 +555,23 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 		</div>,
 		document.body
 	)
+}
+
+/**
+ * Closes the picker when the route's page changes under it. Every way out of
+ * a picker with book buttons goes through here: the book followed as a link
+ * (a tap, the keyboard) and "Open its page" in the card a click on the book
+ * opens, which is a link outside the picker. In the team window the picker
+ * would otherwise stay open over the page it led to.
+ *
+ * Its own component because it needs the router, and a picker without books
+ * (the guide editor, the veteran form) has no reason to.
+ */
+function CloseOnLeave({ onClose }: { onClose: () => void }) {
+	const { pathname } = useLocation()
+	const openedOn = useRef(pathname)
+	useEffect(() => {
+		if (pathname !== openedOn.current) onClose()
+	}, [pathname, onClose])
+	return null
 }

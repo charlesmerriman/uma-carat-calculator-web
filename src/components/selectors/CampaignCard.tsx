@@ -100,6 +100,11 @@ export const CampaignCard = ({
 	// selectors open with the main part (Daptrius, 2026-11-04). It starts where
 	// the projection credits the purchases, `main_start_date`
 	// (predictions._main_part), which is `start_date` for every other campaign.
+	// A product that goes on sale after the purchase window opens (its part
+	// starts later than the main part) says when, under its name.
+	const firstDay = event.main_start_date ?? event.start_date
+	const opensLater = (opensAt: string | null | undefined): opensAt is string =>
+		Boolean(opensAt && firstDay && formatDate(opensAt) !== formatDate(firstDay))
 	const dates = isUndated
 		? "Dates unknown"
 		: `${formatDate(event.main_start_date ?? event.start_date)} – ${formatDate(event.end_date)}`
@@ -205,8 +210,13 @@ export const CampaignCard = ({
 									key={line.product.id}
 									className="grid grid-cols-[minmax(0,1fr)_3.75rem_4rem] items-center gap-2 py-2"
 								>
-									<span className="min-w-0 truncate text-sm text-gray-200">
-										{line.product.name}
+									<span className="min-w-0">
+										<span className="block truncate text-sm text-gray-200">{line.product.name}</span>
+										{/* Only on a line that opens later than the card's first date: an
+										    anniversary's 1500 pack goes on sale with Part 3 (Daptrius). */}
+										{opensLater(line.product.opens_at) && (
+											<span className="block text-xs text-gray-400">from {formatDate(line.product.opens_at)}</span>
+										)}
 									</span>
 									<span className="text-right text-xs text-gray-400">
 										{formatUsd(line.product.usd_cost)}

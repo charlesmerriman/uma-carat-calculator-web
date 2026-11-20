@@ -59,14 +59,24 @@ color in `src/index.css`.
 `src/index.css`.** The light theme *inverts* the gray ramp, so existing utilities keep
 working unchanged. Read the comments there before adding a theme.
 
-The compact picker puts **Dark** and **Light** first as the primary choices, with
-small swatches for alternative **Dark themes** and **Light themes** underneath,
-grouped by the `mode` in `themeStore.ts`. Each swatch is two-tone: the theme's
-`canvas` (its card colour on a dark theme, its page colour on a light one) with
-its accent `swatch` as a dot, so themes sharing a gold accent still differ. Dark retains the saved `gold` id and
-remains the initial default. Light (`light`) restores the original warm palette;
-Blue (`light-blue`), Green, Red, Purple and Pearl remain alternatives, giving
-each mode six themes. Purple keeps its saved `light-lilac` id.
+**The defaults (2026-11-18): Dark (`gold`) for dark, Tracen for light.** A first visit,
+with no valid theme saved, follows the device's `prefers-color-scheme`: light mode gets
+Tracen, anything else Dark. The pick is saved at once (`index.html`'s script, then
+`saveFirstVisitTheme` on mount), so a later change of device setting never moves it, and
+a saved theme is never replaced. The server render and hydration use Dark
+(`getServerTheme`); the pre-paint script is what shows the right one. A returning visitor
+who never saved a theme looks like a first visit, so on a light-mode device they moved
+from Dark to Tracen once when this shipped.
+
+The picker is two columns split by the `mode` in `themeStore.ts`: every dark theme on the
+left, every light one on the right, with a rule between. Each column leads with its
+default as a larger button (`DEFAULT_DARK_THEME`, `DEFAULT_LIGHT_THEME`), then **More
+themes** lists the rest of that mode, palette themes first. Every theme is a named row
+with the same swatch: the theme's `canvas` (its card colour on a dark theme, its page
+colour on a light one) as a disc with its accent `swatch` as a dot, so themes sharing a
+gold accent still differ. Light (`light`) is the original warm palette; Blue
+(`light-blue`), Green, Red, Purple and Pearl remain alternatives. Purple keeps its saved
+`light-lilac` id.
 
 `data-theme-mode="light"` supplies the shared light ramp, status colors, button
 labels and surface tokens. Individual `data-theme` selectors override the palette,
@@ -78,6 +88,68 @@ orange on Red, on-pity blue on Green). Gilded is the amber, brown-gray dark them
 mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
+
+### The palette themes: Winning Live and Tracen
+
+Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
+has a `palette` (the accent, then its Uma, Support and Step-Up colours): the picker lists
+it ahead of the one-accent themes in its column (Tracen leads the light column as its
+default), its swatch dot split between those colours.
+
+| | Winning Live (dark) | Tracen (light) |
+|---|---|---|
+| Idea | the concert after the race | the game's own menus |
+| Brand | yellow `#ffe45c` | deep green `#367500`; lime is paint only (below) |
+| Uma / Support / Step-Up | cyan / lime / violet, bright fills with DARK ink | blue / **orange** / violet, tints with deep ink and a saturated band |
+| Over budget | red-orange | hot pink, and pink is used for nothing else |
+| A second colour | pink, only on the wordmark's "Carat" and the panel title | none |
+| Type | Unbounded for `font-display` | Nunito for `font-display` and `font-sans`, weights a step heavier |
+| Radius | `--radius-md` 12px, `-xl` 20px | 10px, 18px |
+
+**Tracen Night, Tracen's dark pair, was removed on 2026-11-18** (the owner's call, after
+Daptrius's verdict). A device with it saved moves to Winning Live and
+saves that: `RETIRED_THEMES` in `themeStore.ts`, mirrored by `index.html`'s script and held
+to it by `themeScript.test.ts`. **Removing any theme works this way**: delete its entry and
+CSS, and add its id to that map with a replacement, for good. Without the entry its users
+fall to the device default and their dead id stays stored. Tracen's colours that its shapes
+read (key face and edge, tab tray and ink, stat-box face and edge, the numerals, the
+shortfall pill) are still `--tracen-*` tokens in its `index.css` block, written for the pair.
+
+**Their colours are tokens in `index.css` like any theme's; their shapes are in
+`src/personalityThemes.css`**, imported last in `App.tsx`. That file's header carries its
+three rules, which hold for any later theme of this kind:
+
+1. **Paint only, never size.** An edge is a `box-shadow`, a strip is a background, and
+   added padding is given back as a negative margin. The navbar's height, the pull field's
+   44px and the banner table's tracks are all load-bearing.
+2. **Hooks, never utilities.** The selectors name classes the components carry for this:
+   `site-navbar`, `nav-tabs`, `nav-tab` / `nav-tab--active`, `nav-control`,
+   `wordmark-second`, `planner-panel-title`, `planner-section-title`, `income-value` (with
+   `data-income` on its tile), `add-banner-button--{uma,support,step-up}`, `hero-cta`,
+   `forecast-shortfall`, plus the semantic classes `App.css` already had. The default
+   themes have no rule for any of them. The one utility selector is the precedent
+   `index.css` set, `.bg-brand.text-black` (the solid brand button).
+3. **Read tokens for anything colorblind mode redraws**, so that mode keeps winning.
+
+Four things a new palette theme has to get right, each learned on these two:
+
+- **The brand token is text in hundreds of places.** Tracen's lime is 1.9:1 on white, so
+  its `--color-brand` is the deep green and lime is painted on the solid brand button and
+  the named hooks only, always with dark ink.
+- **Kind and pull tokens go in the palette block, above the colorblind block**
+  (`[data-colorblind-mode="true"]` has the same specificity, so a later block would beat
+  it). What colorblind mode must also change for the theme goes in a two-attribute block
+  after it: Winning Live gets its white ink back on the deep colorblind fills.
+- **Bright kind fills flip the phone card's strip.** Its controls assume a deep fill under
+  pale ink, so Winning Live gives the strip the light themes' `--tile-*` set and a dark
+  stretch of the gray ramp, except under colorblind mode.
+- **Tailwind's `rounded-*` and `font-*` utilities read `--radius-*` and
+  `--font-weight-*`**, so a theme block can move them. Full pills stay on hooks: a pill
+  radius on a textarea is a blob.
+
+Tracen moves Support to orange (lime is the brand) and keeps on-pity green, which shares
+a hue with its brand; the Green theme moved on-pity to blue for that, and blue is Uma
+here. That one is the owner's to settle (`notes/theme-options.md`).
 
 **A theme's page glow is a `--page-glow` value, never a page background.** One
 `position: fixed` layer (`body::before`) paints it, and the page shells
@@ -685,8 +757,40 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
   (`useOshiIds`, owner 2026-10-16: a favorite Oguri Cap frames Oguri Cap (Christmas) too,
   on every page). The server resolves the outfits (`account.oshi_uma_ids`, by
   `game_id // 100`); the client only tests membership. App.css ("Uma frames") lays the
-  frame over the art and clips the art to the frame's corner (82/762 of the side), so nothing
-  pokes out past it. `className` only sizes the square (`w-14`, `h-full`).
+  frame over the art, and **the art fills the frame's box at exactly its size. Never shrink
+  or inset it.** The portraits are the game's cut, with rounded bottom corners baked into
+  the picture as transparency; at full size the frame's 24-unit band hides them with about
+  2 units to spare, and even at 99.5% they show. Web #379 drew the art at 96.85% and every
+  uma that reaches her bottom corners got a dark gap in both, on every device (v2.17,
+  2026-11-17). Only the grey square behind the art (a missing picture, the art's transparent
+  background) sits 12 units inside the frame's outer edge, under the band: a flat colour has
+  no corners to expose. A bare frame's square fills the box.
+  `className` only sizes the square (`w-14`, `h-full`), and it MUST size it: the art is
+  absolutely positioned, so it gives the frame no size of its own.
+  **The art's outer 12 units are not painted** (`clip-path` on the `<img>`; the band covers
+  that strip anyway). WebKit, so every browser on an iPhone, draws the frame (a CSS
+  background) up to one device pixel short of the box on the right and bottom when the box
+  isn't a whole number of device pixels wide, while the `<img>` fills it: a line of art
+  showed past the frame on the fluid PvP and Encyclopedia tiles at the default zoom (Daptrius,
+  board "Issues with Uma SVG Alignment on iOS", 2026-11-17). Reproduced and fixed in a Linux
+  WebKit at 402 px and 3x (2026-11-18): 29 tile widths, both frames, sizes down to 16 px and
+  the share picture. Web #376 (the art's sizing) was not the cause. A frame change gets the
+  same WebKit run before it ships (`npx playwright-core install webkit`; Chrome never shows
+  this).
+- **Layered art** (`layers`, the API's `portrait_layers`; notes/layered-uma-art-plan.md,
+  2026-11-20). An uma with Daptrius's layered art is three layers: his base, the frame, then
+  a foreground with whatever sticks out past the frame (ears, hair, hats), drawn OVER it.
+  The foreground's canvas is the frame's box plus a sixth above and 16/360 each side
+  (`.uma-frame__over`, App.css), and it sits outside the tile's box on purpose: layout never
+  grows, so a caller that clips or packs rows tight leaves the room itself. The ones that do:
+  the Timeline's featured tiles and the guide's uma tiles (a headroom strip, `aspect-[6/1]`),
+  the selector pick tile and the step-up slots (no clip on an uma), My team's spot header,
+  Guide picks' row gap, the team window, the share picture's columns, and the phone
+  Encyclopedia hero (`:has(.uma-frame--layered)`). Without `layers`, or with the frame off,
+  `FramedUma` draws `src` as before: the frameless places keep the borderless art (owner,
+  2026-11-18). The base keeps the img clip above: it sits under the opaque band, so it
+  hides nothing and keeps the WebKit fix. A route that sends `portrait` sends
+  `portrait_layers` beside it; pass it wherever the `src` comes from (`layers={x.portrait_layers}`).
 - **Support cards are not `FramedUma`**: in the PvP places they are `FramedCard` ("Card
   frames" below), elsewhere their own bordered picture. A list that can
   hold either pool decides per item from data, never from shape: a catalogue option's
@@ -1243,6 +1347,12 @@ and the card — so a floating tooltip would need a portal and a positioning lib
 field's 100-character cap is what keeps the text inside the narrowest tile. An empty purpose
 renders the tile exactly as before: no overlay, no tab stop, no handlers.
 
+**Each tile is a link to its Encyclopedia page** (`FeaturedTile`, keyed
+by the payload's `game_id`; none when it is null, as on a placeholder card). The link then
+owns the overlay's triggers: it is the one tab stop and the `group` the hover and focus
+classes answer to, and a tap follows the link, so a touch screen doesn't toggle the note.
+For everyone since the Encyclopedia opened (2026-11-18).
+
 ### Infinite scroll — the reveal-count dependency is intentional
 
 The list reveals `INFINITE_CHUNK_SIZE` more cards each time a 1px sentinel `div` at the
@@ -1272,8 +1382,41 @@ step-up banners exist until you press the calculator's third Add button. Because
 step-up's FK points at the campaign **Part** it runs in, the chip lands on exactly one
 card per campaign with no filtering.
 
+### Story events sit flush beneath their banner's card
+
+`StoryEventStrip` (`components/timeline/StoryEventStrip.tsx`) draws each story event under
+the banner it runs with (`story_event_data`, grouped by `storyEventsByBanner`): the logo when
+one is uploaded, the name ("Story event" when it has no English one), "Runs with this banner.
+Claim rewards by ..." through `DateTimeRange`, the reward chips (non-zero only), and each free
+card. It is the mirror of `AnniversaryEventStrip`: outside the panel, which squares its bottom
+corners, so the art row can't grow. Plan: `notes/story-events-plan.md`.
+
+- **Display only.** The rewards are the event's own and nothing reads them for the projection.
+  The cards carry no `first_jp_date`, and the selectors build their catalogue from banners, so
+  a free card never becomes selectable.
+- **On a computer a click on a free card opens the shared card** (`hoverCardProps("card", id)`,
+  drawn by `HoverCardLayer` like every other tile), whose "Open its page" goes to its page.
+- **On a touch screen a tap opens the row's own details, never navigates** (owner,
+  2026-11-17, for this row; `HoverCardLayer` ignores touch). "Open its page" inside does the
+  navigating. Its popup is `useHoverPopup(..., { tapOnly: true })` (hover and focus off), so a
+  mouse or keyboard never opens it beside the shared card, and `FreeCardTile` holds the click
+  back only for a touch (a ref,
+  because the tap's own re-render lands before the click). The banner tiles still send a tap
+  to the page.
+- **For everyone**, like the Encyclopedia, since 2026-11-18 (early access only before).
+- **"Must get" is the one mark**, outlined in brand, never filled (black on brand fails on the
+  light theme). No scale.
+- Search finds a banner by its story event's name and its free cards' names.
+
 ### Other Timeline rules
 
+- **A featured tile's name breaks at a seam, never mid-word** (`withSeams` in
+  `BannerWindowCard.tsx`). Two names are one 18-letter word, "Matikanetannhauser" and
+  "Matikanefukukitaru", too wide for a support tile at any readable size, so a soft hyphen
+  after "Matikane" (`NAME_SEAMS`) lets them break as "Matikane-" over the rest, at the tile's
+  normal size (Daptrius, board "Timeline, Support Card, Longest Name Fix", 2026-11-17; he
+  agreed). Checked 2026-11-17: no other uma or card name has a word over 12 letters; a new
+  one goes in the list.
 - **`SUPPORTS_INTERSECTION_OBSERVER`** is read once at module scope. Where there is no
   observer (jsdom, pre-2019 browsers) the list renders unwindowed, rather than stranding
   the reader partway down with no way to advance.
@@ -1878,13 +2021,15 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   a plain pill, and the popup lists the skills its note names at the bottom (`MentionedSkills`,
   under a rule, crediting UmaTL whenever their text is theirs). A skill's other versions sit on
   a bar down the left with a colour tag, so the two lists read apart.
-- **SHELVED (owner, 2026-10-23): everything about skills below is guide-editor only.**
-  `useSkillsPreview()` (`hooks/useSkillsPreview.ts`) and the API's
-  `pvp_guide_editing.sees_skills_preview` decide it: the Skills page says "not here" to
-  everyone else and is neither prerendered nor in the sitemap (and `noindex`), and the hover
-  card's readable text, sources, "JP only" tag and UmaTL credit show to editors only. Players
-  see guides as before the work. Un-shelving is both functions; the rest is in
-  workspace-root `skills-plan-4.md`.
+- **EARLY ACCESS ONLY, on a guide (owner, 2026-11-18: "Not the guides"): the skills work
+  below.** `useSkillsPreview()` (`hooks/useSkillsPreview.ts`) and the API's
+  `pvp_guide_editing.sees_skills_preview` decide it: a guide's JP-only skills, and the skill
+  card's readable text, sources, type, cost, "JP only" tag, UmaTL credit and link to the
+  skill's page, show to supporters, staff and granted accounts. Everyone else sees guides as
+  before the work. The Skills page and the rest of the Encyclopedia are public and read
+  neither function; `SkillDetail` takes `full` from the Encyclopedia's own skill rows, which
+  draw the same card. Opening the guides is both functions returning true. History:
+  workspace-root `notes/skills-plan-4.md`, `notes/encyclopedia-open-plan.md`.
 - **The Skills page is `/app/skills`** (`components/skills/SkillsPage.tsx`, 2026-10-23):
   every `GET /skills` row, searched by any name a skill answers to (`filterSkills`,
   `utils/skillSearch.ts`) and filtered by colour and by where it is, 60 rows at a time.
@@ -2059,8 +2204,12 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   eight then "Show all", by style with the guide tab's style first (`useStyleTab`, a store
   snapshot of the address); a unique, or its inherited white (the same name), shows the
   uma's `FramedUma` and names her on a quieter line; a tap lights one and opens the card.
-  Beside the map the column scrolls within itself past the screen's height, so "Show all"
-  never strands the map at the top of a long page. The button carries the count only once
+  Beside the map the column is as tall as the map and no taller (a floor of `20rem`, about a
+  row and a half), its rows scrolling under a header that stays put, so an open column never
+  leaves the page blank beside a short strip, and Track or Both give it more room (owner,
+  2026-11-18). "Show all" (in the column's footer, shown whenever rows are past eight or cut
+  off, measured with a `ResizeObserver`) lists every row and lets the column grow to the
+  screen's height, still scrolling within itself. The button carries the count only once
   the map is already cached; the column's title carries it once loaded.
 - **The veterans' ticks** (owner, 2026-11-03: every skill at once was illegible on the
   track): the Layers menu lists each veteran (her avatar and name) with a tick, and under
@@ -2367,7 +2516,8 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
   link (`setMemberUma`); a guest's team never holds one. The team window does not draw it.
 - **What can be picked** is `utils/cardRelease.ts`: a card counts if its first global banner
   starts by the event's last day. Mid-event releases are pickable and tagged with the date; later
-  ones are greyed out and sorted last. A card on no banner is decided by the catalogue's
+  ones are greyed out and sorted last. A story event's free card is dated by the event's
+  start, like a banner's. A card on neither is decided by the catalogue's
   `on_global`. Every way into a team applies it: the pickers, the skill search, Guide picks,
   a guide's deck.
 - **Placeholder cards** (`placeholder` in the catalogue, owner 2026-10-27): stand-ins for
@@ -2501,6 +2651,304 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   button (bottom right) and a bottom sheet (`kit/FilterSheet.tsx`, a native `<dialog>`). The
   pills and the sheet draw the same `FilterGroup`s, so they can't disagree.
 
+## Encyclopedia pages (`components/encyclopedia/`, `components/skills/`)
+
+A page for every trainee outfit, support card and skill (`notes/encyclopedia-plan.md`, in the
+workspace's notes repo). **Open to everyone since 2026-11-18** (supporters and staff had it
+first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
+
+- **Routes**: `/app/umas`, `/app/umas/:gameId`, `/app/cards`, `/app/cards/:gameId`,
+  `/app/skills`, `/app/skills/:gameId` (`SkillPage`; an old `?skill=` link redirects there). A
+  page is keyed by the GAME's id;
+  `utils/encyclopediaRoutes.ts` is the only builder of these links (`umaHref`, `cardHref`), and
+  `parseGameId` reads only the leading digits so a readable suffix can come later.
+- **No gate**: every list and page is wrapped in `EncyclopediaFrame`, which only adds the
+  back-to-top arrow, and the API routes are public. **Search engines:** the three lists are
+  in `PRERENDER_ROUTES` and the sitemap like every tab (the app shell and its head tags at
+  build time; their titles name the Encyclopedia because the head is all a crawler reads of
+  them). Every detail page is a prerendered document in `sitemap-encyclopedia.xml`, built
+  from the API's index ("Every public route is prerendered" below); only an address with no
+  page behind it is `noindex`.
+- **Renders without a browser** (PR 3): a detail page sits OUTSIDE the `/app` loading gate
+  (`AppShell`'s `ungated`, from `encyclopediaPageOf`), so it draws from its own payload
+  without waiting for `/calculator-data`. Its banners and the hero's dates draw when that
+  lands; until then `ReleaseFacts pending` holds the dates' place with blank bars, so the
+  page doesn't jump. Its title and description are `AppRouteMeta`'s, built from the same
+  cache entry by `utils/encyclopediaMeta.ts` (no UmaTL text in a title or description: a
+  search result or link preview can't carry the credit, so a bracket title the API marks
+  `title_translated` stays out; a card without a showable title gets its type and "No." so it never shares
+  its uma's title; a unique and its inherited copy say which they are). `entry-server.ts`
+  `render(url, content, pageData)` primes a fresh query client (`primeEncyclopediaPage`,
+  through `PrimedQueryClientContext`), so the build renders the page itself, and `main.tsx`
+  primes the browser's from the document's `#page-data`. Render-time code on these pages follows the outside-the-gate
+  rule: no `window`, `document`, `localStorage` or clock. `entryServer.test.tsx` and
+  `hydration.test.tsx` render and hydrate the committed sample
+  (`src/content/encyclopedia-sample.json`, refreshed by `npm run content:pull`).
+- **Data**: the lists read `/pvp-catalogue` (`usePvpCatalogue`); a page reads
+  `GET /encyclopedia/<kind>/<id>` through TanStack Query (`services/encyclopediaQueries.ts`). The
+  API sends no dates: banners and release dates come from `/calculator-data`
+  (`utils/encyclopediaBanners.ts`), so date prediction stays in one place.
+- **Rules that bite**: every uma is `FramedUma` from its `portrait`; every card is `FramedCard`
+  from its `image_borderless` (the visual overhaul settled the owner's first-round answer that
+  way, as in the Collection; a card with no frameless art draws its bordered `image`); every
+  date goes through `formatDate`; a section with no data is left out, never drawn empty; a
+  JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
+  colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
+  components only.
+- **The navbar**: the Encyclopedia is everyone's sixth tab, and Rankings the seventh for
+  early access. Both counts use the breakpoints the seven-tab bar was fitted at (icons only
+  below 440px on a phone; the Encyclopedia and Rankings labels are icons below 1536px),
+  because six tabs with the long "Encyclopedia" label was never measured.
+- **The catalogue is 106 KB on the wire** and the links and cards need it
+  (`useEncyclopediaHrefs`). `HoverCardLayer` sits on every `/app` page, so it skips the load
+  where no tile can open a card (`pageDrawsHoverCards`: the calculator and Selectors), and
+  `SelectorTargetPicker` asks only once there is a pick to link.
+
+### The look (the redesign of 2026-11-17, on the 2026-11-12 overhaul)
+
+Drawn first on a canvas, twice: the overhaul (https://claude.ai/artifact/Y3TX7fU71C5ppw7FpGSmm6)
+gave the pages order, and the redesign (https://claude.ai/artifact/6zATpMXYXQJzPBCfbisQr1; plan
+and mocks in the notes repo, `notes/encyclopedia-redesign-plan.md` and `notes/encyclopedia-redesign/`)
+gave them a face. The owner's rules from that second canvas: the hero's coloured background
+stays, no picture is slanted, nothing is dimmed to de-emphasise it, aptitudes sit left of the
+stats in rows of four, stats are separate boxes with Growth named, and Daptrius's filter bar
+(web #369) keeps its rows and wording.
+
+- **A page wears its character's two colours.** The API sends `colours` (`[main, sub]`, the
+  game's own pair for her; `character_colours` by character id on `/pvp-catalogue`), `Page`
+  (`pieces.tsx`) sets them as `--c1` and `--c2` on `.enc-page`, and `colourStyle`
+  (`utils/encyclopedia.ts`) is the only way a pair becomes a style: it refuses anything that is
+  not plain hex. **A colour is only ever a fill, or mixed into a theme token** (`--c1-ink`,
+  `--c1-line`): some are near-black and some pale. With no pair the page wears the theme's
+  accent. A group card and a skill that is nobody's pass an `accent` to the hero instead (the
+  card's type, the skill's kind).
+- **The hero** (`Hero`): the art standing straight on a slanted field of `--c1` with a stripe
+  of `--c2` (clipped shapes, so the slant never lands on the name), the game's own number on a
+  dark plate, and the Japanese name large and faint behind (`ghost`, decoration: the readable
+  line is `japanese`; it uses the reader's own Japanese font, none is bundled). The ghost is
+  sized to fit WHOLE between the art's column and the right edge: the hero is a size container,
+  and the font size is that room over the name's character count (`--chars`), never above
+  6rem, sitting inside the hero's bottom edge (Daptrius, 2026-11-17: at a fixed 8rem a long
+  name lost its first characters under the colour field). An uma's `h1` is the character's
+  name, with the outfit in the eyebrow ("Trainee · Christmas").
+- **A section is one soft panel, no border** (`Section`), its heading flagged in the page's two
+  colours. What is inside sits on `--enc-inset`, the one inset surface, a mix of two theme
+  greys that reads on dark and light themes.
+- **An uma's page** (`UmaPage.tsx`): her unique skill first as a plate with what it does
+  (`UniquePlate`; an outfit below three stars has two), the innate skills in a row, then the
+  awakening levels as posts on a track with each evolved skill hanging off the gold it comes
+  from (one whose base isn't an awakening skill on the page is listed after). From 64rem the
+  track runs across in four columns: levels 2 to 5 are one row, and the 6 and 7 JP added later
+  (their skills JP only) a row of their own under an "Added later" rule, in the same columns,
+  never squeezed onto the first (owner, 2026-11-17). A name on the track wraps to two balanced
+  lines instead of being cut short. Below 64rem it runs down the left. Evolutions come in the
+  API's release order, never by name. Career objectives are a list per year
+  (`CareerObjectives`), a gold post for a race to win and a chequered flag after the last:
+  on a phone the years run as one track, and from 48rem each year is its own column (Daptrius,
+  2026-11-17: the single track wrapped to two rows on desktop anyway). One markup; the CSS
+  switches, never a media query in render.
+  A track's fact that is drawn (the level, what it grows from) is said to a screen reader
+  through `SkillRow`'s `hint`.
+- **Aptitudes and stats** (`facts.tsx`): every aptitude cell at full strength, A or better
+  filled in the page's colour (`isTopAptitude`), the letter a white badge ringed in the game's
+  colour (an override inside a cell; `.apt-letter` itself is the PvP guides'). Stats are boxes
+  with the game's stat icons (`utils/statIcons.ts`). On a phone (under 40rem) the five sit in
+  one row, each only the icon, the number and its growth: the bar goes, and the stat's name
+  stays for a screen reader (`.enc-stat__name`, the sr-only pattern; Daptrius, 2026-11-17). The
+  star switch opens at the stars the player has her at in their Collection (`useOwned`), else
+  her starting stars.
+- **Banners** show the banner's own picture and the faces of who else is on it
+  (`utils/encyclopediaBanners.ts` adds `image`, `featured`, `kind`); related outfits and cards
+  are picture tiles (`.enc-pic`).
+- **A card's effects take the card's TYPE colour** (`--fx`, set by `CardEffects`), the level
+  is a track that marks each limit break's cap beside the steppers, and each effect is its
+  number over its name. **A skill's page** reads its steps left to right (`.enc-step`) and
+  draws its family on one line (`Family`: evolves from and other versions, this skill, evolves
+  into; the API leaves the from and into rows out of `versions`, so nothing is listed twice),
+  with the outfit it belongs to in the hero (`owner_umas`). **Several slots are "Trigger 1, 2"**
+  (the game fires the first whose conditions hold) unless the API's `readable.chained` says a
+  later one waits on the first, then "Part 1, 2" (`slotLabel` in `utils/skillWords.ts`, the
+  hover card too; Daptrius, 2026-11-17). On a ◎ page a giver of its ○ is listed with the ○'s
+  name on its second line (`via`): a hint for the ○ counts for the ◎.
+- **The lists**: a masthead whose tabs lead with how many each list holds
+  (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
+  another's data to count it; the uma and card lists report the Skills tab's number too, from
+  the catalogue's `skill_count`, so all three show from the first list opened). A tile is its art, no box; an uma's carries her colours as a bar.
+  A full list in name order gets letter headings and an A to Z index (`letters.tsx`,
+  `utils/encyclopediaLetters.ts`); filtered or re-sorted it is one plain grid. A letter heading
+  is a `role="presentation"` item, so the list's items stay the tiles. On the Skills list a
+  unique or evolved skill's row ends with its owner's face (`SkillList` `faces`).
+
+- **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
+  in `@layer components` so a Tailwind utility at the call site still wins. Classes are
+  `enc-*` plus four that are used outside these pages: `.skill-card` (the hover card),
+  `.kind-pill`, `.apt-letter`, `.grade-pill`. Every colour is a theme token, except the game's
+  own (aptitude letters, race grades, rarity, a gold / evolved / unique skill), which are fixed
+  fills with dark ink so they read the same on all twelve themes.
+- **The filter bar** (`listFilters.tsx`: `Toolbar`,
+  `SearchBox`, `Count`, `Chips`, `PickChips`, `SortControl`, `GradeSelect`): one card, each
+  filter a small caps label and its chips. The group is named by `aria-label`, and the visible
+  label is `aria-hidden`. Its look is Daptrius's (board "Encyclopedia Filter Changes",
+  2026-11-17):
+  - **One grid** (`.enc-filters`, each row a subgrid), so every row's chips start at one left
+    edge; on a phone (under 480px) the label sits above its chips. Chips wrap, never scroll.
+  - **Where and Collection are settings every list shares** (`SHARED_WHERE_KEY`,
+    `SHARED_OWNED_KEY` in `utils/encyclopedia.ts`), drawn first in the bar above a dashed "Set
+    once for every list" rule. They live outside a list's scope, so its Reset leaves them. Only
+    skills have "Coming to global"; an uma or card list reads it as JP only (`listWhere`).
+  - **Most filters take several picks** (`PickChips`, remembered by `useRememberedPicks` as one
+    comma-separated key): its first chip is "All", pressed while nothing is picked, and any pick
+    passes. The uma list's aptitudes are the exception: each picked column gets its own "at
+    least" grade under the row, and an uma must pass them all ("Turf A and Dirt C").
+  - **A card type's chip is its icon** (`utils/cardTypeIcons.ts`, the frame overlay's corner
+    cut out), grey until picked; a rarity chip lights up in its metal; the aptitude rows' chips
+    share one width so Distance and Style line up, with "Med." / "Dist." on a narrow screen.
+  - **Sort is a menu and a reverse button** (`SortControl`) that says which way the list runs
+    ("Newest first"). Reversing flips the comparison only: whatever a sort can't place (JP only,
+    undated, no effect, no cost, no aptitude) stays last both ways (`sortList`, `sortByValue`,
+    `sortByEffect`). Sorted by id, date or an aptitude, a tile says its value (`sortFact`).
+  - **A query of digits is an id** (`searchMatches`): the start of a card's or outfit's game id,
+    or its character's 4-digit id (`character_id`; an outfit id starts with it).
+- **The jump bar sticks**, and where depends on what scrolls: under the navbar when the
+  document scrolls (a phone, a short window), at 0 inside the desktop app shell. Under the
+  navbar it sticks at the navbar's MEASURED height, `--navbar-h` on `<html>`
+  (`hooks/useNavbarHeight.ts`, a ResizeObserver from `Navbar`): a written-down height was
+  wrong on a phone under 440px, where the tabs' labels go sr-only and the bar is shorter, and
+  left a gap (Daptrius, 2026-11-17). index.css's `scroll-padding-top` numbers are only its
+  first-paint fallback. It
+  draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
+  `#hash` links, so Back leaves the page.
+- **A card's effects** (`CardEffects.tsx`, first on the card page): a Limit break switch, a
+  level stepper, the unique effect, then every effect as a value chip with the game's help text.
+  The API sends one value per level (`effects[].values`, backend `support_effects.py`, which has
+  the growth rule and its check), so the component only looks one up, and `effectValue` writes a
+  unit only for a format the API names. It opens at the level the owner's limit break reaches,
+  derived on each render because the Collection loads after the page. It never adds the unique
+  effect into a row: a unique Friendship Bonus or Specialty Priority multiplies with the card's
+  own (Daptrius, 2026-11-13), so the unique effect says so in a line, for the effects the API
+  names in `unique_effect.multiplies`.
+- **A skill's times are per 1,000 m** (`utils/skillWords.ts`): the API states a timed duration
+  and a repeating cooldown against the race's length ("2.4 s per 1,000 m"), because the game
+  scales both by it (Daptrius, 2026-11-13). The skill page explains that once, under How it
+  works, when a time scales (`hasScaledTime`); the hover card only shows the chips. A value or
+  a duration that ALSO scales with something else ends "(varies)": the files give only a code
+  per kind of scaling (`value_usage`, `duration_usage`), and nothing is worded until someone
+  confirms what a code means (asked of Daptrius, 2026-11-17).
+- **The Skills page's Type filter has sub-types** (`utils/skillSearch.ts`, `TYPE_FILTERS`): a
+  type is an icon family, and Stat boost and Debuff split further (Daptrius, 2026-11-12). A
+  sub-type's key is its parent's plus a suffix (`stat_speed`), so `typeMatches` keeps a whole
+  type by prefix. Several types may be picked: a type is picked whole (its own key) or narrowed
+  (its sub-types' keys, never both), and each picked type with sub-types gets a row of its own
+  under Type (`toggleTypePick`, `toggleSubTypePick`).
+  The grouping and its evidence are the API's (`skill_types.py`).
+- **Loading is a skeleton** (`PageSkeleton`, `GridSkeleton`, `.enc-skeleton`), and "nothing
+  matched" or "didn't load" is `EmptyNote`, a dashed box.
+
+### The skill card (`components/pvp/SkillDetail.tsx`, `.skill-card`)
+
+What hovering a skill shows, on a guide's chips, mentions and deck cells and on every
+Encyclopedia skill row: a header in the skill's own colour (icon, name, kind, and for early
+access the type and cost), the description, a guide's note, When and Does as a small table,
+timing as chips, where it comes from, its other versions, and a footer.
+
+- **Every element is a `<span>`**: a mention sits inside a sentence, where a `<div>` is
+  invalid. A label's colon is `sr-only`, for a screen reader and for copied text.
+- **The popup is `components/pvp/hoverPopup.tsx`** (`useHoverPopup`), lifted out of
+  `PvpTiles.tsx` so both places draw one card. `interactive` lets the pointer travel into the
+  popup (Floating UI's `safePolygon`) and click its link; it is on only for early access on a
+  skill with a `game_id`, because that is when the card ends in "Open its page". The popup is
+  `aria-hidden` (its words are in the caller's `sr-only` copy), so that link is `tabIndex={-1}`
+  there (`InsidePopupContext`). `tap: false` is for a row that is itself a link.
+- **An Encyclopedia row fetches its card's body on first hover** (`useSkillPage`, one request
+  per skill, shared with the skill's page), through `utils/skillCard.ts`
+  (`rowToCardSkill`, `detailToCardSkill`). It never fetches for a row nobody hovered.
+
+### Links into the Encyclopedia from the rest of the site
+
+Umas and cards drawn elsewhere link to their page for early access. Since 2026-11-18 a MOUSE
+click on most of those links opens the uma's or card's card instead, and the card's "Open its
+page" goes on to the page (next section); a tap or the keyboard still follows the link (bar a
+guide style tab's deck card, which a tap opens too). **One lookup serves them
+all: `useEncyclopediaHrefs()`** (`hooks/useEncyclopediaHrefs.ts`), which maps the SITE's
+row id (what every team, guide, ranking, roster and gallery snapshot carries) to the page
+through the PvP catalogue's `game_id`. It answers null for everyone else, for a placeholder
+card and for anything the catalogue doesn't number, and the caller then draws the old tile.
+The Timeline alone reads `game_id` from its own payload, since it has it. How each place
+links depends on what a click already does there:
+
+| The tile is... | The link is... | Where |
+|---|---|---|
+| display only | the tile itself (`<Link>`); a click opens the card | Timeline, Legend Races, the uma wall, a ranking row that doesn't open, the podium (a stretched link), gallery teams, a guide deck's card art |
+| a button (add, edit, pick) | the name under it, or `EncyclopediaIconLink` beside it, never inside; a click opens the card | Collection names, My team's names (`PageName`), the picker's book |
+| the same, with no card | a plain link to the page | the Selectors pick (bottom-left book), a step-up's chosen slot |
+| a guide tile with a hover note | a click pins the note open as the full card; "Open its page" is in both (`OpenPageLink`, `interactive`). A guide uma tile with a card has no hover, only the click | guide uma tiles, All-tab faces and mini cards, "or" alternatives |
+| a ranking row that opens | "Open its page" at the top of the breakdown | `RankRow` with `detail` |
+| inside the Encyclopedia | the tile itself, straight to the page, no card | the uma and card lists, a page's outfits and cards, a skill's owners |
+
+Left out on purpose: the planner's art cell (already a link to the banner on the Timeline,
+and a link can't hold links), pickers where a click chooses, the guide editor's deck
+(`pageLink={false}`: a stray click would leave mid-edit), the share pictures, and the account
+page.
+
+### Cards for umas and support cards (`components/hovercards/`)
+
+The skill card's two siblings (plan: `notes/uma-card-hover-plan.md`): an uma's card shows her
+aptitudes (the race's ringed), stats boxed with Growth and skills; a support card's shows its
+effects at 0LB, MLB and the player's own limit break, its unique effect and the skills it
+teaches. Both end in "Open its page". Early access only, mouse only (a phone and the keyboard
+keep the links above). The code says "hover" because they opened on hover for one release
+(v2.17).
+
+- **They open on a click, never on hover** (owner, 2026-11-18, after Daptrius's report that a
+  card under every picture the mouse crossed felt laggy and covered the page). They are off the
+  calculator, the shared plan page, the Selectors page and the Encyclopedia's own pages.
+- **A tile opts in with attributes, built by `hoverCardProps()`** (`utils/hoverCards.ts`), never
+  by hand: `data-hover-card` names the row, `data-hover-card-ring` the aptitudes to ring. Put
+  them on plain art, or on the link to that uma's or card's Encyclopedia page (and give that
+  link `title={CARD_LINK_TITLE}`). **Never on a button or a link with another job**: the layer
+  leaves that click alone, so the attribute would do nothing. Where the tile is such a button,
+  the name or book beside it carries the card (`PageName`, the Collection's names,
+  `EncyclopediaIconLink hover`).
+- **One popup serves the whole app: `HoverCardLayer`**, mounted once in `AppShell` beside the
+  team window. It listens on the document for a press, a click and Escape, and does nothing
+  while the mouse moves. A click opens the card when nothing under the pointer is a link or a
+  button, or when the nearest one is a link to the tile's own page (the link then doesn't
+  navigate and its `onClick` doesn't run). A click on the tile again, anywhere else, Escape or
+  a route change closes it; a keyboard click and a new-tab click are left to the link, and so is
+  a tap, except on a tile built with `hoverCardProps(..., { tap: true })` (a guide style tab's
+  deck card, `SupportTile`; Henry 2026-11-19, the one place phones get the shared card);
+  the tile's `title` is moved aside while its card is open; `[data-hover-card]` gets the pointer
+  cursor only while the layer is on. It draws at `z-[10001]`, above the pickers' overlays, and
+  inside an open native `<dialog>` when the tile is in one.
+- **Where it goes: beside the tile, right else left, top level with the tile's, slid up only as
+  far as the window needs** (`cardPopupMiddleware` in `pvp/hoverPopup.tsx`, shared with the
+  guide tiles). The side is picked by the room beside the tile alone (`flip` with
+  `crossAxis: false`): with the default, a card taller than the room under its tile counted as
+  not fitting anywhere and landed above or below, squeezed (in practice only in a narrow
+  window; beside a small picture in a wide one the two rules agree). The box is at most the
+  window's height and scrolls inside itself. **A tile wider than the card** (a ranking row, a
+  podium entry) is placed beside the POINT that was clicked instead (`anchorFor` in the
+  layer): beside the row itself there is no room on either side. While its page loads the
+  card holds about its final height (`.hover-card__loading`), so it is placed once.
+- **Every popup keeps clear of Raptive's sticky footer ad** (`.adthrive-sticky.adthrive-footer`,
+  fixed at z-index 1000001, 50px on a phone and 90px on a computer): `popupEdges()` adds the
+  ad's height to the bottom padding and the card's max height, and `watchFooterAd` checks the
+  ad four times a second while a popup is open, since Raptive slides it in late. Never raise a
+  popup over the ad instead: covering an ad breaks the network's rules. Before this (2026-11-19)
+  a tall card slid under the ad and "Open its page" opened the ad.
+- **The cards only draw** (`UmaHoverCard`, `CardHoverCard`, from `UmaPageData` / `CardPageData`),
+  wearing `.skill-card` plus `.hover-card__*` (`encyclopedia.css`). The page's fetch starts on
+  the press (`prefetchEncyclopediaPage`) and is read on open (`useUmaPage` / `useCardPage` with
+  a 30 minute `staleTime`, the same cache the pages use); the header draws from the catalogue
+  meanwhile. `useEncyclopediaLookup()` maps the row id to the game id, beside
+  `useEncyclopediaHrefs()` on the same index.
+- **A guide tile keeps its own popup** (`WithDetail`): hover shows the guide's note, as for
+  everyone, and a click pins it open as the full card with the note on top
+  (`useHoverPopup({ pin })`; a tap does the same). The layer ignores anything inside one, so
+  nothing opens two cards. **A guide uma tile (`UmaTile`) has no hover** when her card exists
+  (`hover={false}`; Daptrius, 2026-11-19): the card already holds the note and the unique's
+  verdict, and opening it lights the course map. Keyboard focus still opens the small popup.
+
 ## Selectors page (`components/selectors/`)
 
 `/app/selectors` is the third nav destination, alongside Calculator and Timeline. It
@@ -2578,7 +3026,9 @@ and its checkbox always line up left to right.
 
 **Both pickers share `useEligibleCardCatalogue`** (`hooks/`), which owns the catalogue
 rules: candidates come from the calculator's past and upcoming gacha-banner catalogue
-rather than a new endpoint, spreadsheet catch-all rows such as `(All)` are excluded,
+rather than a new endpoint, spreadsheet catch-all banners named `(All)` are excluded (judged
+by the banner's own name, never its timeline's: a support-only week's real SSR banner sits on
+an `(All)` timeline),
 cards are deduplicated across reruns, filtered inclusively against the cutoff, and sorted
 newest-JP-first with a name tiebreak. It was extracted rather than copied — this repo has
 twice paid for hand-copied duplicates of exactly that kind.
@@ -2661,6 +3111,27 @@ nothing, because a Disallow stops the crawl before the crawler can read the tag 
 is what earned the "Indexed, though blocked by robots.txt" warning on 2026-09-08). A
 static host answers every unmatched path with the catch-all and a **200**, so for
 `NotFound` the tag is load-bearing rather than tidiness.
+
+**The Encyclopedia's detail pages are prerendered from the API, not from
+`PRERENDER_ROUTES`** (`notes/encyclopedia-open-plan.md`, web #408 and PR 4). After the fixed
+routes, `prerenderEncyclopedia` in `scripts/prerender.mjs` fetches `GET /encyclopedia/index`
+from the API the bundle was built against, then each page's payload (two requests at a
+time, three retries, then the build fails and the old site stays up), renders it through
+`render(route, content, pageData)`, and writes `dist/<route>/index.html` with the payload
+embedded as `#page-data` (`other_names` stripped: GameTora's names never reach page
+source). `main.tsx` primes the query cache from that block before hydrating, marked stale so
+the page refetches at once. It writes the **`dir` layout only**: on 2026-11-20 the live host
+served the `spa.html` shell for `/index` and `/app/index`, whose files exist only as
+`index.html`, so App Platform never appends `.html`, and a second copy of 3,000 files would
+never be served. Then `dist/sitemap-encyclopedia.xml` lists exactly the documents written,
+and `public/robots.txt` names it. `buildDetailPage` refuses a page with no `<h1>`, a title
+without the page's name, or `noindex`. Sizes at the first full build (local data, 3,056
+pages): 175 MB, 53 to 84 s, umas about 72 KB a document, cards 67 KB, skills 53 KB.
+**Every web build therefore asks the live API for about 3,080 pages**: deploy the web
+after the API is live and not at the 15:00 UTC peak (`/push-live`). A page added after
+the last build has no document and no sitemap entry until the next one; its address
+still works through the shell and is not `noindex`. `PRERENDER_CONTENT=snapshot` (CI)
+renders the committed sample, `src/content/encyclopedia-sample.json`.
 
 **One public route cannot be prerendered: a shared plan's link, `/app/<public_id>`.** The
 id is per plan, so no build can list it. It rides the `spa.html` shell, reports
@@ -2917,9 +3388,10 @@ then scrolls itself into view. Its numbers are explained in
 Ctrl+K / Cmd+K anywhere, or the navbar's search button. `hooks/useSiteSearch.ts` holds the
 open state and the key, `components/search/SiteSearch.tsx` the button and the lazy palette (its
 own chunk, cmdk and Fuse included, loaded on first opening), `utils/siteSearch.ts` what can be
-found and where it goes. An uma or card opens the Timeline on its banner, an event its guide, and
-a skill shows in the palette (no page of its own while the Skills page is shelved). A new page
-goes in `pageEntries`. Outside `/app` the banners come through `readCalculatorCatalogue`, the
+found and where it goes. An uma, a card or a skill opens its Encyclopedia page and an event its
+guide. Two fallbacks: until the catalogue loads, an uma or card opens the Timeline on its banner,
+and a skill with no game id (so no page) shows in the palette. A new page goes in `pageEntries`;
+Rankings is listed for early access only. Outside `/app` the banners come through `readCalculatorCatalogue`, the
 navbar's prefetch, so going on to the calculator costs no second request.
 
 ## Share picture (`carat-calculator/share/`, `pvp/share/`)

@@ -25,6 +25,7 @@ import { Link } from "react-router-dom"
 import { ArrowDown, ArrowUp, Minus, MoreHorizontal, Plus, Search, X } from "lucide-react"
 import { FramedUma } from "../FramedUma"
 import { FramedCard } from "../FramedCard"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { LIMIT_BREAKS, STAR_LEVELS, cardSummary, limitBreakLabel, umaSummary, type RosterView } from "../../utils/roster"
 import {
 	CARD_SORTS,
@@ -43,6 +44,8 @@ import { parseApiDate } from "../../utils/dateFormat"
 import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import type { CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
 import type { OwnedCardRow, OwnedUmaRow, RosterChanges } from "../../types/roster"
+import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
+import { nameMatches } from "../../utils/searchText"
 
 const CARD_TYPES = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
 const CARD_TYPE_LABELS: Record<string, string> = {
@@ -67,7 +70,7 @@ const PILL = (on: boolean) =>
 		on ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-200 hover:border-gray-500"
 	}`
 
-const matches = (name: string, query: string) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+const matches = (name: string, query: string) => nameMatches(query, name)
 const time = (iso: string | null | undefined) => (iso ? (parseApiDate(iso)?.getTime() ?? null) : null)
 const inView = (view: RosterView, owned: boolean) => view === "all" || (view === "owned") === owned
 
@@ -410,6 +413,9 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 	onEdit: (changes: RosterChanges) => void
 }) {
 	const { tileRef, buttonRef, close } = useTileEditor(open, onToggle)
+	// Her Encyclopedia page (early access). The tile is the add/edit button, so
+	// the name under it is the link: a link inside a button is invalid.
+	const page = useEncyclopediaHrefs().uma(uma.id)
 	const set = (change: { stars?: number; talent_level?: number }) => onEdit({ umas: [{ uma: uma.id, owned: true, ...change }] })
 	return (
 		<li ref={tileRef} className="relative flex min-w-0 flex-col items-center gap-1.5">
@@ -424,7 +430,7 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 				onClick={() => (row ? onToggle(!open) : onEdit({ umas: [{ uma: uma.id, owned: true, stars: baseStars(uma) }] }))}
 				className={`relative w-full rounded-[10.75%] transition ${open ? "ring-2 ring-brand ring-offset-2 ring-offset-gray-900" : ""}`}
 			>
-				<FramedUma src={uma.portrait ?? uma.image} oshi={oshi} alt="" className={`w-full transition ${row ? "" : "opacity-40 grayscale hover:opacity-70"}`} />
+				<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshi} alt="" className={`w-full transition ${row ? "" : "opacity-40 grayscale hover:opacity-70"}`} />
 				{row ? (
 					<>
 						<span className="art-badge absolute inset-x-[9%] bottom-[8%] flex justify-center rounded-md text-xs leading-4 tracking-tighter" aria-hidden="true">
@@ -444,7 +450,19 @@ function UmaTile({ uma, row, oshi, veterans, open, onToggle, onEdit }: {
 					<AddBadge />
 				)}
 			</button>
-			<span className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight ${row ? "text-gray-100" : "text-gray-400"}`}>{uma.name}</span>
+			{page ? (
+				// The tile's click edits her, so her name is what opens her card.
+				<Link
+					to={page}
+					{...hoverCardProps("uma", uma.id)}
+					title={CARD_LINK_TITLE}
+					className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight transition-colors hover:text-brand hover:underline ${row ? "text-gray-100" : "text-gray-400"}`}
+				>
+					{uma.name}
+				</Link>
+			) : (
+				<span className={`line-clamp-2 min-h-8 w-full text-center text-xs leading-tight ${row ? "text-gray-100" : "text-gray-400"}`}>{uma.name}</span>
+			)}
 			{veterans > 0 && (
 				<Link to={`/app/collection?uma=${uma.id}`} className="-mt-1 text-[11.5px] font-medium text-brand hover:underline">
 					{veterans === 1 ? "1 veteran" : `${veterans} veterans`}
@@ -581,6 +599,8 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 	onEdit: (changes: RosterChanges) => void
 }) {
 	const { tileRef, buttonRef, close } = useTileEditor(open, onToggle)
+	// Its Encyclopedia page, on the name: see UmaTile.
+	const page = useEncyclopediaHrefs().card(card.id)
 	const named = `${card.name}${card.title ? ` (${card.title})` : ""}`
 	const set = (change: { limit_break?: number; spare_copies?: number }) =>
 		onEdit({ support_cards: [{ support_card: card.id, owned: true, ...change }] })
@@ -625,7 +645,13 @@ function CardTile({ card, row, open, onToggle, onEdit }: {
 			<span className="flex min-w-0 flex-col">
 				<span className={`flex min-w-0 items-center gap-1.5 text-xs font-semibold ${row ? "text-gray-100" : "text-gray-400"}`}>
 					<span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CARD_TYPE_COLORS[card.card_type ?? ""] ?? "var(--color-gray-500)" }} aria-hidden="true" />
-					<span className="truncate">{card.name}</span>
+					{page ? (
+						<Link to={page} {...hoverCardProps("card", card.id)} title={CARD_LINK_TITLE} className="min-w-0 truncate transition-colors hover:text-brand hover:underline">
+							{card.name}
+						</Link>
+					) : (
+						<span className="truncate">{card.name}</span>
+					)}
 				</span>
 				{card.title && <span className="truncate text-[11px] text-gray-400">{card.title}</span>}
 			</span>

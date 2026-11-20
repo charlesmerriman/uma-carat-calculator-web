@@ -67,7 +67,7 @@ export default function VeteranLayerSource({ event, onData }: {
 			umaNames.set(key, uma?.name ?? veteran.label)
 			heads.set(key, (
 				<FramedUma
-					src={uma?.portrait ?? null}
+					src={uma?.portrait ?? null} layers={uma?.portrait_layers}
 					oshi={oshiIds.has(member.uma)}
 					alt=""
 					title={uma?.name ?? veteran.label}

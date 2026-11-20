@@ -37,6 +37,7 @@ import {
 import { statsTitle, veteranText } from "../../utils/veteranGrade"
 import type { CatalogueUma } from "../../types/pvpTeam"
 import type { TrainedUma } from "../../types/trainedUma"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const EYEBROW = "text-[10px] font-bold uppercase tracking-[0.08em] text-gray-300 sm:text-[11px]"
 const INSET = "rounded-[10px] border border-edge bg-gray-900/60"
@@ -173,7 +174,7 @@ function EventRow({ row, umasById, oshiIds }: { row: EventHistory; umasById: Map
 						const uma = umasById.get(tally.uma)
 						return (
 							<li key={`${tally.uma}:${tally.trained_uma ?? ""}`} className="flex items-center gap-2">
-								<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={oshiIds.has(tally.uma)} alt="" className="w-8 shrink-0" />
+								<FramedUma src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers} oshi={oshiIds.has(tally.uma)} alt="" className="w-8 shrink-0" hover={hoverCardProps("uma", tally.uma)} />
 								<span className="flex flex-col leading-tight">
 									<span className="max-w-36 truncate text-[13px] font-semibold text-gray-100" title={uma?.name}>
 										{uma?.name ?? "Unknown uma"}
@@ -193,7 +194,7 @@ function EventRow({ row, umasById, oshiIds }: { row: EventHistory; umasById: Map
 function VeteranRow({ record, veteran, uma, oshi }: { record: VeteranRecord; veteran: TrainedUma | undefined; uma: CatalogueUma | undefined; oshi: boolean }) {
 	return (
 		<li className="flex items-center gap-3">
-			<FramedUma src={uma?.portrait ?? uma?.image ?? null} oshi={oshi} alt="" className="w-10 shrink-0" />
+			<FramedUma src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers} oshi={oshi} alt="" className="w-10 shrink-0" hover={hoverCardProps("uma", uma?.id)} />
 			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 				<div className="flex items-baseline justify-between gap-2">
 					<span className="flex min-w-0 flex-col">

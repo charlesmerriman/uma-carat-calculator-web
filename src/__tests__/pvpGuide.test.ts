@@ -307,6 +307,19 @@ describe("guideSkillsByCategory", () => {
 		])
 	})
 
+	it("orders Henry's groups after Acceleration and shows only groups with skills", () => {
+		const henry = {
+			skill_recommendations: [
+				row(5, "front", "speed", null),
+				row(6, "front", "late", null),
+				row(7, "front", "early_mid", null),
+				row(8, "front", "acceleration", null),
+			],
+		} as unknown as PvpGuide
+		// No "other" (Core skills) row, so no Core skills group.
+		expect(guideSkillsByCategory(henry).map((group) => group.category)).toEqual(["acceleration", "early_mid", "late", "speed"])
+	})
+
 	it("lists the positions with skills, without everyone", () => {
 		expect(skillPositions(guide)).toEqual(["front", "pace", "late", "end"])
 	})

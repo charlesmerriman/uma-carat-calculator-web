@@ -146,7 +146,11 @@ function MostCopied({ posts, event, catalogue }: {
 							<span className="flex shrink-0 gap-1">
 								{post.umas.map((id) => {
 									const uma = catalogue.umasById.get(id)
-									return <FramedUma key={id} src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(id)} className="w-10" />
+									return (
+										<span key={id} className="inline-block">
+											<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(id)} className="w-10" />
+										</span>
+									)
 								})}
 							</span>
 							<span className="flex min-w-0 flex-col">

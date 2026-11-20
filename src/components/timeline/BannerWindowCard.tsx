@@ -20,8 +20,10 @@ import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
 import { AnniversaryEventStrip } from "./AnniversaryEventStrip"
 import { LegendRaceNote } from "./LegendRaceNote"
+import { StoryEventStrip } from "./StoryEventStrip"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import type { DatedRelease } from "../../utils/dailyLegendRaces"
+import type { StoryEvent } from "../../types"
 import {
 	CATEGORY_LABELS,
 	TIMELINE_FOCUS_HIGHLIGHT,
@@ -41,9 +43,13 @@ import type {
 	BannerUma,
 	UserPlannedBanner,
 } from "../../types"
+import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 
+import { hoverCardProps } from "../../utils/hoverCards"
+import type { PortraitLayers } from "../../types/portraitLayers"
 /**
  * One timeline card: a date header, then one section per banner opening in that
  * window.
@@ -116,6 +122,29 @@ const CATEGORY_CHROME: Partial<Record<BannerCategory, CategoryChrome>> = {
  * section is better off as a full-width band.
  */
 const COLUMN_TILE_CAPACITY = 2
+
+/**
+ * THE SUPPORT CAP IS 0.875 OF THE UMA CAP, SO THE TWO PANELS' TILES ARE THE
+ * SAME HEIGHT.
+ *
+ * A layered uma tile is 7/6 of its width tall (the square portrait plus the
+ * ear strip, a sixth); a card is 4/3. Equal heights need card = uma × 7/8:
+ *
+ *                 uma cap   card cap   art height, both
+ *   xl            10rem     8.75rem    ~187px
+ *   2xl           13.5rem   11.75rem   ~252px (card 11.8125 rounded down)
+ *
+ * The old caps (7.75 / 9.5rem) were ~25px shorter than a cell, so the slack
+ * showed as a wide gutter between the two cards, and the card panel, ~40px
+ * shorter than the uma panel beside it, centred its tiles and left a gap above
+ * its button. The panels split their width 0.88 : 0.78 (0.886), close enough
+ * to 7/8 that when both tiles fill their cells instead of hitting the cap,
+ * the heights still land within a few pixels.
+ *
+ * Column layout only: a band keeps the old caps (bandTileWidthClass), so a
+ * full-width row of cards doesn't grow.
+ */
+const SUPPORT_COLUMN_TILE_WIDTH = "max-w-[8.75rem] 2xl:max-w-[11.75rem]"
 
 /**
  * A BAND IS ONE LINE AT EVERY WIDTH. Nothing about it is breakpoint-driven.
@@ -276,6 +305,14 @@ const BANNER_ART =
 const BANNER_ART_ALONE = `${BANNER_ART} mx-auto xl:w-[var(--timeline-art-width)]`
 
 /**
+ * The art in the ordinary row. From xl it has a column of its own and sits
+ * hard left in it. Below xl it spans the card's full width, which on a tablet
+ * is wider than the 41rem cap, so it is centred there: hard left left a strip
+ * of empty card beside it, while the race cards' art (no cap) filled the row.
+ */
+const BANNER_ART_IN_ROW = `${BANNER_ART} mx-auto xl:mx-0`
+
+/**
  * The fields a featured tile actually renders. Both Uma and SupportCard
  * satisfy this structurally, which is what lets the two panels share one
  * component instead of duplicating forty lines of near-identical JSX.
@@ -286,6 +323,7 @@ type FeaturedCard = {
 	image: string
 	/** An uma's borderless art (the API's `portrait`); support cards have none. */
 	portrait?: string | null
+	portrait_layers?: PortraitLayers | null
 	recommendation: string
 	/**
 	 * The card's public one-liner, shown over its art on hover, focus or tap.
@@ -293,6 +331,12 @@ type FeaturedCard = {
 	 * briefly receive cards without it; the API always sends a string.
 	 */
 	purpose?: string
+	/**
+	 * The key of its Encyclopedia page. Optional for the same reason as
+	 * `purpose`; null for a card the game hasn't numbered (or a placeholder),
+	 * and then the tile is not a link.
+	 */
+	game_id?: number | null
 }
 
 /**
@@ -317,12 +361,20 @@ type FeaturedCard = {
  *   reliably to a tapped non-button, so this one is state rather than CSS.
  *   pointerup rather than click, because a touch that becomes a scroll cancels
  *   the pointer and never fires it — scrolling past a tile can't open it.
+ *
+ * A LINKED tile (its Encyclopedia page, FeaturedTile) hands all three to the
+ * link around it: the link is the one tab stop and carries the `group` the
+ * overlay's hover and focus classes answer to, and a tap follows the link
+ * instead of toggling the note, the same call hoverPopup.tsx makes with
+ * `tap: false`. So the art box here is plain: no tab stop, no handlers.
  */
 function FeaturedTileArt({
 	item,
 	tileAspectClass,
 	framed,
 	oshi,
+	linked,
+	overlayId,
 }: {
 	item: FeaturedCard
 	tileAspectClass: string
@@ -333,8 +385,11 @@ function FeaturedTileArt({
 	framed: boolean
 	/** One of the person's favorite umas: the rainbow frame. */
 	oshi: boolean
+	/** The tile is a link: it owns focus, hover and taps (see above). */
+	linked: boolean
+	/** The overlay's id, made by the tile so a link can point at it too. */
+	overlayId: string
 }) {
-	const overlayId = useId()
 	const [tapped, setTapped] = useState(false)
 	const purpose = (item.purpose ?? "").trim()
 
@@ -344,9 +399,12 @@ function FeaturedTileArt({
 		</div>
 	)
 	const art = framed ? (
-		<FramedUma src={item.portrait ?? item.image} alt={item.name} oshi={oshi} className="w-full" />
+		<FramedUma src={item.portrait ?? item.image} layers={item.portrait_layers} alt={item.name} oshi={oshi} className="w-full" hover={linked ? undefined : hoverCardProps("uma", item.id)} />
 	) : (
 		<img
+			// Only the uma panel is framed, so this art is a support card. A
+			// linked tile carries the card on its link instead (FeaturedTile).
+			{...(linked ? {} : hoverCardProps("card", item.id))}
 			src={item.image}
 			alt={item.name}
 			loading="lazy"
@@ -364,6 +422,9 @@ function FeaturedTileArt({
 	// the art's lower half with the tile's colour, so its round bottom corners
 	// meet the name block without a notch.
 	const surface = framed ? "rounded-[10.75%]" : "rounded-[8.3%_/_6.25%]"
+	// A framed uma's layered art reaches past the frame (FramedUma), so her box
+	// doesn't clip; the overlay rounds itself instead (rounded-[inherit]).
+	const clip = framed ? "" : "overflow-hidden"
 	const withSkirt = (box: ReactNode) => (
 		<div className="relative shrink-0">
 			<div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gray-700" />
@@ -373,9 +434,35 @@ function FeaturedTileArt({
 
 	if (!purpose) {
 		return withSkirt(
-			<div className={`relative shrink-0 overflow-hidden ${surface}`}>
+			<div className={`relative shrink-0 ${clip} ${surface}`}>
 				{recommendationBadge}
 				{art}
+			</div>
+		)
+	}
+
+	// Always in the DOM, faded out rather than unmounted, so a screen reader
+	// gets the note through aria-describedby whether or not anyone is hovering.
+	// White on a black scrim rather than theme tokens: it sits on arbitrary
+	// card art — the same reasoning as mobileBannerSelectStyles.
+	const overlay = (
+		<div
+			id={overlayId}
+			role="tooltip"
+			className={`pointer-events-none absolute inset-0 z-20 flex items-end rounded-[inherit] bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
+				tapped ? "opacity-100" : "opacity-0"
+			}`}
+		>
+			<p className="line-clamp-6 break-words">{purpose}</p>
+		</div>
+	)
+
+	if (linked) {
+		return withSkirt(
+			<div className={`relative shrink-0 ${clip} ${surface}`}>
+				{recommendationBadge}
+				{art}
+				{overlay}
 			</div>
 		)
 	}
@@ -392,25 +479,109 @@ function FeaturedTileArt({
 			onBlur={() => setTapped(false)}
 			// ring-inset: the tile clips its overflow, so an outset ring would be
 			// shaved off at the rounded corners.
-			className={`group relative shrink-0 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
+			className={`group relative shrink-0 ${clip} outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
 		>
 			{recommendationBadge}
 			{art}
-			{/* Always in the DOM, faded out rather than unmounted, so a screen
-			    reader gets the note through aria-describedby whether or not anyone
-			    is hovering. White on a black scrim rather than theme tokens: it
-			    sits on arbitrary card art — the same reasoning as
-			    mobileBannerSelectStyles. */}
-			<div
-				id={overlayId}
-				role="tooltip"
-				className={`pointer-events-none absolute inset-0 z-20 flex items-end bg-gradient-to-t from-black/90 via-black/70 to-black/30 p-2 text-left text-xs font-medium leading-snug text-white transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${
-					tapped ? "opacity-100" : "opacity-0"
-				}`}
-			>
-				<p className="line-clamp-6 break-words">{purpose}</p>
-			</div>
+			{overlay}
 		</div>
+	)
+}
+
+/**
+ * Where a name too long for one line of a tile may break. Two names are one
+ * 18-letter word, "Matikanetannhauser" and "Matikanefukukitaru": the longest
+ * the game allows, too wide for a support tile at any readable size, so the
+ * browser broke them wherever the edge fell ("Matikanetan / nhauser";
+ * Daptrius, board "Timeline, Support Card, Longest Name Fix", 2026-11-17).
+ * Each is "Matikane" and a name, so a soft hyphen there lets the word break
+ * at that seam ("Matikane- / tannhauser") and only when it has to. Checked
+ * 2026-11-17: no other uma or card name has a word over 12 letters.
+ */
+const NAME_SEAMS = ["Matikane"]
+function withSeams(name: string): string {
+	return NAME_SEAMS.reduce((text, seam) => text.replace(new RegExp(`\\b${seam}(?=\\p{L}{4})`, "gu"), `${seam}\u00AD`), name)
+}
+
+/**
+ * One featured tile: the art (with its purpose note) over the name block.
+ *
+ * With `href` the whole tile is a link to the card's Encyclopedia page:
+ * every tile whose uma or card has a game id (FeaturePanel decides).
+ */
+function FeaturedTile({
+	item,
+	href,
+	tileAspectClass,
+	tileWidthClass,
+	nameClass,
+	framed,
+	oshi,
+}: {
+	item: FeaturedCard
+	href: string | null
+	tileAspectClass: string
+	tileWidthClass: string
+	nameClass: string
+	framed: boolean
+	oshi: boolean
+}) {
+	const overlayId = useId()
+	const hasPurpose = Boolean((item.purpose ?? "").trim())
+
+	const body = (
+		<>
+			{/* The layered art's ears, a sixth of the tile above her frame
+			    (FramedUma), land in this strip instead of being cut off. */}
+			{framed && item.portrait_layers && <div aria-hidden="true" className="aspect-[6/1] w-full shrink-0" />}
+			<FeaturedTileArt
+				item={item}
+				tileAspectClass={tileAspectClass}
+				framed={framed}
+				oshi={oshi}
+				linked={href !== null}
+				overlayId={overlayId}
+			/>
+			{/* No minimum height: it used to reserve two lines (min-h-16) so
+			    neighbours matched, which left a one-line name floating in empty
+			    space. The grid's items-stretch keeps neighbours level now. */}
+			<div className={`flex flex-1 items-center justify-center bg-gray-700 p-2 ${framed ? "rounded-b-lg" : ""}`}>
+				<div
+					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
+				>
+					{withSeams(item.name)}
+				</div>
+			</div>
+		</>
+	)
+
+	// No fill or shadow of its own: either would show past the art's round top
+	// corners (FeaturedTileArt). The name block carries the tile's colour instead.
+	// A framed tile doesn't clip, or a layered uma's side accessories (16/360
+	// of the tile, Daptrius's wide canvas) would be shaved off; its name block
+	// rounds the bottom corners itself.
+	const tileClass = `flex h-full w-full min-w-0 flex-col ${framed ? "" : "overflow-hidden"} rounded-lg text-left ${tileWidthClass}`
+
+	if (!href) return <div className={tileClass}>{body}</div>
+
+	// `group` is what the purpose overlay and the name's hover colour answer
+	// to. The focus mark is an INSET outline: the tile clips its overflow and
+	// a band scrolls, so an outset ring would be shaved off at the edges.
+	// The name comes from aria-label, so the art's alt, the hidden note and
+	// the name block aren't all read as one long link name; the note is read
+	// as its description instead.
+	return (
+		<Link
+			to={href}
+			// A mouse click anywhere on the tile opens the uma's or the card's
+			// card, whose "Open its page" goes on to this link's page.
+			{...hoverCardProps(framed ? "uma" : "card", item.id)}
+			aria-label={item.name}
+			aria-describedby={hasPurpose ? overlayId : undefined}
+			className={`group ${tileClass} outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand`}
+		>
+			{body}
+		</Link>
 	)
 }
 
@@ -449,8 +620,13 @@ type FeaturePanelProps = {
 	/** Uma tiles: drawn in the site's frame (FramedUma). Support art keeps its own. */
 	framed?: boolean
 	emptyText: string
-	/** Widest a tile grows to. Uma art is portrait and wider; support art is smaller. */
+	/**
+	 * Widest a tile grows to in the two-across column. The two panels' caps are
+	 * paired, see SUPPORT_COLUMN_TILE_WIDTH.
+	 */
 	tileWidthClass: string
+	/** Widest a tile grows to in a band. Defaults to `tileWidthClass`. */
+	bandTileWidthClass?: string
 	/**
 	 * The tile art's intrinsic ratio, reserved before the image loads. Uma
 	 * portraits are square (360×360) and support cards are 3:4 (450×600),
@@ -481,16 +657,23 @@ type FeaturePanelProps = {
 	 * chip in the title line under the same zero-layout rule as `recommended`.
 	 */
 	freePulls?: number
+	/**
+	 * A tile's Encyclopedia address from its game id: `umaHref` or `cardHref`.
+	 * The panel knows which it holds, so no tile has to guess from its shape.
+	 */
+	pageHref: (gameId: number) => string
 }
 
 function FeaturePanel({
 	icon: Icon,
 	title,
 	items,
+	pageHref,
 	hasBanner,
 	framed = false,
 	emptyText,
 	tileWidthClass,
+	bandTileWidthClass = tileWidthClass,
 	tileAspectClass,
 	bandMinWidthClass,
 	layout = "column",
@@ -525,26 +708,15 @@ function FeaturePanel({
 
 	const tiles = items.map((item) => {
 		const tile = (
-			<div
-				// No fill or shadow of its own: either would show past the art's
-				// round top corners (FeaturedTileArt). The name block carries the
-				// tile's colour instead.
-				className={`flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg text-left ${tileWidthClass}`}
-			>
-				<FeaturedTileArt
-					item={item}
-					tileAspectClass={tileAspectClass}
-					framed={framed}
-					oshi={framed && oshiIds.has(item.id)}
-				/>
-				<div className="flex min-h-16 flex-1 items-center justify-center bg-gray-700 p-2">
-					<div
-						className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${nameClass}`}
-					>
-						{item.name}
-					</div>
-				</div>
-			</div>
+			<FeaturedTile
+				item={item}
+				href={item.game_id ? pageHref(item.game_id) : null}
+				tileAspectClass={tileAspectClass}
+				tileWidthClass={isBand ? bandTileWidthClass : tileWidthClass}
+				nameClass={nameClass}
+				framed={framed}
+				oshi={framed && oshiIds.has(item.id)}
+			/>
 		)
 
 		// In a band the growth sits on a wrapper so the tile keeps its own cap and
@@ -673,7 +845,10 @@ function FeaturePanel({
 						</div>
 					) : (
 						<div
-							className={`grid flex-1 content-center items-center gap-1.5 ${
+							// items-stretch: the two tiles in a row share its height, so a
+							// one-line name beside a two-line one still ends level (the
+							// name block takes up the difference).
+							className={`grid flex-1 content-center items-stretch gap-1.5 ${
 								items.length === 1 ? "grid-cols-1" : "grid-cols-2"
 							}`}
 						>
@@ -810,6 +985,7 @@ function BannerSection({
 			icon={Sparkles}
 			title="Featured Umamusume"
 			items={umaBanner?.umas ?? []}
+			pageHref={umaHref}
 			hasBanner={!!umaBanner}
 			framed
 			emptyText="No Umamusume banner"
@@ -835,9 +1011,11 @@ function BannerSection({
 			icon={Ticket}
 			title="Featured Support Cards"
 			items={supportBanner?.support_cards ?? []}
+			pageHref={cardHref}
 			hasBanner={!!supportBanner}
 			emptyText="No Support Banner"
-			tileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
+			tileWidthClass={SUPPORT_COLUMN_TILE_WIDTH}
+			bandTileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
 			tileAspectClass="aspect-[3/4]"
 			// A race-prep batch's ten cards fit unscrolled from about 1050px up.
 			// The launch banner's twenty scroll on any realistic screen, which is
@@ -915,7 +1093,7 @@ function BannerSection({
 									alt={banner.name}
 									loading="lazy"
 									decoding="async"
-									className={BANNER_ART}
+									className={BANNER_ART_IN_ROW}
 								/>
 							) : (
 								<BannerArtPlaceholder />
@@ -978,6 +1156,8 @@ type BannerWindowCardProps = {
 	onAddBanner: (banner: BannerUma | BannerSupport, type: "Uma" | "Support") => void
 	/** Daily legend race batches arriving with a banner in this window. */
 	legendRaces?: DatedRelease[]
+	/** Story events running with a banner in this window: the row beneath the card. */
+	storyEvents?: StoryEvent[]
 } & TimelineFocusProps
 
 export function BannerWindowCard({
@@ -987,6 +1167,7 @@ export function BannerWindowCard({
 	stagedBanners,
 	onAddBanner,
 	legendRaces = [],
+	storyEvents = [],
 	focusRef,
 	isFocused = false,
 }: BannerWindowCardProps) {
@@ -1057,7 +1238,7 @@ export function BannerWindowCard({
 			<div
 				className={`card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
 					attachedEvent ? "rounded-t-none" : ""
-				} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
+				} ${storyEvents.length > 0 ? "rounded-b-none" : ""} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
 			>
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex min-w-0 items-center gap-3">
@@ -1143,6 +1324,8 @@ export function BannerWindowCard({
 					))}
 				</div>
 			</div>
+			{/* Flush beneath the panel, outside it, so the art row above can't grow. */}
+			{storyEvents.length > 0 && <StoryEventStrip events={storyEvents} />}
 		</div>
 	)
 }

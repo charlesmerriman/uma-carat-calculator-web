@@ -239,6 +239,7 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 							note=""
 							borrow={isBorrow}
 							limitBreak={main.limit_break ?? null}
+							pageLink={false}
 						/>
 					) : main.support_card !== null ? (
 						<NoteOnlyTile note={`Card ${main.support_card}`} borrow={isBorrow} />

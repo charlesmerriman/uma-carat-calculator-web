@@ -21,6 +21,7 @@ import { pvpEventHref } from "../../../utils/pvpEvent"
 import { FramedUma } from "../../FramedUma"
 import { GalleryModal } from "./GalleryModal"
 import type { ProfileCardData, ProfileCardTarget } from "../../../types/gallery"
+import { hoverCardProps } from "../../../utils/hoverCards"
 
 const HEADING = "text-[11px] font-bold uppercase tracking-[0.08em] text-gray-300"
 const ROW =
@@ -70,8 +71,8 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 					<h3 className={HEADING}>{card.favorites.length > 1 ? "Favorites" : "Favorite"}</h3>
 					<ul className="flex flex-wrap gap-2">
 						{card.favorites.map((favorite) => (
-							<li key={favorite.uma}>
-								<FramedUma src={favorite.image} oshi={oshiIds.has(favorite.uma)} alt={favorite.label} title={favorite.label} className="w-14" />
+							<li key={favorite.uma} {...hoverCardProps("uma", favorite.uma)}>
+								<FramedUma src={favorite.image} layers={favorite.layers} oshi={oshiIds.has(favorite.uma)} alt={favorite.label} title={favorite.label} className="w-14" />
 							</li>
 						))}
 					</ul>

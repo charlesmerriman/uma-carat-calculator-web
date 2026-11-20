@@ -1,0 +1,384 @@
+/* ===== THE PALETTE THEMES' SHAPES =====
+
+   Winning Live and Tracen are the themes that change more than colour
+   (notes/theme-options.md). Their COLOURS are tokens in index.css like
+   every other theme's; this file is the rest: pills, the strip under the
+   navbar, the filled add-banner buttons, Tracen's key buttons and header
+   pill.
+
+   THREE RULES for anything added here.
+
+   1. Paint only, never size. A rule may change a colour, a radius, a shadow
+      or a background. It must not change a box's width or height: the
+      navbar's height feeds scroll-padding-top and --navbar-h, the pull
+      field's 44px and the planner row's 64px are load-bearing (App.css), and
+      the banner table's tracks are counted to the pixel. So an "edge" here is
+      a box-shadow, a strip is a background, and where padding is added it is
+      taken back with an equal negative margin.
+
+   2. Hooks, never utilities. Every selector names a class a component carries
+      for this purpose (site-navbar, nav-tab, nav-control, planner-panel-title,
+      planner-section-title, add-banner-button, income-value, hero-cta,
+      forecast-shortfall, wordmark-second) or a semantic class that already
+      existed (banner-type-tab, banner-stat-box, pull-input). Never `.rounded-md`
+      or `.shadow-sm`: that is how every theme once re-skinned the wrong
+      elements (SURFACES, index.css). The one exception is the precedent
+      index.css already sets, `.bg-brand.text-black`: the solid brand button.
+
+   3. Read tokens for anything colorblind mode redraws (the kind fills and
+      inks, the pull colours), so that mode keeps winning without a second
+      copy of every rule here.
+
+   Imported last (App.tsx), after App.css. Nothing here is in a cascade layer,
+   so these rules beat the Tailwind utilities on the same element, which is
+   what lets a hook repaint a button that also carries `bg-brand/10`.
+
+   The default themes match nothing in this file. */
+
+
+/* ─────────────────────────── WINNING LIVE ─────────────────────────── */
+
+/* The penlight strip: five flat segments along the navbar's bottom edge, in
+   the theme's five colours. A background on the bar itself, so the bar keeps
+   its height; its own 1px rule goes transparent so the strip isn't cut. */
+[data-theme="winning-live"] .site-navbar {
+	border-bottom-color: transparent;
+	background-image: linear-gradient(90deg,
+		#ffe45c 0 20%, #ff7acb 20% 40%, #5ad7ff 40% 60%, #a6f06a 60% 80%, #cfaaff 80%);
+	background-size: 100% 3px;
+	background-position: 0 100%;
+	background-repeat: no-repeat;
+}
+
+/* Pills for the bar's tabs and controls. The active tab is solid yellow with
+   dark ink instead of the shared brand tint, so the one place you are reads
+   from across the room. */
+[data-theme="winning-live"] .nav-tabs,
+[data-theme="winning-live"] .nav-tab,
+[data-theme="winning-live"] .nav-control {
+	border-radius: 9999px;
+}
+
+[data-theme="winning-live"] .nav-tabs {
+	border-color: var(--color-gray-600);
+}
+
+[data-theme="winning-live"] .nav-tab--active {
+	border-color: transparent;
+	background-color: var(--color-brand);
+	color: #1a0f2e;
+}
+
+[data-theme="winning-live"] .nav-control {
+	border-color: var(--color-gray-600);
+}
+
+/* The navbar's wordmark, scaled to the width it has in Outfit. In Unbounded
+   at the same size it was 58px wider, stacked and on one line alike, and the
+   bar has none to spare below 1280px with seven tabs. The two Tailwind size
+   tokens its lines use are redefined for the wordmark alone, so the lines
+   keep their `text-base lg:text-xl` step: 0.72 of each. */
+[data-theme="winning-live"] .wordmark-nav {
+	--text-base: 0.72rem;
+	--text-xl: 0.9rem;
+}
+
+/* Pink, in its only two places. */
+[data-theme="winning-live"] .wordmark-second,
+[data-theme="winning-live"] .planner-panel-title {
+	color: var(--accent-second);
+}
+
+/* The three add-banner buttons, each filled with its kind's colour. On every
+   other theme the first is the brand and the other two are outlines; here
+   all three say which kind of row they make. The fills and inks are the
+   --color-type-* tokens, so colorblind mode's blue and red arrive by
+   themselves. The 4px "key" edge is a shadow in a darker shade of the fill. */
+[data-theme="winning-live"] .add-banner-button {
+	border-color: transparent;
+	border-radius: 9999px;
+}
+
+/* Heavier lettering only where the button has room for it. On a phone the
+   three share one row at about 99px each, and "Support" at 800 touched the
+   pill's ends. */
+@media (min-width: 40rem) {
+	[data-theme="winning-live"] .add-banner-button {
+		font-weight: 800;
+	}
+}
+
+[data-theme="winning-live"] .add-banner-button--uma {
+	background-color: var(--color-type-uma);
+	color: var(--color-type-uma-ink);
+	box-shadow: 0 4px 0 color-mix(in srgb, var(--color-type-uma) 66%, #000);
+}
+
+[data-theme="winning-live"] .add-banner-button--support {
+	background-color: var(--color-type-support);
+	color: var(--color-type-support-ink);
+	box-shadow: 0 4px 0 color-mix(in srgb, var(--color-type-support) 66%, #000);
+}
+
+[data-theme="winning-live"] .add-banner-button--step-up {
+	background-color: var(--color-type-step-up);
+	color: var(--color-type-step-up-ink);
+	box-shadow: 0 4px 0 color-mix(in srgb, var(--color-type-step-up) 66%, #000);
+}
+
+[data-theme="winning-live"] .add-banner-button:hover {
+	filter: brightness(1.08);
+}
+
+/* The home page's main button: a pill with the same key edge. */
+[data-theme="winning-live"] .hero-cta {
+	border-radius: 9999px;
+	box-shadow: 0 4px 0 #b89b12;
+}
+
+/* Average Monthly Income: carats in the brand's yellow, and the two ticket
+   counts in their kind's colour. The shards keep the plain ink: they belong
+   to no kind, and a colour with no meaning is the thing this theme avoids. */
+[data-theme="winning-live"] [data-income="carats"] .income-value {
+	color: var(--color-brand);
+}
+
+[data-theme="winning-live"] [data-income="uma-tickets"] .income-value {
+	color: var(--kind-uma-accent);
+}
+
+[data-theme="winning-live"] [data-income="support-tickets"] .income-value {
+	color: var(--kind-support-accent);
+}
+
+/* The phone card's header strip is the kind's fill, and everything on it
+   assumes a deep fill under pale ink: the select and the two buttons are
+   drawn from --tile-* values, and the row-options icon is gray-100 or
+   gray-500, near-white on a dark theme. This theme's fills are bright under
+   dark ink, so inside the strip it takes the light themes' --tile-* set and a
+   dark stretch of the gray ramp. Redefining the ramp for the strip keeps
+   this off the utilities: the icon still says `text-gray-100`, and gets the
+   ink that reads here (15:1 on the cyan, 5.6:1 for the quiet gray-500).
+
+   Not under colorblind mode, whose deep blue and red fills want the pale ink
+   and the dark --tile-* set every dark theme has. */
+[data-theme="winning-live"]:not([data-colorblind-mode="true"]) .banner-type-tile {
+	--tile-control-fill: rgb(255 255 255 / 60%);
+	--tile-control-fill-focus: rgb(255 255 255 / 85%);
+	--tile-control-border: rgb(0 0 0 / 15%);
+	--tile-control-border-hover: rgb(0 0 0 / 30%);
+	--tile-control-border-focus: rgb(0 0 0 / 45%);
+	--tile-control-ring: rgb(0 0 0 / 25%);
+	--tile-button-border: rgb(0 0 0 / 12%);
+	/* Deeper than the light themes' red: theirs is 3.3:1 on this violet. */
+	--tile-danger: #8a0f0f;
+	--color-gray-50: #0b0618;
+	--color-gray-100: #1a0f2e;
+	--color-gray-200: #24174a;
+	--color-gray-300: #2f2060;
+	--color-gray-400: #3d2c78;
+	--color-gray-500: #4a3785;
+}
+
+
+/* ──────────────────────────────── TRACEN ──────────────────────────────── */
+
+/* What isn't the lime (the key face and edge, the tab tray and ink, the stat
+   box, the numerals, the shortfall pill) is a --tracen-* token in Tracen's
+   block in index.css. */
+
+/* Body text a step heavier, with the font-weight tokens the theme block
+   raises (index.css). An element that names a weight still gets its own. */
+[data-theme="tracen"] body {
+	font-weight: 500;
+}
+
+/* Lime, the game's button green. --color-brand is the DEEP green on Tracen
+   (lime is 1.9:1 on white and the brand is text in hundreds of places),
+   so the solid brand button is repainted here: lime with the dark brown ink,
+   which measures 6.3:1 or better down the gradient, and a deep green rim so
+   the button still has an edge on a white card. Later than the shared rule in
+   index.css that turns this label white on a light theme. */
+[data-theme="tracen"] .bg-brand.text-black {
+	background-color: #7ecf12;
+	background-image: linear-gradient(180deg, #8fd61a, #76c80e);
+	color: #4f2504;
+	box-shadow: inset 0 0 0 1.5px #4f9a00;
+}
+
+/* The home page's main button also gets the game's thicker bottom edge. */
+[data-theme="tracen"] .hero-cta {
+	box-shadow: inset 0 0 0 1.5px #4f9a00, 0 3px 0 #3f8200;
+}
+
+/* The navbar's controls as the game's menu buttons: a white face, a slate
+   outline and a thicker bottom edge (a deep blue face and a lavender edge at
+   night). The edge is a shadow, so the 36px
+   control keeps its height inside the 64px bar. */
+[data-theme="tracen"] .nav-control {
+	border-color: var(--tracen-key-line);
+	background-color: var(--tracen-key-face);
+	color: var(--color-gray-100);
+	box-shadow: 0 2px 0 var(--tracen-key-line);
+}
+
+[data-theme="tracen"] .nav-control:hover {
+	background-color: var(--color-gray-700);
+}
+
+/* The tabs sit in a grey tray, like the game's side menu, and the one you are
+   on is lime. */
+[data-theme="tracen"] .nav-tabs {
+	border-color: transparent;
+	background-color: var(--tracen-tab-tray);
+}
+
+[data-theme="tracen"] .nav-tab {
+	color: var(--tracen-tab-ink);
+}
+
+/* The tab's own hover colour is a utility, which the rule above outranks, so
+   the hover is restated here. */
+[data-theme="tracen"] .nav-tab:not(.nav-tab--active):hover {
+	color: var(--color-gray-100);
+}
+
+[data-theme="tracen"] .nav-tab--active {
+	border-color: #4f9a00;
+	background-color: #7ecf12;
+	background-image: linear-gradient(180deg, #8fd61a, #76c80e);
+	color: #4f2504;
+	box-shadow: 0 2px 0 #3f8200;
+}
+
+/* The planner's panel title in the game's header pill: lime, with a diamond
+   lattice at its left end. The padding is given back as a negative margin, so
+   the header row is the height it always was. The lattice is two crossed
+   stripe layers confined to the pill's first 2.75rem, and the left padding
+   starts the words past it: over the lettering it read as noise. */
+[data-theme="tracen"] .planner-panel-title {
+	margin: -0.25rem 0;
+	padding: 0.25rem 1.25rem 0.25rem 3.25rem;
+	border-radius: 9999px;
+	background-color: #7ecf12;
+	background-image:
+		repeating-linear-gradient(45deg, rgb(63 130 0 / 30%) 0 6px, transparent 6px 12px),
+		repeating-linear-gradient(-45deg, rgb(63 130 0 / 30%) 0 6px, transparent 6px 12px),
+		linear-gradient(180deg, #8fd61a, #76c80e);
+	background-size: 2.75rem 100%, 2.75rem 100%, 100% 100%;
+	background-repeat: no-repeat;
+	color: #4f2504;
+	box-shadow: inset 0 0 0 1.5px #4f9a00;
+	letter-spacing: 0;
+	text-transform: none;
+}
+
+/* A planner section's title on the game's slanted green rule. The bar and
+   its sliver are absolutely placed pseudo-elements behind the text, 3px
+   taller than the line each way, so the title's own box (and the centred
+   text in it) doesn't move. Without clip-path they are plain rectangles. */
+[data-theme="tracen"] .planner-section-title {
+	position: relative;
+	z-index: 0;
+	color: #4f2504;
+}
+
+[data-theme="tracen"] .planner-section-title svg {
+	color: #4f2504;
+}
+
+[data-theme="tracen"] .planner-section-title::before,
+[data-theme="tracen"] .planner-section-title::after {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	top: -3px;
+	bottom: -3px;
+	background-color: #7ecf12;
+}
+
+[data-theme="tracen"] .planner-section-title::before {
+	left: 0;
+	right: 20px;
+	border-radius: 5px 0 0 5px;
+	clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+
+[data-theme="tracen"] .planner-section-title::after {
+	right: 0;
+	width: 17px;
+	clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+
+/* The three add-banner buttons: a tint of the kind's colour, its deep ink,
+   and the saturated colour as the rim and the bottom edge, after the game's
+   action buttons. Two classes on each rule so they outrank the lime rule
+   above, which the Uma button (a solid brand button elsewhere) also matches. */
+[data-theme="tracen"] .add-banner-button.add-banner-button {
+	border-color: transparent;
+	background-image: none;
+	font-weight: 800;
+}
+
+[data-theme="tracen"] .add-banner-button.add-banner-button--uma {
+	background-color: var(--color-type-uma);
+	color: var(--color-type-uma-ink);
+	box-shadow: inset 0 0 0 2px var(--kind-uma-band), 0 3px 0 var(--kind-uma-band);
+}
+
+[data-theme="tracen"] .add-banner-button.add-banner-button--support {
+	background-color: var(--color-type-support);
+	color: var(--color-type-support-ink);
+	box-shadow: inset 0 0 0 2px var(--kind-support-band), 0 3px 0 var(--kind-support-band);
+}
+
+[data-theme="tracen"] .add-banner-button.add-banner-button--step-up {
+	background-color: var(--color-type-step-up);
+	color: var(--color-type-step-up-ink);
+	box-shadow: inset 0 0 0 2px var(--kind-step-up-band), 0 3px 0 var(--kind-step-up-band);
+}
+
+[data-theme="tracen"] .add-banner-button:hover {
+	filter: brightness(0.97);
+}
+
+/* A type tile's band: the kind's saturated colour along the bottom of its
+   tint, on the desktop badge and the phone card's label alike. Inset, so the
+   tile is the size it was. */
+[data-theme="tracen"] .banner-type-tab--uma {
+	box-shadow: inset 0 -4px 0 var(--kind-uma-band);
+}
+
+[data-theme="tracen"] .banner-type-tab--support {
+	box-shadow: inset 0 -4px 0 var(--kind-support-band);
+}
+
+[data-theme="tracen"] .banner-type-tab--step-up {
+	box-shadow: inset 0 -4px 0 var(--kind-step-up-band);
+}
+
+/* The derived-stats boxes as the game's stat panel: a white face with a slate
+   edge and the warm brown numerals (the page's navy and a warm cream at
+   night). */
+[data-theme="tracen"] .banner-stat-box {
+	border-color: var(--tracen-stat-line);
+	background-color: var(--tracen-stat-face);
+}
+
+[data-theme="tracen"] .banner-stat-box-value,
+[data-theme="tracen"] .income-value {
+	color: var(--tracen-numeral);
+}
+
+/* The forecast's "Short by" line. Brown body text and the deep pink warning
+   are close in lightness (1.7:1), so colour alone doesn't carry it: the line
+   sits in a pale pink pill. Padding given back as margin, as above. */
+[data-theme="tracen"] .forecast-shortfall {
+	width: fit-content;
+	max-width: 100%;
+	margin: 0 -0.5rem -0.125rem;
+	padding: 0.125rem 0.5rem;
+	border-radius: 9999px;
+	background-color: var(--tracen-shortfall-fill);
+	color: var(--color-pull-over);
+}

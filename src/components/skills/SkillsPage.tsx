@@ -1,229 +1,252 @@
 /**
  * The Skills page (/app/skills): every skill with a name (in Japanese when it has no English one), global's
- * and JP's, from GET /skills. Search by any name a skill has had, filter by
- * colour and by where it is, and open one to see it in full
- * (SkillDetailCard, GET /skills/<game_id>).
+ * and JP's, from GET /skills. Search by any name a skill has had, its id or an
+ * uma's name, filter by colours, types and where it is, sort by name, id or
+ * skill point cost either way round. A row opens the skill's own page
+ * (/app/skills/<game id>, SkillPage), and hovering one opens its card; an old
+ * `?skill=<game id>` link redirects to the page.
  *
- * The open skill is `?skill=<game id>` in the URL, so a link opens it. The
- * list is long (~1,800), so it shows a page of rows and grows on "Show more"
- * rather than drawing them all.
+ * The list is long (~2,200), so it shows a page of rows and grows on "Show
+ * more" rather than drawing them all.
  */
 
-import { useContext, useEffect, useMemo, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
-import { Loader2, Search, Zap } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Navigate, useSearchParams } from "react-router-dom"
 import { useSkillListState } from "../../hooks/useSkillList"
-import { useSkillsPreview } from "../../hooks/useSkillsPreview"
-import { AuthContext } from "../../services/AuthContext"
-import type { SkillListRow } from "../../types/skills"
-import { GOLD_SKILL_RARITY } from "../../utils/pvpGuide"
+import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
+import { reportCounts } from "../../utils/encyclopediaCounts"
+import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
+import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
+import { EmptyNote } from "../encyclopedia/pieces"
+import { SkillList } from "../encyclopedia/skillRows"
 import {
-	COLOUR_FILTERS, SKILL_PARAM, UMATL_URL, WHERE_FILTERS, filterSkills, parseSkillParam, skillHref, skillKind,
-	type ColourFilter, type WhereFilter,
+	PAGE_CONTAINER, REVERSED_VALUES, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, countLine, sortByValue, sortList, values,
+	type SharedWhere,
+} from "../../utils/encyclopedia"
+import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
+import {
+	COLOUR_FILTERS, DOES_TAGS, RACE_TAGS, SKILL_PARAM, STYLE_TAGS, TYPE_FILTERS, UMATL_URL, WHEN_TAGS, WHERE_FILTERS,
+	filterSkills, parseSkillParam, pickedParents, skillHref, subTypePicks, toggleSubTypePick, toggleTypePick,
+	type ColourFilter, type SkillTag, type TagMatch, type TypeFilter,
 } from "../../utils/skillSearch"
-import { JpOnlyTag } from "../pvp/SkillDetail"
-import { SkillDetailCard } from "./SkillDetailCard"
-import { nameLang } from "../../utils/skillList"
+
+/** The Skills list's sorts: a skill has no release date of its own, but has a cost (Daptrius, 2026-11-17). */
+type SkillSortOrder = "name" | "game_id" | "cost"
+const SKILL_SORT_OPTIONS: { value: SkillSortOrder; label: string }[] = [
+	{ value: "name", label: "Name" },
+	{ value: "game_id", label: "Game ID" },
+	{ value: "cost", label: "Skill point cost" },
+]
 
 const PAGE = 60
 
-function FilterChips<T extends string>({ label, options, value, onChange }: {
-	label: string
-	options: { value: T; label: string }[]
-	value: T
-	onChange: (value: T) => void
-}) {
-	return (
-		<div role="group" aria-label={label} className="flex flex-wrap gap-1">
-			{options.map((option) => (
-				<button
-					key={option.value}
-					type="button"
-					aria-pressed={value === option.value}
-					onClick={() => onChange(option.value)}
-					className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
-						value === option.value
-							? "border-brand bg-brand/15 text-gray-100"
-							: "border-gray-600 text-gray-300 hover:border-gray-500"
-					}`}
-				>
-					{option.label}
-				</button>
-			))}
-		</div>
-	)
-}
-
-/** A row's surface: the game's gold or pink, else a card's fill and edge with
- * light text (a bare bg-gray-800 is the page's own colour on some themes). */
-function rowSurface(row: SkillListRow): string {
-	if (row.is_evolved) return "skill-evolved"
-	if (row.rarity === GOLD_SKILL_RARITY) return "skill-gold"
-	return "border-edge bg-(--card-fill) text-gray-100 hover:border-gray-500"
-}
-
-function SkillRow({ row, open }: { row: SkillListRow; open: boolean }) {
-	return (
-		<li>
-			<Link
-				to={skillHref(row.game_id)}
-				aria-current={open ? "true" : undefined}
-				className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${rowSurface(row)} ${
-					open ? "ring-2 ring-brand" : ""
-				}`}
-			>
-				{row.image ? (
-					<img src={row.image} alt="" className="h-6 w-6 shrink-0" loading="lazy" decoding="async" />
-				) : (
-					<span className="h-6 w-6 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
-				)}
-				<span className="min-w-0 flex-1 truncate" lang={nameLang(row.name)}>{row.name}</span>
-				{row.availability === "jp" && <JpOnlyTag className="shrink-0 text-[10px]" />}
-				<span className="shrink-0 text-xs opacity-70">{skillKind(row)}</span>
-			</Link>
-		</li>
-	)
-}
+// "Match": a skill must carry every picked condition and effect, or any one is enough (Daptrius's list, item 2).
+const MATCH_OPTIONS: { value: TagMatch; label: string }[] = [
+	{ value: "all", label: "All of them" },
+	{ value: "any", label: "Any of them" },
+]
 
 /**
- * SHELVED to the guide editors (useSkillsPreview, owner 2026-10-23): anyone
- * else gets a plain "not here", and the route is neither prerendered nor in
- * the sitemap until the work is picked up again. Waits for the account while
- * it loads, so an editor's page doesn't flash "not here" first.
+ * Each colour's dot on its filter chip, the hue its rows wear down their left
+ * edge (encyclopedia.css, ".enc-skill"): the game's gold, pink and a unique's
+ * violet are fixed; white and inherited take the theme's greys.
+ */
+const COLOUR_DOTS: Partial<Record<ColourFilter, string>> = {
+	white: "var(--color-gray-300)",
+	gold: "#e8b51a",
+	unique: "#c9b1ff",
+	inherited: "var(--color-gray-500)",
+	evolved: "#f28cbc",
+}
+const COLOUR_OPTIONS = COLOUR_FILTERS.map((option) => ({ ...option, dot: COLOUR_DOTS[option.value] }))
+// The chip row draws "All" itself. No "Unique" chip: the Color filter already
+// has Unique, Inherited and Evolved, and the type only caught the skills the
+// game data gives no icon (Daptrius, 2026-11-13). The type stays in
+// TYPE_FILTERS so a row still has its word.
+const TYPE_OPTIONS = TYPE_FILTERS.filter(({ value }) => value !== "all" && value !== "unique")
+// Every value the Type filter can hold: the chips and their sub-types' chips.
+const TYPE_VALUES = TYPE_OPTIONS.flatMap(({ value, subs }) => [value, ...(subs ?? []).map((sub) => sub.value)])
+
+/**
+ * Part of the Encyclopedia, open to everyone since 2026-11-18. The route is
+ * prerendered and in the sitemap like every /app tab: the shell and its head
+ * tags at build time, the list itself in the browser.
  */
 export const SkillsPage = () => {
-	const preview = useSkillsPreview()
-	const auth = useContext(AuthContext)
-	if (!preview) {
-		const waiting = Boolean(auth?.isLoggedIn) && auth?.status === "loading"
-		return (
-			<p className="mx-auto my-6 w-[calc(100%-1rem)] max-w-6xl text-sm text-gray-400" role="status">
-				{waiting ? "Loading..." : (
-					<>
-						This page isn't here.{" "}
-						<Link to="/app" className="text-brand transition hover:text-brand/75">Back to the calculator</Link>
-					</>
-				)}
-			</p>
-		)
-	}
-	return <SkillsPageBody />
+	// An old link (Discord, a bookmark) named the skill as ?skill=<id>; its page is its own address now.
+	const [searchParams] = useSearchParams()
+	const oldLink = parseSkillParam(searchParams.get(SKILL_PARAM))
+	if (oldLink !== null) return <Navigate to={skillHref(oldLink)} replace />
+	return (
+		<EncyclopediaFrame>
+			<SkillsPageBody />
+		</EncyclopediaFrame>
+	)
 }
 
 const SkillsPageBody = () => {
 	const list = useSkillListState()
-	const [searchParams, setSearchParams] = useSearchParams()
-	const openId = parseSkillParam(searchParams.get(SKILL_PARAM))
-	const [query, setQuery] = useState("")
-	const [colour, setColour] = useState<ColourFilter>("all")
-	const [where, setWhere] = useState<WhereFilter>("all")
+	// Remembered for the tab, so a trip to a skill's page and back keeps them (useRememberedFilter).
+	const [query, setQuery] = useRememberedFilter<string>("skills:query", "")
+	const [colours, setColours] = useRememberedPicks<ColourFilter>("skills:colour", values(COLOUR_FILTERS))
+	// Where is the setting every list shares (SHARED_WHERE_KEY); only skills have "Coming to global".
+	const [where, setWhere] = useRememberedFilter<SharedWhere>(SHARED_WHERE_KEY, "all", SHARED_WHERE_VALUES)
+	const [types, setTypes] = useRememberedPicks<TypeFilter>("skills:type", TYPE_VALUES)
+	const [sort, setSort] = useRememberedFilter<SkillSortOrder>("skills:sort", "name", values(SKILL_SORT_OPTIONS))
+	const [reversedFlag, setReversed] = useRememberedFilter<string>("skills:sort-reversed", "0", REVERSED_VALUES)
+	const reversed = reversedFlag === "1"
+	// The condition and effect filters, one remembered row each so Reset clears them with the rest.
+	const [when, setWhen] = useRememberedPicks<SkillTag>("skills:when", values(WHEN_TAGS))
+	const [race, setRace] = useRememberedPicks<SkillTag>("skills:race", values(RACE_TAGS))
+	const [style, setStyle] = useRememberedPicks<SkillTag>("skills:style", values(STYLE_TAGS))
+	const [does, setDoes] = useRememberedPicks<SkillTag>("skills:does", values(DOES_TAGS))
+	const [match, setMatch] = useRememberedFilter<TagMatch>("skills:match", "all", values(MATCH_OPTIONS))
+	const tagPicks = useMemo(() => [...when, ...race, ...style, ...does], [when, race, style, does])
+	// Whether those rows are open. Kept outside the "skills:" scope, so opening
+	// them isn't a filter for Reset to clear; open whenever one is set, so a
+	// remembered pick never hides behind a closed button.
+	const [openFlag, setOpen] = useRememberedFilter<string>("skills-panel:conditions", "0", REVERSED_VALUES)
+	const conditionsOpen = openFlag === "1" || tagPicks.length > 0
 	const [shown, setShown] = useState(PAGE)
-	const detailRef = useRef<HTMLDivElement | null>(null)
 
-	const rows = useMemo(
-		() => (list.status === "ready" ? filterSkills(list.rows, query, colour, where) : []),
-		[list, query, colour, where]
-	)
+	// The tabs' headline numbers. The Umas and Support cards tabs count from the
+	// catalogue, which the hover cards already load on this page; the Skills
+	// tab's own number, once the list is here, is the list's length.
+	useCatalogueCounts(usePvpCatalogue())
+	const total = list.status === "ready" ? list.rows.length : null
+	useEffect(() => {
+		if (total !== null) reportCounts({ skills: total })
+	}, [total])
+
+	const rows = useMemo(() => {
+		if (list.status !== "ready") return []
+		const found = filterSkills(list.rows, query, colours, where, types, { picks: tagPicks, match })
+		// By name the API's order stands (it sorts names the way the game does), turned round on asking.
+		if (sort === "name") return reversed ? [...found].reverse() : found
+		// A unique has no cost and goes last either way round.
+		if (sort === "cost") return sortByValue(found, (row) => row.cost ?? null, reversed)
+		return sortList(found, sort, undefined, reversed)
+	}, [list, query, colours, where, types, tagPicks, match, sort, reversed])
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colour}|${where}`
+	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
 		setShown(PAGE)
 	}
 
-	// Opening a skill on a narrow screen puts its card in view (it sits above
-	// the list there). Read in an effect: the page is prerendered.
-	useEffect(() => {
-		if (openId !== null) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
-	}, [openId])
-
-	const close = () => {
-		const next = new URLSearchParams(searchParams)
-		next.delete(SKILL_PARAM)
-		setSearchParams(next)
-	}
-
 	return (
-		<div className="mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]">
-			<header>
-				<h1 className="font-display flex items-center gap-2 text-xl font-bold text-brand">
-					<Zap className="h-5 w-5 shrink-0" />
-					Skills
-				</h1>
-				<p className="mt-1 text-sm leading-relaxed text-gray-300">
-					Every skill in the game, on global and in JP. Search by name, then open one to see when it fires,
-					what it does and which umas and cards give it.
-				</p>
-			</header>
-
-			<div className="flex flex-col gap-2">
-				<div className="relative w-full sm:w-80">
-					<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-					<input
-						type="search"
-						aria-label="Search skills"
-						placeholder="Search skills..."
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						className="w-full rounded-lg border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 placeholder-gray-500 focus:border-brand focus:outline-none"
-					/>
-				</div>
-				<FilterChips label="Colour" options={COLOUR_FILTERS} value={colour} onChange={setColour} />
-				<FilterChips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />
-			</div>
-
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-				{openId !== null && (
-					<div ref={detailRef} className="lg:sticky lg:top-4 lg:order-2 lg:self-start">
-						<SkillDetailCard gameId={openId} onClose={close} />
-					</div>
-				)}
-
-				<div className="lg:order-1">
-					{list.status === "loading" ? (
-						<p className="flex items-center gap-2 text-sm text-gray-400" role="status">
-							<Loader2 className="h-4 w-4 animate-spin" /> Loading skills...
-						</p>
-					) : list.status === "error" ? (
-						<p className="text-sm text-gray-400">The skill list didn't load. Reload the page to try again.</p>
-					) : (
-						<>
-							<p className="mb-2 text-xs text-gray-400" aria-live="polite">
-								{rows.length === 1 ? "1 skill" : `${rows.length.toLocaleString("en-US")} skills`}
-							</p>
-							{rows.length === 0 ? (
-								<p className="text-sm text-gray-400">No skill matches that.</p>
-							) : (
-								<ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-									{rows.slice(0, shown).map((row) => (
-										<SkillRow key={row.id} row={row} open={row.game_id === openId} />
-									))}
-								</ul>
-							)}
-							{rows.length > shown && (
+		<div className={PAGE_CONTAINER}>
+			<EncyclopediaTabs />
+			<Toolbar
+				scope="skills"
+				search={<SearchBox label="Search skills" placeholder="Search by skill, uma or ID..." value={query} onChange={setQuery} />}
+				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
+				settings={<Chips label="Where" options={WHERE_FILTERS} value={where} onChange={setWhere} />}
+			>
+				{/* American spelling on screen (Daptrius, 2026-11-13); the code keeps "colour". */}
+				<PickChips label="Color" options={COLOUR_OPTIONS} picks={colours} onChange={setColours} />
+				{/* The Type chips are the types; each picked type with sub-types (the
+				    greens, the debuffs) opens a row of its own under them. */}
+				<PickChips
+					label="Type"
+					options={TYPE_OPTIONS}
+					picks={pickedParents(types).map((option) => option.value)}
+					onChange={setTypes}
+					onToggle={(parent) => setTypes(toggleTypePick(types, parent))}
+				/>
+				{pickedParents(types).filter((parent) => parent.subs).map((parent) => {
+					const subs = subTypePicks(types, parent.value)
+					return (
+						<div key={parent.value} role="group" aria-label={parent.label} className="enc-filter">
+							<span className="enc-filter__label" aria-hidden="true">{parent.label}</span>
+							<div className="enc-filter__chips">
 								<button
 									type="button"
-									onClick={() => setShown((count) => count + PAGE)}
-									className="mt-3 rounded-lg border border-gray-600 px-3 py-1.5 text-sm text-gray-200 transition hover:border-gray-500"
+									className="enc-chip"
+									aria-pressed={subs.length === 0}
+									onClick={() => setTypes(toggleSubTypePick(types, parent.value, parent.value))}
 								>
-									Show more
+									All
 								</button>
-							)}
-						</>
-					)}
+								{(parent.subs ?? []).map((sub) => (
+									<button
+										key={sub.value}
+										type="button"
+										className="enc-chip"
+										aria-pressed={subs.includes(sub.value)}
+										onClick={() => setTypes(toggleSubTypePick(types, parent.value, sub.value))}
+									>
+										{sub.label}
+									</button>
+								))}
+							</div>
+						</div>
+					)
+				})}
+				{/* When it fires, the race it asks for and what it does: folded away until
+				    asked for, since most visits only search (Daptrius's list, item 2). */}
+				<div role="group" aria-label="Conditions and effects" className="enc-filter">
+					<span className="enc-filter__label" aria-hidden="true">More</span>
+					<div className="enc-filter__chips">
+						<button
+							type="button"
+							className="enc-chip"
+							aria-expanded={conditionsOpen}
+							// Can't fold while a pick is set: the picks would still filter, out of sight.
+							disabled={tagPicks.length > 0}
+							onClick={() => setOpen(conditionsOpen ? "0" : "1")}
+						>
+							{conditionsOpen ? "Hide conditions and effects" : "Show conditions and effects"}
+						</button>
+					</div>
 				</div>
-			</div>
+				{conditionsOpen && (
+					<>
+						<PickChips label="When" options={WHEN_TAGS} picks={when} onChange={setWhen} />
+						<PickChips label="Race" options={RACE_TAGS} picks={race} onChange={setRace} />
+						<PickChips label="Strategy" options={STYLE_TAGS} picks={style} onChange={setStyle} />
+						<PickChips label="Does" options={DOES_TAGS} picks={does} onChange={setDoes} />
+						<Chips label="Match" options={MATCH_OPTIONS} value={match} onChange={setMatch} />
+					</>
+				)}
+				<SortControl
+					options={SKILL_SORT_OPTIONS}
+					value={sort}
+					onChange={setSort}
+					reversed={reversed}
+					onReverse={() => setReversed(reversed ? "0" : "1")}
+				/>
+			</Toolbar>
 
-			<p className="text-xs leading-relaxed text-gray-400">
+			{list.status === "loading" ? (
+				<div role="status" aria-label="Loading skills" className="enc-skills">
+					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-12" />)}
+				</div>
+			) : list.status === "error" ? (
+				<EmptyNote>The skill list didn't load. Reload the page to try again.</EmptyNote>
+			) : rows.length === 0 ? (
+				<EmptyNote>No skill matches that.</EmptyNote>
+			) : (
+				<>
+					<SkillList skills={rows.slice(0, shown)} faces />
+					{rows.length > shown && (
+						<div className="enc-more">
+							<span>Showing {shown.toLocaleString("en-US")} of {rows.length.toLocaleString("en-US")}</span>
+							<button type="button" onClick={() => setShown((count) => count + PAGE)}>Show more</button>
+						</div>
+					)}
+				</>
+			)}
+
+			<p className="enc-foot">
 				JP only skills aren't in the global game yet, and their numbers may change when they arrive. Some English
 				names and descriptions are{" "}
-				<a href={UMATL_URL} target="_blank" rel="noreferrer" className="text-brand transition hover:text-brand/75">
-					UmaTL
-				</a>
+				<a href={UMATL_URL} target="_blank" rel="noreferrer">UmaTL</a>
 				's fan translation, shown until global has its own. A part shown as code is one we haven't confirmed the
-				meaning of yet.
+				meaning of yet. Under conditions, a strategy, distance or surface finds the skills that ask for it.
 			</p>
 		</div>
 	)

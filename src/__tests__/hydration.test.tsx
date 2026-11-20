@@ -24,9 +24,20 @@ import App from "../App"
 import { PRERENDER_ROUTES, render } from "../entry-server"
 import { SiteContentProvider } from "../services/SiteContentProvider"
 import SNAPSHOT from "../content/snapshot.json"
+import ENCYCLOPEDIA_SAMPLE from "../content/encyclopedia-sample.json"
 import type { SiteContent } from "../types/siteContent"
+import type { QueryClient } from "@tanstack/react-query"
+import { PrimedQueryClientContext, makeQueryClient } from "../services/queryClient"
+import { primeEncyclopediaPage } from "../services/encyclopediaQueries"
+import { encyclopediaPageOf } from "../utils/encyclopediaRoutes"
 
 const CONTENT = SNAPSHOT as SiteContent
+// One live page of each kind (npm run content:pull).
+const DETAIL_PAGES = [
+	{ route: `/app/umas/${ENCYCLOPEDIA_SAMPLE.uma.game_id}`, data: ENCYCLOPEDIA_SAMPLE.uma },
+	{ route: `/app/cards/${ENCYCLOPEDIA_SAMPLE.card.game_id}`, data: ENCYCLOPEDIA_SAMPLE.card },
+	{ route: `/app/skills/${ENCYCLOPEDIA_SAMPLE.skill.game_id}`, data: ENCYCLOPEDIA_SAMPLE.skill },
+]
 
 let roots: Root[] = []
 let container: HTMLDivElement
@@ -48,9 +59,22 @@ afterEach(() => {
 	vi.restoreAllMocks()
 })
 
-function hydrate(route: string): { recoverable: ReturnType<typeof vi.fn>; errors: string[] } {
-	const { html, content } = render(route, CONTENT)
+/**
+ * @param pageData An Encyclopedia detail page's payload: the build renders with
+ *   it, and the client primes its cache with the same copy before hydrating
+ *   (stale, as main.tsx will, so it refetches after), the way a built document
+ *   will carry it (notes/encyclopedia-open-plan.md, PR 4).
+ */
+function hydrate(route: string, pageData?: unknown): { recoverable: ReturnType<typeof vi.fn>; errors: string[] } {
+	const { html, content } = render(route, CONTENT, pageData)
 	container.innerHTML = html
+
+	const page = encyclopediaPageOf(route)
+	let primed: QueryClient | null = null
+	if (page?.gameId != null && pageData !== undefined) {
+		primed = makeQueryClient()
+		primeEncyclopediaPage(primed, { kind: page.kind, gameId: page.gameId }, pageData, { updatedAt: 0 })
+	}
 
 	const errors: string[] = []
 	vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
@@ -63,9 +87,11 @@ function hydrate(route: string): { recoverable: ReturnType<typeof vi.fn>; errors
 			hydrateRoot(
 				container,
 				<SiteContentProvider initial={content}>
-					<MemoryRouter initialEntries={[route]}>
-						<App />
-					</MemoryRouter>
+					<PrimedQueryClientContext.Provider value={primed}>
+						<MemoryRouter initialEntries={[route]}>
+							<App />
+						</MemoryRouter>
+					</PrimedQueryClientContext.Provider>
 				</SiteContentProvider>,
 				{ onRecoverableError: recoverable },
 			),
@@ -79,6 +105,30 @@ describe("hydrating the prerendered markup", () => {
 		const { recoverable, errors } = hydrate(route)
 		expect(recoverable).not.toHaveBeenCalled()
 		expect(errors).toEqual([])
+	})
+
+	it.each(DETAIL_PAGES)("$route hydrates cleanly from its payload", ({ route, data }) => {
+		const { recoverable, errors } = hydrate(route, data)
+		expect(recoverable).not.toHaveBeenCalled()
+		expect(errors).toEqual([])
+		expect(container.querySelector("h1")).not.toBeNull()
+	})
+
+	it.each(DETAIL_PAGES)("$route hydrates cleanly with a saved theme and a stored token", async ({ route, data }) => {
+		// Signed in, the page adds what you own once the Collection loads, after hydration.
+		localStorage.setItem("uma-planner-theme", "light")
+		localStorage.setItem("authToken", "a-real-token")
+		const { recoverable, errors } = hydrate(route, data)
+		expect(recoverable).not.toHaveBeenCalled()
+		expect(errors).toEqual([])
+		// The query cache tells React about a change on a timer, so let it run.
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 20))
+		})
+		// Still the page after hydration: the token is read after the first
+		// render, and a sign-in change resets the query cache, which would
+		// throw the primed page away and leave its skeleton (fetch never answers here).
+		expect(container.querySelector("h1")?.textContent).toBe(data.name)
 	})
 
 	it.each([

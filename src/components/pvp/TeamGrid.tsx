@@ -13,6 +13,7 @@
  */
 
 import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { ChevronDown, Handshake, Heart, Plus, Star, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
@@ -27,6 +28,9 @@ import { FramedUma } from "../FramedUma"
 import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { CARD_LINK_TITLE, hoverCardProps, ringFor } from "../../utils/hoverCards"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 /**
  * "Use this deck" dealing a guide's deck onto a spot (TeamBuilder; owner,
@@ -131,6 +135,11 @@ function MemberPanel({
 	const umaLabel = uma?.name ?? `uma ${position + 1}`
 	const starred = (pool: "uma" | "support", id: number) =>
 		member !== undefined && (isRecommended?.(pool, id, member.style) ?? false)
+	// Encyclopedia pages (early access; null for everyone else, and for a
+	// placeholder card). Every tile is already a button (pick, drag), and the
+	// corners hold the star, the flag, the badge and the x, so the NAMES are
+	// the links: the uma's in the header, each card's caption under it.
+	const pages = useEncyclopediaHrefs()
 
 	const cardTile = (slot: number) => {
 		const entry = member?.cards.find((card) => card.slot === slot)
@@ -144,6 +153,8 @@ function MemberPanel({
 				art={entry ? (card?.image ?? null) : undefined}
 				card={card}
 				caption={entry ? (card?.name ?? "Unknown card") : slotName}
+				captionHref={entry ? pages.card(entry.support_card) : null}
+				captionHover={entry ? hoverCardProps("card", entry.support_card) : undefined}
 				disabled={!member}
 				disabledHint="Pick an uma first"
 				shape="card"
@@ -214,7 +225,8 @@ function MemberPanel({
 
 	return (
 		<section className="card-panel p-2.5 sm:p-3" aria-label={umaLabel}>
-			<header className="mb-2.5 flex items-center gap-2">
+			{/* mb-6: the big tile's layered ears (a sixth of it, FramedUma) rise into this gap. */}
+			<header className={`${uma?.portrait_layers ? "mb-6" : "mb-2.5"} flex items-center gap-2`}>
 				<span
 					className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-black"
 					aria-hidden="true"
@@ -222,7 +234,15 @@ function MemberPanel({
 					{position + 1}
 				</span>
 				<div className="min-w-0 flex-1">
-					<h3 className="truncate text-sm font-semibold text-gray-100">{umaLabel}</h3>
+					<h3 className="truncate text-sm font-semibold text-gray-100">
+						{/* Her tile opens the picker, so her name opens her card: it
+						    rings what this race asks of her at the style she runs. */}
+						<PageName
+							href={pages.uma(member.uma)}
+							name={umaLabel}
+							hover={hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) })}
+						/>
+					</h3>
 					{course && uma && (
 						<AptitudeLetters
 							// Her veteran's letters once one is linked: inheritance may have fixed a D.
@@ -272,6 +292,7 @@ function MemberPanel({
 				<UmaDropSpot position={position} className="row-span-2 min-w-0 sm:row-span-1">
 					<Tile
 						art={uma?.portrait ?? uma?.image ?? null}
+						layers={uma?.portrait_layers}
 						framed
 						large
 						starred={starred("uma", member.uma)}
@@ -296,10 +317,13 @@ function MemberPanel({
  */
 function Tile({
 	art,
+	layers,
 	label,
 	onClick,
 	empty,
 	caption,
+	captionHref = null,
+	captionHover,
 	shape = "square",
 	card,
 	framed = false,
@@ -315,10 +339,19 @@ function Tile({
 	className = "",
 }: {
 	art: string | null | undefined
+	/** A framed uma's layered art (FramedUma `layers`). */
+	layers?: PortraitLayers | null
 	label: string
 	onClick: () => void
 	empty: ReactNode
 	caption?: string
+	/** The caption's Encyclopedia page: the name becomes a link. Null: plain text. */
+	captionHref?: string | null
+	/**
+	 * The card's attributes (utils/hoverCards.ts) for the caption's name link:
+	 * the tile's own click opens the picker, so the name opens the card.
+	 */
+	captionHover?: Record<string, string>
 	/** "card" is the support art's 3:4; the default is the portrait's square. */
 	shape?: "square" | "card"
 	/** A support card: drawn as the game draws it (FramedCard), its art from the card itself. */
@@ -364,7 +397,7 @@ function Tile({
 					}`}
 				>
 					{filled && framed ? (
-						<FramedUma src={art} oshi={favorite} className="w-full" />
+						<FramedUma src={art} layers={layers} oshi={favorite} className="w-full" />
 					) : filled && card ? (
 						<FramedCard card={card} className="h-full w-full" />
 					) : filled ? (
@@ -407,12 +440,36 @@ function Tile({
 					className={`mt-1 hidden truncate text-center text-[11px] leading-tight sm:block ${
 						filled ? "text-gray-300" : "text-gray-500"
 					}`}
-					title={caption}
+					title={captionHref ? undefined : caption}
 				>
-					{caption}
+					<PageName href={captionHref} name={caption} hover={captionHover} />
 				</p>
 			)}
 		</div>
+	)
+}
+
+/**
+ * A name that links to its Encyclopedia page when it has one (the Rankings
+ * pattern, EncyclopediaName), else the same text. It inherits the size and
+ * colour of the line it sits in, so the header and the caption keep their look
+ * and only the hover says it's a link. Shared with CompactTeamGrid.
+ *
+ * With `hover` (hoverCardProps) a mouse click opens the uma's or card's card
+ * instead, and the card's "Open its page" goes on to the page. The team's
+ * tiles can't open it themselves: their click opens the picker.
+ */
+export function PageName({ href, name, hover }: { href: string | null; name: string; hover?: Record<string, string> }) {
+	if (!href) return <>{name}</>
+	return (
+		<Link
+			to={href}
+			{...hover}
+			title={hover ? `${name}: ${CARD_LINK_TITLE.toLowerCase()}` : `Open ${name} in the Encyclopedia`}
+			className="transition-colors hover:text-brand hover:underline"
+		>
+			{name}
+		</Link>
 	)
 }
 

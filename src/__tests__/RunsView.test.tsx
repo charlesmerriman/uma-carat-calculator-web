@@ -445,6 +445,16 @@ describe("the finals", () => {
 		// The team the last ticket ran, never "Same three as" (owner, 2026-11-12).
 		expect(within(finals).getAllByRole("button", { name: /^Use / })[0]).toHaveTextContent("Use Team 1")
 	})
+
+	it("offers a button per team, as a ticket does", async () => {
+		// Daptrius, board "CM Runs, Finals Team select", 2026-11-17: only the last team showed.
+		teams.list = [TEAM, { ...TEAM, key: "t2", id: 2, name: "Plan B", members: TEAM.members.slice(0, 2) }]
+		show()
+		fireEvent.click(await screen.findByRole("tab", { name: /Finals/ }))
+		const finals = screen.getByRole("region", { name: "Finals" })
+		expect(within(finals).getByRole("button", { name: "Use Team 1" })).toBeTruthy()
+		expect(within(finals).getByRole("button", { name: "Use Plan B" })).toBeTruthy()
+	})
 })
 
 describe("veterans", () => {

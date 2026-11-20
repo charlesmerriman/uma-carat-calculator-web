@@ -11,6 +11,7 @@
  */
 
 import type { AptitudeKey } from "./pvpTeam"
+import type { PortraitLayers } from "./portraitLayers"
 
 /** A running style as a guide uses it. "everyone" is the whole team. */
 export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end"
@@ -22,7 +23,8 @@ export type PvpStyle = "everyone" | "runaway" | "front" | "pace" | "late" | "end
  */
 export type PvpStyleTab = Exclude<PvpStyle, "everyone"> | "all"
 
-export type PvpSkillCategory = "acceleration" | "speed" | "green" | "recovery" | "debuff" | "other"
+/** How a guide groups its skills (backend PvpSkillCategory). `early_mid` and `late` are Henry's of 2026-11-13. */
+export type PvpSkillCategory = "acceleration" | "early_mid" | "late" | "speed" | "green" | "recovery" | "debuff" | "other"
 
 /** Small embedded catalogue objects. Ids are the site's, not the game's. */
 export interface PvpUmaRef {
@@ -31,6 +33,8 @@ export interface PvpUmaRef {
 	image: string | null
 	/** The borderless art, drawn in the site's frame (FramedUma). Optional for older fixtures. */
 	portrait?: string | null
+	/** The layered art, or null (types/portraitLayers.ts). */
+	portrait_layers?: PortraitLayers | null
 	/**
 	 * Its ten aptitudes, 1..8 (G..S) or null, as /pvp-catalogue sends them: the
 	 * guide prints this course's distance and the row's style as letters.
@@ -86,6 +90,18 @@ export type SkillAvailability = "global" | "announced" | "jp"
 export interface SkillPhrase {
 	text: string
 	raw: boolean
+	/** An effect whose number scales: the bands behind its range, for the skill page's table. */
+	scaling?: SkillScaling
+}
+
+/**
+ * What a scaling number or duration depends on, band by band (the API's
+ * skill_scaling.py): `heading` names the left column ("Fans"), each row the
+ * band ("Under 20,000") and the skill's number in it ("+0.28", "5 s").
+ */
+export interface SkillScaling {
+	heading: string
+	rows: { when: string; value: string }[]
 }
 
 /** A condition: every phrase in `all`, and one of the `any` lists (none when empty). */
@@ -102,6 +118,8 @@ export interface SkillSlot {
 	effects: SkillPhrase[]
 	/** "2.4 s", "Whole race", or null for an instant effect. */
 	duration: string | null
+	/** The bands behind a duration that scales; absent when the time is fixed. */
+	duration_scaling?: SkillScaling
 	/** "Once per race", "30 s", or null. */
 	cooldown: string | null
 }
@@ -112,6 +130,13 @@ export interface SkillReadable {
 	wit_check: boolean | null
 	/** False when any phrase is raw. */
 	complete: boolean
+	/**
+	 * True when a later slot waits for the first to fire, so the slots run one
+	 * after the other ("Part 1, 2"); false when they are alternatives, the
+	 * first whose conditions hold firing ("Trigger 1, 2"). Absent from an
+	 * older API. slotLabel() reads it.
+	 */
+	chained?: boolean
 	slots: SkillSlot[]
 }
 
@@ -125,6 +150,8 @@ export interface PvpSkillSources {
 
 export interface PvpSkillRef {
 	id: number
+	/** The game's id: the skill's Encyclopedia page. Absent from an older API and on an editor-built ref. */
+	game_id?: number | null
 	name: string
 	/** The game's own description: what the chip shows on hover. */
 	description: string
@@ -155,6 +182,10 @@ export interface PvpSkillRef {
 	uses_translation?: boolean
 	readable?: SkillReadable
 	sources?: PvpSkillSources
+	/** Skill points; null for a unique. Absent from an API older than the visual overhaul. */
+	cost?: number | null
+	/** The Skills list's type key ("velocity"), worded by SKILL_TYPE_WORDS. Absent like `cost`. */
+	type?: string
 }
 
 export interface PvpStatConfig {

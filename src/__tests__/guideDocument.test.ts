@@ -6,6 +6,7 @@ import type { Scenario } from "../types"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 import {
 	LIMIT_BREAK_NEEDS_CARD,
+	editorTabsFor,
 	errorsByTab,
 	hydrateGuide,
 	mentionsIn,
@@ -13,6 +14,7 @@ import {
 	rowsByTab,
 	tabForPath,
 	toPayload,
+	uniqueOwners,
 	validateDocument,
 } from "../utils/guideDocument"
 import {
@@ -222,12 +224,21 @@ describe("missingSummary and payload", () => {
 	it("says what the guide lacks, with where to go", () => {
 		const doc = document()
 		const items = missingSummary(doc)
-		expect(items.map((item) => item.text)).toEqual(["End: no advice, no decks.", "Nothing yet for Runaway, Pace, Late."])
+		// No Runaway in the nag: the editor offers that tab only to a guide that already uses it.
+		expect(items.map((item) => item.text)).toEqual(["End: no advice, no decks.", "Nothing yet for Pace, Late."])
 		expect(items[0]).toMatchObject({ tab: "end", section: "style_notes" })
 		expect(missingSummary({ ...doc, stat_configs: [], uma_recommendations: [], style_notes: [], decks: [], skill_recommendations: [] }).map((item) => item.text)).toEqual([
 			"No recommended stats yet.",
 			"No style has anything yet. Pick a tab and add rows.",
 		])
+	})
+
+	it("offers a Runaway tab only to a guide that already has a runaway row", () => {
+		expect(editorTabsFor(document())).toEqual(["guide", "front", "pace", "late", "end"])
+		const withRunaway = { ...document(), style_notes: [{ style: "runaway" as const, body: "Lead early." }] }
+		expect(editorTabsFor(withRunaway)).toEqual(["guide", "runaway", "front", "pace", "late", "end"])
+		// And then the nag names it again when it lacks something.
+		expect(missingSummary(withRunaway).map((item) => item.text)).toContain("Runaway: no umas, no decks.")
 	})
 
 	it("strips what the server owns from a save", () => {
@@ -295,5 +306,21 @@ describe("edits", () => {
 		expect(copied.decks[1].slots).toHaveLength(3)
 		const fromTeam = deckFromCards("late", "Henry's", [{ slot: 1, support_card: 302 }, { slot: 6, support_card: 303 }])
 		expect(fromTeam.slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[1, false], [6, true]])
+	})
+})
+
+describe("uniqueOwners", () => {
+	it("names a unique's outfit on its inherited copy too, the way the API does", () => {
+		const catalogue = {
+			umas: [{ id: 5, name: "Fuji Kiseki", skills: [{ skill: 11, source: "unique" }] }],
+			support_cards: [],
+			skills: [
+				{ id: 11, game_id: 110331, name: "Lights of Vaudeville" },
+				{ id: 12, game_id: 910331, name: "Lights of Vaudeville" },
+				{ id: 13, game_id: 919991, name: "No Unique Here" },
+			],
+		} as unknown as PvpCatalogue
+		const owners = uniqueOwners({ catalogue } as PvpCatalogueIndex)
+		expect([owners.get(11), owners.get(12), owners.get(13)]).toEqual(["Fuji Kiseki", "Fuji Kiseki", undefined])
 	})
 })

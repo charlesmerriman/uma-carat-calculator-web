@@ -2,6 +2,9 @@ import { useLocation } from "react-router-dom"
 import { useDocumentMeta } from "../hooks/useDocumentMeta"
 import { useSiteContent } from "../services/SiteContentContext"
 import { isPublicId } from "../utils/appRoutes"
+import { useEncyclopediaPage, type EncyclopediaPageState } from "../services/encyclopediaQueries"
+import { encyclopediaPageOf, type EncyclopediaPageKind } from "../utils/encyclopediaRoutes"
+import { cardPageMeta, skillPageMeta, umaPageMeta } from "../utils/encyclopediaMeta"
 
 /**
  * The owner of the /app routes' document titles and descriptions. Renders nothing.
@@ -17,6 +20,10 @@ import { isPublicId } from "../utils/appRoutes"
  * the whole of the loading spinner; now it reads "Calculator | …" from the
  * first frame.)
  *
+ * The Encyclopedia's detail pages render outside that gate (they need nothing
+ * from /calculator-data to draw), but their titles live here too, built from
+ * the page's own cached payload, so a build-time render carries them.
+ *
  * Until 2026-09-13 this component also rendered a short "how to read this"
  * block under each page. That prose was removed at the owner's request; the
  * guide and the FAQ carry the explanations, and the head tags carry the route.
@@ -28,7 +35,9 @@ interface RouteMeta {
 	description: string
 }
 
-type AppPath = "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection" | "/app/rankings"
+type AppPath =
+	| "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection"
+	| "/app/rankings" | "/app/umas" | "/app/cards"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -70,11 +79,54 @@ const META: Record<AppPath, RouteMeta> = {
 		title: "Rankings",
 		description: "Which Uma Musume support cards and umas the PvP guides recommend most, across every guide or the next few events.",
 	},
+	// The Encyclopedia's three lists name it in the title and the description:
+	// their built documents hold the app shell, so the head is the only place
+	// a search engine reads the word (owner, 2026-11-18: "the encyclopedia
+	// itself" must be findable). The wording is the owner's to change.
 	"/app/skills": {
-		title: "Skills",
+		title: "Encyclopedia: Skills",
 		description:
-			"Every Uma Musume skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
+			"The Uma Musume Encyclopedia's skill list. Every skill on global and in JP: when it activates, what it does, and which umas and support cards give it.",
 	},
+	// The Encyclopedia's lists (these two and /app/skills above): public and
+	// prerendered like every tab since 2026-11-18.
+	"/app/umas": {
+		title: "Encyclopedia: Umas",
+		description:
+			"The Uma Musume Encyclopedia: a page for every uma, support card and skill. Every trainee on global and in JP, with aptitudes, stats at every star, skills and banners.",
+	},
+	"/app/cards": {
+		title: "Encyclopedia: Support Cards",
+		description:
+			"The Uma Musume Encyclopedia's support card list. Every card on global and in JP, with its effects at every level, the skills it teaches and its banners.",
+	},
+}
+
+/**
+ * An Encyclopedia page (/app/umas/<id> and its card and skill twins) while its
+ * payload loads: one meta per kind. Once the payload is in the cache the page
+ * gets its own (utils/encyclopediaMeta.ts). A build-time render has it before
+ * the first render (entry-server.ts primes the cache), so a built document
+ * carries the page's own title from the start.
+ */
+const ENCYCLOPEDIA_PAGE_META: Record<EncyclopediaPageKind, RouteMeta> = {
+	uma: { title: "Uma", description: "An Uma Musume trainee: aptitudes, stats, skills and banners." },
+	card: { title: "Support Card", description: "An Uma Musume support card: the skills it teaches and its banners." },
+	skill: { title: "Skill", description: "An Uma Musume skill: when it activates, what it does, and who gives it." },
+}
+
+/** A detail path the API has no page for. Always noindex: the static host answers it with a 200. */
+const MISSING_PAGE_META: RouteMeta = {
+	title: "No such page",
+	description: "There's no Encyclopedia page at this address.",
+}
+
+function encyclopediaMeta(state: EncyclopediaPageState): RouteMeta {
+	if (state.data === null) return MISSING_PAGE_META
+	if (state.data === undefined) return ENCYCLOPEDIA_PAGE_META[state.kind]
+	if (state.kind === "uma") return umaPageMeta(state.data)
+	if (state.kind === "card") return cardPageMeta(state.data)
+	return skillPageMeta(state.data)
 }
 
 /**
@@ -102,6 +154,8 @@ function appPathFor(pathname: string): AppPath | "shared" {
 export const AppRouteMeta = () => {
 	const { pathname } = useLocation()
 	const content = useSiteContent()
+	// The same cache entry the detail page reads, so the two share one request.
+	const encyclopedia = useEncyclopediaPage(encyclopediaPageOf(pathname))
 	const path = appPathFor(pathname)
 
 	// The Legend Races tab's title and description are the team's to write,
@@ -119,20 +173,25 @@ export const AppRouteMeta = () => {
 			: path === "/app/pvp"
 				? content.page("pvp-guides", { optional: true })
 				: null
-	const meta = page
-		? { title: page.title, description: page.meta_description }
-		: path === "shared"
-			? SHARED_PLAN_META
-			: META[path]
+	const meta = encyclopedia
+		? encyclopediaMeta(encyclopedia)
+		: page
+			? { title: page.title, description: page.meta_description }
+			: path === "shared"
+				? SHARED_PLAN_META
+				: META[path]
 
-	// The Skills page is shelved to guide editors (useSkillsPreview): noindex,
-	// like a shared plan, and not prerendered, until it is picked up again.
-	// The Collection is one player's account, so it never should be, and
-	// Rankings is behind early access.
+	// noindex: an Encyclopedia address with no page behind it, a shared plan,
+	// the Collection (one player's account) and Rankings (behind early access).
+	// Every real Encyclopedia page is indexed: the build writes each one as a
+	// document with its own title and lists it in sitemap-encyclopedia.xml
+	// (scripts/prerender.mjs). A page newer than the last build rides the
+	// spa.html shell until the next one, unblocked.
+	const encyclopediaNoindex = encyclopedia !== null && encyclopedia.data === null
 	useDocumentMeta(
 		meta.title,
 		meta.description,
-		path === "shared" || path === "/app/skills" || path === "/app/collection" || path === "/app/rankings"
+		encyclopediaNoindex || path === "shared" || path === "/app/collection" || path === "/app/rankings"
 	)
 	return null
 }

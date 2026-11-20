@@ -28,6 +28,9 @@ import { DraggableCard, DraggableUma } from "./CardDrag"
 import { FramedUma } from "../FramedUma"
 import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { OpenPageLink } from "../EncyclopediaLinks"
+import type { PortraitLayers } from "../../types/portraitLayers"
 
 /** One button in a pick's action row. A disabled one says why. */
 export interface PickButton {
@@ -74,6 +77,10 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 	const toggle = (key: string) => setOpenKey((current) => (current === key ? null : key))
 	const onTeamUmas = new Set(members.map((member) => member.uma))
 	const onTeamCards = new Set(members.flatMap((member) => member.cards.map((card) => card.support_card)))
+	// Each pick's Encyclopedia page (early access), linked from its action row:
+	// the tile itself is a button (and a drag handle), and at four a row it has
+	// no room for a corner button.
+	const pages = useEncyclopediaHrefs()
 
 	if (guideState.status === "loading" || guideState.status === "idle") {
 		return (
@@ -102,7 +109,7 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							umaDrag: draggable ? { umaId: pick.ref.id, style: memberStyleFrom(pick.styles) } : undefined,
 							name: pick.ref.name,
 							image: pick.ref.image,
-							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image },
+							uma: { id: pick.ref.id, portrait: pick.ref.portrait ?? pick.ref.image, portrait_layers: pick.ref.portrait_layers },
 							card: null,
 							detail: describe(pick.styles, pick.notes),
 							stars: pick.stars,
@@ -110,6 +117,7 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							actions: () => actions.uma(pick.ref.id, pick.styles),
 							emptyHint: null,
 							note: actions.note?.("uma", pick.ref.id) ?? null,
+							page: pages.uma(pick.ref.id),
 						}))}
 						shape="square"
 						openKey={openKey}
@@ -137,6 +145,7 @@ export function GuidePicksBody({ guideState, members, actions, draggable = false
 							actions: () => actions.card(pick.ref.id),
 							emptyHint: actions.emptyCardHint,
 							note: actions.note?.("support", pick.ref.id) ?? null,
+							page: pages.card(pick.ref.id),
 						}))}
 						shape="card"
 						openKey={openKey}
@@ -166,7 +175,7 @@ interface PickItem {
 	name: string
 	image: string | null
 	/** Set for an uma: drawn in the site's frame (FramedUma), the rainbow one for a favorite. */
-	uma: { id: number; portrait: string | null } | null
+	uma: { id: number; portrait: string | null; portrait_layers?: PortraitLayers | null } | null
 	/** Set for a support card: drawn as the game draws it (FramedCard). */
 	card: FramedCardArt | null
 	detail: string
@@ -177,6 +186,8 @@ interface PickItem {
 	emptyHint: string | null
 	/** "Out 2026/11/5, during this event", or null. */
 	note: string | null
+	/** Its Encyclopedia page (useEncyclopediaHrefs), or null for none to open. */
+	page: string | null
 }
 
 /** Four tiles a row, with the open pick's action row after its row. */
@@ -191,7 +202,8 @@ function PickGrid({ items, shape, openKey, onToggle, onDone }: {
 	// The last tile of the open pick's row (or of the list, on a short last row).
 	const rowEnd = openIndex < 0 ? -1 : Math.min(Math.floor(openIndex / COLUMNS) * COLUMNS + COLUMNS - 1, items.length - 1)
 	return (
-		<ul className="grid grid-cols-4 gap-1.5">
+		// gap-y-3.5 for umas: a row's layered ears (a sixth of the tile, FramedUma) rise into the gap.
+		<ul className={`grid grid-cols-4 gap-x-1.5 ${shape === "square" ? "gap-y-3.5" : "gap-y-1.5"}`}>
 			{items.map((item, index) => (
 				<Fragment key={item.key}>
 					<PickTile item={item} shape={shape} open={item.key === openKey} onClick={() => onToggle(item.key)} />
@@ -237,7 +249,7 @@ function PickTile({ item, shape, open, onClick }: {
 						}
 					>
 						{item.uma ? (
-							<FramedUma src={item.uma.portrait} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
+							<FramedUma src={item.uma.portrait} layers={item.uma.portrait_layers} alt={item.name} oshi={oshiIds.has(item.uma.id)} className="w-full" />
 						) : item.card ? (
 							<FramedCard card={item.card} alt={item.name} className="w-full" />
 						) : item.image ? (
@@ -288,7 +300,10 @@ function ActionRow({ item, onDone }: { item: PickItem; onDone: () => void }) {
 	const rows = item.actions()
 	return (
 		<li className="col-span-4 rounded-lg border border-brand/40 bg-gray-900/80 p-2" aria-label={`Add ${item.name}`}>
-			<p className="mb-1.5 truncate text-xs font-semibold text-gray-100">Add {item.name}</p>
+			<div className="mb-1.5 flex items-baseline gap-2">
+				<p className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-100">Add {item.name}</p>
+				<OpenPageLink href={item.page} className="shrink-0" />
+			</div>
 			{item.note && <p className="-mt-1 mb-1.5 text-[11px] font-medium text-brand">{item.note}</p>}
 			{rows.length === 0 ? (
 				<p className="text-xs text-gray-400">{item.emptyHint}</p>

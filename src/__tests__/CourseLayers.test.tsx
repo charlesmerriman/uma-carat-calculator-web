@@ -189,6 +189,31 @@ describe("the course map's layers", () => {
 		expect(await screen.findByText("No skill here matches that.")).toBeInTheDocument()
 	})
 
+	it("offers Show all once the map's height cuts the rows off, and Show fewer after", async () => {
+		mockAccelFetch()
+		const { unmount } = render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+		fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+		await screen.findByRole("list", { name: "Accels on this course" })
+		// Three rows that all fit: nothing to show more of.
+		expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull()
+		unmount()
+		act(() => setAccelsOpen(false))
+		// jsdom lays nothing out, so say the rows are taller than their box, as
+		// they are beside a short strip.
+		vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} })
+		vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(500)
+		try {
+			render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })
+			fireEvent.click(screen.getAllByRole("button", { name: "Accels" })[0])
+			await screen.findByRole("list", { name: "Accels on this course" })
+			// Fewer than the first eight, yet cut off: the button is the way to them.
+			fireEvent.click(screen.getByRole("button", { name: "Show all 3" }))
+			expect(screen.getByRole("button", { name: "Show fewer" })).toBeInTheDocument()
+		} finally {
+			vi.unstubAllGlobals()
+		}
+	})
+
 	it("switches to the speed skills, ranked by the API's speed score", async () => {
 		mockAccelFetch()
 		render(<CourseSection course={CHUKYO_1200} />, { wrapper: TestQueryProvider })

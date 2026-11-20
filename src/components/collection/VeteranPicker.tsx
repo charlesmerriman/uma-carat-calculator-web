@@ -27,7 +27,7 @@ const BUTTON =
 	"mt-1 w-full max-w-full truncate rounded-md border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-left text-[11px] text-gray-200 transition hover:border-brand hover:text-brand"
 
 export function VeteranPicker({ uma, value, veterans, oshi, onChange, buttonClassName = BUTTON }: {
-	uma: Pick<CatalogueUma, "id" | "name" | "portrait" | "image"> | undefined
+	uma: Pick<CatalogueUma, "id" | "name" | "portrait" | "portrait_layers" | "image"> | undefined
 	/** The linked veteran's id, or null. */
 	value: number | null | undefined
 	veterans: TrainedUma[]
@@ -75,7 +75,7 @@ function veteranName(veteran: TrainedUma, uma: Pick<CatalogueUma, "name">): stri
 }
 
 function PickerOverlay({ uma, options, value, oshi, onPick, onClose }: {
-	uma: Pick<CatalogueUma, "name" | "portrait" | "image">
+	uma: Pick<CatalogueUma, "name" | "portrait" | "portrait_layers" | "image">
 	options: TrainedUma[]
 	value: number | null
 	oshi: boolean
@@ -133,7 +133,7 @@ function PickerOverlay({ uma, options, value, oshi, onPick, onClose }: {
 						return (
 							<li key={veteran.id}>
 								<button type="button" aria-pressed={veteran.id === value} onClick={() => onPick(veteran.id)} className={choice(veteran.id === value)}>
-									<FramedUma src={uma.portrait ?? uma.image} oshi={oshi} alt="" className="w-12 shrink-0" />
+									<FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshi} alt="" className="w-12 shrink-0" />
 									<span className="min-w-0 flex-1">
 										<span className="block truncate text-sm font-semibold text-gray-100">
 											{veteranName(veteran, uma)}

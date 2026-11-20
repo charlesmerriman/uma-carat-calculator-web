@@ -4,15 +4,17 @@
  *
  * WHERE A RESULT GOES
  * -------------------
- * An uma or a support card has no page of its own, so it opens the Timeline on
- * its banner: the next one still to end, else the latest. One with no banner
- * isn't listed, because there is nowhere to send anyone. A race event opens its
- * PvP guide. A skill has no page either (the Skills page is shelved), so it has
- * no `href`: the palette shows what it does and who teaches it instead.
+ * Every uma and card in the PvP catalogue is listed, banner or not, and opens
+ * its own Encyclopedia page; a banner it has stays in the detail line. A skill
+ * opens its page too. For everyone since the Encyclopedia opened (2026-11-18).
+ * A race event opens its PvP guide.
  *
- * Dedicated uma and support card pages are coming (owner, 2026-10-30), with
- * details on every one. When they exist, these results go there, every card
- * gets listed whether or not it has a banner, and skills can follow.
+ * TWO FALLBACKS. Until the catalogue has loaded (or if it fails), an uma or a
+ * card is listed by its banner and opens the Timeline on it: the next one
+ * still to end, else the latest. And a skill with no game id has no page, so
+ * it has no `href`: the palette shows what it does and who teaches it.
+ *
+ * `earlyAccess` decides one thing now: whether Rankings is a page result.
  *
  * WHY FUSE
  * --------
@@ -27,7 +29,12 @@ import { formatDate, parseApiDate } from "./dateFormat"
 import { pvpEventHref, refForRaceEvent, shortEventName } from "./pvpEvent"
 import { timelineFocusHref } from "./timelineFocus"
 import type { AnniversaryEvent, BannerStepUp, BannerSupport, BannerUma, RaceEvent, Scenario } from "../types"
-import type { CatalogueSkill, PvpCatalogue } from "../types/pvpTeam"
+import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
+import { cardLine } from "./encyclopedia"
+import { UMA_LIST_PATH, cardHref, umaHref } from "./encyclopediaRoutes"
+import { skillHref } from "./skillSearch"
+import type { PortraitLayers } from "../types/portraitLayers"
+import { nameMatches } from "./searchText"
 
 export type SearchKind = "page" | "uma" | "card" | "banner" | "event" | "skill"
 
@@ -45,6 +52,8 @@ export interface SearchEntry {
 	image?: string | null
 	/** Set on an uma, so the palette can draw it in the site's frame. */
 	umaId?: number
+	/** An uma's layered art, drawn in her frame (FramedUma `layers`). */
+	layers?: PortraitLayers | null
 	/** Set on a skill: its row in the PvP catalogue. */
 	skillId?: number
 	/** Set on a skill: the game's id, which a query of just that number finds. */
@@ -59,6 +68,9 @@ export interface SearchSources {
 	scenarios: Scenario[]
 	campaigns: AnniversaryEvent[]
 	skills: CatalogueSkill[]
+	/** The PvP catalogue's outfits and cards: the Encyclopedia's entries, early access only. */
+	umas?: CatalogueUma[]
+	cards?: CatalogueSupportCard[]
 }
 
 const page = (title: string, href: string, keywords = ""): SearchEntry => ({
@@ -79,6 +91,8 @@ export function pageEntries(earlyAccess: boolean): SearchEntry[] {
 		page("Legend Races", "/app/legend-races", "daily"),
 		page("PvP", "/app/pvp", "guides teams gallery champions meeting league of heroes"),
 		...(earlyAccess ? [page("Rankings", "/app/rankings", "most used")] : []),
+		page("Encyclopedia", UMA_LIST_PATH, "umas support cards skills characters wiki"),
+		page("Skills", "/app/skills", "encyclopedia"),
 		page("Collection", "/app/collection", "veterans owned cards history"),
 		page("FAQ", "/faq", "questions income help"),
 		page("Changelog", "/changelog", "patch notes updates"),
@@ -117,9 +131,9 @@ const onBanner = (label: string, banner: { banner_timeline: { id: number; end_da
 	href: timelineFocusHref({ kind: "banner", id: banner.banner_timeline.id }),
 })
 
-export function buildSearchEntries(sources: SearchSources, now: Date, earlyAccess: boolean): SearchEntry[] {
-	const entries = pageEntries(earlyAccess)
-
+/** Everyone else's umas and cards: each on its banner, and none without one. */
+function bannerEntries(sources: SearchSources, now: Date): SearchEntry[] {
+	const entries: SearchEntry[] = []
 	for (const { card: uma, banners } of groupByCard(sources.umaBanners, (banner) => banner.umas).values()) {
 		entries.push({
 			id: `uma-${uma.id}`,
@@ -127,6 +141,7 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			title: uma.name,
 			keywords: "",
 			image: uma.portrait ?? uma.image,
+			layers: uma.portrait_layers,
 			umaId: uma.id,
 			...onBanner("Uma banner", pickBanner(banners, now)),
 		})
@@ -140,6 +155,63 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			image: card.image,
 			...onBanner("Support banner", pickBanner(banners, now)),
 		})
+	}
+	return entries
+}
+
+/**
+ * Early access's umas and cards: every one in the catalogue, opening its
+ * Encyclopedia page. The detail line names its banner when it has one, else
+ * says where it is out. A card's title is a keyword, since many share a name.
+ */
+function encyclopediaEntries(
+	sources: SearchSources, umas: CatalogueUma[], cards: CatalogueSupportCard[], now: Date,
+): SearchEntry[] {
+	const umaBanners = groupByCard(sources.umaBanners, (banner) => banner.umas)
+	const cardBanners = groupByCard(sources.supportBanners, (banner) => banner.support_cards)
+	const where = (onGlobal: boolean | undefined) => (onGlobal === false ? " · JP only" : "")
+	const entries: SearchEntry[] = []
+	for (const uma of umas) {
+		if (uma.game_id == null) continue
+		const banners = umaBanners.get(uma.id)?.banners
+		entries.push({
+			id: `uma-${uma.id}`,
+			kind: "uma",
+			title: uma.name,
+			// The outfit's title, Global's or UmaTL's, so a title finds it as a card's does, and
+			// its ids, as a skill's (board "Add Searchable Aliases", 2026-11-17).
+			keywords: [uma.title, uma.game_id, uma.character_id].filter((part) => part != null && part !== "").join(" "),
+			image: uma.portrait ?? uma.image,
+			layers: uma.portrait_layers,
+			umaId: uma.id,
+			detail: banners ? onBanner("Uma banner", pickBanner(banners, now)).detail : `Uma${where(uma.on_global)}`,
+			href: umaHref(uma.game_id),
+		})
+	}
+	for (const card of cards) {
+		if (card.game_id == null || card.placeholder) continue
+		const banners = cardBanners.get(card.id)?.banners
+		const line = [card.title, cardLine(card)].filter(Boolean).join(" · ")
+		entries.push({
+			id: `card-${card.id}`,
+			kind: "card",
+			title: card.name,
+			keywords: [card.title, card.game_id, card.character_id].filter((part) => part != null && part !== "").join(" "),
+			image: card.image,
+			detail: banners ? `${line} · ${onBanner("Support banner", pickBanner(banners, now)).detail}` : `${line}${where(card.on_global)}`,
+			href: cardHref(card.game_id),
+		})
+	}
+	return entries
+}
+
+export function buildSearchEntries(sources: SearchSources, now: Date, earlyAccess: boolean): SearchEntry[] {
+	const entries = pageEntries(earlyAccess)
+
+	if (sources.umas && sources.cards) {
+		entries.push(...encyclopediaEntries(sources, sources.umas, sources.cards, now))
+	} else {
+		entries.push(...bannerEntries(sources, now))
 	}
 	for (const stepUp of sources.stepUps) {
 		entries.push({
@@ -192,6 +264,8 @@ export function buildSearchEntries(sources: SearchSources, now: Date, earlyAcces
 			image: skill.image,
 			skillId: skill.id,
 			gameId: skill.game_id ?? undefined,
+			// Its page; a skill with no game id is read in the palette instead.
+			...(skill.game_id != null ? { href: skillHref(skill.game_id) } : {}),
 		})
 	}
 	return entries
@@ -212,7 +286,12 @@ export function createSearcher(entries: SearchEntry[]): (query: string) => Searc
 		// A skill id: that skill alone. Fuse would score near-miss ids as hits.
 		const id = query.trim()
 		if (/^\d+$/.test(id)) return entries.filter((entry) => entry.gameId === Number(id))
-		return fuse.search(query, { limit: MAX_RESULTS }).map((result) => result.item)
+		// Fuse's ranking first, then any name the shared rule finds that Fuse's
+		// fuzzy score missed ("mr cb" is "Mr. C.B.", utils/searchText.ts).
+		const fuzzy = fuse.search(query, { limit: MAX_RESULTS }).map((result) => result.item)
+		const seen = new Set(fuzzy)
+		const missed = entries.filter((entry) => !seen.has(entry) && nameMatches(query, entry.title))
+		return [...fuzzy, ...missed].slice(0, MAX_RESULTS)
 	}
 }
 

@@ -7,6 +7,8 @@
  */
 
 import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
+import { CARD_LINK_TITLE } from "../../../utils/hoverCards"
 import { Movement, type MovementValue } from "./Movement"
 
 export interface PodiumEntry {
@@ -20,6 +22,10 @@ export interface PodiumEntry {
 	/** count / the leader's count. */
 	fill: number
 	movement?: MovementValue | null
+	/** Its Encyclopedia page (useEncyclopediaHrefs): the whole card opens it. */
+	href?: string | null
+	/** Its card (utils/hoverCards.ts hoverCardProps): a mouse click anywhere on the entry opens it. */
+	hover?: Record<string, string>
 }
 
 export function Podium({ entries, kicker, label }: {
@@ -32,14 +38,34 @@ export function Podium({ entries, kicker, label }: {
 	return (
 		<ol aria-label={label} className="grid gap-2.5 @min-[40rem]:grid-cols-3">
 			{entries.slice(0, 3).map((entry, index) => (
-				<li key={entry.key} className="relative flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-edge bg-gray-800 p-3">
+				<li
+					key={entry.key}
+					// The name's link is stretched over the whole entry, art included, so
+					// the entry itself carries the card: a click anywhere on it lands on
+					// that link, and the layer opens the card in its place.
+					{...entry.hover}
+					className="relative flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-edge bg-gray-800 p-3"
+				>
 					<span className="flex shrink-0">{entry.art}</span>
 					<span className="flex min-w-0 flex-col gap-0.5">
 						<span className="font-display text-[11px] font-bold tracking-wider text-brand">
 							#{index + 1}{kicker ? ` ${kicker}` : ""}
 						</span>
 						<span className="flex min-w-0 items-center gap-1.5">
-							<span className="truncate text-sm font-semibold text-gray-100">{entry.name}</span>
+							{entry.href ? (
+								// A stretched link: its ::after covers the entry (the li is
+								// `relative`), so the whole entry is one click target and
+								// the link's name is the entry's name alone.
+								<Link
+									to={entry.href}
+									title={entry.hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"}
+									className="truncate text-sm font-semibold text-gray-100 transition-colors after:absolute after:inset-0 after:rounded-xl hover:text-brand focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand"
+								>
+									{entry.name}
+								</Link>
+							) : (
+								<span className="truncate text-sm font-semibold text-gray-100">{entry.name}</span>
+							)}
 							<Movement value={entry.movement} />
 						</span>
 						<span className="text-xs tabular-nums text-gray-400">

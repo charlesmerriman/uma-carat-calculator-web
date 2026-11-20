@@ -18,6 +18,7 @@ import { Avatar } from "../../account/Avatar"
 import { FramedUma } from "../../FramedUma"
 import { Wordmark } from "../../Wordmark"
 import { FavoriteHeart } from "../TeamGrid"
+import type { PortraitLayers } from "../../../types/portraitLayers"
 
 /**
  * A PvP team as a picture, made to be posted (notes/team-picture-plan.md; the
@@ -43,7 +44,7 @@ import { FavoriteHeart } from "../TeamGrid"
  * Draws only; the caller picks the team, the options and the account's
  * veterans. Every colour is a theme token, drawn while mounted in the page.
  */
-export function TeamPicture({ event, members, teamName, notes, umasById, cardsById, isFavorite, veterans, ownerName, ownerPicture, now }: {
+export function TeamPicture({ event, members, teamName, notes, umasById, cardsById, isFavorite, veterans, ownerName, ownerPicture, ownerPictureLayers = null, now }: {
 	event: RaceEvent
 	members: PvpTeamMember[]
 	/** The name the player gave the team, or null for an unnamed one ("Team 1" on the bar). */
@@ -61,6 +62,8 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 	ownerName: string | null
 	/** The account's picture (its first favorite uma), under the same box. */
 	ownerPicture: string | null
+	/** The same picture's layered art (FramedUma `layers`). */
+	ownerPictureLayers?: PortraitLayers | null
 	now: Date
 }) {
 	const { kicker, title } = splitEventName(event)
@@ -86,7 +89,7 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 			<header className="relative px-10 pt-9">
 				<div className="flex items-start justify-between gap-8">
 					<div className="flex min-w-0 items-center gap-4">
-						{ownerPicture && <Avatar src={ownerPicture} size="lg" oshi />}
+						{ownerPicture && <Avatar src={ownerPicture} layers={ownerPictureLayers} size="lg" oshi />}
 						<div className="min-w-0">
 							{kicker && <p className="text-[13px] font-bold tracking-[0.12em] text-brand uppercase">{kicker}</p>}
 							<h2 className="font-display mt-1.5 text-[2.375rem] leading-[1.08] font-bold tracking-tight text-gray-50">
@@ -113,7 +116,9 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 
 			<ShapeStrip members={members} umasById={umasById} isFavorite={isFavorite} fill={fill} />
 
-			<div className="relative mx-10 mt-4 grid grid-cols-3 gap-4">
+			{/* mt-8: the members' layered ears (a sixth of each ~252 px portrait, FramedUma)
+			    rise past their columns' tops and would touch the shape strip at mt-4. */}
+			<div className="relative mx-10 mt-8 grid grid-cols-3 gap-4">
 				{positions.map((position) => {
 					const member = memberAt(members, position)
 					const uma = member ? umasById.get(member.uma) : undefined
@@ -224,7 +229,7 @@ function ShapeStrip({ members, umasById, isFavorite, fill }: {
 								style={{ left: `clamp(32px, calc(${STYLE_ON_STRAIGHT[member.style]}% + ${offset}px), calc(100% - 32px))` }}
 							>
 								<Gate position={member.position} className="-top-1.5 -left-1.5 h-[18px] w-[18px] text-[11px]" />
-								<FramedUma src={uma?.portrait ?? uma?.image} oshi={uma ? isFavorite(uma.id) : false} className="w-full" />
+								<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? isFavorite(uma.id) : false} className="w-full" />
 							</div>
 						)
 					})}
@@ -279,7 +284,7 @@ function MemberColumn({ position, member, uma, event, cardsById, favorite, veter
 		<div className="flex flex-col gap-3 rounded-2xl border border-edge bg-(--card-fill) p-3.5 shadow-(--card-shadow)">
 			<div className="relative">
 				<Gate position={position} className="font-display -top-1.5 -left-1.5 h-[34px] w-[34px] text-lg shadow-[0_0_0_4px_var(--card-fill)]" />
-				<FramedUma src={uma?.portrait ?? uma?.image} oshi={favorite} className="w-full" />
+				<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={favorite} className="w-full" />
 				{favorite && <FavoriteHeart className="absolute right-2 bottom-2" />}
 			</div>
 

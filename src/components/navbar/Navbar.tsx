@@ -1,5 +1,6 @@
+import { useRef } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
+import { BookOpen, CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
@@ -12,8 +13,12 @@ import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
 import { useSiteSearch } from "../../hooks/useSiteSearch"
+import { useNavbarHeight } from "../../hooks/useNavbarHeight"
+import { UMA_LIST_PATH, isEncyclopediaPath } from "../../utils/encyclopediaRoutes"
 
 export const Navbar = () => {
+	const navbarRef = useRef<HTMLDivElement>(null)
+	useNavbarHeight(navbarRef)
 	const location = useLocation()
 	// null when rendered outside CalculatorProvider (e.g. on the home page)
 	const calculatorData = useCalculatorDataSafe()
@@ -53,14 +58,15 @@ export const Navbar = () => {
 			<ThemePicker />
 		</>
 	)
-	// A phone has less row than five buttons and the wordmark want, so the gear
-	// holds the theme too. The palette stands in only until the stats load,
-	// while the gear has nothing else to show.
+	// The same buttons on a phone. The gear held the theme too until 2026-11-18
+	// (web #275, to give the wordmark room); the owner wanted them as separate
+	// menus, so the palette is its own button here as well.
 	const phoneControls = (
 		<>
 			{searchButton}
 			<TeamDrawerButton />
-			{calculatorData?.userStatsData ? <SettingsMenu withTheme /> : <ThemePicker />}
+			<SettingsMenu />
+			<ThemePicker />
 		</>
 	)
 
@@ -70,6 +76,7 @@ export const Navbar = () => {
 	const isLegendRaces = location.pathname === "/app/legend-races"
 	const isPvp = location.pathname === "/app/pvp"
 	const isRankings = location.pathname === "/app/rankings"
+	const isEncyclopedia = isEncyclopediaPath(location.pathname)
 
 	const timerIsGoing = calculatorData?.timerIsGoing ?? false
 	// False once this browser has refused to store the guest's plan.
@@ -90,20 +97,25 @@ export const Navbar = () => {
 	// 360px even that truncates, so the words hide there and the icons carry
 	// the bar; the label stays in the accessibility tree (sr-only).
 	//
-	// A sixth tab (Rankings, early access only) takes each cell to about 54px
-	// at 375px, where "Calculator" no longer fits, so with six the words hide
-	// below 390px instead. Both strings are literal so Tailwind sees them.
-	const mobileLabel = showRankings ? "truncate max-[389px]:sr-only" : "truncate max-[359px]:sr-only"
+	// Everyone has six tabs since the Encyclopedia opened (2026-11-18), and
+	// early access a seventh (Rankings). The words hide below 440px and the
+	// Encyclopedia and Rankings labels below 2xl (1536px): the breakpoints
+	// the seven-tab bar was fitted at, kept for six because "Encyclopedia"
+	// is the long label in both and six with it was never measured. Loosen
+	// them for the six-tab bar only after measuring it.
+	const mobileLabel = "truncate max-[439px]:sr-only"
+	const mobileColumns = showRankings ? "grid-cols-7" : "grid-cols-6"
+	const desktopLabel = "sr-only 2xl:not-sr-only"
 	const mobileNavClass = (active: boolean) =>
-		`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
+		`nav-tab flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
-				? "border-brand/50 bg-brand/10 text-brand"
+				? "nav-tab--active border-brand/50 bg-brand/10 text-brand"
 				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 		}`
 	const desktopNavClass = (active: boolean) =>
-		`flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm font-medium transition ${
+		`nav-tab flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm font-medium transition ${
 			active
-				? "border-brand/50 bg-brand/10 text-brand"
+				? "nav-tab--active border-brand/50 bg-brand/10 text-brand"
 				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
 		}`
 
@@ -163,18 +175,22 @@ export const Navbar = () => {
 	// away. html's `scroll-padding-top` (index.css) carries this bar's height so
 	// jump links and deep links land below it rather than under it.
 	// `data-sticky-navbar` is how the PvP page measures it, to pin its own
-	// tabs under it (hooks/usePvpStickyOffsets.ts).
+	// tabs under it (hooks/usePvpStickyOffsets.ts); its height is --navbar-h
+	// for the Encyclopedia's jump bar (hooks/useNavbarHeight.ts).
 	return (
-		<div className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
+		<div ref={navbarRef} className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
-			<nav className="border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
-				<div className="flex h-14 items-center justify-between gap-3 px-3">
+			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
+				{/* Tighter gaps under 360px: signed in, the row holds five buttons
+				    (search, team, gear, palette, profile), and at 320px the 6px gaps
+				    pushed the wordmark onto a third line, clipping "Uma". */}
+				<div className="flex h-14 items-center justify-between gap-2 px-3 min-[360px]:gap-3">
 					<div className="flex min-w-0 items-center">
 						{logo}
 					</div>
 
-					<div className="relative flex shrink-0 items-center gap-1.5">
+					<div className="relative flex shrink-0 items-center gap-1 min-[360px]:gap-1.5">
 						{calculatorData ? (
 							isLoggedIn ? (
 								<>
@@ -216,7 +232,7 @@ export const Navbar = () => {
 				    phone never reaches the cap. Height unchanged, so the
 				    scroll-padding figures in index.css still hold. */}
 				<div className="border-t border-gray-700 px-2 py-2">
-				<div className={`mx-auto grid max-w-[32rem] gap-1 ${showRankings ? "grid-cols-6" : "grid-cols-5"}`}>
+				<div className={`mx-auto grid max-w-[32rem] gap-1 ${mobileColumns}`}>
 					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
 						<CalculatorIcon className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>Calculator</span>
@@ -238,6 +254,10 @@ export const Navbar = () => {
 					<Link to="/app/pvp" className={mobileNavClass(isPvp)} {...prefetchOnIntent}>
 						<Swords className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>PvP</span>
+					</Link>
+					<Link to={UMA_LIST_PATH} className={mobileNavClass(isEncyclopedia)} {...prefetchOnIntent}>
+						<BookOpen className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Encyclopedia</span>
 					</Link>
 					{showRankings && (
 						<Link to="/app/rankings" className={mobileNavClass(isRankings)} {...prefetchOnIntent}>
@@ -261,7 +281,7 @@ export const Navbar = () => {
 			    is the plain edge-to-edge one. One cap for the whole bar, not a
 			    per-page inset: see ui-conventions ("The wordmark sits on the bar's
 			    gutter, capped at the page column"). */}
-			<nav className="hidden border-b border-gray-700 bg-gray-900 px-5 desktop-nav:block">
+			<nav className="site-navbar hidden border-b border-gray-700 bg-gray-900 px-5 desktop-nav:block">
 				<div className="mx-auto grid h-16 max-w-[96rem] grid-cols-[1fr_auto_1fr] items-center">
 					{/* Left: Branding, on the bar's left gutter on every page. Until
 					    2026-09-13 it was indented per page to line the wordmark up with the
@@ -272,7 +292,7 @@ export const Navbar = () => {
 					</div>
 
 					{/* Center: Nav links */}
-					<div className="flex items-center justify-center gap-0.5 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
+					<div className="nav-tabs flex items-center justify-center gap-0.5 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
 						<Link to="/app" className={desktopNavClass(isCalculator)} {...prefetchOnIntent}>
 							<CalculatorIcon className="w-4 h-4" />
 							Calculator
@@ -293,11 +313,16 @@ export const Navbar = () => {
 							<Swords className="h-4 w-4" />
 							PvP
 						</Link>
-						{/* Icon only below xl: a sixth label overflows the bar at 1024px. */}
+						{/* Icon only below 2xl: with its label the bar wrapped at 1440px. */}
+						<Link to={UMA_LIST_PATH} className={desktopNavClass(isEncyclopedia)} title="Encyclopedia" {...prefetchOnIntent}>
+							<BookOpen className="h-4 w-4" />
+							<span className={desktopLabel}>Encyclopedia</span>
+						</Link>
+						{/* The seventh, early access only; an icon below 2xl. */}
 						{showRankings && (
 							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
 								<ListOrdered className="h-4 w-4" />
-								<span className="sr-only xl:not-sr-only">Rankings</span>
+								<span className={desktopLabel}>Rankings</span>
 							</Link>
 						)}
 					</div>

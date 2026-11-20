@@ -7,6 +7,11 @@ import { Timeline } from "../components/timeline/Timeline"
 import { Selectors } from "../components/selectors/Selectors"
 import { DailyLegendRaces } from "../components/legend-races/DailyLegendRaces"
 import { SkillsPage } from "../components/skills/SkillsPage"
+import { SkillPage } from "../components/skills/SkillPage"
+import { UmaListPage } from "../components/encyclopedia/UmaListPage"
+import { UmaPage } from "../components/encyclopedia/UmaPage"
+import { CardListPage } from "../components/encyclopedia/CardListPage"
+import { CardPage } from "../components/encyclopedia/CardPage"
 import { RankingsPage } from "../components/rankings/RankingsPage"
 import { RankingsDock } from "../components/rankings/RankingsDock"
 import { CollectionPage } from "../components/collection/CollectionPage"
@@ -18,10 +23,12 @@ import { loadForecastPlot } from "../components/carat-calculator/loadForecastPlo
 import { AppRouteMeta } from "./AppRouteMeta"
 import { SharedPlanLanding } from "../components/shared-plan/SharedPlanLanding"
 import { isPublicId } from "../utils/appRoutes"
+import { encyclopediaPageOf } from "../utils/encyclopediaRoutes"
 import { PvpTeamsProvider } from "../services/PvpTeamsProvider"
 import { TeamDrawerProvider } from "../services/TeamDrawerProvider"
 import { useTeamDrawer } from "../services/TeamDrawerContext"
 import { TeamDrawer } from "../components/pvp/TeamDrawer"
+import { HoverCardLayer } from "../components/hovercards/HoverCardLayer"
 import { AnimatePresence } from "framer-motion"
 
 /* The page area while the initial fetch is still out. Sized to roughly fill the
@@ -81,6 +88,12 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 	// loads when it first renders instead (its lazy() retries the import).
 	const { pathname } = useLocation()
 	const onCalculator = pathname === "/app" || pathname === "/app/"
+	// An Encyclopedia detail page needs nothing from /calculator-data but its
+	// banners and the hero's dates, which it draws once they land. So it
+	// renders straight away: a player doesn't wait for the megabyte payload,
+	// and a build-time render (which never has it) draws the page itself
+	// instead of the spinner (notes/encyclopedia-open-plan.md, PR 3).
+	const ungated = encyclopediaPageOf(pathname) !== null
 	useEffect(() => {
 		if (onCalculator) void loadForecastPlot().catch(() => {})
 	}, [onCalculator])
@@ -145,9 +158,12 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 						    flex items themselves. flex-1 grows it into the slack; min-height:auto
 						    stops it shrinking below its content, so tall content still scrolls. */}
 						{/* The routed pages mount only once the data is here — they
-						    all assume their collections are populated. */}
+						    all assume their collections are populated. The
+						    Encyclopedia's detail pages are the exception (`ungated`). */}
 						<div className="flex-1">
-							{isLoading ? (
+							{ungated ? (
+								children ?? <Outlet />
+							) : isLoading ? (
 								<PageLoading />
 							) : fetchError ? (
 								<PageError onRetry={retryLoad} />
@@ -167,6 +183,10 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 					{/* The pinned Rankings panel: a window over the page's left side, the
 					    team window's mirror. Behind the gate for the same reason. */}
 					{!isLoading && !fetchError && <RankingsDock />}
+					{/* The uma and support card hover cards: one popup for every page,
+					    opened by any tile with data-hover-card.
+					    Behind the gate like the windows above. */}
+					{!isLoading && !fetchError && <HoverCardLayer />}
 				</div>
 			</TeamDrawerProvider>
 		</PvpTeamsProvider>
@@ -204,6 +224,16 @@ export const ApplicationViews = () => (
 			<Route path="selectors" element={<Selectors />}/>
 			<Route path="legend-races" element={<DailyLegendRaces />}/>
 			<Route path="skills" element={<SkillsPage />}/>
+			{/* The Encyclopedia (notes/encyclopedia-plan.md), open to everyone.
+			    A page is keyed by the game's id (utils/encyclopediaRoutes.ts),
+			    renders outside the loading gate (AppShell's `ungated`), and is
+			    prerendered from the API's index, not PRERENDER_ROUTES
+			    (scripts/prerender.mjs; notes/encyclopedia-open-plan.md). */}
+			<Route path="skills/:gameId" element={<SkillPage />}/>
+			<Route path="umas" element={<UmaListPage />}/>
+			<Route path="umas/:gameId" element={<UmaPage />}/>
+			<Route path="cards" element={<CardListPage />}/>
+			<Route path="cards/:gameId" element={<CardPage />}/>
 			{/* A static path, so it outranks the ":publicId" share route below;
 			    "pvp" is also too short to pass isPublicId. */}
 			<Route path="pvp" element={<PvpGuidePage />}/>

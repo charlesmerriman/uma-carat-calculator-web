@@ -33,6 +33,7 @@ import { useRankingsPayload } from "../../hooks/useRankingsPayload"
 import { useGalleryRankings } from "../../hooks/useGalleryRankings"
 import { usePvpCatalogue, type PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { FramedUma } from "../FramedUma"
 import { STYLE_LABELS, defaultPvpEvent, findEvent, raceEventsInOrder } from "../../utils/pvpGuide"
 import { PVP_EVENT_PARAM, formatPvpEvent, parsePvpEvent, refForRaceEvent, shortEventName, splitEventName } from "../../utils/pvpEvent"
@@ -51,6 +52,7 @@ import { CardBuildList, TrioList, UmaBuildList } from "./TeamLists"
 import { knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
 import { EventStrip } from "./EventStrip"
 import { YourTeam } from "./YourTeam"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
 /** Two lists side by side when both fit at 26rem, else stacked: by the container, like the kit. */
@@ -226,6 +228,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 	previous: string[] | undefined
 }) {
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const known = (row: WinRateRow) => catalogue.umasById.has(row.uma)
 	const rates = winRates(runs)
 	const ranked = rates.ranked.filter(known)
@@ -241,7 +244,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 				place={place}
 				muted={place === null}
 				movement={place === null ? undefined : moves.get(`${entry.uma}-${entry.style}`)}
-				art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(entry.uma)} className={`w-12 ${place === null ? "opacity-60" : ""}`} />}
+				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(entry.uma)} className={`w-12 ${place === null ? "opacity-60" : ""}`} />}
 				name={uma?.name ?? "Unknown uma"}
 				sub={
 					<span>
@@ -253,6 +256,8 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 				tone="win"
 				count={formatShare(entry.rate)}
 				share={<Marks marks={entry.marks} />}
+				href={hrefs.uma(entry.uma)}
+				hover={hoverCardProps("uma", entry.uma)}
 			/>
 		)
 	}
@@ -265,11 +270,7 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 			itemKey={(entry) => `${entry.uma}-${entry.style}`}
 			empty="Not enough runs yet."
 			render={(entry, index) => row(entry, index + 1)}
-			after={
-				unranked.length > 0
-					? unranked.map((entry) => <li key={`${entry.uma}-${entry.style}`}>{row(entry, null)}</li>)
-					: undefined
-			}
+			after={unranked.map((entry) => <li key={`${entry.uma}-${entry.style}`}>{row(entry, null)}</li>)}
 		/>
 	)
 }

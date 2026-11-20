@@ -50,6 +50,7 @@ import { Lens } from "./kit/Lens"
 import { RankRow } from "./kit/RankRow"
 import { parseSection, sectionHref, useVisibleSections, type SectionEntry } from "./sections"
 import { WindowSource, type WindowList } from "./WindowSources"
+import { nameMatches } from "../../utils/searchText"
 
 /** Rows the window shows, and the edge tab watches. */
 const TOP = 10
@@ -177,7 +178,7 @@ function WindowBody({ entry, list, onNavigate }: { entry: SectionEntry; list: Wi
 	const needle = query.trim().toLowerCase()
 	// Search reaches the whole list, not just the ten, and keeps each row's place.
 	const placed = list.rows.map((row, index) => ({ row, place: index + 1 }))
-	const rows = (needle ? placed.filter(({ row }) => row.name.toLowerCase().includes(needle)) : placed).slice(0, TOP)
+	const rows = (needle ? placed.filter(({ row }) => nameMatches(needle, row.name)) : placed).slice(0, TOP)
 
 	return (
 		<div className="flex min-h-0 flex-col gap-2 p-2.5">
@@ -237,7 +238,7 @@ function WindowBody({ entry, list, onNavigate }: { entry: SectionEntry; list: Wi
 					<ol className="flex flex-col divide-y divide-edge">
 						{rows.map(({ row, place }) => (
 							<li key={row.id}>
-								<RankRow compact place={place} art={row.art} name={row.name} movement={row.movement} fill={row.fill} count={row.count} share={row.share} />
+								<RankRow compact place={place} art={row.art} name={row.name} movement={row.movement} fill={row.fill} count={row.count} share={row.share} href={row.href} hover={row.hover} />
 							</li>
 						))}
 					</ol>

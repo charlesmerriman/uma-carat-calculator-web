@@ -104,6 +104,7 @@ import {
 import type { CalculationConstants, RaceEvent } from "../../types"
 import type { CatalogueUma, MemberStyle, PvpTeam } from "../../types/pvpTeam"
 import type { PvpFinalsGroup, PvpRun, PvpRunContent, PvpRunRunner, PvpRunSlot } from "../../types/pvpRun"
+import { hoverCardProps } from "../../utils/hoverCards"
 
 /**
  * A quiet bordered button (Change umas, Skip, Undo). A button that needs another
@@ -961,7 +962,7 @@ function Pip({ race, run, shared }: { race: number; run: PvpRun; shared: Shared 
 		const label = `Race ${race}: ${umaName(shared.umasById, runner)} won`
 		return (
 			<FramedUma
-				src={uma?.portrait ?? uma?.image ?? null}
+				src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 				oshi={runner ? shared.oshiIds.has(runner.uma) : false}
 				alt={label}
 				title={label}
@@ -1002,7 +1003,7 @@ function Faces({ runners, shared, className }: { runners: PvpRunRunner[]; shared
 				return (
 					<FramedUma
 						key={runner.position}
-						src={uma?.portrait ?? uma?.image ?? null}
+						src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 						oshi={shared.oshiIds.has(runner.uma)}
 						className={`${className} shadow-[0_0_0_2px_var(--card-fill)] ${index ? "-ml-2" : ""}`}
 					/>
@@ -1147,8 +1148,9 @@ function LineupBlock({ title, eyebrow, run, choices, shared, onWrite }: {
 							className={`${INSET} flex min-w-0 flex-col items-center gap-1.5 p-1.5 pb-2 text-center sm:flex-row sm:gap-3 sm:pb-1.5 sm:text-left`}
 						>
 							<FramedUma
-								src={uma?.portrait ?? uma?.image ?? null}
+								src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 								oshi={shared.oshiIds.has(runner.uma)}
+								hover={hoverCardProps("uma", runner.uma)}
 								alt={uma?.name ?? ""}
 								className="w-full max-w-24 shrink-0 sm:w-18"
 							/>
@@ -1236,8 +1238,9 @@ function RaceGrid({ title, run, shared, onWrite }: {
 					return (
 						<div key={runner.position} className="flex min-w-0 flex-col items-center gap-0.75 sm:flex-row sm:gap-2 sm:px-0.5">
 							<FramedUma
-								src={uma?.portrait ?? uma?.image ?? null}
+								src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 								oshi={shared.oshiIds.has(runner.uma)}
+								hover={hoverCardProps("uma", runner.uma)}
 								alt=""
 								className="w-7.5 shrink-0 sm:w-8"
 							/>
@@ -1495,13 +1498,20 @@ function TopBody({ run, choices, shared, onWrite }: {
 	)
 }
 
-/** A row with no lineup yet: the first choice in one tap, or the whole list. */
-function LineupStart({ question, eyebrow, choices, shared, onPick }: {
+/**
+ * A row with no lineup yet (the Finals, the Top 96): the first choice in one
+ * tap, or the whole list as cards. With `everyTeam`, a button per team, the
+ * one run last first, as a ticket shows them (Daptrius, board "CM Runs, Finals
+ * Team select", 2026-11-17: the Finals offered only the last team). The Top 96
+ * keeps one button: its choices are long "Same three as..." lines.
+ */
+function LineupStart({ question, eyebrow, choices, shared, onPick, everyTeam = false }: {
 	question: string
 	eyebrow: string
 	choices: LineupChoice[]
 	shared: Shared
 	onPick: (choice: LineupChoice) => void
+	everyTeam?: boolean
 }) {
 	const [picking, setPicking] = useState(false)
 	const first = choices.at(0)
@@ -1520,6 +1530,11 @@ function LineupStart({ question, eyebrow, choices, shared, onPick }: {
 							{startLabel(first)}
 						</button>
 					)}
+					{everyTeam && choices.slice(1).map((choice) => (
+						<button key={choice.key} type="button" className={soft({ size: "min-h-11 px-3 sm:min-h-10" })} onClick={() => start(choice)}>
+							{startLabel(choice)}
+						</button>
+					))}
 					<button type="button" className={soft({ size: "min-h-11 px-3 sm:min-h-10" })} aria-expanded={picking} onClick={() => setPicking((isOpen) => !isOpen)}>
 						Pick a team
 					</button>
@@ -1542,6 +1557,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 				<LineupStart
 					question="Who ran the Finals?"
 					eyebrow="Finals"
+					everyTeam
 					choices={choices}
 					shared={shared}
 					onPick={(choice) => onWrite((current) => withLineup(current, choice))}
@@ -1609,7 +1625,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 							>
 								{runner ? (
 									<FramedUma
-										src={uma?.portrait ?? uma?.image ?? null}
+										src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 										oshi={shared.oshiIds.has(runner.uma)}
 										className="w-7.5 shrink-0 sm:w-8"
 									/>
@@ -1809,8 +1825,9 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 							return (
 								<li key={key} className="flex items-center gap-2.5 sm:gap-3">
 									<FramedUma
-										src={uma?.portrait ?? uma?.image ?? null}
+										src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
 										oshi={oshiIds.has(tally.uma)}
+										hover={hoverCardProps("uma", tally.uma)}
 										alt=""
 										className="w-9.5 shrink-0 sm:w-10.5"
 									/>

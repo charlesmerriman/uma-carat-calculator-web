@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { isCardEligible, isCardSelectable } from "../utils/selectorTickets"
 import type { BannerUma, BannerSupport, Uma, SupportCard } from "../types"
+import type { PortraitLayers } from "../types/portraitLayers"
 
 /** One selectable card, flattened out of the banner catalogues. */
 export interface EligibleCard {
@@ -13,6 +14,8 @@ export interface EligibleCard {
 	 * a support card, which keeps its own art.
 	 */
 	portrait: string | null
+	/** The uma's layered art (FramedUma `layers`); null for a support card. */
+	portrait_layers: PortraitLayers | null
 	/** First JP banner date — the ordering key, and what eligibility is judged on. */
 	firstJpDate: string | null
 }
@@ -29,9 +32,15 @@ export interface EligibleCardCatalogueInput {
 }
 
 /**
- * A spreadsheet's "(All)" row is a non-gacha catch-all, not a banner the
+ * A spreadsheet's "(All)" banner is a non-gacha catch-all, not a banner the
  * calculator presents to users. It carries card links purely for source-data
  * bookkeeping, so those links must not make their cards selectable.
+ *
+ * Judge the BANNER's own name, never its timeline's. A support-only week (a
+ * new SSR with no new uma) has its timeline and uma banner both named "(All)",
+ * while the support banner beside them is a real gacha banner under the card's
+ * name. Testing the timeline hid SSR Sasami Anshinzawa, whose only banner is
+ * one of those, from every selector and step-up (2026-11-18, Daptrius).
  *
  * Exported for the tests — this rule is invisible from outside and is exactly
  * the kind of thing a rewrite drops on the floor.
@@ -96,7 +105,8 @@ export function buildEligibleCardCatalogue({
 
 	const addEligibleCards = <Card extends Uma | SupportCard>(
 		cards: Card[],
-		portraitOf: (card: Card) => string | null
+		portraitOf: (card: Card) => string | null,
+		layersOf: (card: Card) => PortraitLayers | null = () => null
 	): void => {
 		for (const card of cards) {
 			if (seen.has(card.id)) continue
@@ -109,6 +119,7 @@ export function buildEligibleCardCatalogue({
 				label: card.name,
 				image: card.image,
 				portrait: portraitOf(card),
+				portrait_layers: layersOf(card),
 				firstJpDate: card.first_jp_date,
 			})
 		}
@@ -116,12 +127,12 @@ export function buildEligibleCardCatalogue({
 
 	if (pool === "uma") {
 		for (const banner of umaBannerData) {
-			if (!isGachaBanner(banner.banner_timeline.name)) continue
-			addEligibleCards(banner.umas, (uma) => uma.portrait ?? uma.image)
+			if (!isGachaBanner(banner.name)) continue
+			addEligibleCards(banner.umas, (uma) => uma.portrait ?? uma.image, (uma) => uma.portrait_layers ?? null)
 		}
 	} else {
 		for (const banner of supportBannerData) {
-			if (!isGachaBanner(banner.banner_timeline.name)) continue
+			if (!isGachaBanner(banner.name)) continue
 			addEligibleCards(banner.support_cards, () => null)
 		}
 	}

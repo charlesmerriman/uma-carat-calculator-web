@@ -409,29 +409,36 @@ export const IncomeForm = () => {
 	// because the projection's has the skipped rows taken out already.
 	const skippedRaces = upcomingSkipCount(fullIncomeLedger, userStatsData.skipped_race_events, new Date())
 
+	// `kind` is the tile's theme hook (data-income): a theme with kind colours
+	// ties the two ticket counts to Uma and Support (personalityThemes.css).
 	const monthlyItems = [
 		{
 			label: "Carats",
+			kind: "carats",
 			value: monthlyStats.carats,
 			icon: <Carrot className={iconCls} />,
 		},
 		{
 			label: "Uma Tickets",
+			kind: "uma-tickets",
 			value: monthlyStats.umaTickets,
 			icon: <Ticket className={iconCls} />,
 		},
 		{
 			label: "Support Tickets",
+			kind: "support-tickets",
 			value: monthlyStats.supportTickets,
 			icon: <Ticket className={iconCls} />,
 		},
 		{
 			label: "SSR Shards",
+			kind: "ssr-shards",
 			value: monthlyStats.ssrShards,
 			icon: <Star className={iconCls} />,
 		},
 		{
 			label: "SR Shards",
+			kind: "sr-shards",
 			value: monthlyStats.srShards,
 			icon: <Sparkles className={iconCls} />,
 		},
@@ -451,7 +458,7 @@ export const IncomeForm = () => {
 				aria-expanded={isOpen}
 				className="flex w-full cursor-pointer items-center justify-between gap-2 border-b border-gray-700 bg-gray-800/50 px-4 py-3 text-left transition-colors hover:bg-gray-800/80 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
 			>
-				<span className="font-display min-w-0 truncate text-base font-semibold text-gray-100 uppercase tracking-wide">Income &amp; Resources</span>
+				<span className="planner-panel-title font-display min-w-0 truncate text-base font-semibold text-gray-100 uppercase tracking-wide">Income &amp; Resources</span>
 				{/* A title with a chevron beside it reads as a title. The word and the
 				    boxed chevron together read as a control — and this panel starts
 				    CLOSED on a phone, so the header is all there is to go on: if it
@@ -496,7 +503,7 @@ export const IncomeForm = () => {
 							<div className="grid grid-cols-1 gap-4 @income-wide:grid-cols-[3fr_auto_2fr]">
 								{/* Competitive Progress */}
 								<div className="min-w-0">
-									<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="planner-section-title font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Trophy className={iconCls} />
 										Competitive Progress
 									</h3>
@@ -595,7 +602,7 @@ export const IncomeForm = () => {
 
 								{/* Purchases */}
 								<div className="flex min-w-0 flex-col">
-									<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+									<h3 className="planner-section-title font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 										<Gift className={iconCls} />
 										Purchases
 									</h3>
@@ -736,7 +743,7 @@ export const IncomeForm = () => {
 
 						{/* Current Resources */}
 						<div className="border-t border-gray-700 p-3 @income-wide:p-5 @income-wide:border-t-0 @income-wide:border-l">
-							<h3 className="font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
+							<h3 className="planner-section-title font-display font-semibold text-center text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-4">
 								<Diamond className={iconCls} />
 								Current Resources
 							</h3>
@@ -805,7 +812,7 @@ export const IncomeForm = () => {
 					{/* ── Bottom row: Average Monthly Income + Uncap Crystals ── */}
 					<div className="grid grid-cols-1 border-t border-gray-700 @3xl:grid-cols-2 @income-wide:grid-cols-[2fr_1fr]">
 						<div className="p-3 @income-wide:p-5 flex flex-col">
-							<h3 className="font-display font-semibold text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
+							<h3 className="planner-section-title font-display font-semibold text-sm text-gray-200 mb-2 flex items-center justify-center gap-1.5 @income-wide:mb-3">
 								<TrendingUp className={iconCls} />
 								Average Monthly Income
 							</h3>
@@ -833,12 +840,13 @@ export const IncomeForm = () => {
 								{monthlyItems.map((item) => (
 									<div
 										key={item.label}
+										data-income={item.kind}
 										className="flex items-center justify-between gap-2 border-b border-gray-700 bg-gray-900 px-3 py-1.5 last:border-b-0 @income-wide:flex-col @income-wide:justify-center @income-wide:gap-1 @income-wide:p-3 @income-wide:border-b-0 @income-wide:border-r @income-wide:last:border-r-0"
 									>
 										<span className="min-w-0 text-xs text-gray-400 leading-tight @income-wide:text-center">{item.label}</span>
 										<div className="flex shrink-0 items-center gap-1.5 @income-wide:w-full @income-wide:justify-center">
 											<span className="text-brand">{item.icon}</span>
-											<NumberFlow value={item.value} className="text-lg font-bold text-gray-100 @income-wide:text-2xl" />
+											<NumberFlow value={item.value} className="income-value text-lg font-bold text-gray-100 @income-wide:text-2xl" />
 										</div>
 									</div>
 								))}

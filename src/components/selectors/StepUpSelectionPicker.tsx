@@ -24,6 +24,9 @@ import type {
 } from "../../types"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { Link } from "react-router-dom"
+import { nameMatches } from "../../utils/searchText"
 
 interface StepUpSelectionPickerProps {
 	stepUp: BannerStepUp
@@ -61,6 +64,7 @@ export const StepUpSelectionPicker = ({
 	const isUma = poolFor(stepUp) === "uma"
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 
 	const options = useEligibleCardCatalogue({
 		pool: poolFor(stepUp),
@@ -98,9 +102,7 @@ export const StepUpSelectionPicker = ({
 		(selection) => !cardsById.has(cardIdOf(selection) ?? -1)
 	).length
 
-	const matchingOptions = options.filter((option) =>
-		option.label.toLocaleLowerCase().includes(search.toLocaleLowerCase())
-	)
+	const matchingOptions = options.filter((option) => nameMatches(search, option.label))
 
 	const cardSizeClass = isUma ? "h-24 w-24" : "h-24 w-[4.5rem]"
 	const slotSizeClass = isUma ? "h-16 w-16" : "h-16 w-12"
@@ -109,30 +111,40 @@ export const StepUpSelectionPicker = ({
 		const slotNumber = index + 1
 		const card = selection ? cardsById.get(cardIdOf(selection) ?? -1) : undefined
 		const isTargetSlot = selection?.is_target ?? false
+		// A chosen slot's art opens the card's Encyclopedia page (early access).
+		// The candidates below stay pick-only: there a click chooses.
+		const page = card ? (isUma ? hrefs.uma(card.value) : hrefs.card(card.value)) : null
+		const art = card?.portrait ? (
+			<FramedUma src={card.portrait} layers={card.portrait_layers} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
+		) : card ? (
+			<img
+				src={card.image}
+				alt={card.label}
+				loading="lazy"
+				decoding="async"
+				className="h-full w-full object-contain"
+			/>
+		) : null
 
 		return (
-			<div key={slotNumber} className="flex min-w-0 flex-col items-center gap-1">
+			<div key={slotNumber} className={`flex min-w-0 flex-col items-center ${card?.portrait ? "gap-3" : "gap-1"}`}>
 				<span className="flex items-center gap-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-gray-500">
 					{slotNumber}
 					{isTargetSlot && <Star className="h-3 w-3 fill-brand text-brand" />}
 				</span>
 				<div
-					className={`flex ${slotSizeClass} items-center justify-center overflow-hidden rounded border ${
+					className={`flex ${slotSizeClass} items-center justify-center ${card?.portrait ? "" : "overflow-hidden"} rounded border ${
 						isTargetSlot
 							? "border-brand bg-brand/10"
 							: "border-gray-600 bg-gray-900/50"
 					}`}
 				>
-					{card?.portrait ? (
-						<FramedUma src={card.portrait} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
-					) : card ? (
-						<img
-							src={card.image}
-							alt={card.label}
-							loading="lazy"
-							decoding="async"
-							className="h-full w-full object-contain"
-						/>
+					{art && page ? (
+						<Link to={page} title="Open in the Encyclopedia" className="flex h-full w-full items-center justify-center transition hover:brightness-110">
+							{art}
+						</Link>
+					) : art ? (
+						art
 					) : selection ? (
 						// Chosen, but no longer in the eligible catalogue.
 						<span className="px-1 text-center text-[0.6rem] leading-tight text-amber-400">
@@ -197,7 +209,7 @@ export const StepUpSelectionPicker = ({
 				onClick={() => onChange(toggleCard(selections, stepUp, option.value))}
 			>
 				{option.portrait ? (
-					<FramedUma src={option.portrait} oshi={oshiIds.has(option.value)} className="w-24" />
+					<FramedUma src={option.portrait} layers={option.portrait_layers} oshi={oshiIds.has(option.value)} className="w-24" />
 				) : (
 					<img
 						src={option.image}
@@ -247,7 +259,7 @@ export const StepUpSelectionPicker = ({
 							type="search"
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							placeholder="Search cards…"
+							placeholder={isUma ? "Search umas…" : "Search cards…"}
 							className="w-full rounded border border-gray-600 bg-gray-900 py-2 pl-9 pr-3 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-brand"
 						/>
 					</label>

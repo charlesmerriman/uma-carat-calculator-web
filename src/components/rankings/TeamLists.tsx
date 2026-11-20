@@ -19,6 +19,8 @@ import type { ReactNode } from "react"
 import type { TeamSharesData } from "../../types/rankingsTabs"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
+import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
 import { formatShare } from "../../utils/guideRankings"
 import { CardArt } from "./kit/CardArt"
@@ -30,6 +32,7 @@ import { RankedList } from "./kit/RankedList"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
+import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
 
 export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
@@ -42,6 +45,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 	moves?: ReadonlyMap<number, MovementValue>
 }) {
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const umas = knownUmas(counts, catalogue)
 	const leader = umas[0]?.share ?? 0
 	const used = MEMBER_STYLES.filter((style) => umas.some((row) => (row.styles[style] ?? 0) > 0))
@@ -59,7 +63,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 				return (
 					<RankRow
 						place={index + 1}
-						art={<FramedUma src={uma?.portrait ?? uma?.image} oshi={oshiIds.has(row.uma)} className="w-12" />}
+						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-12" />}
 						name={uma?.name ?? "Unknown uma"}
 						movement={moves?.get(row.uma)}
 						sub={sub?.(row.uma)}
@@ -67,6 +71,8 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 						parts={stylesOf(row).map(([style, share]) => stylePart(style, share))}
 						count={formatShare(row.share)}
 						detail={detail?.(row)}
+						href={hrefs.uma(row.uma)}
+						hover={hoverCardProps("uma", row.uma)}
 					/>
 				)
 			}}
@@ -83,6 +89,7 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 	/** Rank movement over the week, by card id. */
 	moves?: ReadonlyMap<number, MovementValue>
 }) {
+	const hrefs = useEncyclopediaHrefs()
 	const cards = counts.cards.filter((row) => catalogue.cardsById.has(row.card))
 	const leader = cards[0]?.share ?? 0
 	return (
@@ -110,6 +117,8 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 						}
 						fill={leader > 0 ? row.share / leader : 0}
 						count={formatShare(row.share)}
+						href={hrefs.card(row.card)}
+						hover={hoverCardProps("card", row.card)}
 					/>
 				)
 			}}
@@ -123,6 +132,7 @@ export function TrioList({ trios, catalogue }: {
 	catalogue: PvpCatalogueIndex
 }) {
 	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	const shown = trios.filter((trio) => trio.umas.every((id) => catalogue.umasById.has(id))).slice(0, 5)
 	if (shown.length === 0) return null
 	return (
@@ -134,9 +144,18 @@ export function TrioList({ trios, catalogue }: {
 						<li key={trio.umas.join("-")} className="flex min-w-0 items-center gap-2.5 px-1">
 							<span className="w-4 shrink-0 text-right font-mono text-xs tabular-nums text-gray-400">{index + 1}</span>
 							<span className="flex shrink-0 gap-1">
-								{umas.map((uma) => (
-									<FramedUma key={uma.id} src={uma.portrait ?? uma.image} oshi={oshiIds.has(uma.id)} className="w-9" />
-								))}
+								{umas.map((uma) => {
+									const face = <FramedUma key={uma.id} src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-9" />
+									const page = hrefs.uma(uma.id)
+									// Each face opens her card; the names beside them stay text.
+									return page ? (
+										<Link key={uma.id} to={page} aria-label={uma.name} title={CARD_LINK_TITLE} className="transition hover:brightness-110" {...hoverCardProps("uma", uma.id)}>
+											{face}
+										</Link>
+									) : (
+										face
+									)
+								})}
 							</span>
 							<span className="flex min-w-0 flex-col">
 								<b className="text-[13px] font-semibold text-gray-100">{umas.map((uma) => uma.name).join(" · ")}</b>
