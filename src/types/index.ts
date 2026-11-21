@@ -98,7 +98,7 @@ export type {
 
 export type { Scenario } from "./scenario"
 export type { DailyLegendRaceRelease, DailyLegendRaceUma } from "./dailyLegendRace"
-export type { StoryEvent, StoryEventCard } from "./storyEvent"
+export type { StoryEvent, StoryEventCard, StoryEventKind, StoryEventUma } from "./storyEvent"
 
 export type {
 	Plan,

@@ -22,6 +22,7 @@ import { useUmaPage } from "../../services/encyclopediaQueries"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { PageSkill, UmaPageData } from "../../types/encyclopedia"
 import { umaReleases } from "../../utils/encyclopediaBanners"
+import { firstEventGivingUma } from "../../utils/storyEvents"
 import { UMA_LIST_PATH, parseGameId } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaFrame } from "./EncyclopediaTabs"
 import {
@@ -197,7 +198,13 @@ export function UmaDetail({ uma }: { uma: UmaPageData }) {
 	// draw once it lands; until then the dates hold their place.
 	const calculator = useCalculatorDataSafe()
 	const datesPending = calculator?.isLoading ?? false
-	const releases = umaReleases(calculator?.umaBannerData ?? [], uma.id)
+	const bannerReleases = umaReleases(calculator?.umaBannerData ?? [], uma.id)
+	// An outfit on no banner (a main story chapter's reward) is dated by the
+	// first event that gives it, as the uma list sorts it (withEventDates).
+	const givenBy = bannerReleases.globalDate ? undefined : firstEventGivingUma(calculator?.storyEventData ?? [], uma.id)
+	const releases = givenBy
+		? { ...bannerReleases, globalDate: givenBy.start_date, predicted: givenBy.is_predicted }
+		: bannerReleases
 	const hasApt = Object.values(uma.apt).some((value) => value != null)
 	const hasStats = hasApt && uma.star_stats.length > 0
 	const style = uma.running_style ? RUNNING_STYLE_WORDS[uma.running_style] : null

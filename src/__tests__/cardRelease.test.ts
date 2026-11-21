@@ -41,6 +41,25 @@ describe("cardRelease", () => {
 		expect(cardReleases([], []).supports.has(427)).toBe(false)
 	})
 
+	it("dates an event's uma outfit by the event's start, beside her banners", () => {
+		// Rhein Kraft (Alt Version) comes from a main story chapter and is on no banner.
+		const umaBanners = [
+			{ banner_timeline: { start_date: "2026-09-01T12:00:00Z" }, umas: [{ id: 1 }] },
+		] as unknown as BannerUma[]
+		const storyEvents = [
+			{ start_date: "2026-10-25T12:00:00Z", cards: [], umas: [{ id: 239 }, { id: 1 }] },
+			// An API older than the kinds sends no `umas`.
+			{ start_date: "2026-10-01T12:00:00Z", cards: [] },
+		] as unknown as Parameters<typeof cardReleases>[2]
+		const releases = cardReleases(umaBanners, [], storyEvents)
+
+		expect(releases.umas.get(239)).toBe(at("2026-10-25T12:00:00Z"))
+		// A banner before the event still wins.
+		expect(releases.umas.get(1)).toBe(at("2026-09-01T12:00:00Z"))
+		// The uma never lands among the support cards.
+		expect(releases.supports.has(239)).toBe(false)
+	})
+
 	it("keeps the earlier of a banner date and a story event date", () => {
 		const supports = [
 			{ banner_timeline: { start_date: "2026-09-01T12:00:00Z" }, support_cards: [{ id: 9 }] },

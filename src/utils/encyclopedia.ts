@@ -8,6 +8,7 @@
 import type { CSSProperties } from "react"
 import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
+import type { StoryEvent } from "../types/storyEvent"
 import type { Status } from "../components/rankings/kit/StatusPill"
 import { CARD_TYPE_LABELS } from "./cardTypes"
 import { formatDate, parseApiDate } from "./dateFormat"
@@ -350,6 +351,37 @@ export function withGameDates(
 		const game = parseApiDate(card.released_at)?.getTime() ?? null
 		// The game's date has passed (the API sends only those), so it is never an estimate.
 		if (game !== null) merged.set(card.id, { global: game, jp: known?.jp ?? null, predicted: false })
+	}
+	return merged
+}
+
+/**
+ * The uma list's dates: the banners' first, else the start of the first event
+ * that gives the outfit (a main story chapter's reward uma is on no banner).
+ * Daptrius, 2026-11-20: sorted by date, Special Week (Commander) and Rhein
+ * Kraft (Alt Version) showed none. The event's date may be the site's estimate,
+ * badged the same way as a banner's. Selectors never read this.
+ */
+export function withEventDates(
+	dates: Map<number, ReleaseDates>,
+	events: readonly Pick<StoryEvent, "start_date" | "is_predicted" | "umas">[],
+): Map<number, ReleaseDates> {
+	// The earliest event per uma first, so the banners' dates are checked once.
+	const fromEvents = new Map<number, { start: number; predicted: boolean }>()
+	for (const event of events) {
+		const start = event.start_date ? parseApiDate(event.start_date)?.getTime() ?? null : null
+		if (start === null || Number.isNaN(start)) continue
+		for (const uma of event.umas ?? []) {
+			const seen = fromEvents.get(uma.id)
+			if (!seen || start < seen.start) fromEvents.set(uma.id, { start, predicted: event.is_predicted })
+		}
+	}
+	const merged = new Map(dates)
+	for (const [id, { start, predicted }] of fromEvents) {
+		const known = merged.get(id)
+		// A banner's date always wins: an event only fills a blank.
+		if (known?.global != null) continue
+		merged.set(id, { global: start, jp: known?.jp ?? null, predicted })
 	}
 	return merged
 }
