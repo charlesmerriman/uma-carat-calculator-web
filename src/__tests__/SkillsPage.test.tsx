@@ -217,7 +217,7 @@ describe("SkillsPage", () => {
 		fireEvent.pointerDown(gourmand, { pointerType: "mouse" })
 		fireEvent.click(gourmand, { detail: 1 })
 		expect(screen.queryByText("The skill's own page")).not.toBeInTheDocument()
-		const open = await screen.findByText("Open its page")
+		const open = await screen.findByText("Open Encyclopedia")
 		expect(open.closest("a")).toHaveAttribute("href", "/app/skills/200002")
 		// A tap pins it too, and the tap's click doesn't follow the link.
 		const corner = screen.getByRole("link", { name: /Corner Adept/ })

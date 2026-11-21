@@ -574,7 +574,7 @@ function FeaturedTile({
 		<Link
 			to={href}
 			// A mouse click anywhere on the tile opens the uma's or the card's
-			// card, whose "Open its page" goes on to this link's page.
+			// card, whose "Open Encyclopedia" goes on to this link's page.
 			{...hoverCardProps(framed ? "uma" : "card", item.id)}
 			aria-label={item.name}
 			aria-describedby={hasPurpose ? overlayId : undefined}

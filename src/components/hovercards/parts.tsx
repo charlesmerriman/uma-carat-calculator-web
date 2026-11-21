@@ -104,9 +104,9 @@ export function CardFoot({ href, credit }: { href: string | null; credit: boolea
 		<div className="skill-card__foot">
 			{credit ? <span>English text: UmaTL fan translation.</span> : <span />}
 			{href && (
-				// Never wraps: beside the UmaTL credit it would break to "Open its / page".
+				// Never wraps: beside the UmaTL credit it would break to "Open / Encyclopedia".
 				<Link to={href} tabIndex={inPopup ? -1 : undefined} className="skill-card__open inline-flex shrink-0 items-center gap-1 whitespace-nowrap transition hover:opacity-80">
-					Open its page
+					Open Encyclopedia
 					<ArrowRight className="h-3 w-3" aria-hidden="true" />
 				</Link>
 			)}

@@ -5,7 +5,7 @@
  * Top to bottom: a header in her character's main colour (her framed
  * portrait, name, title, starting stars and running style), her ten
  * aptitudes with the race's ones ringed, her stats boxed with Growth, her
- * skills, and "Open its page".
+ * skills, and "Open Encyclopedia".
  *
  * It only draws. HoverCardLayer works out which uma, fetches her page and
  * passes it in; the guide's tiles draw it with their note on top (`top`).

@@ -139,7 +139,7 @@ type PvpCardPickerProps = {
 	/** A team slot: remembers the filters for that place. Omitted: they start fresh. */
 	place?: PickerPlace
 	/**
-	 * A book button on each tile that opens its card, whose "Open its page"
+	 * A book button on each tile that opens its card, whose "Open Encyclopedia"
 	 * goes on to the Encyclopedia (early access). Only where leaving loses
 	 * nothing: the team builder and the team window save as they go. Off in
 	 * the guide editor and the veteran form, where a stray click would drop an
@@ -560,7 +560,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 /**
  * Closes the picker when the route's page changes under it. Every way out of
  * a picker with book buttons goes through here: the book followed as a link
- * (a tap, the keyboard) and "Open its page" in the card a click on the book
+ * (a tap, the keyboard) and "Open Encyclopedia" in the card a click on the book
  * opens, which is a link outside the picker. In the team window the picker
  * would otherwise stay open over the page it led to.
  *

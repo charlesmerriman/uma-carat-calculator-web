@@ -137,7 +137,7 @@ describe("the uma card", () => {
 		expect(screen.getByText("103")).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200003")
 		expect(screen.getByText("Lv 3")).toBeInTheDocument()
-		expect(screen.getByRole("link", { name: /Open its page/ })).toHaveAttribute("href", "/app/umas/100101")
+		expect(screen.getByRole("link", { name: /Open Encyclopedia/ })).toHaveAttribute("href", "/app/umas/100101")
 	})
 
 	it("draws the header from the catalogue and a loading line while her page is on its way", () => {
@@ -269,7 +269,7 @@ describe("the hover card layer", () => {
 		// The link's own onClick (a picker's book closes its picker) stays out of it too.
 		expect(ran).not.toHaveBeenCalled()
 		// By its words: the popup is aria-hidden, so it has no role to ask for.
-		await user.click(screen.getByText("Open its page"))
+		await user.click(screen.getByText("Open Encyclopedia"))
 		expect(screen.getByRole("status", { name: "route" })).toHaveTextContent("/app/umas/100101")
 		await waitFor(() => expect(screen.queryByText(META)).toBeNull())
 	})

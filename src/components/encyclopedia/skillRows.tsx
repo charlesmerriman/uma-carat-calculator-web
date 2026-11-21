@@ -18,7 +18,7 @@
  * A CLICK OPENS THE CARD, NOT THE PAGE (Henry, 2026-11-18: "popup first like
  * on pvp page"). Hovering still previews the card, which ignores the pointer.
  * A click or a tap PINS it (useHoverPopup's `pin`): it stays open, takes the
- * pointer, and ends in "Open its page". The row stays a real link, so a
+ * pointer, and ends in "Open Encyclopedia". The row stays a real link, so a
  * ctrl/cmd or middle click opens the page in a new tab, Enter on a focused
  * row follows it, and the prerendered page still links every skill.
  */
@@ -55,7 +55,7 @@ export interface RowSkill {
 /** The card's body: the full skill once fetched, the row's own header until then. */
 function HoverCard({ skill, wanted, pinned }: { skill: RowSkill; wanted: boolean; pinned: boolean }) {
 	const page = useSkillPage(wanted ? skill.game_id : null)
-	// Only a pinned card takes the pointer, so only it offers "Open its page".
+	// Only a pinned card takes the pointer, so only it offers "Open Encyclopedia".
 	if (page.data) return <SkillDetail skill={detailToCardSkill(page.data)} link={pinned} full />
 	return (
 		<>
