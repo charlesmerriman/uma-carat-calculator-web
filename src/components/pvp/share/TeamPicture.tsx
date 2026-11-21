@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react"
+import type { CSSProperties } from "react"
 import { Award, Handshake } from "lucide-react"
 import type { RaceEvent } from "../../../types"
 import type { AptitudeKey, CatalogueSupportCard, CatalogueUma, MemberStyle, PvpNote, PvpNoteColor, PvpTeamMember } from "../../../types/pvpTeam"
@@ -125,7 +125,6 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 					return member ? (
 						<MemberColumn
 							key={position}
-							position={position}
 							member={member}
 							uma={uma}
 							event={event}
@@ -134,7 +133,7 @@ export function TeamPicture({ event, members, teamName, notes, umasById, cardsBy
 							veteran={veterans?.find((candidate) => candidate.id === member.trained_uma) ?? null}
 						/>
 					) : (
-						<OpenSpot key={position} position={position} />
+						<OpenSpot key={position} />
 					)
 				})}
 			</div>
@@ -183,15 +182,6 @@ function styleVars(style: MemberStyle): CSSProperties {
 	return { "--style-color": styleColor(style) } as CSSProperties
 }
 
-/** The numbered badge that ties a column to its face on the strip. */
-function Gate({ position, className, children }: { position: number; className: string; children?: ReactNode }) {
-	return (
-		<span className={`absolute z-10 flex items-center justify-center rounded-full bg-brand font-extrabold text-black ${className}`}>
-			{children ?? position + 1}
-		</span>
-	)
-}
-
 /**
  * One straight of the course with each uma's face where her style runs,
  * Runaway on the left to End on the right (STYLE_ON_STRAIGHT), and the team's
@@ -228,7 +218,6 @@ function ShapeStrip({ members, umasById, isFavorite, fill }: {
 								className="absolute top-1/2 z-[1] w-12 -translate-x-1/2 -translate-y-1/2"
 								style={{ left: `clamp(32px, calc(${STYLE_ON_STRAIGHT[member.style]}% + ${offset}px), calc(100% - 32px))` }}
 							>
-								<Gate position={member.position} className="-top-1.5 -left-1.5 h-[18px] w-[18px] text-[11px]" />
 								<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? isFavorite(uma.id) : false} className="w-full" />
 							</div>
 						)
@@ -255,8 +244,7 @@ function letterTone(value: number | null | undefined): string {
 	return value == null ? "text-gray-500" : value >= 7 ? "text-brand" : value <= 4 ? "text-highlight" : "text-gray-200"
 }
 
-function MemberColumn({ position, member, uma, event, cardsById, favorite, veteran }: {
-	position: number
+function MemberColumn({ member, uma, event, cardsById, favorite, veteran }: {
 	member: PvpTeamMember
 	uma: CatalogueUma | undefined
 	event: RaceEvent
@@ -283,7 +271,6 @@ function MemberColumn({ position, member, uma, event, cardsById, favorite, veter
 	return (
 		<div className="flex flex-col gap-3 rounded-2xl border border-edge bg-(--card-fill) p-3.5 shadow-(--card-shadow)">
 			<div className="relative">
-				<Gate position={position} className="font-display -top-1.5 -left-1.5 h-[34px] w-[34px] text-lg shadow-[0_0_0_4px_var(--card-fill)]" />
 				<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={favorite} className="w-full" />
 				{favorite && <FavoriteHeart className="absolute right-2 bottom-2" />}
 			</div>
@@ -372,11 +359,10 @@ function MemberColumn({ position, member, uma, event, cardsById, favorite, veter
 	)
 }
 
-/** A spot with no uma yet: the column stays, so the numbers still match the strip. */
-function OpenSpot({ position }: { position: number }) {
+/** A spot with no uma yet: the column stays, so the lineup keeps its three places. */
+function OpenSpot() {
 	return (
 		<div className="relative flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-gray-600 text-[15px] text-gray-400">
-			<Gate position={position} className="font-display top-2 left-2 h-[34px] w-[34px] text-lg" />
 			Open spot
 		</div>
 	)
