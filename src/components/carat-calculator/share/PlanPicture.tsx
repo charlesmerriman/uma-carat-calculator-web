@@ -313,11 +313,12 @@ function BannerEntry({ plannerRow, resources, umaBannerData, supportBannerData, 
 			</RailNode>
 
 			<div
-				className={`flex min-h-[5.5rem] items-center gap-4 rounded-xl border border-edge bg-(--card-fill) py-2.5 pr-4 pl-3 shadow-(--card-shadow) ${
+				className={`flex min-h-[5.5rem] items-center gap-4 rounded-xl border border-edge bg-(--card-fill) py-1.5 pr-4 pl-3 shadow-(--card-shadow) ${
 					excluded ? "opacity-60" : ""
 				}`}
 			>
-				<div className="relative flex w-[136px] shrink-0 items-center justify-center gap-1.5">
+				{/* py-1.5 and 152px: the art fills the row (BannerArt `large`). */}
+				<div className="relative flex w-38 shrink-0 items-center justify-center gap-1.5">
 					<BannerArt
 						target={target}
 						userStepUpSelectionData={userStepUpSelectionData}
