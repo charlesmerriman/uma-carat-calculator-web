@@ -7,7 +7,7 @@
  * rarity and type, and when it came out on Global), its training effects at
  * 0LB and at max limit break side by side, plus the player's own limit break
  * when the card is in their Collection (owner, 2026-11-17), its unique effect,
- * the skills it hints and teaches through events, and "Open its page".
+ * the skills it hints and teaches through events, and "Open Encyclopedia".
  *
  * It only draws, like UmaHoverCard: HoverCardLayer fetches the page.
  */

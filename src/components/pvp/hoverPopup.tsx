@@ -102,7 +102,7 @@ export const cardPopupMiddleware = () => [
  * bottom of the window at z-index 1000001: 50px tall on a phone, 90px on a
  * computer (measured on the live site, 2026-11-19). A card is often taller
  * than the room under its tile, so it slides down to the window's bottom
- * edge, and its foot ("Open its page") ended up under the ad: a tap or a
+ * edge, and its foot ("Open Encyclopedia") ended up under the ad: a tap or a
  * click there opened the ad (Daptrius, 2026-11-19).
  *
  * The popups keep clear of it instead of drawing over it: covering an ad
@@ -175,7 +175,7 @@ export interface HoverPopupOptions {
 	/** Hears every open and close (a skill's card lights the course map). */
 	onOpenChange?: (open: boolean) => void
 	/**
-	 * The popup holds something to click (a skill card's "Open its page"), so
+	 * The popup holds something to click (a skill card's "Open Encyclopedia"), so
 	 * the pointer may travel from the tile into it without it closing, and it
 	 * takes clicks. Off by default: a popup that ignores the pointer never
 	 * blocks the tiles under it.
@@ -334,7 +334,7 @@ export function useHoverPopup(
 				// draws its popup inside the tile. Toggling then closed the card
 				// under the finger, and the browser's click, which comes after
 				// the finger lifts, fell through to the page behind it (a guide
-				// card's "Open its page" did nothing on a phone, 2026-11-19).
+				// card's "Open Encyclopedia" did nothing on a phone, 2026-11-19).
 				if (!(event.target instanceof Node && event.currentTarget.contains(event.target))) return
 				if (pin && !open) setPinned(true)
 				setOpen(!open)

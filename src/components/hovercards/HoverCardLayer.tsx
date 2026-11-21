@@ -18,7 +18,7 @@
  *
  *   - on plain art (nothing under the pointer is a link or a button);
  *   - on a link to that same uma's or card's Encyclopedia page. The card
- *     opens instead, and its "Open its page" is the way to the page.
+ *     opens instead, and its "Open Encyclopedia" is the way to the page.
  *
  * A click on anything else (a button that picks, opens a picker or an editor,
  * a link to a post or the Timeline) keeps doing what it did, and no card
@@ -235,7 +235,7 @@ export function HoverCardLayer() {
 			if (parsed && entry) prefetchEncyclopediaPage(queryClient, parsed.kind, entry.gameId, CARD_PAGE_STALE_MS)
 		}
 		const onClick = (event: MouseEvent) => {
-			// The card's own links ("Open its page", a skill) are ordinary links.
+			// The card's own links ("Open Encyclopedia", a skill) are ordinary links.
 			if (inCard(event.target)) return
 			// A new-tab click (Ctrl, a middle button) and a keyboard or screen
 			// reader click (detail 0) keep the link's meaning; so does a tap,
@@ -280,7 +280,7 @@ export function HoverCardLayer() {
 		}
 	}, [refs, queryClient])
 
-	// "Open its page", a skill chip, or any other navigation ends the card.
+	// "Open Encyclopedia", a skill chip, or any other navigation ends the card.
 	const { key: locationKey } = useLocation()
 	useEffect(() => closeRef.current(), [locationKey])
 

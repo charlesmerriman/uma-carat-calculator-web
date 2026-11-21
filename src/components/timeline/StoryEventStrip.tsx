@@ -173,10 +173,10 @@ function FreeUmaTile({ uma, eventName, oshi }: { uma: StoryEventUma; eventName: 
  *
  *   - on a computer, a click opens the site's shared hover card (hoverCardProps,
  *     drawn by HoverCardLayer, the same card every other tile opens), whose
- *     "Open its page" goes to the page; from the keyboard the link goes
+ *     "Open Encyclopedia" goes to the page; from the keyboard the link goes
  *     straight there;
  *   - on a touch screen, which that layer ignores, a tap opens the SAME card
- *     (HoverCardContent) in this row's own popup, its "Open its page" inside,
+ *     (HoverCardContent) in this row's own popup, its "Open Encyclopedia" inside,
  *     and never navigates (owner, 2026-11-17: the Timeline's cards get the
  *     same hover cards, and on a phone a tap opens it). A banner tile does the
  *     opposite (a tap follows its link), which is why the click is held back
@@ -269,7 +269,7 @@ function FreeRewardTile({ kind, id, href, art, name, title, purpose, mustGet, ta
 				to={href}
 				className="mt-0.5 flex items-center justify-between border-t border-gray-700 pt-1.5 font-semibold text-brand underline-offset-2 hover:underline"
 			>
-				Open its page
+				Open Encyclopedia
 				<ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
 			</Link>
 		</div>

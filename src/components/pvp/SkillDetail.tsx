@@ -254,7 +254,7 @@ function SkillVersions({ skill }: { skill: PvpSkillRef }) {
 
 /**
  * The whole card for one skill. `note` is a guide row's note, if any.
- * `link` false leaves out "Open its page" where the thing hovered is already
+ * `link` false leaves out "Open Encyclopedia" where the thing hovered is already
  * the link (an Encyclopedia row).
  */
 export function SkillDetail({ skill, note, link = true, full = false }: {
@@ -342,7 +342,7 @@ export function SkillDetail({ skill, note, link = true, full = false }: {
 							tabIndex={inPopup ? -1 : undefined}
 							className="skill-card__open inline-flex items-center gap-1 transition hover:opacity-80"
 						>
-							Open its page
+							Open Encyclopedia
 							<ArrowRight className="h-3 w-3" aria-hidden="true" />
 						</Link>
 					)}

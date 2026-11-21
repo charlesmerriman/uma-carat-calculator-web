@@ -87,7 +87,7 @@ describe("RankRow with a page", () => {
 
 		expect(screen.queryByRole("link")).toBeNull()
 		fireEvent.click(screen.getByRole("button"))
-		expect(screen.getByRole("link", { name: /Open its page/ })).toHaveAttribute("href", "/app/umas/100701")
+		expect(screen.getByRole("link", { name: /Open Encyclopedia/ })).toHaveAttribute("href", "/app/umas/100701")
 	})
 
 	it("draws as before with no page", () => {
@@ -215,6 +215,6 @@ describe("My team's links", () => {
 		fireEvent.click(screen.getByRole("button", { name: /Gold Ship/ }))
 		// findBy: the link arrives once the catalogue has loaded.
 		const row = within(screen.getByRole("listitem", { name: "Add Gold Ship" }))
-		expect(await row.findByRole("link", { name: /Open its page/ })).toHaveAttribute("href", "/app/umas/100701")
+		expect(await row.findByRole("link", { name: /Open Encyclopedia/ })).toHaveAttribute("href", "/app/umas/100701")
 	})
 })

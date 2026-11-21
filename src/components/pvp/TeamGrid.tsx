@@ -456,7 +456,7 @@ function Tile({
  * and only the hover says it's a link. Shared with CompactTeamGrid.
  *
  * With `hover` (hoverCardProps) a mouse click opens the uma's or card's card
- * instead, and the card's "Open its page" goes on to the page. The team's
+ * instead, and the card's "Open Encyclopedia" goes on to the page. The team's
  * tiles can't open it themselves: their click opens the picker.
  */
 export function PageName({ href, name, hover }: { href: string | null; name: string; hover?: Record<string, string> }) {

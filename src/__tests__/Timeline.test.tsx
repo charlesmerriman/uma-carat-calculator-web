@@ -1280,7 +1280,7 @@ describe('Timeline story events', () => {
     // ...and a mouse never opens the row's own tap popup beside it.
     fireEvent.pointerDown(tile, { pointerType: 'mouse' })
     fireEvent.pointerUp(tile, { pointerType: 'mouse' })
-    expect(screen.queryByText('Open its page')).toBeNull()
+    expect(screen.queryByText('Open Encyclopedia')).toBeNull()
 
     fireEvent.pointerDown(tile, { pointerType: 'touch' })
     fireEvent.pointerUp(tile, { pointerType: 'touch' })
@@ -1290,7 +1290,7 @@ describe('Timeline story events', () => {
     expect(click.defaultPrevented).toBe(true)
     // The drawn popup is aria-hidden (a screen reader reads the card's own
     // description), so it is found by its text.
-    expect(screen.getByText('Open its page').closest('a')).toHaveAttribute('href', '/app/cards/30133')
+    expect(screen.getByText('Open Encyclopedia').closest('a')).toHaveAttribute('href', '/app/cards/30133')
   })
 
   it('links the card for an account without early access too, as the banner tiles do', () => {

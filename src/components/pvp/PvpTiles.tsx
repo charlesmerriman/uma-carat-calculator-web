@@ -257,7 +257,7 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 	detailClassName?: string
 	/** Hears the detail open and close (a skill chip lights the course map). */
 	onOpenChange?: (open: boolean) => void
-	/** The detail holds a link (a skill card's "Open its page"): let the pointer reach it. */
+	/** The detail holds a link (a skill card's "Open Encyclopedia"): let the pointer reach it. */
 	interactive?: boolean
 	/** False: resting the pointer on the tile opens nothing (useHoverPopup `hover`). */
 	hover?: boolean
@@ -372,7 +372,7 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 }) {
 	const oshiIds = useOshiIds()
 	const mentions = useSkillMentions()
-	// Her Encyclopedia page, for early access: "Open its page" ends the popup,
+	// Her Encyclopedia page, for early access: "Open Encyclopedia" ends the popup,
 	// as on a skill card, since the tile itself opens the popup.
 	const page = useEncyclopediaHrefs().uma(uma.id)
 	const { base, outfit } = splitOutfit(uma.name)
@@ -547,7 +547,7 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 /**
  * A card's art as a link to its Encyclopedia page, for the tiles with no
  * popup of their own (SupportTile, SwapInCard). A mouse click opens the
- * card's card (`hover`), whose "Open its page" goes on to the page; the
+ * card's card (`hover`), whose "Open Encyclopedia" goes on to the page; the
  * keyboard follows the link, and so does a tap unless `hover` was built with
  * `tap` (SupportTile's). The art's own alt (the card's name) names
  * the link. No href: the art alone.
