@@ -63,8 +63,44 @@ export function pixelRatioFor(width: number, height: number): number {
 	)
 }
 
-/** At most this many passes on Safari's engine (see renderNodeToPng). */
-const MAX_WEBKIT_PASSES = 4
+/** At most this many passes on Safari's engine (see drawUntilSettled). */
+const MAX_WEBKIT_PASSES = 8
+
+/** A pass "adds art" when its PNG is at least this much bigger (0.5%). */
+const GROWTH = 0.005
+
+/** Passes in a row that add nothing before the picture counts as finished. */
+const SETTLED_AFTER = 2
+
+/**
+ * Draw until the picture stops changing, for Safari's engine, which decodes
+ * the inlined art only once asked to draw it, a few pictures per pass. Blank
+ * art compresses smaller, so a pass that adds art makes a bigger file.
+ *
+ * It used to stop at the FIRST pass that didn't grow the file by 1%, at most
+ * 4 passes. A long plan on an iPhone then came out with no art at all (board
+ * post "Plan Images Export", 2026-11-20, iOS 27): measured in WebKit, a
+ * 3-banner plan needs 2 passes to show its art and a 7-banner plan 3, so a
+ * 41-banner plan on a phone can stall for a pass and stop blank, or run out.
+ * Now one quiet pass isn't enough: it stops after SETTLED_AFTER quiet passes
+ * in a row, or at `maxPasses`. The growth bar is lower too (GROWTH), since on
+ * a big picture one card's art is a small share of the file.
+ *
+ * Each pass is kept unless it came out smaller than the best so far: a later
+ * pass has at least as much art decoded. Exported for its tests.
+ */
+export async function drawUntilSettled(draw: () => Promise<Blob | null>, maxPasses = MAX_WEBKIT_PASSES): Promise<Blob | null> {
+	let blob = await draw()
+	let quiet = 0
+	for (let pass = 2; pass <= maxPasses && quiet < SETTLED_AFTER; pass++) {
+		const next = await draw()
+		if (!next) break
+		const grew = next.size > (blob?.size ?? 0) * (1 + GROWTH)
+		quiet = grew ? 0 : quiet + 1
+		if (!blob || next.size >= blob.size) blob = next
+	}
+	return blob
+}
 
 /**
  * Draw `node` as a PNG, at pixelRatioFor its size.
@@ -78,12 +114,9 @@ const MAX_WEBKIT_PASSES = 4
  * and a picture that can't be loaded is counted, never left out silently.
  *
  * On Safari's engine the first pass draws the inlined art blank (it decodes
- * the pictures inside the SVG only once asked to draw them). It used to draw
- * exactly twice, which left a long plan's art blank on an iPhone (v2.10,
- * iOS 26 and 27). Now it draws until the PNG stops growing: blank art
- * compresses smaller, so a pass that adds art makes a bigger file. Three
- * passes at least (the third checks the second), MAX_WEBKIT_PASSES at most.
- * Every other browser draws once.
+ * the pictures inside the SVG only once asked to draw them), so it draws
+ * until the picture settles (drawUntilSettled). Every other browser draws
+ * once.
  *
  * `cache` keeps the embedded-font CSS and the inlined art between the redraws
  * of one panel opening. html-to-image embeds only the font families the
@@ -101,17 +134,8 @@ export async function renderNodeToPng(node: HTMLElement, cache: DrawCache = newD
 	}
 	const options = { pixelRatio: pixelRatioFor(node.offsetWidth, node.offsetHeight), fontEmbedCSS }
 
-	let blob = await toBlob(node, options)
-	if (needsSecondPass()) {
-		// The second pass is always kept; after that, a pass is kept only while
-		// it adds something (1% bigger), and the first that doesn't ends it.
-		blob = (await toBlob(node, options)) ?? blob
-		for (let pass = 3; pass <= MAX_WEBKIT_PASSES; pass++) {
-			const next = await toBlob(node, options)
-			if (!next || next.size <= (blob?.size ?? 0) * 1.01) break
-			blob = next
-		}
-	}
+	const draw = () => toBlob(node, options)
+	const blob = needsSecondPass() ? await drawUntilSettled(draw) : await draw()
 	if (!blob) throw new Error("The picture came out empty.")
 	return { blob, missingArt }
 }
