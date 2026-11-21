@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
 	aptitudeMatches, directionWords, effectReading, releaseDates, searchMatches, sortByEffect, sortByValue, sortFact, sortList,
-	withGameDates, type ReleaseDates,
+	withEventDates, withGameDates, type ReleaseDates,
 } from "../utils/encyclopedia"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { AptitudeKey } from "../types/pvpTeam"
@@ -72,6 +72,30 @@ describe("withGameDates", () => {
 		expect(dates.get(4)?.global).toBe(Date.UTC(2025, 7, 1))
 		expect(dates.get(2)?.global).toBe(Date.UTC(2025, 5, 1))
 		expect(dates.get(1)).toEqual({ global: null, jp: Date.UTC(2026, 0, 1) })
+		expect(DATES.has(4)).toBe(false) // a copy, the banners' map untouched
+	})
+})
+
+describe("withEventDates", () => {
+	it("dates an outfit on no banner by the first event that gives it, and never overrides a banner", () => {
+		// Daptrius, 2026-11-20: Special Week (Commander) and Rhein Kraft (Alt
+		// Version) come from main story chapters and sorted with no date.
+		const umas = (...ids: number[]) => ids.map((id) => ({ id }))
+		const dates = withEventDates(DATES, [
+			{ start_date: "2026-06-25T22:00:00Z", is_predicted: false, umas: umas(4, 2) },
+			{ start_date: "2026-01-01T00:00:00Z", is_predicted: true, umas: umas(4) },
+			{ start_date: "2027-08-26T00:00:00Z", is_predicted: true, umas: umas(1) },
+			{ start_date: null, is_predicted: false, umas: umas(5) },
+			// An API older than the kinds sends no `umas`.
+			{ start_date: "2026-01-01T00:00:00Z", is_predicted: false },
+		] as unknown as Parameters<typeof withEventDates>[1])
+		// Daiwa: the earlier event, with its estimate badge.
+		expect(dates.get(4)).toEqual({ global: Date.UTC(2026, 0, 1), jp: null, predicted: true })
+		// Agnes: her banner wins.
+		expect(dates.get(2)?.global).toBe(Date.UTC(2025, 5, 1))
+		// Cheval: JP only until her chapter's predicted Global day, keeping her JP date.
+		expect(dates.get(1)).toEqual({ global: Date.UTC(2027, 7, 26), jp: Date.UTC(2026, 0, 1), predicted: true })
+		expect(dates.has(5)).toBe(false)
 		expect(DATES.has(4)).toBe(false) // a copy, the banners' map untouched
 	})
 })

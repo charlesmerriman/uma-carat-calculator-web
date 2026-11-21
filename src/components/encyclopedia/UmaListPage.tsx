@@ -27,7 +27,7 @@ import {
 	APTITUDE_GROUPS, APTITUDE_KEYS, GRADE_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, REVERSED_VALUES, SHARED_OWNED_KEY,
 	SHARED_WHERE_KEY, SHARED_WHERE_VALUES, STAR_OPTIONS, UMA_SORT_OPTIONS, WHERE_OPTIONS,
 	aptitudeLabel, aptitudeMatches, colourStyle, countLine, filterUmas, gradeLetter, listWhere, ownedMatches, releaseDates, sortAptitude,
-	sortByValue, sortFact, sortList, sortsHighFirst, values,
+	sortByValue, sortFact, sortList, sortsHighFirst, values, withEventDates,
 	type OwnedFilter, type SharedWhere, type UmaSortOrder,
 } from "../../utils/encyclopedia"
 
@@ -53,9 +53,15 @@ const UmaListBody = () => {
 	const reversed = reversedFlag === "1"
 	const aptitudes = useAptitudeFilter()
 	const sortedAptitude = sortAptitude(sort)
-	// Release dates from the banners the calculator already loaded; none yet means a date sort goes by name.
-	const banners = useCalculatorDataSafe()?.umaBannerData
-	const dates = useMemo(() => releaseDates(banners ?? [], (banner) => banner.umas), [banners])
+	// Release dates from the banners the calculator already loaded, plus the
+	// events that give an outfit on no banner; none yet means a date sort goes by name.
+	const calculator = useCalculatorDataSafe()
+	const banners = calculator?.umaBannerData
+	const storyEvents = calculator?.storyEventData
+	const dates = useMemo(
+		() => withEventDates(releaseDates(banners ?? [], (banner) => banner.umas), storyEvents ?? []),
+		[banners, storyEvents]
+	)
 	// The Collection filter and the ticks only for a signed-in player with something in their Collection.
 	const showOwned = owned.signedIn && !owned.empty
 	const umas = useMemo(() => {

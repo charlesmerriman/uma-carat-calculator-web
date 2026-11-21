@@ -72,10 +72,15 @@ function firstStarts<T extends { id: number }>(entries: Array<{ start: string; c
 export function cardReleases(
 	umaBanners: BannerUma[],
 	supportBanners: BannerSupport[],
-	storyEvents: Pick<StoryEvent, "start_date" | "cards">[] = []
+	storyEvents: Pick<StoryEvent, "start_date" | "cards" | "umas">[] = []
 ): CardReleases {
 	return {
-		umas: firstStarts(umaBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.umas }))),
+		// An event's uma outfit (a main story chapter's) is dated like its card,
+		// so Rhein Kraft (Alt Version) is pickable for a CM after her chapter.
+		umas: firstStarts<{ id: number }>([
+			...umaBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.umas })),
+			...storyEvents.map((event) => ({ start: event.start_date ?? "", cards: event.umas ?? [] })),
+		]),
 		// Typed by the shape both sources share: banner cards and story event cards differ otherwise.
 		supports: firstStarts<{ id: number }>([
 			...supportBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.support_cards })),

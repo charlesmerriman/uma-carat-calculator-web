@@ -1302,6 +1302,90 @@ describe('Timeline story events', () => {
     expect(tile).toHaveAttribute('href', '/app/cards/30133')
     expect(tile).toHaveAttribute('data-hover-card', 'card:90')
   })
+
+  /** A main story chapter that gives a card and an uma outfit (notes/story-events-plan-2.md). */
+  function finale(overrides: Partial<StoryEvent> = {}): StoryEvent {
+    return teatime({
+      id: 8,
+      kind: 'main_story',
+      game_id: 7,
+      name: 'Act 1, Finale Part 2',
+      end_date: null,
+      claim_end_date: null,
+      carat_amount: 0,
+      uma_ticket_amount: 0,
+      support_ticket_amount: 0,
+      ssr_shard_amount: 0,
+      cards: [{
+        id: 91, name: 'Special Week', title: '[Take Hold of Our Dreams!]', image: null, rarity: 3,
+        purpose: '', game_id: 30105, must_get: false, note: '',
+      }],
+      umas: [{
+        id: 199, name: 'Special Week (Commander)', title: '[Ruler of Japan]', image: null,
+        portrait: null, portrait_layers: null, rarity: 3, purpose: '', game_id: 100103,
+        must_get: false, note: '',
+      }],
+      ...overrides,
+    })
+  }
+
+  it("labels a main story chapter's row by its kind and draws its uma as a framed tile", () => {
+    events = [categorised(2, 'standard', ['Kitasan Black'])]
+    storyEvents = [finale(), teatime()]
+    renderTimeline()
+
+    const rows = screen.getAllByRole('region', { name: /^(Story event|Main story):/ })
+    // The story event stacks first, the chapter under it.
+    expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual([
+      'Story event: Sweet Memories Teatime',
+      'Main story: Act 1, Finale Part 2',
+    ])
+    const chapter = rows[1]
+    expect(chapter).toHaveTextContent('Added with this banner. Read it any time.')
+    expect(chapter).not.toHaveTextContent('Event rewards')
+    expect(chapter).toHaveTextContent('SSR, free, 5 copies')
+    expect(chapter).toHaveTextContent('3★ uma, free')
+
+    const umaTile = screen.getByRole('link', { name: /Special Week \(Commander\)/ })
+    expect(umaTile).toHaveAttribute('href', '/app/umas/100103')
+    expect(umaTile).toHaveAttribute('data-hover-card', 'uma:199')
+    // Every uma is FramedUma (frontend-ui.md).
+    expect(umaTile.querySelector('.uma-frame')).not.toBeNull()
+  })
+
+  it("finds the banner by a free uma's name", () => {
+    events = [
+      categorised(1, 'standard', ['Rice Shower']),
+      categorised(2, 'standard', ['Kitasan Black']),
+    ]
+    storyEvents = [finale()]
+    renderTimeline()
+
+    fireEvent.change(screen.getByPlaceholderText('Search characters or events...'), {
+      target: { value: 'commander' },
+    })
+    expect(screen.getByAltText('Kitasan Black')).toBeInTheDocument()
+    expect(screen.queryByAltText('Rice Shower')).toBeNull()
+  })
+
+  it("draws any kind's picture in the row's one slot, and no box without one", () => {
+    events = [categorised(2, 'standard', ['Kitasan Black'])]
+    storyEvents = [finale({ image: 'https://example.test/main-story-7.png' })]
+    renderTimeline()
+    const withPicture = screen.getByRole('region', { name: /^Main story:/ })
+    expect(withPicture.querySelector('img[src="https://example.test/main-story-7.png"]')).not.toBeNull()
+  })
+
+  it('draws a row with no picture without an empty box', () => {
+    events = [categorised(2, 'standard', ['Kitasan Black'])]
+    storyEvents = [finale({ kind: 'anniversary', name: '', umas: [], end_date: '2099-03-01T12:00:00Z' })]
+    renderTimeline()
+    const row = screen.getByRole('region', { name: 'Anniversary missions: Anniversary missions' })
+    // Only the free card's own placeholder; nothing stands in for the picture.
+    expect(row.querySelectorAll('img')).toHaveLength(0)
+    expect(row.firstElementChild?.tagName).toBe('DIV')
+    expect(row).toHaveTextContent('Missions and login bonus. Ends 2099/3/1.')
+  })
 })
 
 describe('Timeline free pulls', () => {
