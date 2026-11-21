@@ -45,4 +45,12 @@ describe('pixelRatioFor', () => {
     }
     expect(pixelRatioFor(960, 5150)).toBeCloseTo(1.8, 1)
   })
+
+  it('keeps a two-column plan about 2,000 px wide, not 2x', () => {
+    // 41 banners in two columns: 1,880 x about 2,850 CSS px. Uncapped this
+    // was 3,246 x 4,928, the most pixels an iPhone allows.
+    const ratio = pixelRatioFor(1880, 2850)
+    expect(Math.round(1880 * ratio)).toBe(2000)
+    expect(1880 * ratio * 2850 * ratio).toBeLessThan(7_000_000)
+  })
 })
