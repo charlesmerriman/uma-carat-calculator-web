@@ -45,6 +45,7 @@ import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 import type { CatalogueSupportCard, CatalogueUma } from "../../types/pvpTeam"
 import type { OwnedCardRow, OwnedUmaRow, RosterChanges } from "../../types/roster"
 import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
+import { nameMatches } from "../../utils/searchText"
 
 const CARD_TYPES = ["speed", "stamina", "power", "guts", "wit", "friend", "group"] as const
 const CARD_TYPE_LABELS: Record<string, string> = {
@@ -69,7 +70,7 @@ const PILL = (on: boolean) =>
 		on ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-200 hover:border-gray-500"
 	}`
 
-const matches = (name: string, query: string) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+const matches = (name: string, query: string) => nameMatches(query, name)
 const time = (iso: string | null | undefined) => (iso ? (parseApiDate(iso)?.getTime() ?? null) : null)
 const inView = (view: RosterView, owned: boolean) => view === "all" || (view === "owned") === owned
 

@@ -13,6 +13,7 @@ import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
+import { nameMatches } from "../../utils/searchText"
 
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
@@ -72,9 +73,7 @@ export const SelectorTargetPicker = ({
 	// the Selectors page otherwise never makes (utils/hoverCards.ts,
 	// pageDrawsHoverCards, has the numbers).
 	const hrefs = useEncyclopediaHrefs({ load: isOpen || selected !== null })
-	const matchingOptions = options.filter((option) =>
-		option.label.toLocaleLowerCase().includes(search.toLocaleLowerCase())
-	)
+	const matchingOptions = options.filter((option) => nameMatches(search, option.label))
 
 	useEffect(() => {
 		if (!isOpen) return undefined

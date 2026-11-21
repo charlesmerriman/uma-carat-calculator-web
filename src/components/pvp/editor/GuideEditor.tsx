@@ -32,7 +32,7 @@ import { GuideTab } from "./GuideTab"
 import { StartGuide } from "./StartGuide"
 import { StyleTab } from "./StyleTab"
 import { ConflictDialog, CopyFromDialog, DeleteDialog, RevisionsDialog, SheetDialog, TrackGreensDialog, VisibilityDialog } from "./EditorDialogs"
-import { errorsByTab, hydrateGuide, missingSummary, rowsByTab, validateDocument, type ChecklistItem, type EditorTab } from "../../../utils/guideDocument"
+import { errorsByTab, hydrateGuide, missingSummary, rowsByTab, validateDocument, type ChecklistItem, type EditorTab, editorTabsFor } from "../../../utils/guideDocument"
 import type { EditorError } from "../../../types/guideDocument"
 import type { RaceEvent } from "../../../types"
 import type { GuideVisibility } from "../../../types/pvpGuide"
@@ -182,7 +182,7 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 						onOpen={onDialog}
 					/>
 					<Checklist missing={missing} errors={problemsByTab} onJump={jump} />
-					<EditorTabs tab={tab} rows={rows} errors={problemsByTab} onChange={onTab} />
+					<EditorTabs tabs={editorTabsFor(document)} tab={tab} rows={rows} errors={problemsByTab} onChange={onTab} />
 					<div role="tabpanel" aria-label={tab === "guide" ? "Guide" : tab}>
 						{tab === "guide" ? <GuideTab /> : <StyleTab style={tab} />}
 					</div>

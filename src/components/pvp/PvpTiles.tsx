@@ -144,6 +144,11 @@ function MentionedSkills({ text, skip }: { text: string; skip?: number }) {
  * decides, utils/remarkHighlight.ts), so it gets a red ring to stand out
  * (Daptrius, 2026-10-17). A ring, not a border colour: a gold skill's
  * .skill-gold border would win over a border utility.
+ *
+ * A unique's inherited copy, written [[Name (inherited)]], takes the violet
+ * frame its chip has, so a sentence naming both versions shows which is which
+ * (owner, 2026-11-20). Only the copy: a unique mention stays on the plain
+ * surface, as every other mention does.
  */
 export function SkillMention({ name, scenarioLink = false }: { name: string; scenarioLink?: boolean }) {
 	const skill = useSkillMentions()[name.toLowerCase()]
@@ -157,7 +162,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 		interactive: preview && skill?.game_id != null,
 	})
 	if (!skill) return <>{name}</>
-	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
+	const surface = skillSurface(skill, `${skill.is_inherited ? "border-step-up-border/70" : "border-gray-600"} bg-gray-800 text-gray-100`)
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
 	const pill = `inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none ${surface} ${ring}`
 	const face = (
@@ -196,7 +201,17 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
  * (notes/course-map-plan-2.md, section 8).
  */
 function lightOnCourseMap(skill: PvpSkillRef, open: boolean) {
-	if (open) setCourseFocus({ skillId: skill.id, name: skill.name, image: skill.image })
+	// A unique, or its inherited copy, says whose it is on the verdict card, as
+	// the Skills list does (Henry, board "Two types of popup", 2026-11-19).
+	const owner = skill.sources?.umas.find((row) => row.source === "unique" || row.source === "inherited")
+	if (open) {
+		setCourseFocus({
+			skillId: skill.id,
+			name: skill.name,
+			image: skill.image,
+			...(owner && { owner: { name: owner.name, portrait: null, inherited: owner.source === "inherited", id: owner.id } }),
+		})
+	}
 	else clearCourseFocus(skill.id)
 }
 
@@ -242,7 +257,7 @@ function WithDetail({ label, detail, card, children, className = "", detailClass
 	detailClassName?: string
 	/** Hears the detail open and close (a skill chip lights the course map). */
 	onOpenChange?: (open: boolean) => void
-	/** The detail holds a link (a skill card's "Open its page"): let the pointer reach it. */
+	/** The detail holds a link (a skill card's "Open Encyclopedia"): let the pointer reach it. */
 	interactive?: boolean
 	/** False: resting the pointer on the tile opens nothing (useHoverPopup `hover`). */
 	hover?: boolean
@@ -357,7 +372,7 @@ export function UmaTile({ uma, stars, role, note, showStars = true, noteSlot = t
 }) {
 	const oshiIds = useOshiIds()
 	const mentions = useSkillMentions()
-	// Her Encyclopedia page, for early access: "Open its page" ends the popup,
+	// Her Encyclopedia page, for early access: "Open Encyclopedia" ends the popup,
 	// as on a skill card, since the tile itself opens the popup.
 	const page = useEncyclopediaHrefs().uma(uma.id)
 	const { base, outfit } = splitOutfit(uma.name)
@@ -532,7 +547,7 @@ export function AnyTypeLine({ type }: { type: DeckStatType }) {
 /**
  * A card's art as a link to its Encyclopedia page, for the tiles with no
  * popup of their own (SupportTile, SwapInCard). A mouse click opens the
- * card's card (`hover`), whose "Open its page" goes on to the page; the
+ * card's card (`hover`), whose "Open Encyclopedia" goes on to the page; the
  * keyboard follows the link, and so does a tap unless `hover` was built with
  * `tap` (SupportTile's). The art's own alt (the card's name) names
  * the link. No href: the art alone.

@@ -3,7 +3,7 @@
 // them. And the scale a picture is drawn at, so it never passes an iPhone's
 // canvas cap.
 import { describe, expect, it } from 'vitest'
-import { needsSecondPass, pixelRatioFor } from '../utils/shareImage'
+import { drawUntilSettled, needsSecondPass, pixelRatioFor } from '../utils/shareImage'
 
 const SAFARI_ENGINE = {
   'Safari on an iPhone': ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1', 5],
@@ -44,5 +44,50 @@ describe('pixelRatioFor', () => {
       expect(960 * ratio * height * ratio).toBeLessThanOrEqual(16_777_216)
     }
     expect(pixelRatioFor(960, 5150)).toBeCloseTo(1.8, 1)
+  })
+
+  it('keeps a two-column plan about 2,000 px wide, not 2x', () => {
+    // 41 banners in two columns: 1,880 x about 2,850 CSS px. Uncapped this
+    // was 3,246 x 4,928, the most pixels an iPhone allows.
+    const ratio = pixelRatioFor(1880, 2850)
+    expect(Math.round(1880 * ratio)).toBe(2000)
+    expect(1880 * ratio * 2850 * ratio).toBeLessThan(7_000_000)
+  })
+})
+
+describe('drawUntilSettled', () => {
+  // A fake draw: each call returns the next size as a blob, and counts.
+  const passes = (sizes: Array<number | null>) => {
+    let at = 0
+    const draw = vi.fn(async () => {
+      const size = sizes[Math.min(at++, sizes.length - 1)]
+      return size === null ? null : new Blob([new Uint8Array(size)])
+    })
+    return draw
+  }
+
+  it('keeps drawing through one pass that adds nothing, and keeps the art', async () => {
+    // Blank, a pass that stalls, then the art lands, then two quiet passes.
+    const draw = passes([1000, 1001, 1500, 1500, 1500])
+    const blob = await drawUntilSettled(draw)
+    expect(blob?.size).toBe(1500)
+    expect(draw).toHaveBeenCalledTimes(5)
+  })
+
+  it('stops after two quiet passes in a row', async () => {
+    const draw = passes([1000, 1600, 1600, 1600, 2000])
+    expect((await drawUntilSettled(draw))?.size).toBe(1600)
+    expect(draw).toHaveBeenCalledTimes(4)
+  })
+
+  it('never passes the limit, and keeps the biggest pass', async () => {
+    const draw = passes([100, 200, 300, 400, 500, 600, 700, 800, 900])
+    expect((await drawUntilSettled(draw, 8))?.size).toBe(800)
+    expect(draw).toHaveBeenCalledTimes(8)
+  })
+
+  it('keeps the best pass when a later one comes out smaller or empty', async () => {
+    expect((await drawUntilSettled(passes([1000, 1500, 1490, 1495])))?.size).toBe(1500)
+    expect((await drawUntilSettled(passes([1000, 1500, null])))?.size).toBe(1500)
   })
 })

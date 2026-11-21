@@ -72,12 +72,21 @@ const panelClass = (tinted: boolean, isFocused: boolean): string =>
  * side with another in EventMarkerPairCard, with no second copy of the chip
  * or art rules to drift.
  *
- * The art is always centred, alone or in a pair (owner, 2026-11-20). A pair
- * used to set it hard left against its column edge, but a half is wider than
- * the art, so that left an empty strip on the right of each picture and the
- * scenario's cut-out looked off to one side.
+ * `artAlign` (owner, 2026-11-20, after web #412 centred both halves):
+ *   - "center": the lone card, and the pair's scenario. Its cut-out has no
+ *     edge to line up with, and hard left it looked off to one side.
+ *   - "row": the pair's campaign, which sits in the same left column as the
+ *     banner art in the rows around it, so it follows BANNER_ART_IN_ROW
+ *     (BannerWindowCard) to the letter: centred below xl, hard left from xl,
+ *     where it lines up with the banner art above and below.
  */
-const EventMarkerBody = ({ marker }: { marker: TimelineMarker }) => {
+const EventMarkerBody = ({
+	marker,
+	artAlign,
+}: {
+	marker: TimelineMarker
+	artAlign: "center" | "row"
+}) => {
 	const chrome = MARKER_CHROME[marker.kind]
 	const Icon = chrome.icon
 	// A scenario announces a change in how the game is played, so it gets the
@@ -126,7 +135,8 @@ const EventMarkerBody = ({ marker }: { marker: TimelineMarker }) => {
 			 * loads and nothing below it moves when it does — see BANNER_ART in
 			 * BannerWindowCard for why that matters to the planner's deep links.
 			 *
-			 * Centred in its card or half; see the component note.
+			 * Placed per `artAlign`; see the component note. Literal class
+			 * strings, so Tailwind finds them.
 			 *
 			 * From xl up the art is `--timeline-art-width`, the width every
 			 * banner card's art has (see App.css): resolved against the panel
@@ -134,7 +144,11 @@ const EventMarkerBody = ({ marker }: { marker: TimelineMarker }) => {
 			 * column too. Below xl the cap matches BANNER_ART, so a marker's art
 			 * is never wider than a banner's there either.
 			 */
-			<div className="mx-auto max-w-[41rem] xl:w-[var(--timeline-art-width)]">
+			<div
+				className={`mx-auto max-w-[41rem] xl:w-[var(--timeline-art-width)] ${
+					artAlign === "row" ? "xl:mx-0" : ""
+				}`}
+			>
 				<img
 					src={marker.image}
 					alt={marker.name}
@@ -155,7 +169,7 @@ export const EventMarkerCard = ({
 }: { marker: TimelineMarker } & TimelineFocusProps) => (
 	<div ref={focusRef} className={CARD_WRAPPER}>
 		<div className={panelClass(marker.kind === "scenario", isFocused)}>
-			<EventMarkerBody marker={marker} />
+			<EventMarkerBody marker={marker} artAlign="center" />
 		</div>
 	</div>
 )
@@ -167,8 +181,9 @@ export const EventMarkerCard = ({
  * sorts first as a lone card. Read left to right the panel then says "the
  * anniversary, and with it a new scenario", which is how the launch is
  * announced; and the campaign's 16:9 art is the wider, heavier image, so it
- * leads while the scenario's cut-out sits lighter beside it. Each picture is
- * centred in its own half.
+ * leads while the scenario's cut-out sits lighter beside it. The campaign's
+ * art lines up with the banner art in the rows around it, and the scenario's
+ * is centred in its half (EventMarkerBody's `artAlign`).
  *
  * Two columns from the medium breakpoint with a rule between them; below it
  * the halves stack in that same order with the rule turned horizontal, so a
@@ -195,7 +210,7 @@ export const EventMarkerPairCard = ({
 			 */}
 			<div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6">
 				<div className="min-w-0">
-					<EventMarkerBody marker={anniversary} />
+					<EventMarkerBody marker={anniversary} artAlign="row" />
 				</div>
 				{/*
 				 * The divider. Stacked, it is a short centred horizontal rule between
@@ -208,7 +223,7 @@ export const EventMarkerPairCard = ({
 					className="mx-auto h-px w-2/3 bg-gray-600 md:mx-0 md:my-4 md:h-auto md:w-px md:self-stretch"
 				/>
 				<div className="min-w-0">
-					<EventMarkerBody marker={scenario} />
+					<EventMarkerBody marker={scenario} artAlign="center" />
 				</div>
 			</div>
 		</div>

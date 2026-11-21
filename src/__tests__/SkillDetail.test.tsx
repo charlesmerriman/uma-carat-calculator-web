@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { SkillDetail } from "../components/pvp/SkillDetail"
+import { InsidePopupContext, PopupHoldContext } from "../components/pvp/hoverPopup"
+import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { PvpSkillRef, SkillReadable } from "../types/pvpGuide"
 
 /** The hover detail of a guide's skill: what the API's readable text and sources become. */
@@ -44,6 +46,46 @@ describe("SkillDetail", () => {
 		// How long it lasts, how often it fires and the Wit roll are chips under the rows.
 		for (const chip of ["Lasts 5 s", "Once per race", "Rolls Wit check"]) expect(screen.getByText(chip)).toBeInTheDocument()
 		expect(screen.getByText("is_overtake==1").tagName).toBe("CODE")
+	})
+
+	it("names a unique's owner on its inherited copy (Henry, 2026-11-19)", () => {
+		const { container } = render(asEditor(<SkillDetail skill={skill({
+			is_inherited: true,
+			sources: { umas: [{ id: 12, name: "Seiun Sky", source: "inherited", level: null, on_global: true }], uma_count: 1, cards: [], card_count: 0 },
+		})} />))
+		expect(container).toHaveTextContent("Umas: Seiun Sky (inherited)")
+	})
+
+	it("turns a held popup into the card of a name clicked in it, with a way back (Henry, 2026-11-19)", () => {
+		const hold = vi.fn()
+		const sources = {
+			umas: [{ id: 12, name: "Seiun Sky", source: "unique", level: 3, on_global: true }, { name: "No Id", source: "hint", level: null, on_global: true }],
+			uma_count: 2, cards: [], card_count: 0,
+		}
+		render(asEditor(
+			<TestQueryProvider>
+				<InsidePopupContext.Provider value={true}>
+					<PopupHoldContext.Provider value={hold}>
+						<SkillDetail skill={skill({ name: "Angling and Scheming", sources })} />
+					</PopupHoldContext.Provider>
+				</InsidePopupContext.Provider>
+			</TestQueryProvider>
+		))
+		// A name with an id is a button; one without stays words.
+		expect(screen.queryByRole("button", { name: "No Id" })).toBeNull()
+		fireEvent.click(screen.getByRole("button", { name: "Seiun Sky" }))
+		expect(hold).toHaveBeenCalledTimes(1)
+		// Her card in the popup (loading here: no catalogue in a test), under a row back to the skill.
+		expect(screen.getByRole("status", { name: "Loading Seiun Sky" })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Angling and Scheming" }))
+		expect(screen.getByRole("button", { name: "Seiun Sky" })).toBeInTheDocument()
+	})
+
+	it("keeps plain names outside a popup that can hold (the screen reader's copy)", () => {
+		render(asEditor(<SkillDetail skill={skill({
+			sources: { umas: [{ id: 12, name: "Seiun Sky", source: "unique", level: 3, on_global: true }], uma_count: 1, cards: [], card_count: 0 },
+		})} />))
+		expect(screen.queryByRole("button", { name: "Seiun Sky" })).toBeNull()
 	})
 
 	it("names where a player gets it, global first, and counts the rest", () => {

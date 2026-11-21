@@ -51,6 +51,12 @@ export interface SkillZoneEntry {
 	 */
 	speed_kind?: "target" | "current"
 	/**
+	 * What an accel or speed skill does to its own runner, in its skill card's
+	 * words at the base value ("Acceleration +0.4"): what the Skills list shows
+	 * (Henry, board "Accels -> Skills", 2026-11-20). Absent from an older API.
+	 */
+	effect_words?: string[]
+	/**
 	 * A speed skill's ranking score for the Speed list (skill_verdicts.py, rule
 	 * 9): `useful` orders it, never shown; `speed` and `carry` are its parts;
 	 * `accelerating`, the share of a target-speed trigger landing while the

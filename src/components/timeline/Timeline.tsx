@@ -57,6 +57,7 @@ import type {
 	UserPlannedBanner,
 	TimelineEvent,
 } from "../../types"
+import { nameMatches } from "../../utils/searchText"
 
 const PAGE_SIZE = 10
 
@@ -289,20 +290,17 @@ function PaginationControls({
 }
 
 function eventMatchesSearch(event: TimelineEvent, query: string): boolean {
-	const q = query.toLowerCase()
-	if (isRaceEvent(event)) {
-		return event.name.toLowerCase().includes(q) || event.track.toLowerCase().includes(q)
-	}
+	if (isRaceEvent(event)) return nameMatches(query, event.name, event.track)
 	const bannerEvent = event
-	if (bannerEvent.name.toLowerCase().includes(q)) return true
+	if (nameMatches(query, bannerEvent.name)) return true
 	for (const banner of bannerEvent.banner_umas) {
 		for (const uma of banner.umas) {
-			if (uma.name.toLowerCase().includes(q)) return true
+			if (nameMatches(query, uma.name)) return true
 		}
 	}
 	for (const banner of bannerEvent.banner_supports) {
 		for (const card of banner.support_cards) {
-			if (card.name.toLowerCase().includes(q)) return true
+			if (nameMatches(query, card.name)) return true
 		}
 	}
 	return false

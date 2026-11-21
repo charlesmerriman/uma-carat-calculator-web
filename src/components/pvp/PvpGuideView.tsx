@@ -66,6 +66,7 @@ import type {
 	PvpStyleTab,
 	PvpUmaRecommendation,
 } from "../../types/pvpGuide"
+import { useRememberedOpen } from "../../hooks/useRememberedOpen"
 
 
 // Module scope, so MarkdownContent's memoised components keep one identity.
@@ -623,7 +624,9 @@ function StyleTabs({ styles, active, onChange, label, ranks }: {
 	)
 }
 
-function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event, onUseDeck }: {
+function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event, onUseDeck, allTop = null }: {
+	/** Under the tabs and above the style boxes, on the All tab only (a phone's General skills). */
+	allTop?: ReactNode
 	guide: PvpGuide
 	styles: Array<Exclude<PvpStyle, "everyone">>
 	style: PvpStyleTab | null
@@ -649,7 +652,10 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 			{shown === ALL_STYLES_TAB ? (
 				// Every style at a glance (owner, 2026-10-24): a box per style in
 				// the tabs' order, faces, top skills and every deck one line each.
-				<AllStylesPreview guide={guide} styles={styles} onStyleChange={onStyleChange} scenarioName={guide.scenario?.name ?? null} />
+				<>
+					{allTop}
+					<AllStylesPreview guide={guide} styles={styles} onStyleChange={onStyleChange} scenarioName={guide.scenario?.name ?? null} />
+				</>
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 					{/* Keyed by style: another style is another pane, drawn at once.
@@ -698,19 +704,59 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 		setBudget(label)
 		rememberDeckBudget(label)
 	}
-	// Below xl the side column stacks above the style, and a guide's general
-	// skills (21 in CM 21) were 866px of phone before the first uma
-	// (2026-10-23), so there they start folded. Read once: the page renders
-	// only behind the /app gate. "Narrow?" rather than "wide?", so a test's
-	// no-match stub sees the desktop default.
-	const [generalOpen] = useState(
-		() => typeof window === "undefined" || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width: 79.98rem)").matches
+	// Below xl there is no side column: the general skills stack in the page.
+	// Read in the first render (the page renders only behind the /app gate),
+	// then kept in step with the window. "Narrow?" rather than "wide?", so a
+	// test's no-match stub sees the desktop default.
+	const [narrow, setNarrow] = useState(
+		() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(NARROW_QUERY).matches
 	)
+	useEffect(() => {
+		if (typeof window.matchMedia !== "function") return
+		const query = window.matchMedia(NARROW_QUERY)
+		const update = () => setNarrow(query.matches)
+		query.addEventListener?.("change", update)
+		return () => query.removeEventListener?.("change", update)
+	}, [])
+	// They start OPEN on a phone too (Henry, board, 2026-11-17: folded "it's
+	// easy to miss"; they started folded from 2026-10-23, when 21 skills were
+	// 866px of phone before the first uma). A reader who folds them keeps them
+	// folded until a reload (useRememberedOpen). From xl they are always open:
+	// the side column has no fold.
+	const [generalOpen, setGeneralOpen] = useRememberedOpen("pvp-general-skills", true)
 	// The general skills (and the whole guide's thread) stand beside the style
 	// from xl; the band above holds the rest of what is team-wide.
 	const hasSide = generalSkills.length > 0
 	// The tab on screen, the same pick StyleColumn makes, for the band's ladder.
 	const shownStyle = pickStyle(styles, style)
+	// On a phone's All tab the general skills come right under the style tabs,
+	// above the style boxes (Henry, 2026-11-17); on a style's own tab, and on a
+	// tablet's, after the style as before.
+	const generalUp = narrow && shownStyle === ALL_STYLES_TAB
+	const generalSection = generalSkills.length > 0 ? (
+		<section className={SECTION} aria-labelledby="pvp-general-skills">
+			<details open={!narrow || generalOpen} onToggle={(toggle) => narrow && setGeneralOpen(toggle.currentTarget.open)} className="group/general">
+				<summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+					<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
+					<span className="ml-auto text-xs text-gray-400 xl:hidden">
+						{generalSkills.length} {generalSkills.length === 1 ? "skill" : "skills"} · <span className="group-open/general:hidden">Show</span>
+						<span className="hidden group-open/general:inline">Hide</span>
+					</span>
+				</summary>
+				<p className="mt-1 text-xs text-gray-400">
+					Recommended for every position.
+					{/* The Skills page is shelved to guide editors (useSkillsPreview). */}
+					{skillsPreview && (
+						<>
+							{" "}Look any skill up on the{" "}
+							<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
+						</>
+					)}
+				</p>
+				<SkillCategories rows={generalSkills} />
+			</details>
+		</section>
+	) : null
 
 	// The side column's height, for .pvp-side-sticky (App.css): pinned when it
 	// fits on screen, scrolled with the page to its end when it doesn't.
@@ -760,30 +806,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 					// Below xl the column follows the style: on a phone the general
 					// skills (folded) and the whole guide's thread come after it.
 					<aside ref={sideRef} className="pvp-side-sticky order-last flex min-w-0 flex-col gap-4 xl:order-none" aria-label="For every position">
-						{generalSkills.length > 0 && (
-							<section className={SECTION} aria-labelledby="pvp-general-skills">
-								<details open={generalOpen} className="group/general">
-									<summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
-										<h3 id="pvp-general-skills" className={HEADING}>General skills</h3>
-										<span className="ml-auto text-xs text-gray-400 xl:hidden">
-											{generalSkills.length} {generalSkills.length === 1 ? "skill" : "skills"} · <span className="group-open/general:hidden">Show</span>
-											<span className="hidden group-open/general:inline">Hide</span>
-										</span>
-									</summary>
-									<p className="mt-1 text-xs text-gray-400">
-										Recommended for every position.
-										{/* The Skills page is shelved to guide editors (useSkillsPreview). */}
-										{skillsPreview && (
-											<>
-												{" "}Look any skill up on the{" "}
-												<Link to="/app/skills" className="text-brand transition hover:text-brand/75">Skills page</Link>.
-											</>
-										)}
-									</p>
-									<SkillCategories rows={generalSkills} />
-								</details>
-							</section>
-						)}
+						{!generalUp && generalSection}
 
 						<div className={SECTION}>
 							<GuideComments guide={guide} section="" label={WHOLE_GUIDE_LABEL} placeholder={WHOLE_GUIDE_PROMPT} className="" />
@@ -792,7 +815,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 				)}
 
 				{styles.length > 0 && (
-					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} onUseDeck={onUseDeck} />
+					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} onUseDeck={onUseDeck} allTop={generalUp ? generalSection : null} />
 				)}
 			</div>
 			{/* A guide with no side column still has a thread for the whole guide. */}
@@ -805,6 +828,9 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 		</SkillMentionsContext.Provider>
 	)
 }
+
+// Below xl: no side column (the grid's xl breakpoint, 80rem).
+const NARROW_QUERY = "(max-width: 79.98rem)"
 
 const EMPTY_MENTIONS = {}
 

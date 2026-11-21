@@ -13,6 +13,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 import { useSkillListState } from "../../hooks/useSkillList"
+import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { reportCounts } from "../../utils/encyclopediaCounts"
 import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
@@ -108,7 +110,10 @@ const SkillsPageBody = () => {
 	const conditionsOpen = openFlag === "1" || tagPicks.length > 0
 	const [shown, setShown] = useState(PAGE)
 
-	// The Skills tab's headline number, once the list is here.
+	// The tabs' headline numbers. The Umas and Support cards tabs count from the
+	// catalogue, which the hover cards already load on this page; the Skills
+	// tab's own number, once the list is here, is the list's length.
+	useCatalogueCounts(usePvpCatalogue())
 	const total = list.status === "ready" ? list.rows.length : null
 	useEffect(() => {
 		if (total !== null) reportCounts({ skills: total })

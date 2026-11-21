@@ -6,7 +6,7 @@
  * A tile opts in with data attributes, and HoverCardLayer (one per app, in
  * AppShell) reads them when the tile is clicked. Put them on plain art, or on
  * the LINK to that uma's or card's Encyclopedia page (the click then opens
- * the card, whose "Open its page" goes on to the page). Never on a button or
+ * the card, whose "Open Encyclopedia" goes on to the page). Never on a button or
  * a link with another job: the layer leaves those clicks alone, so the
  * attribute would do nothing there. Building the attributes here, never by
  * hand at a call site, keeps their spelling in one place:

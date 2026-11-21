@@ -6,7 +6,8 @@
  * stretch in neither list, then corner -1, and crosses dirt; Tokyo dirt 1600
  * (CM 22) starts on turf; Nakayama 2500 starts on a chute that joins the loop
  * inside corner 3, so its first corner is 146 m of a 250 m bend; Hanshin 2200
- * runs exactly one lap, home straight to home straight.
+ * runs exactly one lap, home straight to home straight; Kawasaki 2100 runs
+ * its home straight twice, a 400 m straight between short bends.
  */
 import type { RaceCourse } from "../types"
 
@@ -37,6 +38,21 @@ export const NAKAYAMA_3600: RaceCourse = {
 		{ start: 1740, length: 110, slope: 20000 }, { start: 1925, length: 200, slope: 15000 }, { start: 2225, length: 400, slope: -15000 },
 		{ start: 3425, length: 110, slope: 20000 },
 	],
+	surface_changes: [],
+}
+
+export const KAWASAKI_2100: RaceCourse = {
+	...base, game_id: 11303, racecourse: "Kawasaki", surface: "dirt", distance: 2100, direction: "left",
+	corners: [
+		{ start: 400, length: 100, number: 3 }, { start: 500, length: 100, number: 4 },
+		{ start: 1000, length: 100, number: 1 }, { start: 1100, length: 100, number: 2 },
+		{ start: 1600, length: 100, number: 3 }, { start: 1700, length: 100, number: 4 },
+	],
+	straights: [
+		{ start: 0, length: 400, front: 2 }, { start: 600, length: 400, front: 1 },
+		{ start: 1200, length: 400, front: 2 }, { start: 1800, length: 300, front: 1 },
+	],
+	slopes: [],
 	surface_changes: [],
 }
 

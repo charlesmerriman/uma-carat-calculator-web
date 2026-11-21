@@ -142,9 +142,14 @@ export interface SkillReadable {
 
 /** Where a player gets a skill, in short: a few of each, with the totals. */
 export interface PvpSkillSources {
-	umas: { name: string; source: string; level: number | null; on_global: boolean }[]
+	/**
+	 * `id` is the outfit's or card's row id (absent from an older API), for its
+	 * card. A unique's inherited copy lists the unique's owners with `source:
+	 * "inherited"` (api #300).
+	 */
+	umas: { id?: number; name: string; source: string; level: number | null; on_global: boolean }[]
 	uma_count: number
-	cards: { name: string; source: string; on_global: boolean }[]
+	cards: { id?: number; name: string; source: string; on_global: boolean }[]
 	card_count: number
 }
 

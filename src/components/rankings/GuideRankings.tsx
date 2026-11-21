@@ -76,6 +76,7 @@ import { Detail, DetailBlock } from "./kit/Detail"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { hoverCardProps } from "../../utils/hoverCards"
+import { nameMatches } from "../../utils/searchText"
 
 const STYLES: PvpStyle[] = ["runaway", "front", "pace", "late", "end"]
 const KINDS: Array<{ id: PvpEventKind; label: string }> = [
@@ -585,10 +586,10 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 		const umaPlaces = new Map(umas.map((rank, index) => [rank.uma, { rank, place: index + 1 }]))
 		const found = [
 			...[...cardsById.values()]
-				.filter((card) => !card.placeholder && card.name.toLowerCase().includes(needle))
+				.filter((card) => !card.placeholder && nameMatches(needle, card.name))
 				.map((card) => ({ kind: "card" as const, card, hit: cardPlaces.get(card.id) ?? null })),
 			...[...umasById.values()]
-				.filter((uma) => uma.name.toLowerCase().includes(needle))
+				.filter((uma) => nameMatches(needle, uma.name))
 				.map((uma) => ({ kind: "uma" as const, uma, hit: umaPlaces.get(uma.id) ?? null })),
 		]
 		const nameOf = (entry: (typeof found)[number]) => (entry.kind === "card" ? entry.card.name : entry.uma.name)

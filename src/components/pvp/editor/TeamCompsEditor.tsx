@@ -17,7 +17,7 @@ export function TeamCompsEditor() {
 		<section id="editor-guide-team_comps" aria-label="Team comps" className="flex flex-col gap-2">
 			<div className="flex flex-wrap items-baseline justify-between gap-2">
 				<h4 className={SECTION_HEADING}>Team comps</h4>
-				<span className={SUBTLE}>A recommended team shape and why.</span>
+				<span className={SUBTLE}>A recommended team shape and why. Styles and Debuffer get a chip.</span>
 			</div>
 			{rows.map((_, i) => (
 				<TeamCompRow key={i} index={i} count={rows.length} />

@@ -50,7 +50,7 @@ export interface RankRowProps {
 	/**
 	 * The uma or card's Encyclopedia page (useEncyclopediaHrefs; null for
 	 * anyone without early access). A row that opens keeps its button and
-	 * starts its breakdown with "Open its page"; a row that doesn't open is
+	 * starts its breakdown with "Open Encyclopedia"; a row that doesn't open is
 	 * the link itself.
 	 */
 	href?: string | null

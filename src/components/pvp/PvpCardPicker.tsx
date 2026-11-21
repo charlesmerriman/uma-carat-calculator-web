@@ -51,6 +51,7 @@ import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 import type { PortraitLayers } from "../../types/portraitLayers"
+import { nameMatches } from "../../utils/searchText"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -138,7 +139,7 @@ type PvpCardPickerProps = {
 	/** A team slot: remembers the filters for that place. Omitted: they start fresh. */
 	place?: PickerPlace
 	/**
-	 * A book button on each tile that opens its card, whose "Open its page"
+	 * A book button on each tile that opens its card, whose "Open Encyclopedia"
 	 * goes on to the Encyclopedia (early access). Only where leaving loses
 	 * nothing: the team builder and the team window save as they go. Off in
 	 * the guide editor and the veteran form, where a stray click would drop an
@@ -263,8 +264,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				} else if (item.placeholder || (rarity !== null && (item.rarity ?? 3) !== rarity)) return false
 			}
 			if (!query) return true
-			if (item.name.toLocaleLowerCase().includes(query)) return true
-			if (item.alias.toLocaleLowerCase().includes(query)) return true
+			if (nameMatches(query, item.name, item.alias)) return true
 			return item.skills.some((link) => matchingSkillIds.has(link.skill))
 		})
 		// Stable: what can be picked before what can't, the guide's picks
@@ -560,7 +560,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 /**
  * Closes the picker when the route's page changes under it. Every way out of
  * a picker with book buttons goes through here: the book followed as a link
- * (a tap, the keyboard) and "Open its page" in the card a click on the book
+ * (a tap, the keyboard) and "Open Encyclopedia" in the card a click on the book
  * opens, which is a link outside the picker. In the team window the picker
  * would otherwise stay open over the page it led to.
  *

@@ -80,6 +80,12 @@ interface CourseStripProps {
 	 * sets its own (CourseSection).
 	 */
 	widthPx?: number
+	/**
+	 * The stuck strip's rows only (owner, 2026-11-20: the slim strip): no
+	 * height profile and no section numbers, so it holds about 200px of the
+	 * screen while the guide scrolls under it.
+	 */
+	slim?: boolean
 }
 
 // The label column across the page, and the marks' margin down it.
@@ -338,6 +344,7 @@ export default function CourseStrip({
 	onPreview,
 	preview = null,
 	widthPx = STRIP_PX,
+	slim = false,
 }: CourseStripProps) {
 	const vertical = orientation === "vertical"
 	const distance = course.distance
@@ -407,7 +414,7 @@ export default function CourseStrip({
 	const rows = (
 		<>
 			{/* A flat course (Funabashi dirt 1600) has no profile and no hills to draw. */}
-			{hills.length > 0 && <HeightRow course={course} vertical={vertical} />}
+			{hills.length > 0 && !slim && <HeightRow course={course} vertical={vertical} />}
 			<Row vertical={vertical} label="Phase" band="phases" grow={0.8}>
 				{phases.map((phase, index) => (
 					<Segment
@@ -503,7 +510,7 @@ export default function CourseStrip({
 					))}
 				</div>
 			)}
-			<Row vertical={vertical} label="Section" vlabel="Sec" band="sections" size={vertical ? 18 : SECTIONS_PX} className="!bg-transparent">
+			{!slim && <Row vertical={vertical} label="Section" vlabel="Sec" band="sections" size={vertical ? 18 : SECTIONS_PX} className="!bg-transparent">
 				{sectionBoundaries(distance).slice(1).map((end, index, bounds) => (
 					<div
 						key={end}
@@ -514,7 +521,7 @@ export default function CourseStrip({
 						{everySection || index === 0 || (index + 1) % 4 === 0 ? index + 1 : null}
 					</div>
 				))}
-			</Row>
+			</Row>}
 		</>
 	)
 

@@ -6,8 +6,10 @@ import type { Scenario } from "../types"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 import {
 	LIMIT_BREAK_NEEDS_CARD,
+	editorTabsFor,
 	errorsByTab,
 	hydrateGuide,
+	mentionName,
 	mentionsIn,
 	missingSummary,
 	rowsByTab,
@@ -135,6 +137,26 @@ describe("hydrateGuide", () => {
 		expect(Object.keys(guide.skill_mentions ?? {})).toEqual(["groundwork", "left-handed ○"])
 	})
 
+	it("reads [[Name (inherited)]] as a unique's inherited copy, the bare name as the unique (Henry, 2026-11-20)", () => {
+		const unique = { ...skill(10, "Angling and Scheming", "unique"), rarity: 5, game_id: 100201 }
+		const copy = { ...skill(11, "Angling and Scheming", "◎ white"), game_id: 900201 }
+		const catalogue = { ...CATALOGUE, skills: [...CATALOGUE.skills, copy, unique] }
+		const index = { ...INDEX, catalogue, skillsById: new Map(catalogue.skills.map((row) => [row.id, row])) }
+		expect(mentionName(copy)).toBe("Angling and Scheming (inherited)")
+		expect(mentionName(unique)).toBe("Angling and Scheming")
+		const doc = { ...document(), meta_analysis: "[[Angling and Scheming]] or [[angling and scheming (Inherited)]]" }
+		const guide = hydrateGuide(doc, index, SCENARIOS, null)
+		expect(guide.skill_mentions?.["angling and scheming"]?.id).toBe(10)
+		expect(guide.skill_mentions?.["angling and scheming (inherited)"]?.id).toBe(11)
+		// The Preview frames the copy's pill as the reader does.
+		expect(guide.skill_mentions?.["angling and scheming"]?.is_inherited).toBe(false)
+		expect(guide.skill_mentions?.["angling and scheming (inherited)"]?.is_inherited).toBe(true)
+		expect(validateDocument(doc, index)).toEqual([])
+		// A skill with no inherited copy has no such name.
+		const typo = validateDocument({ ...document(), meta_analysis: "[[Groundwork (inherited)]]" }, index)
+		expect(typo.map((error) => error.message)).toEqual(["No skill has this name: [[Groundwork (inherited)]]"])
+	})
+
 	it("takes versions and uniques from the server's last answer when it has them", () => {
 		const previous = {
 			skill_recommendations: [
@@ -223,12 +245,21 @@ describe("missingSummary and payload", () => {
 	it("says what the guide lacks, with where to go", () => {
 		const doc = document()
 		const items = missingSummary(doc)
-		expect(items.map((item) => item.text)).toEqual(["End: no advice, no decks.", "Nothing yet for Runaway, Pace, Late."])
+		// No Runaway in the nag: the editor offers that tab only to a guide that already uses it.
+		expect(items.map((item) => item.text)).toEqual(["End: no advice, no decks.", "Nothing yet for Pace, Late."])
 		expect(items[0]).toMatchObject({ tab: "end", section: "style_notes" })
 		expect(missingSummary({ ...doc, stat_configs: [], uma_recommendations: [], style_notes: [], decks: [], skill_recommendations: [] }).map((item) => item.text)).toEqual([
 			"No recommended stats yet.",
 			"No style has anything yet. Pick a tab and add rows.",
 		])
+	})
+
+	it("offers a Runaway tab only to a guide that already has a runaway row", () => {
+		expect(editorTabsFor(document())).toEqual(["guide", "front", "pace", "late", "end"])
+		const withRunaway = { ...document(), style_notes: [{ style: "runaway" as const, body: "Lead early." }] }
+		expect(editorTabsFor(withRunaway)).toEqual(["guide", "runaway", "front", "pace", "late", "end"])
+		// And then the nag names it again when it lacks something.
+		expect(missingSummary(withRunaway).map((item) => item.text)).toContain("Runaway: no umas, no decks.")
 	})
 
 	it("strips what the server owns from a save", () => {

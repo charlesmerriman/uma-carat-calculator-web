@@ -133,7 +133,7 @@ describe("GuideEditor", () => {
 		expect(screen.getByLabelText("Style ranking")).toHaveValue("Front >> End")
 		expect(screen.getByText("Private")).toBeInTheDocument()
 		expect(screen.getByText("Saved")).toBeInTheDocument()
-		expect(screen.getByText("Nothing yet for Runaway, Pace, Late, End.")).toBeInTheDocument()
+		expect(screen.getByText("Nothing yet for Pace, Late, End.")).toBeInTheDocument()
 	})
 
 	it("saves the whole document once after a pause, with the version, and primes the reader", async () => {
@@ -232,7 +232,7 @@ describe("GuideEditor", () => {
 		const dialog = within(screen.getByRole("dialog", { name: "Who can see this guide?" }))
 		expect(dialog.getByRole("radio", { name: /Supporters/ })).toBeChecked()
 		// The checklist shows on the way out of Private.
-		expect(dialog.getByText("Nothing yet for Runaway, Pace, Late, End.")).toBeInTheDocument()
+		expect(dialog.getByText("Nothing yet for Pace, Late, End.")).toBeInTheDocument()
 		fireEvent.click(dialog.getByRole("button", { name: "Save" }))
 		// The dialog closes, and the header names the new setting.
 		expect(await screen.findByRole("button", { name: "Visibility" })).toBeInTheDocument()

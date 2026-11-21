@@ -1,14 +1,14 @@
 /**
- * The editor's tab strip: Guide, then the five styles, each with how many
+ * The editor's tab strip: Guide, then the styles it offers (editorTabsFor), each with how many
  * rows it holds and, in red, how many problems the last check found there.
  * The same shape as the reader's style tabs, so the editor reads as the page.
  */
 
 import type { EditorTab } from "../../../utils/guideDocument"
-import { EDITOR_TABS } from "../../../utils/guideDocument"
 import { STYLE_LABELS } from "../../../utils/pvpGuide"
 
-export function EditorTabs({ tab, rows, errors, onChange }: {
+export function EditorTabs({ tabs, tab, rows, errors, onChange }: {
+	tabs: EditorTab[]
 	tab: EditorTab
 	rows: Map<EditorTab, number>
 	errors: Map<EditorTab, number>
@@ -16,7 +16,7 @@ export function EditorTabs({ tab, rows, errors, onChange }: {
 }) {
 	return (
 		<div role="tablist" aria-label="Guide section" className="flex flex-wrap gap-1 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
-			{EDITOR_TABS.map((candidate) => {
+			{tabs.map((candidate) => {
 				const active = candidate === tab
 				const count = rows.get(candidate) ?? 0
 				const problems = errors.get(candidate) ?? 0

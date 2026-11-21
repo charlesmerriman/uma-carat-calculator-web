@@ -36,7 +36,25 @@ export const DECK_SLOTS = 6
 /** The editor's tab for everything that is not a running style. */
 export type EditorTab = "guide" | Exclude<PvpStyle, "everyone">
 export const STYLE_TABS: Array<Exclude<PvpStyle, "everyone">> = ["runaway", "front", "pace", "late", "end"]
-export const EDITOR_TABS: EditorTab[] = ["guide", ...STYLE_TABS]
+
+/**
+ * The styles the editor offers a tab for. Runaway only when the guide already
+ * has a runaway row: no guide uses it, and an empty tab with its "Nothing yet
+ * for Runaway" nag was clutter (Henry, board "Remove runaway section from pvp
+ * guide", 2026-11-17: "just remove from edit option altogether"). A guide that
+ * does have one keeps the tab, so no row is ever out of reach. Readers and
+ * teams keep the Runaway style; this is the editor's tab strip only.
+ */
+export function editorStyleTabs(document: GuideDocument): Array<Exclude<PvpStyle, "everyone">> {
+	const hasRunaway = [document.uma_recommendations, document.style_notes, document.skill_recommendations, document.decks]
+		.some((rows) => rows.some((row) => row.style === "runaway"))
+	return STYLE_TABS.filter((style) => style !== "runaway" || hasRunaway)
+}
+
+/** The editor's tabs: Guide, then the styles it offers. */
+export function editorTabsFor(document: GuideDocument): EditorTab[] {
+	return ["guide", ...editorStyleTabs(document)]
+}
 
 // The column lengths, the server's (calculatorapi/models/pvp_guide.py).
 export const MAX_LENGTH = {
@@ -149,6 +167,29 @@ function cardRef(card: CatalogueSupportCard): PvpSupportCardRef {
 const INHERITED_OFFSET = 800000
 
 /**
+ * `[[Name (inherited)]]` names a unique's inherited copy (Henry, board, 2026-11-20):
+ * the copy shares the unique's name, so the bare name means the unique, as on
+ * the server (SkillQuerySet.resolve_names).
+ */
+export const INHERITED_SUFFIX = " (inherited)"
+
+/** Is this a unique's inherited copy (game id 9xxxxx)? */
+export function isInheritedCopy(skill: { game_id?: number | null }): boolean {
+	const gameId = skill.game_id ?? 0
+	return gameId >= 900000 && gameId < 1000000
+}
+
+/** What a [[mention]] writes for a skill: an inherited copy's name carries " (inherited)". */
+export function mentionName(skill: { name: string; game_id?: number | null }): string {
+	return isInheritedCopy(skill) ? `${skill.name}${INHERITED_SUFFIX}` : skill.name
+}
+
+/** Every lower-case name a [[mention]] may write for a skill: a copy's, each with the suffix. */
+function mentionKeys(skill: CatalogueSkill): string[] {
+	return isInheritedCopy(skill) ? skillNames(skill).map((name) => `${name}${INHERITED_SUFFIX}`) : skillNames(skill)
+}
+
+/**
  * Which outfit each unique skill belongs to, read off the catalogue's uma
  * skill links (source "unique"), the same answer the API's `unique_of`
  * gives. The lowest uma id wins a tie, as on the server. A unique's inherited
@@ -196,6 +237,8 @@ function skillRef(
 		version: previous?.version ?? skill.version ?? "",
 		tier: previous?.tier ?? skill.tier ?? 1,
 		is_evolved: previous?.is_evolved ?? skill.version === "evolved",
+		// A mention of the copy is framed as one (SkillMention), Preview included.
+		is_inherited: previous?.is_inherited ?? isInheritedCopy(skill),
 		versions: previous?.versions ?? [],
 		// What the server said last; a newly picked JP skill is tagged from
 		// the list row until the next autosave brings the rest.
@@ -280,14 +323,16 @@ export function hydrateGuide(
 		}))
 
 	// [[mentions]]: every name a catalogue skill answers to (its own first,
-	// then its other names), matched ignoring case like the server.
+	// then its other names), matched ignoring case like the server. An
+	// inherited copy answers only to its names with " (inherited)", so the
+	// bare name is always the unique's.
 	const byLowerName = new Map<string, CatalogueSkill>()
 	for (const skill of index.catalogue.skills) {
-		const key = skill.name.toLowerCase()
+		const key = mentionName(skill).toLowerCase()
 		if (!byLowerName.has(key)) byLowerName.set(key, skill)
 	}
 	for (const skill of index.catalogue.skills) {
-		for (const key of skillNames(skill)) if (!byLowerName.has(key)) byLowerName.set(key, skill)
+		for (const key of mentionKeys(skill)) if (!byLowerName.has(key)) byLowerName.set(key, skill)
 	}
 	const mentions: Record<string, PvpSkillRef> = {}
 	for (const [, text] of texts(document)) {
@@ -398,7 +443,7 @@ export function validateDocument(document: GuideDocument, index: PvpCatalogueInd
 	document.decks.forEach((deck, i) => deckErrors(deck, i, index, add))
 
 	// [[mentions]] name a skill the editor knows, by any of its names.
-	const names = new Set(index.catalogue.skills.flatMap(skillNames))
+	const names = new Set(index.catalogue.skills.flatMap((skill) => [...skillNames(skill), ...mentionKeys(skill)]))
 	for (const [path, text] of texts(document)) {
 		const unknown = [...new Set(mentionsIn(text).filter((name) => !names.has(name.toLowerCase())))]
 		if (unknown.length > 0) add(path, `No skill has this name: ${unknown.map((name) => `[[${name}]]`).join("; ")}`)
@@ -501,8 +546,9 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 	for (const row of document.style_notes) mark(row.style, "advice")
 	for (const row of document.skill_recommendations) mark(row.style, "skills")
 	for (const row of document.decks) mark(row.style, "decks")
-	const empty = STYLE_TABS.filter((style) => !present.has(style))
-	for (const style of STYLE_TABS) {
+	const styles = editorStyleTabs(document)
+	const empty = styles.filter((style) => !present.has(style))
+	for (const style of styles) {
 		const tables = present.get(style)
 		if (!tables) continue
 		const gaps = (["umas", "advice", "decks"] as const).filter((name) => !tables.has(name))
@@ -511,7 +557,7 @@ export function missingSummary(document: GuideDocument): ChecklistItem[] {
 			items.push({ text: `${STYLE_LABELS[style]}: no ${gaps.join(", no ")}.`, tab: style, section: sectionOf[gaps[0]] })
 		}
 	}
-	if (empty.length === STYLE_TABS.length) {
+	if (empty.length === styles.length) {
 		items.push({ text: "No style has anything yet. Pick a tab and add rows.", tab: "front", section: "any" })
 	} else if (empty.length > 0) {
 		items.push({ text: `Nothing yet for ${empty.map((style) => STYLE_LABELS[style]).join(", ")}.`, tab: empty[0], section: "any" })

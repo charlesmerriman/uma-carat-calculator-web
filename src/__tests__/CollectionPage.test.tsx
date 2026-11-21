@@ -183,7 +183,7 @@ describe("who sees what", () => {
 
 describe("the CM history tab", () => {
 	const day = (ticket: number, winners: Array<number | null>): PvpRun => ({
-		kind: "cm", event: 21, stage: "day", day: 1, ticket, finals_group: "", placement: null, note: "", skipped: false,
+		kind: "cm", event: 21, stage: "day", day: 1, ticket, finals_group: "", placement: null, note: "", skipped: false, team: null,
 		updated_at: "2026-11-01T00:00:00Z",
 		runners: [{ position: 0, uma: 41, style: "pace", trained_uma: 1 }, { position: 1, uma: 42, style: "front" }],
 		races: winners.map((winner, index) => ({ race: index + 1, winner })),

@@ -57,8 +57,9 @@ function resolveGuaranteedCard(
  *
  * Shared by BannerRow (both layouts) and the share picture, so the picture
  * shows exactly the art the sheet does. Images only: the caller decides whether
- * the cell links anywhere. `large` is the picture's: art a size up (64px for
- * the sheet's 56), since the art is what a picture is looked at for.
+ * the cell links anywhere. `large` is the picture's: art as big as its row
+ * allows (76px cards, 68px umas, for the sheet's 56), since the art is what a
+ * picture is looked at for.
  */
 export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supportBannerData, large = false }: {
 	target: PlannedBannerTarget
@@ -69,8 +70,16 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 }) {
 	// The person's favorite umas, drawn in the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
-	const umaSize = large ? "w-16" : "w-14"
-	const cardClass = large ? "h-16 w-auto object-contain" : "thumb-banner"
+	// The picture's sizes fill its row's inner height (PlanPicture: a 88 px
+	// row with 6 px of padding leaves 76): a card at the full 76. An uma is
+	// smaller and sits lower, because her layered ears rise a sixth of the
+	// tile above it and must stay inside the row's border: at 72 px, centred,
+	// they crossed it (Daptrius, 2026-11-20). At 68 px, pushed 4 px down by
+	// mt-2 (a centred item's margin moves it half its size), her frame ends
+	// at the padding's bottom and her ear tips sit about 3 px inside the top
+	// border. Two umas, 68 + 6 + 68, fit the 152 px cell.
+	const umaSize = large ? "mt-2 w-17" : "w-14"
+	const cardClass = large ? "h-19 w-auto object-contain" : "thumb-banner"
 
 	if (target.type === "StepUp") {
 		const pool = stepUpPool(target)

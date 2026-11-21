@@ -19,7 +19,7 @@ import { CARD_LINK_TITLE } from "../utils/hoverCards"
  * would do both. The caller places it with `className` (`absolute left-1 bottom-1`).
  *
  * With `hover` (utils/hoverCards.ts hoverCardProps) a mouse click opens the
- * uma's or card's card instead, and the card's "Open its page" goes on to
+ * uma's or card's card instead, and the card's "Open Encyclopedia" goes on to
  * the page; a tap or the keyboard still follows the link.
  */
 export function EncyclopediaIconLink({ href, name, className = "", hover }: {
@@ -59,7 +59,7 @@ export function EncyclopediaName({ href, name, className }: { href: string | nul
 }
 
 /**
- * "Open its page", the line a skill card ends with (SkillDetail), for an uma
+ * "Open Encyclopedia", the line a skill card ends with (SkillDetail), for an uma
  * or card's hover card and a ranking row's breakdown. Inside a drawn popup it
  * takes clicks but leaves the Tab order: the popup is aria-hidden and the
  * screen reader's copy has the same link (hoverPopup.tsx).
@@ -73,7 +73,7 @@ export function OpenPageLink({ href, className = "" }: { href: string | null; cl
 			tabIndex={inPopup ? -1 : undefined}
 			className={`inline-flex items-center gap-1 text-xs font-semibold text-brand transition hover:opacity-80 ${className}`}
 		>
-			Open its page
+			Open Encyclopedia
 			<ArrowRight className="h-3 w-3" aria-hidden="true" />
 		</Link>
 	)

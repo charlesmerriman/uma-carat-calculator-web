@@ -47,6 +47,12 @@ export interface PvpRunContent {
 	 * Only the player sets it, never the clock. ticketState() reads it.
 	 */
 	skipped: boolean
+	/**
+	 * The My team team (its id) the ticket was filled from. While nothing is
+	 * raced it follows that team: a team edit rewrites its lineup on the
+	 * server (backend models/pvp_run.py). Null: no team, or it was deleted.
+	 */
+	team: number | null
 }
 
 /** One run as the server sends it. */

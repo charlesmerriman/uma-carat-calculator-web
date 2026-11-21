@@ -1,5 +1,5 @@
 /**
- * "Accels that land at the spurt" (notes/course-map-plan-2.md, section 8;
+ * "Skills on this course", once "Accels that land at the spurt" (notes/course-map-plan-2.md, section 8;
  * notes/course-map-visual-plan.md, "The accels column"): the accels that can
  * land at the last spurt's start here, most useful first (owner, 2026-11-03:
  * "the ones that are actually useful on the track ... ranked by usefulness",
@@ -42,6 +42,7 @@ import { useCourseZones } from "../../services/courseQueries"
 import { setCourseFocus, useCourseFocus, useStyleTab, type StyleChoice } from "../../services/courseMapStore"
 import { accelRows, grade, speedRows, verdictLines, type AccelRow } from "../../utils/courseLayers"
 import { GradePill, ZoneBar } from "./CourseVerdictCard"
+import { nameMatches } from "../../utils/searchText"
 
 const STYLES: { value: StyleChoice; label: string }[] = [
 	{ value: "all", label: "All" },
@@ -61,7 +62,7 @@ type ListKind = "accel" | "speed"
 const LISTS: Record<ListKind, { label: string; title: string; rows: string; search: string; none: string; loading: string }> = {
 	accel: {
 		label: "Accels",
-		title: "Accels that land at the spurt",
+		title: "Skills on this course",
 		rows: "Accels on this course",
 		search: "Search the accels",
 		none: "No accel lands at the late-race start here for this style.",
@@ -69,7 +70,7 @@ const LISTS: Record<ListKind, { label: string; title: string; rows: string; sear
 	},
 	speed: {
 		label: "Speed",
-		title: "Speed skills on this course",
+		title: "Skills on this course",
 		rows: "Speed skills on this course",
 		search: "Search the speed skills",
 		none: "No speed skill pays off here for this style.",
@@ -84,32 +85,29 @@ interface Owner {
 }
 
 /**
- * Why a row ranks where it does (owner, 2026-11-04): the rank's two parts
- * as chips, Accel (the share landing well times the speed its acceleration
- * adds) and Carry (the share carrying speed into the late race times that
- * speed), and the carry in the game's terms. A part of zero is left out.
- * On the Speed list the first chip is Speed (the speed it adds, less the
- * share landing while the runner is still speeding up), with that share in
- * words, and a skill raising current speed says so, since that's why it
- * takes no cut.
+ * What the skill does and why it ranks where it does, under its name: its own
+ * effect in its skill card's words at the base value ("Acceleration +0.4";
+ * Henry, board "Accels -> Skills", 2026-11-20: the computed "Accel 1.60" and
+ * "Carry" chips read as wrong, "just show that it has 0.4 increase
+ * acceleration for base and 0.2 increase acceleration for inherit"), then
+ * the carry in the game's terms, and on the Speed list the share landing
+ * while the runner is still speeding up. A skill raising current speed says
+ * so, since that's why it takes no cut. The ranking itself is never shown.
  */
 function RankParts({ entry, list }: { entry: AccelRow["entry"]; list: ListKind }) {
 	const rank = list === "speed" ? entry.speed_rank : undefined
-	const first = list === "speed" ? (rank?.speed ?? 0) : (entry.spurt?.accel ?? 0)
+	const words = entry.effect_words ?? []
 	const carry = (list === "speed" ? rank?.carry : entry.spurt?.carry) ?? 0
 	const carries = carry > 0 && entry.carry_speed !== undefined
 	const accelerating = rank?.accelerating ?? 0
 	const current = list === "speed" && entry.speed_kind === "current"
-	if (first <= 0 && !carries && accelerating <= 0 && !current) return null
+	if (words.length === 0 && !carries && accelerating <= 0 && !current) return null
 	return (
 		<span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-semibold tabular-nums">
-			{first > 0 && (
-				<span className="rounded-full bg-gray-700 px-1.5 py-px text-gray-200">
-					{list === "speed" ? "Speed" : "Accel"} {first.toFixed(2)}
-				</span>
-			)}
+			{words.map((text) => (
+				<span key={text} className="rounded-full bg-gray-700 px-1.5 py-px text-gray-200">{text}</span>
+			))}
 			{current && <span className="rounded-full border border-gray-600 px-1.5 py-px font-normal text-gray-300">Raises current speed</span>}
-			{carries && <span className="rounded-full bg-brand/20 px-1.5 py-px text-brand">Carry {carry.toFixed(2)}</span>}
 			{carries && (
 				<span className="font-normal text-gray-400">
 					+{entry.carry_speed?.toFixed(2)} m/s into the late race{entry.carry_seconds ? ` for ${entry.carry_seconds} s` : ""}
@@ -255,7 +253,7 @@ export default function CourseAccelList({
 		return rows.filter(({ skillId }) => {
 			const skill = ready?.skillsById.get(skillId) ?? { name: `Skill ${skillId}` }
 			const owner = owners.get(skillId)?.uma.name ?? ""
-			return skillMatches(skill, words) || foldText(owner).includes(needle)
+			return skillMatches(skill, words) || nameMatches(needle, owner)
 		})
 	}, [rows, needle, ready, owners])
 	const loaded = zones.data !== undefined && ready !== null

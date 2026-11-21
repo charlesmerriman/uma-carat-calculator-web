@@ -26,7 +26,7 @@ import {
 	type CourseMarker,
 } from "../utils/courseGeometry"
 import { schematicShape } from "../utils/courseSchematic"
-import { CHUKYO_1200, NAKAYAMA_3600, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
+import { CHUKYO_1200, KAWASAKI_2100, NAKAYAMA_3600, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
 
 describe("Chukyo turf 1200 m, the worked example", () => {
 	it("puts the phases at 1/6, 2/3 and 5/6, phase 3 a band of its own", () => {
@@ -216,6 +216,29 @@ describe("metres to positions", () => {
 		expect(moved(1365)).toBeLessThan(20)
 		const chukyo = schematicShape(CHUKYO_1200)
 		expect(withLapRings(chukyo, CHUKYO_1200, 20)).toBe(chukyo)
+	})
+
+	it("keeps lap one's home straight on its own ring, parallel to the final straight (Kawasaki 2100)", () => {
+		// Henry, 2026-11-21: the step to the inner ring was blended along lap
+		// one's home straight (600 to 1,000 m), so it ran at an angle to the
+		// final straight. Every straight now holds one offset along its length.
+		const shape = schematicShape(KAWASAKI_2100)
+		const ringed = withLapRings(shape, KAWASAKI_2100, 20)
+		const moved = (metre: number) => {
+			const index = Math.round((metre / 2100) * 1000)
+			return Math.hypot(ringed[index][0] - shape[index][0], ringed[index][1] - shape[index][1])
+		}
+		// Lap one's home straight: not moved, end to end.
+		expect(moved(620)).toBeLessThan(0.5)
+		expect(moved(980)).toBeLessThan(0.5)
+		// The step happens in corners 1 and 2 (1,000 to 1,200 m)...
+		expect(moved(1100)).toBeGreaterThan(2)
+		expect(moved(1100)).toBeLessThan(18)
+		// ...so the back straight and the final straight sit one whole ring in.
+		expect(moved(1220)).toBeCloseTo(20, 0)
+		expect(moved(1580)).toBeCloseTo(20, 0)
+		expect(moved(1820)).toBeCloseTo(20, 0)
+		expect(moved(2080)).toBeCloseTo(20, 0)
 	})
 
 	it("rings a course that turns a little under a full circle (Nakayama 2000's real shape: 357 degrees)", () => {

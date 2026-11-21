@@ -13,7 +13,7 @@
  * type's word is still there for a screen reader.
  */
 
-import { Fragment, useEffect, useMemo } from "react"
+import { Fragment, useMemo } from "react"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedCard } from "../FramedCard"
@@ -24,7 +24,7 @@ import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { LetterHeading, LetterIndex } from "./letters"
 import { lettersFor } from "../../utils/encyclopediaLetters"
-import { reportCounts } from "../../utils/encyclopediaCounts"
+import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { Chips, Count, PickChips, SearchBox, SelectFilter, SortControl, Toolbar } from "./listFilters"
 import { useCardEffects } from "../../services/encyclopediaQueries"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
@@ -33,7 +33,7 @@ import { useOwned } from "../../hooks/useOwned"
 import {
 	CARD_SORT_OPTIONS, EFFECT_AT_OPTIONS, OWNED_OPTIONS, PAGE_CONTAINER, RARITY_OPTIONS, RARITY_WORDS, REVERSED_VALUES,
 	SHARED_OWNED_KEY, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, TYPE_OPTIONS, WHERE_OPTIONS,
-	countLine, effectReading, effectValue, filterCards, filterUmas, listWhere, ownedMatches, releaseDates, sortByEffect, sortFact,
+	countLine, effectReading, effectValue, filterCards, listWhere, ownedMatches, releaseDates, sortByEffect, sortFact,
 	sortList, values, withGameDates,
 	type CardSortOrder, type EffectAt, type OwnedFilter, type SharedWhere,
 } from "../../utils/encyclopedia"
@@ -105,15 +105,7 @@ const CardListBody = () => {
 	)
 
 	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
-	const totals = useMemo(() => (catalogue.status === "ready" ? {
-		umas: filterUmas(catalogue.catalogue.umas, "", "all", []).length,
-		cards: filterCards(catalogue.catalogue.support_cards, "", [], [], "all").length,
-		// The Skills tab's number before its list is opened (Daptrius, board, 2026-11-17).
-		...(catalogue.catalogue.skill_count !== undefined && { skills: catalogue.catalogue.skill_count }),
-	} : null), [catalogue])
-	useEffect(() => {
-		if (totals) reportCounts(totals)
-	}, [totals])
+	const totals = useCatalogueCounts(catalogue)
 	// Letter headings for the whole list in name order only (letters.tsx).
 	const letters = lettersFor(shown, (card) => card.name, sort === "name" && totals !== null && shown.length === totals.cards)
 

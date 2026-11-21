@@ -23,6 +23,7 @@ import type {
 	Scenario,
 	TimelineEvent,
 } from "../../types"
+import { nameMatches } from "../../utils/searchText"
 
 // Countdown label for the badge in a card's header. Both dates are parsed
 // through parseApiDate so date-only strings land on *local* midnight —
@@ -706,9 +707,9 @@ export function markerRowMatchesKind(
 	return rowMarkers(row).some((marker) => marker.kind === kind)
 }
 
-/** Whether any marker in the row is named by the (already lowercased) query. */
+/** Whether any marker in the row is named by the query (utils/searchText.ts). */
 export function markerRowMatchesSearch(row: TimelineRow, query: string): boolean {
-	return rowMarkers(row).some((marker) => marker.name.toLowerCase().includes(query))
+	return rowMarkers(row).some((marker) => nameMatches(query, marker.name))
 }
 
 /**
