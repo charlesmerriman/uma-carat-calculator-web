@@ -24,9 +24,14 @@ import CourseFactsList from "./CourseFactsList"
 import CourseTrack from "./CourseTrack"
 import { courseName } from "./courseName"
 
-// The track's widest in the drawer: the card is wide, but a 900px oval would
-// make the drawer taller than the card it hangs from.
-const DRAWER_TRACK_PX = 720
+// The drawer's desktop track is the guide's own (CourseTrack's default box,
+// 1000px), so it lays its chips out exactly as the guide's map does. The chips
+// are HTML at a fixed px size, placed by a guess at their size in the box
+// (nothing is measured), so a different box width gives a different layout:
+// at 720px every fix tuned on the guide's map (chip clearance, Corner 4,
+// laps) came out differently here. Scaling the 1000px layout down instead
+// would shrink the chips' 11px text to about 8px. The card sits in the same
+// 96rem column as the guide, so it has the room; the open drawer is taller.
 // A phone's card, less its padding (below Tailwind's sm, 640px).
 const PHONE_TRACK_PX = 340
 
@@ -36,7 +41,7 @@ function DrawerTrack({ course }: { course: RaceCourse }) {
 	const colours = useTrackColours()
 	if (shape.isPending) {
 		return (
-			<div className="mx-auto flex aspect-[2/1] w-full items-center justify-center" style={{ maxWidth: DRAWER_TRACK_PX }}>
+			<div className="mx-auto flex aspect-[2/1] w-full max-w-250 items-center justify-center">
 				<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 			</div>
 		)
@@ -50,7 +55,7 @@ function DrawerTrack({ course }: { course: RaceCourse }) {
 	// own box size and only the callouts that fit it.
 	return (
 		<>
-			<CourseTrack course={course} shape={shape.data} widthPx={DRAWER_TRACK_PX} colours={colours} className="hidden sm:block" />
+			<CourseTrack course={course} shape={shape.data} colours={colours} className="hidden sm:block" />
 			<CourseTrack course={course} shape={shape.data} widthPx={PHONE_TRACK_PX} compact colours={colours} className="sm:hidden" />
 		</>
 	)
