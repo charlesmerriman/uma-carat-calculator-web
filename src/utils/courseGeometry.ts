@@ -478,6 +478,12 @@ function smoothstep(t: number): number {
 	return clamped * clamped * (3 - 2 * clamped)
 }
 
+// How many points either side the ring blend averages the turn over (1.2% of
+// the race, 25 to 43 m on the courses that ring). A real shape's heading
+// wobbles from point to point, and a blend read off the raw turn steps with
+// it, so a bend comes out jagged; a schematic's turn is smooth either way.
+const RING_TURN_SMOOTHING = 12
+
 /**
  * A course over one lap with each later lap drawn as its own ring, inside or
  * outside lap one (`later_laps`, chosen per course; owner, 2026-11-02), so
@@ -494,22 +500,39 @@ export function withLapRings(shape: Shape, course: RaceCourse, gap: number): Sha
 	const rings = Math.floor((Math.abs(total) + TURN_SLACK) / 360)
 	if (rings === 0) return shape
 	const last = shape.length - 1
-	const metreOf = (index: number) => (index / last) * course.distance
-	const firstAt = (turn: number) => {
-		const index = turns.findIndex((value) => value >= turn)
-		return metreOf(index === -1 ? last : index)
-	}
 
 	// Ring k blends in over the half turn (two corners) before the course has
 	// turned k full circles, so it is in place by the time the course is back
 	// over old ground, and the step hides in the bend. Measured from the lap
 	// boundary instead, the last ring of a course that finishes on its home
 	// straight would have to blend along the straight.
-	const blends = Array.from({ length: rings }, (_, k) => {
-		const from = firstAt(360 * (k + 1) - 180)
-		const to = firstAt(360 * (k + 1) - TURN_SLACK)
-		return { from, to: Math.max(to, from + 1) }
-	})
+	//
+	// The blend is read off the turn itself, never off metres between two
+	// turn readings. A straight holds its turn, so a straight's offset can't
+	// change. Metres between "first turned 180" and "first turned 350" put
+	// the blend's start at the exit of the bend BEFORE the straight (the
+	// straight already reads 180), so lap one's home straight took the whole
+	// step along its length and ran at an angle to the final straight (Henry,
+	// 2026-11-21, board post 1573498930824613938: Kyoto 3200 and 3000,
+	// Kawasaki 2100, Sapporo 2600, Nakayama 2500). The turn is averaged over
+	// a few points (RING_TURN_SMOOTHING) and never allowed to fall back, so a
+	// real shape's wobble doesn't step the blend.
+	const steady: number[] = []
+	let highest = 0
+	for (let i = 0; i <= last; i++) {
+		const from = Math.max(0, i - RING_TURN_SMOOTHING)
+		const to = Math.min(last, i + RING_TURN_SMOOTHING)
+		let sum = 0
+		for (let j = from; j <= to; j++) sum += turns[j]
+		highest = Math.max(highest, sum / (to - from + 1))
+		steady.push(highest)
+	}
+	const span = 180 - TURN_SLACK
+	const offsetAt = (index: number) => {
+		let offset = 0
+		for (let k = 0; k < rings; k++) offset += smoothstep((steady[index] - (360 * (k + 1) - 180)) / span)
+		return offset
+	}
 
 	// Inside a clockwise course is to the right of travel; the sign of the
 	// total turn says which way this one goes.
@@ -517,8 +540,7 @@ export function withLapRings(shape: Shape, course: RaceCourse, gap: number): Sha
 	const side = course.later_laps === "outside" ? -inward : inward
 
 	return shape.map(([x, y], index) => {
-		const metre = metreOf(index)
-		const offset = blends.reduce((sum, blend) => sum + smoothstep((metre - blend.from) / (blend.to - blend.from)), 0)
+		const offset = offsetAt(index)
 		if (offset === 0) return [x, y] as const
 		const [ax, ay] = shape[Math.max(0, index - 1)]
 		const [bx, by] = shape[Math.min(last, index + 1)]
