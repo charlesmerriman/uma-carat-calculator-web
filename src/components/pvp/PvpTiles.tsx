@@ -144,6 +144,11 @@ function MentionedSkills({ text, skip }: { text: string; skip?: number }) {
  * decides, utils/remarkHighlight.ts), so it gets a red ring to stand out
  * (Daptrius, 2026-10-17). A ring, not a border colour: a gold skill's
  * .skill-gold border would win over a border utility.
+ *
+ * A unique's inherited copy, written [[Name (inherited)]], takes the violet
+ * frame its chip has, so a sentence naming both versions shows which is which
+ * (owner, 2026-11-20). Only the copy: a unique mention stays on the plain
+ * surface, as every other mention does.
  */
 export function SkillMention({ name, scenarioLink = false }: { name: string; scenarioLink?: boolean }) {
 	const skill = useSkillMentions()[name.toLowerCase()]
@@ -157,7 +162,7 @@ export function SkillMention({ name, scenarioLink = false }: { name: string; sce
 		interactive: preview && skill?.game_id != null,
 	})
 	if (!skill) return <>{name}</>
-	const surface = skillSurface(skill, "border-gray-600 bg-gray-800 text-gray-100")
+	const surface = skillSurface(skill, `${skill.is_inherited ? "border-step-up-border/70" : "border-gray-600"} bg-gray-800 text-gray-100`)
 	const ring = scenarioLink ? "ring-2 ring-highlight" : ""
 	const pill = `inline-flex max-w-full items-center gap-1 rounded border pl-0.5 pr-1.5 align-middle text-[0.95em] font-medium leading-none ${surface} ${ring}`
 	const face = (

@@ -148,6 +148,9 @@ describe("hydrateGuide", () => {
 		const guide = hydrateGuide(doc, index, SCENARIOS, null)
 		expect(guide.skill_mentions?.["angling and scheming"]?.id).toBe(10)
 		expect(guide.skill_mentions?.["angling and scheming (inherited)"]?.id).toBe(11)
+		// The Preview frames the copy's pill as the reader does.
+		expect(guide.skill_mentions?.["angling and scheming"]?.is_inherited).toBe(false)
+		expect(guide.skill_mentions?.["angling and scheming (inherited)"]?.is_inherited).toBe(true)
 		expect(validateDocument(doc, index)).toEqual([])
 		// A skill with no inherited copy has no such name.
 		const typo = validateDocument({ ...document(), meta_analysis: "[[Groundwork (inherited)]]" }, index)

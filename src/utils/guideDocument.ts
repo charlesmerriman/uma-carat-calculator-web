@@ -237,6 +237,8 @@ function skillRef(
 		version: previous?.version ?? skill.version ?? "",
 		tier: previous?.tier ?? skill.tier ?? 1,
 		is_evolved: previous?.is_evolved ?? skill.version === "evolved",
+		// A mention of the copy is framed as one (SkillMention), Preview included.
+		is_inherited: previous?.is_inherited ?? isInheritedCopy(skill),
 		versions: previous?.versions ?? [],
 		// What the server said last; a newly picked JP skill is tagged from
 		// the list row until the next autosave brings the rest.
