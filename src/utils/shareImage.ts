@@ -38,13 +38,29 @@ export interface DrawnPicture {
 const MAX_CANVAS_PIXELS = 16_000_000
 
 /**
+ * The widest picture we make, in real pixels. A one-column picture (960 CSS
+ * px: a plan up to 30 banners, a PvP team) still draws at 2x, 1,920 wide. A
+ * two-column plan (1,880 CSS px) drew at up to 2x before, capped only by
+ * MAX_CANVAS_PIXELS: Daptrius's 41-banner plan came out 3,246 x 4,928 (16
+ * million pixels), far more than any screen shows, and slow on a phone, which
+ * draws it up to MAX_WEBKIT_PASSES times. Capped, it is about 2,000 x 3,030
+ * (6 million): the same text, a third of the drawing (board post "Plan
+ * Images Export", 2026-11-20).
+ */
+const MAX_OUTPUT_WIDTH = 2000
+
+/**
  * The scale to draw a `width` x `height` (CSS px) picture at: twice its size,
- * so it stays sharp on a phone, unless that would pass MAX_CANVAS_PIXELS. A
- * long plan (about 33 banners and up) then draws a little softer rather than
- * failing on an iPhone (notes/v2-10-feedback-plan.md, item 2).
+ * so it stays sharp on a phone, but never wider than MAX_OUTPUT_WIDTH and
+ * never past MAX_CANVAS_PIXELS. A very long plan then draws a little softer
+ * rather than failing on an iPhone (notes/v2-10-feedback-plan.md, item 2).
  */
 export function pixelRatioFor(width: number, height: number): number {
-	return Math.min(2, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height)))
+	return Math.min(
+		2,
+		MAX_OUTPUT_WIDTH / Math.max(1, width),
+		Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height))
+	)
 }
 
 /** At most this many passes on Safari's engine (see renderNodeToPng). */
