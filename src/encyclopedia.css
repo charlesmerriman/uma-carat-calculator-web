@@ -2495,6 +2495,9 @@
 	}
 	.enc-level__track input {
 		position: absolute;
+		/* Above the cap ticks, which come later in the DOM and would otherwise
+		   paint across the thumb when it sits on a cap (level 50 = MLB). */
+		z-index: 1;
 		top: 0.2rem;
 		right: 0;
 		left: 0;
