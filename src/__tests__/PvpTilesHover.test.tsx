@@ -63,6 +63,20 @@ describe("hover details in a guide", () => {
 		expect(detail.textContent?.match(/Slightly reduce fatigue/g)).toHaveLength(1)
 	})
 
+	it("frames an inherited copy's mention the way its chip is framed, and leaves a unique's plain", () => {
+		const unique = skill({ id: 4, name: "Angling and Scheming", rarity: 3, unique_of: "Seiun Sky" })
+		const copy = skill({ id: 5, name: "Angling and Scheming", is_inherited: true, unique_of: "Seiun Sky" })
+		render(
+			<SkillMentionsContext.Provider value={{ "angling and scheming": unique, "angling and scheming (inherited)": copy }}>
+				<InlineNote text="[[Angling and Scheming]] or [[Angling and Scheming (inherited)]]" />
+			</SkillMentionsContext.Provider>
+		)
+		const [first, second] = screen.getAllByRole("group", { name: "Angling and Scheming" })
+		expect(first.className).toContain("border-gray-600")
+		expect(second.className).toContain("border-step-up-border/70")
+		expect(second.className).not.toContain("border-gray-600")
+	})
+
 	it("leaves out the skill a chip is about when its note names itself", () => {
 		render(inGuide(<SkillChip skill={MOXIE} note="Take [[Moxie]] early" />))
 		expect(screen.getByRole("tooltip").textContent?.match(/Slightly reduce fatigue/g)).toHaveLength(1)
