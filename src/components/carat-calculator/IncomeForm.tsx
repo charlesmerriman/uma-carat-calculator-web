@@ -12,6 +12,8 @@ import { useAverageMonthlyIncome } from "../../hooks/useAverageMonthlyIncome"
 import { UncapCrystalsPanel } from "./UncapCrystalsPanel"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { NumberField } from "../NumberField"
+import { CountStepper } from "./CountStepper"
+import { ITEM_CHIPS } from "../../utils/countChips"
 import { useCoarsePointer } from "../../hooks/useCoarsePointer"
 import { shopTicketsPerMonth } from "../../utils/cumulativeIncome"
 import { upcomingSkipCount } from "../../utils/raceParticipation"
@@ -154,18 +156,39 @@ function RankSelect<T extends { id: number; name: string }>({ ranks, value, onPi
 // biggest block in the panel. Two columns of smaller rows is ~140px: the icon
 // drops to 24px, the label to 11px and wraps rather than pushing the field off
 // the row, and the field keeps a 3.5rem tap target.
-const ResourceRow = ({ icon, label, value, onChange }: { icon: ReactNode; label: string; value: number; onChange: (v: number) => void }) => (
-	<div className="flex min-w-0 items-center gap-1.5 @income-wide:gap-2">
-		<span className="shrink-0 w-6 h-6 flex items-center justify-center @income-wide:w-8 @income-wide:h-8">{icon}</span>
-		<span className="min-w-0 flex-1 text-[11px] text-gray-400 leading-tight @income-wide:text-sm">{label}</span>
+//
+// `stepper`: focusing the box opens the planner's −1 / +1 pad (CountStepper),
+// for the item counts that grow one at a time (players asked, 2026-11-07).
+// Carats leave it off.
+const ResourceRow = ({ icon, label, value, onChange, stepper = false }: {
+	icon: ReactNode
+	label: string
+	value: number
+	onChange: (v: number) => void
+	stepper?: boolean
+}) => {
+	const field = (
 		<NumberField
 			value={value}
 			className={`${numInputClass} w-14 shrink-0 @income-wide:w-20`}
 			ariaLabel={label}
 			onChange={onChange}
 		/>
-	</div>
-)
+	)
+	return (
+		<div className="flex min-w-0 items-center gap-1.5 @income-wide:gap-2">
+			<span className="shrink-0 w-6 h-6 flex items-center justify-center @income-wide:w-8 @income-wide:h-8">{icon}</span>
+			<span className="min-w-0 flex-1 text-[11px] text-gray-400 leading-tight @income-wide:text-sm">{label}</span>
+			{stepper ? (
+				<CountStepper value={value} onChange={onChange} chips={ITEM_CHIPS} label={label}>
+					{field}
+				</CountStepper>
+			) : (
+				field
+			)}
+		</div>
+	)
+}
 
 // ── Shop tickets ──────────────────────────────────────────────────────
 
@@ -761,6 +784,7 @@ export const IncomeForm = () => {
 								<ResourceRow
 									icon={<img src="/item_icon_00144.png" alt="SSR Crystals" className="w-8 h-8 object-contain" />}
 									label="SSR Crystals"
+									stepper
 									value={userStatsData.ssr_crystals}
 									onChange={(v) => setUserStatsData({ ...userStatsData, ssr_crystals: v })}
 								/>
@@ -778,30 +802,35 @@ export const IncomeForm = () => {
 								<ResourceRow
 									icon={<img src="/item_icon_00145.png" alt="SR Crystals" className="w-8 h-8 object-contain" />}
 									label="SR Crystals"
+									stepper
 									value={userStatsData.sr_crystals}
 									onChange={(v) => setUserStatsData({ ...userStatsData, sr_crystals: v })}
 								/>
 								<ResourceRow
 									icon={<img src="/item_icon_00041.png" alt="Uma Tickets" className="w-8 h-8 object-contain" />}
 									label="Uma Tickets"
+									stepper
 									value={userStatsData.uma_ticket}
 									onChange={(v) => setUserStatsData({ ...userStatsData, uma_ticket: v })}
 								/>
 								<ResourceRow
 									icon={<img src="/item_icon_00149.png" alt="SSR Shards" className="w-8 h-8 object-contain" />}
 									label="SSR Shards"
+									stepper
 									value={userStatsData.ssr_shards}
 									onChange={(v) => setUserStatsData({ ...userStatsData, ssr_shards: v })}
 								/>
 								<ResourceRow
 									icon={<img src="/item_icon_00111.png" alt="Support Tickets" className="w-8 h-8 object-contain" />}
 									label="Support Tickets"
+									stepper
 									value={userStatsData.support_ticket}
 									onChange={(v) => setUserStatsData({ ...userStatsData, support_ticket: v })}
 								/>
 								<ResourceRow
 									icon={<img src="/item_icon_00150.png" alt="SR Shards" className="w-8 h-8 object-contain" />}
 									label="SR Shards"
+									stepper
 									value={userStatsData.sr_shards}
 									onChange={(v) => setUserStatsData({ ...userStatsData, sr_shards: v })}
 								/>
