@@ -45,6 +45,8 @@ import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { BannerTypeBadge } from "./BannerTypeBadge"
 import { TrashIcon } from "./TrashIcon"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
 
 // Static, so built once rather than per render.
 const copyChips = buildCopyChips()
@@ -216,9 +218,11 @@ export const StagedBannerRow = ({
 								className="w-14"
 							/>
 						))
-					: images.slice(0, 2).map((img) => (
-							<img key={img.name} src={img.image} alt={img.name} className="thumb-banner" />
-						))}
+					: target.type === "Support"
+						? target.banner.support_cards.slice(0, 2).map((card) => (
+								<FramedCard key={card.id} card={cardFrameArt(card)} alt={card.name} className="h-14" />
+							))
+						: null}
 				<ExtraCardsBadge hidden={images.length - 2} />
 			</>
 		)

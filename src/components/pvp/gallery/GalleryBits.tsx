@@ -23,6 +23,7 @@ import type { GalleryPoster, GalleryRowBase, ProfileCardTarget } from "../../../
 import { isPlanPost } from "../../../utils/galleryPost"
 import type { CatalogueUma, MemberStyle, PvpTeamMember } from "../../../types/pvpTeam"
 import { hoverCardProps } from "../../../utils/hoverCards"
+import { FramedCard } from "../../FramedCard"
 
 /**
  * The tier chip: the tier's NAME on the look's colours. The name is the
@@ -268,13 +269,8 @@ export function GalleryTeam({ members, index }: {
 								const cardPage = art ? hrefs.card(art.id) : null
 								const cardFace = (
 									<>
-										{art?.image ? (
-											<img
-												src={art.image}
-												alt=""
-												loading="lazy"
-												className="aspect-[3/4] w-full rounded-md bg-gray-700 object-cover"
-											/>
+										{art?.image || art?.image_borderless ? (
+											<FramedCard card={art} className="w-full" />
 										) : (
 											<div className="aspect-[3/4] w-full rounded-md bg-gray-700" />
 										)}

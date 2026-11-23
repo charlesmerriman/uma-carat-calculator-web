@@ -23,8 +23,11 @@ export interface StoryEventCard {
 	name: string
 	/** Global's title only ("[Fondente Smile]"), "" for a card Global hasn't titled. */
 	title: string
-	/** The bordered card art; the Timeline keeps it, as on a banner's tiles. */
+	/** The bordered card art, drawn when there is no borderless art yet. */
 	image: string | null
+	/** FramedCard's inputs, as on a banner's cards (types/banner.ts SupportCard). */
+	image_borderless?: string | null
+	card_type?: string | null
 	/** 1 R, 2 SR, 3 SSR. Null for a card with no game id. */
 	rarity: number | null
 	/** The card's public one-liner, "" when none is written. */

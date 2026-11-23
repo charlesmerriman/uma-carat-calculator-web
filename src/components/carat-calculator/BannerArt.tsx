@@ -11,6 +11,8 @@ import { buildEligibleCardCatalogue } from "../../hooks/useEligibleCardCatalogue
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { FramedUma } from "../FramedUma"
 import { ExtraCardsBadge } from "./ExtraCardsBadge"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
 
 /**
  * The card whose art a step-up row should show: the step 5 pick.
@@ -101,7 +103,11 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 			)
 		}
 		if (guaranteedCard) {
-			return (
+			return guaranteedCard.frame && !large ? (
+				<span title={`Guaranteed at step 5: ${guaranteedCard.name}`}>
+					<FramedCard card={guaranteedCard.frame} alt={guaranteedCard.name} className="h-14" />
+				</span>
+			) : (
 				<img
 					src={guaranteedCard.image}
 					alt={guaranteedCard.name}
@@ -139,9 +145,17 @@ export function BannerArt({ target, userStepUpSelectionData, umaBannerData, supp
 							className={umaSize}
 						/>
 					))
-				: images.slice(0, 2).map((img) => (
-						<img key={img.name} src={img.image} alt={img.name} className={cardClass} />
-					))}
+				: target.type === "Support" && !large
+					// The sheet draws a card in the game's frame (FramedCard). The
+					// share picture keeps the bordered art for now: it inlines every
+					// image, the frame's SVG layers included, and its iPhone export
+					// is still being looked at (board, "Plan Images Export").
+					? target.banner.support_cards.slice(0, 2).map((card) => (
+							<FramedCard key={card.id} card={cardFrameArt(card)} alt={card.name} className="h-14" />
+						))
+					: images.slice(0, 2).map((img) => (
+							<img key={img.name} src={img.image} alt={img.name} className={cardClass} />
+						))}
 			<ExtraCardsBadge hidden={images.length - 2} />
 		</>
 	)

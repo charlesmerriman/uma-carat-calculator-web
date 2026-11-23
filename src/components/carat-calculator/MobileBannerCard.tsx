@@ -8,10 +8,25 @@ import { ExtraCardsBadge } from "./ExtraCardsBadge"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import type { PortraitLayers } from "../../types/portraitLayers"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
+
+/** An uma or a support card in the card's thumbnail strip. */
+type ThumbnailCard = {
+	id: number
+	name: string
+	image: string
+	portrait?: string | null
+	portrait_layers?: PortraitLayers | null
+	/** A support card's FramedCard inputs (utils/cardFrame.ts). */
+	image_borderless?: string | null
+	card_type?: string | null
+	rarity?: number | null
+}
 
 interface MobileBannerCardProps {
 	bannerType: BannerRowType
-	images: { id: number; name: string; image: string; portrait?: string | null; portrait_layers?: PortraitLayers | null }[]
+	images: ThumbnailCard[]
 	/**
 	 * Replaces the thumbnail strip entirely. A step-up row has no featured cards
 	 * to thumbnail — the player picks their own from the back catalogue — so it
@@ -99,22 +114,19 @@ interface MobileBannerCardProps {
  * found and widened together whenever a kind was added, and a missed one failed
  * silently by rendering the other kind's treatment.
  *
- * `thumbTileRadius`: the tile clips whatever it contains, so it can only be
- * rounded where the art is too. Uma icons have a rounded frame baked in; support
- * card art is a sharp-cornered rectangle and would get its own border sliced off.
+ * The thumbnails need nothing per kind any more: umas are FramedUma and support
+ * cards FramedCard, each drawing its own corners. (A `thumbTileRadius` once
+ * rounded a clipping tile around a support card's bordered picture.)
  */
 const TYPE_STYLES: Record<
 	BannerRowType,
-	{ label: string; tile: string; thumbTileRadius: string }
+	{ label: string; tile: string }
 > = {
 	// Fill and ink come from .banner-type-tile--* in App.css (theme tokens), not a
 	// stock bg-* class here: a stock class can't change with the light themes.
-	Uma: { label: "UMA", tile: "banner-type-tile banner-type-tile--uma", thumbTileRadius: "rounded-md" },
-	Support: { label: "SUPPORT", tile: "banner-type-tile banner-type-tile--support", thumbTileRadius: "rounded-none" },
-	// Provisional: a step-up carries no featured cards, so the thumb radius is
-	// moot until its own artwork lands. Final treatment comes with the step-up
-	// UI phase — see step-up-banners-plan.md.
-	StepUp: { label: "STEP UP", tile: "banner-type-tile banner-type-tile--step-up", thumbTileRadius: "rounded-md" },
+	Uma: { label: "UMA", tile: "banner-type-tile banner-type-tile--uma" },
+	Support: { label: "SUPPORT", tile: "banner-type-tile banner-type-tile--support" },
+	StepUp: { label: "STEP UP", tile: "banner-type-tile banner-type-tile--step-up" },
 }
 
 /**
@@ -131,14 +143,12 @@ const Thumbnails = ({
 	slot,
 	images,
 	framed,
-	thumbTileRadius,
 }: {
 	href?: string | null
 	slot?: ReactNode
-	images: { id: number; name: string; image: string; portrait?: string | null; portrait_layers?: PortraitLayers | null }[]
+	images: ThumbnailCard[]
 	/** An uma row: the borderless art in the site's frame (FramedUma). */
 	framed: boolean
-	thumbTileRadius: string
 }) => {
 	const oshiIds = useOshiIds()
 	const strip = slot ?? (
@@ -154,12 +164,8 @@ const Thumbnails = ({
 								className="w-12"
 							/>
 						) : (
-							<div
-								key={img.name}
-								className={`flex h-12 min-w-0 shrink-0 items-center justify-center overflow-hidden ${thumbTileRadius} bg-black/10 ring-1 ring-white/10`}
-							>
-								<img src={img.image} alt={img.name} className="h-full w-auto object-contain" />
-							</div>
+							// A support card, in the game's frame (FramedCard).
+							<FramedCard key={img.id} card={cardFrameArt(img)} alt={img.name} className="h-12" />
 						)
 					)
 				: null}
@@ -225,7 +231,6 @@ export const MobileBannerCard = ({
 						slot={imagesSlot}
 						images={images}
 						framed={bannerType === "Uma"}
-						thumbTileRadius={style.thumbTileRadius}
 					/>
 				</div>
 

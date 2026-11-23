@@ -1,3 +1,5 @@
+import type { FramedCardArt } from "../components/FramedCard"
+import { cardFrameArt } from "../utils/cardFrame"
 import { useMemo } from "react"
 import { isCardEligible, isCardSelectable } from "../utils/selectorTickets"
 import type { BannerUma, BannerSupport, Uma, SupportCard } from "../types"
@@ -16,6 +18,8 @@ export interface EligibleCard {
 	portrait: string | null
 	/** The uma's layered art (FramedUma `layers`); null for a support card. */
 	portrait_layers: PortraitLayers | null
+	/** A support card in the game's frame (FramedCard); null for an uma. */
+	frame: FramedCardArt | null
 	/** First JP banner date — the ordering key, and what eligibility is judged on. */
 	firstJpDate: string | null
 }
@@ -106,7 +110,8 @@ export function buildEligibleCardCatalogue({
 	const addEligibleCards = <Card extends Uma | SupportCard>(
 		cards: Card[],
 		portraitOf: (card: Card) => string | null,
-		layersOf: (card: Card) => PortraitLayers | null = () => null
+		layersOf: (card: Card) => PortraitLayers | null = () => null,
+		frameOf: (card: Card) => FramedCardArt | null = () => null
 	): void => {
 		for (const card of cards) {
 			if (seen.has(card.id)) continue
@@ -120,6 +125,7 @@ export function buildEligibleCardCatalogue({
 				image: card.image,
 				portrait: portraitOf(card),
 				portrait_layers: layersOf(card),
+				frame: frameOf(card),
 				firstJpDate: card.first_jp_date,
 			})
 		}
@@ -133,7 +139,7 @@ export function buildEligibleCardCatalogue({
 	} else {
 		for (const banner of supportBannerData) {
 			if (!isGachaBanner(banner.name)) continue
-			addEligibleCards(banner.support_cards, () => null)
+			addEligibleCards(banner.support_cards, () => null, () => null, cardFrameArt)
 		}
 	}
 

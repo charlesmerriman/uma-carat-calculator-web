@@ -34,6 +34,8 @@ import { FramedUma } from "../FramedUma"
 import { BannerTypeIcon } from "../carat-calculator/BannerTypeBadge"
 import { GalleryVote, PosterLine, YouChip } from "../pvp/gallery/GalleryBits"
 import type { PlanFilterChoices, PlanLeadBanner, PlanPostRow } from "../../types/gallery"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
 
 /** The list's columns, shared by the heading line and every row. */
 export const PLAN_ROW_GRID =
@@ -109,7 +111,13 @@ function LeadTile({ lead }: { lead: PlanLeadBanner }) {
 		}
 	} else if (lead.banner_support !== null) {
 		const card = supportBannerData.find((banner) => banner.id === lead.banner_support)?.support_cards[0]
-		if (card) return <img src={card.image} alt={card.name} title={card.name} className={`${tile} rounded-md object-cover object-top`} />
+		if (card) {
+			return (
+				<span title={card.name} className="flex h-12 w-12 shrink-0 justify-center">
+					<FramedCard card={cardFrameArt(card)} alt={card.name} className="h-12" />
+				</span>
+			)
+		}
 	} else if (lead.banner_step_up !== null) {
 		const stepUp = stepUpBannerData.find((banner) => banner.id === lead.banner_step_up)
 		if (stepUp?.image) return <img src={stepUp.image} alt={stepUp.name} title={stepUp.name} className={`${tile} rounded-md object-cover`} />

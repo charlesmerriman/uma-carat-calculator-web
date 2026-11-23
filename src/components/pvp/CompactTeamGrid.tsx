@@ -17,6 +17,7 @@ import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
+import { FramedCard } from "../FramedCard"
 
 const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 const OWNED_SLOTS = [1, 2, 3, 4, 5]
@@ -163,7 +164,7 @@ export function CompactTeamGrid({
 									onClick={() => onPickCard(position, slot)}
 									className="block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 								>
-									<Art src={card?.image ?? null} />
+									{card ? <FramedCard card={card} className="h-full w-full" /> : <Art src={null} />}
 								</button>
 								{starred("support", entry.support_card, member) && <StarBadge small />}
 								<ReleaseFlag status={releaseFor?.("support", entry.support_card)} />

@@ -818,8 +818,14 @@ the PvP catalogue; `GET /umas` and the account's oshis send the portrait as `ima
 card's hover), the team builder (its slots, the card picker, the guide picks panel, the
 drag preview) and the Collection (the Support cards tab, a veteran's training deck) is
 built from layers the way the game draws it** (owner, 2026-11-02; first places only,
-`notes/support-card-art-plan.md`). Everywhere else (the planner, the Timeline, the
-selectors, Rankings, the gallery, search, the share picture) keeps the bordered `image`.
+`notes/support-card-art-plan.md`). **Since 2026-11-23 (board, "Pages still using old support
+card styles") also the planner (sheet, phone card, staged rows, a step-up's step 5 pick), the
+Timeline (banner tiles, story event cards), the Selectors page, the team window, the gallery's
+decks, Rankings (`rankings/kit/CardArt`), shared plan rows and Community plans.** Banner and
+story event cards reach it through `utils/cardFrame.ts` from `/calculator-data`'s
+`image_borderless` and `card_type` (api #311). Still the bordered `image`: search, and **the
+share picture** (`BannerArt`'s `large`), which inlines every image, the frame's SVG layers
+included, until its iPhone export is settled (board, "Plan Images Export").
 
 - **The layers**: the API's `image_borderless` (the game's own texture, no frame, no type
   icon) under Daptrius's SVG overlays in `src/assets/card-overlays/`: the rarity frame
