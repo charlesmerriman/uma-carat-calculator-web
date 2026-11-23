@@ -371,6 +371,18 @@ describe("a post opens in place", () => {
 		expect(screen.getByRole("button", { name: "Plan P1" })).toHaveAttribute("aria-expanded", "false")
 	})
 
+	it("scrolls to an opened row once, never again when a vote changes the list", async () => {
+		vi.mocked(galleryVote).mockImplementation(() => json({ score: 42, my_vote: "up" }))
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView")
+		renderPage({ url: "/app/plans?post=P1" })
+		const first = await waitFor(() => rowOf("Plan P1"))
+		await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1))
+		fireEvent.click(within(first).getByRole("button", { name: "Upvote (score 41)" }))
+		expect(await within(first).findByRole("button", { name: "Take back your upvote (score 42)" })).toBeInTheDocument()
+		expect(scroll).toHaveBeenCalledTimes(1)
+		scroll.mockRestore()
+	})
+
 	it("opens the post the address names", async () => {
 		renderPage({ url: "/app/plans?post=P2" })
 		const second = await screen.findByRole("button", { name: "Plan P2" })

@@ -41,7 +41,10 @@ import { PlanFeedHeading, PlanFeedRow } from "./PlanFeedRow"
 import { PlanFilters } from "./PlanFilters"
 import { PlanPostBody } from "./PlanPostBody"
 
-const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-7xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
+// Wider than the other tabs' 80rem: the list beside the 16rem sidebar needs
+// 64rem (PlanFeedRow's `@5xl/plans`) to draw the banner pictures, which a
+// 1440 screen gives it at 96rem and an 80rem page never would.
+const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-[96rem] flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
 /** Top's windows, in the sort bar's order. */
 const WINDOWS: Array<{ value: PlanWindow; label: string }> = [
@@ -110,12 +113,23 @@ function CommunityPlansBody() {
 	// Keep the pressed row in view: opening one post closes the other, and a
 	// long post closing above would otherwise carry the pressed row off the
 	// top of the screen. `?post=` on arrival scrolls to its row the same way.
+	// ONCE per opened post, the first time its row exists: a vote or a new
+	// comment rewrites the feed's data, and scrolling again then would yank
+	// the page back to the row while someone reads the post.
+	const scrolledTo = useRef<string | null>(null)
 	useLayoutEffect(() => {
-		if (!openId) return
+		if (!openId) {
+			scrolledTo.current = null
+			return
+		}
+		if (scrolledTo.current === openId) return
 		// Matched by the attribute's value, never by pasting the address's id
 		// into a selector.
 		const rows = document.querySelectorAll<HTMLElement>("[data-plan-row]")
-		Array.from(rows).find((row) => row.dataset.planRow === openId)?.scrollIntoView({ block: "nearest" })
+		const row = Array.from(rows).find((candidate) => candidate.dataset.planRow === openId)
+		if (!row) return
+		row.scrollIntoView({ block: "nearest" })
+		scrolledTo.current = openId
 	}, [openId, feed.data])
 
 	if (refused) {
@@ -201,16 +215,20 @@ function SortBar({ view, count, onChange }: {
 		`rounded-md px-3 py-1.5 text-sm transition ${selected ? "bg-brand/15 font-semibold text-brand" : "text-gray-300 hover:bg-gray-700 hover:text-gray-100"}`
 	return (
 		<nav className="flex flex-wrap items-center gap-x-1 gap-y-2" aria-label="Sort">
-			<span className="mr-1 text-sm text-gray-400">Top</span>
-			{WINDOWS.map((choice) => {
-				const selected = view.sort === "top" && view.window === choice.value
-				return (
-					<button key={choice.value} type="button" aria-pressed={selected} onClick={() => onChange({ sort: "top", window: choice.value })} className={tab(selected)}>
-						{choice.label}
-					</button>
-				)
-			})}
-			<span className="mx-2 h-5 w-px bg-gray-700" aria-hidden="true" />
+			{/* On a phone "Top" takes its own line, so the four windows fit on one
+			    (canvas r4-10); from `sm` it sits beside them. */}
+			<span className="w-full text-sm text-gray-400 sm:mr-1 sm:w-auto">Top</span>
+			<span className="flex items-center gap-1">
+				{WINDOWS.map((choice) => {
+					const selected = view.sort === "top" && view.window === choice.value
+					return (
+						<button key={choice.value} type="button" aria-pressed={selected} onClick={() => onChange({ sort: "top", window: choice.value })} className={`${tab(selected)} whitespace-nowrap`}>
+							{choice.label}
+						</button>
+					)
+				})}
+			</span>
+			<span className="mx-2 hidden h-5 w-px bg-gray-700 sm:block" aria-hidden="true" />
 			<button type="button" aria-pressed={view.sort === "new"} onClick={() => onChange({ sort: "new" })} className={tab(view.sort === "new")}>
 				New
 			</button>
