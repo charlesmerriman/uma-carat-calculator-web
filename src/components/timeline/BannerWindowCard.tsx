@@ -550,7 +550,7 @@ function FeaturedTile({
 			{/* No minimum height: it used to reserve two lines (min-h-16) so
 			    neighbours matched, which left a one-line name floating in empty
 			    space. The grid's items-stretch keeps neighbours level now. */}
-			<div className={`flex flex-1 items-center justify-center bg-gray-700 p-2 ${framed ? "rounded-b-lg" : ""}`}>
+			<div className="flex flex-1 items-center justify-center rounded-b-lg bg-gray-700 p-2">
 				<div
 					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
 				>
@@ -562,16 +562,18 @@ function FeaturedTile({
 
 	// No fill or shadow of its own: either would show past the art's round top
 	// corners (FeaturedTileArt). The name block carries the tile's colour instead.
-	// A framed tile doesn't clip, or a layered uma's side accessories (16/360
-	// of the tile, Daptrius's wide canvas) would be shaved off; its name block
-	// rounds the bottom corners itself.
-	const tileClass = `flex h-full w-full min-w-0 flex-col ${framed ? "" : "overflow-hidden"} rounded-lg text-left ${tileWidthClass}`
+	// The tile never clips: a layered uma's side accessories (16/360 of the
+	// tile, Daptrius's wide canvas) would be shaved off, and a support card's
+	// type icon sits flush in its frame's top right corner, where this tile's
+	// 8px curve cut it off (the owner, 2026-11-23, on the live Timeline). Each
+	// frame draws its own corners; the name block rounds the bottom ones.
+	const tileClass = `flex h-full w-full min-w-0 flex-col rounded-lg text-left ${tileWidthClass}`
 
 	if (!href) return <div className={tileClass}>{body}</div>
 
 	// `group` is what the purpose overlay and the name's hover colour answer
-	// to. The focus mark is an INSET outline: the tile clips its overflow and
-	// a band scrolls, so an outset ring would be shaved off at the edges.
+	// to. The focus mark is an INSET outline: a band scrolls, so an outset
+	// ring would be shaved off at its edges.
 	// The name comes from aria-label, so the art's alt, the hidden note and
 	// the name block aren't all read as one long link name; the note is read
 	// as its description instead.
