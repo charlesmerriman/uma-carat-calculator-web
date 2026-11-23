@@ -74,6 +74,14 @@ const ssr = await import(pathToFileURL(entry).href)
 const { render, PRERENDER_ROUTES, SITE_NAME, SITE_ORIGIN, API_URL } = ssr
 const site = { siteName: SITE_NAME, siteOrigin: SITE_ORIGIN }
 
+// The API limits how many requests one address may make (backend
+// calculatorapi/rate_limit.py, notes/rate-limit-plan.md), and this build makes
+// about 3,080 in a minute or two: every Encyclopedia page. PRERENDER_API_KEY is
+// a build-time secret on the static site, equal to the API's
+// RATE_LIMIT_BUILD_KEY, and lets the build through. Unset (CI's snapshot builds,
+// a local build without the key) the header is left off and nothing changes.
+const API_HEADERS = process.env.PRERENDER_API_KEY ? { "X-Build-Key": process.env.PRERENDER_API_KEY } : {}
+
 const content = await loadContent()
 
 async function loadContent() {
@@ -96,7 +104,7 @@ async function loadContent() {
 		label = source.url
 		let response
 		try {
-			response = await fetch(source.url)
+			response = await fetch(source.url, { headers: API_HEADERS })
 		} catch (error) {
 			fail(
 				`could not fetch site content from ${label}: ${error.cause?.message ?? error.message}. ` +
@@ -272,7 +280,7 @@ async function fetchJson(url) {
 	for (let attempt = 0; ; attempt++) {
 		let problem
 		try {
-			const response = await fetch(url)
+			const response = await fetch(url, { headers: API_HEADERS })
 			if (response.ok) return await response.json()
 			if (response.status < 500 && response.status !== 429) fail(`${url} answered ${response.status}`)
 			problem = `answered ${response.status}`

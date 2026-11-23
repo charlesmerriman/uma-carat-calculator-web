@@ -108,3 +108,11 @@ cannot reach the API fails on purpose.
 instead. CI's build step sets it, and so should a local build with no API running. The
 snapshot also feeds the tests; `npm run content:pull` refreshes it from the live API. Drift is
 harmless, since production never reads it.
+
+A build against the live API also fetches every Encyclopedia page, about 3,080 requests,
+which is past the API's per-visitor request limit (backend `calculatorapi/rate_limit.py`).
+The deploy build sends `X-Build-Key` from the static site's build-time secret
+`PRERENDER_API_KEY` (the API's `RATE_LIMIT_BUILD_KEY`) and goes through. A local build
+against the live API needs the same variable in the shell, or `PRERENDER_CONTENT=snapshot`;
+without either it would lock your own address out of the site for ten minutes once the
+limit is enforced.
