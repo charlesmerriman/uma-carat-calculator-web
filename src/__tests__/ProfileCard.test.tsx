@@ -85,6 +85,18 @@ describe("ProfileCard", () => {
 		expect(screen.queryByText("Shared plans")).toBeNull()
 	})
 
+	it("lists posted plans, and says nothing about teams to someone who only posts plans", async () => {
+		answer({
+			favorites: [],
+			posts: [{ kind: "plan", public_id: "Pl4nP0st", caption: "F2P road", score: 3, totals: { row_count: 13, pull_count: 4066, step_count: 0 } }],
+			plans: [],
+		})
+		show()
+		expect(await screen.findByRole("link", { name: /F2P road/ })).toHaveAttribute("href", "/app/plans?post=Pl4nP0st")
+		expect(screen.getByRole("heading", { name: "Community plans" })).toBeTruthy()
+		expect(screen.queryByText("No gallery teams yet.")).toBeNull()
+	})
+
 	it("says so when the card is gone", async () => {
 		answer({ error: "This card isn't available." }, 404)
 		show()

@@ -125,6 +125,21 @@ describe("PostPlanDialog", () => {
 		await waitFor(() => expect(value.postPlan).toHaveBeenCalledWith(7, expect.objectContaining({ include_income: true, include_notes: false })))
 	})
 
+	it("says what range a new post will have, from the open plan's rows", async () => {
+		const banner = { id: 1, name: "B", umas: [], banner_timeline: { start_date: "2026-01-01T12:00:00Z", end_date: "2026-04-01T12:00:00Z" } }
+		renderDialog({
+			context: {
+				activePlanId: 7,
+				userPlannedBannerData: [{ tempId: 1, number_of_pulls: 200, reserved_copies: 0, banner_uma: banner }],
+				scenarioData: [
+					{ id: 1, name: "Grand Live", image: null, banner_timeline: 1, start_date: "2026-01-10T12:00:00Z", is_predicted: false, applied_offset_days: 0 },
+					{ id: 2, name: "Grand Masters", image: null, banner_timeline: 2, start_date: "2026-03-10T12:00:00Z", is_predicted: false, applied_offset_days: 0 },
+				],
+			} as unknown as Partial<CalculatorContextType>,
+		})
+		expect(await screen.findByText(/Runs up to Grand Masters\./)).toBeInTheDocument()
+	})
+
 	it("shows a refused note beside the notes box, inside the dialog", async () => {
 		const postPlan = vi.fn().mockResolvedValue({ ok: false, text: "Check the note on Kitasan Black. No links.", field: "notes" })
 		renderDialog({ context: { postPlan } })
