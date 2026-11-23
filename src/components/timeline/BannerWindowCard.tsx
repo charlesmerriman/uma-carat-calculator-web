@@ -50,6 +50,8 @@ import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
 
 import { hoverCardProps } from "../../utils/hoverCards"
 import type { PortraitLayers } from "../../types/portraitLayers"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
 /**
  * One timeline card: a date header, then one section per banner opening in that
  * window.
@@ -323,6 +325,10 @@ type FeaturedCard = {
 	image: string
 	/** An uma's borderless art (the API's `portrait`); support cards have none. */
 	portrait?: string | null
+	/** A support card's FramedCard inputs (utils/cardFrame.ts); umas have none. */
+	image_borderless?: string | null
+	card_type?: string | null
+	rarity?: number | null
 	portrait_layers?: PortraitLayers | null
 	recommendation: string
 	/**
@@ -401,15 +407,14 @@ function FeaturedTileArt({
 	const art = framed ? (
 		<FramedUma src={item.portrait ?? item.image} layers={item.portrait_layers} alt={item.name} oshi={oshi} className="w-full" hover={linked ? undefined : hoverCardProps("uma", item.id)} />
 	) : (
-		<img
-			// Only the uma panel is framed, so this art is a support card. A
-			// linked tile carries the card on its link instead (FeaturedTile).
-			{...(linked ? {} : hoverCardProps("card", item.id))}
-			src={item.image}
+		// Only the uma panel is framed in FramedUma, so this art is a support
+		// card: the game's art in its own frame (FramedCard). A linked tile
+		// carries the card on its link instead (FeaturedTile).
+		<FramedCard
+			card={cardFrameArt(item)}
 			alt={item.name}
-			loading="lazy"
-			decoding="async"
-			className={`block h-auto w-full object-contain ${tileAspectClass}`}
+			className={`w-full ${tileAspectClass}`}
+			hover={linked ? undefined : hoverCardProps("card", item.id)}
 		/>
 	)
 

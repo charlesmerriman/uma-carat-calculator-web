@@ -22,8 +22,11 @@
  * pipeline.
  *
  * Used in the guide's decks, the team builder and the Collection (owner,
- * 2026-11-02: those three places first). Everywhere else a card keeps its
- * bordered `image`. `className` sizes the card; it is always 3:4. The frame
+ * 2026-11-02: those three places first), and since 2026-11-23 on the planner,
+ * the Timeline, the Selectors page, the team window, the gallery and Rankings
+ * (a banner's cards through utils/cardFrame.ts). Search and the share picture
+ * keep the bordered `image` (docs/ui-conventions.md, "Card frames").
+ * `className` sizes the card; it is always 3:4. The frame
  * is only a look: the caller names the card and its limit break for a screen
  * reader.
  */

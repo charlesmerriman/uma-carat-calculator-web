@@ -26,6 +26,8 @@ import { BannerTypeIcon } from "../carat-calculator/BannerTypeBadge"
 import { FramedUma } from "../FramedUma"
 import { useBannerProjection } from "../../hooks/useBannerResources"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
 
 const TYPE_LABEL: Record<BannerRowType, string> = {
 	Uma: "Uma banner",
@@ -59,12 +61,6 @@ const BannerLine = ({ target, planned, max, note, counted, action }: {
 	const oshiIds = useOshiIds()
 	// The same two thumbnails a planner row shows. A step-up features no cards,
 	// so it shows its campaign art when there is some, else its kind's glyph.
-	const images =
-		target.type === "Uma"
-			? target.banner.umas
-			: target.type === "Support"
-				? target.banner.support_cards
-				: []
 	return (
 		<li className={`${action === undefined ? ROW_GRID : ROW_GRID_WITH_ACTION} rounded-lg border border-gray-700 bg-gray-900/60 px-3 py-2`}>
 			{/* Fixed width, sized for two 48px tiles (the phone card's height), so
@@ -82,8 +78,8 @@ const BannerLine = ({ target, planned, max, note, counted, action }: {
 						<FramedUma key={uma.id} src={uma.portrait ?? uma.image} layers={uma.portrait_layers} alt={uma.name} oshi={oshiIds.has(uma.id)} className="h-full" />
 					))
 				) : (
-					images.slice(0, 2).map((img) => (
-						<img key={img.name} src={img.image} alt={img.name} className="h-full w-auto min-w-0 object-contain" />
+					target.banner.support_cards.slice(0, 2).map((card) => (
+						<FramedCard key={card.id} card={cardFrameArt(card)} alt={card.name} className="h-full" />
 					))
 				)}
 			</div>

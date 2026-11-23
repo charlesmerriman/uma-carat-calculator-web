@@ -261,11 +261,11 @@ describe('findGuaranteedCardArt', () => {
 
   it('resolves the marked support card', () => {
     const selections = setTarget(toggleCard([], supportStepUp, 201), 1)
-    expect(findGuaranteedCardArt(selections, umaBanners, supportBanners)).toEqual({
-      name: 'Matikanefukukitaru',
-      image: 'fuku.png',
-      uma: null,
-    })
+    const art = findGuaranteedCardArt(selections, umaBanners, supportBanners)
+    expect(art).toMatchObject({ name: 'Matikanefukukitaru', image: 'fuku.png', uma: null })
+    // A support pick carries what its card frame draws (FramedCard): with no
+    // borderless art uploaded, the frame falls back to the bordered picture.
+    expect(art?.frame).toMatchObject({ image: 'fuku.png', image_borderless: null })
   })
 
   it('resolves a pick regardless of the campaign cutoff', () => {

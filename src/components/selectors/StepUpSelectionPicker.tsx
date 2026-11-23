@@ -27,6 +27,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { Link } from "react-router-dom"
 import { nameMatches } from "../../utils/searchText"
+import { FramedCard } from "../FramedCard"
 
 interface StepUpSelectionPickerProps {
 	stepUp: BannerStepUp
@@ -116,6 +117,8 @@ export const StepUpSelectionPicker = ({
 		const page = card ? (isUma ? hrefs.uma(card.value) : hrefs.card(card.value)) : null
 		const art = card?.portrait ? (
 			<FramedUma src={card.portrait} layers={card.portrait_layers} alt={card.label} oshi={oshiIds.has(card.value)} className="h-full" />
+		) : card?.frame ? (
+			<FramedCard card={card.frame} alt={card.label} className="h-full" />
 		) : card ? (
 			<img
 				src={card.image}
@@ -210,6 +213,8 @@ export const StepUpSelectionPicker = ({
 			>
 				{option.portrait ? (
 					<FramedUma src={option.portrait} layers={option.portrait_layers} oshi={oshiIds.has(option.value)} className="w-24" />
+				) : option.frame ? (
+					<FramedCard card={option.frame} className={cardSizeClass} />
 				) : (
 					<img
 						src={option.image}

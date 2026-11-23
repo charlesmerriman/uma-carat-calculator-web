@@ -19,6 +19,8 @@ import {
 	storyEventRewards,
 	storyEventUmas,
 } from "../../utils/storyEvents"
+import { FramedCard } from "../FramedCard"
+import { cardFrameArt } from "../../utils/cardFrame"
 
 /**
  * The rows that sit flush BENEATH a banner's Timeline card: each free card
@@ -106,7 +108,7 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
 	)
 }
 
-/** One free support card: bordered `image`, as on a banner's Timeline tiles (frontend-ui.md, "Card frames"). */
+/** One free support card, in the game's frame (FramedCard), as on a banner's Timeline tiles (frontend-ui.md, "Card frames"). */
 function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: string }) {
 	const rarity = rarityLabel(card.rarity)
 	const freeFrom = `${rarity} support card. Free from ${eventName}, ${FREE_CARD_COPIES} copies.`
@@ -116,14 +118,8 @@ function FreeCardTile({ card, eventName }: { card: StoryEventCard; eventName: st
 			id={card.id}
 			href={card.game_id ? cardHref(card.game_id) : null}
 			art={
-				card.image ? (
-					<img
-						src={card.image}
-						alt=""
-						loading="lazy"
-						decoding="async"
-						className="block aspect-[3/4] w-16 shrink-0 rounded-md object-contain"
-					/>
+				card.image || card.image_borderless ? (
+					<FramedCard card={cardFrameArt(card)} className="w-16" />
 				) : (
 					<div aria-hidden="true" className="aspect-[3/4] w-16 shrink-0 rounded-md bg-gray-700" />
 				)

@@ -19,6 +19,7 @@ import type {
 } from "../../types"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
+import { FramedCard } from "../FramedCard"
 
 interface StepUpSelectionStripProps {
 	/** This campaign's step-ups, already filtered by the caller. */
@@ -97,6 +98,8 @@ const StepUpRow = ({
 						oshi={oshiIds.has(guaranteed.uma.id)}
 						className="h-full"
 					/>
+				) : guaranteed?.frame ? (
+					<FramedCard card={guaranteed.frame} className="h-full" />
 				) : guaranteed ? (
 					<img
 						src={guaranteed.image}

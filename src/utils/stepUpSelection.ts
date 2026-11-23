@@ -1,3 +1,5 @@
+import type { FramedCardArt } from "../components/FramedCard"
+import { cardFrameArt } from "./cardFrame"
 import type {
 	BannerStepUp,
 	BannerSupport,
@@ -204,6 +206,8 @@ export interface SelectedCardArt {
 	 * support card, which keeps its own art.
 	 */
 	uma: { id: number; portrait: string | null; portrait_layers?: PortraitLayers | null } | null
+	/** A support card pick in the game's frame (FramedCard); null for an uma. */
+	frame?: FramedCardArt | null
 }
 
 /** The step 5 pick, tagged with the pool it came from. */
@@ -267,7 +271,7 @@ export function findGuaranteedCardArt(
 	const { name, image } = pick.card
 	return pick.pool === "uma"
 		? { name, image, uma: { id: pick.card.id, portrait: pick.card.portrait ?? null, portrait_layers: pick.card.portrait_layers ?? null } }
-		: { name, image, uma: null }
+		: { name, image, uma: null, frame: cardFrameArt(pick.card) }
 }
 
 /**
