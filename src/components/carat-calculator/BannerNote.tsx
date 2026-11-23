@@ -7,7 +7,7 @@ import { SlidersHorizontal } from "lucide-react"
  * note is a 400 there. The textarea's maxLength stops the field ever holding
  * more, so an auto-save can't fail on it. Change both numbers together.
  */
-export const NOTE_MAX_LENGTH = 500
+export const NOTE_MAX_LENGTH = 1000 // 500 until 2026-11-23: too short for notes posted with a plan
 
 /** The counter stays hidden until the note is this close to the cap. */
 const COUNTER_THRESHOLD = NOTE_MAX_LENGTH - 100
