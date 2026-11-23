@@ -314,6 +314,9 @@ describe('PlanSwitcher', () => {
 				plans: [{ ...plan(1, 'Main plan', true), post_public_id: null }, plan(2, 'What if')],
 				activePlanId: 1,
 				isPlanBusy: false,
+				// The post dialog reads the open plan's rows for its "Runs up to" line.
+				userPlannedBannerData: [],
+				scenarioData: [],
 				...actions(),
 				...overrides,
 			} as unknown as CalculatorContextType
