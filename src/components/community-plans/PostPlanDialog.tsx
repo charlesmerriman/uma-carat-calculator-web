@@ -47,6 +47,7 @@ import {
 } from "../../types/gallery"
 import type { Plan } from "../../types"
 import { planPostHref } from "../../utils/galleryPost"
+import { planRange } from "../../utils/planRange"
 import { GalleryModal } from "../pvp/gallery/GalleryModal"
 import { DANGER_BUTTON, FIELD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../pvp/gallery/galleryStyles"
 
@@ -102,7 +103,7 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 	initial: PlanPost | undefined
 	onClose: () => void
 }) {
-	const { postPlan, forgetPlanPost, isPlanBusy } = useCalculatorData()
+	const { postPlan, forgetPlanPost, isPlanBusy, activePlanId, userPlannedBannerData, scenarioData } = useCalculatorData()
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 	const takeDown = useTakeDownPost()
@@ -121,6 +122,9 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 	const errorId = useId()
 	const updating = plan.post_public_id != null
 	const meaning = choices.spending.find((level) => level.value === spending)?.meaning
+	// What the post's range will be, worked out from the rows on screen when
+	// they are this plan's (the dialog posts the open plan); else the post's own.
+	const range = plan.id === activePlanId ? planRange(userPlannedBannerData, scenarioData ?? [])?.name : initial?.range?.label
 
 	/** Marks the box a refusal named, and points it at the message. */
 	const faultProps = (field: string) =>
@@ -274,7 +278,7 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 			</fieldset>
 
 			<p className="text-xs text-gray-400">
-				{initial?.range ? `Runs up to ${initial.range.label}. ` : ""}
+				{range ? `Runs up to ${range}. ` : ""}
 				The range filter is worked out from your plan's last banner each time you post.
 			</p>
 

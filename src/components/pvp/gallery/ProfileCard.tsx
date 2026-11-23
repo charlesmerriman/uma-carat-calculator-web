@@ -101,9 +101,11 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 						))}
 					</ul>
 				</section>
-			) : (
+			) : postedPlans.length === 0 ? (
+				// Only when there is nothing at all: someone who posts plans and
+				// no teams shouldn't read "no teams" above their plans.
 				<p className="text-sm text-gray-400">No gallery teams yet.</p>
-			)}
+			) : null}
 			{postedPlans.length > 0 && (
 				<section className="flex flex-col gap-2">
 					<h3 className={HEADING}>Community plans</h3>
