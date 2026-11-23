@@ -19,7 +19,8 @@ import { Link } from "react-router-dom"
 import { useEncyclopediaHrefs } from "../../../hooks/useEncyclopediaHrefs"
 import { ProfileCard } from "./ProfileCard"
 import type { PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
-import type { GalleryPoster, GalleryRow, ProfileCardTarget } from "../../../types/gallery"
+import type { GalleryPoster, GalleryRowBase, ProfileCardTarget } from "../../../types/gallery"
+import { isPlanPost } from "../../../utils/galleryPost"
 import type { CatalogueUma, MemberStyle, PvpTeamMember } from "../../../types/pvpTeam"
 import { hoverCardProps } from "../../../utils/hoverCards"
 
@@ -140,9 +141,13 @@ export function StyleChip({ style }: { style: MemberStyle }) {
  *
  *   column  the feed: up, score, down, stacked at the row's edge
  *   row     the post panel, beside the other numbers
+ *
+ * A team's and a Community plans post's vote are the same (decision 9 of
+ * notes/pull-plan-database-plan.md); only the words name what is voted on.
  */
-export function GalleryVote({ post, layout }: { post: GalleryRow; layout: "column" | "row" }) {
+export function GalleryVote({ post, layout }: { post: GalleryRowBase; layout: "column" | "row" }) {
 	const vote = useGalleryVote()
+	const thing = isPlanPost(post) ? "plan" : "team"
 	const { prompt } = useSignInPrompt()
 	const score = post.stats.score
 	const split = splitText(post.stats.split)
@@ -157,7 +162,7 @@ export function GalleryVote({ post, layout }: { post: GalleryRow; layout: "colum
 
 	if (post.is_mine) {
 		return (
-			<span title={split ?? "Your own team"} aria-label={`Score ${score} on your team`} className={`${box} border-gray-700 text-gray-400`}>
+			<span title={split ?? `Your own ${thing}`} aria-label={`Score ${score} on your ${thing}`} className={`${box} border-gray-700 text-gray-400`}>
 				<ArrowBigUp className="h-5 w-5" aria-hidden="true" />
 				{number}
 			</span>
@@ -166,7 +171,7 @@ export function GalleryVote({ post, layout }: { post: GalleryRow; layout: "colum
 
 	const press = (choice: "up" | "down") => {
 		if (post.my_vote === null) {
-			prompt("Sign in to vote on teams.")
+			prompt(`Sign in to vote on ${thing}s.`)
 			return
 		}
 		const next = post.my_vote === choice ? "none" : choice

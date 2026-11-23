@@ -223,6 +223,8 @@ export interface CalculatorContextType {
 	 * (SharedPlanLanding).
 	 */
 	copySharedPlan: (publicId: string, options: SharedPlanCopyOptions) => Promise<boolean>
+	/** Copy a Community plans post: a new plan (account, named) or the device's rows (guest). */
+	copyPostedPlan: (publicId: string, name?: string) => Promise<boolean>
 	/**
 	 * Guest only. False once a write to this device has failed (blocked or
 	 * full storage), so the navbar stops saying the plan is saved here.

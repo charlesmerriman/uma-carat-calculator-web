@@ -216,6 +216,26 @@ private before). It is
 enforced twice: the card sends `include_stats` only when the box is ticked and the server
 sends stats only then, and the provider ignores stats it did not ask for.
 
+### Copying a posted plan (Community plans)
+
+A Community plans post (`/app/plans`, `notes/pull-plan-database-plan.md`) is copied the same
+way: `copyPostedPlan(publicId, name?)`, beside `copySharedPlan`, and both run ONE body,
+`copyPlanFrom(send, goneText, includeStats)`, so the two can never drift. Only the request
+differs (`POST /plan-gallery/posts/<id>/copy`), and two rows of the table above:
+
+- **Stats and purchases never travel.** A post carries no balance and its posted income is
+  for reading only, so an account copy reads the account's own block, and a guest copy
+  replaces the device's rows and nothing else (`includeStats` is always false).
+- **Notes** travel only when the author posted them.
+
+The page asks before a guest's device rows are replaced, as the landing card does. The guest
+path is built but unreachable while the page is early access (PR 5 opens it).
+
+**"Add to my plan" is not a copy.** It stages one banner, with the author's pulls, through
+`hooks/useStageBanner.ts`, the same path as the Timeline's "Stage banner": the row goes to
+`stagedBanners`, and the player confirms it in the Calculator with "Add to calculator". It
+writes no plan and moves no copy count.
+
 ---
 
 ## Guest mode

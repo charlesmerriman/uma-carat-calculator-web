@@ -14,7 +14,8 @@
  * still to end, else the latest. And a skill with no game id has no page, so
  * it has no `href`: the palette shows what it does and who teaches it.
  *
- * `earlyAccess` decides one thing now: whether Rankings is a page result.
+ * `earlyAccess` decides one thing now: whether Rankings and Community plans
+ * are page results.
  *
  * WHY FUSE
  * --------
@@ -91,6 +92,7 @@ export function pageEntries(earlyAccess: boolean): SearchEntry[] {
 		page("Legend Races", "/app/legend-races", "daily"),
 		page("PvP", "/app/pvp", "guides teams gallery champions meeting league of heroes"),
 		...(earlyAccess ? [page("Rankings", "/app/rankings", "most used")] : []),
+		...(earlyAccess ? [page("Community plans", "/app/plans", "posted pull plans copy browse")] : []),
 		page("Encyclopedia", UMA_LIST_PATH, "umas support cards skills characters wiki"),
 		page("Skills", "/app/skills", "encyclopedia"),
 		page("Collection", "/app/collection", "veterans owned cards history"),

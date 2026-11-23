@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react"
+import { Suspense, lazy, useEffect, type ReactNode } from "react"
 import { Outlet, Route, Routes, useLocation, useParams } from "react-router-dom"
 import { useCalculatorData } from "../services/CalculatorContext"
 import { Navbar } from "../components/navbar/Navbar.tsx"
@@ -20,6 +20,7 @@ import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
 import { OguriSpinner } from "../components/OguriSpinner"
 import { loadForecastPlot } from "../components/carat-calculator/loadForecastPlot"
+import { loadCommunityPlans } from "../components/community-plans/loadCommunityPlans"
 import { AppRouteMeta } from "./AppRouteMeta"
 import { SharedPlanLanding } from "../components/shared-plan/SharedPlanLanding"
 import { isPublicId } from "../utils/appRoutes"
@@ -30,6 +31,9 @@ import { useTeamDrawer } from "../services/TeamDrawerContext"
 import { TeamDrawer } from "../components/pvp/TeamDrawer"
 import { HoverCardLayer } from "../components/hovercards/HoverCardLayer"
 import { AnimatePresence } from "framer-motion"
+
+// Its own chunk, fetched the first time the page renders.
+const CommunityPlansPage = lazy(() => loadCommunityPlans().then((module) => ({ default: module.CommunityPlansPage })))
 
 /* The page area while the initial fetch is still out. Sized to roughly fill the
    space the calculator will occupy, so the footer doesn't ride up under the
@@ -240,6 +244,17 @@ export const ApplicationViews = () => (
 			{/* Early access only, and noindex. Static like "timeline", so it
 			    outranks ":publicId" (it is eight letters too). */}
 			<Route path="rankings" element={<RankingsPage />}/>
+			{/* Community plans (notes/pull-plan-database-plan.md). Early access
+			    only, and noindex, like Rankings: not prerendered or in the
+			    sitemap until PR 5 opens it. Static, so it outranks ":publicId". */}
+			<Route
+				path="plans"
+				element={
+					<Suspense fallback={<PageLoading />}>
+						<CommunityPlansPage />
+					</Suspense>
+				}
+			/>
 			{/* Account only, and off the navbar: the profile menu links it. */}
 			<Route path="collection" element={<CollectionPage />}/>
 		</Route>

@@ -1,11 +1,16 @@
 /**
- * The gallery: teams players posted for an event, their comments, and what a
- * post shows about the person who made it.
+ * The gallery: teams players posted for an event, Community plans (pull plans
+ * players posted), their comments, and what a post shows about the person who
+ * made it.
  *
- * Mirrors backend views/gallery.py and views/pvp_gallery.py; shapes and
- * refusals in backend/docs/api-reference.md ("Gallery").
+ * Mirrors backend views/gallery.py, views/pvp_gallery.py and
+ * views/plan_gallery.py; shapes and refusals in backend/docs/api-reference.md
+ * ("Gallery"). A post is a team or a plan: narrow with isPlanPost() /
+ * isTeamPost() (utils/galleryPost.ts), never by which keys it has.
  */
 
+import type { PlannedBannerPayload } from "../services/calculatorFetchCalls"
+import type { UserStats } from "./user"
 import type { PvpEventKind } from "../utils/pvpEvent"
 import type { MemberStyle, PvpTeamMember } from "./pvpTeam"
 import type { PortraitLayers } from "./portraitLayers"
@@ -48,13 +53,11 @@ export type ProfileCardTarget = { kind: "post"; id: string } | { kind: "comment"
 export interface ProfileCardData {
 	/** Every favorite their tier covers, in their order. */
 	favorites: { uma: number; label: string; image: string; layers?: PortraitLayers | null }[]
-	/** Their visible posts, newest first, ten at most. */
-	posts: {
-		public_id: string
-		caption: string
-		score: number
-		event: { kind: PvpEventKind; id: number; label: string }
-	}[]
+	/** Their visible posts, teams and plans, newest first, ten at most. */
+	posts: Array<
+		| { kind?: "pvp_team"; public_id: string; caption: string; score: number; event: { kind: PvpEventKind; id: number; label: string } }
+		| { kind: "plan"; public_id: string; caption: string; score: number; totals: { row_count: number; pull_count: number; step_count: number } }
+	>
 	/** Their shared plans' totals. Empty unless they turned that on. */
 	plans: { public_id: string; row_count: number; pull_count: number; step_count: number }[]
 }
@@ -76,18 +79,25 @@ export interface GalleryStats {
 	comments: number
 }
 
-/** One post in a feed: a compact row. */
-export interface GalleryRow {
+/** What every post's row carries, a team's or a plan's. */
+export interface GalleryRowBase {
 	public_id: string
+	/** "pvp_team" or "plan". Optional on a team only for an API older than plans. */
+	kind?: "pvp_team" | "plan"
 	caption: string
 	published_at: string
 	content_updated_at: string
 	is_mine: boolean
-	umas: Array<{ uma: number; style: MemberStyle }>
 	stats: GalleryStats
 	/** null for a guest: "not voted" and "can't vote" are drawn differently. */
 	my_vote: VoteChoice | null
 	poster: GalleryPoster
+}
+
+/** One TEAM post in a feed: a compact row. */
+export interface GalleryRow extends GalleryRowBase {
+	kind?: "pvp_team"
+	umas: Array<{ uma: number; style: MemberStyle }>
 }
 
 /** One post in full, for the post panel. */
@@ -175,6 +185,100 @@ export interface GalleryCopy {
 	kind: PvpEventKind
 	event: number
 	members: PvpTeamMember[]
+}
+
+// ── Community plans ──────────────────────────────────────────────────────
+
+export type PlanSort = "top" | "new"
+export type PlanWindow = "day" | "week" | "month" | "all"
+export type PlanSpending = "f2p" | "minnow" | "dolphin" | "orca" | "whale"
+export type PlanSweat = "casual" | "semi_comp" | "comp" | "no_life"
+export type PlanStrategy = "front" | "pace" | "late" | "end"
+
+/** A banner a plan's row draws: exactly one id is set. */
+export interface PlanLeadBanner {
+	banner_uma: number | null
+	banner_support: number | null
+	banner_step_up: number | null
+}
+
+/**
+ * The income settings an author chose to show (backend
+ * plan_gallery.POSTED_INCOME_FIELDS): what the Calculator's Average Monthly
+ * Income tiles read, never a balance. The page runs them through the same
+ * engine to show "average a month".
+ */
+export type PostedIncome = Pick<
+	UserStats,
+	| "club_rank" | "team_trials_rank" | "champions_meeting_rank" | "league_of_heroes_rank"
+	| "daily_carat" | "training_pass" | "misc_earnings" | "custom_misc_earnings_monthly"
+	| "monthly_shop_tickets" | "shop_uma_tickets_bought" | "shop_support_tickets_bought"
+>
+
+/** One Community plans post in the feed: enough to draw the whole row. */
+export interface PlanPostRow extends GalleryRowBase {
+	kind: "plan"
+	plan: {
+		row_count: number
+		pull_count: number
+		step_count: number
+		/** The first four banners still ahead, else the first four. */
+		lead: PlanLeadBanner[]
+		has_notes: boolean
+		has_income: boolean
+	}
+	spending: PlanSpending | null
+	sweat: PlanSweat | null
+	strategies: PlanStrategy[]
+	/** The scenario the plan runs up to; "label", never "name". */
+	range: { id: number; label: string } | null
+	/** A plan's row carries its copies (the list has a Copies column); a team's only in full. */
+	stats: GalleryStats & { copies: number }
+}
+
+/** One Community plans post in full, fetched when its row is opened. */
+export interface PlanPost extends PlanPostRow {
+	/** "About this plan" (the gallery's `strategy` column), "" when there is none. */
+	strategy: string
+	hidden: boolean
+	stats: GalleryStats & { copies: number }
+	/** The share link's row shape; `note` only when the author posted notes. */
+	rows: PlannedBannerPayload[]
+	income: PostedIncome | null
+}
+
+/** Either kind of post in full: the account page's list holds both. */
+export type AnyGalleryPost = GalleryPost | PlanPost
+
+/** Every choice the sidebar offers, from the API so nothing is hard-coded. */
+export interface PlanFilterChoices {
+	spending: Array<{ value: PlanSpending; label: string; meaning: string }>
+	sweat: Array<{ value: PlanSweat; label: string }>
+	strategies: Array<{ value: PlanStrategy; label: string }>
+	/** Only the scenarios some visible plan reaches, in release order. */
+	ranges: Array<{ value: number; label: string }>
+}
+
+/** The filters set on the page. An empty one is no filter. */
+export interface PlanFilters {
+	range: number | null
+	strategies: PlanStrategy[]
+	spending: PlanSpending | null
+	sweat: PlanSweat | null
+}
+
+export const NO_PLAN_FILTERS: PlanFilters = { range: null, strategies: [], spending: null, sweat: null }
+
+/** GET /plan-gallery: the top `limit` plans for one sort and set of filters. */
+export interface PlanFeed {
+	count: number
+	sort: PlanSort
+	/** Top's window; null for New. */
+	window: PlanWindow | null
+	limit: number
+	has_more: boolean
+	results: PlanPostRow[]
+	filters: PlanFilterChoices
 }
 
 export const GALLERY_CAPTION_MAX = 140

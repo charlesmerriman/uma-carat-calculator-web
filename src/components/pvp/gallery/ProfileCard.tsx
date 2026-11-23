@@ -2,8 +2,9 @@
  * A person's card, opened from their name on an open post or a comment
  * (notes/profile-cards-plan.md). Everyone sees it, guests included. Who they
  * are comes from the post or comment it opened on; the API adds what's new:
- * their favorites, their other teams, and their shared plans if they turned
- * that on (backend views/profile_card.py says what never leaves).
+ * their favorites, their other teams, their posted plans, and their shared
+ * plans if they turned that on (backend views/profile_card.py says what never
+ * leaves).
  *
  * The first favorite is their picture, so the card has no picture of its own.
  * A person has no public address, so there's nothing here to link to.
@@ -18,6 +19,7 @@ import { profileCardFetch, refusalText } from "../../../services/galleryFetchCal
 import { HttpError } from "../../../services/queryClient"
 import { planTotalsLine, plural } from "../../../utils/planTotals"
 import { pvpEventHref } from "../../../utils/pvpEvent"
+import { isPlanPost, isTeamPost, planPostHref } from "../../../utils/galleryPost"
 import { FramedUma } from "../../FramedUma"
 import { GalleryModal } from "./GalleryModal"
 import type { ProfileCardData, ProfileCardTarget } from "../../../types/gallery"
@@ -64,6 +66,8 @@ export function ProfileCard({ target, name, tier, onClose }: {
 
 function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => void }) {
 	const oshiIds = useOshiIds()
+	const teams = card.posts.filter(isTeamPost)
+	const postedPlans = card.posts.filter(isPlanPost)
 	return (
 		<>
 			{card.favorites.length > 0 && (
@@ -78,11 +82,11 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 					</ul>
 				</section>
 			)}
-			{card.posts.length > 0 ? (
+			{teams.length > 0 ? (
 				<section className="flex flex-col gap-2">
 					<h3 className={HEADING}>Gallery teams</h3>
 					<ul className="flex flex-col gap-1.5">
-						{card.posts.map((post) => (
+						{teams.map((post) => (
 							<li key={post.public_id}>
 								<Link to={`${pvpEventHref(post.event)}&view=gallery&post=${post.public_id}`} onClick={onClose} className={ROW}>
 									<span className="min-w-0">
@@ -99,6 +103,28 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 				</section>
 			) : (
 				<p className="text-sm text-gray-400">No gallery teams yet.</p>
+			)}
+			{postedPlans.length > 0 && (
+				<section className="flex flex-col gap-2">
+					<h3 className={HEADING}>Community plans</h3>
+					<ul className="flex flex-col gap-1.5">
+						{postedPlans.map((post) => (
+							<li key={post.public_id}>
+								<Link to={planPostHref(post.public_id)} onClick={onClose} className={ROW}>
+									<span className="min-w-0">
+										<span className="block truncate text-sm font-medium text-gray-100">{post.caption}</span>
+										<span className="block truncate text-xs text-gray-400">
+											{plural(post.totals.row_count, "banner", "banners")} · {planTotalsLine(post.totals.pull_count, post.totals.step_count)}
+										</span>
+									</span>
+									<span className="shrink-0 text-sm font-semibold text-gray-100" title={`Score ${post.score}`}>
+										▲ {post.score}
+									</span>
+								</Link>
+							</li>
+						))}
+					</ul>
+				</section>
 			)}
 			{card.plans.length > 0 && (
 				<section className="flex flex-col gap-2">
