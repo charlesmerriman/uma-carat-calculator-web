@@ -159,6 +159,7 @@ function StagedRows({ post }: { post: PlanPost }) {
 /** Copy to my plans, Copy link, and Report (or Take down, on your own). */
 function Actions({ post, onTakenDown }: { post: PlanPost; onTakenDown: () => void }) {
 	const { isLoggedIn } = useAccount()
+	const { forgetPlanPost } = useCalculatorData()
 	const { prompt } = useSignInPrompt()
 	const takeDown = useTakeDownPost()
 	const [copyOpen, setCopyOpen] = useState(false)
@@ -178,6 +179,8 @@ function Actions({ post, onTakenDown }: { post: PlanPost; onTakenDown: () => voi
 	const remove = () =>
 		takeDown.mutate(post.public_id, {
 			onSuccess: () => {
+				// The plan menu's "Posted" mark goes with it.
+				forgetPlanPost(post.public_id)
 				toast.success("Your post is down.")
 				onTakenDown()
 			},

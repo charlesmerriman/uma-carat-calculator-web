@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useCalculatorData } from "../../services/CalculatorContext"
+import { AuthContext } from "../../services/AuthContext"
 import { sharedPlanSummaryFetch } from "../../services/planFetchCalls"
 import { statsAreDirty } from "../../services/guestMigration"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
@@ -80,6 +81,8 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 		switchPlan
 	} = useCalculatorData()
 	const navigate = useNavigate()
+	// Community plans is early access first: the link shows only to those it opens for.
+	const earlyAccess = useContext(AuthContext)?.account?.early_access === true
 
 	// Starts loading, and a new id starts a new card: SharedPlanRoute keys this
 	// component on the id, so nothing here has to reset itself between links.
@@ -199,6 +202,14 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 	return (
 		<div className="mx-auto max-w-3xl px-4 py-10">
 			<h1 className="font-display text-2xl font-bold text-gray-100">Someone shared a pull plan with you</h1>
+			{earlyAccess && (
+				<p className="mt-2 text-sm text-gray-400">
+					Looking for more?{" "}
+					<Link to="/app/plans" className="font-medium text-brand underline-offset-2 hover:underline">
+						Browse community plans
+					</Link>
+				</p>
+			)}
 
 			{/* The copy controls sit ABOVE the banner list: a long plan pushed them
 			    off the bottom of the screen, behind dozens of rows. */}

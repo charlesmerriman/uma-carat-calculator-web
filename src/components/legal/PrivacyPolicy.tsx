@@ -45,7 +45,7 @@ export const PrivacyPolicy: React.FC = () => {
 			<main className="flex-1">
 				<div className="mx-auto max-w-3xl px-4 py-8">
 					<h1 className="font-display text-3xl font-bold text-gray-100">Privacy Policy</h1>
-					<p className="mt-2 text-sm text-gray-500">Last updated: November 4, 2026</p>
+					<p className="mt-2 text-sm text-gray-500">Last updated: November 23, 2026</p>
 
 					<p className={paragraph}>
 						This policy explains what the Uma Musume Carat Calculator (&quot;the Site&quot;)
@@ -168,6 +168,13 @@ export const PrivacyPolicy: React.FC = () => {
 						can see who gave it.
 					</p>
 					<p className={paragraph}>
+						When you post a pull plan to Community plans, its banners and pull counts are shown with
+						your name, picture and tier. Your notes, and your ranks and income settings, are shown
+						only if you tick the box for each when you post. Your carats, tickets and crystals are
+						never shown. What is shown is a copy from that moment: take the post down, or post again
+						without the box, to remove it.
+					</p>
+					<p className={paragraph}>
 						Anyone who can see your post or comment can open your profile card. It shows the same
 						name, picture and tier, your favorite characters and your other gallery posts. It lists
 						your shared plans only if you turn that on in your account.
@@ -256,7 +263,7 @@ export const PrivacyPolicy: React.FC = () => {
 							service you asked for when you signed in.
 						</li>
 						<li>
-							<strong>Showing what you post in the gallery</strong> (your team, caption, strategy,
+							<strong>Showing what you post in the gallery</strong> (your team or plan, caption, strategy,
 							comments, display name, picture and tier, and your profile card). Basis: <strong>your consent</strong>,
 							Article 6(1)(a), given when you post. You withdraw it by taking the post down or
 							deleting the comment.

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { FormEvent, MouseEvent, ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronDown, Copy, Ellipsis, Pencil, Plus, Share2, Trash2, Wallet } from "lucide-react"
+import { Check, ChevronDown, Copy, Ellipsis, Megaphone, Pencil, Plus, Share2, Trash2, Users, Wallet } from "lucide-react"
+import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { PLAN_CAP, PLAN_NAME_MAX_LENGTH } from "../../types"
@@ -9,6 +10,8 @@ import type { PlanSharingChanges } from "../../types"
 import { sharedPlanLinkPath } from "../../utils/appRoutes"
 import { hasPlansBar } from "../../utils/plansBar"
 import { NAV_POPOVER } from "../navbar/navStyles"
+import { AuthContext } from "../../services/AuthContext"
+import { PostPlanDialog } from "../community-plans/PostPlanDialog"
 
 /**
  * The PLANS bar above the banner sheet: one tab per plan, a "New" button, and
@@ -31,6 +34,14 @@ import { NAV_POPOVER } from "../navbar/navStyles"
  * opens a shared plan: the link leads to a card whose one action is "copy"
  * (SharedPlanLanding). The face is hidden on an API older than sharing (no
  * `public_id`), the same degrade income_profile_id gets.
+ *
+ * COMMUNITY PLANS (notes/pull-plan-database-plan.md, decisions 1 and 11).
+ * The way in is a "Community plans" button on this bar, beside the plan menu
+ * and Share picture; below 40rem of bar it keeps its icon and drops its
+ * words. "Post this plan" in the menu opens PostPlanDialog for the open plan,
+ * and says "Posted" while the plan has a post (`post_public_id`). Both show
+ * only with early access until the page opens to everyone (the server checks
+ * too), and "Post this plan" is hidden on an API without the field.
  *
  * WHY TABS. The site grew out of a spreadsheet, and sheet tabs are how a
  * spreadsheet says "several versions of this". With the cap at five they
@@ -157,6 +168,10 @@ export const PlanSwitcher = ({ actions }: { actions?: ReactNode }) => {
 		resetPlanLink
 	} = useCalculatorData()
 
+	// Early access first (Community plans, Design 8): the bar's button and
+	// "Post this plan" show only to accounts that pass.
+	const earlyAccess = useContext(AuthContext)?.account?.early_access === true
+	const [posting, setPosting] = useState(false)
 	const [open, setOpen] = useState(false)
 	const [face, setFace] = useState<Face>("list")
 	// The menu a form's "Back" returns to. null when the form was opened
@@ -260,6 +275,9 @@ export const PlanSwitcher = ({ actions }: { actions?: ReactNode }) => {
 	// Undefined on an API older than sharing, which hides the Share item.
 	const publicId = activePlan.public_id
 	const isShared = activePlan.is_shared === true
+	// Undefined on an API older than Community plans, which hides "Post this plan".
+	const canPost = earlyAccess && activePlan.post_public_id !== undefined
+	const isPosted = activePlan.post_public_id != null
 
 	const draftFor = (kind: NameFormFace): string =>
 		kind === "rename"
@@ -401,6 +419,22 @@ export const PlanSwitcher = ({ actions }: { actions?: ReactNode }) => {
 					{isShared && <span className="text-xs font-semibold text-brand">On</span>}
 				</button>
 			)}
+			{canPost && (
+				<button
+					type="button"
+					role="menuitem"
+					disabled={isPlanBusy}
+					onClick={() => {
+						close()
+						setPosting(true)
+					}}
+					className={MENU_ITEM}
+				>
+					<Megaphone className="h-4 w-4 shrink-0" aria-hidden="true" />
+					<span className="flex-1">Post this plan</span>
+					{isPosted && <span className="text-xs font-semibold text-brand">Posted</span>}
+				</button>
+			)}
 			<button
 				type="button"
 				role="menuitem"
@@ -505,7 +539,22 @@ export const PlanSwitcher = ({ actions }: { actions?: ReactNode }) => {
 				<ChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
 			</button>
 
+			{earlyAccess && (
+				// Icon only below 40rem of bar, where the plan dropdown has the row.
+				<Link
+					to="/app/plans"
+					title="Community plans"
+					aria-label="Community plans"
+					className={`${BAR_BUTTON} flex self-center`}
+				>
+					<Users className="h-4 w-4" aria-hidden="true" />
+					<span className="hidden @min-[40rem]:inline">Community plans</span>
+				</Link>
+			)}
+
 			{actions}
+
+			{posting && <PostPlanDialog plan={activePlan} onClose={() => setPosting(false)} />}
 
 			{open && createPortal(
 				<div

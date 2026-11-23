@@ -28,6 +28,11 @@ import type { GameEvent, ChampionsMeeting, LeagueOfHeroes, RaceEvent } from "./e
 import type { AnniversaryEvent, UserPlannedPurchase } from "./anniversary"
 import type { Scenario } from "./scenario"
 import type { DailyLegendRaceRelease } from "./dailyLegendRace"
+import type { PlanPost } from "./gallery"
+import type { PlanPublishBody } from "../services/galleryFetchCalls"
+
+/** What postPlan answers: the post, or why not (the API's sentence, and the field it names). */
+export type PostPlanResult = { ok: true; post: PlanPost } | { ok: false; text: string; field: string | null }
 import type { StoryEvent } from "./storyEvent"
 import type { Plan, PlanSharingChanges, SharedPlanCopyOptions } from "./plan"
 import type { IncomeLedgerRow } from "./ledger"
@@ -225,6 +230,15 @@ export interface CalculatorContextType {
 	copySharedPlan: (publicId: string, options: SharedPlanCopyOptions) => Promise<boolean>
 	/** Copy a Community plans post: a new plan (account, named) or the device's rows (guest). */
 	copyPostedPlan: (publicId: string, name?: string) => Promise<boolean>
+	/**
+	 * Post a plan to Community plans, or update its post, after saving any
+	 * pending edit (the post is a copy of the SAVED rows). Answers the post, or
+	 * the refusal's sentence and the field it names, for the dialog to show
+	 * inline (toasts sit under a modal).
+	 */
+	postPlan: (planId: number, body: PlanPublishBody) => Promise<PostPlanResult>
+	/** A plan post was taken down: clear the "Posted" mark from the plan that had it. */
+	forgetPlanPost: (publicId: string) => void
 	/**
 	 * Guest only. False once a write to this device has failed (blocked or
 	 * full storage), so the navbar stops saying the plan is saved here.

@@ -231,6 +231,13 @@ differs (`POST /plan-gallery/posts/<id>/copy`), and two rows of the table above:
 The page asks before a guest's device rows are replaced, as the landing card does. The guest
 path is built but unreachable while the page is early access (PR 5 opens it).
 
+**Posting a plan** is `postPlan(planId, body)`: it runs as a plan action (busy, so no switch
+mid-post), saves a pending edit first because the server copies the plan's SAVED rows, and on
+success sets `post_public_id` on the plan (the menu's "Posted" mark). It answers the post or the
+refusal's words instead of toasting, because the dialog is a modal and a toast would sit under
+it. `forgetPlanPost(publicId)` clears the mark after a take-down from the page or the dialog; a
+take-down from the account page (outside the provider) shows on the next load of `/app`.
+
 **"Add to my plan" is not a copy.** It stages one banner, with the author's pulls, through
 `hooks/useStageBanner.ts`, the same path as the Timeline's "Stage banner": the row goes to
 `stagedBanners`, and the player confirms it in the Calculator with "Add to calculator". It
