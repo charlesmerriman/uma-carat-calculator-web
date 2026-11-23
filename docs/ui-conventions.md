@@ -3269,6 +3269,44 @@ notes off. The item is hidden on an API older than sharing (no
 - On success it navigates to `/app`; the provider toasts. A wrong link or a plan whose
   sharing is off reads "This plan isn't shared, or the link is wrong." with a way back.
 
+## Community plans (`components/community-plans/`, `/app/plans`)
+
+Pull plans players have posted (`notes/pull-plan-database-plan.md`, Design 6 to 8; the
+canvas shots are in `notes/pull-plan-database/`). Early access only until PR 5: the route
+exists, the page shows `SupportersFirstNote` without `account.early_access` or on the API's
+403, and it is noindex and out of `prerenderRoutes.ts` and the sitemap, like Rankings.
+Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Navbar`).
+
+- **A list whose posts open in place**, never a side panel or a dialog (decision 8). The
+  heading with "My plans"; the sort bar (Top for Today / This week / This month / All time,
+  and New) with the count; the filter sidebar (`PlanFilters`, a column from `lg`, a sheet on
+  `GalleryModal` below) beside the list.
+- **One grid for every row** (`PLAN_ROW_GRID` in `PlanFeedRow.tsx`), shaped by the LIST's
+  width (`@container/plans`), never the window's: wide adds the four lead banners' pictures,
+  medium drops them, narrow folds the numbers into one line under the poster. The heading
+  line (`PlanFeedHeading`) sits on the same grid.
+- **The row's title is a real `<button>` stretched over the row**, with `aria-expanded`; the
+  vote control and the poster's name sit above it (`z-[2]`) and keep their own clicks. The
+  opened post (`PlanPostBody`) renders inside the same `<li>`. One open at a time.
+- **The address holds the view**: `sort`, `window`, `range`, `strategy`, `spending`,
+  `sweat` and `post` (`utils/planFeedView.ts`, defaults left out). The view is remembered
+  per device in an EFFECT (render never reads `localStorage`, so PR 5 can prerender the
+  page). `?post=` opens that post; one the list leaves out is drawn on its own above it.
+- **The rows are the share card's** (`shared-plan/PlanRows.tsx`, lifted from
+  `SharedPlanLanding`), with an optional per-row `action`: "Add to my plan", through
+  `hooks/useStageBanner.ts` (the Timeline's staging path). "Already staged" and "Already
+  in calculator" by the Timeline's rules; an ended banner has no button.
+- **The posted income** (`PostedIncome.tsx`) runs `useAverageMonthlyIncome` on the posted
+  fields over the viewer's block (only to fill the shape: every field the engine reads is
+  posted) with the FULL ledger, so it shows what the author's own tiles showed. Ranks and
+  settings as chips, then "Their carats, tickets and crystals are never shown."
+- **Gallery rules hold**: the supporter look from `gallery_style` alone, `GalleryVote`
+  (up and down, decision 9), `GalleryComments` on `postThread`, `ReportDialog` with
+  `what="plan"`, the `/post/<id>` share link. Feed data goes through `galleryQueries.ts`
+  (`usePlanFeed` under the same `["gallery", "feed"]` prefix, so `patchPost` reaches it).
+- Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
+  its keys: the account page's list and the profile card hold both kinds.
+
 ## The update notice: stale tabs are told a newer build is live
 
 The site is a single-page app, so an open tab never reloads itself. A deploy changes

@@ -37,7 +37,7 @@ interface RouteMeta {
 
 type AppPath =
 	| "/app" | "/app/timeline" | "/app/selectors" | "/app/legend-races" | "/app/pvp" | "/app/skills" | "/app/collection"
-	| "/app/rankings" | "/app/umas" | "/app/cards"
+	| "/app/rankings" | "/app/plans" | "/app/umas" | "/app/cards"
 
 const META: Record<AppPath, RouteMeta> = {
 	"/app": {
@@ -78,6 +78,12 @@ const META: Record<AppPath, RouteMeta> = {
 	"/app/rankings": {
 		title: "Rankings",
 		description: "Which Uma Musume support cards and umas the PvP guides recommend most, across every guide or the next few events.",
+	},
+	// Early access only for now: noindex below, and not prerendered (PR 5 of
+	// notes/pull-plan-database-plan.md opens it).
+	"/app/plans": {
+		title: "Community Plans",
+		description: "Uma Musume pull plans other players have posted, ranked and filtered by budget and play style. Copy one or take single banners.",
 	},
 	// The Encyclopedia's three lists name it in the title and the description:
 	// their built documents hold the app shell, so the head is the only place
@@ -182,7 +188,8 @@ export const AppRouteMeta = () => {
 				: META[path]
 
 	// noindex: an Encyclopedia address with no page behind it, a shared plan,
-	// the Collection (one player's account) and Rankings (behind early access).
+	// the Collection (one player's account), and Rankings and Community plans
+	// (behind early access).
 	// Every real Encyclopedia page is indexed: the build writes each one as a
 	// document with its own title and lists it in sitemap-encyclopedia.xml
 	// (scripts/prerender.mjs). A page newer than the last build rides the
@@ -191,7 +198,11 @@ export const AppRouteMeta = () => {
 	useDocumentMeta(
 		meta.title,
 		meta.description,
-		encyclopediaNoindex || path === "shared" || path === "/app/collection" || path === "/app/rankings"
+		encyclopediaNoindex ||
+			path === "shared" ||
+			path === "/app/collection" ||
+			path === "/app/rankings" ||
+			path === "/app/plans"
 	)
 	return null
 }

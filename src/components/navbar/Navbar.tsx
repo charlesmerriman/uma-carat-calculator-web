@@ -70,7 +70,9 @@ export const Navbar = () => {
 		</>
 	)
 
-	const isCalculator = location.pathname === "/app"
+	// Community plans is the calculator's own (its way in is the Plans bar),
+	// so the Calculator tab stays lit there.
+	const isCalculator = location.pathname === "/app" || location.pathname === "/app/plans"
 	const isTimeline = location.pathname === "/app/timeline"
 	const isSelectors = location.pathname === "/app/selectors"
 	const isLegendRaces = location.pathname === "/app/legend-races"

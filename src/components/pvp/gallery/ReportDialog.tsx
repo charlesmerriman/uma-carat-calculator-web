@@ -18,8 +18,8 @@ import { GALLERY_REPORT_NOTE_MAX, GALLERY_REPORT_REASONS, type GalleryReportReas
 
 export function ReportDialog({ target, what, onClose }: {
 	target: GalleryReportTarget
-	/** "team" or "comment", for the copy. */
-	what: "team" | "comment"
+	/** What is reported, for the copy. */
+	what: "team" | "plan" | "comment"
 	onClose: () => void
 }) {
 	const [reason, setReason] = useState<GalleryReportReason | null>(null)

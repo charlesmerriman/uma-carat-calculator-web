@@ -665,7 +665,7 @@ export type PlannedBannerTarget =
 
 /** Fields the target helpers read. Accepting this rather than a whole
  *  UserPlannedBanner lets staged rows and test fixtures pass too. */
-type BannerTargetFields = Pick<
+export type BannerTargetFields = Pick<
 	UserPlannedBanner,
 	"banner_uma" | "banner_support" | "banner_step_up"
 >

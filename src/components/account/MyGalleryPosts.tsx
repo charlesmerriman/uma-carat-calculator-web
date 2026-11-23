@@ -1,7 +1,8 @@
 /**
- * The account page's "Your gallery posts": every team the person has posted,
- * with its umas, its numbers, whether it is live or waiting for a moderator,
- * and the ways to open, share or take it down.
+ * The account page's "Your gallery posts": every team and plan the person has
+ * posted, with its umas (a team) or its totals (a plan), its numbers, whether
+ * it is live or waiting for a moderator, and the ways to open, share or take
+ * it down.
  *
  * Read from the gallery's query cache (services/galleryQueries.ts), so a vote
  * or a take-down made on the PvP page in this tab is already reflected. The
@@ -24,6 +25,20 @@ import { formatTimeAgo } from "../../utils/relativeDate"
 import { countLabel } from "../../utils/plural"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { hoverCardProps } from "../../utils/hoverCards"
+import { isTeamPost, planPostHref } from "../../utils/galleryPost"
+import { planTotalsLine, plural } from "../../utils/planTotals"
+import type { AnyGalleryPost } from "../../types/gallery"
+
+/** Where the post opens, and what its heading line says. */
+function postPlace(post: AnyGalleryPost): { href: string; label: string } {
+	if (isTeamPost(post)) {
+		return {
+			href: `/app/pvp?event=${post.event.kind}-${post.event.id}&view=gallery&post=${post.public_id}`,
+			label: post.event.label,
+		}
+	}
+	return { href: planPostHref(post.public_id), label: "Community plans" }
+}
 
 export function MyGalleryPosts({ className, titleClassName }: { className: string; titleClassName: string }) {
 	const posts = useMyGalleryPosts()
@@ -80,7 +95,7 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 					{posts.data.map((post) => (
 						<li key={post.public_id} className="flex flex-col gap-2 rounded-lg border border-gray-700 bg-gray-900/40 p-3">
 							<div className="flex flex-wrap items-center gap-2">
-								<span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-100">{post.event.label}</span>
+								<span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-100">{postPlace(post).label}</span>
 								{post.hidden ? (
 									<span className="rounded-full bg-highlight/15 px-2 py-0.5 text-xs font-medium text-highlight">
 										Hidden while we review it
@@ -90,7 +105,7 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 								)}
 							</div>
 							{post.caption && <p className="break-words text-sm text-gray-300">{post.caption}</p>}
-							<ul className="flex gap-3" aria-label="Umas">
+							{isTeamPost(post) ? <ul className="flex gap-3" aria-label="Umas">
 								{post.umas.map((member) => {
 									const uma = pictures.get(member.uma)
 									return (
@@ -102,7 +117,11 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 										</li>
 									)
 								})}
-							</ul>
+							</ul> : (
+								<p className="text-sm text-gray-300">
+									{plural(post.plan.row_count, "banner", "banners")} · {planTotalsLine(post.plan.pull_count, post.plan.step_count)}
+								</p>
+							)}
 							<p className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
 								<span className="flex items-center gap-1">
 									<ArrowBigUp className="h-3.5 w-3.5" aria-hidden="true" />
@@ -125,10 +144,7 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 								</time>
 							</p>
 							<div className="flex flex-wrap items-center gap-2">
-								<Link
-									to={`/app/pvp?event=${post.event.kind}-${post.event.id}&view=gallery&post=${post.public_id}`}
-									className={ACTION_BUTTON}
-								>
+								<Link to={postPlace(post).href} className={ACTION_BUTTON}>
 									Open
 								</Link>
 								<button type="button" onClick={() => void share(post.public_id)} className={ACTION_BUTTON}>
