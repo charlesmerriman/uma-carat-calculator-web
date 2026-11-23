@@ -418,18 +418,19 @@ function FeaturedTileArt({
 		/>
 	)
 
-	// The art's box is cut to the art's own corner, so the badge and the
-	// purpose scrim stop where the art does, and has no fill of its own: the
-	// tile's colour would otherwise show past the art's round top corners.
-	// An uma's corner is its frame's (App.css "Uma frames"). A support card's
-	// PNG has transparent round corners baked in, a 37.5px radius on 450x600,
-	// so 8.3% of the width by 6.25% of the height. Underneath, the skirt fills
-	// the art's lower half with the tile's colour, so its round bottom corners
-	// meet the name block without a notch.
+	// The art's box is rounded to the art's own corner, so the purpose scrim
+	// stops where the art does, and has no fill of its own: the tile's colour
+	// would otherwise show past the art's round top corners. An uma's corner is
+	// her frame's (App.css "Uma frames"); a support card's is its frame's
+	// (FramedCard), about 8.3% of the width by 6.25% of the height. Underneath,
+	// the skirt fills the art's lower half with the tile's colour, so its round
+	// bottom corners meet the name block without a notch.
 	const surface = framed ? "rounded-[10.75%]" : "rounded-[8.3%_/_6.25%]"
-	// A framed uma's layered art reaches past the frame (FramedUma), so her box
-	// doesn't clip; the overlay rounds itself instead (rounded-[inherit]).
-	const clip = framed ? "" : "overflow-hidden"
+	// NEITHER box clips. A framed uma's layered art reaches past her frame, and
+	// a support card's type icon sits in the very corner of its frame: clipped
+	// to the old picture's rounded corner, the curve cut the icon off (the
+	// owner, 2026-11-23, on the live Timeline). Each frame draws its own
+	// corners, and the overlay rounds itself instead (rounded-[inherit]).
 	const withSkirt = (box: ReactNode) => (
 		<div className="relative shrink-0">
 			<div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gray-700" />
@@ -439,7 +440,7 @@ function FeaturedTileArt({
 
 	if (!purpose) {
 		return withSkirt(
-			<div className={`relative shrink-0 ${clip} ${surface}`}>
+			<div className={`relative shrink-0 ${surface}`}>
 				{recommendationBadge}
 				{art}
 			</div>
@@ -464,7 +465,7 @@ function FeaturedTileArt({
 
 	if (linked) {
 		return withSkirt(
-			<div className={`relative shrink-0 ${clip} ${surface}`}>
+			<div className={`relative shrink-0 ${surface}`}>
 				{recommendationBadge}
 				{art}
 				{overlay}
@@ -482,9 +483,8 @@ function FeaturedTileArt({
 				if (event.pointerType === "touch") setTapped((open) => !open)
 			}}
 			onBlur={() => setTapped(false)}
-			// ring-inset: the tile clips its overflow, so an outset ring would be
-			// shaved off at the rounded corners.
-			className={`group relative shrink-0 ${clip} outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
+			// ring-inset: the ring sits inside the tile's rounded edge, over the art.
+			className={`group relative shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${surface}`}
 		>
 			{recommendationBadge}
 			{art}
@@ -550,7 +550,7 @@ function FeaturedTile({
 			{/* No minimum height: it used to reserve two lines (min-h-16) so
 			    neighbours matched, which left a one-line name floating in empty
 			    space. The grid's items-stretch keeps neighbours level now. */}
-			<div className={`flex flex-1 items-center justify-center bg-gray-700 p-2 ${framed ? "rounded-b-lg" : ""}`}>
+			<div className="flex flex-1 items-center justify-center rounded-b-lg bg-gray-700 p-2">
 				<div
 					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
 				>
@@ -562,16 +562,18 @@ function FeaturedTile({
 
 	// No fill or shadow of its own: either would show past the art's round top
 	// corners (FeaturedTileArt). The name block carries the tile's colour instead.
-	// A framed tile doesn't clip, or a layered uma's side accessories (16/360
-	// of the tile, Daptrius's wide canvas) would be shaved off; its name block
-	// rounds the bottom corners itself.
-	const tileClass = `flex h-full w-full min-w-0 flex-col ${framed ? "" : "overflow-hidden"} rounded-lg text-left ${tileWidthClass}`
+	// The tile never clips: a layered uma's side accessories (16/360 of the
+	// tile, Daptrius's wide canvas) would be shaved off, and a support card's
+	// type icon sits flush in its frame's top right corner, where this tile's
+	// 8px curve cut it off (the owner, 2026-11-23, on the live Timeline). Each
+	// frame draws its own corners; the name block rounds the bottom ones.
+	const tileClass = `flex h-full w-full min-w-0 flex-col rounded-lg text-left ${tileWidthClass}`
 
 	if (!href) return <div className={tileClass}>{body}</div>
 
 	// `group` is what the purpose overlay and the name's hover colour answer
-	// to. The focus mark is an INSET outline: the tile clips its overflow and
-	// a band scrolls, so an outset ring would be shaved off at the edges.
+	// to. The focus mark is an INSET outline: a band scrolls, so an outset
+	// ring would be shaved off at its edges.
 	// The name comes from aria-label, so the art's alt, the hidden note and
 	// the name block aren't all read as one long link name; the note is read
 	// as its description instead.

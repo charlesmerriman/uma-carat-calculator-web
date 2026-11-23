@@ -56,12 +56,13 @@ describe('BannerNoteEditor', () => {
 		expect(screen.getByLabelText('Note for x')).toHaveAttribute(
 			'maxlength', String(NOTE_MAX_LENGTH)
 		)
-		expect(screen.queryByText(/\/500$/)).toBeNull()
+		expect(screen.queryByText(new RegExp(`/${NOTE_MAX_LENGTH}$`))).toBeNull()
 
+		const near = NOTE_MAX_LENGTH - 50
 		rerender(
-			<BannerNoteEditor note={'x'.repeat(450)} bannerName="x" onCommit={vi.fn()} />
+			<BannerNoteEditor note={'x'.repeat(near)} bannerName="x" onCommit={vi.fn()} />
 		)
-		expect(screen.getByText('450/500')).toBeInTheDocument()
+		expect(screen.getByText(`${near}/${NOTE_MAX_LENGTH}`)).toBeInTheDocument()
 	})
 })
 

@@ -156,7 +156,9 @@ export function CompactTeamGrid({
 							)
 						}
 						return (
-							<div key={slot} className="group relative aspect-[3/4] overflow-hidden rounded-md bg-gray-700 ring-1 ring-gray-600 transition hover:ring-2 hover:ring-brand/70">
+							// A framed card draws its own corners, so its cell doesn't clip: a
+							// clip cut the type icon in the card's top right corner.
+							<div key={slot} className={`group relative aspect-[3/4] rounded-md ring-1 ring-gray-600 transition hover:ring-2 hover:ring-brand/70 ${card ? "" : "overflow-hidden bg-gray-700"}`}>
 								<button
 									type="button"
 									aria-label={`Change ${place} for ${name}: ${card?.name ?? "unknown"}`}
