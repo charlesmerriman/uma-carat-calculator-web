@@ -90,7 +90,7 @@ const StepUpRow = ({
 			<span
 				className={`flex ${
 					isUma ? "h-12 w-12" : "h-12 w-9"
-				} shrink-0 items-center justify-center ${guaranteed?.uma ? "" : "overflow-hidden"} rounded border border-gray-600 bg-gray-900/50`}
+				} shrink-0 items-center justify-center ${guaranteed?.uma || guaranteed?.frame ? "" : "overflow-hidden"} rounded border border-gray-600 bg-gray-900/50`}
 			>
 				{guaranteed?.uma ? (
 					<FramedUma

@@ -136,7 +136,9 @@ export const StepUpSelectionPicker = ({
 					{isTargetSlot && <Star className="h-3 w-3 fill-brand text-brand" />}
 				</span>
 				<div
-					className={`flex ${slotSizeClass} items-center justify-center ${card?.portrait ? "" : "overflow-hidden"} rounded border ${
+					// A framed uma or card draws its own corners, and clipping would
+					// cut the card's type icon in its corner.
+					className={`flex ${slotSizeClass} items-center justify-center ${card?.portrait || card?.frame ? "" : "overflow-hidden"} rounded border ${
 						isTargetSlot
 							? "border-brand bg-brand/10"
 							: "border-gray-600 bg-gray-900/50"
