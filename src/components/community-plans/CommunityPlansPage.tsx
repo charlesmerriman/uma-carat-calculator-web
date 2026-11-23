@@ -3,7 +3,8 @@
  * (notes/pull-plan-database-plan.md, Design 6 to 8).
  *
  * Top to bottom: the heading with "My plans" (the way back to the
- * calculator); the sort bar (Top for Today / This week / This month / All
+ * calculator) and "Post a plan" (the open plan, through PostPlanDialog); the
+ * sort bar (Top for Today / This week / This month / All
  * time, and New) with the count; then the filter sidebar beside the list.
  * Below `lg` the sidebar is a "Filters" button opening the same controls in a
  * sheet. A row opens its post in place (PlanFeedRow, PlanPostBody), one at a
@@ -29,6 +30,7 @@ import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 
 import { Link, useSearchParams } from "react-router-dom"
 import { Loader2, SlidersHorizontal } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
+import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePlanFeed, usePlanPost } from "../../services/galleryQueries"
 import { HttpError } from "../../services/queryClient"
 import { GALLERY_FEED_STEP, NO_PLAN_FILTERS } from "../../types/gallery"
@@ -36,7 +38,8 @@ import type { PlanFeed, PlanPostRow, PlanSort, PlanWindow } from "../../types/ga
 import { REMEMBER_KEY, VIEW_PARAMS, filtersSet, readView, writeView, type PlanView } from "../../utils/planFeedView"
 import { SupportersFirstNote } from "../SupportersFirstNote"
 import { GalleryModal } from "../pvp/gallery/GalleryModal"
-import { SECONDARY_BUTTON } from "../pvp/gallery/galleryStyles"
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../pvp/gallery/galleryStyles"
+import { PostPlanDialog } from "./PostPlanDialog"
 import { PlanFeedHeading, PlanFeedRow } from "./PlanFeedRow"
 import { PlanFilters } from "./PlanFilters"
 import { PlanPostBody } from "./PlanPostBody"
@@ -72,6 +75,10 @@ function CommunityPlansBody() {
 	const openId = params.get("post")
 	const [limit, setLimit] = useState(GALLERY_FEED_STEP)
 	const [sheetOpen, setSheetOpen] = useState(false)
+	const [posting, setPosting] = useState(false)
+	const { plans, activePlanId } = useCalculatorData()
+	// A guest has no plan list (activePlanId null): nothing to post from here.
+	const activePlan = plans.find((plan) => plan.id === activePlanId)
 	const feed = usePlanFeed({ ...view, limit })
 	const refused = feed.error instanceof HttpError && feed.error.status === 403
 
@@ -154,10 +161,18 @@ function CommunityPlansBody() {
 						copy it or take single banners.
 					</p>
 				</div>
-				<Link to="/app" className={SECONDARY_BUTTON}>
-					My plans
-				</Link>
+				<div className="flex gap-2">
+					<Link to="/app" className={SECONDARY_BUTTON}>
+						My plans
+					</Link>
+					{activePlan && activePlan.post_public_id !== undefined && (
+						<button type="button" onClick={() => setPosting(true)} className={PRIMARY_BUTTON}>
+							{activePlan.post_public_id ? "Update my post" : "Post a plan"}
+						</button>
+					)}
+				</div>
 			</header>
+			{posting && activePlan && <PostPlanDialog plan={activePlan} onClose={() => setPosting(false)} />}
 
 			<SortBar view={view} count={feed.data?.count} onChange={changeView} />
 

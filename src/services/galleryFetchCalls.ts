@@ -13,6 +13,9 @@ import type {
 	GallerySort,
 	PlanFilters,
 	PlanSort,
+	PlanSpending,
+	PlanStrategy,
+	PlanSweat,
 	PlanWindow,
 	ProfileCardTarget,
 	VoteChoice,
@@ -124,6 +127,23 @@ export function planFeedFetch({
  */
 export function planPostCopy(publicId: string, name?: string): Promise<Response> {
 	return post(`/plan-gallery/posts/${encodeURIComponent(publicId)}/copy`, name === undefined ? {} : { name })
+}
+
+/** What the posting dialog sends. The three ticks are the person's own, every time. */
+export interface PlanPublishBody {
+	caption: string
+	strategy: string
+	spending: PlanSpending | ""
+	sweat: PlanSweat | ""
+	strategies: PlanStrategy[]
+	include_notes: boolean
+	include_income: boolean
+	confirm_public_identity: boolean
+}
+
+/** Post one of your plans, or update its post: 201 the first time, 200 after. */
+export function planPublish(planId: number, body: PlanPublishBody): Promise<Response> {
+	return post(`/plans/${planId}/publish`, body)
 }
 
 export function galleryPostFetch(publicId: string): Promise<Response> {

@@ -3306,6 +3306,17 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
   (`usePlanFeed` under the same `["gallery", "feed"]` prefix, so `patchPost` reaches it).
 - Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
   its keys: the account page's list and the profile card hold both kinds.
+- **The way in** (decisions 1 and 11): a "Community plans" button on the Plans bar
+  (`PlanSwitcher`, icon only below 40rem of bar), and "Post this plan" in the plan menu with
+  a "Posted" mark from `post_public_id`; both early access only, and the item hidden on an
+  API without the field. The page's heading has "My plans" and "Post a plan" (the open plan).
+  The share card links "Browse community plans" under the same gate.
+- **Posting** (`PostPlanDialog`, the `PublishDialog` pattern on `GalleryModal`): title,
+  About, the three optional picks worded by the feed's `filters`, the range shown never
+  asked, "Include my notes" and "Include my income" UNTICKED ON EVERY OPEN, the agree box,
+  and on a posted plan "Update post" and "Take it down". It sends through the provider's
+  `postPlan`, which saves a pending edit first (the post copies the SAVED rows); a refusal
+  shows inline beside the field it names (`notes` beside its box).
 
 ## The update notice: stale tabs are told a newer build is live
 

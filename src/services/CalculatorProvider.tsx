@@ -62,7 +62,9 @@ import {
 	planRename,
 	sharedPlanCopy
 } from "./planFetchCalls"
-import { planPostCopy } from "./galleryFetchCalls"
+import { planPostCopy, planPublish, refusal, type PlanPublishBody } from "./galleryFetchCalls"
+import type { PlanPost } from "../types/gallery"
+import type { PostPlanResult } from "../types/calculator"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { withoutSkippedRaces } from "../utils/raceParticipation"
 
@@ -982,6 +984,44 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		[copyPlanFrom]
 	)
 
+	/**
+	 * Post a plan to Community plans (PostPlanDialog). The post is a copy of
+	 * the plan's SAVED rows (backend plan_gallery.snapshot_from_plan), so a
+	 * pending edit is saved first, as before a switch. The plan then carries
+	 * the post's id, which is the menu's "Posted" mark. A refusal comes back
+	 * as words for the dialog to show beside its fields, never a toast: a
+	 * toast would sit under the modal.
+	 */
+	const postPlan = useCallback(
+		async (planId: number, body: PlanPublishBody): Promise<PostPlanResult> => {
+			const failed = "Your plan couldn't be posted. Try again in a moment."
+			let result: PostPlanResult = { ok: false, text: failed, field: null }
+			await runPlanAction(async () => {
+				if (!(await flushPendingSave())) {
+					result = { ok: false, text: "Your changes didn't save, so the plan wasn't posted.", field: null }
+					return false
+				}
+				const response = await planPublish(planId, body)
+				if (!response.ok) {
+					result = { ok: false, ...(await refusal(response, failed)) }
+					return false
+				}
+				const post = (await response.json()) as PlanPost
+				setPlans((prev) => prev.map((plan) => (plan.id === planId ? { ...plan, post_public_id: post.public_id } : plan)))
+				result = { ok: true, post }
+				return true
+			})
+			return result
+		},
+		[runPlanAction, flushPendingSave]
+	)
+
+	const forgetPlanPost = useCallback((publicId: string): void => {
+		setPlans((prev) =>
+			prev.map((plan) => (plan.post_public_id === publicId ? { ...plan, post_public_id: null } : plan))
+		)
+	}, [])
+
 	// The ledger every projection consumer reads, with the race events the
 	// player said they're skipping already taken out. Done HERE, once, rather
 	// than in each engine hook, so the planner rows, the income tiles and the
@@ -1034,6 +1074,8 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		resetPlanLink,
 		copySharedPlan,
 		copyPostedPlan,
+		postPlan,
+		forgetPlanPost,
 		isGuestPlanStored,
 		resetGuestPlan,
 		saveNow,
