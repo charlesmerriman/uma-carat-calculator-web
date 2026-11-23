@@ -3,7 +3,7 @@ import "./encyclopedia.css"
 // Last on purpose: the palette themes' shape rules outrank App.css by order.
 import "./personalityThemes.css"
 import { useEffect } from "react"
-import { Route, Routes } from "react-router-dom"
+import { Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "sonner"
 import { MotionConfig } from "framer-motion"
 import { ApplicationViews } from "./views/ApplicationViews.js"
@@ -29,6 +29,7 @@ import { NotFound } from "./components/NotFound.js"
 import { recordVisit } from "./services/visitBeacon.js"
 import { useScrollReset } from "./hooks/useScrollReset.js"
 import { useUpdateNotifier } from "./hooks/useUpdateNotifier.js"
+import { applyAdPageClass } from "./services/adPageClass.js"
 
 const ThemedToaster = () => {
 	const { activeTheme } = useTheme()
@@ -57,6 +58,15 @@ function App() {
 	// bundle until something tells it a newer one is live, and it has to be
 	// told on every route, not only inside the calculator.
 	useUpdateNotifier()
+
+	// Raptive's per-page layouts read a body class (services/adPageClass.ts).
+	// index.html's inline script sets it for the first page; this keeps it
+	// right as the reader moves around without a reload. Here because only App
+	// sees both halves of the site: the home page and the /app routes.
+	const { pathname } = useLocation()
+	useEffect(() => {
+		applyAdPageClass(pathname)
+	}, [pathname])
 
 	return (
 		<ThemeProvider>
