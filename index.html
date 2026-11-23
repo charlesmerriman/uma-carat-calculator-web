@@ -255,6 +255,23 @@
         } catch (e) {}
       })();
     </script>
+    <!--
+      Per-page classes for Raptive's ad layout: their installs team targets the
+      PvP guide and the home page by these body classes (2026-11-23). Added here,
+      before the ad script can place anything, from the path alone; App.tsx keeps
+      it right on client-side navigation. The map duplicates
+      src/services/adPageClass.ts, and adPageClass.test.ts fails if they drift.
+      The class names are on file with Raptive: don't rename them.
+    -->
+    <script>
+      (function () {
+        var classes = { "/": "ad-page-home", "/app/pvp": "ad-page-pvp" };
+        try {
+          var path = location.pathname.replace(/\/+$/, "") || "/";
+          if (classes.hasOwnProperty(path)) document.body.classList.add(classes[path]);
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!--

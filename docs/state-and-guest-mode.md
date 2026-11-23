@@ -216,6 +216,33 @@ private before). It is
 enforced twice: the card sends `include_stats` only when the box is ticked and the server
 sends stats only then, and the provider ignores stats it did not ask for.
 
+### Copying a posted plan (Community plans)
+
+A Community plans post (`/app/plans`, `notes/pull-plan-database-plan.md`) is copied the same
+way: `copyPostedPlan(publicId, name?)`, beside `copySharedPlan`, and both run ONE body,
+`copyPlanFrom(send, goneText, includeStats)`, so the two can never drift. Only the request
+differs (`POST /plan-gallery/posts/<id>/copy`), and two rows of the table above:
+
+- **Stats and purchases never travel.** A post carries no balance and its posted income is
+  for reading only, so an account copy reads the account's own block, and a guest copy
+  replaces the device's rows and nothing else (`includeStats` is always false).
+- **Notes** travel only when the author posted them.
+
+The page asks before a guest's device rows are replaced, as the landing card does. The guest
+path is built but unreachable while the page is early access (PR 5 opens it).
+
+**Posting a plan** is `postPlan(planId, body)`: it runs as a plan action (busy, so no switch
+mid-post), saves a pending edit first because the server copies the plan's SAVED rows, and on
+success sets `post_public_id` on the plan (the menu's "Posted" mark). It answers the post or the
+refusal's words instead of toasting, because the dialog is a modal and a toast would sit under
+it. `forgetPlanPost(publicId)` clears the mark after a take-down from the page or the dialog; a
+take-down from the account page (outside the provider) shows on the next load of `/app`.
+
+**"Add to my plan" is not a copy.** It stages one banner, with the author's pulls, through
+`hooks/useStageBanner.ts`, the same path as the Timeline's "Stage banner": the row goes to
+`stagedBanners`, and the player confirms it in the Calculator with "Add to calculator". It
+writes no plan and moves no copy count.
+
 ---
 
 ## Guest mode

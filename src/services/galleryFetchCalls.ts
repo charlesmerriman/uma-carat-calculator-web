@@ -8,7 +8,18 @@
  * {"error": "<one sentence>"}, written for the player; refusalText reads it.
  */
 import { authHeaders } from "./authToken"
-import type { GalleryReportReason, GallerySort, ProfileCardTarget, VoteChoice } from "../types/gallery"
+import type {
+	GalleryReportReason,
+	GallerySort,
+	PlanFilters,
+	PlanSort,
+	PlanSpending,
+	PlanStrategy,
+	PlanSweat,
+	PlanWindow,
+	ProfileCardTarget,
+	VoteChoice,
+} from "../types/gallery"
 import type { PvpEventRef } from "../utils/pvpEvent"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -82,6 +93,57 @@ export function galleryFeedFetch(
 	const query = new URLSearchParams({ sort, limit: String(limit) })
 	if (uma !== null) query.set("uma", String(uma))
 	return fetch(`${API_URL}/pvp-gallery/${ref.kind}/${ref.id}?${query}`, { headers: jsonHeaders() })
+}
+
+// ── Community plans ──────────────────────────────────────────────────────
+// Reading one, votes, views, comments, reports and taking it down are the
+// shared /gallery/posts routes above, as a team's are.
+
+/** Community plans: the top `limit` plans for one sort, window and set of filters. */
+export function planFeedFetch({
+	sort,
+	window: topWindow,
+	filters,
+	limit,
+}: {
+	sort: PlanSort
+	window: PlanWindow
+	filters: PlanFilters
+	limit: number
+}): Promise<Response> {
+	const query = new URLSearchParams({ sort, limit: String(limit) })
+	if (sort === "top") query.set("window", topWindow)
+	if (filters.range !== null) query.set("range", String(filters.range))
+	if (filters.strategies.length) query.set("strategy", filters.strategies.join(","))
+	if (filters.spending) query.set("spending", filters.spending)
+	if (filters.sweat) query.set("sweat", filters.sweat)
+	return fetch(`${API_URL}/plan-gallery?${query}`, { headers: jsonHeaders() })
+}
+
+/**
+ * Take a copy of a posted plan. Signed in, `name` names the new plan and the
+ * answer is the plan with its rows (201, inactive: the caller switches to
+ * it). A guest sends nothing and gets the rows for the device store.
+ */
+export function planPostCopy(publicId: string, name?: string): Promise<Response> {
+	return post(`/plan-gallery/posts/${encodeURIComponent(publicId)}/copy`, name === undefined ? {} : { name })
+}
+
+/** What the posting dialog sends. The three ticks are the person's own, every time. */
+export interface PlanPublishBody {
+	caption: string
+	strategy: string
+	spending: PlanSpending | ""
+	sweat: PlanSweat | ""
+	strategies: PlanStrategy[]
+	include_notes: boolean
+	include_income: boolean
+	confirm_public_identity: boolean
+}
+
+/** Post one of your plans, or update its post: 201 the first time, 200 after. */
+export function planPublish(planId: number, body: PlanPublishBody): Promise<Response> {
+	return post(`/plans/${planId}/publish`, body)
 }
 
 export function galleryPostFetch(publicId: string): Promise<Response> {

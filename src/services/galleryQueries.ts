@@ -32,17 +32,24 @@ import {
 	galleryPostFetch,
 	galleryPostTakeDown,
 	galleryVote,
+	planFeedFetch,
 	refusalText,
 } from "./galleryFetchCalls"
 import { HttpError } from "./queryClient"
 import type { PvpEventRef } from "../utils/pvpEvent"
 import type {
+	AnyGalleryPost,
 	GalleryComment,
 	GalleryFeed,
 	GalleryPost,
-	GalleryRow,
+	GalleryRowBase,
 	GallerySort,
 	GalleryThread,
+	PlanFeed,
+	PlanFilters,
+	PlanPost,
+	PlanSort,
+	PlanWindow,
 	VoteChoice,
 	VoteSplit,
 } from "../types/gallery"
@@ -72,6 +79,16 @@ export const galleryKeys = {
 	feeds: () => ["gallery", "feed"] as const,
 	feed: (ref: PvpEventRef, sort: GallerySort, uma: number | null, limit: number) =>
 		["gallery", "feed", ref.kind, ref.id, sort, uma, limit] as const,
+	/**
+	 * Community plans' feed sits under the same "feed" prefix as the teams',
+	 * so a vote, a take-down or a new post reaches it through the same calls.
+	 * "plans" in the place of an event kind keeps it apart from every team feed.
+	 */
+	planFeed: (sort: PlanSort, window: PlanWindow, filters: PlanFilters, limit: number) =>
+		[
+			"gallery", "feed", "plans", sort, sort === "top" ? window : null,
+			filters.range, filters.strategies.join(","), filters.spending, filters.sweat, limit,
+		] as const,
 	post: (publicId: string) => ["gallery", "post", publicId] as const,
 	comments: (publicId: string) => ["gallery", "comments", publicId] as const,
 	mine: () => ["gallery", "mine"] as const,
@@ -102,6 +119,37 @@ export function useGalleryPost(publicId: string | null) {
 	return useQuery({
 		queryKey: galleryKeys.post(publicId ?? ""),
 		queryFn: async () => readJson<GalleryPost>(await galleryPostFetch(publicId ?? ""), "The team didn't load."),
+		enabled: publicId !== null,
+	})
+}
+
+/**
+ * Community plans' feed. While another sort, window or filter loads, the
+ * rows already on screen stay (marked `isPlaceholderData`): every plan feed
+ * is the same pool of posts, so the old rows are only old, never wrong.
+ */
+export function usePlanFeed(
+	{ sort, window, filters, limit }: { sort: PlanSort; window: PlanWindow; filters: PlanFilters; limit: number },
+	enabled = true
+) {
+	return useQuery({
+		queryKey: galleryKeys.planFeed(sort, window, filters, limit),
+		queryFn: async () =>
+			readJson<PlanFeed>(await planFeedFetch({ sort, window, filters, limit }), "Community plans didn't load."),
+		placeholderData: (previous, previousQuery) =>
+			previousQuery && previousQuery.queryKey[2] === "plans" ? previous : undefined,
+		enabled,
+	})
+}
+
+/**
+ * One plan post in full, opened from its row. The same cache entry as a
+ * team's (galleryKeys.post), so patchPost reaches it with no second path.
+ */
+export function usePlanPost(publicId: string | null) {
+	return useQuery({
+		queryKey: galleryKeys.post(publicId ?? ""),
+		queryFn: async () => readJson<PlanPost>(await galleryPostFetch(publicId ?? ""), "The plan didn't load."),
 		enabled: publicId !== null,
 	})
 }
@@ -143,11 +191,11 @@ export function useGalleryComments(source: CommentThreadSource) {
 	})
 }
 
-/** The signed-in person's posts, every event, hidden ones too. */
+/** The signed-in person's posts, teams and plans, hidden ones too. */
 export function useMyGalleryPosts() {
 	return useQuery({
 		queryKey: galleryKeys.mine(),
-		queryFn: async () => readJson<GalleryPost[]>(await galleryMyPosts(), "Your posts didn't load."),
+		queryFn: async () => readJson<AnyGalleryPost[]>(await galleryMyPosts(), "Your posts didn't load."),
 	})
 }
 
@@ -184,7 +232,7 @@ export function voteDelta(from: VoteChoice | null, to: VoteChoice): number {
 	return VOTE_VALUE[to] - VOTE_VALUE[from ?? "none"]
 }
 
-function patched<T extends GalleryRow>(row: T, patch: PostPatch): T {
+function patched<T extends GalleryRowBase>(row: T, patch: PostPatch): T {
 	const score = patch.votes?.score ?? row.stats.score + (patch.scoreDelta ?? 0)
 	const split = patch.votes ? patch.votes.split : row.stats.split
 	return {
@@ -199,16 +247,25 @@ function patched<T extends GalleryRow>(row: T, patch: PostPatch): T {
 	}
 }
 
+/**
+ * Any cached feed: an event's teams or Community plans. Both hold their rows
+ * in `results`, and a patch only touches what every row has.
+ */
+type AnyFeed = GalleryFeed | PlanFeed
+
+/** `feed` with each row passed through `change`, typed for either kind of feed. */
+function mapRows(feed: AnyFeed, change: (row: GalleryRowBase) => GalleryRowBase | null): AnyFeed {
+	const results = (feed.results as GalleryRowBase[]).map(change).filter((row) => row !== null)
+	return { ...feed, results } as AnyFeed
+}
+
 /** Applies `patch` to the post wherever it is cached: every feed, the post itself, your posts. */
 function patchPost(client: QueryClient, publicId: string, patch: PostPatch): void {
-	client.setQueriesData<GalleryFeed>({ queryKey: galleryKeys.feeds() }, (feed) =>
-		feed && {
-			...feed,
-			results: feed.results.map((row) => (row.public_id === publicId ? patched(row, patch) : row)),
-		}
+	client.setQueriesData<AnyFeed>({ queryKey: galleryKeys.feeds() }, (feed) =>
+		feed && mapRows(feed, (row) => (row.public_id === publicId ? patched(row, patch) : row))
 	)
-	client.setQueryData<GalleryPost>(galleryKeys.post(publicId), (post) => post && patched(post, patch))
-	client.setQueryData<GalleryPost[]>(galleryKeys.mine(), (posts) =>
+	client.setQueryData<AnyGalleryPost>(galleryKeys.post(publicId), (post) => post && patched(post, patch))
+	client.setQueryData<AnyGalleryPost[]>(galleryKeys.mine(), (posts) =>
 		posts?.map((post) => (post.public_id === publicId ? patched(post, patch) : post))
 	)
 }
@@ -251,15 +308,12 @@ export function useTakeDownPost() {
 		mutationFn: async (publicId: string) =>
 			expectOk(await galleryPostTakeDown(publicId), "Your post couldn't be taken down. Try again in a moment."),
 		onSuccess: (_nothing, publicId) => {
-			client.setQueriesData<GalleryFeed>({ queryKey: galleryKeys.feeds() }, (feed) => {
-				if (!feed?.results.some((row) => row.public_id === publicId)) return feed
-				return {
-					...feed,
-					count: Math.max(feed.count - 1, 0),
-					results: feed.results.filter((row) => row.public_id !== publicId),
-				}
+			client.setQueriesData<AnyFeed>({ queryKey: galleryKeys.feeds() }, (feed) => {
+				if (!feed || !(feed.results as GalleryRowBase[]).some((row) => row.public_id === publicId)) return feed
+				const left = mapRows(feed, (row) => (row.public_id === publicId ? null : row))
+				return { ...left, count: Math.max(feed.count - 1, 0) }
 			})
-			client.setQueryData<GalleryPost[]>(galleryKeys.mine(), (posts) =>
+			client.setQueryData<AnyGalleryPost[]>(galleryKeys.mine(), (posts) =>
 				posts?.filter((post) => post.public_id !== publicId)
 			)
 			client.removeQueries({ queryKey: galleryKeys.post(publicId) })
@@ -274,7 +328,7 @@ export function useTakeDownPost() {
  * answer, and the feeds and your posts are refetched, since a new post or a
  * re-post (votes back to zero, newest again) moves it in every sort.
  */
-export function rememberPublished(client: QueryClient, post: GalleryPost): void {
+export function rememberPublished(client: QueryClient, post: AnyGalleryPost): void {
 	client.setQueryData(galleryKeys.post(post.public_id), post)
 	void client.invalidateQueries({ queryKey: galleryKeys.feeds() })
 	void client.invalidateQueries({ queryKey: galleryKeys.mine() })

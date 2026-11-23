@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildCopyChips, buildCountChips, buildQuantityChips, coarsePullDelta } from '../utils/countChips'
+import { ITEM_CHIPS, buildCopyChips, buildCountChips, buildQuantityChips, coarsePullDelta } from '../utils/countChips'
 import type { CountChipSet } from '../utils/countChips'
 import { PULLS_PER_PITY_COPY } from '../utils/probabilityCalculations'
 import { STEPS_PER_ROUND } from '../utils/stepUpLadder'
@@ -159,3 +159,17 @@ describe('buildQuantityChips', () => {
 		expect(chip(buildQuantityChips(4), '+1').next(4)).toBe(4)
 	})
 })
+
+describe('ITEM_CHIPS — tickets, crystals and shards in Current Resources', () => {
+	it('steps by one either way, with nothing else on the pad', () => {
+		expect(ITEM_CHIPS.deltas.map((chip) => chip.label)).toEqual(['−1', '+1'])
+		expect(ITEM_CHIPS.presets).toEqual([])
+		expect(ITEM_CHIPS.deltas.map((chip) => chip.next(7))).toEqual([6, 8])
+	})
+
+	it('never goes below zero, and has no ceiling', () => {
+		expect(ITEM_CHIPS.deltas[0].next(0)).toBe(0)
+		expect(ITEM_CHIPS.deltas[1].next(9999)).toBe(10000)
+	})
+})
+

@@ -137,6 +137,13 @@ export interface SupportCard extends JpDated {
 	rarity?: number | null
 	/** See Uma.game_id. Also null for a placeholder card, which has no page. */
 	game_id?: number | null
+	/**
+	 * What FramedCard builds the card from (utils/cardFrame.ts): the game's art
+	 * with no frame, null until uploaded, and the card's type. Absent from an
+	 * API older than api #311, which draws the bordered `image` as before.
+	 */
+	image_borderless?: string | null
+	card_type?: string | null
 }
 
 /** An uma gacha banner — contains one or more featured umas */

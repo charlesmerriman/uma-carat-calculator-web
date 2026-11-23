@@ -55,6 +55,12 @@ export interface Plan {
 	share_notes?: boolean
 	/** Copies taken through the link. Read-only. */
 	copy_count?: number
+	/**
+	 * The plan's Community plans post, or null when it isn't posted. Read-only:
+	 * posting is POST /plans/<id>/publish. Absent from an API older than
+	 * Community plans, which hides "Post this plan" (the share face's degrade).
+	 */
+	post_public_id?: string | null
 	/** ISO instant. Moves on rename, on activate, and when the rows are saved. */
 	updated_at: string
 }

@@ -11,7 +11,8 @@ import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { OguriSpinner } from "../OguriSpinner"
 import { useCalculatorData } from "../../services/CalculatorContext"
-import { nextTempId, plannedBannerKey } from "../../utils/bannerHelpers"
+import { plannedBannerKey } from "../../utils/bannerHelpers"
+import { useStageBanner } from "../../hooks/useStageBanner"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { motion } from "framer-motion"
 import { RaceEventCard } from "./RaceEventCard"
@@ -54,7 +55,6 @@ import type {
 	BannerUma,
 	BannerSupport,
 	RaceEvent,
-	UserPlannedBanner,
 	TimelineEvent,
 } from "../../types"
 import { nameMatches } from "../../utils/searchText"
@@ -313,12 +313,12 @@ export const Timeline = () => {
 		umaBannerData,
 		supportBannerData,
 		stagedBanners,
-		setStagedBanners,
 		scenarioData,
 		anniversaryEventData,
 		dailyLegendRaceData,
 		storyEventData,
 	} = useCalculatorData()
+	const { stage: stageBanner } = useStageBanner()
 	const [searchParams, setSearchParams] = useSearchParams()
 	/**
 	 * Which half of the calendar to show, as an OVERRIDE rather than the value.
@@ -473,19 +473,14 @@ export const Timeline = () => {
 			return
 		}
 
-		setStagedBanners((prev) => {
-			// From `prev`, never from the render-scoped stagedBanners — staging two
-			// banners in quick succession is the normal way to use this page, and a
-			// stale list would mint the same tempId twice. See nextTempId.
-			const tempId = nextTempId(userPlannedBannerData, prev)
-
-			const newStaged: UserPlannedBanner = type === "Uma"
-				? { tempId, number_of_pulls: 0, reserved_copies: 0, banner_uma: fullBanner as BannerUma, initialBannerType: "Uma" }
-				: { tempId, number_of_pulls: 0, reserved_copies: 0, banner_support: fullBanner as BannerSupport, initialBannerType: "Support" }
-
-			return [...prev, newStaged]
-		})
-		toast.success(`${fullBanner.name} staged! Head to the Calculator to confirm.`)
+		// The one staging path (hooks/useStageBanner), shared with Community
+		// plans' "Add to my plan".
+		stageBanner(
+			type === "Uma"
+				? { number_of_pulls: 0, reserved_copies: 0, banner_uma: fullBanner as BannerUma, initialBannerType: "Uma" }
+				: { number_of_pulls: 0, reserved_copies: 0, banner_support: fullBanner as BannerSupport, initialBannerType: "Support" },
+			fullBanner.name
+		)
 	}
 
 	// Only offer categories the data actually contains. `race_prep_support` has

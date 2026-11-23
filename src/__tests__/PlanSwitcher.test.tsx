@@ -15,11 +15,20 @@
 
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { PlanSwitcher } from '../components/carat-calculator/PlanSwitcher'
+import { AuthContext, type AuthContextType } from '../services/AuthContext'
 import { CalculatorContext } from '../services/CalculatorContext'
+import { planFeedFetch } from '../services/galleryFetchCalls'
+import { TestQueryProvider } from '../test/TestQueryProvider'
 import { PLAN_CAP } from '../types'
 import type { CalculatorContextType, Plan } from '../types'
+
+vi.mock('../services/galleryFetchCalls', async () => ({
+	...(await vi.importActual<typeof import('../services/galleryFetchCalls')>('../services/galleryFetchCalls')),
+	planFeedFetch: vi.fn(),
+}))
 
 const plan = (id: number, name: string, isActive = false): Plan => ({
 	id,
@@ -298,4 +307,73 @@ describe('PlanSwitcher', () => {
 			expect(value.createPlan).toHaveBeenCalledWith('Whale', undefined)
 		})
 	})
+
+	describe('Community plans', () => {
+		const withAccess = (earlyAccess: boolean, overrides: Partial<CalculatorContextType> = {}) => {
+			const value = {
+				plans: [{ ...plan(1, 'Main plan', true), post_public_id: null }, plan(2, 'What if')],
+				activePlanId: 1,
+				isPlanBusy: false,
+				// The post dialog reads the open plan's rows for its "Runs up to" line.
+				userPlannedBannerData: [],
+				scenarioData: [],
+				...actions(),
+				...overrides,
+			} as unknown as CalculatorContextType
+			const auth = {
+				isLoggedIn: true, status: 'ready', isSupporter: earlyAccess, refresh: vi.fn(), signOut: vi.fn(),
+				account: { display_name: 'Me', early_access: earlyAccess, oshis: [], oshi_slots: 1, oshi_uma_ids: [] },
+			} as unknown as AuthContextType
+			render(
+				<AuthContext.Provider value={auth}>
+					<CalculatorContext.Provider value={value}>
+						<TestQueryProvider>
+							<MemoryRouter>
+								<PlanSwitcher />
+							</MemoryRouter>
+						</TestQueryProvider>
+					</CalculatorContext.Provider>
+				</AuthContext.Provider>
+			)
+		}
+
+		it('offers neither the button nor the menu item without early access', async () => {
+			withAccess(false)
+			expect(screen.queryByRole('link', { name: 'Community plans' })).toBeNull()
+			await openOptions()
+			expect(screen.queryByRole('menuitem', { name: /Post this plan/ })).toBeNull()
+		})
+
+		it('puts the way in on the bar and "Post this plan" in the menu', async () => {
+			withAccess(true)
+			expect(screen.getByRole('link', { name: 'Community plans' })).toHaveAttribute('href', '/app/plans')
+			await openOptions()
+			const item = screen.getByRole('menuitem', { name: 'Post this plan' })
+			expect(within(item).queryByText('Posted')).toBeNull()
+		})
+
+		it('marks a posted plan', async () => {
+			withAccess(true, { plans: [{ ...plan(1, 'Main plan', true), post_public_id: 'Post1234' }] })
+			await openOptions()
+			expect(within(screen.getByRole('menuitem', { name: /Post this plan/ })).getByText('Posted')).toBeInTheDocument()
+		})
+
+		it('hides "Post this plan" on an API without the field', async () => {
+			withAccess(true, { plans: [plan(1, 'Main plan', true)] })
+			await openOptions()
+			expect(screen.queryByRole('menuitem', { name: /Post this plan/ })).toBeNull()
+		})
+
+		it('opens the posting dialog from the menu', async () => {
+			vi.mocked(planFeedFetch).mockImplementation(() =>
+				Promise.resolve(new Response(JSON.stringify({ count: 0, sort: 'top', window: 'week', limit: 20, has_more: false, results: [],
+					filters: { spending: [], sweat: [], strategies: [], ranges: [] } })))
+			)
+			withAccess(true)
+			await openOptions()
+			await userEvent.click(screen.getByRole('menuitem', { name: 'Post this plan' }))
+			expect(screen.getByRole('dialog', { name: 'Post this plan to Community plans' })).toBeInTheDocument()
+		})
+	})
 })
+

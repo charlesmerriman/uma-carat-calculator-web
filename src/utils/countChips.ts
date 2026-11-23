@@ -215,3 +215,20 @@ export function buildQuantityChips(max: number): CountChipSet {
 		hint: "↑↓ ±1",
 	}
 }
+
+/**
+ * The pad for an item count in Current Resources: tickets, crystals, shards.
+ *
+ * Players asked for it (feedback forum, 2026-11-07): these come one at a time,
+ * a rainbow shard every other event, so retyping the box for each was the
+ * chore. One step either way and nothing else; never below 0. Carats keep a
+ * plain box: they never move by one.
+ */
+export const ITEM_CHIPS: CountChipSet = {
+	deltas: [
+		{ label: "−1", title: "One fewer", next: (current) => Math.max(0, current - 1) },
+		{ label: "+1", title: "One more", next: (current) => current + 1 },
+	],
+	presets: [],
+	hint: "↑↓ ±1",
+}

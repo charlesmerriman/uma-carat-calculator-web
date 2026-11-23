@@ -14,6 +14,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import { nameMatches } from "../../utils/searchText"
+import { FramedCard } from "../FramedCard"
 
 interface SelectorTargetPickerProps {
 	product: AnniversaryEventProduct
@@ -141,6 +142,8 @@ export const SelectorTargetPicker = ({
 				>
 					{selected?.portrait ? (
 						<FramedUma src={selected.portrait} layers={selected.portrait_layers} oshi={oshiIds.has(selected.value)} className="h-28" />
+					) : selected?.frame ? (
+						<FramedCard card={selected.frame} className="h-full" />
 					) : selected ? (
 						<img
 							src={selected.image}
@@ -270,6 +273,8 @@ export const SelectorTargetPicker = ({
 											>
 												{option.portrait ? (
 													<FramedUma src={option.portrait} layers={option.portrait_layers} oshi={oshiIds.has(option.value)} className="w-28" />
+												) : option.frame ? (
+													<FramedCard card={option.frame} className={cardSizeClass} />
 												) : (
 													<img
 														src={option.image}

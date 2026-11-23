@@ -62,6 +62,9 @@ import {
 	planRename,
 	sharedPlanCopy
 } from "./planFetchCalls"
+import { planPostCopy, planPublish, refusal, type PlanPublishBody } from "./galleryFetchCalls"
+import type { PlanPost } from "../types/gallery"
+import type { PostPlanResult } from "../types/calculator"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { withoutSkippedRaces } from "../utils/raceParticipation"
 
@@ -850,7 +853,9 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	)
 
 	/**
-	 * Take a copy of somebody's shared plan. The path is the one this tab
+	 * Take a copy of somebody's plan: a shared link's (copySharedPlan) or a
+	 * Community plans post's (copyPostedPlan). `send` makes the request for
+	 * the path this tab loaded in. The path is the one this tab
 	 * LOADED in, like every save (loadedAsRef). The server picks its own path
 	 * from the token on the request, so a tab whose token changed since loading
 	 * is refused here: a guest tab whose person signed in elsewhere would get
@@ -873,8 +878,8 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	 * path resetGuestPlan relies on. Asking before replacing a plan is the
 	 * landing card's job.
 	 */
-	const copySharedPlan = useCallback(
-		(publicId: string, { name = "", includeStats = false }: SharedPlanCopyOptions): Promise<boolean> =>
+	const copyPlanFrom = useCallback(
+		(send: (asAccount: boolean) => Promise<Response>, goneText: string, includeStats: boolean): Promise<boolean> =>
 			runPlanAction(async () => {
 				const loadedAs = loadedAsRef.current
 				if (loadedAs === null || (loadedAs === "account") !== !!getAuthToken()) return false
@@ -883,17 +888,14 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 					toast.error("Your changes didn't save, so the plan wasn't copied.")
 					return false
 				}
-				const response = await sharedPlanCopy(
-					publicId,
-					asAccount ? { name } : { include_stats: includeStats }
-				)
+				const response = await send(asAccount)
 				if (!response.ok) {
 					const body = (await response.json().catch(() => null)) as
 						| { error?: string; name?: string[] }
 						| null
 					toast.error(
 						response.status === 404
-							? "This plan isn't shared any more."
+							? goneText
 							: response.status === 429
 								? "That's a lot of copies in a short time. Try again later."
 								// The cap and a blank name, worded by the server.
@@ -955,6 +957,71 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		[runPlanAction, flushPendingSave, applyPlan]
 	)
 
+	const copySharedPlan = useCallback(
+		(publicId: string, { name = "", includeStats = false }: SharedPlanCopyOptions): Promise<boolean> =>
+			copyPlanFrom(
+				(asAccount) => sharedPlanCopy(publicId, asAccount ? { name } : { include_stats: includeStats }),
+				"This plan isn't shared any more.",
+				includeStats
+			),
+		[copyPlanFrom]
+	)
+
+	/**
+	 * Copy a Community plans post: the share link's two paths (copyPlanFrom),
+	 * with the post's own route. Signed in, a new plan named `name`, activated
+	 * and applied. A guest's copy (once the page opens to everyone) replaces
+	 * the device's rows only: a post never carries anyone's resources, so
+	 * there is nothing to take and the guest's own stay.
+	 */
+	const copyPostedPlan = useCallback(
+		(publicId: string, name = ""): Promise<boolean> =>
+			copyPlanFrom(
+				(asAccount) => planPostCopy(publicId, asAccount ? name : undefined),
+				"This plan was taken down.",
+				false
+			),
+		[copyPlanFrom]
+	)
+
+	/**
+	 * Post a plan to Community plans (PostPlanDialog). The post is a copy of
+	 * the plan's SAVED rows (backend plan_gallery.snapshot_from_plan), so a
+	 * pending edit is saved first, as before a switch. The plan then carries
+	 * the post's id, which is the menu's "Posted" mark. A refusal comes back
+	 * as words for the dialog to show beside its fields, never a toast: a
+	 * toast would sit under the modal.
+	 */
+	const postPlan = useCallback(
+		async (planId: number, body: PlanPublishBody): Promise<PostPlanResult> => {
+			const failed = "Your plan couldn't be posted. Try again in a moment."
+			let result: PostPlanResult = { ok: false, text: failed, field: null }
+			await runPlanAction(async () => {
+				if (!(await flushPendingSave())) {
+					result = { ok: false, text: "Your changes didn't save, so the plan wasn't posted.", field: null }
+					return false
+				}
+				const response = await planPublish(planId, body)
+				if (!response.ok) {
+					result = { ok: false, ...(await refusal(response, failed)) }
+					return false
+				}
+				const post = (await response.json()) as PlanPost
+				setPlans((prev) => prev.map((plan) => (plan.id === planId ? { ...plan, post_public_id: post.public_id } : plan)))
+				result = { ok: true, post }
+				return true
+			})
+			return result
+		},
+		[runPlanAction, flushPendingSave]
+	)
+
+	const forgetPlanPost = useCallback((publicId: string): void => {
+		setPlans((prev) =>
+			prev.map((plan) => (plan.post_public_id === publicId ? { ...plan, post_public_id: null } : plan))
+		)
+	}, [])
+
 	// The ledger every projection consumer reads, with the race events the
 	// player said they're skipping already taken out. Done HERE, once, rather
 	// than in each engine hook, so the planner rows, the income tiles and the
@@ -1006,6 +1073,9 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 		setPlanSharing,
 		resetPlanLink,
 		copySharedPlan,
+		copyPostedPlan,
+		postPlan,
+		forgetPlanPost,
 		isGuestPlanStored,
 		resetGuestPlan,
 		saveNow,
