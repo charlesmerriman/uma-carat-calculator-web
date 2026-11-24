@@ -35,9 +35,9 @@ const ICONS: Record<CalculatorTab["to"], LucideIcon> = {
 	"/app/plans": Users,
 }
 
-// Literal strings so Tailwind sees them. Two or three columns on a phone,
-// sharing the width the way the PvP row does; from `sm` the tabs sit side by
-// side at their own width.
+// Literal strings so Tailwind sees them. One equal column per tab at EVERY
+// width, so the tabs share the bar's whole width the way the Rankings and PvP
+// rows do (owner, 2026-11-24: not bunched at the left on a desktop).
 const GRID_COLUMNS: Record<number, string> = { 2: "grid-cols-2", 3: "grid-cols-3" }
 
 export function CalculatorTabs() {
@@ -47,7 +47,7 @@ export function CalculatorTabs() {
 		<div className="sticky top-(--navbar-h,7.75rem) z-30 bg-gray-900 app-shell:top-0">
 			<nav
 				aria-label="Calculator"
-				className={`mx-auto grid w-[calc(100%-1rem)] max-w-[96rem] gap-1 border-b border-gray-700 sm:flex sm:w-[calc(100%-2rem)] ${GRID_COLUMNS[tabs.length] ?? "grid-cols-3"}`}
+				className={`mx-auto grid w-[calc(100%-1rem)] max-w-[96rem] gap-1 border-b border-gray-700 sm:w-[calc(100%-2rem)] ${GRID_COLUMNS[tabs.length] ?? "grid-cols-3"}`}
 			>
 				{tabs.map((tab) => {
 					const Icon = ICONS[tab.to]
