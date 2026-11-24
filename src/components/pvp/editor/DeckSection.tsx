@@ -2,7 +2,9 @@
  * One style's example decks, editable: each deck is the reader's six-slot
  * grid with the controls under every slot (pick or change the card, a note,
  * the borrow mark, an "or" alternative), a label and a note on top, and
- * duplicate / delete. Decks drag to reorder. A card comes from the team
+ * duplicate / delete. Decks drag to reorder by their grip, and a slot's card
+ * drags onto another slot of the same deck, taking its note, limit break,
+ * alternatives and borrow mark with it (./SlotDrag.tsx). A card comes from the team
  * builder's picker, which blocks a card already in the deck and notes a
  * release date beside the event.
  */
@@ -14,6 +16,8 @@ import { NoteOnlyTile, SupportTile } from "../PvpTiles"
 import { useFieldErrors, useGuideEditor } from "./GuideEditorContext"
 import { MentionField } from "./MentionField"
 import { SortableGroup, SortableItem } from "./Sortable"
+import { DraggableSlot, SlotDragContext, SlotDropZone } from "./SlotDrag"
+import { FramedCard } from "../../FramedCard"
 import { ADD_BUTTON, FIELD_ERROR, ICON_BUTTON, INPUT, SECTION_HEADING, SMALL_BUTTON, SUBTLE } from "./editorStyles"
 import {
 	addAlternative,
@@ -24,6 +28,7 @@ import {
 	removeDeck,
 	setBorrowSlot,
 	setSlotCard,
+	swapSlots,
 	updateDeck,
 	updateSlot,
 } from "../../../utils/guideDocumentEdits"
@@ -63,7 +68,7 @@ export function DeckSection({ style }: { style: MemberStyle }) {
 		<section id={`editor-${style}-decks`} aria-label="Example decks" className="flex flex-col gap-3">
 			<div className="flex flex-wrap items-baseline justify-between gap-2">
 				<h4 className={SECTION_HEADING}>Example decks</h4>
-				<span className={SUBTLE}>Six slots; slot 6 is usually the borrow. Drag a deck's grip to reorder.</span>
+				<span className={SUBTLE}>Six slots; slot 6 is usually the borrow. Drag a card onto another slot to move it, or a deck's grip to reorder.</span>
 			</div>
 			<SortableGroup ids={decks.map(({ i }) => i)} layout="list" onMove={(from, to) => update((doc) => moveDeck(doc, from, to))}>
 				<div className="flex flex-col gap-3" role="list" aria-label={`${STYLE_LABELS[style]} decks`}>
@@ -158,18 +163,20 @@ function DeckEditor({ deck, index: i }: { deck: GuideDeckRow; index: number }) {
 					</div>
 
 					{/* Row gap and top margin leave room for the borrow tab above its card. */}
-					<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-6">
-						{SLOT_NUMBERS.map((slot) => (
-							<SlotEditor
-								key={slot}
-								deckIndex={i}
-								slot={slot}
-								rows={deck.slots.filter((row) => row.slot === slot).sort((a, b) => a.order - b.order)}
-								isBorrow={borrowSlot === slot}
-								onPick={(order) => setTarget({ deck: i, slot, order })}
-							/>
-						))}
-					</div>
+					<SlotDragContext deckIndex={i} onMove={(from, to) => update((doc) => swapSlots(doc, i, from, to))} preview={(slot) => <SlotPreview deck={deck} slot={slot} />}>
+						<div className="mt-4 grid max-w-3xl grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-6">
+							{SLOT_NUMBERS.map((slot) => (
+								<SlotEditor
+									key={slot}
+									deckIndex={i}
+									slot={slot}
+									rows={deck.slots.filter((row) => row.slot === slot).sort((a, b) => a.order - b.order)}
+									isBorrow={borrowSlot === slot}
+									onPick={(order) => setTarget({ deck: i, slot, order })}
+								/>
+							))}
+						</div>
+					</SlotDragContext>
 					{deckErrors.map((message) => (
 						<p key={message} className={`${FIELD_ERROR} mt-2`} role="alert">
 							{message}
@@ -215,6 +222,18 @@ function DeckEditor({ deck, index: i }: { deck: GuideDeckRow; index: number }) {
 	)
 }
 
+/**
+ * The copy under the pointer while a slot is dragged: its card in the site's
+ * card frame (as on My team), or its note for a note-only slot.
+ */
+function SlotPreview({ deck, slot }: { deck: GuideDeckRow; slot: number }) {
+	const { index } = useGuideEditor()
+	const main = deck.slots.find((row) => row.slot === slot && row.order === 0)
+	const card = main?.support_card == null ? undefined : index.cardsById.get(main.support_card)
+	if (card) return <FramedCard card={{ ...card, image_borderless: card.image_borderless ?? null }} />
+	return <NoteOnlyTile note={main?.note || "Note only"} />
+}
+
 function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 	deckIndex: number
 	slot: number
@@ -229,34 +248,38 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 	const card = main?.support_card === null || main?.support_card === undefined ? null : index.cardsById.get(main.support_card)
 	const [noting, setNoting] = useState(false)
 
+	// The whole column takes a drop (an empty slot's dashed button too, the
+	// case in Henry's clip); only a filled slot's tile can be picked up.
+	const tile = main ? (
+		<DraggableSlot deckIndex={deckIndex} slot={slot}>
+			{card ? (
+				<SupportTile
+					card={{ id: card.id, name: card.name, image: card.image, image_borderless: card.image_borderless ?? null, card_type: card.card_type, rarity: card.rarity }}
+					note=""
+					borrow={isBorrow}
+					limitBreak={main.limit_break ?? null}
+					pageLink={false}
+				/>
+			) : main.support_card !== null ? (
+				<NoteOnlyTile note={`Card ${main.support_card}`} borrow={isBorrow} />
+			) : (
+				<NoteOnlyTile note={main.note || "Note only"} borrow={isBorrow} />
+			)}
+		</DraggableSlot>
+	) : (
+		<button
+			type="button"
+			onClick={() => onPick(0)}
+			className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-600 text-xs text-gray-400 transition hover:border-brand hover:text-brand"
+		>
+			<Plus className="h-4 w-4" />
+			Slot {slot}
+		</button>
+	)
+
 	return (
-		<div className="flex min-w-0 flex-col gap-1">
-			<div className="relative">
-				{main ? (
-					card ? (
-						<SupportTile
-							card={{ id: card.id, name: card.name, image: card.image, image_borderless: card.image_borderless ?? null, card_type: card.card_type, rarity: card.rarity }}
-							note=""
-							borrow={isBorrow}
-							limitBreak={main.limit_break ?? null}
-							pageLink={false}
-						/>
-					) : main.support_card !== null ? (
-						<NoteOnlyTile note={`Card ${main.support_card}`} borrow={isBorrow} />
-					) : (
-						<NoteOnlyTile note={main.note || "Note only"} borrow={isBorrow} />
-					)
-				) : (
-					<button
-						type="button"
-						onClick={() => onPick(0)}
-						className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-600 text-xs text-gray-400 transition hover:border-brand hover:text-brand"
-					>
-						<Plus className="h-4 w-4" />
-						Slot {slot}
-					</button>
-				)}
-			</div>
+		<SlotDropZone deckIndex={deckIndex} slot={slot} className="flex min-w-0 flex-col gap-1">
+			<div className="relative">{tile}</div>
 			<div className="flex flex-wrap items-center justify-center gap-0.5 [&>button]:whitespace-nowrap">
 				<button type="button" className={SMALL_BUTTON} onClick={() => onPick(0)} title={main?.support_card ? "Change the card" : "Pick a card"}>
 					{main?.support_card ? "Change" : "Card"}
@@ -356,7 +379,7 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 					</button>
 				</div>
 			)}
-		</div>
+		</SlotDropZone>
 	)
 }
 

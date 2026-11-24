@@ -32,6 +32,7 @@ import {
 	setBorrowSlot,
 	setSlotCard,
 	setStyleNote,
+	swapSlots,
 	updateSlot,
 	updateUma,
 } from "../utils/guideDocumentEdits"
@@ -327,6 +328,31 @@ describe("edits", () => {
 		expect(copied.decks[1].slots).toHaveLength(3)
 		const fromTeam = deckFromCards("late", "Henry's", [{ slot: 1, support_card: 302 }, { slot: 6, support_card: 303 }])
 		expect(fromTeam.slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[1, false], [6, true]])
+	})
+
+	it("drags a slot onto another: everything on it travels, an empty slot is a move", () => {
+		let doc = addDeck(document(), "front", "Whale")
+		doc = setSlotCard(doc, 1, 1, 302)
+		doc = updateSlot(doc, 1, 1, 0, { note: "2SP", limit_break: 4 })
+		doc = addAlternative(doc, 1, 1, null, "any speed")
+		doc = setSlotCard(doc, 1, 6, 303)
+		doc = setBorrowSlot(doc, 1, 6)
+		const rows = (d: typeof doc) => d.decks[1].slots.map((row) => [row.slot, row.order, row.support_card, row.note, row.limit_break, row.is_borrow])
+
+		// Swap 1 and 6: the note, limit break and "or" row go with Kitasan, the borrow with Creek.
+		const swapped = swapSlots(doc, 1, 6, 1)
+		expect(rows(swapped)).toEqual([
+			[6, 0, 302, "2SP", 4, false],
+			[6, 1, null, "any speed", null, false],
+			[1, 0, 303, "", null, true],
+		])
+		expect(validateDocument(swapped, INDEX).filter((error) => error.path.startsWith("decks[1]"))).toEqual([])
+
+		// Onto an empty slot: a move, slot 1 left empty.
+		expect(rows(swapSlots(doc, 1, 1, 4)).map(([slot]) => slot)).toEqual([4, 4, 6])
+		// Dropped where it started: nothing changes, and the other deck is untouched.
+		expect(swapSlots(doc, 1, 3, 3)).toBe(doc)
+		expect(swapped.decks[0]).toBe(doc.decks[0])
 	})
 })
 
