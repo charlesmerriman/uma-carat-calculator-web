@@ -1,9 +1,8 @@
 import { Sparkles } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
 import { DateTimeRange } from "./DateTimeRange"
-import { TIMELINE_FOCUS_HIGHLIGHT } from "./timelineShared"
 import { CopyTimelineLink } from "./CopyTimelineLink"
-import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
+import { TimelineCard } from "./TimelineCard"
 import type { TimelineFocusProps, TimelineMarker } from "./timelineShared"
 
 /**
@@ -45,25 +44,11 @@ const MARKER_CHROME: Record<
 }
 
 /**
- * The wrapper and panel every marker card sits in, alone or paired.
- *
- * The SAME two boxes as BannerWindowCard and RaceEventCard, class for class:
- * an outer `my-3 w-full px-2` that carries the ref and the scroll margin, and
- * the `card-panel` inside it padded `p-2 sm:p-3`, which carries the ring. A
- * marker card used to be its own root with wider padding and no wrapper, and
- * sat visibly wider than every banner card around it. The gutter and padding
- * are not styling choices here; they are what lines the panel edges up.
- */
-const CARD_WRAPPER = `my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`
-
-/**
  * `tinted` is the scenario's brand edge: a lone scenario card carries it, and
- * so does a pair, because a pair always holds one.
+ * so does a pair, because a pair always holds one. The two boxes around it
+ * are TimelineCard's, the same ones every banner and race card sits in.
  */
-const panelClass = (tinted: boolean, isFocused: boolean): string =>
-	`tl-card card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
-		tinted ? "border-brand/40" : ""
-	} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`
+const tintClass = (tinted: boolean): string => (tinted ? "border-brand/40" : "")
 
 /**
  * A marker's contents without the panel: chip, name, dates, art.
@@ -97,7 +82,8 @@ const EventMarkerBody = ({
 		<>
 			<div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
 				<span
-					className={`tl-pill flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${chrome.accent}`}
+					data-size="xs"
+					className={`tl-pill flex items-center gap-1.5 px-2.5 font-semibold uppercase tracking-wide ${chrome.accent}`}
 				>
 					{Icon && <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
 					{chrome.label}
@@ -155,11 +141,9 @@ export const EventMarkerCard = ({
 	focusRef,
 	isFocused = false,
 }: { marker: TimelineMarker } & TimelineFocusProps) => (
-	<div ref={focusRef} className={CARD_WRAPPER}>
-		<div className={panelClass(marker.kind === "scenario", isFocused)}>
-			<EventMarkerBody marker={marker} artAlign="center" />
-		</div>
-	</div>
+	<TimelineCard focusRef={focusRef} isFocused={isFocused} panelClassName={tintClass(marker.kind === "scenario")}>
+		<EventMarkerBody marker={marker} artAlign="center" />
+	</TimelineCard>
 )
 
 /**
@@ -188,32 +172,30 @@ export const EventMarkerPairCard = ({
 	scenario: TimelineMarker
 	anniversary: TimelineMarker
 } & TimelineFocusProps) => (
-	<div ref={focusRef} className={CARD_WRAPPER}>
-		<div className={panelClass(true, isFocused)}>
+	<TimelineCard focusRef={focusRef} isFocused={isFocused} panelClassName={tintClass(true)}>
+		{/*
+		 * Three tracks, not two: the middle one is the rule, sized by its own
+		 * width so the halves stay equal. minmax(0, 1fr) rather than 1fr so a
+		 * long name wraps inside its column instead of widening it — the same
+		 * job min-w-0 does on the cells.
+		 */}
+		<div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6">
+			<div className="min-w-0">
+				<EventMarkerBody marker={anniversary} artAlign="row" />
+			</div>
 			{/*
-			 * Three tracks, not two: the middle one is the rule, sized by its own
-			 * width so the halves stay equal. minmax(0, 1fr) rather than 1fr so a
-			 * long name wraps inside its column instead of widening it — the same
-			 * job min-w-0 does on the cells.
+			 * The divider. Stacked, it is a short centred horizontal rule between
+			 * the halves; side by side, a one-pixel column stretched to the row
+			 * and inset top and bottom, so it separates the two without walling
+			 * the panel in half.
 			 */}
-			<div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6">
-				<div className="min-w-0">
-					<EventMarkerBody marker={anniversary} artAlign="row" />
-				</div>
-				{/*
-				 * The divider. Stacked, it is a short centred horizontal rule between
-				 * the halves; side by side, a one-pixel column stretched to the row
-				 * and inset top and bottom, so it separates the two without walling
-				 * the panel in half.
-				 */}
-				<div
-					aria-hidden="true"
-					className="mx-auto h-px w-2/3 bg-gray-600 md:mx-0 md:my-4 md:h-auto md:w-px md:self-stretch"
-				/>
-				<div className="min-w-0">
-					<EventMarkerBody marker={scenario} artAlign="center" />
-				</div>
+			<div
+				aria-hidden="true"
+				className="mx-auto h-px w-2/3 bg-gray-600 md:mx-0 md:my-4 md:h-auto md:w-px md:self-stretch"
+			/>
+			<div className="min-w-0">
+				<EventMarkerBody marker={scenario} artAlign="center" />
 			</div>
 		</div>
-	</div>
+	</TimelineCard>
 )

@@ -53,7 +53,7 @@ export const AnniversaryEventStrip = ({
 		>
 			<Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
 			<span className="text-sm font-bold">{event.name}</span>
-			<span className="tl-pill rounded-full border border-current/40 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+			<span data-size="xs" className="tl-pill border-current/40 font-semibold uppercase tracking-wide">
 				Part {event.part_number}
 			</span>
 			{event.accent_label && (
@@ -64,7 +64,8 @@ export const AnniversaryEventStrip = ({
 			{stepUpChip && (
 				<span
 					title="Select Step-Up banners run during this campaign: a discounted, paid-carats-only ladder that guarantees a card you choose"
-					className="tl-pill rounded-full border border-step-up-border/50 bg-step-up/15 px-2 py-0.5 text-[11px] font-semibold text-step-up"
+					data-size="xs"
+					className="tl-pill border-step-up-border/50 bg-step-up/15 font-semibold text-step-up"
 				>
 					{stepUpChip}
 				</span>
