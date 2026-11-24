@@ -129,6 +129,20 @@ describe("timeline.css", () => {
 		}
 	})
 
+	it("lands a deep-linked card below the pinned control bar, and with its month heading", () => {
+		// Until 2026-11-24 a deep link parked the card's first 40px, its title,
+		// under the sticky controls: the scroller's padding only knew about the
+		// screen's tab bar.
+		const pinned = matching(/\.tl-anchor\b/).filter((rule) => rule.media?.includes("64rem"))
+		expect(pinned.length).toBe(2)
+		for (const rule of pinned) expect(rule.body, rule.selector).toMatch(/scroll-margin-top\s*:[^;]*var\(--tl-bar-h\)/)
+		// A card under a month heading brings the heading with it, at every width.
+		for (const rule of matching(/\.tl-month \+ \.tl-anchor/)) {
+			expect(rule.body, rule.selector).toMatch(/var\(--tl-month-h\)/)
+		}
+		expect(matching(/\.tl-month \+ \.tl-anchor/).length).toBe(2)
+	})
+
 	it("keeps the layout rules layered and the chips' display unset", () => {
 		// Unlayered CSS beats every Tailwind utility. The layout must not; and
 		// the two title-line chips hide and show through container-query
