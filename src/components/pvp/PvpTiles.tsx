@@ -970,12 +970,24 @@ export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRe
 		<>
 			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
 			<MentionedSkills text={note} skip={skill.id} />
+			<CourseVerdict skillId={skill.id} />
 		</>
 	)
 	// A small cell (under a deck card) has no room for a caption.
 	const sub = size === "small" ? "" : skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
+	// Its detail lights the skill on the course map while open, as the
+	// editor's chip always did (Henry, board "Allow user to pin track view",
+	// 2026-11-24: "only works on edit tab"). With the map stuck to the top, a
+	// skill read far down the guide shows where it fires.
 	return (
-		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-80" interactive={preview && skill.game_id != null}>
+		<WithDetail
+			label={skill.name}
+			detail={detail}
+			className="w-full min-w-0"
+			detailClassName="w-80"
+			onOpenChange={(open) => lightOnCourseMap(skill, open)}
+			interactive={preview && skill.game_id != null}
+		>
 			<SkillFace skill={skill} sub={sub} size={size} />
 		</WithDetail>
 	)

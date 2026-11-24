@@ -234,13 +234,19 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx: widestPx = BOX_PX, maxHeightPx, compact = false, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
 	overlays?: CourseOverlays
 	/** The box's widest, in px: the guide's 1000, the Timeline drawer's less. */
 	widthPx?: number
+	/**
+	 * The box's tallest, in px: the box narrows until it fits and takes that
+	 * width outright (the stuck bar's track, whose height moves the page's
+	 * sticky rows). Without it the box fills its parent up to `widthPx`.
+	 */
+	maxHeightPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
 	/** False draws the track bare: icon chips with no words (a phone's, until it's tapped). */
@@ -301,6 +307,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const { shape, box, size, centre, clockwise, track, ringed } = drawing
 	// The outside of the track is the left of travel on a clockwise course.
 	const outside = clockwise ? 1 : -1
+	// Narrowed to fit a height cap, if there is one; the labels size by it.
+	const widthPx = maxHeightPx ? Math.min(widestPx, (maxHeightPx * box.width) / box.height) : widestPx
 	const unitsPerPx = box.width / widthPx
 	const P = (metre: number) => pointAtMetre(shape, metre, distance)
 	// The same metre before the laps are pulled apart into rings: every pass of
@@ -715,7 +723,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	})()
 
 	return (
-		<div ref={ref} className={`relative mx-auto w-full ${className}`} style={{ maxWidth: widthPx, aspectRatio: `${box.width} / ${box.height}` }} aria-hidden="true">
+		<div ref={ref} className={`relative mx-auto w-full ${className}`} style={{ maxWidth: widthPx, width: maxHeightPx ? widthPx : undefined, aspectRatio: `${box.width} / ${box.height}` }} aria-hidden="true">
 			<svg viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`} className="absolute inset-0 h-full w-full overflow-visible">
 				{/* The kerb, then the race over it, phase by phase. Butt ends: a
 				    round cap poked a black nub out past the chequer and behind the

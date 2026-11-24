@@ -2136,6 +2136,14 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   (`showWords`). Down the page the word columns share the width (a `Band` without a
   `size`) and the words wrap; across, they truncate, and a part too narrow for its words
   shows a short form (a hill's percent) or only its colour.
+- **Stick to top** (owner, 2026-11-20; Henry, 2026-11-24) is a fixed copy of the map in a
+  portal on `<body>` (`data-course-stuck`), shown once the in-place strip (in Track view, the
+  block's bottom) passes `--pvp-stick-line`; `usePvpStickyOffsets` adds its height to the
+  tabs' offsets. It shows the slim strip, a compact bare track capped at 240 px tall
+  (`CourseTrack`'s `maxHeightPx`) or both, by its OWN remembered switch (`useStuckView`),
+  never the in-place Strip | Track | Both: changing that while stuck resizes the block
+  above the reader and jumps the page. Desktop only. Every skill in the guide (`SkillCell`,
+  `SkillChip`, a mention, an uma's unique) lights the map while its detail is open.
 - **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any
   `overlays` (`{spans, markers}` in metres) and an optional `cursor` (a metre or a motion
   value). A later layer is a pure function to that shape; it never changes the strip.
