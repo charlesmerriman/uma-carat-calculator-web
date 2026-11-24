@@ -32,7 +32,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { useLocation } from "react-router-dom"
-import { Check, Search, Star, Trash2, X } from "lucide-react"
+import { Check, Search, Trash2, X } from "lucide-react"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
 import type { RaceEvent } from "../../types"
 import type {
@@ -198,6 +198,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 	const [pinnedSkills, setPinnedSkills] = useState<number[]>([])
 	const [cardType, setCardType] = useState<string | null>(place ? rememberedCardFilters.cardType : null)
 	const [rarity, setRarity] = useState<RarityFilter>(place ? rememberedCardFilters.rarity : null)
+	const [recommendedOnly, setRecommendedOnly] = useState(false)
 	const [ownedOnly, setOwnedOnly] = useState(
 		() => (place && rememberedOwnedOnly[place]) ?? (place !== "borrow" && Boolean(owned && owned.ids.size > 0))
 	)
@@ -255,6 +256,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 			if (!pinnedSkills.every((id) => (pairs.get(id) ?? [id]).some((member) => skillIds.has(member)))) return false
 			// Nobody owns a placeholder; it stands in for what they do own.
 			if (ownedOnly && owned && !owned.ids.has(item.id) && !item.placeholder) return false
+			// The guide's picks alone (Daptrius, 2026-11-20).
+			if (recommendedOnly && !recommended.has(item.id)) return false
 			// Support-only filters (see the header). A card with no rarity
 			// reads as SSR, the convention on SupportCard.rarity.
 			if (pool === "support") {
@@ -344,8 +347,15 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 
 				{tabs && <div className="border-b border-gray-700 px-4 py-2">{tabs}</div>}
 
-				{(chips.length > 0 || pool === "support" || owned) && (
+				{(chips.length > 0 || pool === "support" || owned || recommended.size > 0) && (
 					<div className="flex flex-col gap-2 border-b border-gray-700 bg-gray-900/35 px-4 py-2">
+						{recommended.size > 0 && (
+							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
+								<input type="checkbox" checked={recommendedOnly} onChange={(change) => setRecommendedOnly(change.target.checked)} />
+								Recommended only
+								<span className="text-gray-500">(the guide's {recommended.size})</span>
+							</label>
+						)}
 						{owned && (
 							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
 								<input type="checkbox" checked={ownedOnly} onChange={(change) => chooseOwnedOnly(change.target.checked)} />
@@ -448,6 +458,7 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 							{/* A rarity and a type can empty the grid with nothing typed. */}
 							{query ? "Nothing matches that search." : "Nothing matches these filters."}
 							{ownedOnly && " Turn off Owned only to see everything."}
+							{recommendedOnly && " Turn off Recommended only to see everything."}
 						</p>
 					) : (
 						<ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
@@ -494,14 +505,14 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 														</span>
 													)
 												)}
+												{/* The guide's pick: an edge around the art, nothing on it (Daptrius, 2026-11-20). */}
 												{isRecommended && (
 													<span
-														className="absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-950/85"
+														role="img"
 														aria-label="Recommended by the guide"
 														title="Recommended by the guide"
-													>
-														<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
-													</span>
+														className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${item.card ? "rounded-[6%/4.5%]" : "rounded-[10.75%]"}`}
+													/>
 												)}
 											</span>
 											<span className="mt-1 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">{item.name}</span>

@@ -544,8 +544,8 @@ function ReadyBuilder({ event, teamsState, index }: {
 
 					{guide && (
 						<p className="flex items-center gap-1.5 text-xs text-gray-500">
-							<Star className="h-3 w-3 fill-highlight text-highlight" aria-hidden="true" />
-							Recommended by this event's guide for that running style.
+							<span className="h-3 w-3 shrink-0 rounded-sm ring-2 ring-inset ring-brand" aria-hidden="true" />
+							An edge marks what this event's guide recommends for that running style.
 						</p>
 					)}
 					{mode === "guest" && (
