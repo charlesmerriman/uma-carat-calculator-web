@@ -146,6 +146,9 @@ export function PlanFeedRow({ row, choices, open, onToggle, bodyId, children }: 
 	const look = row.poster.gallery_style
 	const label = <T extends string>(list: Array<{ value: T; label: string }> | undefined, value: T | null) =>
 		list?.find((choice) => choice.value === value)?.label ?? null
+	// The spending chip keeps the short label ("Minnow"); a row has room for a
+	// word, so what it means rides along as the chip's tooltip.
+	const spendingMeaning = choices?.spending.find((level) => level.value === row.spending)?.meaning
 	const chips = [
 		label(choices?.spending, row.spending),
 		label(choices?.sweat, row.sweat),
@@ -154,6 +157,7 @@ export function PlanFeedRow({ row, choices, open, onToggle, bodyId, children }: 
 		row.plan.has_notes && "Notes",
 		row.plan.has_income && "Income",
 	].filter((chip): chip is string => typeof chip === "string" && chip !== "")
+	const spendingChip = label(choices?.spending, row.spending)
 
 	return (
 		<li
@@ -207,7 +211,12 @@ export function PlanFeedRow({ row, choices, open, onToggle, bodyId, children }: 
 					{chips.length > 0 && (
 						<ul className="flex flex-wrap gap-1" aria-label="Tags">
 							{chips.map((chip, index) => (
-								<li key={`${chip}-${index}`} className={CHIP}>
+								<li
+									key={`${chip}-${index}`}
+									className={CHIP}
+									// The spending chip is always first when there is one.
+									title={index === 0 && chip === spendingChip ? spendingMeaning : undefined}
+								>
 									{chip}
 								</li>
 							))}

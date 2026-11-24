@@ -57,6 +57,18 @@ export function writeView(params: URLSearchParams, view: PlanView): URLSearchPar
 	return next
 }
 
+/**
+ * A spending level as its option reads: "Minnow - Daily Carat Pack only"
+ * (Henry, board 2026-11-24: say what a level stands for before it is picked).
+ * The post dialog and the filter both use it, so the two lists can't drift.
+ * Both halves come from the API's `filters` block (plan_gallery.SPENDING_MEANINGS),
+ * so rewording a level there needs no web release. A hyphen, never a dash:
+ * copy.md.
+ */
+export function spendingOptionLabel(level: { label: string; meaning: string }): string {
+	return level.meaning ? `${level.label} - ${level.meaning}` : level.label
+}
+
 /** How many of the four are set: the "Filters (2)" button's number. */
 export function filtersSet(filters: Filters): number {
 	return [filters.range !== null, filters.strategies.length > 0, filters.spending !== null, filters.sweat !== null].filter(Boolean)

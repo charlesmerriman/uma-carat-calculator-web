@@ -44,7 +44,7 @@ import { PlanFeedHeading, PlanFeedRow } from "./PlanFeedRow"
 import { PlanFilters } from "./PlanFilters"
 import { PlanPostBody } from "./PlanPostBody"
 
-// Wider than the other tabs' 80rem: the list beside the 16rem sidebar needs
+// Wider than the other tabs' 80rem: the list beside the 17rem sidebar needs
 // 64rem (PlanFeedRow's `@5xl/plans`) to draw the banner pictures, which a
 // 1440 screen gives it at 96rem and an 80rem page never would.
 const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-[96rem] flex-col gap-4 sm:w-[calc(100%-2rem)]"
@@ -177,7 +177,10 @@ function CommunityPlansBody() {
 			<SortBar view={view} count={feed.data?.count} onChange={changeView} />
 
 			<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-				<aside className="card-panel hidden w-64 shrink-0 p-3 lg:block" aria-label="Filters">
+				{/* 17rem: the widest spending option, "Minnow - Daily Carat Pack
+				    only", is 197px in Nunito at 14px and must fit the closed
+				    select beside its arrow (16rem left it about 190px). */}
+				<aside className="card-panel hidden w-68 shrink-0 p-3 lg:block" aria-label="Filters">
 					<h2 className="mb-3 text-sm font-semibold text-gray-100">Filters</h2>
 					{feed.data && <PlanFilters choices={feed.data.filters} value={view.filters} onChange={(filters) => changeView({ filters })} />}
 				</aside>

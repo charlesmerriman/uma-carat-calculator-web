@@ -2748,8 +2748,14 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
 
 - **A list whose posts open in place**, never a side panel or a dialog (decision 8). The
   heading with "My plans"; the sort bar (Top for Today / This week / This month / All time,
-  and New) with the count; the filter sidebar (`PlanFilters`, a column from `lg`, a sheet on
-  `GalleryModal` below) beside the list.
+  and New) with the count; the filter sidebar (`PlanFilters`, a 17rem column from `lg`, a
+  sheet on `GalleryModal` below) beside the list.
+- **A spending level's option says what it means** ("Minnow - Daily Carat Pack only",
+  `spendingOptionLabel` in `utils/planFeedView.ts`), in the filter and the post dialog
+  alike; both halves are the API's (`plan_gallery.SPENDING_MEANINGS`). The feed row's chip
+  keeps the short label with the meaning as its tooltip. The sidebar is 17rem because the
+  longest option has to fit its closed select; the dialog stacks its two pickers for the
+  same reason.
 - **One grid for every row** (`PLAN_ROW_GRID` in `PlanFeedRow.tsx`), shaped by the LIST's
   width (`@container/plans`), never the window's: wide adds the four lead banners' pictures,
   medium drops them, narrow folds the numbers into one line under the poster. The heading

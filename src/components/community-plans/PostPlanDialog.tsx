@@ -47,6 +47,7 @@ import {
 } from "../../types/gallery"
 import type { Plan } from "../../types"
 import { planPostHref } from "../../utils/galleryPost"
+import { spendingOptionLabel } from "../../utils/planFeedView"
 import { planRange } from "../../utils/planRange"
 import { GalleryModal } from "../pvp/gallery/GalleryModal"
 import { DANGER_BUTTON, FIELD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../pvp/gallery/galleryStyles"
@@ -121,7 +122,6 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 	const [error, setError] = useState<{ text: string; field: string | null } | null>(null)
 	const errorId = useId()
 	const updating = plan.post_public_id != null
-	const meaning = choices.spending.find((level) => level.value === spending)?.meaning
 	// What the post's range will be, worked out from the rows on screen when
 	// they are this plan's (the dialog posts the open plan); else the post's own.
 	const range = plan.id === activePlanId ? planRange(userPlannedBannerData, scenarioData ?? [])?.name : initial?.range?.label
@@ -234,18 +234,21 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 			</label>
 			{errorAt("strategy")}
 
-			<div className="grid gap-3 sm:grid-cols-2">
+			{/* One box per line: "Orca - Discounted packs only" is wider than half
+			    of the dialog's 32rem, and a closed select cuts its text off. */}
+			<div className="grid gap-3">
 				<label className="flex flex-col gap-1">
 					Spending level (optional)
 					<select value={spending} onChange={(change) => setSpending(change.target.value as PlanSpending | "")} className={FIELD}>
 						<option value="">Not saying</option>
+						{/* "Minnow - Daily Carat Pack only": what a level means shows
+						    before it is picked (Henry, board 2026-11-24). */}
 						{choices.spending.map((level) => (
 							<option key={level.value} value={level.value}>
-								{level.label}
+								{spendingOptionLabel(level)}
 							</option>
 						))}
 					</select>
-					{meaning && <span className="text-xs text-gray-500">{meaning}</span>}
 				</label>
 				<label className="flex flex-col gap-1">
 					Sweat level (optional)

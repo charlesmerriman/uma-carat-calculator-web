@@ -287,8 +287,9 @@ describe("the address holds the view", () => {
 		const sidebar = screen.getByRole("complementary", { name: "Filters" })
 		fireEvent.change(within(sidebar).getByLabelText("Spending level"), { target: { value: "f2p" } })
 		await waitFor(() => expect(lastFeedCall()?.filters.spending).toBe("f2p"))
-		// The chosen level's meaning, in words.
-		expect(within(sidebar).getByText("No money spent")).toBeInTheDocument()
+		// Each level's meaning is in its option, picked or not.
+		expect(within(sidebar).getByRole("option", { name: "F2P - No money spent" })).toBeInTheDocument()
+		expect(within(sidebar).getByRole("option", { name: "Minnow - Daily Carat Pack only" })).toBeInTheDocument()
 
 		fireEvent.click(within(sidebar).getByLabelText("Late"))
 		fireEvent.click(within(sidebar).getByLabelText("Front"))
