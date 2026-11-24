@@ -1,5 +1,7 @@
 import "./App.css"
 import "./encyclopedia.css"
+// The Timeline's own rules. Before the themes, so a theme's shape rules still win.
+import "./timeline.css"
 // Last on purpose: the palette themes' shape rules outrank App.css by order.
 import "./personalityThemes.css"
 import { useEffect } from "react"

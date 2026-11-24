@@ -66,18 +66,18 @@ export function RaceEventCard({
 	return (
 		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
 			<div
-				className={`card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
+				className={`tl-card card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
 					isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""
 				}`}
 			>
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex min-w-0 items-center gap-3">
-						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
+						<div className="tl-icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
 							<Trophy className="h-5 w-5" />
 						</div>
 						<div className="min-w-0">
 							<div className="flex flex-wrap items-center gap-2">
-								<h2 className="text-xl font-semibold text-gray-100 sm:text-2xl">{event.name}</h2>
+								<h2 className="tl-title text-xl font-semibold text-gray-100 sm:text-2xl">{event.name}</h2>
 								{event.is_predicted && <PredictedBadge />}
 							</div>
 							<p className="mt-0.5 text-sm text-gray-400">
@@ -96,7 +96,7 @@ export function RaceEventCard({
 						{event.has_guide && (
 							<Link
 								to={pvpEventHref(refForRaceEvent(event))}
-								className="flex w-fit items-center gap-1.5 rounded-full border border-brand/50 bg-brand/10 px-3 py-1 text-sm font-semibold text-brand transition hover:bg-brand/20"
+								className="tl-pill flex w-fit items-center gap-1.5 rounded-full border border-brand/50 bg-brand/10 px-3 py-1 text-sm font-semibold text-brand transition hover:bg-brand/20"
 							>
 								<BookOpen className="h-4 w-4" />
 								PvP guide
@@ -104,7 +104,7 @@ export function RaceEventCard({
 						)}
 						{participation && (
 							<div
-								className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 py-0.5 pl-3 pr-1 text-sm font-semibold text-gray-100"
+								className="tl-pill flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 py-0.5 pl-3 pr-1 text-sm font-semibold text-gray-100"
 								title="Turn this off if you won't play it. Its rewards then stay out of your projected income."
 							>
 								<span>Taking part</span>
@@ -117,7 +117,7 @@ export function RaceEventCard({
 						)}
 						{/* A race ref is already a TimelineFocus (cm-12 / loh-3). */}
 						<CopyTimelineLink focus={refForRaceEvent(event)} name={event.name} />
-						<div className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
+						<div className="tl-pill tl-countdown flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
 							<span>{countdownLabel}</span>
 							<Clock3 className="h-4 w-4 text-brand" />
 						</div>
@@ -133,7 +133,7 @@ export function RaceEventCard({
 
 				{/*
 				 * The art track is `--timeline-art-width`, the same width the banner
-				 * cards' art has (see App.css and BANNER_ART). This used to be the
+				 * cards' art has (see timeline.css and BANNER_ART). This used to be the
 				 * banner row's 1.28fr weight against one gap instead of two, which
 				 * came out 6px wider than the banners above and below it. The
 				 * side panels (course details, your rewards) take the rest. With

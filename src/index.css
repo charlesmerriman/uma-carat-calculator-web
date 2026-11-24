@@ -190,7 +190,7 @@ html {
 
 	/* ── Banner category accent ────────────────────────────────────────────
 	   The chip on a Golden Week revival's timeline section (.category-chip--
-	   revival in App.css). Only this one category gets a hue of its own: it is
+	   revival in timeline.css). Only this one category gets a hue of its own: it is
 	   the headline case, the one that visibly breaks the card's usual layout,
 	   and the one a reader most needs to spot while scrolling. Reruns and race-
 	   prep batches use the gray ramp, so they read as annotations rather than
@@ -288,7 +288,7 @@ html {
 
 	/* ── Recommended banner accent ─────────────────────────────────────────
 	   The editorial "Recommended" flag: the SSR panel on the Timeline
-	   (.ssr-panel / .recommended-chip in App.css) and the gold star and wash in
+	   (.ssr-panel in App.css, .recommended-chip in timeline.css) and the gold star and wash in
 	   the planner's banner dropdown (RecommendedMark, withRecommendedOption).
 
 	   Gold, and deliberately NOT the brand gold. On the gold and gilded themes a

@@ -211,7 +211,7 @@ belongs in `@theme` as its own token.
 
 The `--color-pull-*` tokens (pull-count status, consumed by `.pull-input--*` in
 `App.css`) are the worked example to copy. `--color-category-revival[-border]`
-(`.category-chip--revival`, the Golden Week marker on a timeline section) follows the same
+(`.category-chip--revival` in `timeline.css`, the Golden Week marker on a timeline section) follows the same
 pattern: dark values in `@theme`, deepened counterparts under `[data-theme-mode="light"]`.
 So do `--color-type-*` (the banner-row kinds), `--color-step-up` (every step-up marker,
 including the Timeline strip's chip) and `--color-new-year` / `--color-campaign` (the
@@ -1134,6 +1134,17 @@ windows use the wider card in `components/timeline/BannerWindowCard.tsx`. `RaceE
 never branches on which of the two it has — if it ever needs to, they've stopped being the
 same card and should be split again. `RaceEventCard.test.tsx` renders one of each from the
 same data and diffs the markup, so a change applied to only one type fails there.
+
+**The Timeline's shared rules are `src/timeline.css`**, imported after `App.css` and before
+`personalityThemes.css`: the art width (`--timeline-art-width`) and the three chips. Its
+header is the map of the file and the list of the Timeline's **hook names** (`tl-card`,
+`tl-panel` with `data-kind`, `tl-tile`, `tl-plate` and `tl-plate-skirt`, `tl-stage` with
+`data-status`, `tl-pill`, `tl-countdown`, `tl-control`, and the rest). A hook says what a
+part is and carries no paint; hooks are the only thing a theme may select on this page
+(`personalityThemes.css`, rule 2). Two rules ride on them: a tile's name block and the
+skirt behind its art are one plane (repaint both or neither, and nothing crosses the join),
+and nothing between a tile's art and its card may clip, because a layered uma's ears and
+hat reach past her frame.
 
 ### Concurrent banners are one card, grouped at render time
 

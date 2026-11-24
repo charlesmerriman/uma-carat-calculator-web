@@ -266,19 +266,19 @@ function PaginationControls({
 		<div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
 			<button
 				type="button"
-				className={paginationButtonClass}
+				className={`tl-control ${paginationButtonClass}`}
 				disabled={currentPage === 1}
 				onClick={onPrevious}
 			>
 				<ChevronLeft className="h-4 w-4" />
 				Previous
 			</button>
-			<span className={pageIndicatorClass}>
+			<span className={`tl-readout ${pageIndicatorClass}`}>
 				Page <span className="mx-1 text-brand">{currentPage}</span> of {totalPages}
 			</span>
 			<button
 				type="button"
-				className={paginationButtonClass}
+				className={`tl-control ${paginationButtonClass}`}
 				disabled={currentPage === totalPages}
 				onClick={onNext}
 			>
@@ -1002,7 +1002,7 @@ export const Timeline = () => {
 			    changes at rest. z-30 sits above the cards, below FloatingBackToTop. */}
 			<div
 				ref={controlsRef}
-				className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950"
+				className="tl-bar border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950"
 			>
 				{/* Below lg (phones AND tablets), two compact rows and a caption:
 				    the two toggles side by side, then the filter beside the search,
@@ -1024,12 +1024,12 @@ export const Timeline = () => {
 							<BackToTopButton
 								onClick={scrollToTop}
 								disabled={!isAwayFromTop}
-								className={`${controlButtonClass} px-2.5`}
+								className={`tl-control ${controlButtonClass} px-2.5`}
 							/>
 						</span>
 						<button
 							type="button"
-							className={`${controlButtonClass} min-w-0 text-center leading-tight`}
+							className={`tl-control ${controlButtonClass} min-w-0 text-center leading-tight`}
 							onClick={() => { setShowPastOverride(!showPast); resetListWindow() }}
 						>
 							<History className="h-4 w-4 text-brand" />
@@ -1039,7 +1039,7 @@ export const Timeline = () => {
 						    button beside it rather than reading as a state indicator. */}
 						<button
 							type="button"
-							className={`${controlButtonClass} min-w-0 text-center leading-tight`}
+							className={`tl-control ${controlButtonClass} min-w-0 text-center leading-tight`}
 							title={
 								viewMode === "infinite"
 									? "Show a fixed number of events per page"
@@ -1068,7 +1068,7 @@ export const Timeline = () => {
 							/>
 						</div>
 					) : viewMode === "infinite" && timelineRows.length > 0 ? (
-						<span className={countClass}>
+						<span className={`tl-readout ${countClass}`}>
 							Showing <span className="mx-1 text-brand">{visibleRows.length}</span> of{" "}
 							{timelineRows.length}
 						</span>
@@ -1094,7 +1094,7 @@ export const Timeline = () => {
 								</label>
 								<select
 									id="timeline-event-filter"
-									className={`${categorySelectClass} max-w-[45%] shrink-0 lg:max-w-none`}
+									className={`tl-control ${categorySelectClass} max-w-[45%] shrink-0 lg:max-w-none`}
 									value={activeFilter}
 									onChange={(e) => handleFilterChange(e.target.value as EventFilter)}
 								>
@@ -1144,7 +1144,7 @@ export const Timeline = () => {
 							<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 							<input
 								type="text"
-								className={searchInputClass}
+								className={`tl-control ${searchInputClass}`}
 								placeholder="Search characters or events..."
 								value={searchQuery}
 								onChange={(e) => handleSearchChange(e.target.value)}

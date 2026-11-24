@@ -82,7 +82,7 @@ type BannerCardStatus = "available" | "planned" | "staged" | "expired"
 type CategoryChrome = {
 	label: string
 	icon: LucideIcon
-	/** Defined in App.css against the --color-category-* theme tokens. */
+	/** Defined in timeline.css against the --color-category-* theme tokens. */
 	chipClass: string
 	/**
 	 * Full-width horizontal band instead of the usual image/uma/support
@@ -178,7 +178,7 @@ const BAND_TILE = "flex flex-1 justify-center"
 /**
  * THE ART TRACK IS THE SAME IN EVERY TEMPLATE: `minmax(360px,var(--timeline-art-width))`.
  *
- * `--timeline-art-width` (App.css) is the ordinary row's 1.28-of-2.94fr share
+ * `--timeline-art-width` (timeline.css) is the ordinary row's 1.28-of-2.94fr share
  * written as a length, so it is the width the art has always had in that row
  * and now the width it has in every other shape too — the support-led and
  * one-panel rows below, the art-only branch, and the marker cards. The 360px
@@ -433,7 +433,7 @@ function FeaturedTileArt({
 	// corners, and the overlay rounds itself instead (rounded-[inherit]).
 	const withSkirt = (box: ReactNode) => (
 		<div className="relative shrink-0">
-			<div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gray-700" />
+			<div aria-hidden="true" className="tl-plate-skirt absolute inset-x-0 bottom-0 h-1/2 bg-gray-700" />
 			{box}
 		</div>
 	)
@@ -550,7 +550,7 @@ function FeaturedTile({
 			{/* No minimum height: it used to reserve two lines (min-h-16) so
 			    neighbours matched, which left a one-line name floating in empty
 			    space. The grid's items-stretch keeps neighbours level now. */}
-			<div className="flex flex-1 items-center justify-center rounded-b-lg bg-gray-700 p-2">
+			<div className="tl-plate flex flex-1 items-center justify-center rounded-b-lg bg-gray-700 p-2">
 				<div
 					className={`overflow-hidden break-words text-center font-semibold leading-tight text-gray-100 ${href ? "transition-colors group-hover:text-brand motion-reduce:transition-none" : ""} ${nameClass}`}
 				>
@@ -567,7 +567,7 @@ function FeaturedTile({
 	// type icon sits flush in its frame's top right corner, where this tile's
 	// 8px curve cut it off (the owner, 2026-11-23, on the live Timeline). Each
 	// frame draws its own corners; the name block rounds the bottom ones.
-	const tileClass = `flex h-full w-full min-w-0 flex-col rounded-lg text-left ${tileWidthClass}`
+	const tileClass = `tl-tile flex h-full w-full min-w-0 flex-col rounded-lg text-left ${tileWidthClass}`
 
 	if (!href) return <div className={tileClass}>{body}</div>
 
@@ -624,6 +624,8 @@ type FeaturePanelProps = {
 	items: FeaturedCard[]
 	/** False when this window has no banner of this kind at all. */
 	hasBanner: boolean
+	/** Which banner this panel holds: written to `data-kind`, for themes (timeline.css). */
+	kind: "uma" | "support"
 	/** Uma tiles: drawn in the site's frame (FramedUma). Support art keeps its own. */
 	framed?: boolean
 	emptyText: string
@@ -677,6 +679,7 @@ function FeaturePanel({
 	items,
 	pageHref,
 	hasBanner,
+	kind,
 	framed = false,
 	emptyText,
 	tileWidthClass,
@@ -753,13 +756,13 @@ function FeaturePanel({
 	const hasChip = recommended || freePulls > 0
 
 	return (
-		<section className={`flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
+		<section data-kind={kind} className={`tl-panel flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
 			{/* `@container` so the free-pulls chip can size itself to THIS line's
 			    width rather than the viewport's — see its note below. Inline-size
 			    containment only stops the line from ever pushing its column wider,
 			    which nothing relied on: every column has an explicit minimum. */}
 			<div
-				className={`@container mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
+				className={`tl-panel-title @container mb-1.5 flex shrink-0 items-center gap-2 text-sm font-semibold ${
 					recommended ? "text-recommended" : "text-brand"
 				}`}
 			>
@@ -868,7 +871,8 @@ function FeaturePanel({
 						type="button"
 						onClick={onAdd}
 						disabled={status !== "available"}
-						className={`flex shrink-0 items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs font-medium leading-tight transition ${getBannerStatusClasses(status)} ${
+						data-status={status}
+						className={`tl-stage flex shrink-0 items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs font-medium leading-tight transition ${getBannerStatusClasses(status)} ${
 							status === "available" ? "cursor-pointer" : "cursor-not-allowed"
 						} ${
 							// A solid backing on the SSR surface: the button's brand text is
@@ -990,6 +994,7 @@ function BannerSection({
 	const umaPanel = (
 		<FeaturePanel
 			icon={Sparkles}
+			kind="uma"
 			title="Featured Umamusume"
 			items={umaBanner?.umas ?? []}
 			pageHref={umaHref}
@@ -1016,6 +1021,7 @@ function BannerSection({
 	const supportPanel = (
 		<FeaturePanel
 			icon={Ticket}
+			kind="support"
 			title="Featured Support Cards"
 			items={supportBanner?.support_cards ?? []}
 			pageHref={cardHref}
@@ -1243,13 +1249,13 @@ export function BannerWindowCard({
 				<AnniversaryEventStrip event={attachedEvent} stepUps={stepUps} />
 			)}
 			<div
-				className={`card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
+				className={`tl-card card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
 					attachedEvent ? "rounded-t-none" : ""
 				} ${storyEvents.length > 0 ? "rounded-b-none" : ""} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
 			>
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex min-w-0 items-center gap-3">
-						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
+						<div className="tl-icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
 							<CalendarDays className="h-5 w-5" />
 						</div>
 						{title ? (
@@ -1257,7 +1263,7 @@ export function BannerWindowCard({
 							// range stays one element with the same text, which is what
 							// the Timeline tests find a card by.
 							<div className="min-w-0">
-								<h3 className="text-lg leading-snug font-semibold text-balance text-gray-100 sm:text-xl">{title}</h3>
+								<h3 className="tl-title text-lg leading-snug font-semibold text-balance text-gray-100 sm:text-xl">{title}</h3>
 								<div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
 									<span>
 										<DateTimeRange start={group.start_date} end={group.end_date} />
@@ -1266,7 +1272,7 @@ export function BannerWindowCard({
 								</div>
 							</div>
 						) : (
-							<div className="min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
+							<div className="tl-title min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
 								<div className="flex flex-wrap items-center gap-2">
 									<span>
 										<DateTimeRange start={group.start_date} end={group.end_date} />
@@ -1289,7 +1295,7 @@ export function BannerWindowCard({
 							<div
 								key={text}
 								role="note"
-								className="flex w-fit items-center gap-2 rounded-full border border-staging/40 px-3 py-1 text-sm font-medium text-gray-200"
+								className="tl-pill flex w-fit items-center gap-2 rounded-full border border-staging/40 px-3 py-1 text-sm font-medium text-gray-200"
 							>
 								<NoteIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-staging" />
 								<span>{text}</span>
@@ -1301,7 +1307,7 @@ export function BannerWindowCard({
 							focus={{ kind: "banner", id: group.banners[0].id }}
 							name={title || `the banners from ${formatDate(group.start_date)}`}
 						/>
-						<div className="flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
+						<div className="tl-pill tl-countdown flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
 							<span>{countdownLabel}</span>
 							<Clock3 className="h-4 w-4 text-brand" />
 						</div>

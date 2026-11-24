@@ -20,7 +20,8 @@
       for this purpose (site-navbar, nav-tab, nav-control, planner-panel-title,
       planner-section-title, add-banner-button, income-value, hero-cta,
       forecast-shortfall, wordmark-second) or a semantic class that already
-      existed (banner-type-tab, banner-stat-box, pull-input). Never `.rounded-md`
+      existed (banner-type-tab, banner-stat-box, pull-input). The Timeline's
+      hooks are the `tl-*` names listed at the top of timeline.css. Never `.rounded-md`
       or `.shadow-sm`: that is how every theme once re-skinned the wrong
       elements (SURFACES, index.css). The one exception is the precedent
       index.css already sets, `.bg-brand.text-black`: the solid brand button.

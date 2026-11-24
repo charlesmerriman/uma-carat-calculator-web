@@ -61,7 +61,7 @@ const CARD_WRAPPER = `my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`
  * so does a pair, because a pair always holds one.
  */
 const panelClass = (tinted: boolean, isFocused: boolean): string =>
-	`card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
+	`tl-card card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
 		tinted ? "border-brand/40" : ""
 	} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`
 
@@ -97,13 +97,13 @@ const EventMarkerBody = ({
 		<>
 			<div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
 				<span
-					className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${chrome.accent}`}
+					className={`tl-pill flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${chrome.accent}`}
 				>
 					{Icon && <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
 					{chrome.label}
 				</span>
 				<h3
-					className={`min-w-0 font-bold text-gray-100 ${
+					className={`tl-title min-w-0 font-bold text-gray-100 ${
 						isScenario ? "text-xl sm:text-2xl" : "text-lg"
 					}`}
 				>
@@ -139,7 +139,7 @@ const EventMarkerBody = ({
 			 * strings, so Tailwind finds them.
 			 *
 			 * From xl up the art is `--timeline-art-width`, the width every
-			 * banner card's art has (see App.css): resolved against the panel
+			 * banner card's art has (see timeline.css): resolved against the panel
 			 * through its `@container`, so it holds inside the pair's half-width
 			 * column too. Below xl the cap matches BANNER_ART, so a marker's art
 			 * is never wider than a banner's there either.
