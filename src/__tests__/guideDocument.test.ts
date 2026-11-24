@@ -24,6 +24,8 @@ import {
 	addSkill,
 	addUma,
 	clearSlot,
+	copyNoteToCard,
+	countNoteCopies,
 	deckFromCards,
 	duplicateDeck,
 	moveRow,
@@ -328,6 +330,27 @@ describe("edits", () => {
 		expect(copied.decks[1].slots).toHaveLength(3)
 		const fromTeam = deckFromCards("late", "Henry's", [{ slot: 1, support_card: 302 }, { slot: 6, support_card: 303 }])
 		expect(fromTeam.slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[1, false], [6, true]])
+	})
+
+	it("copies a card's note to its other appearances, in one style or every style", () => {
+		let doc = addDeck(addDeck(addDeck(document(), "front", "A"), "front", "B"), "pace", "C")
+		const front = doc.decks.findIndex((deck) => deck.label === "A")
+		const front2 = doc.decks.findIndex((deck) => deck.label === "B")
+		const pace = doc.decks.findIndex((deck) => deck.label === "C")
+		doc = updateSlot(setSlotCard(doc, front, 1, 999), front, 1, 0, { note: "2SP" })
+		doc = setSlotCard(doc, front2, 4, 999)
+		doc = setSlotCard(doc, pace, 2, 999)
+		// An "or" row with the same card is not a slot note: left alone.
+		doc = addAlternative(doc, pace, 2, 999, "keep")
+
+		expect(countNoteCopies(doc, 999, "2SP", "front")).toBe(1)
+		expect(countNoteCopies(doc, 999, "2SP", null)).toBe(2)
+		const inStyle = copyNoteToCard(doc, 999, "2SP", "front")
+		expect(inStyle.decks[front2].slots[0].note).toBe("2SP")
+		expect(inStyle.decks[pace]).toBe(doc.decks[pace])
+		const everywhere = copyNoteToCard(doc, 999, "2SP", null)
+		expect(everywhere.decks[pace].slots.map((row) => row.note)).toEqual(["2SP", "keep"])
+		expect(countNoteCopies(everywhere, 999, "2SP", null)).toBe(0)
 	})
 
 	it("drags a slot onto another: everything on it travels, an empty slot is a move", () => {
