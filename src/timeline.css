@@ -12,6 +12,7 @@
    4. The free-pulls chip    .free-pulls-chip
    5. Layout                 the numbers (--tl-*), the art, a section's row,
                              a panel's column or band, the tile caps
+   6. Where a deep link lands   .tl-anchor's scroll margin
 
    HOOK NAMES (the components carry them; no rule here paints them)
    A hook is a class or attribute that says what a part IS. It has no rule of
@@ -22,6 +23,7 @@
      tl-bar            the sticky band of controls above the list
      tl-control        a button, select or search field in that band
      tl-readout        the "Showing 10 of 190" count and the page indicator
+     tl-anchor         the wrapper around a card that a deep link scrolls to
      tl-card           a card's panel (banner window, race event, marker)
      tl-icon-box       the 40px icon square in a card's header
      tl-title          a card's title
@@ -608,5 +610,50 @@
 
 	.tl-panel[data-kind="support"][data-layout="band"] .tl-tile {
 		max-width: var(--tl-support-band-tile);
+	}
+}
+
+/* ===== 6. WHERE A DEEP LINK LANDS =====
+
+   A link to a card (?focus=banner-12, a planner row's link, "View on
+   Timeline") scrolls the card's wrapper, `tl-anchor`, to the top of the list.
+   "The top" is the scroller's edge less its scroll padding, and the padding
+   (index.css) only knows about the screen's tab bar. The Timeline pins a
+   second band under that bar from the app-shell breakpoint, its controls, so
+   a card that lands at "the top" has its first 40px, the title, underneath
+   them. That is what happened until 2026-11-24.
+
+   So the anchor's own scroll margin makes up the difference: the control
+   bar's height where the bar is pinned, and the month heading's where the
+   card has one, so the heading arrives with its card instead of being left
+   behind the bar. `scroll-margin-top` affects nothing but scrollIntoView.
+
+   UNLAYERED, unlike section 5: the wrapper also carries the shared
+   `scroll-mt-6` utility (FOCUS_SCROLL_MARGIN, the 24px that keeps the tail of
+   the previous card in shot), and this has to outrank it. The 1.5rem below IS
+   that 24px. The hook that holds a card in place after a search is cleared
+   sets the margin inline, which outranks this in turn, as it should.
+
+   --tl-bar-h is the control bar on one line: 12px padding each way, a 36px
+   control and its two 1px rules, rounded up. If the bar ever grows a second
+   line at the app-shell width, this is the number to revisit.
+   --tl-month-h is a month heading and the gap under it: 16 + 28 + 2. */
+:root {
+	--tl-bar-h: 3.875rem;
+	--tl-month-h: 2.875rem;
+}
+
+.tl-month + .tl-anchor {
+	scroll-margin-top: calc(1.5rem + var(--tl-month-h));
+}
+
+/* 64rem wide and 32rem tall is `app-shell` (index.css), where the bar pins. */
+@media (min-width: 64rem) and (min-height: 32rem) {
+	.tl-anchor {
+		scroll-margin-top: calc(1.5rem + var(--tl-bar-h));
+	}
+
+	.tl-month + .tl-anchor {
+		scroll-margin-top: calc(1.5rem + var(--tl-bar-h) + var(--tl-month-h));
 	}
 }

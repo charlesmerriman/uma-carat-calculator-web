@@ -12,7 +12,9 @@ import { TIMELINE_FOCUS_HIGHLIGHT, type CountdownState, type TimelineFocusProps 
  *
  *   - the outer wrapper carries the gutter, the ref and the scroll margin. A
  *     deep link scrolls to IT, so anything attached above the panel (`before`:
- *     a campaign strip) is on screen too.
+ *     a campaign strip) is on screen too. It is `tl-anchor`: timeline.css
+ *     (section 6) widens its scroll margin so the card lands BELOW the sticky
+ *     control bar, and below its month heading when it has one.
  *   - the panel carries the padding, the `@container` the art's width is
  *     measured against, and the focus ring: it is the box a reader recognises
  *     as "the card", and the only one with the right rounding.
@@ -38,7 +40,7 @@ export function TimelineCard({
 	children: ReactNode
 }) {
 	return (
-		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
+		<div ref={focusRef} className={`tl-anchor my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
 			{before}
 			<div
 				className={`tl-card card-panel @container w-full overflow-hidden p-2 sm:p-3 ${panelClassName} ${

@@ -109,9 +109,11 @@ no clip, no size, the plate and its skirt one fill, nothing across the top of a 
   paged view and a filtered list both start by saying which month they are in.
 - **The month is the one the card's own printed date falls in**: `formatMonthName` reads
   the row's start (`timelineRowStartDate`) in the viewer's zone, as `formatDate` does.
-- **A deep link lands on the card, not on its heading.** The card's wrapper is the scroll
-  target, so the heading above it can sit under the sticky bar. That is on purpose: the
-  link is to the card.
+- **A deep link lands the card below the sticky control bar, with its month heading.** The
+  card's wrapper (`tl-anchor`) is the scroll target, and `timeline.css` section 6 gives it a
+  scroll margin of the bar's height where the bar is pinned, plus the heading's when the
+  card has one. Before 2026-11-24 the scroller's padding only knew about the screen's tab
+  bar, and a deep-linked card arrived with its title under the controls.
 - A change like this one, which adds an element between cards, is checked with
   `geometry.mjs snapshot --ignore ".tl-month"` and `diff --relative`: every card moves down
   the page, and nothing inside any card may move or change.
