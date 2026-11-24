@@ -94,7 +94,9 @@ describe("PostPlanDialog", () => {
 		expect(post).toBeDisabled()
 		fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: "  F2P road  " } })
 		fireEvent.change(screen.getByLabelText(/^Spending level/), { target: { value: "f2p" } })
-		expect(screen.getByText("No purchases")).toBeInTheDocument()
+		// Each level says what it means in its own option, before it is picked.
+		expect(screen.getByRole("option", { name: "Minnow - Daily Carat Pack only" })).toBeInTheDocument()
+		expect(screen.getByLabelText(/^Spending level/)).toHaveValue("f2p")
 		fireEvent.click(screen.getByLabelText("Late"))
 		fireEvent.click(screen.getByLabelText("Front"))
 		expect(post).toBeDisabled()
