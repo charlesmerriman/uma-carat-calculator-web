@@ -80,8 +80,10 @@ function GapMark({ gap }: { gap: RankingStep["gap"] }) {
  * button to its tab; a word that names no style (CM 20's "Blaze") is a plain
  * step.
  */
-function Ladder({ guide, steps, active, onStyleChange }: {
+function Ladder({ guide, steps, active, onStyleChange, label = "Style ranking" }: {
 	guide: PvpGuide
+	/** The list's accessible name; the editor's preview names its own. */
+	label?: string
 	steps: RankingStep[]
 	active: PvpStyleTab | null
 	onStyleChange: (style: PvpStyleTab) => void
@@ -94,7 +96,7 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 			.slice(0, 3)
 	return (
 		<div className="@container mt-2">
-			<ol aria-label="Style ranking" className="flex flex-col gap-1 @xl:flex-row @xl:items-stretch @xl:gap-0">
+			<ol aria-label={label} className="flex flex-col gap-1 @xl:flex-row @xl:items-stretch @xl:gap-0">
 				{steps.map((step, index) => {
 					const style = step.style
 					const first = index === 0
@@ -436,6 +438,22 @@ function TeamComps({ guide, className = "" }: { guide: PvpGuide; className?: str
 					</li>
 				))}
 			</ul>
+		</div>
+	)
+}
+
+/**
+ * The ranking strip alone, for the guide editor (review item 17, 2026-11-24):
+ * drawn under the Style ranking field from the document as typed, so `>>`,
+ * `>=` and `((Uma name))` show what they become without leaving the editor.
+ * The same Ladder the guide draws; its style steps don't switch tabs here.
+ */
+export function RankingPreview({ guide }: { guide: PvpGuide }) {
+	const steps = parseStyleRanking(guide.style_ranking)
+	if (steps.length === 0) return null
+	return (
+		<div aria-label="How the ranking will look" role="group">
+			<Ladder guide={guide} steps={steps} active={null} onStyleChange={() => {}} label="Ranking preview" />
 		</div>
 	)
 }

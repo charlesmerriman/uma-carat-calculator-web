@@ -156,6 +156,17 @@ describe("GuideEditor", () => {
 		expect((puts()[1].body as GuideDocument).version).toBe(4)
 	})
 
+	it("draws the style ranking under its field as the guide will (review item 17)", async () => {
+		renderEditor()
+		const ranking = await screen.findByLabelText("Style ranking")
+		const preview = () => within(screen.getByRole("group", { name: "How the ranking will look" }))
+		const names = () => preview().getAllByRole("listitem").map((step) => step.textContent?.replace(/^.*(#\d)/, "$1"))
+		expect(names()).toEqual(["#1Front", "#2End"])
+		expect(preview().getByText("A clear gap, then")).toBeInTheDocument()
+		fireEvent.change(ranking, { target: { value: "End >= Front" } })
+		expect(names()).toEqual(["#1End", "#2Front"])
+		expect(preview().getByText("Level with it")).toBeInTheDocument()
+	})
 	it("marks the guide under construction and saves it", async () => {
 		renderEditor()
 		const toggle = await screen.findByRole("checkbox", { name: /Under construction/ })
