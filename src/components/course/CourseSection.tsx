@@ -83,6 +83,9 @@ const PHONE_STRIP_PX = 660
 // the bar's height pushes the View tabs and the style tabs down the screen,
 // and 240 keeps the bar near the slim strip's (about 258px with its header).
 const STUCK_TRACK_PX = { width: 480, height: 240 }
+// The stuck strip's race width beside that track (a 1440 screen leaves it
+// about 780), what its words and metres are spaced for.
+const STUCK_BOTH_STRIP_PX = 720
 
 // The strip's row names: Phase colours the track like the Phase row, Course like the Course row.
 const TRACK_COLOUR_OPTIONS: { value: TrackColours; label: string }[] = [{ value: "phase", label: "Phase" }, { value: "course", label: "Course" }]
@@ -445,11 +448,11 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					</button>
 				</div>
 			</div>
-			{/* One row that wraps: the track keeps its size, the strip (flex-1,
-			    basis 0) takes what's left, and when Both leaves the strip less
-			    than 24rem beside the track and the card, the card drops under
-			    them instead of squeezing the strip. Strip alone never wraps. */}
-			<div className={`flex items-start gap-4 ${stuckView === "strip" ? "" : "flex-wrap"}`}>
+			{/* Strip: the strip, the card at its right. Track: the track, the
+			    card at the right. Both: the track, then a column with the strip
+			    and the card under it, where the track's height leaves room (the
+			    card beside the strip squeezed the strip's words together). */}
+			<div className="flex items-start gap-4">
 				{stuckView !== "strip" && (
 					<div className="shrink-0">
 						{stuckTrackWaiting ? (
@@ -457,13 +460,14 @@ export default function CourseSection({ course, event = null, guide = null }: {
 								<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 							</div>
 						) : (
-							// Compact and bare, like a phone's: chips with icons, no words.
+							// Bare: chips with icons, no words. Not `compact`: its padding
+							// is room for a phone's word chips, and at this height it left
+							// the drawing a third smaller.
 							<CourseTrack
 								course={course}
 								shape={shape}
 								widthPx={STUCK_TRACK_PX.width}
 								maxHeightPx={STUCK_TRACK_PX.height}
-								compact
 								showWords={false}
 								colours={trackColours}
 								overlays={layer.overlays}
@@ -473,22 +477,28 @@ export default function CourseSection({ course, event = null, guide = null }: {
 						)}
 					</div>
 				)}
-				{stuckView !== "track" && (
-					<CourseStrip
-						course={course}
-						orientation="horizontal"
-						slim
-						overlays={layer.overlays}
-						laneHeads={layer.heads}
-						preview={preview}
-						onPreview={setPreview}
-						className={`flex-1 ${stuckView === "both" ? "min-w-[24rem]" : "min-w-0"}`}
-					/>
-				)}
-				{focus && (
-					<div className="ml-auto w-[380px] shrink-0">
-						<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
+				{stuckView === "both" ? (
+					<div className="flex min-w-0 flex-1 flex-col gap-2">
+						{/* Spaced for the narrower room beside the track, so a part's metres
+						    show only where they fit (at the default 1,000 they ran into its words). */}
+						<CourseStrip course={course} orientation="horizontal" slim widthPx={STUCK_BOTH_STRIP_PX} overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} />
+						{focus && (
+							<div className="ml-auto w-full max-w-[380px]">
+								<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
+							</div>
+						)}
 					</div>
+				) : (
+					<>
+						{stuckView === "strip" && (
+							<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
+						)}
+						{focus && (
+							<div className="ml-auto w-[380px] shrink-0">
+								<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
+							</div>
+						)}
+					</>
 				)}
 			</div>
 		</div>,
