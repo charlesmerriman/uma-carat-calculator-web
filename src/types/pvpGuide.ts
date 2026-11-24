@@ -27,6 +27,14 @@ export type PvpStyleTab = Exclude<PvpStyle, "everyone"> | "all"
 export type PvpSkillCategory = "acceleration" | "early_mid" | "late" | "speed" | "green" | "recovery" | "debuff" | "other"
 
 /** Small embedded catalogue objects. Ids are the site's, not the game's. */
+/** An uma a guide's text names as ((Uma name)): enough for her framed picture (the API's `uma_mentions`). */
+export interface PvpUmaMention {
+	id: number
+	name: string
+	portrait: string | null
+	portrait_layers?: PortraitLayers | null
+}
+
 export interface PvpUmaRef {
 	id: number
 	name: string
@@ -301,6 +309,8 @@ export interface PvpGuide {
 	 * plain name. Optional: an older API omits it.
 	 */
 	skill_mentions?: Record<string, PvpSkillRef>
+	/** {lower-case name: uma} for every ((Uma name)) in the guide's text, the style ranking included. */
+	uma_mentions?: Record<string, PvpUmaMention>
 	/**
 	 * Visible comments per section: "" for the whole guide, else a running
 	 * style. A section with none is absent. Optional: an older API omits it.

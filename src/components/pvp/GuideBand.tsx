@@ -19,8 +19,10 @@ import { Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
-import { InlineNote, SkillMention } from "./PvpTiles"
+import { InlineNote, SkillMention, UmaMention } from "./PvpTiles"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
+import { useUmaMentions } from "./skillMentionsContext"
+import { umaStepName } from "../../utils/remarkHighlight"
 import { STYLE_LABELS, compPlaceColor, compPlaceLetter, parseStyleRanking, parseTeamComp, styleColor, umasByStars, type RankingStep } from "../../utils/pvpGuide"
 import type { PvpGuide, PvpStatConfig, PvpStyle, PvpStyleTab } from "../../types/pvpGuide"
 import { hoverCardProps } from "../../utils/hoverCards"
@@ -29,6 +31,7 @@ import { hoverCardProps } from "../../utils/hoverCards"
 const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
 	<SkillMention name={name} scenarioLink={scenarioLink} />
 )
+const renderUma = (name: string) => <UmaMention name={name} />
 
 type RankedStyle = Exclude<PvpStyle, "everyone">
 
@@ -84,6 +87,7 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	const oshiIds = useOshiIds()
+	const umaMentions = useUmaMentions()
 	const faces = (style: RankedStyle) =>
 		umasByStars(guide.uma_recommendations.filter((row) => row.style === style))
 			.flatMap((group) => group.rows)
@@ -95,6 +99,11 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 					const style = step.style
 					const first = index === 0
 					const shown = style ? faces(style) : []
+					// A step written ((Uma name)) names an uma (Henry's ask, review
+					// item 6): her picture where a style's faces go, her name as
+					// the step's. Unmatched, the words stay as written.
+					const umaName = style ? null : umaStepName(step.label)
+					const named = umaName ? (umaMentions[umaName.toLowerCase()] ?? null) : null
 					const rung = `flex min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border bg-gray-800 px-2.5 py-1.5 text-left @xl:flex-col @xl:items-start @xl:gap-1.5 @xl:p-2.5 ${
 						style && active === style ? "border-(--style-color) ring-1 ring-inset ring-(--style-color)" : "border-gray-700"
 					}`
@@ -109,9 +118,22 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 										first ? "text-[19px] @xl:text-2xl" : "text-[17px] @xl:text-xl"
 									}`}
 								>
-									{step.label}
+									{named ? named.name : (umaName ?? step.label)}
 								</span>
 							</span>
+							{named && (
+								<span className="flex shrink-0 gap-1">
+									<span className="inline-block" {...hoverCardProps("uma", named.id)}>
+										<FramedUma
+											src={named.portrait} layers={named.portrait_layers}
+											alt=""
+											title={named.name}
+											oshi={oshiIds.has(named.id)}
+											className={first ? "w-[1.875rem] @xl:w-10" : "w-7 @xl:w-[2.125rem]"}
+										/>
+									</span>
+								</span>
+							)}
 							{shown.length > 0 && (
 								<span className="flex shrink-0 gap-1">
 									{shown.map((row) => (
@@ -222,12 +244,12 @@ function GuideText({ guide }: { guide: PvpGuide }) {
 				style={cut === null ? undefined : ({ "--guide-text-cut": `${cut}px` } as CSSProperties)}
 			>
 				{guide.short_description && (
-					<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
+					<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} renderUma={renderUma} />
 				)}
 				{guide.meta_analysis && (
 					<div className={guide.short_description ? "mt-3" : "mt-2"}>
 						<h4 className={SUBHEADING}>Meta analysis</h4>
-						<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
+						<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} renderUma={renderUma} />
 					</div>
 				)}
 			</div>

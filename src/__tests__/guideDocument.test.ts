@@ -219,6 +219,18 @@ describe("validateDocument", () => {
 		expect(paths).toContainEqual(["team_comps[1].text", "Write the team comp, like 2 Front + 1 Pace."])
 	})
 
+	it("checks ((uma)) mentions by exact name, and hydrates the ones it knows", () => {
+		const doc = document()
+		doc.style_ranking = "((Gold Ship)) > Front"
+		doc.meta_analysis = "Watch ((gold ship)) and ((Goldship))."
+		expect(validateDocument(doc, INDEX).map((error) => [error.path, error.message])).toEqual([
+			["meta_analysis", "No uma has this name: ((Goldship))"],
+		])
+		const guide = hydrateGuide(doc, INDEX, SCENARIOS, null)
+		expect(Object.keys(guide.uma_mentions ?? {})).toEqual(["gold ship"])
+		expect(guide.uma_mentions?.["gold ship"]).toMatchObject({ id: 42, name: "Gold Ship" })
+	})
+
 	it("takes a limit break of 0 to 4, and only on a card", () => {
 		const doc = document()
 		doc.decks[0].slots[2].limit_break = 4

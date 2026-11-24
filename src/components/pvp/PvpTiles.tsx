@@ -15,7 +15,7 @@
 import { useContext, useId, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
-import { useSkillMentions } from "./skillMentionsContext"
+import { useSkillMentions, useUmaMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { GOLD_SKILL_RARITY, type UmaAptitude } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
@@ -53,6 +53,8 @@ function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 					<span key={index}>{piece.text}</span>
 				) : piece.kind === "skill" ? (
 					<SkillMention key={index} name={piece.name} scenarioLink={piece.scenarioLink} />
+				) : piece.kind === "uma" ? (
+					<UmaMention key={index} name={piece.name} />
 				) : (
 					<mark key={index} className="bg-transparent font-semibold text-highlight">
 						<NotePieces pieces={piece.pieces} />
@@ -63,7 +65,25 @@ function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 	)
 }
 
-/** A one-line note: `==words==` in red, `[[Skill name]]` as a skill, line breaks kept. */
+/**
+ * A `((Uma name))` mention inside text: her framed picture, sized to the text
+ * around it (2.4em: about the style ranking's faces in a guide paragraph, as
+ * Henry asked, and smaller in an 11px deck note), opening her card like every
+ * uma tile. Her name is its accessible name and its title. A name the guide's
+ * map does not hold renders as plain text.
+ */
+export function UmaMention({ name }: { name: string }) {
+	const uma = useUmaMentions()[name.toLowerCase()]
+	const oshiIds = useOshiIds()
+	if (!uma) return <>{name}</>
+	return (
+		<span className="inline-block align-middle" role="img" aria-label={uma.name} {...hoverCardProps("uma", uma.id)}>
+			<FramedUma src={uma.portrait} layers={uma.portrait_layers} alt="" title={uma.name} oshi={oshiIds.has(uma.id)} className="w-[2.4em]" />
+		</span>
+	)
+}
+
+/** A one-line note: `==words==` in red, `[[Skill name]]` as a skill, `((Uma))` as her picture, line breaks kept. */
 export function InlineNote({ text, className = "" }: { text: string; className?: string }) {
 	if (!text) return null
 	return (
