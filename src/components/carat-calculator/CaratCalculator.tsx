@@ -94,7 +94,7 @@ export const CaratCalculator: React.FC = () => {
 	} = useCalculatorData()
 
 	// The rows, plus what the daily pulls on banners outside the plan took
-	// (the two gear-menu switches); the chart draws the latter.
+	// (the two projection-settings switches); the chart draws the latter.
 	const { rows: bannerResources, backgroundSpends } = useBannerProjection({
 		userStatsData,
 		clubRankData,

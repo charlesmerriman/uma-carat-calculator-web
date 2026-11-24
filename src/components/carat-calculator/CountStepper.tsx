@@ -49,7 +49,7 @@ interface CountStepperProps {
 /**
  * A bulk-adjust pad for the planner's pull/step field.
  *
- * WHY A PORTAL, and not the `relative` + `absolute` idiom SettingsMenu uses:
+ * WHY A PORTAL, and not the `relative` + `absolute` idiom the navbar's menus use:
  * this pad opens from inside the banner sheet, and the sheet is wrapped in an
  * `overflow-hidden` panel (CaratCalculator) whose rows are `motion.div`s
  * carrying `layout` transforms. In-flow, the pad would be clipped at the panel's

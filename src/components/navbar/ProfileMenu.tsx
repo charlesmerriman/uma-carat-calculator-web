@@ -37,9 +37,9 @@ import { NAV_POPOVER, NAV_PROFILE_TRIGGER } from "./navStyles"
  * once instead of jumping from a placeholder.
  *
  * Closes on outside click, Escape and choosing an item — the same popover
- * idiom as ThemePicker and SettingsMenu, anchored under the button; unlike
- * SettingsMenu it is always the LAST control in the bar, so a right-anchored
- * panel never runs off a narrow screen.
+ * idiom as ThemePicker, anchored under the button; unlike ThemePicker it is
+ * always the LAST control in the bar, so a right-anchored panel never runs off
+ * a narrow screen.
  */
 
 const MENU_ITEM =

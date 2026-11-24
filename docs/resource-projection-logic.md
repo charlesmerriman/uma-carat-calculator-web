@@ -112,7 +112,8 @@ always belongs to `userPlannedBannerData[i]` regardless of pass order.
 
 ### Daily pulls on banners outside the plan
 
-Two gear-menu switches, both **off** by default: `daily_pulls_other_uma_banners`
+Two projection-settings switches (`carat-calculator/ProjectionSettings.tsx`, the last row of
+the Income & Resources panel), both **off** by default: `daily_pulls_other_uma_banners`
 and `daily_pulls_other_support_banners` (owner, 2026-10-19). They are for a whale
 who takes the 50-paid-carat daily pull on every banner, wanted or not.
 `utils/backgroundDailyPulls.ts` picks the **background banners**; the pass charges them.
@@ -285,7 +286,7 @@ figure dripped as `monthly / 30`.
   zeroes the matching tickets once, so the spend, `maxPossiblePulls` and the
   breakdown all agree; the balances still accrue and show on every row. The hook
   reads it as `!== false`, so an API without the field behaves as "on".
-- **Row options override the gear menu for one row, through `rowSpendSettings`**
+- **Row options override the projection settings for one row, through `rowSpendSettings`**
   (`utils/rowOptions.ts`, the only reader). `tickets_to_use` is a ceiling passed as
   `ticketLimit`: it caps the spend AND `maxPossiblePulls`, and a number on the row
   wins over `spend_tickets_on_banners` (owner's call, 2026-10-16), so 0 holds every

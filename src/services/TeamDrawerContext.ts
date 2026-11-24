@@ -3,7 +3,7 @@
  * drawer AppShell mounts. Split from its provider, like AuthContext.
  *
  * Outside /app there is no provider, and the button renders nothing: the
- * drawer belongs to the planner pages, the way SettingsMenu does.
+ * drawer belongs to the planner pages.
  */
 
 import { createContext, useContext } from "react"

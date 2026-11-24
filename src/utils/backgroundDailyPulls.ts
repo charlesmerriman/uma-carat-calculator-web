@@ -4,7 +4,7 @@
  * Every uma and support banner has its own once-a-day pull for 50 PAID carats.
  * A whale takes it on every banner that runs, whether or not they want its
  * cards, and those carats are gone before the banners they DO want arrive. The
- * two gear-menu switches (`daily_pulls_other_uma_banners`,
+ * two projection-settings switches (`daily_pulls_other_uma_banners`,
  * `daily_pulls_other_support_banners`, both off by default) model that.
  *
  * WHICH BANNERS

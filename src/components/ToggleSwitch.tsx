@@ -7,8 +7,8 @@ interface ToggleSwitchProps {
 
 /**
  * A small styled on/off switch built on a visually-hidden checkbox (the `peer`)
- * plus a Tailwind-styled track/knob. Shared by the Income form and the navbar
- * Settings menu so the toggle look stays consistent in one place.
+ * plus a Tailwind-styled track/knob. Shared by the Income form and its
+ * projection settings so the toggle look stays consistent in one place.
  */
 export const ToggleSwitch = ({ checked, onChange, ariaLabel }: ToggleSwitchProps) => (
 	<label className="relative inline-flex items-center cursor-pointer">

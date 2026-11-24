@@ -1,5 +1,5 @@
 /**
- * The navbar's control recipes, shared by Navbar, SettingsMenu and ThemePicker.
+ * The navbar's control recipes, shared by Navbar, ThemePicker and the search button.
  *
  * Four copies of the same text-button string and three of the icon-button one
  * used to live inline across those files, and they drifted a `rounded` at a
@@ -14,7 +14,7 @@
 export const NAV_BUTTON =
 	"nav-control flex h-9 items-center gap-1.5 rounded-md border border-gray-600 px-3 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
 
-/** A square icon button: settings gear, theme palette, mobile logout. */
+/** A square icon button: search, theme palette. */
 export const NAV_ICON_BUTTON =
 	"nav-control flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
 

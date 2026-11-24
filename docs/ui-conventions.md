@@ -251,7 +251,7 @@ being unable to hold either desktop layout.
 
 | Variant | Condition | Governs |
 |---|---|---|
-| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar, and the `SettingsMenu` panel's anchoring, which must track the navbar |
+| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar, and the `ThemePicker` panel's anchoring, which must track the navbar |
 | `app-shell:` | `min-width: 64rem` **and** `min-height: 32rem` | the fixed-height, internally-scrolling app shell in `ApplicationViews` |
 
 The height half of `app-shell:` is the load-bearing part. Applied to a landscape phone,
@@ -566,7 +566,7 @@ that opens costs the grid nothing.
 Three things about it are load-bearing:
 
 - **It portals to `<body>` and positions itself from the anchor's rect.** The in-flow
-  `relative`/`absolute` idiom `SettingsMenu` uses cannot work here: the sheet sits inside
+  `relative`/`absolute` idiom the navbar's menus use cannot work here: the sheet sits inside
   an `overflow-hidden` panel (`CaratCalculator`), which clips the pad on the last row, and
   its rows are `motion.div`s carrying `layout` transforms, against which a `position:
   fixed` fallback would resolve instead of the viewport. The cost of the portal is having
@@ -608,7 +608,7 @@ pad, its chips and its per-kind quantities come to both for free — but:
   `window.resize`. Without those listeners the pad is placed against the full-height
   viewport, decides it fits below, and is then covered by the keypad.
 - **Chips are `h-9`, not the `h-7` a pointer would need.** That is the size this app
-  already gives its icon buttons (the card's delete, the navbar's gear), so the pad matches
+  already gives its icon buttons (the card's delete, the navbar's search), so the pad matches
   rather than inventing a target size.
 
 There is no hover affordance to lose on touch, because there is no hover affordance at
@@ -895,8 +895,8 @@ left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
 opening a menu with **Account**, **Collection** (since 2026-10-26) and **Sign out** (since 2026-09-12; sign-out used
 to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
 `desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
-is already save + settings + theme + this. A guest still sees the Login link. The
-menu is the same popover idiom as ThemePicker and SettingsMenu and is always the
+is already save + theme + this. A guest still sees the Login link. The
+menu is the same popover idiom as ThemePicker and is always the
 LAST control, so right-anchoring never runs it off a narrow screen.
 
 **The name is the one they chose, else the handle.** `account.display_name`
@@ -2434,6 +2434,31 @@ keep the links above). The code says "hover" because they opened on hover for on
   nothing opens two cards. **A guide uma tile (`UmaTile`) has no hover** when her card exists
   (`hover={false}`; Daptrius, 2026-11-19): the card already holds the note and the unique's
   verdict, and opening it lights the course map. Keyboard focus still opens the small popup.
+
+## Projection settings (`carat-calculator/ProjectionSettings.tsx`)
+
+The switches that decide what the projection assumes (spend tickets, misc earnings and its
+own amount, the paid pulls, the daily pull on banners outside the plan). **The last row of
+the Income & Resources panel since 2026-11-24** (owner; `notes/navigation-plan.md`, PR 1).
+Until then it was `navbar/SettingsMenu.tsx`, a popover behind a gear drawn on every `/app`
+page, although only the calculator reads these settings.
+
+- **The closed row says what is on.** A count pill ("4 of 6 on") at every width, and from
+  `@3xl` the short names of the settings that are on. A dropdown hides its contents, and
+  the shop ticket counts showed what that costs (3% of players found them behind the gear),
+  so the panel has to show what its numbers assume without being opened. A new setting
+  needs a `short` name for that line.
+- **Closed on every load, open until a reload** (`useRememberedOpen("projection-settings")`),
+  like the panel around it.
+- **Closed means out of reach**: the body is `inert` and `aria-hidden` on a plain wrapper
+  inside the animated box. Height 0 alone would leave six switches in the tab order.
+- **Layout is by container query**, like the rest of the panel: one tile per row on a
+  phone, two from `@3xl`, three from `@income-wide`. A setting that is on gets the brand
+  edge; off is the plain tile, never a dimmed one.
+- **The height animation asks `useReducedMotion()` itself**: `MotionConfig` stops
+  transforms only.
+- A guest's "Clear plan and start over" lives under the tiles, two presses, as it did in
+  the popover.
 
 ## Calculator screen bar (`carat-calculator/CalculatorTabs.tsx`)
 
