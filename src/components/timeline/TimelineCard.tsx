@@ -86,6 +86,26 @@ export function TimelineCardHeader({
 }
 
 /**
+ * "December 2026", before the first card of each month.
+ *
+ * 190 cards with nothing between them is a long way to scroll for one month,
+ * and a month is how people look for a banner. A real element on every theme:
+ * its box is `.tl-month` in timeline.css (the same on all of them), its
+ * default paint is the utilities below, and a theme may repaint it through
+ * the hooks. It sits INSIDE its row, above the card, so the list still has
+ * exactly one child per row (the keys, the scroll tripwire and the deep-link
+ * anchor all count on that).
+ */
+export function TimelineMonthHeading({ label }: { label: string }) {
+	return (
+		<h2 className="tl-month">
+			<span className="tl-month-label bg-gray-700 text-gray-100">{label}</span>
+			<span aria-hidden="true" className="tl-month-rule bg-gray-700" />
+		</h2>
+	)
+}
+
+/**
  * The countdown pill ("Ends in 7 Days"), last in a card's header. `state`
  * (getCountdownState) is written as `data-state` for a theme to colour; the
  * default themes draw every state the same.

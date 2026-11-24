@@ -557,3 +557,26 @@
 [data-theme="tracen"] .tl-stat-value {
 	color: var(--tracen-numeral);
 }
+
+/* The month heading on the game's slanted green rule, the planner's section
+   titles' shape. The label's own fill goes, and a lime tab is laid behind the
+   words: a pseudo-element, out of the flow, that runs 14px past the label's
+   right edge so its slanted end lands on the rule. Nothing changes size. */
+[data-theme="tracen"] .tl-month-label {
+	background-color: transparent;
+	color: #4f2504;
+}
+
+[data-theme="tracen"] .tl-month-label::before {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	inset: 0 -0.875rem 0 0;
+	border-radius: 5px 0 0 5px;
+	background-color: #7ecf12;
+	clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+
+[data-theme="tracen"] .tl-month-rule {
+	background-color: #7ecf12;
+}

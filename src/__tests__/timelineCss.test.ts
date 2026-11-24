@@ -144,7 +144,11 @@ describe("timeline.css", () => {
 // It is held to the same promises as the layout: paint, never clip, and never
 // split a tile's picture from its name.
 describe("personalityThemes.css, on the Timeline's hooks", () => {
-	const themeRules = parseRules(themeCss).filter((rule) => /\.tl-/.test(rule.selector))
+	const allThemeRules = parseRules(themeCss).filter((rule) => /\.tl-/.test(rule.selector))
+	// A ::before or ::after is a shape laid behind or over a part, not the part.
+	const isPseudo = (rule: Rule) => /::(before|after)/.test(rule.selector)
+	const themeRules = allThemeRules.filter((rule) => !isPseudo(rule))
+	const pseudoRules = allThemeRules.filter(isPseudo)
 
 	it("has Timeline rules to check", () => {
 		expect(themeRules.length).toBeGreaterThan(10)
@@ -165,6 +169,18 @@ describe("personalityThemes.css, on the Timeline's hooks", () => {
 			expect(rule.body, rule.selector).not.toMatch(/(^|[;\s])(min-|max-)?(width|height)\s*:/)
 			expect(rule.body, rule.selector).not.toMatch(/(^|[;\s])(display|position|flex|grid[a-z-]*|gap|font-size|line-height|border-width)\s*:/)
 			if (/(^|[;\s])padding[a-z-]*\s*:/.test(rule.body)) expect(rule.body, rule.selector).toMatch(/(^|[;\s])margin[a-z-]*\s*:/)
+		}
+	})
+
+	it("keeps a decorative pseudo-element out of the flow, so it cannot move a box", () => {
+		// Tracen's slanted tab behind a month heading. It may be clipped to a
+		// shape (it IS the shape); what it may not do is take up room.
+		for (const rule of pseudoRules.filter((r) => /content\s*:/.test(r.body))) {
+			expect(rule.body, rule.selector).toMatch(/position\s*:\s*absolute/)
+		}
+		for (const rule of pseudoRules) {
+			expect(rule.body, rule.selector).not.toMatch(/overflow(-[xy])?\s*:/)
+			expect(rule.body, rule.selector).not.toMatch(/\bcontain\s*:/)
 		}
 	})
 

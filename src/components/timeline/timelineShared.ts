@@ -750,6 +750,18 @@ export function markerRowMatchesSearch(row: TimelineRow, query: string): boolean
 }
 
 /**
+ * The start date a row is placed by, as the API sent it. A pair is placed by
+ * its scenario, the half that sorts first. What the month headings group on
+ * (through `formatMonthName`) and what `timelineRowStart` turns into a number.
+ */
+export function timelineRowStartDate(row: TimelineRow): string {
+	return row.kind === "race" ? row.event.start_date
+		: row.kind === "banner_window" ? row.group.start_date
+			: row.kind === "marker" ? row.marker.startDate
+				: row.scenario.startDate
+}
+
+/**
  * A row's opening instant in ms, or +Infinity for one that cannot be parsed
  * (which sorts it last rather than throwing the splice off).
  *
@@ -760,12 +772,7 @@ export function markerRowMatchesSearch(row: TimelineRow, query: string): boolean
  * land on different sides of the toggle.
  */
 export function timelineRowStart(row: TimelineRow): number {
-	const iso =
-		row.kind === "race" ? row.event.start_date
-			: row.kind === "banner_window" ? row.group.start_date
-				: row.kind === "marker" ? row.marker.startDate
-					: row.scenario.startDate
-	const ms = new Date(iso).getTime()
+	const ms = new Date(timelineRowStartDate(row)).getTime()
 	return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms
 }
 
