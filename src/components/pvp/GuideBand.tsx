@@ -157,6 +157,31 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 	)
 }
 
+/** The phone's clamp, as the max-h class writes it: 5.25rem. */
+const CLAMP_REM = 5.25
+
+/**
+ * The height, in px from the box's top, where the last line of text that fits
+ * whole inside the clamp ends. The clamp itself is a rem height, and the box
+ * mixes paragraphs, a heading and margins, so a fixed height lands mid-line
+ * as often as not; reading the lines' own boxes finds the cut that doesn't.
+ * Null when the browser gives no line boxes (jsdom) or nothing fits.
+ */
+function lastWholeLine(box: HTMLElement): number | null {
+	if (typeof document.createRange !== "function") return null
+	const range = document.createRange()
+	range.selectNodeContents(box)
+	if (typeof range.getClientRects !== "function") return null
+	const top = box.getBoundingClientRect().top
+	const limit = CLAMP_REM * parseFloat(getComputedStyle(document.documentElement).fontSize || "16")
+	let best: number | null = null
+	for (const rect of Array.from(range.getClientRects())) {
+		const bottom = rect.bottom - top
+		if (rect.height > 0 && bottom <= limit + 0.5 && (best === null || bottom > best)) best = bottom
+	}
+	return best === null ? null : Math.ceil(best)
+}
+
 /**
  * The short description and the meta analysis. On a phone they start at about
  * three lines with "Read more", when they run longer than that (measured once
@@ -166,12 +191,20 @@ function GuideText({ guide }: { guide: PvpGuide }) {
 	const boxRef = useRef<HTMLDivElement>(null)
 	const [long, setLong] = useState(false)
 	const [open, setOpen] = useState(false)
+	// Where the phone's cut falls: the bottom of the last line that fits whole
+	// in the clamp, so the text stops on a full line with no fade over it
+	// (owner, 2026-11-17: never fade text to cut it). Null until measured,
+	// and in a browser without Range rects, when the plain clamp applies.
+	const [cut, setCut] = useState<number | null>(null)
 	// Measured again whenever the box changes size: a window opened wide (no
 	// clamp, nothing to measure) and then narrowed must still get its "Read more".
 	useEffect(() => {
 		const box = boxRef.current
 		if (!box) return
-		const measure = () => setLong(box.scrollHeight > box.clientHeight + 1)
+		const measure = () => {
+			setLong(box.scrollHeight > box.clientHeight + 1)
+			setCut(lastWholeLine(box))
+		}
 		measure()
 		// No ResizeObserver in jsdom; every browser the site supports has one.
 		if (typeof ResizeObserver === "undefined") return
@@ -182,12 +215,11 @@ function GuideText({ guide }: { guide: PvpGuide }) {
 	if (!guide.short_description && !guide.meta_analysis) return null
 	return (
 		<>
-			{/* Faded at the cut on a phone, so the clamp never ends on half a line. */}
+			{/* Cut at the last whole line on a phone (`--guide-text-cut`), so the clamp never ends on half a line. */}
 			<div
 				ref={boxRef}
-				className={`text-sm ${open ? "" : "max-h-[5.25rem] overflow-hidden sm:max-h-none"} ${
-					long && !open ? "max-sm:[mask-image:linear-gradient(to_bottom,black_55%,transparent)]" : ""
-				}`}
+				className={`text-sm ${open ? "" : "max-h-(--guide-text-cut,5.25rem) overflow-hidden sm:max-h-none"}`}
+				style={cut === null ? undefined : ({ "--guide-text-cut": `${cut}px` } as CSSProperties)}
 			>
 				{guide.short_description && (
 					<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
