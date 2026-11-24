@@ -253,6 +253,40 @@ export function setStickyMap(on: boolean) {
 	notify()
 }
 
+/**
+ * What the stuck bar shows: the slim strip, a small track, or both (Henry,
+ * board "Allow user to pin track view", 2026-11-24). Its own choice, apart
+ * from the in-place map's Strip | Track | Both: switching the in-place view
+ * while stuck would resize the block above the reader and jump the page.
+ * Remembered on the device; the strip until the reader picks another.
+ */
+export type StuckView = "strip" | "track" | "both"
+const STUCK_VIEW_KEY = "uma-course-map-stuck-view"
+let stuckView: StuckView | null = null
+
+function readStuckView(): StuckView {
+	try {
+		const stored = localStorage.getItem(STUCK_VIEW_KEY)
+		return stored === "track" || stored === "both" ? stored : "strip"
+	} catch {
+		return "strip"
+	}
+}
+
+export function useStuckView(): StuckView {
+	return useSyncExternalStore(subscribe, () => (stuckView ??= readStuckView()), () => "strip")
+}
+
+export function setStuckView(next: StuckView) {
+	stuckView = next
+	try {
+		localStorage.setItem(STUCK_VIEW_KEY, next)
+	} catch {
+		// Storage blocked: the choice lasts this page's life.
+	}
+	notify()
+}
+
 /** The guide's course block (CourseSection): one per page. */
 export const COURSE_MAP_ID = "course-map"
 

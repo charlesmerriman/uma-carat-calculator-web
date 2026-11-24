@@ -28,10 +28,13 @@ import {
 	COURSE_MAP_ID,
 	setAccelsOpen,
 	setStickyMap,
+	setStuckView,
 	setCourseFocus,
 	setPageCourse,
 	useAccelsOpen,
 	useStickyMap,
+	useStuckView,
+	type StuckView,
 	subscribeCourseMap,
 	useCourseFocus,
 	useStyleTab,
@@ -76,6 +79,10 @@ const PHONE_TRACK_PX = 358
 // The phone strip's race width inside its sideways scroller: a 720px strip less
 // the 60px label column. Wide enough for every section number and the words.
 const PHONE_STRIP_PX = 660
+// The stuck bar's track at its largest. The height is the cap that matters:
+// the bar's height pushes the View tabs and the style tabs down the screen,
+// and 240 keeps the bar near the slim strip's (about 258px with its header).
+const STUCK_TRACK_PX = { width: 480, height: 240 }
 
 // The strip's row names: Phase colours the track like the Phase row, Course like the Course row.
 const TRACK_COLOUR_OPTIONS: { value: TrackColours; label: string }[] = [{ value: "phase", label: "Phase" }, { value: "course", label: "Course" }]
@@ -149,9 +156,13 @@ export default function CourseSection({ course, event = null, guide = null }: {
 		query.addEventListener("change", update)
 		return () => query.removeEventListener("change", update)
 	}, [])
+	// "Stick to top", and what the stuck bar shows (see STICK TO TOP below).
+	const sticky = useStickyMap()
+	const stuckView = useStuckView()
 	// The real shape, fetched the first time Track is chosen on a desktop (most
-	// readers stay on the strip) and right away on a phone.
-	const real = useCourseShape(view !== "strip" || narrow ? course.id : null)
+	// readers stay on the strip), in place or for the stuck bar, and right away
+	// on a phone.
+	const real = useCourseShape(view !== "strip" || narrow || (sticky && stuckView !== "strip") ? course.id : null)
 	const realShape = real.data ?? null
 	// Waiting for it holds the box, rather than flash the schematic first.
 	const waiting = view !== "strip" && shapeChoice === "real" && real.isPending
@@ -330,7 +341,8 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	// strip (no height or section rows) and the lit skill's card beside it,
 	// where it sits in place, so the strip keeps its width when it docks. Not
 	// on a phone, where a stuck strip would take most of the screen.
-	const sticky = useStickyMap()
+	// The bar shows the strip, a small track or both, by its own switch
+	// (Henry, 2026-11-24; `stuckView`, apart from the in-place view).
 	const stripAnchorRef = useRef<HTMLDivElement>(null)
 	const [docked, setDocked] = useState<{ top: number; left: number; width: number } | null>(null)
 	// Only while it's on and the screen is wide; a stale measurement is replaced on the next frame.
@@ -372,16 +384,27 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	const stuckOn = stuck !== null
 	useLayoutEffect(() => {
 		window.dispatchEvent(new Event(STICKY_CHANGE))
-	}, [stuckOn, focus])
+	}, [stuckOn, focus, stuckView])
 	useEffect(() => () => {
 		window.dispatchEvent(new Event(STICKY_CHANGE))
 	}, [])
+	// ...and when it changes size by itself: the real shape landing in place of
+	// the spinner, a verdict card wrapping under the strip. usePvpStickyOffsets
+	// observes the band and the tabs, never this bar, so it is told here.
+	const stuckBarRef = useRef<HTMLDivElement>(null)
+	useEffect(() => {
+		const bar = stuckBarRef.current
+		if (!stuckOn || !bar || typeof ResizeObserver === "undefined") return
+		const observer = new ResizeObserver(() => window.dispatchEvent(new Event(STICKY_CHANGE)))
+		observer.observe(bar)
+		return () => observer.disconnect()
+	}, [stuckOn])
 	const stickyButton = (
 		<button
 			type="button"
 			aria-pressed={sticky}
 			onClick={() => setStickyMap(!sticky)}
-			title="Keep the course strip at the top of the page while you scroll the guide"
+			title="Keep the course map at the top of the page while you scroll the guide"
 			className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
 				sticky ? "border-brand bg-brand/15 text-gray-100" : "border-gray-600 text-gray-200 hover:bg-gray-700/60"
 			}`}
@@ -390,8 +413,12 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			Stick to top
 		</button>
 	)
+	// The real shape is still on its way: hold the track's place rather than
+	// flash the schematic, as the in-place map does.
+	const stuckTrackWaiting = shapeChoice === "real" && real.isPending
 	const stuckBar = stuck && createPortal(
 		<div
+			ref={stuckBarRef}
 			data-course-stuck=""
 			role="region"
 			aria-label="Course map, stuck to the top"
@@ -400,20 +427,66 @@ export default function CourseSection({ course, event = null, guide = null }: {
 		>
 			<div className="mb-1 flex items-center gap-3">
 				<h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Course map</h3>
-				<span className="truncate text-xs text-gray-300">{courseName(course)}</span>
-				<button
-					type="button"
-					onClick={() => setStickyMap(false)}
-					className="ml-auto flex shrink-0 items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
-				>
-					<PinOff className="h-3.5 w-3.5" aria-hidden="true" />
-					Unstick
-				</button>
+				<span className="min-w-0 truncate text-xs text-gray-300">{courseName(course)}</span>
+				<div className="ml-auto flex shrink-0 items-center gap-2">
+					<Segmented<StuckView>
+						label="Stuck map view"
+						value={stuckView}
+						onChange={setStuckView}
+						options={[{ value: "strip", label: "Strip" }, { value: "track", label: "Track" }, { value: "both", label: "Both" }]}
+					/>
+					<button
+						type="button"
+						onClick={() => setStickyMap(false)}
+						className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-gray-400 transition hover:bg-gray-700 hover:text-gray-100"
+					>
+						<PinOff className="h-3.5 w-3.5" aria-hidden="true" />
+						Unstick
+					</button>
+				</div>
 			</div>
-			<div className="flex items-start gap-4">
-				<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
+			{/* One row that wraps: the track keeps its size, the strip (flex-1,
+			    basis 0) takes what's left, and when Both leaves the strip less
+			    than 24rem beside the track and the card, the card drops under
+			    them instead of squeezing the strip. Strip alone never wraps. */}
+			<div className={`flex items-start gap-4 ${stuckView === "strip" ? "" : "flex-wrap"}`}>
+				{stuckView !== "strip" && (
+					<div className="shrink-0">
+						{stuckTrackWaiting ? (
+							<div className="flex items-center justify-center" style={{ width: STUCK_TRACK_PX.height * 1.5, height: STUCK_TRACK_PX.height }}>
+								<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
+							</div>
+						) : (
+							// Compact and bare, like a phone's: chips with icons, no words.
+							<CourseTrack
+								course={course}
+								shape={shape}
+								widthPx={STUCK_TRACK_PX.width}
+								maxHeightPx={STUCK_TRACK_PX.height}
+								compact
+								showWords={false}
+								colours={trackColours}
+								overlays={layer.overlays}
+								preview={preview}
+								onPreview={setPreview}
+							/>
+						)}
+					</div>
+				)}
+				{stuckView !== "track" && (
+					<CourseStrip
+						course={course}
+						orientation="horizontal"
+						slim
+						overlays={layer.overlays}
+						laneHeads={layer.heads}
+						preview={preview}
+						onPreview={setPreview}
+						className={`flex-1 ${stuckView === "both" ? "min-w-[24rem]" : "min-w-0"}`}
+					/>
+				)}
 				{focus && (
-					<div className="w-[380px] shrink-0">
+					<div className="ml-auto w-[380px] shrink-0">
 						<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
 					</div>
 				)}
