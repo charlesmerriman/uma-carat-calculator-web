@@ -37,7 +37,7 @@ function postPlace(post: AnyGalleryPost): { href: string; label: string } {
 			label: post.event.label,
 		}
 	}
-	return { href: planPostHref(post.public_id), label: "Community plans" }
+	return { href: planPostHref(post.public_id), label: "Pull Plan Library" }
 }
 
 export function MyGalleryPosts({ className, titleClassName }: { className: string; titleClassName: string }) {

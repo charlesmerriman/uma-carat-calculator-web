@@ -2741,7 +2741,10 @@ notes off. The item is hidden on an API older than sharing (no
 ## Community plans (`components/community-plans/`, `/app/plans`)
 
 Pull plans players have posted (`notes/pull-plan-database-plan.md`, Design 6 to 8; the
-canvas shots are in `notes/pull-plan-database/`). Early access only until PR 5: the route
+canvas shots are in `notes/pull-plan-database/`). **Players see it as the Pull Plan
+Library** (renamed 2026-11-24, `notes/pull-plan-database-plan-2.md`): every visible string
+says that, while the folder, the components, the comments and `/app/plans` keep "Community
+plans" as the internal name. Site search still finds it by "community plans". Early access only until PR 5: the route
 exists, the page shows `SupportersFirstNote` without `account.early_access` or on the API's
 403, and it is noindex and out of `prerenderRoutes.ts` and the sitemap, like Rankings.
 Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Navbar`).
@@ -2781,11 +2784,12 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
   (`usePlanFeed` under the same `["gallery", "feed"]` prefix, so `patchPost` reaches it).
 - Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
   its keys: the account page's list and the profile card hold both kinds.
-- **The way in** (decisions 1 and 11): a "Community plans" button on the Plans bar
-  (`PlanSwitcher`, icon only below 40rem of bar), and "Post this plan" in the plan menu with
-  a "Posted" mark from `post_public_id`; both early access only, and the item hidden on an
-  API without the field. The page's heading has "My plans" and "Post a plan" (the open plan).
-  The share card links "Browse community plans" under the same gate.
+- **The way in** (decisions 1 and 11): a "Pull Plan Library" button on the Plans bar
+  (`PlanSwitcher`; "Library" below 40rem of bar, never a bare icon, which nobody found on a
+  phone), and "Post this plan" in the plan menu with a "Posted" mark from `post_public_id`;
+  both early access only, and the item hidden on an API without the field. The page's
+  heading has "My plans" and "Post a plan" (the open plan). The share card links "Browse the
+  Pull Plan Library" under the same gate.
 - **Posting** (`PostPlanDialog`, the `PublishDialog` pattern on `GalleryModal`): title,
   About, the three optional picks worded by the feed's `filters`, the range shown never
   asked, "Include my notes" and "Include my income" UNTICKED ON EVERY OPEN, the agree box,

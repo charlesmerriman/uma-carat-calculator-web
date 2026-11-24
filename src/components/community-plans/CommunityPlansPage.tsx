@@ -62,7 +62,7 @@ export const CommunityPlansPage = () => {
 	if (!auth?.account?.early_access) {
 		return (
 			<div className={CONTAINER}>
-				<SupportersFirstNote feature="Community plans are" />
+				<SupportersFirstNote feature="The Pull Plan Library is" />
 			</div>
 		)
 	}
@@ -142,7 +142,7 @@ function CommunityPlansBody() {
 	if (refused) {
 		return (
 			<div className={CONTAINER}>
-				<SupportersFirstNote feature="Community plans are" />
+				<SupportersFirstNote feature="The Pull Plan Library is" />
 			</div>
 		)
 	}
@@ -155,7 +155,7 @@ function CommunityPlansBody() {
 		<div className={CONTAINER}>
 			<header className="flex flex-wrap items-start gap-x-4 gap-y-2">
 				<div className="mr-auto min-w-0">
-					<h1 className="font-display text-xl font-bold text-gray-100 sm:text-2xl">Community plans</h1>
+					<h1 className="font-display text-xl font-bold text-gray-100 sm:text-2xl">Pull Plan Library</h1>
 					<p className="mt-1 text-sm text-gray-400">
 						Pull plans other players have posted. Open one to see every banner and what your own resources would cover, then
 						copy it or take single banners.
@@ -270,7 +270,7 @@ function FeedList({ feed, isPending, isError, onRetry, openId, onToggle, onClear
 	if (isError && !feed) {
 		return (
 			<div className="card-panel flex flex-col items-start gap-3 p-4 text-sm text-gray-300" role="alert">
-				Community plans didn't load.
+				The Pull Plan Library didn't load.
 				<button type="button" onClick={onRetry} className={SECONDARY_BUTTON}>
 					Try again
 				</button>

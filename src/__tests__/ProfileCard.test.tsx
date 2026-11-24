@@ -93,7 +93,7 @@ describe("ProfileCard", () => {
 		})
 		show()
 		expect(await screen.findByRole("link", { name: /F2P road/ })).toHaveAttribute("href", "/app/plans?post=Pl4nP0st")
-		expect(screen.getByRole("heading", { name: "Community plans" })).toBeTruthy()
+		expect(screen.getByRole("heading", { name: "Pull Plan Library" })).toBeTruthy()
 		expect(screen.queryByText("No gallery teams yet.")).toBeNull()
 	})
 

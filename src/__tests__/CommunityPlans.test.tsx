@@ -225,14 +225,14 @@ afterEach(() => {
 describe("the gate", () => {
 	it("shows the supporters-first note without early access, and asks for nothing", () => {
 		renderPage({ earlyAccess: false })
-		expect(screen.getByText(/Community plans are for our Patreon supporters/)).toBeInTheDocument()
+		expect(screen.getByText(/The Pull Plan Library is for our Patreon supporters/)).toBeInTheDocument()
 		expect(planFeedFetch).not.toHaveBeenCalled()
 	})
 
 	it("shows the same note when the server refuses", async () => {
-		vi.mocked(planFeedFetch).mockImplementation(() => json({ error: "Community plans are open to supporters first." }, 403))
+		vi.mocked(planFeedFetch).mockImplementation(() => json({ error: "The Pull Plan Library is open to supporters first." }, 403))
 		renderPage()
-		expect(await screen.findByText(/Community plans are for our Patreon supporters/)).toBeInTheDocument()
+		expect(await screen.findByText(/The Pull Plan Library is for our Patreon supporters/)).toBeInTheDocument()
 	})
 })
 

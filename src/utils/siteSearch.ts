@@ -92,7 +92,7 @@ export function pageEntries(earlyAccess: boolean): SearchEntry[] {
 		page("Legend Races", "/app/legend-races", "daily"),
 		page("PvP", "/app/pvp", "guides teams gallery champions meeting league of heroes"),
 		...(earlyAccess ? [page("Rankings", "/app/rankings", "most used")] : []),
-		...(earlyAccess ? [page("Community plans", "/app/plans", "posted pull plans copy browse")] : []),
+		...(earlyAccess ? [page("Pull Plan Library", "/app/plans", "community plans posted pull plans copy browse")] : []),
 		page("Encyclopedia", UMA_LIST_PATH, "umas support cards skills characters wiki"),
 		page("Skills", "/app/skills", "encyclopedia"),
 		page("Collection", "/app/collection", "veterans owned cards history"),

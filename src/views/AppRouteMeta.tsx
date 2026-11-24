@@ -82,7 +82,7 @@ const META: Record<AppPath, RouteMeta> = {
 	// Early access only for now: noindex below, and not prerendered (PR 5 of
 	// notes/pull-plan-database-plan.md opens it).
 	"/app/plans": {
-		title: "Community Plans",
+		title: "Pull Plan Library",
 		description: "Uma Musume pull plans other players have posted, ranked and filtered by budget and play style. Copy one or take single banners.",
 	},
 	// The Encyclopedia's three lists name it in the title and the description:

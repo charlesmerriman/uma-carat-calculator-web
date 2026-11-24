@@ -339,14 +339,14 @@ describe('PlanSwitcher', () => {
 
 		it('offers neither the button nor the menu item without early access', async () => {
 			withAccess(false)
-			expect(screen.queryByRole('link', { name: 'Community plans' })).toBeNull()
+			expect(screen.queryByRole('link', { name: 'Pull Plan Library' })).toBeNull()
 			await openOptions()
 			expect(screen.queryByRole('menuitem', { name: /Post this plan/ })).toBeNull()
 		})
 
 		it('puts the way in on the bar and "Post this plan" in the menu', async () => {
 			withAccess(true)
-			expect(screen.getByRole('link', { name: 'Community plans' })).toHaveAttribute('href', '/app/plans')
+			expect(screen.getByRole('link', { name: 'Pull Plan Library' })).toHaveAttribute('href', '/app/plans')
 			await openOptions()
 			const item = screen.getByRole('menuitem', { name: 'Post this plan' })
 			expect(within(item).queryByText('Posted')).toBeNull()
@@ -372,7 +372,7 @@ describe('PlanSwitcher', () => {
 			withAccess(true)
 			await openOptions()
 			await userEvent.click(screen.getByRole('menuitem', { name: 'Post this plan' }))
-			expect(screen.getByRole('dialog', { name: 'Post this plan to Community plans' })).toBeInTheDocument()
+			expect(screen.getByRole('dialog', { name: 'Post this plan to the Pull Plan Library' })).toBeInTheDocument()
 		})
 	})
 })

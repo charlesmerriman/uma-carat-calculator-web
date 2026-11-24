@@ -35,10 +35,10 @@ import { PostPlanDialog } from "../community-plans/PostPlanDialog"
  * (SharedPlanLanding). The face is hidden on an API older than sharing (no
  * `public_id`), the same degrade income_profile_id gets.
  *
- * COMMUNITY PLANS (notes/pull-plan-database-plan.md, decisions 1 and 11).
- * The way in is a "Community plans" button on this bar, beside the plan menu
- * and Share picture; below 40rem of bar it keeps its icon and drops its
- * words. "Post this plan" in the menu opens PostPlanDialog for the open plan,
+ * COMMUNITY PLANS (notes/pull-plan-database-plan.md, decisions 1 and 11;
+ * players see it as the Pull Plan Library since -plan-2.md). The way in is a
+ * button on this bar, beside the plan menu and Share picture; below 40rem of
+ * bar it reads "Library", above it "Pull Plan Library", never a bare icon. "Post this plan" in the menu opens PostPlanDialog for the open plan,
  * and says "Posted" while the plan has a post (`post_public_id`). Both show
  * only with early access until the page opens to everyone (the server checks
  * too), and "Post this plan" is hidden on an API without the field.
@@ -540,15 +540,18 @@ export const PlanSwitcher = ({ actions }: { actions?: ReactNode }) => {
 			</button>
 
 			{earlyAccess && (
-				// Icon only below 40rem of bar, where the plan dropdown has the row.
+				// Always with words: as a bare icon on a phone nobody found it
+				// (Henry, board 2026-11-23). "Library" below 40rem of bar, where
+				// the plan dropdown shares the row; the full name above it.
 				<Link
 					to="/app/plans"
-					title="Community plans"
-					aria-label="Community plans"
+					title="Pull Plan Library: plans other players have posted"
+					aria-label="Pull Plan Library"
 					className={`${BAR_BUTTON} flex self-center`}
 				>
 					<Users className="h-4 w-4" aria-hidden="true" />
-					<span className="hidden @min-[40rem]:inline">Community plans</span>
+					<span className="@min-[40rem]:hidden">Library</span>
+					<span className="hidden @min-[40rem]:inline">Pull Plan Library</span>
 				</Link>
 			)}
 

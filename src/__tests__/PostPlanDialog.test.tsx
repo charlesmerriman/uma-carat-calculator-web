@@ -108,7 +108,7 @@ describe("PostPlanDialog", () => {
 			include_notes: false, include_income: false, confirm_public_identity: true,
 		})
 		await waitFor(() => expect(onClose).toHaveBeenCalled())
-		expect(toast.success).toHaveBeenCalledWith("Your plan is in Community plans.", expect.anything())
+		expect(toast.success).toHaveBeenCalledWith("Your plan is in the Pull Plan Library.", expect.anything())
 	})
 
 	it("starts an update from the post's words and picks, never its two ticks", async () => {
