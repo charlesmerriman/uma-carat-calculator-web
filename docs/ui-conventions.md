@@ -2452,6 +2452,8 @@ opens). One bar at the top switches between them, drawn like the PvP page's view
   shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`,
   opaque.
 - A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
+- **The tabs share the bar's whole width at every size**, one equal grid column each, like
+  the Rankings and PvP rows (owner, 2026-11-24); never bunched at the left.
 
 ## Selectors page (`components/selectors/`)
 
