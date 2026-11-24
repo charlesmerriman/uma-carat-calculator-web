@@ -1,18 +1,20 @@
 import { useRef } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { LogIn } from "lucide-react"
+import { BookOpen, CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Swords, Trophy } from "lucide-react"
+import { isCalculatorScreen } from "../carat-calculator/calculatorTabs"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
 import { Wordmark } from "../Wordmark"
 import { OguriSpinner } from "../OguriSpinner"
+import { ThemePicker } from "./ThemePicker"
 import { TeamDrawerButton } from "./TeamDrawerButton"
-import { SiteMenu } from "./SiteMenu"
-import { navPlacesFor } from "./navPlaces"
+import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
 import { useSiteSearch } from "../../hooks/useSiteSearch"
 import { useNavbarHeight } from "../../hooks/useNavbarHeight"
+import { UMA_LIST_PATH, isEncyclopediaPath } from "../../utils/encyclopediaRoutes"
 
 export const Navbar = () => {
 	const navbarRef = useRef<HTMLDivElement>(null)
@@ -36,20 +38,17 @@ export const Navbar = () => {
 	// a token dropped ELSEWHERE — the calculator's 401 recovery, or a sign-out in
 	// another tab — re-renders this slot, instead of leaving it showing a
 	// signed-in avatar to someone the server no longer recognises. Sign-out
-	// itself lives in SiteMenu now.
+	// itself lives in ProfileMenu now.
 	const { isLoggedIn, account } = useAccount()
 	const siteSearch = useSiteSearch()
-	// The places this reader gets (navPlaces.ts): the same list for the phone
-	// bar and the desktop bar. Rankings is Patreon only for now (owner,
-	// 2026-10-27), so it joins for early access alone. The account is unknown
-	// during the prerender and while it loads, so it appears after load and
-	// never flashes.
-	const places = navPlacesFor({ earlyAccess: Boolean(account?.early_access) })
+	// Rankings is Patreon only for now (owner, 2026-10-27): its item is drawn
+	// for early access alone. The account is unknown during the prerender and
+	// while it loads, so the item appears after load and never flashes.
+	const showRankings = Boolean(account?.early_access)
 
-	// Search + team drawer, grouped so the desktop nav's branches render the
-	// same controls. TeamDrawerButton renders nothing outside app mode. The
-	// theme was a palette button here until 2026-11-24; it is a row of the
-	// menu at the end of the bar now (SiteMenu), which a guest gets too. The projection settings were a gear here until 2026-11-24; they are
+	// Search + team drawer + theme picker, grouped so the desktop nav's branches
+	// render the same controls. TeamDrawerButton renders nothing outside app
+	// mode. The projection settings were a gear here until 2026-11-24; they are
 	// a row of the calculator's Income & Resources panel now
 	// (carat-calculator/ProjectionSettings.tsx), since only the calculator
 	// reads them.
@@ -58,13 +57,30 @@ export const Navbar = () => {
 		<>
 			{searchButton}
 			<TeamDrawerButton />
+			<ThemePicker />
+		</>
+	)
+	// The same buttons on a phone. The gear held the theme too until 2026-11-18
+	// (web #275, to give the wordmark room); the owner wanted them as separate
+	// menus, so the palette is its own button here as well.
+	const phoneControls = (
+		<>
+			{searchButton}
+			<TeamDrawerButton />
+			<ThemePicker />
 		</>
 	)
 
-	// A place stays lit on every page inside it: the Calculator on Selectors
-	// and the Pull Plan Library, the Timeline on Legend Races. Those pages are
-	// switched by the screen's own bar (components/ScreenTabs.tsx), which is why
-	// neither has a tab here any more.
+	// The Calculator screen owns three pages, switched by its own bar
+	// (carat-calculator/CalculatorTabs.tsx, owner 2026-11-24): the calculator,
+	// Selectors and the Pull Plan Library. So Selectors has no tab here any
+	// more, and the Calculator tab stays lit on all three.
+	const isCalculator = isCalculatorScreen(location.pathname)
+	const isTimeline = location.pathname === "/app/timeline"
+	const isLegendRaces = location.pathname === "/app/legend-races"
+	const isPvp = location.pathname === "/app/pvp"
+	const isRankings = location.pathname === "/app/rankings"
+	const isEncyclopedia = isEncyclopediaPath(location.pathname)
 
 	const timerIsGoing = calculatorData?.timerIsGoing ?? false
 	// False once this browser has refused to store the guest's plan.
@@ -87,16 +103,13 @@ export const Navbar = () => {
 	//
 	// Everyone had six tabs once the Encyclopedia opened (2026-11-18), and
 	// early access a seventh (Rankings). Selectors moved into the Calculator
-	// screen's bar and Legend Races into the Timeline's (both 2026-11-24), so
-	// it is four and five now. On a phone the words still hide below 440px:
-	// that breakpoint was fitted to seven tabs and is kept until the phone bar
-	// is rebuilt (notes/navigation-plan.md, PR 4). Loosen it only after
-	// measuring. On desktop every place has its name from 1024px: five names
-	// are 567px wide, where seven needed Encyclopedia and Rankings cut to
-	// icons below 1536px.
+	// screen's own bar on 2026-11-24, so it is five and six now. The words
+	// hide below 440px and the Encyclopedia and Rankings labels below 2xl
+	// (1536px): the breakpoints the seven-tab bar was fitted at, kept because
+	// fewer tabs only gives each more room. Loosen them only after measuring.
 	const mobileLabel = "truncate max-[439px]:sr-only"
-	// Literal strings so Tailwind sees them.
-	const mobileColumns = places.length === 5 ? "grid-cols-5" : "grid-cols-4"
+	const mobileColumns = showRankings ? "grid-cols-6" : "grid-cols-5"
+	const desktopLabel = "sr-only 2xl:not-sr-only"
 	const mobileNavClass = (active: boolean) =>
 		`nav-tab flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
 			active
@@ -144,23 +157,18 @@ export const Navbar = () => {
 		</Link>
 	)
 
-	// The end of the bar outside the app (home mode): the menu, with a Login
-	// link before it for a guest. The menu is there for everyone: it holds
-	// the theme and the info pages as well as the account.
+	// Auth slot shown on the right side when outside the app (home mode): the
+	// avatar menu for a signed-in person, a Login link for a guest.
 	const authButton = isLoggedIn ? (
-		<SiteMenu />
+		<ProfileMenu />
 	) : (
-		<>
-			<Link
-				to="/login"
-				className={NAV_BUTTON}
-			>
-				<LogIn className="w-4 h-4" />
-				{/* Just the icon on a small phone, where the menu button now sits beside it. */}
-				<span className="max-[379px]:sr-only">Login</span>
-			</Link>
-			<SiteMenu />
-		</>
+		<Link
+			to="/login"
+			className={NAV_BUTTON}
+		>
+			<LogIn className="w-4 h-4" />
+			Login
+		</Link>
 	)
 
 	// `sticky top-0` pins the bar wherever the DOCUMENT scrolls: every page on a
@@ -178,10 +186,10 @@ export const Navbar = () => {
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
 			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
-				{/* Tighter gaps under 360px. Signed in, the row held five buttons
-				    (search, team, gear, palette, profile) and at 320px the 6px gaps
-				    pushed the wordmark onto a third line, clipping "Uma". It holds
-				    three now, four for a guest (search, team, sign in, menu). */}
+				{/* Tighter gaps under 360px: signed in, the row held five buttons
+				    until the gear left (four now: search, team, palette, profile),
+				    and at 320px the 6px gaps pushed the wordmark onto a third line,
+				    clipping "Uma". Kept: four is not measured at 320px yet. */}
 				<div className="flex h-14 items-center justify-between gap-2 px-3 min-[360px]:gap-3">
 					<div className="flex min-w-0 items-center">
 						{logo}
@@ -205,14 +213,13 @@ export const Navbar = () => {
 											</button>
 										</div>
 									)}
-									{navControls}
-									<SiteMenu />
+									{phoneControls}
+									<ProfileMenu />
 								</>
 							) : (
 								<>
-									{navControls}
+									{phoneControls}
 									{signInToSyncButton}
-									<SiteMenu />
 								</>
 							)
 						) : (
@@ -224,22 +231,41 @@ export const Navbar = () => {
 					</div>
 				</div>
 
-				{/* The rule spans the bar; the tabs are capped at 32rem and
+				{/* The rule spans the bar; the five tabs are capped at 32rem and
 				    centred. Uncapped, a landscape phone (844px) spread them across
 				    the whole width with wide gaps between small labels; a portrait
 				    phone never reaches the cap. Height unchanged, so the
 				    scroll-padding figures in index.css still hold. */}
 				<div className="border-t border-gray-700 px-2 py-2">
 				<div className={`mx-auto grid max-w-[32rem] gap-1 ${mobileColumns}`}>
-					{places.map((place) => {
-						const isOpen = place.isOpen(location.pathname)
-						return (
-							<Link key={place.id} to={place.to} aria-current={isOpen ? "page" : undefined} className={mobileNavClass(isOpen)} {...prefetchOnIntent}>
-								<place.icon className="h-4 w-4 shrink-0" />
-								<span className={mobileLabel}>{place.label}</span>
-							</Link>
-						)
-					})}
+					<Link to="/app" className={mobileNavClass(isCalculator)} {...prefetchOnIntent}>
+						<CalculatorIcon className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Calculator</span>
+					</Link>
+					<Link to="/app/timeline" className={mobileNavClass(isTimeline)} {...prefetchOnIntent}>
+						<CalendarDays className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Timeline</span>
+					</Link>
+					{/* "Legends" rather than the desktop "Legend Races": four tabs share
+					    the bar, and the longer label would not fit a 320px screen. */}
+					<Link to="/app/legend-races" className={mobileNavClass(isLegendRaces)} {...prefetchOnIntent}>
+						<Trophy className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Legends</span>
+					</Link>
+					<Link to="/app/pvp" className={mobileNavClass(isPvp)} {...prefetchOnIntent}>
+						<Swords className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>PvP</span>
+					</Link>
+					<Link to={UMA_LIST_PATH} className={mobileNavClass(isEncyclopedia)} {...prefetchOnIntent}>
+						<BookOpen className="h-4 w-4 shrink-0" />
+						<span className={mobileLabel}>Encyclopedia</span>
+					</Link>
+					{showRankings && (
+						<Link to="/app/rankings" className={mobileNavClass(isRankings)} {...prefetchOnIntent}>
+							<ListOrdered className="h-4 w-4 shrink-0" />
+							<span className={mobileLabel}>Rankings</span>
+						</Link>
+					)}
 				</div>
 				</div>
 			</nav>
@@ -268,18 +294,37 @@ export const Navbar = () => {
 
 					{/* Center: Nav links */}
 					<div className="nav-tabs flex items-center justify-center gap-0.5 rounded-xl border border-gray-700 bg-gray-800/60 p-1">
-						{places.map((place) => {
-							const isOpen = place.isOpen(location.pathname)
-							return (
-								<Link key={place.id} to={place.to} aria-current={isOpen ? "page" : undefined} className={desktopNavClass(isOpen)} {...prefetchOnIntent}>
-									<place.icon className="h-4 w-4" />
-									{place.label}
-								</Link>
-							)
-						})}
+						<Link to="/app" className={desktopNavClass(isCalculator)} {...prefetchOnIntent}>
+							<CalculatorIcon className="w-4 h-4" />
+							Calculator
+						</Link>
+						<Link to="/app/timeline" className={desktopNavClass(isTimeline)} {...prefetchOnIntent}>
+							<CalendarDays className="w-4 h-4" />
+							Timeline
+						</Link>
+						<Link to="/app/legend-races" className={desktopNavClass(isLegendRaces)} {...prefetchOnIntent}>
+							<Trophy className="h-4 w-4" />
+							Legend Races
+						</Link>
+						<Link to="/app/pvp" className={desktopNavClass(isPvp)} {...prefetchOnIntent}>
+							<Swords className="h-4 w-4" />
+							PvP
+						</Link>
+						{/* Icon only below 2xl: with its label the bar wrapped at 1440px. */}
+						<Link to={UMA_LIST_PATH} className={desktopNavClass(isEncyclopedia)} title="Encyclopedia" {...prefetchOnIntent}>
+							<BookOpen className="h-4 w-4" />
+							<span className={desktopLabel}>Encyclopedia</span>
+						</Link>
+						{/* The last, early access only; an icon below 2xl. */}
+						{showRankings && (
+							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
+								<ListOrdered className="h-4 w-4" />
+								<span className={desktopLabel}>Rankings</span>
+							</Link>
+						)}
 					</div>
 
-					{/* Right: Save indicator + search + team + the menu (and Sign in for a guest) */}
+					{/* Right: Save indicator + settings + theme picker + avatar menu / Login */}
 					<div className="flex items-center justify-end gap-2">
 						{calculatorData ? (
 							isLoggedIn ? (
@@ -298,13 +343,12 @@ export const Navbar = () => {
 										)}
 									</div>
 									{navControls}
-									<SiteMenu />
+									<ProfileMenu />
 								</>
 							) : (
 								<>
 									{navControls}
 									{signInToSyncButton}
-									<SiteMenu />
 								</>
 							)
 						) : (

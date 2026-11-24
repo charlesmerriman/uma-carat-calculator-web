@@ -158,7 +158,7 @@ export const CalculatorProvider = ({ children }: CalculatorProviderProps) => {
 	// With the mode latched, neither can happen: a guest tab only ever writes
 	// the device store and an account tab only ever PATCHes. A tab whose mode
 	// no longer matches the token reloads (the effect below), which is the
-	// same answer SiteMenu gives for a sign-out.
+	// same answer ProfileMenu gives for a sign-out.
 	const loadedAsRef = useRef<"guest" | "account" | null>(null)
 	// The payload the page was built from. Kept so a guest plan changed in
 	// ANOTHER tab can be rebuilt against the same catalogue without a refetch.

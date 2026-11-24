@@ -9,7 +9,8 @@
 
    desktop-nav — the navbar's three-column desktop layout, which is already
    over-full below ~900px (the "Sign in to sync" button wraps to 2-3 lines).
-   That is exactly the landscape-phone band.
+   That is exactly the landscape-phone band. ThemePicker anchors its panel to a
+   navbar button, so it must switch on this same variant and no other.
 
    app-shell — the fixed-height, internally-scrolling desktop shell. It needs
    width AND real vertical room. Applied at 844x390 it produces a ~330px scroll
@@ -52,40 +53,6 @@ html {
 
 	@variant desktop-nav {
 		scroll-padding-top: 4.125rem;
-	}
-}
-
-/* ===== SCREEN BAR OFFSET =====
-   A screen's own bar (components/ScreenTabs.tsx: the Calculator's and the
-   Timeline's) pins under the navbar, so it covers the top of the page the
-   same way. Its height is this one variable, read by the bar itself and by
-   everything that has to clear it:
-
-     - the document, where the document scrolls: the navbar's figure above
-       plus the bar;
-     - the desktop /app shell's own scroller, which the navbar sits outside
-       of, so there it is the bar alone;
-     - a band a page pins beneath the bar (the Timeline's controls,
-       `app-shell:top-(--screen-tabs-h)`).
-
-   Without the two scroll paddings a deep link (a planner row's link to its
-   Timeline card, a campaign strip's link to Selectors) parks its target
-   under the bar. 2.375rem = 20px line + 2 x 8px padding + 2px rule. */
-:root {
-	--screen-tabs-h: 2.375rem;
-}
-
-html:has([data-screen-tabs]) {
-	scroll-padding-top: calc(7.75rem + var(--screen-tabs-h));
-
-	@variant desktop-nav {
-		scroll-padding-top: calc(4.125rem + var(--screen-tabs-h));
-	}
-}
-
-[data-app-scroller]:has(> [data-screen-tabs]) {
-	@variant app-shell {
-		scroll-padding-top: var(--screen-tabs-h);
 	}
 }
 
@@ -566,6 +533,10 @@ html:has([data-screen-tabs]) {
    5. For cards of its own, set --card-shadow (and --color-edge, if the shared
       edge does not suit) in that same block. Never re-skin cards by matching
       utility classes such as `.shadow-md`: see SURFACES above.
+   6. A one-accent theme gets the default family's shapes by itself (THE
+      DEFAULT FAMILY'S ROLES, below). A theme with shapes of its own adds its
+      id to the two exclusion selectors there and to the one in
+      personalityThemes.css.
 */
 
 [data-theme="gold"] {
@@ -1163,6 +1134,81 @@ html:has([data-screen-tabs]) {
 	--tracen-open-line: #2563eb;
 	--tracen-closing-fill: #c2410c;
 	--tracen-closing-line: #9a3412;
+}
+
+/* ===== THE DEFAULT FAMILY'S ROLES =====
+   The twelve themes that are not Tracen or Winning Live (Dark, Gilded,
+   Midnight, Pace, Violet, Teal, Light, Blue, Green, Red, Purple, Pearl) share
+   one set of SHAPES, in personalityThemes.css ("The default family"): raised
+   key controls, a solid tab, a bar behind a section title, kind-coloured add
+   buttons, wells for numbers. One set of rules can serve twelve palettes
+   because a shape rule never names a colour. It names a ROLE, defined here,
+   and each role has a value for dark themes and one for light themes.
+
+   WHY TWO BLOCKS AND NOT GRAY TOKENS IN THE RULES. The light ramp is inverted
+   and not symmetrical: gray-800 is the white card, gray-900 the page, and
+   gray-950 a surface LIGHTER than the page. "One step below the card" is
+   near gray-950 on a dark theme and gray-900 on a light one; a rule written
+   with a raw gray would put a well lighter than its card on six themes.
+
+   BOTH BLOCKS ARE WRAPPED IN :where(), WHICH WEIGHS NOTHING, so a theme sets
+   its own value for a role in its ordinary [data-theme="x"] block, the way it
+   already overrides a gray (Dark sets two). Without :where() this selector
+   would outweigh every theme block and a theme's own value would silently
+   lose. The rules that READ the roles keep their full weight; they have to
+   beat utilities.
+
+   Excluded by name, never listed: a new default theme gets the shapes for
+   free, and a new palette theme adds its id to the exclusion here and in
+   personalityThemes.css.
+
+     --brand-ink         text on a solid brand tab or button
+     --brand-lit         the lit top edge of a solid brand face
+     --key-face / -hover a control's face, and a step on from it on hover
+     --key-line / -hover a control's border
+     --key-lit           a key's lit top edge
+     --key-seat          the line a key sits on
+     --press-filter      how a filled button answers the mouse
+     --well-fill         stat boxes: one step below the card
+     --tabs-well         the tray the navbar's tabs sit in
+     --bar-fill          the bar behind a planner section's title
+     --kind-*-band       the band on an add button and a type tile, from the
+                         theme's own kind colours (so colorblind mode's swap
+                         of those colours carries through by itself)
+
+   The three radii are a step rounder than Tailwind's (8 / 10 / 14px). */
+:where(:root:not([data-theme="tracen"], [data-theme="winning-live"])) {
+	--brand-ink: #000000; /* what `bg-brand text-black` already draws on a dark theme */
+	--brand-lit: rgb(255 255 255 / 35%);
+	--key-face: var(--color-gray-700);
+	--key-face-hover: var(--color-gray-600);
+	--key-line: var(--color-gray-600);
+	--key-line-hover: var(--color-gray-500);
+	--key-lit: rgb(255 255 255 / 7%);
+	--key-seat: rgb(0 0 0 / 50%);
+	--press-filter: brightness(1.1);
+	--well-fill: color-mix(in oklab, var(--color-gray-900) 65%, var(--color-gray-800));
+	--tabs-well: var(--color-gray-950);
+	--bar-fill: var(--color-gray-700);
+	--kind-uma-band: color-mix(in oklab, var(--color-type-uma) 45%, white);
+	--kind-support-band: color-mix(in oklab, var(--color-type-support) 45%, white);
+	--kind-step-up-band: color-mix(in oklab, var(--color-type-step-up) 45%, white);
+	--radius-md: 0.5rem;
+	--radius-lg: 0.625rem;
+	--radius-xl: 0.875rem;
+}
+
+:where(:root:not([data-theme="tracen"], [data-theme="winning-live"])[data-theme-mode="light"]) {
+	--brand-ink: var(--light-button-ink);
+	--brand-lit: rgb(255 255 255 / 22%);
+	--key-lit: rgb(255 255 255 / 90%);
+	--key-seat: color-mix(in srgb, var(--color-gray-300) 45%, transparent);
+	--press-filter: brightness(0.96);
+	--well-fill: var(--color-gray-900);
+	--tabs-well: var(--color-gray-700);
+	--kind-uma-band: color-mix(in oklab, var(--color-type-uma-ink) 55%, var(--color-type-uma));
+	--kind-support-band: color-mix(in oklab, var(--color-type-support-ink) 55%, var(--color-type-support));
+	--kind-step-up-band: color-mix(in oklab, var(--color-type-step-up-ink) 55%, var(--color-type-step-up));
 }
 
 /* ===== PAGE GLOW =====

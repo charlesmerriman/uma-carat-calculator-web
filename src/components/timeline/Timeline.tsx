@@ -1002,16 +1002,10 @@ export const Timeline = () => {
 			    darker band against the page, but 60% of a banner card would show
 			    through it once cards start passing underneath. The two colors are
 			    within a few percent of each other on every theme, so nothing visibly
-			    changes at rest. z-30 sits above the cards, below FloatingBackToTop.
-
-			    It pins UNDER the Timeline screen's bar (Timeline, Legend Races;
-			    components/ScreenTabs.tsx), which pins at this scroller's top, so
-			    its `top` is that bar's height (--screen-tabs-h, index.css). At
-			    top-0 the two would stack on the same line and this one, later in
-			    the page, would cover the tabs. */}
+			    changes at rest. z-30 sits above the cards, below FloatingBackToTop. */}
 			<div
 				ref={controlsRef}
-				className="tl-bar border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-(--screen-tabs-h) app-shell:z-30 app-shell:bg-gray-950"
+				className="tl-bar border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950"
 			>
 				{/* Below lg (phones AND tablets), two compact rows and a caption:
 				    the two toggles side by side, then the filter beside the search,

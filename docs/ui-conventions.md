@@ -90,6 +90,51 @@ mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
 
+### The default family: one set of shapes for twelve themes
+
+Every theme that is not Winning Live or Tracen (Dark, Gilded, Midnight, Pace, Violet, Teal,
+Light, Blue, Green, Red, Purple, Pearl) shares one set of shapes (2026-11-24; the owner:
+"the other themes that aren't tracen or winning live will need these changes too"). They are
+the first section of `src/personalityThemes.css`, "The default family":
+
+- **A control is a raised key**: a face one step above the card, a lit top edge, a seat.
+- **The navbar's tabs sit in a well**, and the one you are on is solid brand.
+- **A planner section's title sits on a quiet bar** (a pseudo-element behind the words).
+- **The three add-banner buttons are filled in the theme's kind colours**, and the type
+  tiles carry the same band.
+- **Numbers sit in wells**, one step below the card. Carats are the one brand-coloured number.
+- **The Timeline's "Stage banner" is a solid brand button**, and its controls and countdown
+  pill are keys.
+- **Radii are a step rounder**: 8 / 10 / 14px for `md` / `lg` / `xl`.
+
+So the brand is spent in four places (the solid primary button, the tab you are on, carats,
+links) and is no longer the outline of everything.
+
+**How one set of rules draws twelve palettes: role tokens.** A family rule never names a
+colour. It names a role (`--brand-ink`, `--key-face`, `--key-line`, `--key-lit`,
+`--key-seat`, `--well-fill`, `--tabs-well`, `--bar-fill`, `--kind-*-band`, `--press-filter`),
+and `index.css` ("The default family's roles") gives each role a value for dark themes and
+one for light themes. Two blocks and not raw grays, because the light ramp is inverted and
+not symmetrical: `gray-950` is LIGHTER than the page there, so "one step below the card"
+is a different gray on each side.
+
+- **A theme sets its own value for a role in its ordinary `[data-theme="x"]` block.** That
+  works only because both role blocks are wrapped in `:where()`, which weighs nothing.
+  Unwrapped, the family's selector would outweigh every theme block and a theme's own value
+  would silently lose. Dark sets two roles this way.
+- **The rules are scoped by exclusion**, `:root:not([data-theme="tracen"],
+  [data-theme="winning-live"])`, written out on every rule. A new one-accent theme gets the
+  shapes for free; a new palette theme adds its id to the exclusion (three places: the two
+  role blocks and the rules). Never bare rules for the palette themes to override: Winning
+  Live has no `.planner-section-title::before`, so a bare bar would leak into it.
+- **Every repainted control restates its hover and its focus.** A rule there is unlayered,
+  so it beats the element's own `hover:` and `focus:` utilities on any property it sets.
+- `timelineCss.test.ts` fails if a family rule drops the scope or names a colour.
+
+A change to these shapes is checked with the geometry check (`docs/timeline.md`): `--boxes`
+on the themes it paints (paint may change, no box may move), and plain zero on Tracen and
+Winning Live.
+
 ### The palette themes: Winning Live and Tracen
 
 Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
@@ -127,8 +172,8 @@ three rules, which hold for any later theme of this kind:
    `site-navbar`, `nav-tabs`, `nav-tab` / `nav-tab--active`, `nav-control`,
    `wordmark-second`, `planner-panel-title`, `planner-section-title`, `income-value` (with
    `data-income` on its tile), `add-banner-button--{uma,support,step-up}`, `hero-cta`,
-   `forecast-shortfall`, plus the semantic classes `App.css` already had. The default
-   themes have no rule for any of them. The one utility selector is the precedent
+   `forecast-shortfall`, plus the semantic classes `App.css` already had, and the
+   Timeline's `tl-*` hooks (`docs/timeline.md`). The default family uses the same hooks. The one utility selector is the precedent
    `index.css` set, `.bg-brand.text-black` (the solid brand button).
 3. **Read tokens for anything colorblind mode redraws**, so that mode keeps winning.
 
@@ -251,7 +296,7 @@ being unable to hold either desktop layout.
 
 | Variant | Condition | Governs |
 |---|---|---|
-| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar |
+| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar, and the `ThemePicker` panel's anchoring, which must track the navbar |
 | `app-shell:` | `min-width: 64rem` **and** `min-height: 32rem` | the fixed-height, internally-scrolling app shell in `ApplicationViews` |
 
 The height half of `app-shell:` is the load-bearing part. Applied to a landscape phone,
@@ -889,24 +934,14 @@ because the image is `aria-hidden` and the caller owns the accessible name.
 
 ## The profile menu and the account page
 
-**The last control in the bar is one menu, `components/navbar/SiteMenu.tsx`, for everything
-that is not a place** (owner, 2026-11-24; `notes/navigation-plan.md`, PR 2; it was
-`ProfileMenu`, signed-in only). It holds the account rows, a **Theme** row that names the
-current theme and opens the picker in place (`navbar/ThemeOptions.tsx`, the old palette
-button's panel; a pick does not close the menu), and **About, FAQ, Changelog, Feedback**,
-which only the footer linked before. **A guest gets it too**, behind a plain menu button
-("Menu" beside the icon from `desktop-nav:` up) next to the Sign in button: its first row is
-"Sign in to sync" with the sentence the bar's button keeps in its tooltip, so a phone can
-read it. A new non-place (a setting, a link) goes in this menu, never back in the bar.
-
-Signed in, its trigger is unchanged: a
+Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: a
 pill (`NAV_PROFILE_TRIGGER` in `navStyles.ts`) with the account's avatar as its
 left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
 opening a menu with **Account**, **Collection** (since 2026-10-26) and **Sign out** (since 2026-09-12; sign-out used
 to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
 `desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
 is already save + theme + this. A guest still sees the Login link. The
-menu closes on an outside press, Escape (focus returns to the trigger) and a link, and is always the
+menu is the same popover idiom as ThemePicker and is always the
 LAST control, so right-anchoring never runs it off a narrow screen.
 
 **The name is the one they chose, else the handle.** `account.display_name`
@@ -919,7 +954,7 @@ so the pill widens once rather than jumping from a placeholder.
 `Avatar.tsx` shows `account.avatar_url` — the server sends the first oshi's art,
 `null` until they pick one — and on `null` or a broken image draws the quiet
 default: a muted `UserRound` silhouette on a `bg-gray-700` rounded square,
-styled like the icon buttons beside it so it reads as one
+styled like the settings and theme icon buttons beside it so it reads as one
 more control. The same default for everyone and for the loading state, on
 purpose: the avatar is only ever shown to its owner, so two empty accounts have
 no reason to look different, and the initials-on-a-hue circle it replaced
@@ -1145,8 +1180,7 @@ its rules loads by itself whenever a session opens the folder (the notes repo's
 
 ## Legend Races page (`components/legend-races/`)
 
-`/app/legend-races` is the second page of the Timeline screen, reached from that screen's
-bar (it had a navbar tab of its own until 2026-11-24; see "Screen bars"). It
+`/app/legend-races` is the fourth nav destination ("Legends" in the mobile bar). It
 shows when each batch of umas joins the daily legend races and how long grinding one
 takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 
@@ -1540,8 +1574,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   so a row's numbers always share one line. A blank cell is an en dash.
 - **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
   first global banner start, between the nearest earlier event of either kind and this one.
-- **The mobile bar has four tabs, five with Rankings** (`navbar/navPlaces.ts`): labels are
-  10px and hide (sr-only) below 440px, where the icons carry the bar.
+- **The mobile bar has five tabs**: labels are 10px and hide (sr-only) below 360px, where
+  the icons carry the bar. Checked at 375px and 320px on 2026-10-13.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
@@ -2191,9 +2225,11 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
   colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
   components only.
-- **The navbar**: the Encyclopedia is everyone's fourth place since Selectors and Legend
-  Races moved into their screens' bars (2026-11-24), and Rankings the fifth for early
-  access. Its name shows at every desktop width now; see "Screen bars".
+- **The navbar**: the Encyclopedia is everyone's fifth tab since Selectors moved into the
+  Calculator screen's bar (2026-11-24), and Rankings the sixth for early access. Both counts
+  keep the breakpoints the seven-tab bar was fitted at (icons only below 440px on a phone;
+  the Encyclopedia and Rankings labels are icons below 1536px): fewer tabs only gives each
+  more room, and the looser fit was never measured.
 - **The catalogue is 106 KB on the wire** and the links and cards need it
   (`useEncyclopediaHrefs`). `HoverCardLayer` sits on every `/app` page, so it skips the load
   where no tile can open a card (`pageDrawsHoverCards`: the calculator and Selectors), and
@@ -2469,42 +2505,22 @@ page, although only the calculator reads these settings.
 - A guest's "Clear plan and start over" lives under the tiles, two presses, as it did in
   the popover.
 
-## Screen bars (`components/ScreenTabs.tsx`) and the navbar's places
+## Calculator screen bar (`carat-calculator/CalculatorTabs.tsx`)
 
-**The navbar lists places; a place with more than one page gets a screen bar under it**
-(owner, 2026-11-24; `notes/navigation-plan.md`). Seven navbar tabs were more than a phone
-could name, and two of them were icons without a word below 1536px on a desktop.
+The Calculator screen owns three pages (owner, 2026-11-24): the calculator (`/app`),
+Selectors (`/app/selectors`) and the Pull Plan Library (`/app/plans`, early access until it
+opens). One bar at the top switches between them, drawn like the PvP page's view tabs
+(Henry's ask) but as `NavLink`s, since they are three addresses.
 
-- **The places are `navbar/navPlaces.ts`** (`NAV_PLACES`, `navPlacesFor`): Calculator,
-  Timeline, PvP, Encyclopedia, and Rankings for early access. One list for the phone bar and
-  the desktop bar. Each has an `isOpen(pathname)`, so a place stays lit on every page inside
-  it. A new place is one entry there; something that is not a place (a setting, a link, the
-  theme) goes in the menu (`SiteMenu`), never in the bar.
-- **On desktop every place has its name from 1024px** (five are 567px wide; the wordmark
-  wraps to two lines at 1024px with all five, as it did before). On a phone the names still
-  hide below 440px until the phone bar is rebuilt (the plan's PR 4).
-- **A screen bar is `ScreenTabs`**, fed a list and a one-line wrapper per screen:
-  the Calculator's (`carat-calculator/calculatorTabs.ts` + `CalculatorTabs.tsx`: the
-  calculator `/app`, Selectors `/app/selectors`, the Pull Plan Library `/app/plans`, early
-  access until it opens; web #456) and the Timeline's (`timeline/timelineTabs.ts` +
-  `TimelineTabs.tsx`: the Timeline and Legend Races). Drawn like the PvP page's view tabs
-  (Henry's ask) but as `NavLink`s, since they are separate addresses. A third screen is a
-  list and a wrapper, never a copy of the markup.
-- **AppShell draws a screen's bar above the loading gate**, so the build-time render of the
-  screen's pages has it. A wrapper reads the path and the account only; a gated tab (the
-  Library) joins after the account loads, and the bar's height never changes.
+- **The list is `calculatorTabs.ts`** (`CALCULATOR_TABS`, `calculatorTabsFor`,
+  `isCalculatorScreen`). The navbar asks `isCalculatorScreen` to keep its Calculator tab lit
+  on all three, and has no Selectors tab any more (five tabs, six with Rankings).
+- **AppShell draws it above the loading gate**, so the build-time render of `/app` and
+  `/app/selectors` has it. It reads the path and the account only; the Library tab joins
+  after the account loads, and the bar's height never changes.
 - **Sticky** at `--navbar-h` where the document scrolls (phone), at `0` in the desktop
   shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`,
   opaque.
-- **Its height is one variable, `--screen-tabs-h` (`index.css`), and whatever sits under the
-  bar reads it.** The scroll padding (`html:has([data-screen-tabs])` where the document
-  scrolls, `[data-app-scroller]:has(> [data-screen-tabs])` in the desktop shell) is what
-  lands a deep link below the bar: without it a planner row's link to its Timeline card, or a
-  campaign strip's link to Selectors, parks its target under the bar. A band a page pins
-  beneath the bar takes it as its `top` (the Timeline's controls,
-  `app-shell:top-(--screen-tabs-h)`); at `top-0` the two stack on one line and the later one
-  covers the tabs. Measured 2026-11-24: a Timeline deep link lands where it did before the
-  bar existed, relative to the bands, at 1440px and 390px.
 - A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
 - **The tabs share the bar's whole width at every size**, one equal grid column each, like
   the Rankings and PvP rows (owner, 2026-11-24); never bunched at the left.
@@ -2860,7 +2876,7 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
 - Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
   its keys: the account page's list and the profile card hold both kinds.
 - **The way in is the Calculator screen's bar** (owner, 2026-11-24, replacing decisions 1
-  and 11's Plans bar button): see "Screen bars" below. "Post this plan" in the plan
+  and 11's Plans bar button): see "Calculator screen bar" below. "Post this plan" in the plan
   menu has a "Posted" mark from `post_public_id`; early access only, and hidden on an API
   without the field. The page's heading has "Post a plan" (the open plan) and no "My plans":
   the bar is the way back. The share card links "Browse the Pull Plan Library" under the

@@ -584,9 +584,7 @@ exist, though in practice they cannot: typing in the search box drops the deep l
   A standing `IntersectionObserver` would run every scroll frame of a page holding 250
   image-heavy cards to produce a value wanted once a visit, if ever.
 - **"Topmost" means topmost below the CONTROLS BAND**, which is sticky at the app-shell
-  breakpoint and covers the top of the scrollport. It pins under the Timeline screen's bar
-  (Timeline, Legend Races), so its `top` is `--screen-tabs-h`, never 0: see ui-conventions,
-  "Screen bars". A row is the one being read if any part
+  breakpoint and covers the top of the scrollport. A row is the one being read if any part
   of it is still below that line — hence `bottom`, not `top`: someone halfway down a tall
   banner card is reading that card, not the one after it.
 - **The row is put back where it was, not at the top.** `useFocusScroll`'s optional
