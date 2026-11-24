@@ -15,7 +15,7 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { ChevronDown, Handshake, Heart, Plus, Star, UserPlus, X } from "lucide-react"
+import { ChevronDown, Handshake, Heart, Plus, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { aptitudeKeysForEvent, aptitudeLetter } from "../../utils/courseAptitude"
@@ -327,7 +327,7 @@ function Tile({
 	shape = "square",
 	card,
 	framed = false,
-	large = false,
+	large: _large = false,
 	disabled = false,
 	disabledHint,
 	starred = false,
@@ -410,13 +410,14 @@ function Tile({
 						empty
 					)}
 				</button>
+				{/* The guide's pick: an edge around the box, nothing on the art (Daptrius, 2026-11-20). */}
 				{starred && (
 					<span
-						className={`pointer-events-none absolute left-1 top-1 flex items-center justify-center rounded-full bg-gray-950/85 ${large ? "h-6 w-6" : "h-5 w-5"}`}
+						role="img"
+						aria-label="Recommended by the guide"
 						title="Recommended by the guide"
-					>
-						<Star className={`fill-highlight text-highlight ${large ? "h-3.5 w-3.5" : "h-3 w-3"}`} aria-label="Recommended by the guide" />
-					</span>
+						className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${shape === "card" ? "rounded-[6%/4.5%]" : "rounded-[10.75%]"}`}
+					/>
 				)}
 				<ReleaseFlag status={flag} />
 				{badge && (
