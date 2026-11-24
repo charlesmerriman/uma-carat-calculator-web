@@ -90,6 +90,51 @@ mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
 
+### The default family: one set of shapes for twelve themes
+
+Every theme that is not Winning Live or Tracen (Dark, Gilded, Midnight, Pace, Violet, Teal,
+Light, Blue, Green, Red, Purple, Pearl) shares one set of shapes (2026-11-24; the owner:
+"the other themes that aren't tracen or winning live will need these changes too"). They are
+the first section of `src/personalityThemes.css`, "The default family":
+
+- **A control is a raised key**: a face one step above the card, a lit top edge, a seat.
+- **The navbar's tabs sit in a well**, and the one you are on is solid brand.
+- **A planner section's title sits on a quiet bar** (a pseudo-element behind the words).
+- **The three add-banner buttons are filled in the theme's kind colours**, and the type
+  tiles carry the same band.
+- **Numbers sit in wells**, one step below the card. Carats are the one brand-coloured number.
+- **The Timeline's "Stage banner" is a solid brand button**, and its controls and countdown
+  pill are keys.
+- **Radii are a step rounder**: 8 / 10 / 14px for `md` / `lg` / `xl`.
+
+So the brand is spent in four places (the solid primary button, the tab you are on, carats,
+links) and is no longer the outline of everything.
+
+**How one set of rules draws twelve palettes: role tokens.** A family rule never names a
+colour. It names a role (`--brand-ink`, `--key-face`, `--key-line`, `--key-lit`,
+`--key-seat`, `--well-fill`, `--tabs-well`, `--bar-fill`, `--kind-*-band`, `--press-filter`),
+and `index.css` ("The default family's roles") gives each role a value for dark themes and
+one for light themes. Two blocks and not raw grays, because the light ramp is inverted and
+not symmetrical: `gray-950` is LIGHTER than the page there, so "one step below the card"
+is a different gray on each side.
+
+- **A theme sets its own value for a role in its ordinary `[data-theme="x"]` block.** That
+  works only because both role blocks are wrapped in `:where()`, which weighs nothing.
+  Unwrapped, the family's selector would outweigh every theme block and a theme's own value
+  would silently lose. Dark sets two roles this way.
+- **The rules are scoped by exclusion**, `:root:not([data-theme="tracen"],
+  [data-theme="winning-live"])`, written out on every rule. A new one-accent theme gets the
+  shapes for free; a new palette theme adds its id to the exclusion (three places: the two
+  role blocks and the rules). Never bare rules for the palette themes to override: Winning
+  Live has no `.planner-section-title::before`, so a bare bar would leak into it.
+- **Every repainted control restates its hover and its focus.** A rule there is unlayered,
+  so it beats the element's own `hover:` and `focus:` utilities on any property it sets.
+- `timelineCss.test.ts` fails if a family rule drops the scope or names a colour.
+
+A change to these shapes is checked with the geometry check (`docs/timeline.md`): `--boxes`
+on the themes it paints (paint may change, no box may move), and plain zero on Tracen and
+Winning Live.
+
 ### The palette themes: Winning Live and Tracen
 
 Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
@@ -127,8 +172,8 @@ three rules, which hold for any later theme of this kind:
    `site-navbar`, `nav-tabs`, `nav-tab` / `nav-tab--active`, `nav-control`,
    `wordmark-second`, `planner-panel-title`, `planner-section-title`, `income-value` (with
    `data-income` on its tile), `add-banner-button--{uma,support,step-up}`, `hero-cta`,
-   `forecast-shortfall`, plus the semantic classes `App.css` already had. The default
-   themes have no rule for any of them. The one utility selector is the precedent
+   `forecast-shortfall`, plus the semantic classes `App.css` already had, and the
+   Timeline's `tl-*` hooks (`docs/timeline.md`). The default family uses the same hooks. The one utility selector is the precedent
    `index.css` set, `.bg-brand.text-black` (the solid brand button).
 3. **Read tokens for anything colorblind mode redraws**, so that mode keeps winning.
 
