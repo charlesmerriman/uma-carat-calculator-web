@@ -1585,8 +1585,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   so a row's numbers always share one line. A blank cell is an en dash.
 - **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
   first global banner start, between the nearest earlier event of either kind and this one.
-- **The mobile bar has four tabs, five with Rankings** (`navbar/navPlaces.ts`): labels are
-  10px and hide (sr-only) below 440px, where the icons carry the bar.
+- **The mobile bar has four tabs, five with Rankings** (`navbar/navPlaces.ts`), each with
+  its name at every phone width; see "Screen bars".
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
@@ -2106,8 +2106,7 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   tokens (running, upcoming, ended, predicted) are `@theme`, redrawn for the light themes.
 
 - **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
-  navbar item (both bars; with six phone tabs the labels hide below 390px, and the desktop
-  item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
+  navbar item (both bars, named at every width since 2026-11-24). Every `/rankings/*` route checks `benefits.early_access`
   too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
   in the API's `visits.KNOWN_ROUTES` so landings count.
 - **Tabs, `?view=`**: Guides (default, no parameter), Pull plans (`pull-plans`, behind
@@ -2353,8 +2352,9 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   document scrolls (a phone, a short window), at 0 inside the desktop app shell. Under the
   navbar it sticks at the navbar's MEASURED height, `--navbar-h` on `<html>`
   (`hooks/useNavbarHeight.ts`, a ResizeObserver from `Navbar`): a written-down height was
-  wrong on a phone under 440px, where the tabs' labels go sr-only and the bar is shorter, and
-  left a gap (Daptrius, 2026-11-17). index.css's `scroll-padding-top` numbers are only its
+  wrong on a phone under 440px, where the tabs' labels went sr-only and the bar was shorter, and
+  left a gap (Daptrius, 2026-11-17). On a phone it is the places row alone since 2026-11-24:
+  the wordmark row above it scrolls away. index.css's `scroll-padding-top` numbers are only its
   first-paint fallback. It
   draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
   `#hash` links, so Back leaves the page.
@@ -2526,8 +2526,16 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   it. A new place is one entry there; something that is not a place (a setting, a link, the
   theme) goes in the menu (`SiteMenu`), never in the bar.
 - **On desktop every place has its name from 1024px** (five are 567px wide; the wordmark
-  wraps to two lines at 1024px with all five, as it did before). On a phone the names still
-  hide below 440px until the phone bar is rebuilt (the plan's PR 4).
+  wraps to two lines at 1024px with all five, as it did before).
+- **On a phone the places keep their names too, and only they pin** (owner, 2026-11-24,
+  with a bottom bar deferred so the footer ad is untouched). The bar is two pieces: the
+  wordmark row (search, Team, Sign in, the menu, a waiting save) scrolls away with the page,
+  because the sticky box's `top` is minus that row's `h-14`; the places row under it is
+  what stays, and the only part measured (`data-sticky-navbar`, `--navbar-h`). The cells are
+  sized by their words (`flex-auto`) at 11px, 10px below 360px: five names fit 320px with
+  none cut (measured: 34px for PvP, 76px for Encyclopedia). Pinned, the phone bar is 66px
+  where it was 104px, and `scroll-padding-top` is one figure, 4.125rem, at every width.
+  Change the row's `h-14` and the sticky `top` together.
 - **A screen bar is `ScreenTabs`**, fed a list and a one-line wrapper per screen:
   the Calculator's (`carat-calculator/calculatorTabs.ts` + `CalculatorTabs.tsx`: the
   calculator `/app`, Selectors `/app/selectors`, the Pull Plan Library `/app/plans`, early

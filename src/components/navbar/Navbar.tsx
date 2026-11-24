@@ -75,30 +75,20 @@ export const Navbar = () => {
 	// into a 14px drop shadow (until 2026-10-18) — on a 36px tab that read as a
 	// floating chip.
 	//
-	// Icon ABOVE label since the fourth tab (Legend Races) arrived. Side by
-	// side, measured at 375px, every label truncated: the icon and gap left
-	// 47px for words needing 57-69px. Stacked, at 11px, the longest
-	// ("Calculator", ~63px) fits down to a 320px screen.
+	// Icon ABOVE label since the fourth tab (Legend Races) arrived: side by
+	// side, every label truncated at 375px.
 	//
-	// The fifth tab (PvP) took each cell from about 69px to about 57px at 375px,
-	// so the labels went to 10px ("Calculator" is ~57px there and fits). Below
-	// 360px even that truncates, so the words hide there and the icons carry
-	// the bar; the label stays in the accessibility tree (sr-only).
-	//
-	// Everyone had six tabs once the Encyclopedia opened (2026-11-18), and
-	// early access a seventh (Rankings). Selectors moved into the Calculator
-	// screen's bar and Legend Races into the Timeline's (both 2026-11-24), so
-	// it is four and five now. On a phone the words still hide below 440px:
-	// that breakpoint was fitted to seven tabs and is kept until the phone bar
-	// is rebuilt (notes/navigation-plan.md, PR 4). Loosen it only after
-	// measuring. On desktop every place has its name from 1024px: five names
-	// are 567px wide, where seven needed Encyclopedia and Rankings cut to
-	// icons below 1536px.
-	const mobileLabel = "truncate max-[439px]:sr-only"
-	// Literal strings so Tailwind sees them.
-	const mobileColumns = places.length === 5 ? "grid-cols-5" : "grid-cols-4"
+	// Seven tabs (2026-11-18) were more than a phone could name, so the words
+	// hid below 440px and the bar was seven unlabelled icons. Since Selectors
+	// and Legend Races moved under their places (2026-11-24) it is four tabs,
+	// five with Rankings, and every one keeps its NAME at every phone width
+	// (owner, 2026-11-24: the places stay on top, named, while a bottom bar
+	// waits; notes/navigation-plan.md). Two things make five names fit 320px:
+	// the cells are sized by their words (`flex-auto`), so a short name (PvP)
+	// gives its room to a long one (Encyclopedia) instead of each taking a
+	// fifth, and the words go from 11px to 10px below 360px.
 	const mobileNavClass = (active: boolean) =>
-		`nav-tab flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
+		`nav-tab flex min-w-0 flex-auto flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-1.5 text-[11px] font-semibold transition max-[359px]:text-[10px] ${
 			active
 				? "nav-tab--active border-brand/50 bg-brand/10 text-brand"
 				: "border-transparent text-gray-400 hover:bg-gray-700/70 hover:text-gray-100"
@@ -163,26 +153,36 @@ export const Navbar = () => {
 		</>
 	)
 
-	// `sticky top-0` pins the bar wherever the DOCUMENT scrolls: every page on a
-	// phone, and the home and info pages at any width. On the desktop /app shell
-	// it is inert: the bar sits outside that shell's internal scroller, so it is
-	// already pinned there. It was dropped in May when /app moved to that
-	// scroller, which left the document-scrolled pages with a bar that scrolled
-	// away. html's `scroll-padding-top` (index.css) carries this bar's height so
-	// jump links and deep links land below it rather than under it.
-	// `data-sticky-navbar` is how the PvP page measures it, to pin its own
-	// tabs under it (hooks/usePvpStickyOffsets.ts); its height is --navbar-h
-	// for the Encyclopedia's jump bar (hooks/useNavbarHeight.ts).
+	// The bar is sticky wherever the DOCUMENT scrolls: every page on a phone,
+	// and the home and info pages at any width. On the desktop /app shell it
+	// is inert there: the bar sits outside that shell's internal scroller, so
+	// it is already pinned.
+	//
+	// ON A PHONE ONLY THE PLACES PIN. The row above them (the wordmark, search,
+	// Team, Sign in, the menu) scrolls away with the page: the sticky box's
+	// `top` is minus that row's height, so the box stops when the row has left
+	// the screen and the places sit at the top (owner, 2026-11-24). Scroll up
+	// a little and the row is back. On desktop there is no such row and `top`
+	// is 0. The row's height is its `h-14` (border included: border-box), so
+	// the two numbers change together.
+	//
+	// What is MEASURED is the pinned part alone (`data-sticky-navbar`, the
+	// ref): the PvP page pins its own tabs under it (hooks/usePvpStickyOffsets.ts),
+	// and its height is --navbar-h for the screen bars and the Encyclopedia's
+	// jump bar (hooks/useNavbarHeight.ts). html's `scroll-padding-top`
+	// (index.css) carries the same height, so jump links and deep links land
+	// below it rather than under it.
 	return (
-		<div ref={navbarRef} className="sticky top-0 z-50 shrink-0" data-sticky-navbar="">
+		<div className="sticky -top-14 z-50 shrink-0 desktop-nav:top-0">
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
-			{/* Mobile nav */}
-			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
+			{/* Phone, first row: scrolls away. Not a `site-navbar`: a theme's bar
+			    edge (Winning Live's penlight strip) belongs under the places, the
+			    part that stays. */}
 				{/* Tighter gaps under 360px. Signed in, the row held five buttons
 				    (search, team, gear, palette, profile) and at 320px the 6px gaps
 				    pushed the wordmark onto a third line, clipping "Uma". It holds
 				    three now, four for a guest (search, team, sign in, menu). */}
-				<div className="flex h-14 items-center justify-between gap-2 px-3 min-[360px]:gap-3">
+				<div className="flex h-14 items-center justify-between gap-2 border-b border-gray-700 bg-gray-900 px-3 min-[360px]:gap-3 desktop-nav:hidden">
 					<div className="flex min-w-0 items-center">
 						{logo}
 					</div>
@@ -224,23 +224,23 @@ export const Navbar = () => {
 					</div>
 				</div>
 
-				{/* The rule spans the bar; the tabs are capped at 32rem and
-				    centred. Uncapped, a landscape phone (844px) spread them across
-				    the whole width with wide gaps between small labels; a portrait
-				    phone never reaches the cap. Height unchanged, so the
-				    scroll-padding figures in index.css still hold. */}
-				<div className="border-t border-gray-700 px-2 py-2">
-				<div className={`mx-auto grid max-w-[32rem] gap-1 ${mobileColumns}`}>
+			{/* What stays pinned, and what is measured: the phone's places, or the
+			    whole desktop bar. */}
+			<div ref={navbarRef} data-sticky-navbar="">
+			{/* Phone: the places. Capped at 32rem and centred: uncapped, a landscape
+			    phone (844px) spread them across the whole width with wide gaps
+			    between small labels; a portrait phone never reaches the cap. */}
+			<nav aria-label="Site" className="site-navbar border-b border-gray-700 bg-gray-900 px-2 py-2 desktop-nav:hidden">
+				<div className="mx-auto flex max-w-[32rem] gap-1">
 					{places.map((place) => {
 						const isOpen = place.isOpen(location.pathname)
 						return (
 							<Link key={place.id} to={place.to} aria-current={isOpen ? "page" : undefined} className={mobileNavClass(isOpen)} {...prefetchOnIntent}>
 								<place.icon className="h-4 w-4 shrink-0" />
-								<span className={mobileLabel}>{place.label}</span>
+								<span className="max-w-full truncate">{place.label}</span>
 							</Link>
 						)
 					})}
-				</div>
 				</div>
 			</nav>
 
@@ -316,6 +316,7 @@ export const Navbar = () => {
 					</div>
 				</div>
 			</nav>
+			</div>
 		</div>
 	)
 }
