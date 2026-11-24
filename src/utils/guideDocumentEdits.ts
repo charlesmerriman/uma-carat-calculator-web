@@ -244,6 +244,28 @@ export function clearSlot(doc: Doc, deckIndex: number, slot: number, order = 0):
 	)
 }
 
+/**
+ * Swap two slots of one deck, everything with them: the card, its note and
+ * limit break, its "or" alternatives and the borrow mark all travel together,
+ * because each is a field on the slot's rows (Henry, 2026-11-24: "the notes
+ * and everything also transfer over"). An empty `to` makes it a plain move.
+ *
+ * Only the `slot` numbers change, in place: the rows keep their array
+ * positions, so an error drawn at `decks[i].slots[j]` stays on its row, and
+ * `toPayload` sorts by slot anyway. The borrow mark riding with its card is
+ * deliberate: a slot number is only where a card sits, and moving the
+ * borrowed card must not quietly make another card the borrow.
+ */
+export function swapSlots(doc: Doc, deckIndex: number, from: number, to: number): Doc {
+	if (from === to) return doc
+	const deck = doc.decks[deckIndex]
+	return withSlots(
+		doc,
+		deckIndex,
+		deck.slots.map((row) => (row.slot === from ? { ...row, slot: to } : row.slot === to ? { ...row, slot: from } : row))
+	)
+}
+
 /** Mark one slot as the borrowed card (every row of that slot), and no other. */
 export function setBorrowSlot(doc: Doc, deckIndex: number, slot: number | null): Doc {
 	const deck = doc.decks[deckIndex]
