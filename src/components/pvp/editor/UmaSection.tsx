@@ -44,15 +44,20 @@ export function UmaSection({ style }: { style: MemberStyle }) {
 				<h4 className={SECTION_HEADING}>Recommended umas</h4>
 				<span className={SUBTLE}>Most stars first. Drag within a star group to reorder.</span>
 			</div>
-			{groups.map((group) => (
-				<SortableGroup key={group.stars} ids={group.entries.map(({ i }) => i)} onMove={(from, to) => update((doc) => moveUma(doc, from, to))}>
-					<div className="flex flex-wrap gap-2" role="list" aria-label={`${group.stars} star umas`}>
-						{group.entries.map(({ row, i }) => (
-							<UmaItem key={`${row.uma}`} row={row} index={i} onEdit={() => setEditing(i)} />
-						))}
-					</div>
-				</SortableGroup>
-			))}
+			{/* The star groups left to right, the way the guide draws them (review
+			    item 16, 2026-11-24): a row per group was over 1,000px of scrolling for
+			    four groups. A group still wraps on its own, and drags within itself. */}
+			<div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+				{groups.map((group) => (
+					<SortableGroup key={group.stars} ids={group.entries.map(({ i }) => i)} onMove={(from, to) => update((doc) => moveUma(doc, from, to))}>
+						<div className="flex flex-wrap gap-2" role="list" aria-label={`${group.stars} star umas`}>
+							{group.entries.map(({ row, i }) => (
+								<UmaItem key={`${row.uma}`} row={row} index={i} onEdit={() => setEditing(i)} />
+							))}
+						</div>
+					</SortableGroup>
+				))}
+			</div>
 			<button type="button" className={`${ADD_BUTTON} w-fit`} onClick={() => setPicking(true)}>
 				<Plus className="h-4 w-4" />
 				Add uma
