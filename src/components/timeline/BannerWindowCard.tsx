@@ -126,193 +126,22 @@ const CATEGORY_CHROME: Partial<Record<BannerCategory, CategoryChrome>> = {
 const COLUMN_TILE_CAPACITY = 2
 
 /**
- * THE SUPPORT CAP IS 0.875 OF THE UMA CAP, SO THE TWO PANELS' TILES ARE THE
- * SAME HEIGHT.
+ * WHERE THE LAYOUT IS: `src/timeline.css`, section 5.
  *
- * A layered uma tile is 7/6 of its width tall (the square portrait plus the
- * ear strip, a sixth); a card is 4/3. Equal heights need card = uma × 7/8:
+ * This file says WHICH shape a part has, as an attribute; the stylesheet says
+ * what that shape is, and holds every width, track and cap in one place:
  *
- *                 uma cap   card cap   art height, both
- *   xl            10rem     8.75rem    ~187px
- *   2xl           13.5rem   11.75rem   ~252px (card 11.8125 rounded down)
+ *   the section's row   `tl-row` + data-shape="three" | "support-led" | "pair"
+ *   its art             `tl-art` + data-place="row" | "alone"
+ *   a lone panel        `tl-pair-cell` + data-side, or `tl-lone-panel`
+ *   a panel             `tl-panel` + data-kind, data-layout="column" | "band"
+ *   its tiles           `tl-grid` / `tl-grid-cell`, or `tl-band` / `tl-band-row`
+ *                       / `tl-band-cell`; the tile caps hang off the panel
  *
- * The old caps (7.75 / 9.5rem) were ~25px shorter than a cell, so the slack
- * showed as a wide gutter between the two cards, and the card panel, ~40px
- * shorter than the uma panel beside it, centred its tiles and left a gap above
- * its button. The panels split their width 0.88 : 0.78 (0.886), close enough
- * to 7/8 that when both tiles fill their cells instead of hitting the cap,
- * the heights still land within a few pixels.
- *
- * Column layout only: a band keeps the old caps (bandTileWidthClass), so a
- * full-width row of cards doesn't grow.
+ * They are plain class names because Tailwind only generates a class it finds
+ * spelled out in full: a width built from a shared constant silently produced
+ * no CSS, and the grid fell back to one stacked column.
  */
-const SUPPORT_COLUMN_TILE_WIDTH = "max-w-[8.75rem] 2xl:max-w-[11.75rem]"
-
-/**
- * A BAND IS ONE LINE AT EVERY WIDTH. Nothing about it is breakpoint-driven.
- *
- * The first attempt built the line out of `xl:grid-cols-${n}` classes, which
- * meant the line only existed above 1280px — below that the band fell back to
- * two columns and a ten-card race-prep batch rendered as a 2×5 tower with a
- * gutter of dead space down the middle. It also divided the width by the card
- * count with no floor, so the launch banner's twenty support cards were squeezed
- * to 74px each and their names broke mid-syllable.
- *
- * So the line is a flex row instead, and the card count sets a MINIMUM tile
- * width rather than an exact one:
- *
- *   - each tile grows to an equal share of the row (`flex-1`), so four revival
- *     umas spread across the full width exactly as they do today;
- *   - each tile refuses to shrink past `bandMinWidthClass`, so twenty support
- *     cards stay readable;
- *   - when the minimums don't fit, the row overflows its own `overflow-x-auto`
- *     scroller. Still exactly one line, just one you scroll — and the page body
- *     never scrolls sideways, per the container rule in ui-conventions.
- *
- * The cap lives on the tile and the growth on a wrapper around it, which is what
- * reproduces the grid's `justify-items-center` spread: the wrapper takes its
- * share of the row, the tile sits centered inside it at its natural size.
- */
-const BAND_TILE = "flex flex-1 justify-center"
-
-/**
- * THE ART TRACK IS THE SAME IN EVERY TEMPLATE: `minmax(360px,var(--timeline-art-width))`.
- *
- * `--timeline-art-width` (timeline.css) is the ordinary row's 1.28-of-2.94fr share
- * written as a length, so it is the width the art has always had in that row
- * and now the width it has in every other shape too — the support-led and
- * one-panel rows below, the art-only branch, and the marker cards. The 360px
- * floor is the old track's, kept for the narrow end of xl.
- *
- * Spelled out in full in each template rather than interpolated from a shared
- * constant, because Tailwind finds classes by scanning the source for complete
- * strings: a `${ART_TRACK}` template literal generates no CSS at all, and the
- * grid silently falls back to a single stacked column. (Measured: every
- * ordinary row's art went to the 41rem cap when it was interpolated.)
- */
-
-/**
- * Image | umas | supports. The panels split what the art track leaves, at the
- * same 0.88 : 0.78 weights as before (support-led inverts them), so the
- * ordinary row renders exactly as it did when the art was 1.28fr.
- */
-const SECTION_COLUMNS =
-	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(260px,0.88fr)_minmax(260px,0.78fr)]"
-const SECTION_COLUMNS_SUPPORT_LED =
-	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(200px,0.5fr)_minmax(420px,1.7fr)]"
-/**
- * Image | one panel, for when the other panel has banded away below.
- *
- * The art track, then the rest: art hard left at the shared width, panel hard
- * right in what remains (PAIR_PANEL_CELL). This was two equal halves, which
- * handed the art ~740px and left BANNER_ART's 41rem cap to catch it — about
- * 20px wider than the art in the ordinary row above it, which is exactly the
- * kind of mismatch the shared track exists to end.
- */
-const SECTION_COLUMNS_PAIR =
-	"xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(0,1fr)]"
-
-/**
- * The lone panel's cell in the PAIR shape. It sits hard against ONE edge
- * rather than filling its half, so the cap is what holds it to the width it
- * has in an ordinary three-column row (~438px) instead of ballooning into a
- * 740px box around a single tile.
- *
- * WHICH edge depends on which panel it is, so the panel lands where it sits
- * in the ordinary three-column row: the uma panel is the middle column,
- * immediately right of the art, so it stays LEFT (`mr-auto`) when it's the
- * one left standing. The support panel is the rightmost column, so it stays
- * RIGHT (`ml-auto`) — the uma panel banded away, support didn't, and support
- * should still read as "the far column" rather than drifting toward the art.
- *
- * `grid` so the panel inside still stretches to the row height, as it does when
- * it is the grid item itself. xl-only throughout: below that breakpoint every
- * template collapses to one stacked column, where the panel should still fill
- * the width.
- */
-const PAIR_PANEL_CELL_LEFT = "grid min-w-0 xl:mr-auto xl:w-full xl:max-w-[28rem]"
-const PAIR_PANEL_CELL_RIGHT = "grid min-w-0 xl:ml-auto xl:w-full xl:max-w-[28rem]"
-
-/**
- * BANNER ART IS BOUNDED BY ITS WIDTH, AND THE HEIGHT FOLLOWS.
- *
- * Every banner asset is 16:9, so with only `w-full` the art's height is
- * whatever column template the section happened to land in. That reads fine on
- * the ordinary three-column row — the art gets ~637px, so ~358px tall at the
- * widest the page container goes — but SECTION_COLUMNS_PAIR hands it 1.6 of
- * 2.3fr, i.e. ~1030px, and the same picture renders ~580px tall: one card
- * towering over its neighbours for no reason other than which panel banded
- * away. Below `xl` the grid collapses to one column and it is worse still, the
- * art spanning the full card.
- *
- * THE CAP IS ON THE WIDTH, NOT THE HEIGHT, AND THAT IS NOT INTERCHANGEABLE.
- * `max-h` with `w-full` SQUASHES the art: a percentage width is already
- * definite, so clamping the height just shortens the box and the picture
- * distorts with it (measured: 1030×580 became 1030×368, aspect 1.78 → 2.80).
- * The auto-width rule that would have rescaled the width to match never
- * applies here. Capping the width instead leaves `height: auto` free to track
- * the intrinsic ratio, so the art is always undistorted at any aspect.
- *
- * 41rem/656px is just above the three-column ceiling, so ordinary rows render
- * exactly as they did and only the over-wide shapes clamp — landing them at
- * ~369px tall, i.e. matching the ordinary row instead of dwarfing it. That
- * "just above" is also why the cap alone was not enough: a shape that hit it
- * was still ~20px wider than the ordinary row, so from xl up every shape now
- * sizes its art by `--timeline-art-width` instead, and the cap
- * is the ceiling for the single-column layouts below xl.
- *
- * The art sits HARD LEFT in whatever cell it lands in, so the cap only ever
- * eats into the space on its right. That keeps its left edge on the section's
- * left edge in every template — the ordinary three-column row has no slack to
- * distribute, so centring the capped shapes was the only thing that moved, and
- * it moved them out of line with every other card in the timeline.
- * BANNER_ART_ALONE is the one exception; see its own note.
- *
- * THE 16:9 IS DECLARED, NOT DISCOVERED, AND THAT IS THE POINT.
- * Every banner asset is 16:9 — checked across the live CDN, 1024×576 and
- * 680×383 with no exceptions — so stating the ratio reserves the art's full
- * height before a single byte arrives. Without it a lazy image is 0px tall
- * until it decodes and then snaps to ~369px, so seventy rendered cards grow the
- * document by some 26,000px as you read. That is what used to defeat the
- * planner's deep links: `scrollIntoView` fixes its destination when it is
- * called, and a smooth scroll towards it dragged the viewport past exactly the
- * images whose loading pushed the target further down. See the settle effect
- * in Timeline.tsx for the other half of that fix.
- *
- * `object-contain` is what makes declaring the ratio safe. An asset that is
- * ever NOT 16:9 letterboxes inside the reserved box instead of stretching to
- * fill it — the same distortion the width-cap note above is about, arrived at
- * from the other direction.
- *
- * NO border AND NO shadow, deliberately — both draw the BOX, not the picture.
- * The reserved 16:9 is only a layout device, so any chrome on it outlines
- * whatever `object-contain` didn't fill: letterbox bars, or the transparent
- * margins of a cut-out asset like the scenario art, which is square and fills
- * barely half the width. The shadow is the subtler of the two and outlasted the
- * border — it darkens the card around the box rather than drawing on it, which
- * reads as a raised panel floating behind the art. Chrome belongs to
- * BannerArtPlaceholder, where the box IS the content and its edge is what says
- * "something goes here".
- */
-const BANNER_ART =
-	"block aspect-[16/9] h-auto w-full max-w-[41rem] object-contain rounded-xl"
-
-/**
- * The art-only branch: every panel banded, so the art has a full-width row to
- * itself and nothing beside it. Here there is no column edge to align to, so
- * hard left just reads as a layout bug and the art is centred instead — but
- * at the shared width, not the cap, so it is the same size as the art in the
- * rows around it.
- */
-const BANNER_ART_ALONE = `${BANNER_ART} mx-auto xl:w-[var(--timeline-art-width)]`
-
-/**
- * The art in the ordinary row. From xl it has a column of its own and sits
- * hard left in it. Below xl it spans the card's full width, which on a tablet
- * is wider than the 41rem cap, so it is centred there: hard left left a strip
- * of empty card beside it, while the race cards' art (no cap) filled the row.
- */
-const BANNER_ART_IN_ROW = `${BANNER_ART} mx-auto xl:mx-0`
 
 /**
  * The fields a featured tile actually renders. Both Uma and SupportCard
@@ -518,7 +347,6 @@ function FeaturedTile({
 	item,
 	href,
 	tileAspectClass,
-	tileWidthClass,
 	nameClass,
 	framed,
 	oshi,
@@ -526,7 +354,6 @@ function FeaturedTile({
 	item: FeaturedCard
 	href: string | null
 	tileAspectClass: string
-	tileWidthClass: string
 	nameClass: string
 	framed: boolean
 	oshi: boolean
@@ -567,7 +394,8 @@ function FeaturedTile({
 	// type icon sits flush in its frame's top right corner, where this tile's
 	// 8px curve cut it off (the owner, 2026-11-23, on the live Timeline). Each
 	// frame draws its own corners; the name block rounds the bottom ones.
-	const tileClass = `tl-tile flex h-full w-full min-w-0 flex-col rounded-lg text-left ${tileWidthClass}`
+	// How wide it may grow is the panel's to say (timeline.css, "Tile caps").
+	const tileClass = "tl-tile flex h-full w-full min-w-0 flex-col rounded-lg text-left"
 
 	if (!href) return <div className={tileClass}>{body}</div>
 
@@ -630,24 +458,12 @@ type FeaturePanelProps = {
 	framed?: boolean
 	emptyText: string
 	/**
-	 * Widest a tile grows to in the two-across column. The two panels' caps are
-	 * paired, see SUPPORT_COLUMN_TILE_WIDTH.
-	 */
-	tileWidthClass: string
-	/** Widest a tile grows to in a band. Defaults to `tileWidthClass`. */
-	bandTileWidthClass?: string
-	/**
 	 * The tile art's intrinsic ratio, reserved before the image loads. Uma
 	 * portraits are square (360×360) and support cards are 3:4 (450×600),
 	 * uniformly, so this is a fact about the assets rather than a guess — see
-	 * BANNER_ART for why every image in the timeline has to declare one.
+	 * `.tl-art` in timeline.css for why every image in the timeline declares one.
 	 */
 	tileAspectClass: string
-	/**
-	 * Narrowest a tile shrinks to in a band before the line starts scrolling.
-	 * Unused in column layout, where the two-across grid sets the width.
-	 */
-	bandMinWidthClass: string
 	/** Band is one scrollable line at every width; column stays two-wide. */
 	layout?: "column" | "band"
 	status: BannerCardStatus
@@ -682,10 +498,7 @@ function FeaturePanel({
 	kind,
 	framed = false,
 	emptyText,
-	tileWidthClass,
-	bandTileWidthClass = tileWidthClass,
 	tileAspectClass,
-	bandMinWidthClass,
 	layout = "column",
 	status,
 	actionIcon: ActionIcon,
@@ -694,7 +507,8 @@ function FeaturePanel({
 	freePulls = 0,
 }: FeaturePanelProps) {
 	// Count drives the layout. A narrow column tops out at two tiles across and
-	// grows downwards; a band is always exactly one line — see BAND_TILE.
+	// grows downwards; a band is always exactly one line — see `.tl-band` in
+	// timeline.css.
 	//
 	// There is no row cap and no overflow clip on the cross axis, and that is
 	// deliberate: the panel used to carry `grid-rows-1`, `xl:overflow-hidden` and
@@ -710,8 +524,8 @@ function FeaturePanel({
 	// 15px/two lines "Biwa Hayahide (Christmas)" and "(Mecha)" both truncated to
 	// "Biwa Hayahide…" on a revival featuring both. The old third tier — 11px
 	// with tighter tracking, for the launch banner's twenty support cards — is
-	// gone with the squeeze that forced it; no band tile now renders below
-	// `bandMinWidthClass`.
+	// gone with the squeeze that forced it; no band tile now renders below its
+	// minimum (`--tl-*-band-min`).
 	const nameClass = isBand
 		? "line-clamp-3 text-[0.8125rem]"
 		: "line-clamp-2 text-[0.9375rem]"
@@ -722,7 +536,6 @@ function FeaturePanel({
 				item={item}
 				href={item.game_id ? pageHref(item.game_id) : null}
 				tileAspectClass={tileAspectClass}
-				tileWidthClass={isBand ? bandTileWidthClass : tileWidthClass}
 				nameClass={nameClass}
 				framed={framed}
 				oshi={framed && oshiIds.has(item.id)}
@@ -732,12 +545,8 @@ function FeaturePanel({
 		// In a band the growth sits on a wrapper so the tile keeps its own cap and
 		// stays centered in its share of the line; in a column the tile is the
 		// grid cell itself.
-		return isBand ? (
-			<div key={item.id} className={`${BAND_TILE} ${bandMinWidthClass}`}>
-				{tile}
-			</div>
-		) : (
-			<div key={item.id} className="flex w-full min-w-0 justify-center">
+		return (
+			<div key={item.id} className={isBand ? "tl-band-cell" : "tl-grid-cell"}>
 				{tile}
 			</div>
 		)
@@ -756,7 +565,7 @@ function FeaturePanel({
 	const hasChip = recommended || freePulls > 0
 
 	return (
-		<section data-kind={kind} className={`tl-panel flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
+		<section data-kind={kind} data-layout={layout} className={`tl-panel flex min-w-0 flex-col rounded-xl border px-1.5 py-1.5 ${surfaceClass}`}>
 			{/* `@container` so the free-pulls chip can size itself to THIS line's
 			    width rather than the viewport's — see its note below. Inline-size
 			    containment only stops the line from ever pushing its column wider,
@@ -842,26 +651,13 @@ function FeaturePanel({
 			{hasBanner ? (
 				<div className="flex flex-1 flex-col gap-1.5">
 					{isBand ? (
-						// `pb-1` keeps the tiles' shadow out of the scroller's clip: setting
-						// overflow-x to auto computes overflow-y to auto too, so a band with
-						// no bottom padding shaves the shadow off every tile.
-						<div className="flex-1 overflow-x-auto pb-1">
-							{/* No `justify-*` on purpose. The tiles are flex-1 with the cap on
-							    the inner tile, so the row always fills exactly and there is
-							    never free space to distribute — while `justify-center` on a row
-							    that DOES overflow strands its first tile off the left edge
-							    where no amount of scrolling reaches it. */}
-							<div className="flex items-stretch gap-1.5">{tiles}</div>
+						// One scrollable line: `.tl-band` in timeline.css.
+						<div className="tl-band">
+							<div className="tl-band-row">{tiles}</div>
 						</div>
 					) : (
-						<div
-							// items-stretch: the two tiles in a row share its height, so a
-							// one-line name beside a two-line one still ends level (the
-							// name block takes up the difference).
-							className={`grid flex-1 content-center items-stretch gap-1.5 ${
-								items.length === 1 ? "grid-cols-1" : "grid-cols-2"
-							}`}
-						>
+						// Two across, or one alone: `.tl-grid` in timeline.css.
+						<div className="tl-grid" data-columns={items.length === 1 ? 1 : 2}>
 							{tiles}
 						</div>
 					)}
@@ -1001,11 +797,7 @@ function BannerSection({
 			hasBanner={!!umaBanner}
 			framed
 			emptyText="No Umamusume banner"
-			tileWidthClass="max-w-[10rem] 2xl:max-w-[13.5rem]"
 			tileAspectClass="aspect-square"
-			// 7rem × 9 + gaps still fits the launch banner's umas on one unscrolled
-			// line at 1150px, the narrowest desktop width worth optimising for.
-			bandMinWidthClass="min-w-[7rem]"
 			layout={umaBanded ? "band" : "column"}
 			status={getBannerCardStatus(!!umaBanner, umaExpired, umaPlanned, umaStaged)}
 			actionIcon={Star}
@@ -1027,13 +819,7 @@ function BannerSection({
 			pageHref={cardHref}
 			hasBanner={!!supportBanner}
 			emptyText="No Support Banner"
-			tileWidthClass={SUPPORT_COLUMN_TILE_WIDTH}
-			bandTileWidthClass="max-w-[7.75rem] 2xl:max-w-[9.5rem]"
 			tileAspectClass="aspect-[3/4]"
-			// A race-prep batch's ten cards fit unscrolled from about 1050px up.
-			// The launch banner's twenty scroll on any realistic screen, which is
-			// the intended outcome — 20 across a 1490px card is 68px a tile.
-			bandMinWidthClass="min-w-[6rem]"
 			layout={supportBanded ? "band" : "column"}
 			status={getBannerCardStatus(
 				!!supportBanner,
@@ -1079,12 +865,7 @@ function BannerSection({
 	// `columnPanelCount === 2` implies nothing banded (a banded panel is by
 	// definition not in a column), so the three-column template is only ever
 	// reached by the ordinary case and stays exactly as it was.
-	const artRowColumns =
-		columnPanelCount === 2
-			? chrome?.supportLed
-				? SECTION_COLUMNS_SUPPORT_LED
-				: SECTION_COLUMNS
-			: SECTION_COLUMNS_PAIR
+	const rowShape = columnPanelCount === 2 ? (chrome?.supportLed ? "support-led" : "three") : "pair"
 
 	return (
 		<div className={`flex flex-col ${hasBand ? "gap-3" : "gap-2"}`}>
@@ -1092,21 +873,18 @@ function BannerSection({
 
 			{columnPanelCount > 0 &&
 				(showArt ? (
-					// Below xl every template is one stacked column. With BOTH panels
-					// in columns (two tiles or fewer each, nothing banded) the two
-					// share a row from sm instead, the art spanning above them (design
-					// polish item 21a): stacked on a tablet, a lone uma was a single
-					// portrait centred in a 780px box. Phones keep the stack. Literal
-					// class strings, so Tailwind finds them.
-					<div className={`grid gap-4 xl:items-stretch ${columnPanelCount === 2 ? "sm:grid-cols-2" : ""} ${artRowColumns}`}>
-						<div className={`min-w-0 ${columnPanelCount === 2 ? "sm:col-span-2 xl:col-span-1" : ""}`}>
+					// art | panels. What each shape is, and what it does below xl:
+					// `.tl-row` in timeline.css.
+					<div className="tl-row" data-shape={rowShape}>
+						<div className="tl-row-art">
 							{section.image ? (
 								<img
 									src={section.image}
 									alt={banner.name}
 									loading="lazy"
 									decoding="async"
-									className={BANNER_ART_IN_ROW}
+									className="tl-art"
+									data-place="row"
 								/>
 							) : (
 								<BannerArtPlaceholder />
@@ -1118,7 +896,7 @@ function BannerSection({
 						    the ordinary three-column templates apply and each panel is
 						    the grid item directly. */}
 						{columnPanelCount === 1 ? (
-							<div className={umaInColumn ? PAIR_PANEL_CELL_LEFT : PAIR_PANEL_CELL_RIGHT}>
+							<div className="tl-pair-cell" data-side={umaInColumn ? "left" : "right"}>
 								{umaInColumn ? umaPanel : supportPanel}
 							</div>
 						) : (
@@ -1133,7 +911,7 @@ function BannerSection({
 					// width rather than stretching across a row it is the only
 					// occupant of. Wide enough for two tiles, which is the most a
 					// column ever holds.
-					<div className="w-full max-w-md">
+					<div className="tl-lone-panel" data-shape="panel-only">
 						{umaInColumn && umaPanel}
 						{supportInColumn && supportPanel}
 					</div>
@@ -1149,7 +927,8 @@ function BannerSection({
 					alt={banner.name}
 					loading="lazy"
 					decoding="async"
-					className={BANNER_ART_ALONE}
+					className="tl-art"
+					data-place="alone"
 				/>
 			)}
 

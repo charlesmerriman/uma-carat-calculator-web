@@ -133,28 +133,24 @@ export function RaceEventCard({
 
 				{/*
 				 * The art track is `--timeline-art-width`, the same width the banner
-				 * cards' art has (see timeline.css and BANNER_ART). This used to be the
+				 * cards' art has (`.tl-race-row` in timeline.css). This used to be the
 				 * banner row's 1.28fr weight against one gap instead of two, which
 				 * came out 6px wider than the banners above and below it. The
 				 * side panels (course details, your rewards) take the rest. With
 				 * neither the art sits alone and centred, still at the shared width
 				 * from xl up.
 				 */}
-				<div className={hasSidePanel
-					? "grid gap-4 xl:grid-cols-[minmax(360px,var(--timeline-art-width))_minmax(500px,1fr)] xl:items-stretch"
-					: "mx-auto max-w-[41rem] xl:w-[var(--timeline-art-width)]"}
-				>
+				<div className={hasSidePanel ? "tl-race-row" : "tl-art-frame"}>
 					<div className="min-w-0">
 						{event.image ? (
 							/* 16:9 declared so the box is reserved before the image
-							   loads; object-contain keeps an off-ratio asset
-							   letterboxed rather than stretched. See BANNER_ART. */
+							   loads: `.tl-art` in timeline.css. */
 							<img
 								src={event.image}
 								alt={event.name}
 								loading="lazy"
 								decoding="async"
-								className="aspect-[16/9] h-auto w-full object-contain rounded-xl"
+								className="tl-art"
 							/>
 						) : (
 							<BannerArtPlaceholder />
