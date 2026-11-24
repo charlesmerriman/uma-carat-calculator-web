@@ -26,8 +26,8 @@
 @custom-variant app-shell (@media (min-width: 64rem) and (min-height: 32rem));
 
 /* ===== STICKY NAVBAR OFFSET =====
-   The navbar is `sticky top-0` (components/navbar/Navbar.tsx), so on any page
-   the document scrolls it covers the top of the viewport. scroll-padding-top
+   The navbar is sticky (components/navbar/Navbar.tsx), so on any page the
+   document scrolls it covers the top of the viewport. scroll-padding-top
    tells the browser so: scrollIntoView and #hash jumps then park their target
    below the bar, and each target's own scroll-mt is only the air above it.
 
@@ -35,24 +35,19 @@
    /app shell scrolls an inner div instead, and this does not reach it (nor
    should it: the bar is outside that div).
 
-   Heights, switching on desktop-nav like the navbar itself:
-     mobile  — 56px top row + 1px rule + 65.5px tab row (2 x 8px padding, and
-               48.5px tabs: 16px icon, 2px gap, 16.5px label line, 2 x 6px
-               padding, 2 x 1px border) + 1px bottom border = 122.5px
+   The figure is what STAYS pinned, the same on both layouts:
+     phone   — the places row: 2 x 8px padding, 48.5px tabs (16px icon, 2px
+               gap, 16.5px label line, 2 x 6px padding, 2 x 1px border), and
+               a 1px rule = 65.5px. The wordmark row above it scrolls away
+               (since 2026-11-24), so it is not counted.
      desktop — 64px bar + 1px bottom border = 65px
-   Rounded up a hair. CHANGE THESE IF THE NAVBAR'S HEIGHT CHANGES, or deep
-   links start landing partly under it. The mobile figure is the bar WITH its
-   tab labels: under 440px they go sr-only (Navbar.tsx) and the bar is about
-   17px shorter, so a jump lands that much low there, harmless. The
-   Encyclopedia's jump bar doesn't use these: it sticks at the bar's measured
-   height (--navbar-h, hooks/useNavbarHeight.ts) and keeps these numbers only
-   as its first-paint fallback. */
+   Rounded up a hair. CHANGE THIS IF THE NAVBAR'S HEIGHT CHANGES, or deep
+   links start landing partly under it. The Encyclopedia's jump bar and the
+   screen bars don't use it: they stick at the bar's measured height
+   (--navbar-h, hooks/useNavbarHeight.ts) and keep this number only as
+   their first-paint fallback. */
 html {
-	scroll-padding-top: 7.75rem;
-
-	@variant desktop-nav {
-		scroll-padding-top: 4.125rem;
-	}
+	scroll-padding-top: 4.125rem;
 }
 
 /* ===== SCREEN BAR OFFSET =====
@@ -76,11 +71,7 @@ html {
 }
 
 html:has([data-screen-tabs]) {
-	scroll-padding-top: calc(7.75rem + var(--screen-tabs-h));
-
-	@variant desktop-nav {
-		scroll-padding-top: calc(4.125rem + var(--screen-tabs-h));
-	}
+	scroll-padding-top: calc(4.125rem + var(--screen-tabs-h));
 }
 
 [data-app-scroller]:has(> [data-screen-tabs]) {

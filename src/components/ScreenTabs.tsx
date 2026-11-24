@@ -59,7 +59,7 @@ export function ScreenTabs({ label, tabs }: {
 	tabs: readonly ScreenTab[]
 }) {
 	return (
-		<div data-screen-tabs="" className="sticky top-(--navbar-h,7.75rem) z-30 bg-gray-900 app-shell:top-0">
+		<div data-screen-tabs="" className="sticky top-(--navbar-h,4.125rem) z-30 bg-gray-900 app-shell:top-0">
 			<nav
 				aria-label={label}
 				className={`mx-auto grid h-(--screen-tabs-h) w-[calc(100%-1rem)] max-w-[96rem] gap-1 border-b border-gray-700 sm:w-[calc(100%-2rem)] ${GRID_COLUMNS[tabs.length] ?? "grid-cols-3"}`}
