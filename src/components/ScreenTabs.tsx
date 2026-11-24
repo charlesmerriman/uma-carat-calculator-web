@@ -26,7 +26,9 @@
  * STICKY. Two scrolling set-ups (ApplicationViews, the scroller's comment):
  * on a phone the document scrolls under the sticky navbar, so the bar sticks
  * at the navbar's measured height (--navbar-h, hooks/useNavbarHeight.ts; the
- * written-down figure only for the first paint); in the desktop shell the
+ * written-down figure only for the first paint), plus the phone's wordmark
+ * row while it is shown (--navbar-reveal, hooks/useNavbarReveal.ts); in the
+ * desktop shell the
  * page scrolls inside its own box with the navbar outside it, so the bar
  * sticks at that box's top. Opaque, or the page shows through.
  *
@@ -59,7 +61,7 @@ export function ScreenTabs({ label, tabs }: {
 	tabs: readonly ScreenTab[]
 }) {
 	return (
-		<div data-screen-tabs="" className="sticky top-(--navbar-h,4.125rem) z-30 bg-gray-900 app-shell:top-0">
+		<div data-screen-tabs="" className="sticky top-[calc(var(--navbar-h,4.125rem)_+_var(--navbar-reveal,0px))] z-30 bg-gray-900 app-shell:top-0">
 			<nav
 				aria-label={label}
 				className={`mx-auto grid h-(--screen-tabs-h) w-[calc(100%-1rem)] max-w-[96rem] gap-1 border-b border-gray-700 sm:w-[calc(100%-2rem)] ${GRID_COLUMNS[tabs.length] ?? "grid-cols-3"}`}

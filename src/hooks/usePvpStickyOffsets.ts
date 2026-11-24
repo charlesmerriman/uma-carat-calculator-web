@@ -35,6 +35,7 @@
 
 import { useEffect, type RefObject } from "react"
 import { APP_SCROLLER_SELECTOR } from "./useScrollReset"
+import { NAVBAR_REVEAL_EVENT, navbarRevealPx } from "./useNavbarReveal"
 
 /** Sent on `window` by the course block when its strip docks, leaves or changes height. */
 export const STICKY_CHANGE = "pvp-sticky-change"
@@ -58,7 +59,9 @@ export function usePvpStickyOffsets(
 			// The band is sticky only in the desktop shell (its app-shell:sticky),
 			// which makes its computed position the test for which set-up is live.
 			const shell = getComputedStyle(bandElement).position === "sticky"
-			const line = shell ? bandElement.offsetHeight : (navbar?.offsetHeight ?? 0)
+			// Outside the shell the line is the navbar's pinned part, plus the phone's
+			// wordmark row while scrolling up has brought it back (useNavbarReveal).
+			const line = shell ? bandElement.offsetHeight : (navbar?.offsetHeight ?? 0) + navbarRevealPx()
 			const stuck = document.querySelector<HTMLElement>("[data-course-stuck]")?.offsetHeight ?? 0
 			const top = line + stuck
 			// The shell's scroller (views/ApplicationViews.tsx); the document otherwise.
@@ -77,10 +80,12 @@ export function usePvpStickyOffsets(
 		for (const element of [bandElement, tabsElement, navbar]) if (element) observer?.observe(element)
 		window.addEventListener("resize", update)
 		window.addEventListener(STICKY_CHANGE, update)
+		window.addEventListener(NAVBAR_REVEAL_EVENT, update)
 		return () => {
 			observer?.disconnect()
 			window.removeEventListener("resize", update)
 			window.removeEventListener(STICKY_CHANGE, update)
+			window.removeEventListener(NAVBAR_REVEAL_EVENT, update)
 		}
 	}, [root, band, tabs, hasTabs])
 }
