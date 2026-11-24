@@ -5,6 +5,7 @@
  */
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { MemoryRouter } from "react-router-dom"
 import CourseLayersMenu from "../components/course/CourseLayersMenu"
 import CourseSection from "../components/course/CourseSection"
 import { setAccelsOpen, setCourseFocus, setCourseLayers, setStickyMap, setStuckView, useVeteranPicks } from "../services/courseMapStore"
@@ -275,6 +276,16 @@ describe("the course map's layers", () => {
 		expect(box).not.toBeChecked()
 		expect(box).toBeDisabled()
 		expect(screen.getByText("Sign in to show your team's veterans.")).toBeInTheDocument()
+	})
+
+	it("makes a guest's Sign in a link that brings them back", () => {
+		render(
+			<MemoryRouter initialEntries={["/app/pvp?event=cm-22"]}>
+				<CourseLayersMenu signedIn={false} veteransNote={null} />
+			</MemoryRouter>,
+		)
+		fireEvent.click(screen.getByRole("button", { name: "Layers" }))
+		expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
 	})
 })
 
