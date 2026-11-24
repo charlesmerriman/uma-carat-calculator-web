@@ -1833,24 +1833,19 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   with neither half is left out. Editor values that don't parse show as typed.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
-- **Five views under the header, `?view=`**: Recommendations (the guide, default, no
+- **Four views under the header, `?view=`**: Recommendations (the guide, default, no
   parameter), My team (`team`, the builder), CM Runs (`runs`, the player's logged tickets;
-  see "CM Runs view" below), Gallery (`gallery`, the posted teams; see "Gallery view"
-  below) and, for early access only, Rankings (`rankings`, below). An editor gets Edit guide. On a phone
-  the tabs show their `short` labels (Guide, Team, Runs, Ranks, Edit); the full label stays
-  the accessible name. The guide is fetched only on Recommendations and Rankings.
-- **Rankings** (`PvpGalleryRankings`, owner 2026-10-27): the event on screen only, counting
-  its **gallery posts** (Henry: "teams that people submitted into the gallery"): umas by posted
-  teams with her, cards by member decks with the card (the borrowed card too, "N borrowed"),
-  counts with shares, from `GET /rankings/gallery/<kind>/<id>` (counted on the server,
-  hourly), drawn with the Rankings page's `TeamLists.tsx`. Each row says what the event's
-  guide does with it ("Guide recommends her"; "Guide 3 of 12", the guide's decks holding the
-  card, alternatives out), the band gives the gallery's share of every saved team (the PvP
-  rankings payload), and "Most copied posts" links each post. Every saved team is the
-  Rankings page's PvP tab, linked from the band. **Not drawn at
-  all without early access** (owner, 2026-10-27: "shouldn't be visible at all if you can't
-  access it"): the tab's `earlyAccess` flag, like Edit guide's `editors`, so there is no lock
-  card for it and `?view=rankings` reads as Recommendations; the API refuses it the same way.
+  see "CM Runs view" below) and Gallery (`gallery`, the posted teams; see "Gallery view"
+  below). An editor gets a fifth, Edit guide. On a phone the tabs show their `short` labels
+  (Guide, Team, Runs, Edit); the full label stays the accessible name. The guide is fetched
+  only on Recommendations.
+- **No Rankings view since 2026-11-24.** The PvP page had one (`?view=rankings`,
+  early access only, from 2026-10-27): the event's gallery posts counted, each row beside
+  what the guide does with it, and the most copied posts. The owner removed it as redundant
+  with the Rankings page's PvP tab, which counts every saved team and shows each pick's
+  share of the gallery. An old `?view=rankings` link reads as Recommendations. The API's
+  `GET /rankings/gallery/<kind>/<id>` stays (that PvP tab reads it); its `copied` list
+  (the most copied posts) has no reader now.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
@@ -2608,7 +2603,7 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
 - **PvP** (`PvpTab.tsx`), one event, picked on a sideways strip of event cards
   (`EventStrip.tsx`; `?event=` on the page, else the remembered event, else the one running or
   next; the pinned window uses the remembered one alone). "Umas players build" counts **every
-  saved team**, posted or not (the PvP page's own Rankings view counts the gallery only), with
+  saved team**, posted or not, with
   a bar split by running style; an opened uma reads her strategies, her share of the event's
   gallery posts (`GET /rankings/gallery`) and her CM Runs win rate together. "Cards in their
   decks" the same way. "What wins" is CM Runs' win rate per uma and strategy

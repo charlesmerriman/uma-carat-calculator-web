@@ -4,14 +4,18 @@
  *
  * Top to bottom: the control band (past toggle, Previous / event / Next), a
  * compact event header (name, dates, countdown, course pills, key dates), then
- * three views of the event:
+ * the views of the event:
  *
  *   Recommendations  the guide (PvpGuideView), live now
  *   My team          the player's own team builder (TeamBuilder)
  *   CM Runs          the player's logged tickets and win rates (RunsView)
  *   Gallery          teams other players posted for this event (GalleryView)
- *   Rankings         what this event's gallery posts use most, counted
- *                    (PvpGalleryRankings); drawn only for early access
+ *   Edit guide       the guide editor, editors only (loadGuideEditor)
+ *
+ * A Rankings view (the event's gallery posts, counted) was here until
+ * 2026-11-24. The Rankings page's PvP tab covers it (every saved team, with
+ * each pick's share of the gallery), so an old `?view=rankings` link now
+ * reads as Recommendations.
  *
  * The event, the view and the guide's running style are all URL parameters
  * (`?event=cm-12&view=team`, `?event=cm-12&style=pace`), so every screen is a
@@ -52,7 +56,6 @@ import {
 	History,
 	LayoutGrid,
 	Link2,
-	ListOrdered,
 	Loader2,
 	PenLine,
 	Swords,
@@ -114,7 +117,6 @@ import { guideOpenToEveryone, lockedLandingEvent, lockedPvpEvents, toolsOpenToEv
 import { SupportTile, UmaTile } from "./PvpTiles"
 import { TeamBuilder } from "./TeamBuilder"
 import { RunsView } from "./RunsView"
-import { PvpGalleryRankings } from "./PvpGalleryRankings"
 import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
@@ -125,16 +127,13 @@ import type { UseDeckRequest } from "../../utils/pvpTeams"
 const FALLBACK_TITLE = "PvP Guides"
 
 /** The page's views, in tab order. The id is the `?view=` value. */
-type PvpView = "recommendations" | "team" | "runs" | "gallery" | "rankings" | "editor"
+type PvpView = "recommendations" | "team" | "runs" | "gallery" | "editor"
 const VIEW_PARAM = "view"
 /**
  * `short`, when set, is the label a phone shows; the full one stays the
  * tab's name. `editors` marks the view only a guide editor gets
- * (`account.guide_editor`), `earlyAccess` one only early access gets
- * (`account.early_access`, owner 2026-10-27: Rankings, supporters only,
- * "shouldn't be visible at all if you can't access it"). For anyone else
- * the tab is not drawn and its `?view=` reads as Recommendations; the API
- * refuses them too.
+ * (`account.guide_editor`). For anyone else the tab is not drawn and its
+ * `?view=` reads as Recommendations; the API checks every write anyway.
  */
 const VIEWS: Array<{
 	id: PvpView
@@ -143,13 +142,11 @@ const VIEWS: Array<{
 	icon: LucideIcon
 	soon: boolean
 	editors?: boolean
-	earlyAccess?: boolean
 }> = [
 	{ id: "recommendations", label: "Recommendations", short: "Guide", icon: BookOpen, soon: false },
 	{ id: "team", label: "My team", short: "Team", icon: Users, soon: false },
 	{ id: "runs", label: "CM Runs", short: "Runs", icon: Trophy, soon: false },
 	{ id: "gallery", label: "Gallery", icon: LayoutGrid, soon: false },
-	{ id: "rankings", label: "Rankings", short: "Ranks", icon: ListOrdered, soon: false, earlyAccess: true },
 	{ id: "editor", label: "Edit guide", short: "Edit", icon: PenLine, soon: false, editors: true },
 ]
 
@@ -161,12 +158,11 @@ function viewLabel(entry: { id: PvpView; label: string }, league: boolean): stri
 /** Who is reading, for which tabs are drawn. */
 interface Reader {
 	isEditor: boolean
-	earlyAccess: boolean
 }
 
 /** The tabs this reader gets, in order. */
-function viewsFor({ isEditor, earlyAccess }: Reader) {
-	return VIEWS.filter((entry) => (!entry.editors || isEditor) && (!entry.earlyAccess || earlyAccess))
+function viewsFor({ isEditor }: Reader) {
+	return VIEWS.filter((entry) => !entry.editors || isEditor)
 }
 
 function parseView(value: string | null, reader: Reader): PvpView {
@@ -234,7 +230,6 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	// again, so this only decides what is on screen.
 	const { account } = useAccount()
 	const isEditor = Boolean(account?.guide_editor)
-	const earlyAccess = Boolean(account?.early_access)
 
 	// One clock reading per mount, so every label measures from the same "now".
 	const now = useMemo(() => new Date(), [])
@@ -249,13 +244,12 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const landing = (locked ? lockedLandingEvent(events, now) : null) ?? defaultPvpEvent(events, now)
 	const requested = findEvent(events, parsePvpEvent(searchParams.get(PVP_EVENT_PARAM)))
 	const event = requested ?? landing
-	const reader = { isEditor, earlyAccess }
+	const reader = { isEditor }
 	const view = parseView(searchParams.get(VIEW_PARAM), reader)
 	// Whether the view on screen is closed to this reader: while locked,
 	// Recommendations on anything but a Public guide, and My team, CM Runs and
 	// Gallery unless its editor opened them. An editor is staff, so never
-	// locked. Rankings never gets here locked: parseView gives it to early
-	// access only, who are never locked.
+	// locked.
 	const viewLocked =
 		locked &&
 		!(
@@ -321,11 +315,8 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	// (or the event) instead of stepping back through every tab clicked.
 	const selectStyle = (next: PvpStyleTab) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
-	// Fetched only on the views that show it: the guide itself, and the Rankings
-	// view's "Guide recommends her" / "Guide 3 of 12" (usePvpGuide caches it).
-	const guideState = usePvpGuide(
-		event && (view === "recommendations" || view === "rankings") && !viewLocked ? refForRaceEvent(event) : null
-	)
+	// Fetched only on the view that shows it (usePvpGuide caches it).
+	const guideState = usePvpGuide(event && view === "recommendations" && !viewLocked ? refForRaceEvent(event) : null)
 
 	// The intro shows in full until a guide has been on screen once on this
 	// device, then folds behind a link (services/pvpPageMemory.ts). Read once
@@ -498,7 +489,6 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 									<GalleryView event={event} onOpenMyTeam={() => setParam(VIEW_PARAM, "team")} />
 								</Suspense>
 							)}
-							{view === "rankings" && !viewLocked && event && <PvpGalleryRankings event={event} guide={guideState} />}
 							{view === "editor" && !viewLocked && (
 								<Suspense
 									fallback={
@@ -524,7 +514,7 @@ function prefetchGallery() {
 	void loadGalleryView().catch(() => {})
 }
 
-const GRID_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" }
+const GRID_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5" }
 
 function ViewTabs({ view, reader, league, onChange }: { view: PvpView; reader: Reader; league: boolean; onChange: (view: PvpView) => void }) {
 	const shown = viewsFor(reader)
@@ -536,11 +526,12 @@ function ViewTabs({ view, reader, league, onChange }: { view: PvpView; reader: R
 		// row dropped "Gallery" alone onto a second line. On a phone a tab with
 		// a `short` label shows that, while its full label stays its name for a
 		// screen reader (and for tests querying by name). Four tabs for
-		// everyone, a fifth (Rankings) for early access, a sixth (Edit guide)
-		// for an editor; the class strings are literal so Tailwind sees them.
-		// Six don't fit a 390px phone with their icons ("Gallery" alone is
-		// ~75px of a ~62px column), so an editor's phone drops the icons.
-		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${GRID_COLUMNS[shown.length] ?? "grid-cols-6"}`}>
+		// everyone, a fifth (Edit guide) for an editor; the class strings are
+		// literal so Tailwind sees them. Five fit a 390px phone with their
+		// icons. A sixth tab would not ("Gallery" alone is ~75px of a ~62px
+		// column): it would need the icons hidden below `sm`, as the Rankings
+		// tab once did.
+		<div role="tablist" aria-label="View" className={`grid gap-1 border-b border-gray-700 ${GRID_COLUMNS[shown.length] ?? "grid-cols-5"}`}>
 			{shown.map((entry) => {
 				const Icon = entry.icon
 				const active = entry.id === view
@@ -563,7 +554,7 @@ function ViewTabs({ view, reader, league, onChange }: { view: PvpView; reader: R
 								: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
 						}`}
 					>
-						<Icon className={`h-4 w-4 shrink-0 ${shown.length === 6 ? "hidden sm:block" : ""}`} />
+						<Icon className="h-4 w-4 shrink-0" />
 						{entry.short ? (
 							<>
 								<span className="sm:hidden" aria-hidden="true">{entry.short}</span>
