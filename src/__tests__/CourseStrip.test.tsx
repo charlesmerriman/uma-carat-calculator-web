@@ -8,6 +8,7 @@ import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import CourseSection from "../components/course/CourseSection"
 import CourseStrip from "../components/course/CourseStrip"
+import { segmentText } from "../utils/courseStripText"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import { CHUKYO_1200, SANTA_ANITA_2400, TOKYO_DIRT_1600 } from "./courseFixtures"
 
@@ -31,11 +32,14 @@ describe("CourseStrip, across the page", () => {
 		expect(segment("Uphill 2%")).toBeInTheDocument()
 	})
 
-	it("draws four phases, phase 3 (the final sixth) a band of its own, each with its metres", () => {
+	it("draws four phases, phase 3 (the final sixth) a band of its own, each with the metres that fit", () => {
 		const { container } = render(<CourseStrip course={CHUKYO_1200} />)
 		const phases = [...band(container, "phases").children] as HTMLElement[]
+		// A sixth of a 1,000px strip is about 166px: room for "Late-race" and
+		// its end metre, not its whole range, and none beside "Last spurt",
+		// whose range was drawn over its words until review item 7.
 		expect(phases.map((phase) => [phase.textContent, Math.round(parseFloat(phase.style.left))])).toEqual([
-			["Early-race0–200m", 0], ["Mid-race200–800m", 17], ["Late-race800–1,000m", 67], ["Last spurt1,000–1,200m", 83],
+			["Early-race0–200m", 0], ["Mid-race200–800m", 17], ["Late-race1,000m", 67], ["Last spurt", 83],
 		])
 	})
 
@@ -151,5 +155,24 @@ describe("CourseSection", () => {
 		expect(screen.getByText("Late-race from 800m to 1,000m")).toBeInTheDocument()
 		expect(screen.getByText("Last spurt from 1,000m to the finish")).toBeInTheDocument()
 		expect(screen.getByText("Last spurt: 800m")).toBeInTheDocument()
+	})
+})
+
+describe("segmentText: a stretch's metres never run into its words (review item 7)", () => {
+	// Tokyo dirt 1600's corner 3, 650 to 875m: 14% of the race.
+	const corner = { start: 650, end: 875, distance: 1600, vertical: false, label: "Corner 3", shortLabel: "C3", ranged: true }
+
+	it("drops the metres when the centred words leave no room beside them", () => {
+		// The guide at 1,440 with Skills open: about 614px of strip.
+		expect(segmentText({ ...corner, stripPx: 614 })).toEqual({ words: "Corner 3", metres: undefined })
+	})
+
+	it("keeps the end metre when only that fits, and the range when there's room", () => {
+		expect(segmentText({ ...corner, stripPx: 1000 })).toEqual({ words: "Corner 3", metres: "875m" })
+		expect(segmentText({ ...corner, stripPx: 1400 })).toEqual({ words: "Corner 3", metres: "650–875m" })
+	})
+
+	it("gives a long stretch its whole range", () => {
+		expect(segmentText({ start: 0, end: 650, distance: 1600, vertical: false, label: "Straight", ranged: true, stripPx: 614 }).metres).toBe("0–650m")
 	})
 })
