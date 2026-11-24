@@ -19,7 +19,7 @@ import { Link } from "react-router-dom"
 import PredictedBadge from "../PredictedBadge"
 import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
-import { getCountdownLabel } from "./timelineShared"
+import { getCountdownLabel, getCountdownState } from "./timelineShared"
 import { CourseDetails } from "./CourseDetails"
 import { RaceRewards } from "./RaceRewards"
 import { CopyTimelineLink } from "./CopyTimelineLink"
@@ -98,7 +98,10 @@ export function RaceEventCard({
 						)}
 						{/* A race ref is already a TimelineFocus (cm-12 / loh-3). */}
 						<CopyTimelineLink focus={refForRaceEvent(event)} name={event.name} />
-						<TimelineCountdown label={countdownLabel} />
+						<TimelineCountdown
+							label={countdownLabel}
+							state={getCountdownState(event.start_date, event.end_date, today)}
+						/>
 					</>
 				}
 			>

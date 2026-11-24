@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { Clock3, type LucideIcon } from "lucide-react"
 import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
-import { TIMELINE_FOCUS_HIGHLIGHT, type TimelineFocusProps } from "./timelineShared"
+import { TIMELINE_FOCUS_HIGHLIGHT, type CountdownState, type TimelineFocusProps } from "./timelineShared"
 
 /**
  * THE SHELL EVERY TIMELINE CARD SITS IN: banner windows, race events and
@@ -85,10 +85,18 @@ export function TimelineCardHeader({
 	)
 }
 
-/** The countdown pill ("Ends in 7 Days"), last in a card's header. */
-export function TimelineCountdown({ label }: { label: string }) {
+/**
+ * The countdown pill ("Ends in 7 Days"), last in a card's header. `state`
+ * (getCountdownState) is written as `data-state` for a theme to colour; the
+ * default themes draw every state the same.
+ */
+export function TimelineCountdown({ label, state }: { label: string; state: CountdownState | null }) {
 	return (
-		<div data-size="md" className="tl-pill tl-countdown gap-2 border-gray-600 bg-gray-700 font-semibold text-gray-100">
+		<div
+			data-size="md"
+			data-state={state ?? undefined}
+			className="tl-pill tl-countdown gap-2 border-gray-600 bg-gray-700 font-semibold text-gray-100"
+		>
 			<span>{label}</span>
 			<Clock3 className="h-4 w-4 text-brand" />
 		</div>

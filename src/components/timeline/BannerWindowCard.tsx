@@ -15,6 +15,7 @@ import {
 	buildWindowSections,
 	featuredTitle,
 	getCountdownLabel,
+	getCountdownState,
 } from "./timelineShared"
 import type { BannerWindowGroup, TimelineFocusProps } from "./timelineShared"
 import type { BannerSupport, BannerUma, UserPlannedBanner } from "../../types"
@@ -157,7 +158,10 @@ export function BannerWindowCard({
 							focus={{ kind: "banner", id: group.banners[0].id }}
 							name={title || `the banners from ${formatDate(group.start_date)}`}
 						/>
-						<TimelineCountdown label={countdownLabel} />
+						<TimelineCountdown
+							label={countdownLabel}
+							state={getCountdownState(group.start_date, group.end_date, today)}
+						/>
 					</>
 				}
 			>
