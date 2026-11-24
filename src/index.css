@@ -572,9 +572,57 @@ html:has([data-screen-tabs]) {
       personalityThemes.css.
 */
 
+/* DARK, the default dark theme (id `gold`), redrawn 2026-11-24 (the notes
+   repo's notes/dark-theme-plan.md; the owner: "just a dark theme, but ... a
+   higher quality theme like our light tracen theme is"). Still named Dark, and
+   not game themed.
+
+   Only COLOUR lives here. Its shapes are the default family's, shared with
+   the other eleven one-accent themes (personalityThemes.css).
+
+   - An even graphite ramp with a little blue in it, where the old one was a
+     neutral near-black (still the @theme default above, which a page with no
+     data-theme falls back to).
+   - The creator's gold, unchanged, now spent in four places.
+   - The three kinds at one weight each: a deep fill, a pale ink (9.9:1 or
+     better on the fill) and a bright band.
+   - gray-500 is 4.5:1 on a card, because it carries real words ("Banner
+     ended", "No events found"); the old one measured 2.6:1.
+   - Two of the family's roles get Dark's own values: the ink on a solid gold
+     face is a warm near-black instead of pure black, and a well is set by
+     hand a step below this card.
+
+   Measured on the card (#1a1e25): text 14.0:1, secondary 8.5:1, labels
+   5.7:1, the gold 11.1:1, its ink on it 11.9:1. */
 [data-theme="gold"] {
-	/* Default palette — grays inherit from @theme above */
-	--color-brand: #E6D28A;
+	--color-brand: #e6d28a;
+	--color-gray-50:  #f5f6f8;
+	--color-gray-100: #e9ebef;
+	--color-gray-200: #d2d6dd;
+	--color-gray-300: #b3b9c4;
+	--color-gray-400: #8f97a5;
+	--color-gray-500: #7c8492;
+	--color-gray-600: #363d49;
+	--color-gray-700: #232830;
+	--color-gray-800: #181c22;
+	--color-gray-900: #0e1115;
+	--color-gray-950: #08090c;
+	--color-edge: #2c323c;
+	--card-fill: #1a1e25;
+	--card-shadow: inset 0 1px 0 rgb(255 255 255 / 5%), 0 14px 28px -16px rgb(0 0 0 / 75%);
+
+	--color-type-uma: #16335c;
+	--color-type-uma-ink: #d3e6ff;
+	--color-type-support: #123c2c;
+	--color-type-support-ink: #c8f3dc;
+	--color-type-step-up: #2f2362;
+	--color-type-step-up-ink: #e1d8ff;
+	--kind-uma-band: #4f9bff;
+	--kind-support-band: #34c189;
+	--kind-step-up-band: #9a7bf0;
+
+	--brand-ink: #1c1708;
+	--well-fill: #12151a;
 }
 
 /* Gilded turns the warmth up: the cinematic, amber-lit look that is too
@@ -1152,6 +1200,16 @@ html:has([data-screen-tabs]) {
 	--color-type-step-up-ink: #ffffff;
 	--kind-uma-accent: #60a5fa;
 	--kind-support-accent: #fca5a5;
+}
+
+/* Dark names its three bands outright, so colorblind mode has to rename
+   them: the family's formula would have followed the mode's fills by itself,
+   and a fixed green band on a red Support fill is the clash the mode exists
+   to remove. Blue for Uma, red for Support and Step-Up, as the fills go. */
+[data-theme="gold"][data-colorblind-mode="true"] {
+	--kind-uma-band: #60a5fa;
+	--kind-support-band: #f87171;
+	--kind-step-up-band: #f87171;
 }
 
 [data-theme="tracen"][data-colorblind-mode="true"] {
