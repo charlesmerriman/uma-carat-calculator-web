@@ -251,7 +251,7 @@ being unable to hold either desktop layout.
 
 | Variant | Condition | Governs |
 |---|---|---|
-| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar, and the `ThemePicker` panel's anchoring, which must track the navbar |
+| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar |
 | `app-shell:` | `min-width: 64rem` **and** `min-height: 32rem` | the fixed-height, internally-scrolling app shell in `ApplicationViews` |
 
 The height half of `app-shell:` is the load-bearing part. Applied to a landscape phone,
@@ -889,14 +889,24 @@ because the image is `aria-hidden` and the caller owns the accessible name.
 
 ## The profile menu and the account page
 
-Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: a
+**The last control in the bar is one menu, `components/navbar/SiteMenu.tsx`, for everything
+that is not a place** (owner, 2026-11-24; `notes/navigation-plan.md`, PR 2; it was
+`ProfileMenu`, signed-in only). It holds the account rows, a **Theme** row that names the
+current theme and opens the picker in place (`navbar/ThemeOptions.tsx`, the old palette
+button's panel; a pick does not close the menu), and **About, FAQ, Changelog, Feedback**,
+which only the footer linked before. **A guest gets it too**, behind a plain menu button
+("Menu" beside the icon from `desktop-nav:` up) next to the Sign in button: its first row is
+"Sign in to sync" with the sentence the bar's button keeps in its tooltip, so a phone can
+read it. A new non-place (a setting, a link) goes in this menu, never back in the bar.
+
+Signed in, its trigger is unchanged: a
 pill (`NAV_PROFILE_TRIGGER` in `navStyles.ts`) with the account's avatar as its
 left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
 opening a menu with **Account**, **Collection** (since 2026-10-26) and **Sign out** (since 2026-09-12; sign-out used
 to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
 `desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
 is already save + theme + this. A guest still sees the Login link. The
-menu is the same popover idiom as ThemePicker and is always the
+menu closes on an outside press, Escape (focus returns to the trigger) and a link, and is always the
 LAST control, so right-anchoring never runs it off a narrow screen.
 
 **The name is the one they chose, else the handle.** `account.display_name`
@@ -909,7 +919,7 @@ so the pill widens once rather than jumping from a placeholder.
 `Avatar.tsx` shows `account.avatar_url` — the server sends the first oshi's art,
 `null` until they pick one — and on `null` or a broken image draws the quiet
 default: a muted `UserRound` silhouette on a `bg-gray-700` rounded square,
-styled like the settings and theme icon buttons beside it so it reads as one
+styled like the icon buttons beside it so it reads as one
 more control. The same default for everyone and for the loading state, on
 purpose: the avatar is only ever shown to its owner, so two empty accounts have
 no reason to look different, and the initials-on-a-hue circle it replaced

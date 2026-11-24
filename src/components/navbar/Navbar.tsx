@@ -7,9 +7,8 @@ import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
 import { Wordmark } from "../Wordmark"
 import { OguriSpinner } from "../OguriSpinner"
-import { ThemePicker } from "./ThemePicker"
 import { TeamDrawerButton } from "./TeamDrawerButton"
-import { ProfileMenu } from "./ProfileMenu"
+import { SiteMenu } from "./SiteMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
 import { useSiteSearch } from "../../hooks/useSiteSearch"
@@ -38,7 +37,7 @@ export const Navbar = () => {
 	// a token dropped ELSEWHERE — the calculator's 401 recovery, or a sign-out in
 	// another tab — re-renders this slot, instead of leaving it showing a
 	// signed-in avatar to someone the server no longer recognises. Sign-out
-	// itself lives in ProfileMenu now.
+	// itself lives in SiteMenu now.
 	const { isLoggedIn, account } = useAccount()
 	const siteSearch = useSiteSearch()
 	// Rankings is Patreon only for now (owner, 2026-10-27): its item is drawn
@@ -46,9 +45,10 @@ export const Navbar = () => {
 	// while it loads, so the item appears after load and never flashes.
 	const showRankings = Boolean(account?.early_access)
 
-	// Search + team drawer + theme picker, grouped so the desktop nav's branches
-	// render the same controls. TeamDrawerButton renders nothing outside app
-	// mode. The projection settings were a gear here until 2026-11-24; they are
+	// Search + team drawer, grouped so the desktop nav's branches render the
+	// same controls. TeamDrawerButton renders nothing outside app mode. The
+	// theme was a palette button here until 2026-11-24; it is a row of the
+	// menu at the end of the bar now (SiteMenu), which a guest gets too. The projection settings were a gear here until 2026-11-24; they are
 	// a row of the calculator's Income & Resources panel now
 	// (carat-calculator/ProjectionSettings.tsx), since only the calculator
 	// reads them.
@@ -57,17 +57,6 @@ export const Navbar = () => {
 		<>
 			{searchButton}
 			<TeamDrawerButton />
-			<ThemePicker />
-		</>
-	)
-	// The same buttons on a phone. The gear held the theme too until 2026-11-18
-	// (web #275, to give the wordmark room); the owner wanted them as separate
-	// menus, so the palette is its own button here as well.
-	const phoneControls = (
-		<>
-			{searchButton}
-			<TeamDrawerButton />
-			<ThemePicker />
 		</>
 	)
 
@@ -157,18 +146,23 @@ export const Navbar = () => {
 		</Link>
 	)
 
-	// Auth slot shown on the right side when outside the app (home mode): the
-	// avatar menu for a signed-in person, a Login link for a guest.
+	// The end of the bar outside the app (home mode): the menu, with a Login
+	// link before it for a guest. The menu is there for everyone: it holds
+	// the theme and the info pages as well as the account.
 	const authButton = isLoggedIn ? (
-		<ProfileMenu />
+		<SiteMenu />
 	) : (
-		<Link
-			to="/login"
-			className={NAV_BUTTON}
-		>
-			<LogIn className="w-4 h-4" />
-			Login
-		</Link>
+		<>
+			<Link
+				to="/login"
+				className={NAV_BUTTON}
+			>
+				<LogIn className="w-4 h-4" />
+				{/* Just the icon on a small phone, where the menu button now sits beside it. */}
+				<span className="max-[379px]:sr-only">Login</span>
+			</Link>
+			<SiteMenu />
+		</>
 	)
 
 	// `sticky top-0` pins the bar wherever the DOCUMENT scrolls: every page on a
@@ -186,10 +180,10 @@ export const Navbar = () => {
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
 			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
-				{/* Tighter gaps under 360px: signed in, the row held five buttons
-				    until the gear left (four now: search, team, palette, profile),
-				    and at 320px the 6px gaps pushed the wordmark onto a third line,
-				    clipping "Uma". Kept: four is not measured at 320px yet. */}
+				{/* Tighter gaps under 360px. Signed in, the row held five buttons
+				    (search, team, gear, palette, profile) and at 320px the 6px gaps
+				    pushed the wordmark onto a third line, clipping "Uma". It holds
+				    three now, four for a guest (search, team, sign in, menu). */}
 				<div className="flex h-14 items-center justify-between gap-2 px-3 min-[360px]:gap-3">
 					<div className="flex min-w-0 items-center">
 						{logo}
@@ -213,13 +207,14 @@ export const Navbar = () => {
 											</button>
 										</div>
 									)}
-									{phoneControls}
-									<ProfileMenu />
+									{navControls}
+									<SiteMenu />
 								</>
 							) : (
 								<>
-									{phoneControls}
+									{navControls}
 									{signInToSyncButton}
+									<SiteMenu />
 								</>
 							)
 						) : (
@@ -343,12 +338,13 @@ export const Navbar = () => {
 										)}
 									</div>
 									{navControls}
-									<ProfileMenu />
+									<SiteMenu />
 								</>
 							) : (
 								<>
 									{navControls}
 									{signInToSyncButton}
+									<SiteMenu />
 								</>
 							)
 						) : (
