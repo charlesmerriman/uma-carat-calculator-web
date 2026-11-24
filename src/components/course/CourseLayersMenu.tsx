@@ -13,6 +13,8 @@
  */
 import { useEffect, useId, useRef, useState, type ReactNode } from "react"
 import { Layers } from "lucide-react"
+import { Link, useInRouterContext } from "react-router-dom"
+import { useSignInPrompt } from "../../hooks/useSignInPrompt"
 import { setCourseLayers, setVeteranShown, setVeteranSkillShown, useCourseLayers } from "../../services/courseMapStore"
 
 /** One veteran in the menu: her tick, and a tick per skill of hers that can fire here. */
@@ -25,6 +27,30 @@ export interface VeteranMenuRow {
 	colour?: string
 	shown: boolean
 	skills: { skillId: number; name: string; shown: boolean }[]
+}
+
+/**
+ * A guest's line under the veterans' layer, with "Sign in" a link that comes
+ * back to this page afterwards (useSignInPrompt's `returnTo`, read through
+ * safeReturnPath). Most of the guide's readers are signed out, so the row
+ * offers the way in; it was a greyed line with nothing to press. Outside a
+ * router (a component test) the words show without the link.
+ */
+function SignInLine() {
+	if (!useInRouterContext()) return <>Sign in to show your team's veterans.</>
+	return <SignInLink />
+}
+
+function SignInLink() {
+	const { signInState } = useSignInPrompt()
+	return (
+		<>
+			<Link to="/login" state={signInState} className="font-semibold text-brand underline-offset-2 hover:underline">
+				Sign in
+			</Link>{" "}
+			to show your team's veterans.
+		</>
+	)
 }
 
 export default function CourseLayersMenu({ signedIn, veteransNote, veterans = [] }: {
@@ -67,7 +93,7 @@ export default function CourseLayersMenu({ signedIn, veteransNote, veterans = []
 			</button>
 			{open && (
 				<div id={panelId} className="absolute right-0 z-30 mt-1 max-h-[70vh] w-80 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 p-3 text-sm shadow-lg">
-					<label className={`flex items-start gap-2 ${signedIn ? "" : "opacity-60"}`}>
+					<label className="flex items-start gap-2">
 						<input
 							type="checkbox"
 							className="mt-0.5"
@@ -78,9 +104,7 @@ export default function CourseLayersMenu({ signedIn, veteransNote, veterans = []
 						<span>
 							<span className="font-semibold text-gray-100">My veterans' skills</span>
 							<span className="block text-xs text-gray-400">
-								{signedIn
-									? "Your team's veterans' skills that fire at a place in this race."
-									: "Sign in to show your team's veterans."}
+								{signedIn ? "Your team's veterans' skills that fire at a place in this race." : <SignInLine />}
 							</span>
 						</span>
 					</label>
