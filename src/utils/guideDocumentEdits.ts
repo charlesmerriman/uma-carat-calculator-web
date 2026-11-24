@@ -266,6 +266,37 @@ export function swapSlots(doc: Doc, deckIndex: number, from: number, to: number)
 	)
 }
 
+/**
+ * The slots a note could be copied to: every deck's main row holding `cardId`
+ * whose note isn't `note` already, in decks of `style` (null: every style).
+ * The slot the note came from matches its own note, so it never counts.
+ * "or" rows are left alone: the editor shows no note on an alternative card.
+ */
+function isCopyTarget(deck: GuideDeckRow, row: GuideSlotRow, cardId: number, note: string, style: PvpStyle | null): boolean {
+	return (style === null || deck.style === style) && row.order === 0 && row.support_card === cardId && row.note !== note
+}
+
+export function countNoteCopies(doc: Doc, cardId: number, note: string, style: PvpStyle | null): number {
+	return doc.decks.reduce((total, deck) => total + deck.slots.filter((row) => isCopyTarget(deck, row, cardId, note, style)).length, 0)
+}
+
+/**
+ * Give every appearance of a card the same slot note (Daptrius, 2026-11-24:
+ * a guide repeats one card's note across many decks, and typing it into
+ * each was the slow part). `style` keeps it to one style's decks; null
+ * reaches every style. Decks with nothing to change keep their identity.
+ */
+export function copyNoteToCard(doc: Doc, cardId: number, note: string, style: PvpStyle | null): Doc {
+	return {
+		...doc,
+		decks: doc.decks.map((deck) =>
+			deck.slots.some((row) => isCopyTarget(deck, row, cardId, note, style))
+				? { ...deck, slots: deck.slots.map((row) => (isCopyTarget(deck, row, cardId, note, style) ? { ...row, note } : row)) }
+				: deck
+		),
+	}
+}
+
 /** Mark one slot as the borrowed card (every row of that slot), and no other. */
 export function setBorrowSlot(doc: Doc, deckIndex: number, slot: number | null): Doc {
 	const deck = doc.decks[deckIndex]

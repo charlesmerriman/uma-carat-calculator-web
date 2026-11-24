@@ -23,6 +23,8 @@ import {
 	addAlternative,
 	addDeck,
 	clearSlot,
+	copyNoteToCard,
+	countNoteCopies,
 	duplicateDeck,
 	moveDeck,
 	removeDeck,
@@ -37,6 +39,7 @@ import { STYLE_LABELS } from "../../../utils/pvpGuide"
 import { releaseBlockReason, releaseNote } from "../../../utils/cardRelease"
 import type { GuideDeckRow, GuideSlotRow } from "../../../types/guideDocument"
 import type { MemberStyle } from "../../../types/pvpTeam"
+import type { PvpStyle } from "../../../types/pvpGuide"
 
 const EMPTY_SET = new Set<number>()
 // A swap-in deck's panel, as the guide draws it (PvpGuideView's SwapInRow): a
@@ -284,9 +287,15 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 				<button type="button" className={SMALL_BUTTON} onClick={() => onPick(0)} title={main?.support_card ? "Change the card" : "Pick a card"}>
 					{main?.support_card ? "Change" : "Card"}
 				</button>
-				<button type="button" className={`${SMALL_BUTTON} ${noting || main?.note ? "text-brand" : ""}`} aria-pressed={noting} onClick={() => setNoting(!noting)}>
-					Note
-				</button>
+				{/* A filled slot always shows its note field (Daptrius, 2026-11-24:
+				    notes hidden behind a button were missed). Only an empty slot
+				    keeps the button, to start a note-only slot ("or any speed")
+				    without a field under every blank slot. */}
+				{!main && (
+					<button type="button" className={`${SMALL_BUTTON} ${noting ? "text-brand" : ""}`} aria-pressed={noting} onClick={() => setNoting(!noting)}>
+						Note
+					</button>
+				)}
 				<button
 					type="button"
 					className={`${SMALL_BUTTON} ${isBorrow ? "text-brand" : ""}`}
@@ -321,7 +330,7 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 					))}
 				</select>
 			)}
-			{(noting || (main && main.support_card === null)) && (
+			{(noting || main) && (
 				<MentionField
 					label={`Slot ${slot} note`}
 					value={main?.note ?? ""}
@@ -338,6 +347,7 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 					<span />
 				</MentionField>
 			)}
+			{main?.support_card != null && <CopyNoteButtons cardId={main.support_card} note={main.note} style={document.decks[deckIndex].style} />}
 			{mainErrors.map((message) => (
 				<p key={message} className={FIELD_ERROR} role="alert">
 					{message}
@@ -380,6 +390,35 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 				</div>
 			)}
 		</SlotDropZone>
+	)
+}
+
+/**
+ * Copy this slot's note to the same card in other decks: this style's, or
+ * every style's. Each button shows how many slots would change and hides at
+ * zero, so the pair disappears once the notes agree. An empty note offers
+ * nothing: copying it would wipe the others' notes.
+ */
+function CopyNoteButtons({ cardId, note, style }: { cardId: number; note: string; style: PvpStyle }) {
+	const { document, update } = useGuideEditor()
+	if (!note.trim()) return null
+	const here = countNoteCopies(document, cardId, note, style)
+	const everywhere = countNoteCopies(document, cardId, note, null)
+	if (everywhere === 0) return null
+	return (
+		<div className="flex flex-wrap items-center justify-center gap-0.5 text-[11px] text-gray-400 [&>button]:whitespace-nowrap">
+			<span>Copy note to</span>
+			{here > 0 && (
+				<button type="button" className={SMALL_BUTTON} title="Give this card the same note in this style's other decks" onClick={() => update((doc) => copyNoteToCard(doc, cardId, note, style))}>
+					this style ({here})
+				</button>
+			)}
+			{everywhere > here && (
+				<button type="button" className={SMALL_BUTTON} title="Give this card the same note in every deck of every style" onClick={() => update((doc) => copyNoteToCard(doc, cardId, note, null))}>
+					all styles ({everywhere})
+				</button>
+			)}
+		</div>
 	)
 }
 
