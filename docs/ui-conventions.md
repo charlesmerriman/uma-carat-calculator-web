@@ -1605,12 +1605,18 @@ name and the bar, the headline (`CourseHeadline`: the spurt sentence from `deriv
 bold, the other facts in one line under it; it replaced the chips), the map, and the same in
 words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidden`).
 
+- **The block folds** (`CourseFold`, review item 3, 2026-11-24): it sits above the View tabs,
+  so it opens on Recommendations at `sm` and wider, and starts folded on the other tabs and
+  on a phone: the title, the spurt sentence (`CourseHeadline leadOnly`) and "Show the map".
+  The reader's Show or Hide is kept on the device for each place ("guide" and "tools",
+  `courseMapStore`'s `useMapOpenChoice`), and a lit skill opens it while lit. Folded, there
+  is no strip to stick. The Timeline's drawer never folds.
 - **The strip is the ruler** (`CourseStrip`, both orientations): a label column (Height,
   Phase, Course, Slope, Ground, the layer rows, Section) and a track cell per row (the
   `data-band`), the marks' words above the rows in lanes (`markerLanes`) with their lines
   through every row, the metres under the sections. A segment shows its words, then its
-  metres only where they fit beside them (an estimate against a 1,000 px strip; nothing is
-  measured). Hills carry Daptrius's triangle (`CourseIcon`). Down the page the rows are
+  metres only where they clear the centred words (`utils/courseStripText.ts`, against the
+  strip's measured width once painted, the caller's `widthPx` before that). Hills carry Daptrius's triangle (`CourseIcon`). Down the page the rows are
   columns and the marks' words sit in a margin at the right. A layer span is drawn in its
   `colour` (a veteran's `--color-course-vet-N`, else the lit `--color-course-lit`), the
   veteran's avatar at the head of her first row and "Lit" at the head of the open skill's.
