@@ -577,8 +577,9 @@ html:has([data-screen-tabs]) {
    - The creator's gold, unchanged, now spent in four places.
    - The three kinds at one weight each: a deep fill, a pale ink (9.9:1 or
      better on the fill) and a bright band.
-   - gray-500 is 4.5:1 on a card, because it carries real words ("Banner
-     ended", "No events found"); the old one measured 2.6:1.
+   - gray-500 is 4.7:1 on a card, because it carries real words ("Banner
+     ended", "No events found"); the old one measured 2.6:1. (#7c8492, the
+     first value shipped to develop, measured 4.4:1 on the built page.)
    - Two of the family's roles get Dark's own values: the ink on a solid gold
      face is a warm near-black instead of pure black, and a well is set by
      hand a step below this card.
@@ -592,7 +593,7 @@ html:has([data-screen-tabs]) {
 	--color-gray-200: #d2d6dd;
 	--color-gray-300: #b3b9c4;
 	--color-gray-400: #8f97a5;
-	--color-gray-500: #7c8492;
+	--color-gray-500: #808896;
 	--color-gray-600: #363d49;
 	--color-gray-700: #232830;
 	--color-gray-800: #181c22;
