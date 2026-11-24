@@ -1085,8 +1085,9 @@
 	.enc-jump {
 		position: sticky;
 		/* The navbar's measured height (hooks/useNavbarHeight.ts); the
-		   written-down one only for the first paint. */
-		top: var(--navbar-h, 4.125rem);
+		   written-down one only for the first paint. Plus the phone's wordmark
+		   row while it is shown (hooks/useNavbarReveal.ts). */
+		top: calc(var(--navbar-h, 4.125rem) + var(--navbar-reveal, 0px));
 		z-index: 5;
 		display: flex;
 		/* Wraps on a narrow phone; it used to scroll sideways and cut "Support cards" off (2026-11-13). */

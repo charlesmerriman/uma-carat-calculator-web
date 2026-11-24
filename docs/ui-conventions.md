@@ -2531,7 +2531,15 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   with a bottom bar deferred so the footer ad is untouched). The bar is two pieces: the
   wordmark row (search, Team, Sign in, the menu, a waiting save) scrolls away with the page,
   because the sticky box's `top` is minus that row's `h-14`; the places row under it is
-  what stays, and the only part measured (`data-sticky-navbar`, `--navbar-h`). The cells are
+  what stays, and the only part measured (`data-sticky-navbar`, `--navbar-h`). **Scrolling
+  up brings the row back** (`hooks/useNavbarReveal.ts`, web #466): the hook watches the
+  scroll direction and sets `--navbar-reveal` (3.5rem shown, 0 tucked away) on `<html>`.
+  The navbar's sticky box adds it to its `top`, and everything pinned under the navbar adds
+  it too: a screen bar, the Encyclopedia's jump bar, and the PvP rows, which are measured in
+  pixels and so re-measure on `NAVBAR_REVEAL_EVENT`. A new row that pins under the navbar
+  on a phone takes `calc(var(--navbar-h) + var(--navbar-reveal, 0px))`, or it ends up
+  under the returned row. Measured in WebKit: up 60px, the row returns on the calculator,
+  PvP, the Timeline and an uma page, and every bar under it moves down with it. The cells are
   sized by their words (`flex-auto`) at 11px, 10px below 360px: five names fit 320px with
   none cut (measured: 34px for PvP, 76px for Encyclopedia). Pinned, the phone bar is 66px
   where it was 104px, and `scroll-padding-top` is one figure, 4.125rem, at every width.

@@ -13,10 +13,13 @@ import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
 import { SiteSearchButton, SiteSearchDialog } from "../search/SiteSearch"
 import { useSiteSearch } from "../../hooks/useSiteSearch"
 import { useNavbarHeight } from "../../hooks/useNavbarHeight"
+import { useNavbarReveal } from "../../hooks/useNavbarReveal"
 
 export const Navbar = () => {
 	const navbarRef = useRef<HTMLDivElement>(null)
 	useNavbarHeight(navbarRef)
+	// On a phone, the wordmark row returns when the reader scrolls up.
+	useNavbarReveal()
 	const location = useLocation()
 	// null when rendered outside CalculatorProvider (e.g. on the home page)
 	const calculatorData = useCalculatorDataSafe()
@@ -161,10 +164,12 @@ export const Navbar = () => {
 	// ON A PHONE ONLY THE PLACES PIN. The row above them (the wordmark, search,
 	// Team, Sign in, the menu) scrolls away with the page: the sticky box's
 	// `top` is minus that row's height, so the box stops when the row has left
-	// the screen and the places sit at the top (owner, 2026-11-24). Scroll up
-	// a little and the row is back. On desktop there is no such row and `top`
-	// is 0. The row's height is its `h-14` (border included: border-box), so
-	// the two numbers change together.
+	// the screen and the places sit at the top (owner, 2026-11-24). Scrolling
+	// UP lifts the box by the row's height again (--navbar-reveal, from
+	// hooks/useNavbarReveal.ts), so the row comes back without going to the
+	// top of the page. On desktop there is no such row and `top` is 0. The
+	// row's height is its `h-14` (border included: border-box), the 3.5rem
+	// here and ROW_PX in the hook: the three change together.
 	//
 	// What is MEASURED is the pinned part alone (`data-sticky-navbar`, the
 	// ref): the PvP page pins its own tabs under it (hooks/usePvpStickyOffsets.ts),
@@ -173,7 +178,7 @@ export const Navbar = () => {
 	// (index.css) carries the same height, so jump links and deep links land
 	// below it rather than under it.
 	return (
-		<div className="sticky -top-14 z-50 shrink-0 desktop-nav:top-0">
+		<div className="sticky top-[calc(var(--navbar-reveal,0px)_-_3.5rem)] z-50 shrink-0 desktop-nav:top-0">
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Phone, first row: scrolls away. Not a `site-navbar`: a theme's bar
 			    edge (Winning Live's penlight strip) belongs under the places, the
