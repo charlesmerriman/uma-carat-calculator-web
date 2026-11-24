@@ -167,6 +167,14 @@ describe("GuideEditor", () => {
 		expect(names()).toEqual(["#1End", "#2Front"])
 		expect(preview().getByText("Level with it")).toBeInTheDocument()
 	})
+	it("draws the guide beside the form, following the editor's tab (review item 18)", async () => {
+		renderEditor()
+		fireEvent.click(await screen.findByRole("button", { name: "Guide beside" }))
+		const beside = within(screen.getByRole("complementary", { name: "The guide as visitors will see it" }))
+		expect(beside.getByText("Recommended umas")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Hide the guide" }))
+		expect(screen.queryByRole("complementary", { name: "The guide as visitors will see it" })).toBeNull()
+	})
 	it("marks the guide under construction and saves it", async () => {
 		renderEditor()
 		const toggle = await screen.findByRole("checkbox", { name: /Under construction/ })

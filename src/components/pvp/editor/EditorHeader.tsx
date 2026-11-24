@@ -6,7 +6,7 @@
  */
 
 import { useRef } from "react"
-import { CloudAlert, CloudCheck, Eye, Globe, Heart, Loader2, Lock, MoreHorizontal, Redo2, TriangleAlert, Undo2 } from "lucide-react"
+import { CloudAlert, CloudCheck, Columns2, Eye, Globe, Heart, Loader2, Lock, MoreHorizontal, Redo2, TriangleAlert, Undo2 } from "lucide-react"
 import type { GuideSaveState } from "../../../hooks/useGuideDocument"
 import type { GuideVisibility } from "../../../types/pvpGuide"
 import { visibilityLabel } from "../../../utils/guideDocument"
@@ -47,7 +47,7 @@ export function SaveLine({ saveState, saveError, problems }: { saveState: GuideS
 	)
 }
 
-export function EditorHeader({ visibility, toolsPublic, saveState, saveError, problems, canUndo, canRedo, onUndo, onRedo, onSaveNow, onViewAsVisitor, onOpen }: {
+export function EditorHeader({ visibility, toolsPublic, saveState, saveError, problems, canUndo, canRedo, onUndo, onRedo, onSaveNow, onViewAsVisitor, beside, onBeside, onOpen }: {
 	visibility: GuideVisibility
 	toolsPublic: boolean
 	saveState: GuideSaveState
@@ -59,6 +59,9 @@ export function EditorHeader({ visibility, toolsPublic, saveState, saveError, pr
 	onRedo: () => void
 	onSaveNow: () => void
 	onViewAsVisitor: () => void
+	/** Whether the guide is drawn beside the editor (wide screens only). */
+	beside: boolean
+	onBeside: (beside: boolean) => void
 	onOpen: (dialog: EditorDialog) => void
 }) {
 	const menu = useRef<HTMLDetailsElement>(null)
@@ -96,6 +99,11 @@ export function EditorHeader({ visibility, toolsPublic, saveState, saveError, pr
 				<button type="button" className={ACTION_BUTTON} onClick={onViewAsVisitor}>
 					<Eye className="h-4 w-4" aria-hidden="true" />
 					View as visitor
+				</button>
+				{/* Only where there is room for two columns (review item 18, 2026-11-24). */}
+				<button type="button" className={`${ACTION_BUTTON} hidden 2xl:inline-flex`} aria-pressed={beside} onClick={() => onBeside(!beside)}>
+					<Columns2 className="h-4 w-4" aria-hidden="true" />
+					{beside ? "Hide the guide" : "Guide beside"}
 				</button>
 				{/* One dialog either way: "Publish" while it's a draft, then
 				    "Visibility" to change who sees it. */}
