@@ -847,12 +847,9 @@ export const Timeline = () => {
 	 * continuously, would run on every scroll frame of a page that can hold 250
 	 * image-heavy cards to produce a value wanted once per visit, if ever.
 	 *
-	 * The list container's leading children ARE the rendered cards, one per
-	 * `visibleRows` entry and in the same order — the sentinel, the end-of-list
-	 * line and the tailroom all come after them, and the "No events found." line
-	 * only renders when there are no rows at all (so `limit` is 0 and the loop
-	 * never runs). That correspondence is what lets this find a row without
-	 * threading a data attribute through all three card components.
+	 * Every rendered row carries its `timelineRowKey` as `data-row-key`, so a
+	 * row is found by name. (It used to be found by position, child N of the
+	 * list for row N, which a stray element in the list throws off by one.)
 	 *
 	 * "Topmost" is measured against the BOTTOM OF THE CONTROLS BAND, not the top of
 	 * the viewport. That band is sticky at the app-shell breakpoint, so the first
@@ -870,14 +867,24 @@ export const Timeline = () => {
 		if (!list) return null
 
 		const floor = controlsRef.current?.getBoundingClientRect().bottom ?? 0
-		const limit = Math.min(list.children.length, visibleRows.length)
 
-		for (let index = 0; index < limit; index += 1) {
-			const rect = list.children[index].getBoundingClientRect()
+		// Each row names itself (data-row-key). Counting the list's children
+		// instead, child N for row N, held only while nothing else was ever put
+		// in the list, and the ad script does put a container of its own in
+		// there on some loads: every row after it was then read as its
+		// neighbour, and the wrong card was held (seen 2026-11-24).
+		for (const row of list.querySelectorAll<HTMLElement>(":scope > [data-row-key]")) {
+			const rect = row.getBoundingClientRect()
 			// jsdom reports every rect as zero, so nothing here ever matches under
 			// test and the anchor stays null — which is the pre-existing behaviour.
 			if (rect.bottom > floor) {
-				return { key: timelineRowKey(visibleRows[index]), offset: rect.top }
+				// Where its CARD is, not the row. A row that opens a month starts
+				// with the heading, well above the card, and whether a row opens a
+				// month can differ between the searched list and the full one. The
+				// card's wrapper (tl-anchor) is what gets put back, so it is what
+				// gets measured.
+				const card = row.querySelector(".tl-anchor") ?? row
+				return { key: row.dataset.rowKey ?? "", offset: card.getBoundingClientRect().top }
 			}
 		}
 		return null
@@ -1242,6 +1249,8 @@ export const Timeline = () => {
 					return (
 						<motion.div
 							key={rowKey}
+							// How measureAnchorRow finds this row again.
+							data-row-key={rowKey}
 							className="flex w-full flex-col items-center"
 							initial={{ opacity: 0, y: 14 }}
 							animate={{ opacity: 1, y: 0 }}
