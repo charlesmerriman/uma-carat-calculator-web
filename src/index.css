@@ -55,6 +55,40 @@ html {
 	}
 }
 
+/* ===== SCREEN BAR OFFSET =====
+   A screen's own bar (components/ScreenTabs.tsx: the Calculator's and the
+   Timeline's) pins under the navbar, so it covers the top of the page the
+   same way. Its height is this one variable, read by the bar itself and by
+   everything that has to clear it:
+
+     - the document, where the document scrolls: the navbar's figure above
+       plus the bar;
+     - the desktop /app shell's own scroller, which the navbar sits outside
+       of, so there it is the bar alone;
+     - a band a page pins beneath the bar (the Timeline's controls,
+       `app-shell:top-(--screen-tabs-h)`).
+
+   Without the two scroll paddings a deep link (a planner row's link to its
+   Timeline card, a campaign strip's link to Selectors) parks its target
+   under the bar. 2.375rem = 20px line + 2 x 8px padding + 2px rule. */
+:root {
+	--screen-tabs-h: 2.375rem;
+}
+
+html:has([data-screen-tabs]) {
+	scroll-padding-top: calc(7.75rem + var(--screen-tabs-h));
+
+	@variant desktop-nav {
+		scroll-padding-top: calc(4.125rem + var(--screen-tabs-h));
+	}
+}
+
+[data-app-scroller]:has(> [data-screen-tabs]) {
+	@variant app-shell {
+		scroll-padding-top: var(--screen-tabs-h);
+	}
+}
+
 @theme {
 	/* The loading spinner's turn rate (components/OguriSpinner.tsx). Tailwind's
 	   stock animate-spin is one turn per second, which made the Oguri head a
