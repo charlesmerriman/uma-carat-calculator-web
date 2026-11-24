@@ -1,9 +1,7 @@
-import { useEffect, useId, useRef, useState } from "react"
-import { Moon, Palette, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 import { useTheme } from "../../services/ThemeContext"
 import type { ThemeConfig } from "../../services/ThemeContext"
 import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from "../../services/themeStore"
-import { NAV_ICON_BUTTON, NAV_POPOVER } from "./navStyles"
 
 type Theme = ThemeConfig
 
@@ -40,9 +38,10 @@ const Swatch = ({ theme, large = false }: { theme: Theme; large?: boolean }) => 
 }
 
 /**
- * The theme list and the colorblind switch: the palette button's panel, on
- * desktop and phones alike (the old projection-settings gear carried it on
- * phones until 2026-11-18). `onPicked` closes the panel after a theme is chosen.
+ * The theme list and the colorblind switch. Drawn inside the navbar's menu
+ * (SiteMenu's Theme row) since 2026-11-24; until then it was the panel of a
+ * palette button of its own in the bar. `onPicked` is for a caller that wants
+ * to close itself after a theme is chosen; the menu does not.
  *
  * Laid out as two columns so the split is obvious at a glance: every dark
  * theme on the left, every light one on the right. The two defaults sit on
@@ -50,7 +49,7 @@ const Swatch = ({ theme, large = false }: { theme: Theme; large?: boolean }) => 
  * palette themes first. Every theme is a named row with the same swatch, which
  * replaced four groups that each looked different (owner, 2026-11-18).
  */
-const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
+export const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 	const { activeTheme, themes, setTheme, colorblindMode, setColorblindMode } = useTheme()
 
 	// The rest of a mode's themes, palette themes first, otherwise in THEMES order.
@@ -124,54 +123,5 @@ const ThemeOptions = ({ onPicked }: { onPicked?: () => void }) => {
 			</button>
 		</div>
 		</>
-	)
-}
-
-export const ThemePicker = () => {
-	const [open, setOpen] = useState(false)
-	const containerRef = useRef<HTMLDivElement>(null)
-	const panelId = useId()
-	// Close dropdown when clicking outside
-	useEffect(() => {
-		if (!open) return
-		const handlePointerDown = (e: PointerEvent) => {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-				setOpen(false)
-			}
-		}
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				setOpen(false)
-				containerRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
-			}
-		}
-		document.addEventListener("pointerdown", handlePointerDown)
-		document.addEventListener("keydown", handleKeyDown)
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown)
-			document.removeEventListener("keydown", handleKeyDown)
-		}
-	}, [open])
-
-	return (
-		<div ref={containerRef} className="relative">
-			<button
-				type="button"
-				onClick={() => setOpen((prev) => !prev)}
-				aria-label="Change color theme"
-				aria-expanded={open}
-				aria-controls={open ? panelId : undefined}
-				title="Change color theme"
-				className={NAV_ICON_BUTTON}
-			>
-				<Palette className="h-4 w-4" />
-			</button>
-
-			{open && (
-				<div id={panelId} className={`${NAV_POPOVER} fixed left-1/2 top-16 z-50 flex max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-col gap-1 overflow-y-auto p-2 desktop-nav:absolute desktop-nav:left-auto desktop-nav:top-full desktop-nav:right-0 desktop-nav:mt-1.5 desktop-nav:translate-x-0`}>
-					<ThemeOptions onPicked={() => setOpen(false)} />
-				</div>
-			)}
-		</div>
 	)
 }

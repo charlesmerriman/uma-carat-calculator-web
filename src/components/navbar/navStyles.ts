@@ -1,5 +1,5 @@
 /**
- * The navbar's control recipes, shared by Navbar, ThemePicker and the search button.
+ * The navbar's control recipes, shared by Navbar, SiteMenu and the search button.
  *
  * Four copies of the same text-button string and three of the icon-button one
  * used to live inline across those files, and they drifted a `rounded` at a
@@ -14,7 +14,7 @@
 export const NAV_BUTTON =
 	"nav-control flex h-9 items-center gap-1.5 rounded-md border border-gray-600 px-3 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-600 disabled:hover:bg-transparent disabled:hover:text-gray-300"
 
-/** A square icon button: search, theme palette. */
+/** A square icon button: search. */
 export const NAV_ICON_BUTTON =
 	"nav-control flex h-9 w-9 items-center justify-center rounded-md border border-gray-600 text-gray-300 transition hover:border-gray-500 hover:bg-gray-700 hover:text-gray-100"
 
@@ -38,7 +38,7 @@ export const NAV_SAVE_BUTTON =
  * 2px of border and padding keeps the frame an even width around the square
  * picture; it was a `rounded-full` pill around a circle until 2026-10-07.
  * Below `desktop-nav:` the tail is hidden and this is the frame alone (see
- * ProfileMenu.tsx for why the pill is desktop-only).
+ * SiteMenu.tsx for why the pill is desktop-only).
  */
 export const NAV_PROFILE_TRIGGER =
 	"flex h-10 items-center rounded-lg border p-px transition desktop-nav:gap-2 desktop-nav:pr-2.5"

@@ -9,8 +9,7 @@
 
    desktop-nav — the navbar's three-column desktop layout, which is already
    over-full below ~900px (the "Sign in to sync" button wraps to 2-3 lines).
-   That is exactly the landscape-phone band. ThemePicker anchors its panel to a
-   navbar button, so it must switch on this same variant and no other.
+   That is exactly the landscape-phone band.
 
    app-shell — the fixed-height, internally-scrolling desktop shell. It needs
    width AND real vertical room. Applied at 844x390 it produces a ~330px scroll
