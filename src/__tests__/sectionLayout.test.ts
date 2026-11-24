@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
 // Which layout a banner section gets, as a table. The five shapes that occur in
-// production are each a row (ui-conventions "Count drives the layout": 22 / 4 /
+// production are each a row (docs/timeline.md "Count drives the layout": 22 / 4 /
 // 3 / 4 / 1 rows on the sheet), plus the ordinary banner and the cases that
 // exist to prove the rule: the card count decides, never the category.
 import { describe, expect, it } from "vitest"
