@@ -18,6 +18,8 @@ import { motion } from "framer-motion"
 import { RaceEventCard } from "./RaceEventCard"
 import { BannerWindowCard } from "./BannerWindowCard"
 import { EventMarkerCard, EventMarkerPairCard } from "./EventMarkerCard"
+import { TimelineMonthHeading } from "./TimelineCard"
+import { formatMonthName } from "../../utils/dateFormat"
 import { BackToTopButton, FloatingBackToTop } from "../BackToTop"
 import {
 	CATEGORY_LABELS,
@@ -41,6 +43,7 @@ import {
 	spliceMarkerRows,
 	timelineRowKey,
 	timelineRowStart,
+	timelineRowStartDate,
 } from "./timelineShared"
 import type { TimelineFocusProps, TimelineMarker, TimelineRow } from "./timelineShared"
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
@@ -1160,6 +1163,13 @@ export const Timeline = () => {
 				)}
 				{visibleRows.map((row, rowIndex) => {
 					const rowKey = timelineRowKey(row)
+					// A heading before the first row of each month, and before the
+					// first row on screen (a page, or a filtered list, starts by
+					// saying where it is). A row with no date gets none.
+					const month = formatMonthName(timelineRowStartDate(row))
+					const opensMonth =
+						month !== "" &&
+						(rowIndex === 0 || month !== formatMonthName(timelineRowStartDate(visibleRows[rowIndex - 1])))
 
 					// THE REF AND THE RING ARE NO LONGER THE SAME QUESTION.
 					//
@@ -1235,6 +1245,7 @@ export const Timeline = () => {
 								delay: (rowIndex % TIMELINE_STAGGER_BATCH) * 0.04,
 							}}
 						>
+							{opensMonth && <TimelineMonthHeading label={month} />}
 							{card}
 						</motion.div>
 					)

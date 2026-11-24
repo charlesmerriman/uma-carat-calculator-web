@@ -2063,3 +2063,69 @@ describe('Timeline deep links', () => {
     expect(cardCount()).toBe(10)
   })
 })
+
+/**
+ * The month headings: "March 2099" before the first card of each month.
+ *
+ * The heading sits INSIDE its row, so the list keeps one child per row; the
+ * keys, the scroll tripwire and the deep-link anchor all count on that.
+ */
+describe('Timeline month headings', () => {
+  function monthHeadings(): string[] {
+    return [...document.querySelectorAll('.tl-month')].map((h) => h.textContent ?? '')
+  }
+
+  it('puts one heading before the first card of each month, and none between cards of the same month', () => {
+    // categorised() opens on day `id` of March 2099; the race in March too; the
+    // scenario in May.
+    events = [
+      categorised(1, 'standard', ['A'], ['B']),
+      categorised(2, 'standard', ['C'], ['D']),
+      raceEvent(1, '20'),
+    ]
+    scenarios = [scenario(4, 'Grand Masters')]
+    renderTimeline()
+
+    expect(monthHeadings()).toEqual(['March 2099', 'May 2099'])
+  })
+
+  it('is a heading a screen reader can jump to, above the card it introduces', () => {
+    events = [categorised(1, 'standard', ['A'], ['B'])]
+    renderTimeline()
+
+    const heading = screen.getByRole('heading', { level: 2, name: 'March 2099' })
+    const row = heading.parentElement as HTMLElement
+    // One row: the heading, then the card's wrapper.
+    expect(row.children).toHaveLength(2)
+    expect(row.firstElementChild).toBe(heading)
+    expect(row.querySelector('.tl-card')).not.toBeNull()
+  })
+
+  it('keeps the list at one child per row, with or without a heading', () => {
+    events = [
+      categorised(1, 'standard', ['A'], ['B']),
+      categorised(2, 'standard', ['C'], ['D']),
+    ]
+    renderTimeline()
+
+    const rows = [...document.querySelectorAll('.tl-card')].map((card) => card.parentElement?.parentElement)
+    expect(new Set(rows).size).toBe(2)
+    // Only the first row carries the heading.
+    expect(rows[0]?.querySelector('.tl-month')).not.toBeNull()
+    expect(rows[1]?.querySelector('.tl-month')).toBeNull()
+  })
+
+  it('says the month again at the top of a filtered list', () => {
+    events = [
+      categorised(1, 'standard', ['A'], ['B']),
+      categorised(2, 'rerun', ['C'], ['D']),
+    ]
+    renderTimeline()
+    expect(monthHeadings()).toEqual(['March 2099'])
+
+    // With the first card filtered away, the one left is now first, and says so.
+    fireEvent.change(screen.getByLabelText('Filter events'), { target: { value: 'rerun' } })
+    expect(monthHeadings()).toEqual(['March 2099'])
+    expect(document.querySelectorAll('.tl-card')).toHaveLength(1)
+  })
+})

@@ -59,7 +59,7 @@ theme never has to reach for a utility class. The full list, with what each one 
 the header of `src/timeline.css`: `tl-bar`, `tl-control`, `tl-readout`, `tl-card`,
 `tl-icon-box`, `tl-title`, `tl-pill` (with `data-size`), `tl-countdown`, `tl-panel` (with
 `data-kind` and `data-layout`), `tl-panel-title`, `tl-tile`, `tl-plate`, `tl-plate-skirt`,
-`tl-stage` (with `data-status`), `tl-stat`.
+`tl-stage` (with `data-status`), `tl-stat`, `tl-month`.
 
 Three rules ride on them:
 
@@ -87,12 +87,34 @@ Timeline on Tracen"; the owner's picks of 2026-11-24). What it does, all through
 | `tl-control` | The bar's buttons, filter and search field as the navbar's key buttons. |
 | `tl-plate`, `tl-plate-skirt` | A tile that links to its Encyclopedia page is a key on three sides: down both sides of the name and under it, never across the top. |
 | `tl-stat` | A race card's course boxes as the game's stat panel, a slate header over a white value. |
+| `tl-month` | The month heading on the game's slanted green rule: a lime tab laid behind the words by a pseudo-element, and a lime line. |
 
 A restyle like this is checked with `geometry.mjs diff --boxes`: paint may change, no box
 may move, except the title strips and stat labels, which grow into padding that is given
 back as negative margin. The themes it must not reach are checked at plain zero.
 `timelineCss.test.ts` holds a theme's Timeline rules to the same promises as the layout:
 no clip, no size, the plate and its skirt one fill, nothing across the top of a name.
+
+## Month headings
+
+"December 2026" sits before the first card of each month (`TimelineMonthHeading` in
+`TimelineCard.tsx`; the owner's pick, 2026-11-24). The rules:
+
+- **It is on every theme**, because it is a real element and a theme may not hide one. Its
+  box is `.tl-month` in `timeline.css`, the same everywhere; its default paint is a quiet
+  grey label and line; Tracen repaints it.
+- **It lives INSIDE its row**, above the card, so the list still has exactly one child per
+  row. `timelineRowKey`, the scroll tripwire and the deep-link anchor all count rows.
+- **A heading opens a month, and also opens whatever is first on screen**: page 2 of the
+  paged view and a filtered list both start by saying which month they are in.
+- **The month is the one the card's own printed date falls in**: `formatMonthName` reads
+  the row's start (`timelineRowStartDate`) in the viewer's zone, as `formatDate` does.
+- **A deep link lands on the card, not on its heading.** The card's wrapper is the scroll
+  target, so the heading above it can sit under the sticky bar. That is on purpose: the
+  link is to the card.
+- A change like this one, which adds an element between cards, is checked with
+  `geometry.mjs snapshot --ignore ".tl-month"` and `diff --relative`: every card moves down
+  the page, and nothing inside any card may move or change.
 
 ## The list
 
