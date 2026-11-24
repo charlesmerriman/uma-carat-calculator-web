@@ -17,7 +17,7 @@
  */
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { Loader2, Pin, PinOff, Zap } from "lucide-react"
+import { ChevronUp, Loader2, Pin, PinOff, Zap } from "lucide-react"
 import { createPortal } from "react-dom"
 import type { RaceCourse, RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
@@ -129,8 +129,10 @@ function scrollerOf(node: HTMLElement): { scrollBy: (x: number, y: number) => vo
 	return window
 }
 
-export default function CourseSection({ course, event = null, guide = null }: {
+export default function CourseSection({ course, event = null, guide = null, onFold }: {
 	course: RaceCourse
+	/** Folds the map to its one-line answer (CourseFold, the PvP page); no button without it. */
+	onFold?: () => void
 	/** The event, for the veterans' layer to find the reader's team for it. */
 	event?: RaceEvent | null
 	/** The guide once loaded, for "Only the guide's" skills. */
@@ -544,6 +546,18 @@ export default function CourseSection({ course, event = null, guide = null }: {
 					)}
 					{view !== "strip" && <Segmented<TrackColours> label="Track colours" value={trackColours} onChange={setTrackColours} options={TRACK_COLOUR_OPTIONS} />}
 				</div>
+				{/* Shown at every width: on a phone the row above is hidden, so this sits at the right. */}
+				{onFold && (
+					<button
+						type="button"
+						onClick={onFold}
+						aria-expanded
+						className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-600 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:bg-gray-700/60 sm:ml-0"
+					>
+						Hide the map
+						<ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+					</button>
+				)}
 			</div>
 			{/* The map's first job, in words, before the drawing (owner, 2026-11-03),
 			    and the lit skill's verdict card beside it. The row is `relative` for

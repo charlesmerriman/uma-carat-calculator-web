@@ -287,6 +287,54 @@ export function setStuckView(next: StuckView) {
 	notify()
 }
 
+/**
+ * Whether the PvP page's course map is open or folded to its one-line answer
+ * (review item 3, 2026-11-24: the map sat above every tab, so My team, CM
+ * Runs and the Gallery started under the fold, and a phone scrolled two
+ * screens of map before the guide). Two places, each remembered on the
+ * device once the reader picks: "guide" (Recommendations) and "tools" (every
+ * other tab). Null until picked; CourseFold supplies the default.
+ */
+export type MapPlace = "guide" | "tools"
+const MAP_OPEN_KEY = "uma-course-map-open"
+let mapOpen: Partial<Record<MapPlace, boolean>> | null = null
+
+function readMapOpen(): Partial<Record<MapPlace, boolean>> {
+	try {
+		const stored = JSON.parse(localStorage.getItem(MAP_OPEN_KEY) ?? "{}") as Record<string, unknown>
+		const picked: Partial<Record<MapPlace, boolean>> = {}
+		for (const place of ["guide", "tools"] as const) if (typeof stored[place] === "boolean") picked[place] = stored[place] as boolean
+		return picked
+	} catch {
+		return {}
+	}
+}
+
+export function useMapOpenChoice(place: MapPlace): boolean | null {
+	return useSyncExternalStore(subscribe, () => (mapOpen ??= readMapOpen())[place] ?? null, () => null)
+}
+
+export function setMapOpen(place: MapPlace, open: boolean) {
+	mapOpen = { ...(mapOpen ?? readMapOpen()), [place]: open }
+	try {
+		localStorage.setItem(MAP_OPEN_KEY, JSON.stringify(mapOpen))
+	} catch {
+		// Storage blocked: the choice lasts this page's life.
+	}
+	notify()
+}
+
+/** Tests: forget the reader's picks, stored and in memory. */
+export function forgetMapOpen() {
+	mapOpen = null
+	try {
+		localStorage.removeItem(MAP_OPEN_KEY)
+	} catch {
+		// Nothing stored to forget.
+	}
+	notify()
+}
+
 /** The guide's course block (CourseSection): one per page. */
 export const COURSE_MAP_ID = "course-map"
 

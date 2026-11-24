@@ -86,7 +86,7 @@ import { usePvpGuide } from "../../hooks/usePvpGuide"
 import { usePvpStickyOffsets } from "../../hooks/usePvpStickyOffsets"
 import { announcedCoursePairs } from "../../utils/courseDetails"
 import { CoursePairs } from "../timeline/CourseDetails"
-import CourseSection from "../course/CourseSection"
+import CourseFold from "../course/CourseFold"
 import { formatDate, formatTime, localZoneName } from "../../utils/dateFormat"
 import { timelineFocusHref } from "../../utils/timelineFocus"
 import { guideLinkPath } from "../../utils/appRoutes"
@@ -416,6 +416,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 							keyDates={milestones(event, calculationConstants)}
 							onCopyLink={() => copyLink(event)}
 							guide={guideState.status === "ready" ? guideState.guide : null}
+							mapPlace={view === "recommendations" ? "guide" : "tools"}
 						/>
 
 						{/* Pinned to the top of the scroller (desktop) or under the navbar (phone)
@@ -656,8 +657,10 @@ const PANEL_LABEL = "mb-2 text-[11px] font-semibold uppercase tracking-wider tex
  * pills, both read as congested): labels above values, no boxes, and the key
  * dates as a step line that shows how far the event has got.
  */
-function EventHeader({ event, now, keyDates, onCopyLink, guide }: {
+function EventHeader({ event, now, keyDates, onCopyLink, guide, mapPlace }: {
 	event: RaceEvent
+	/** The tab on screen, for whether the course map starts open (CourseFold). */
+	mapPlace: "guide" | "tools"
 	now: Date
 	keyDates: ReturnType<typeof milestones>
 	onCopyLink: () => void
@@ -791,7 +794,7 @@ function EventHeader({ event, now, keyDates, onCopyLink, guide }: {
 
 			{/* The course map (notes/course-map-plan.md): only for an event the
 			    admin's "Link courses" has given a course. */}
-			{event.course && <CourseSection course={event.course} event={event} guide={guide} />}
+			{event.course && <CourseFold course={event.course} event={event} guide={guide} place={mapPlace} />}
 		</section>
 	)
 }
