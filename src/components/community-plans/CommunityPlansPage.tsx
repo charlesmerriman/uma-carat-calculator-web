@@ -2,8 +2,9 @@
  * /app/plans: Community plans, pull plans players have posted
  * (notes/pull-plan-database-plan.md, Design 6 to 8).
  *
- * Top to bottom: the heading with "My plans" (the way back to the
- * calculator) and "Post a plan" (the open plan, through PostPlanDialog); the
+ * Top to bottom, under the Calculator screen's bar (CalculatorTabs, the way
+ * back to the calculator): the heading with "Post a plan" (the open plan,
+ * through PostPlanDialog); the
  * sort bar (Top for Today / This week / This month / All
  * time, and New) with the count; then the filter sidebar beside the list.
  * Below `lg` the sidebar is a "Filters" button opening the same controls in a
@@ -27,7 +28,7 @@
  */
 
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { Loader2, SlidersHorizontal } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
 import { useCalculatorData } from "../../services/CalculatorContext"
@@ -161,16 +162,14 @@ function CommunityPlansBody() {
 						copy it or take single banners.
 					</p>
 				</div>
-				<div className="flex gap-2">
-					<Link to="/app" className={SECONDARY_BUTTON}>
-						My plans
-					</Link>
-					{activePlan && activePlan.post_public_id !== undefined && (
-						<button type="button" onClick={() => setPosting(true)} className={PRIMARY_BUTTON}>
-							{activePlan.post_public_id ? "Update my post" : "Post a plan"}
-						</button>
-					)}
-				</div>
+				{/* No "My plans" link: the Calculator screen's bar above is the
+				    way back (owner, 2026-11-24). Always "Post a plan": a posted
+				    plan may be posted again, and the dialog asks which. */}
+				{activePlan && activePlan.post_public_id !== undefined && (
+					<button type="button" onClick={() => setPosting(true)} className={PRIMARY_BUTTON}>
+						Post a plan
+					</button>
+				)}
 			</header>
 			{posting && activePlan && <PostPlanDialog plan={activePlan} onClose={() => setPosting(false)} />}
 

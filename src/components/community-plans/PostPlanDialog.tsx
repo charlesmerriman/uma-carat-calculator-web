@@ -20,6 +20,13 @@
  * post's current words (loaded first), so an update can't wipe a long
  * description. A posted plan also offers "Take it down".
  *
+ * SEVERAL POSTS PER PLAN (owner, 2026-11-24). A posted plan asks first:
+ * update that post (the default, and what the plan menu's "Posted" mark
+ * points at), or post the plan again as a new one (`as_new`), which starts
+ * from the same words so only what differs needs typing. "The post" here is
+ * always the plan's NEWEST (`post_public_id`); an older one is taken down
+ * from the account page's list.
+ *
  * The send is CalculatorProvider.postPlan, which saves any pending edit
  * first: the post is a copy of the saved rows. A refused note names its
  * banner and shows beside the notes box. No display name yet: the same way
@@ -67,7 +74,7 @@ export function PostPlanDialog({ plan, onClose }: { plan: Plan; onClose: () => v
 	const loading = (updating && existing.isPending) || feed.isPending
 
 	return (
-		<GalleryModal title={updating ? "Update your plan's post" : "Post this plan to the Pull Plan Library"} onClose={onClose}>
+		<GalleryModal title="Post this plan to the Pull Plan Library" onClose={onClose}>
 			{!displayName ? (
 				<div className="flex flex-col gap-4 text-sm text-gray-300">
 					<p>A post shows your display name, and you haven't set one yet.</p>
@@ -121,7 +128,11 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 	const [confirmTakeDown, setConfirmTakeDown] = useState(false)
 	const [error, setError] = useState<{ text: string; field: string | null } | null>(null)
 	const errorId = useId()
-	const updating = plan.post_public_id != null
+	const posted = plan.post_public_id != null
+	// A posted plan may be posted again as a new post (header); until the
+	// person picks that, the dialog updates the plan's newest post.
+	const [asNew, setAsNew] = useState(false)
+	const updating = posted && !asNew
 	// What the post's range will be, worked out from the rows on screen when
 	// they are this plan's (the dialog posts the open plan); else the post's own.
 	const range = plan.id === activePlanId ? planRange(userPlannedBannerData, scenarioData ?? [])?.name : initial?.range?.label
@@ -142,6 +153,7 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 			include_notes: includeNotes,
 			include_income: includeIncome,
 			confirm_public_identity: agreed,
+			as_new: posted && asNew,
 		})
 		setSending(false)
 		if (!result.ok) {
@@ -194,10 +206,43 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 				<span className="font-semibold text-gray-100">{displayName}</span>, your favorite uma picture and, if you support us on
 				Patreon, your tier. You can take it down any time.
 			</p>
-			{updating && (
-				<p className="rounded-lg border border-gray-600 bg-gray-900/60 p-3">
-					This updates your post with the plan as it is now. The link, comments and votes stay.
-				</p>
+			{posted && (
+				<fieldset className="flex flex-col gap-2 rounded-lg border border-gray-600 bg-gray-900/60 p-3">
+					<legend className="sr-only">This plan is already posted</legend>
+					<label className="flex cursor-pointer items-start gap-2 text-gray-100">
+						<input
+							type="radio"
+							name="post-mode"
+							checked={!asNew}
+							onChange={() => setAsNew(false)}
+							className="mt-0.5 accent-brand"
+						/>
+						<span>
+							Update my post
+							<span className="block text-xs text-gray-400">
+								Your post gets the plan as it is now. The link, comments and votes stay.
+							</span>
+						</span>
+					</label>
+					<label className="flex cursor-pointer items-start gap-2 text-gray-100">
+						<input
+							type="radio"
+							name="post-mode"
+							checked={asNew}
+							onChange={() => {
+								setAsNew(true)
+								setConfirmTakeDown(false)
+							}}
+							className="mt-0.5 accent-brand"
+						/>
+						<span>
+							Post it as a new plan
+							<span className="block text-xs text-gray-400">
+								Your first post stays up as it is. A new post starts with no votes or comments.
+							</span>
+						</span>
+					</label>
+				</fieldset>
 			)}
 
 			<label className="flex flex-col gap-1">

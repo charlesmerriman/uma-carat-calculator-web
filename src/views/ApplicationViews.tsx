@@ -20,6 +20,8 @@ import { Footer } from "../components/footer/Footer.tsx"
 import { NotFound } from "../components/NotFound"
 import { OguriSpinner } from "../components/OguriSpinner"
 import { loadForecastPlot } from "../components/carat-calculator/loadForecastPlot"
+import { CalculatorTabs } from "../components/carat-calculator/CalculatorTabs"
+import { isCalculatorScreen } from "../components/carat-calculator/calculatorTabs"
 import { loadCommunityPlans } from "../components/community-plans/loadCommunityPlans"
 import { AppRouteMeta } from "./AppRouteMeta"
 import { SharedPlanLanding } from "../components/shared-plan/SharedPlanLanding"
@@ -98,6 +100,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 	// and a build-time render (which never has it) draws the page itself
 	// instead of the spinner (notes/encyclopedia-open-plan.md, PR 3).
 	const ungated = encyclopediaPageOf(pathname) !== null
+	const showCalculatorTabs = isCalculatorScreen(pathname)
 	useEffect(() => {
 		if (onCalculator) void loadForecastPlot().catch(() => {})
 	}, [onCalculator])
@@ -161,6 +164,11 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 						    timeline keep a normal block formatting context and don't become
 						    flex items themselves. flex-1 grows it into the slack; min-height:auto
 						    stops it shrinking below its content, so tall content still scrolls. */}
+						{/* The Calculator screen's bar (Calculator, Selectors, the Pull
+						    Plan Library). Above the gate, so the build-time render has
+						    it and it never jumps in when the data lands; it reads only
+						    the path and the account (CalculatorTabs' header). */}
+						{showCalculatorTabs && <CalculatorTabs />}
 						{/* The routed pages mount only once the data is here — they
 						    all assume their collections are populated. The
 						    Encyclopedia's detail pages are the exception (`ungated`). */}

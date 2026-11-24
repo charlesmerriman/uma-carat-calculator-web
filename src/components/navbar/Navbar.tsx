@@ -1,6 +1,7 @@
 import { useRef } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { BookOpen, CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Sparkles, Swords, Trophy } from "lucide-react"
+import { BookOpen, CalendarDays, Calculator as CalculatorIcon, ListOrdered, LogIn, Swords, Trophy } from "lucide-react"
+import { isCalculatorScreen } from "../carat-calculator/calculatorTabs"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import { prefetchCalculatorData } from "../../services/calculatorFetchCalls"
 import { useAccount } from "../../services/AuthContext"
@@ -70,11 +71,12 @@ export const Navbar = () => {
 		</>
 	)
 
-	// Community plans is the calculator's own (its way in is the Plans bar),
-	// so the Calculator tab stays lit there.
-	const isCalculator = location.pathname === "/app" || location.pathname === "/app/plans"
+	// The Calculator screen owns three pages, switched by its own bar
+	// (carat-calculator/CalculatorTabs.tsx, owner 2026-11-24): the calculator,
+	// Selectors and the Pull Plan Library. So Selectors has no tab here any
+	// more, and the Calculator tab stays lit on all three.
+	const isCalculator = isCalculatorScreen(location.pathname)
 	const isTimeline = location.pathname === "/app/timeline"
-	const isSelectors = location.pathname === "/app/selectors"
 	const isLegendRaces = location.pathname === "/app/legend-races"
 	const isPvp = location.pathname === "/app/pvp"
 	const isRankings = location.pathname === "/app/rankings"
@@ -99,14 +101,14 @@ export const Navbar = () => {
 	// 360px even that truncates, so the words hide there and the icons carry
 	// the bar; the label stays in the accessibility tree (sr-only).
 	//
-	// Everyone has six tabs since the Encyclopedia opened (2026-11-18), and
-	// early access a seventh (Rankings). The words hide below 440px and the
-	// Encyclopedia and Rankings labels below 2xl (1536px): the breakpoints
-	// the seven-tab bar was fitted at, kept for six because "Encyclopedia"
-	// is the long label in both and six with it was never measured. Loosen
-	// them for the six-tab bar only after measuring it.
+	// Everyone had six tabs once the Encyclopedia opened (2026-11-18), and
+	// early access a seventh (Rankings). Selectors moved into the Calculator
+	// screen's own bar on 2026-11-24, so it is five and six now. The words
+	// hide below 440px and the Encyclopedia and Rankings labels below 2xl
+	// (1536px): the breakpoints the seven-tab bar was fitted at, kept because
+	// fewer tabs only gives each more room. Loosen them only after measuring.
 	const mobileLabel = "truncate max-[439px]:sr-only"
-	const mobileColumns = showRankings ? "grid-cols-7" : "grid-cols-6"
+	const mobileColumns = showRankings ? "grid-cols-6" : "grid-cols-5"
 	const desktopLabel = "sr-only 2xl:not-sr-only"
 	const mobileNavClass = (active: boolean) =>
 		`nav-tab flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1.5 text-[10px] font-semibold transition ${
@@ -243,10 +245,6 @@ export const Navbar = () => {
 						<CalendarDays className="h-4 w-4 shrink-0" />
 						<span className={mobileLabel}>Timeline</span>
 					</Link>
-					<Link to="/app/selectors" className={mobileNavClass(isSelectors)} {...prefetchOnIntent}>
-						<Sparkles className="h-4 w-4 shrink-0" />
-						<span className={mobileLabel}>Selectors</span>
-					</Link>
 					{/* "Legends" rather than the desktop "Legend Races": four tabs share
 					    the bar, and the longer label would not fit a 320px screen. */}
 					<Link to="/app/legend-races" className={mobileNavClass(isLegendRaces)} {...prefetchOnIntent}>
@@ -303,10 +301,6 @@ export const Navbar = () => {
 							<CalendarDays className="w-4 h-4" />
 							Timeline
 						</Link>
-						<Link to="/app/selectors" className={desktopNavClass(isSelectors)} {...prefetchOnIntent}>
-							<Sparkles className="h-4 w-4" />
-							Selectors
-						</Link>
 						<Link to="/app/legend-races" className={desktopNavClass(isLegendRaces)} {...prefetchOnIntent}>
 							<Trophy className="h-4 w-4" />
 							Legend Races
@@ -320,7 +314,7 @@ export const Navbar = () => {
 							<BookOpen className="h-4 w-4" />
 							<span className={desktopLabel}>Encyclopedia</span>
 						</Link>
-						{/* The seventh, early access only; an icon below 2xl. */}
+						{/* The last, early access only; an icon below 2xl. */}
 						{showRankings && (
 							<Link to="/app/rankings" className={desktopNavClass(isRankings)} title="Rankings" {...prefetchOnIntent}>
 								<ListOrdered className="h-4 w-4" />
