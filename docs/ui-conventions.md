@@ -1145,7 +1145,8 @@ its rules loads by itself whenever a session opens the folder (the notes repo's
 
 ## Legend Races page (`components/legend-races/`)
 
-`/app/legend-races` is the fourth nav destination ("Legends" in the mobile bar). It
+`/app/legend-races` is the second page of the Timeline screen, reached from that screen's
+bar (it had a navbar tab of its own until 2026-11-24; see "Screen bars"). It
 shows when each batch of umas joins the daily legend races and how long grinding one
 takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 
@@ -1539,8 +1540,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   so a row's numbers always share one line. A blank cell is an en dash.
 - **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
   first global banner start, between the nearest earlier event of either kind and this one.
-- **The mobile bar has five tabs**: labels are 10px and hide (sr-only) below 360px, where
-  the icons carry the bar. Checked at 375px and 320px on 2026-10-13.
+- **The mobile bar has four tabs, five with Rankings** (`navbar/navPlaces.ts`): labels are
+  10px and hide (sr-only) below 440px, where the icons carry the bar.
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
@@ -2190,11 +2191,9 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
   colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
   components only.
-- **The navbar**: the Encyclopedia is everyone's fifth tab since Selectors moved into the
-  Calculator screen's bar (2026-11-24), and Rankings the sixth for early access. Both counts
-  keep the breakpoints the seven-tab bar was fitted at (icons only below 440px on a phone;
-  the Encyclopedia and Rankings labels are icons below 1536px): fewer tabs only gives each
-  more room, and the looser fit was never measured.
+- **The navbar**: the Encyclopedia is everyone's fourth place since Selectors and Legend
+  Races moved into their screens' bars (2026-11-24), and Rankings the fifth for early
+  access. Its name shows at every desktop width now; see "Screen bars".
 - **The catalogue is 106 KB on the wire** and the links and cards need it
   (`useEncyclopediaHrefs`). `HoverCardLayer` sits on every `/app` page, so it skips the load
   where no tile can open a card (`pageDrawsHoverCards`: the calculator and Selectors), and
@@ -2470,22 +2469,42 @@ page, although only the calculator reads these settings.
 - A guest's "Clear plan and start over" lives under the tiles, two presses, as it did in
   the popover.
 
-## Calculator screen bar (`carat-calculator/CalculatorTabs.tsx`)
+## Screen bars (`components/ScreenTabs.tsx`) and the navbar's places
 
-The Calculator screen owns three pages (owner, 2026-11-24): the calculator (`/app`),
-Selectors (`/app/selectors`) and the Pull Plan Library (`/app/plans`, early access until it
-opens). One bar at the top switches between them, drawn like the PvP page's view tabs
-(Henry's ask) but as `NavLink`s, since they are three addresses.
+**The navbar lists places; a place with more than one page gets a screen bar under it**
+(owner, 2026-11-24; `notes/navigation-plan.md`). Seven navbar tabs were more than a phone
+could name, and two of them were icons without a word below 1536px on a desktop.
 
-- **The list is `calculatorTabs.ts`** (`CALCULATOR_TABS`, `calculatorTabsFor`,
-  `isCalculatorScreen`). The navbar asks `isCalculatorScreen` to keep its Calculator tab lit
-  on all three, and has no Selectors tab any more (five tabs, six with Rankings).
-- **AppShell draws it above the loading gate**, so the build-time render of `/app` and
-  `/app/selectors` has it. It reads the path and the account only; the Library tab joins
-  after the account loads, and the bar's height never changes.
+- **The places are `navbar/navPlaces.ts`** (`NAV_PLACES`, `navPlacesFor`): Calculator,
+  Timeline, PvP, Encyclopedia, and Rankings for early access. One list for the phone bar and
+  the desktop bar. Each has an `isOpen(pathname)`, so a place stays lit on every page inside
+  it. A new place is one entry there; something that is not a place (a setting, a link, the
+  theme) goes in the menu (`SiteMenu`), never in the bar.
+- **On desktop every place has its name from 1024px** (five are 567px wide; the wordmark
+  wraps to two lines at 1024px with all five, as it did before). On a phone the names still
+  hide below 440px until the phone bar is rebuilt (the plan's PR 4).
+- **A screen bar is `ScreenTabs`**, fed a list and a one-line wrapper per screen:
+  the Calculator's (`carat-calculator/calculatorTabs.ts` + `CalculatorTabs.tsx`: the
+  calculator `/app`, Selectors `/app/selectors`, the Pull Plan Library `/app/plans`, early
+  access until it opens; web #456) and the Timeline's (`timeline/timelineTabs.ts` +
+  `TimelineTabs.tsx`: the Timeline and Legend Races). Drawn like the PvP page's view tabs
+  (Henry's ask) but as `NavLink`s, since they are separate addresses. A third screen is a
+  list and a wrapper, never a copy of the markup.
+- **AppShell draws a screen's bar above the loading gate**, so the build-time render of the
+  screen's pages has it. A wrapper reads the path and the account only; a gated tab (the
+  Library) joins after the account loads, and the bar's height never changes.
 - **Sticky** at `--navbar-h` where the document scrolls (phone), at `0` in the desktop
   shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`,
   opaque.
+- **Its height is one variable, `--screen-tabs-h` (`index.css`), and whatever sits under the
+  bar reads it.** The scroll padding (`html:has([data-screen-tabs])` where the document
+  scrolls, `[data-app-scroller]:has(> [data-screen-tabs])` in the desktop shell) is what
+  lands a deep link below the bar: without it a planner row's link to its Timeline card, or a
+  campaign strip's link to Selectors, parks its target under the bar. A band a page pins
+  beneath the bar takes it as its `top` (the Timeline's controls,
+  `app-shell:top-(--screen-tabs-h)`); at `top-0` the two stack on one line and the later one
+  covers the tabs. Measured 2026-11-24: a Timeline deep link lands where it did before the
+  bar existed, relative to the bands, at 1440px and 390px.
 - A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
 - **The tabs share the bar's whole width at every size**, one equal grid column each, like
   the Rankings and PvP rows (owner, 2026-11-24); never bunched at the left.
@@ -2841,7 +2860,7 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
 - Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
   its keys: the account page's list and the profile card hold both kinds.
 - **The way in is the Calculator screen's bar** (owner, 2026-11-24, replacing decisions 1
-  and 11's Plans bar button): see "Calculator screen bar" below. "Post this plan" in the plan
+  and 11's Plans bar button): see "Screen bars" below. "Post this plan" in the plan
   menu has a "Posted" mark from `post_public_id`; early access only, and hidden on an API
   without the field. The page's heading has "Post a plan" (the open plan) and no "My plans":
   the bar is the way back. The share card links "Browse the Pull Plan Library" under the
