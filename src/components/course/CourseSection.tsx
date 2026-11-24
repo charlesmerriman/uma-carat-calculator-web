@@ -80,9 +80,14 @@ const PHONE_TRACK_PX = 358
 // the 60px label column. Wide enough for every section number and the words.
 const PHONE_STRIP_PX = 660
 // The stuck bar's track at its largest. The height is the cap that matters:
-// the bar's height pushes the View tabs and the style tabs down the screen,
-// and 240 keeps the bar near the slim strip's (about 258px with its header).
+// the bar's height pushes the View tabs and the style tabs down the screen.
+// Beside the strip (Both), 240 keeps the bar near the slim strip's (about
+// 258px with its header). Alone (Track), the bar is a full-width strip and a
+// track is about twice as wide as tall, so at 240 it was a 400px drawing in
+// 1,400px of empty bar (owner, 2026-11-24): it gets 360 and its words, and the
+// reader who picks Track takes the taller bar.
 const STUCK_TRACK_PX = { width: 480, height: 240 }
+const STUCK_TRACK_ALONE_PX = { width: 900, height: 360 }
 // The stuck strip's race width beside that track (a 1440 screen leaves it
 // about 780), what its words and metres are spaced for.
 const STUCK_BOTH_STRIP_PX = 720
@@ -419,6 +424,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 	// The real shape is still on its way: hold the track's place rather than
 	// flash the schematic, as the in-place map does.
 	const stuckTrackWaiting = shapeChoice === "real" && real.isPending
+	const stuckTrackPx = stuckView === "track" ? STUCK_TRACK_ALONE_PX : STUCK_TRACK_PX
 	const stuckBar = stuck && createPortal(
 		<div
 			ref={stuckBarRef}
@@ -452,23 +458,26 @@ export default function CourseSection({ course, event = null, guide = null }: {
 			    card at the right. Both: the track, then a column with the strip
 			    and the card under it, where the track's height leaves room (the
 			    card beside the strip squeezed the strip's words together). */}
-			<div className="flex items-start gap-4">
+			{/* Track alone: the track and the card centred together, not pushed apart. */}
+			<div className={`flex items-start gap-4 ${stuckView === "track" ? "justify-center" : ""}`}>
 				{stuckView !== "strip" && (
 					<div className="shrink-0">
 						{stuckTrackWaiting ? (
-							<div className="flex items-center justify-center" style={{ width: STUCK_TRACK_PX.height * 1.5, height: STUCK_TRACK_PX.height }}>
+							<div className="flex items-center justify-center" style={{ width: stuckTrackPx.height * 1.5, height: stuckTrackPx.height }}>
 								<Loader2 className="h-5 w-5 animate-spin text-gray-400" aria-label="Loading the course map" />
 							</div>
 						) : (
-							// Bare: chips with icons, no words. Not `compact`: its padding
-							// is room for a phone's word chips, and at this height it left
+							// Words on when alone; beside the strip, bare (icon chips),
+							// since the strip names everything. Never `compact`: its
+							// padding is room for a phone's word chips, and here it left
 							// the drawing a third smaller.
 							<CourseTrack
 								course={course}
 								shape={shape}
-								widthPx={STUCK_TRACK_PX.width}
-								maxHeightPx={STUCK_TRACK_PX.height}
-								showWords={false}
+								widthPx={stuckTrackPx.width}
+								maxHeightPx={stuckTrackPx.height}
+								showWords={stuckView === "track"}
+								fewCallouts
 								colours={trackColours}
 								overlays={layer.overlays}
 								preview={preview}
@@ -494,7 +503,7 @@ export default function CourseSection({ course, event = null, guide = null }: {
 							<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
 						)}
 						{focus && (
-							<div className="ml-auto w-[380px] shrink-0">
+							<div className={`w-[380px] shrink-0 ${stuckView === "strip" ? "ml-auto" : ""}`}>
 								<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
 							</div>
 						)}

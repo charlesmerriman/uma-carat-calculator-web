@@ -2134,9 +2134,11 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
 - **Stick to top** (owner, 2026-11-20; Henry, 2026-11-24) is a fixed copy of the map in a
   portal on `<body>` (`data-course-stuck`), shown once the in-place strip (in Track view, the
   block's bottom) passes `--pvp-stick-line`; `usePvpStickyOffsets` adds its height to the
-  tabs' offsets. It shows the slim strip, a bare track (no words, and not `compact`, whose
-  padding shrank the drawing) capped at 240 px tall (`CourseTrack`'s `maxHeightPx`), or both
-  (the lit skill's card under the strip, not beside it, so the strip keeps its room), by its OWN remembered switch (`useStuckView`),
+  tabs' offsets. It shows the slim strip; the track alone, up to 360 px tall with the phone's
+  shorter callout list (`fewCallouts`) and its words, centred with the lit card (owner,
+  2026-11-24: at 240 it was a small drawing in a mostly empty bar); or both, the track bare
+  and capped at 240 px with the lit card under the strip so the strip keeps its room. Never
+  `compact` (its padding shrinks the drawing); the caps are `CourseTrack`'s `maxHeightPx`. By its OWN remembered switch (`useStuckView`),
   never the in-place Strip | Track | Both: changing that while stuck resizes the block
   above the reader and jumps the page. Desktop only. Every skill in the guide (`SkillCell`,
   `SkillChip`, a mention, an uma's unique) lights the map while its detail is open.

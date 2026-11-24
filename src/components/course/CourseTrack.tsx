@@ -234,7 +234,7 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx: widestPx = BOX_PX, maxHeightPx, compact = false, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx: widestPx = BOX_PX, maxHeightPx, compact = false, fewCallouts, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
@@ -249,6 +249,12 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	maxHeightPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
+	/**
+	 * A phone's shorter list of callouts without its padding (the stuck bar's
+	 * track: at about 650px wide the full list's chips ran into each other).
+	 * Defaults to `compact`.
+	 */
+	fewCallouts?: boolean
 	/** False draws the track bare: icon chips with no words (a phone's, until it's tapped). */
 	showWords?: boolean
 	/**
@@ -533,7 +539,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// the rest. A course that passes its corners twice has no room for them
 	// either: the strip under the track names them.
 	const twoLaps = course.corners.length > 4
-	const worded = compact
+	const worded = (fewCallouts ?? compact)
 		? allCallouts
 			.filter((callout) => ["start", "goal", "spurt", "uphill", "downhill"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.

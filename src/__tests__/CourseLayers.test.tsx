@@ -324,15 +324,17 @@ describe("Stick to top (owner, 2026-11-20)", () => {
 		// The track's box: its drawing's parent (the direction arrow is always drawn).
 		const trackBox = () => bar.querySelector('polygon[data-course="direction"]')?.closest("svg")?.parentElement ?? null
 		await waitFor(() => expect(trackBox()).not.toBeNull())
-		// Capped: its width is stated, at most the 480 the bar allows (the
-		// height cap narrows it further; jsdom keeps no aspect-ratio to check).
-		const width = parseFloat(trackBox()!.style.width)
-		expect(width).toBeGreaterThan(0)
-		expect(width).toBeLessThanOrEqual(480)
+		// Capped: its width is stated, at most what the bar allows (the height
+		// cap narrows it further; jsdom keeps no aspect-ratio to check). Alone
+		// it is the larger track, with its words.
+		const width = () => parseFloat(trackBox()!.style.width)
+		expect(width()).toBeGreaterThan(480)
+		expect(width()).toBeLessThanOrEqual(900)
 
 		fireEvent.click(within(views).getByRole("button", { name: "Both" }))
 		expect(within(bar).getByText("Phase")).toBeInTheDocument()
-		expect(trackBox()).not.toBeNull()
+		// Beside the strip, the smaller one.
+		expect(width()).toBeLessThanOrEqual(480)
 		// The map in place is still on its own Strip.
 		const inPlace = screen.getByRole("group", { name: "Map view" })
 		expect(within(inPlace).getByRole("button", { name: "Strip" })).toHaveAttribute("aria-pressed", "true")
