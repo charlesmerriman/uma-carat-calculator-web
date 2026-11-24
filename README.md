@@ -142,7 +142,8 @@ site content reaches the build are in [docs/development.md](docs/development.md)
 - [development.md](docs/development.md): local setup, commands, routes and the build
 - [resource-projection-logic.md](docs/resource-projection-logic.md): how the forecast is computed, from the income ledger to step-ups, selector tickets and campaign purchases
 - [state-and-guest-mode.md](docs/state-and-guest-mode.md): the provider, auto-save, guest mode, plans and the core types
-- [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, the Timeline and the planner layout
+- [ui-conventions.md](docs/ui-conventions.md): dates, styling and themes, and the planner layout
+- [timeline.md](docs/timeline.md): how the Timeline page is built, what changes at which width, and the checks that guard its layout
 
 The data model, endpoints, auth design and income schedule are documented in the
 [API repo](https://github.com/charlesmerriman/uma-carat-calculator-api/tree/HEAD/docs).
