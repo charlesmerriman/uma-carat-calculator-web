@@ -25,7 +25,8 @@
      tl-card           a card's panel (banner window, race event, marker)
      tl-icon-box       the 40px icon square in a card's header
      tl-title          a card's title
-     tl-pill           any rounded-full label or button in a card
+     tl-pill           any rounded-full label or button in a card; its
+                       shape and its two sizes (data-size) are in section 5
      tl-countdown      the countdown pill (also a tl-pill)
      tl-panel          a panel inside a card; data-kind says which:
                        "uma", "support", "course", "rewards"
@@ -513,6 +514,47 @@
 
 	.tl-panel[data-kind="support"] .tl-band-cell {
 		min-width: var(--tl-support-band-min);
+	}
+
+	/* ── Pills ────────────────────────────────────────────────────────────
+	   Every rounded label or button on a card is a `tl-pill`, in one of two
+	   sizes. The shape and the size are here; the COLOUR, the weight and the
+	   gap stay on the element as utilities, because those are what differ
+	   from one pill to the next and say what each one means.
+
+	     data-size="md"   the pills in a card's header row: a flex row, the
+	                      text at 14px (Copy link, the countdown, PvP guide,
+	                      a legend race or stagger note, Taking part)
+	     data-size="xs"   the small labels: 11px (a marker's kind, a campaign's
+	                      part, a step-up, a story event's kind and rewards)
+
+	   A pill that needs a different padding or size says so with a utility,
+	   which outranks this layer: "Taking part" is tighter to hug its switch,
+	   a story reward is 13px, a story tag is 12px bold.
+
+	   Written the way Tailwind writes them (calc(infinity * 1px), the
+	   --spacing and --text-sm variables), so the computed values are the
+	   ones the utilities gave. */
+	.tl-pill {
+		border-radius: calc(infinity * 1px);
+		border-style: var(--tw-border-style);
+		border-width: 1px;
+	}
+
+	.tl-pill[data-size="md"] {
+		display: flex;
+		width: fit-content;
+		align-items: center;
+		padding-inline: calc(var(--spacing) * 3);
+		padding-block: calc(var(--spacing) * 1);
+		font-size: var(--text-sm);
+		line-height: var(--tw-leading, var(--text-sm--line-height));
+	}
+
+	.tl-pill[data-size="xs"] {
+		padding-inline: calc(var(--spacing) * 2);
+		padding-block: calc(var(--spacing) * 0.5);
+		font-size: 11px;
 	}
 
 	/* ── Tile caps (the numbers and their reason are in :root above) ───── */

@@ -14,18 +14,18 @@
  * has, the two have stopped being the same card and should be split again.
  */
 
-import { BookOpen, Clock3, Loader2, Trophy } from "lucide-react"
+import { BookOpen, Loader2, Trophy } from "lucide-react"
 import { Link } from "react-router-dom"
 import PredictedBadge from "../PredictedBadge"
 import { DateTimeRange } from "./DateTimeRange"
 import { BannerArtPlaceholder } from "./BannerArtPlaceholder"
-import { TIMELINE_FOCUS_HIGHLIGHT, getCountdownLabel } from "./timelineShared"
+import { getCountdownLabel } from "./timelineShared"
 import { CourseDetails } from "./CourseDetails"
 import { RaceRewards } from "./RaceRewards"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import { availableCourseDetails, courseDetails } from "../../utils/courseDetails"
 import { pvpEventHref, refForRaceEvent } from "../../utils/pvpEvent"
-import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
+import { TimelineCard, TimelineCardHeader, TimelineCountdown } from "./TimelineCard"
 import { useRaceParticipation } from "../../hooks/useRaceParticipation"
 import { useRaceRewards } from "../../hooks/useRaceRewards"
 import { ToggleSwitch } from "../ToggleSwitch"
@@ -64,39 +64,18 @@ export function RaceEventCard({
 	const hasSidePanel = hasEventDetails || rewards !== null
 
 	return (
-		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
-			<div
-				className={`tl-card card-panel @container w-full overflow-hidden rounded-xl p-2 sm:p-3 ${
-					isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""
-				}`}
-			>
-				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div className="flex min-w-0 items-center gap-3">
-						<div className="tl-icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
-							<Trophy className="h-5 w-5" />
-						</div>
-						<div className="min-w-0">
-							<div className="flex flex-wrap items-center gap-2">
-								<h2 className="tl-title text-xl font-semibold text-gray-100 sm:text-2xl">{event.name}</h2>
-								{event.is_predicted && <PredictedBadge />}
-							</div>
-							<p className="mt-0.5 text-sm text-gray-400">
-								<DateTimeRange start={event.start_date} end={event.end_date} />
-							</p>
-							{skipped && (
-								<p className="mt-0.5 text-sm text-gray-400">
-									You're skipping this one, so its rewards aren't counted in your income.
-								</p>
-							)}
-						</div>
-					</div>
-					<div className="flex flex-wrap items-center gap-2">
+		<TimelineCard focusRef={focusRef} isFocused={isFocused}>
+			<TimelineCardHeader
+				icon={Trophy}
+				actions={
+					<>
 						{/* Only when a guide is PUBLISHED (has_guide). The href comes from
 						    the shared helper, so this card still never reads event_type. */}
 						{event.has_guide && (
 							<Link
 								to={pvpEventHref(refForRaceEvent(event))}
-								className="tl-pill flex w-fit items-center gap-1.5 rounded-full border border-brand/50 bg-brand/10 px-3 py-1 text-sm font-semibold text-brand transition hover:bg-brand/20"
+								data-size="md"
+								className="tl-pill gap-1.5 border-brand/50 bg-brand/10 font-semibold text-brand transition hover:bg-brand/20"
 							>
 								<BookOpen className="h-4 w-4" />
 								PvP guide
@@ -104,7 +83,9 @@ export function RaceEventCard({
 						)}
 						{participation && (
 							<div
-								className="tl-pill flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 py-0.5 pl-3 pr-1 text-sm font-semibold text-gray-100"
+								data-size="md"
+								// Tighter than the other pills, to hug the switch inside it.
+								className="tl-pill gap-2 border-gray-600 bg-gray-700 py-0.5 pl-3 pr-1 font-semibold text-gray-100"
 								title="Turn this off if you won't play it. Its rewards then stay out of your projected income."
 							>
 								<span>Taking part</span>
@@ -117,58 +98,70 @@ export function RaceEventCard({
 						)}
 						{/* A race ref is already a TimelineFocus (cm-12 / loh-3). */}
 						<CopyTimelineLink focus={refForRaceEvent(event)} name={event.name} />
-						<div className="tl-pill tl-countdown flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
-							<span>{countdownLabel}</span>
-							<Clock3 className="h-4 w-4 text-brand" />
-						</div>
+						<TimelineCountdown label={countdownLabel} />
+					</>
+				}
+			>
+				<div className="min-w-0">
+					<div className="flex flex-wrap items-center gap-2">
+						<h2 className="tl-title text-xl font-semibold text-gray-100 sm:text-2xl">{event.name}</h2>
+						{event.is_predicted && <PredictedBadge />}
 					</div>
+					<p className="mt-0.5 text-sm text-gray-400">
+						<DateTimeRange start={event.start_date} end={event.end_date} />
+					</p>
+					{skipped && (
+						<p className="mt-0.5 text-sm text-gray-400">
+							You're skipping this one, so its rewards aren't counted in your income.
+						</p>
+					)}
 				</div>
+			</TimelineCardHeader>
 
-				{hasPendingDetails && (
-					<div className="mb-4 flex items-center gap-2 rounded-lg border border-brand/25 bg-brand/5 px-3 py-2 text-sm text-gray-300">
-						<Loader2 className="h-4 w-4 shrink-0 text-brand" />
-						<span>Some course details are coming soon.</span>
-					</div>
-				)}
+			{hasPendingDetails && (
+				<div className="mb-4 flex items-center gap-2 rounded-lg border border-brand/25 bg-brand/5 px-3 py-2 text-sm text-gray-300">
+					<Loader2 className="h-4 w-4 shrink-0 text-brand" />
+					<span>Some course details are coming soon.</span>
+				</div>
+			)}
 
-				{/*
-				 * The art track is `--timeline-art-width`, the same width the banner
-				 * cards' art has (`.tl-race-row` in timeline.css). This used to be the
-				 * banner row's 1.28fr weight against one gap instead of two, which
-				 * came out 6px wider than the banners above and below it. The
-				 * side panels (course details, your rewards) take the rest. With
-				 * neither the art sits alone and centred, still at the shared width
-				 * from xl up.
-				 */}
-				<div className={hasSidePanel ? "tl-race-row" : "tl-art-frame"}>
-					<div className="min-w-0">
-						{event.image ? (
-							/* 16:9 declared so the box is reserved before the image
-							   loads: `.tl-art` in timeline.css. */
-							<img
-								src={event.image}
-								alt={event.name}
-								loading="lazy"
-								decoding="async"
-								className="tl-art"
-							/>
-						) : (
-							<BannerArtPlaceholder />
-						)}
-					</div>
-
-					{hasSidePanel && (
-						<div className="flex min-w-0 flex-col gap-4">
-							<CourseDetails event={event} />
-							{rewards && <RaceRewards rewards={rewards} />}
-						</div>
+			{/*
+			 * The art track is `--timeline-art-width`, the same width the banner
+			 * cards' art has (`.tl-race-row` in timeline.css). This used to be the
+			 * banner row's 1.28fr weight against one gap instead of two, which
+			 * came out 6px wider than the banners above and below it. The
+			 * side panels (course details, your rewards) take the rest. With
+			 * neither the art sits alone and centred, still at the shared width
+			 * from xl up.
+			 */}
+			<div className={hasSidePanel ? "tl-race-row" : "tl-art-frame"}>
+				<div className="min-w-0">
+					{event.image ? (
+						/* 16:9 declared so the box is reserved before the image
+						   loads: `.tl-art` in timeline.css. */
+						<img
+							src={event.image}
+							alt={event.name}
+							loading="lazy"
+							decoding="async"
+							className="tl-art"
+						/>
+					) : (
+						<BannerArtPlaceholder />
 					)}
 				</div>
 
-				{/* The course map's drawer (notes/course-map-plan.md, PR 5): only
-				    for an event with a course, closed until opened. */}
-				{event.course && <CourseDrawer course={event.course} guideHref={pvpEventHref(refForRaceEvent(event))} />}
+				{hasSidePanel && (
+					<div className="flex min-w-0 flex-col gap-4">
+						<CourseDetails event={event} />
+						{rewards && <RaceRewards rewards={rewards} />}
+					</div>
+				)}
 			</div>
-		</div>
+
+			{/* The course map's drawer (notes/course-map-plan.md, PR 5): only
+			    for an event with a course, closed until opened. */}
+			{event.course && <CourseDrawer course={event.course} guideHref={pvpEventHref(refForRaceEvent(event))} />}
+		</TimelineCard>
 	)
 }

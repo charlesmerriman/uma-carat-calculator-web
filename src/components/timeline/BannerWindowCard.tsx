@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, Sparkles, Ticket } from "lucide-react"
+import { CalendarDays, Sparkles, Ticket } from "lucide-react"
 import PredictedBadge from "../PredictedBadge"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { formatDate } from "../../utils/dateFormat"
@@ -8,15 +8,14 @@ import { LegendRaceNote } from "./LegendRaceNote"
 import { StoryEventStrip } from "./StoryEventStrip"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import { BannerSection } from "./BannerSection"
+import { TimelineCard, TimelineCardHeader, TimelineCountdown } from "./TimelineCard"
 import type { DatedRelease } from "../../utils/dailyLegendRaces"
 import type { StoryEvent } from "../../types"
 import {
-	TIMELINE_FOCUS_HIGHLIGHT,
 	buildWindowSections,
 	featuredTitle,
 	getCountdownLabel,
 } from "./timelineShared"
-import { FOCUS_SCROLL_MARGIN } from "../../hooks/useFocusScroll"
 import type { BannerWindowGroup, TimelineFocusProps } from "./timelineShared"
 import type { BannerSupport, BannerUma, UserPlannedBanner } from "../../types"
 
@@ -118,48 +117,21 @@ export function BannerWindowCard({
 	})
 
 	return (
-		// The ref goes on the outer wrapper so scrolling accounts for the campaign
-		// strip above the panel; the ring goes on the panel, which is the box a
-		// reader recognises as "the card" and the only one with the right rounding.
-		<div ref={focusRef} className={`my-3 w-full px-2 ${FOCUS_SCROLL_MARGIN}`}>
-			{attachedEvent && (
-				<AnniversaryEventStrip event={attachedEvent} stepUps={stepUps} />
-			)}
-			<div
-				className={`tl-card card-panel @container w-full overflow-hidden p-2 sm:p-3 ${
-					attachedEvent ? "rounded-t-none" : ""
-				} ${storyEvents.length > 0 ? "rounded-b-none" : ""} ${isFocused ? TIMELINE_FOCUS_HIGHLIGHT : ""}`}
-			>
-				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div className="flex min-w-0 items-center gap-3">
-						<div className="tl-icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-600 bg-gray-700 text-brand">
-							<CalendarDays className="h-5 w-5" />
-						</div>
-						{title ? (
-							// Names lead, dates follow (design polish item 20). The date
-							// range stays one element with the same text, which is what
-							// the Timeline tests find a card by.
-							<div className="min-w-0">
-								<h3 className="tl-title text-lg leading-snug font-semibold text-balance text-gray-100 sm:text-xl">{title}</h3>
-								<div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
-									<span>
-										<DateTimeRange start={group.start_date} end={group.end_date} />
-									</span>
-									{group.is_predicted && <PredictedBadge />}
-								</div>
-							</div>
-						) : (
-							<div className="tl-title min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
-								<div className="flex flex-wrap items-center gap-2">
-									<span>
-										<DateTimeRange start={group.start_date} end={group.end_date} />
-									</span>
-									{group.is_predicted && <PredictedBadge />}
-								</div>
-							</div>
-						)}
-					</div>
-					<div className="flex flex-wrap items-center gap-2">
+		// A campaign strip sits flush above the panel and the story events flush
+		// beneath it, so the panel's corners on that side square off, or the two
+		// render as separate boxes with a seam between.
+		<TimelineCard
+			focusRef={focusRef}
+			isFocused={isFocused}
+			panelClassName={`${attachedEvent ? "rounded-t-none" : ""} ${storyEvents.length > 0 ? "rounded-b-none" : ""}`}
+			before={attachedEvent && <AnniversaryEventStrip event={attachedEvent} stepUps={stepUps} />}
+			// Outside the panel, so the art row above can't grow.
+			after={storyEvents.length > 0 && <StoryEventStrip events={storyEvents} />}
+		>
+			<TimelineCardHeader
+				icon={CalendarDays}
+				actions={
+					<>
 						{legendRaces.map((release) => (
 							<LegendRaceNote
 								key={release.id}
@@ -172,7 +144,8 @@ export function BannerWindowCard({
 							<div
 								key={text}
 								role="note"
-								className="tl-pill flex w-fit items-center gap-2 rounded-full border border-staging/40 px-3 py-1 text-sm font-medium text-gray-200"
+								data-size="md"
+								className="tl-pill gap-2 border-staging/40 font-medium text-gray-200"
 							>
 								<NoteIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-staging" />
 								<span>{text}</span>
@@ -184,38 +157,57 @@ export function BannerWindowCard({
 							focus={{ kind: "banner", id: group.banners[0].id }}
 							name={title || `the banners from ${formatDate(group.start_date)}`}
 						/>
-						<div className="tl-pill tl-countdown flex w-fit items-center gap-2 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100">
-							<span>{countdownLabel}</span>
-							<Clock3 className="h-4 w-4 text-brand" />
+						<TimelineCountdown label={countdownLabel} />
+					</>
+				}
+			>
+				{title ? (
+					// Names lead, dates follow (design polish item 20). The date
+					// range stays one element with the same text, which is what
+					// the Timeline tests find a card by.
+					<div className="min-w-0">
+						<h3 className="tl-title text-lg leading-snug font-semibold text-balance text-gray-100 sm:text-xl">{title}</h3>
+						<div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+							<span>
+								<DateTimeRange start={group.start_date} end={group.end_date} />
+							</span>
+							{group.is_predicted && <PredictedBadge />}
 						</div>
 					</div>
-				</div>
-
-				{/* Sections are separated by a rule rather than nested panels: two
-				    banners in one window are peers, and boxing each would add a
-				    frame inside a frame. */}
-				<div className="flex flex-col gap-4">
-					{sections.map((section, index) => (
-						<div
-							key={section.primary.id}
-							className={index > 0 ? "border-t border-gray-700/70 pt-4" : undefined}
-						>
-							<BannerSection
-								section={section}
-								isGrouped={isGrouped}
-								groupStartDate={group.start_date}
-								groupEndDate={group.end_date}
-								today={today}
-								plannedBannerKeys={plannedBannerKeys}
-								stagedBanners={stagedBanners}
-								onAddBanner={onAddBanner}
-							/>
+				) : (
+					<div className="tl-title min-w-0 text-xl font-semibold text-gray-100 sm:text-2xl">
+						<div className="flex flex-wrap items-center gap-2">
+							<span>
+								<DateTimeRange start={group.start_date} end={group.end_date} />
+							</span>
+							{group.is_predicted && <PredictedBadge />}
 						</div>
-					))}
-				</div>
+					</div>
+				)}
+			</TimelineCardHeader>
+
+			{/* Sections are separated by a rule rather than nested panels: two
+			    banners in one window are peers, and boxing each would add a
+			    frame inside a frame. */}
+			<div className="flex flex-col gap-4">
+				{sections.map((section, index) => (
+					<div
+						key={section.primary.id}
+						className={index > 0 ? "border-t border-gray-700/70 pt-4" : undefined}
+					>
+						<BannerSection
+							section={section}
+							isGrouped={isGrouped}
+							groupStartDate={group.start_date}
+							groupEndDate={group.end_date}
+							today={today}
+							plannedBannerKeys={plannedBannerKeys}
+							stagedBanners={stagedBanners}
+							onAddBanner={onAddBanner}
+						/>
+					</div>
+				))}
 			</div>
-			{/* Flush beneath the panel, outside it, so the art row above can't grow. */}
-			{storyEvents.length > 0 && <StoryEventStrip events={storyEvents} />}
-		</div>
+		</TimelineCard>
 	)
 }
