@@ -1130,7 +1130,8 @@ a search box.
 
 **Two card shapes, three event types.** Champions Meetings and League of Heroes events
 share one course-details card, `components/timeline/RaceEventCard.tsx`; banner
-windows use the wider card in `components/timeline/BannerWindowCard.tsx`. `RaceEventCard`
+windows use the wider card in `components/timeline/BannerWindowCard.tsx` (one component per
+file: the card, `BannerSection`, `FeaturePanel`, `FeaturedTile`). `RaceEventCard`
 never branches on which of the two it has — if it ever needs to, they've stopped being the
 same card and should be split again. `RaceEventCard.test.tsx` renders one of each from the
 same data and diffs the markup, so a change applied to only one type fails there.
@@ -1180,8 +1181,11 @@ own "Add to Planner". A section whose own end date differs from the header's say
 
 The **card count** decides whether a panel abandons its column for a full-width band
 (`COLUMN_TILE_CAPACITY`, currently 2 — a feature column is ~260px, two tiles across).
-`banner_category` picks the chip and the column weighting (`CATEGORY_CHROME` in
-`BannerWindowCard.tsx`), and can still *force* a band.
+`banner_category` picks the chip (`CATEGORY_CHROME` in `BannerSection.tsx`) and the column
+weighting, and can still *force* a band (`CATEGORY_LAYOUT`). The whole decision is one pure
+function, `sectionLayout()` in `components/timeline/sectionLayout.ts`, which returns the
+section's shape and where each panel goes; `sectionLayout.test.ts` is the table of every
+case below, and the JSX only writes the answer down as `data-shape` and `data-layout`.
 
 That way round because of the JP launch banner: a `standard` row with 9 umas and 20 support
 cards and no art. No category flagged it, and none should have to — the counts are right
@@ -1445,7 +1449,7 @@ can't grow. Plans: `notes/story-events-plan.md`, `notes/story-events-plan-2.md`.
 ### Other Timeline rules
 
 - **A featured tile's name breaks at a seam, never mid-word** (`withSeams` in
-  `BannerWindowCard.tsx`). Two names are one 18-letter word, "Matikanetannhauser" and
+  `FeaturedTile.tsx`). Two names are one 18-letter word, "Matikanetannhauser" and
   "Matikanefukukitaru", too wide for a support tile at any readable size, so a soft hyphen
   after "Matikane" (`NAME_SEAMS`) lets them break as "Matikane-" over the rest, at the tile's
   normal size (Daptrius, board "Timeline, Support Card, Longest Name Fix", 2026-11-17; he
