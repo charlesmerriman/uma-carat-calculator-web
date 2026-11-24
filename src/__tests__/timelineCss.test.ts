@@ -150,6 +150,20 @@ describe("personalityThemes.css, on the Timeline's hooks", () => {
 	const themeRules = allThemeRules.filter((rule) => !isPseudo(rule))
 	const pseudoRules = allThemeRules.filter(isPseudo)
 
+	it("scopes every default-family rule by excluding the two palette themes, and reads roles, not colours", () => {
+		// The family's rules draw twelve palettes, so one may never name a colour
+		// of its own; and a bare rule would leak into Winning Live and Tracen.
+		const SCOPE = ':root:not([data-theme="tracen"], [data-theme="winning-live"])'
+		const family = parseRules(themeCss).filter((rule) => rule.selector.includes(":root:not("))
+		expect(family.length).toBeGreaterThan(20)
+		for (const rule of family) {
+			// Split the selector list on its own commas, not the one inside :not(a, b).
+			for (const selector of rule.selector.split(/,(?![^(]*\))/)) expect(selector.trim().startsWith(SCOPE), selector).toBe(true)
+			expect(rule.body, rule.selector).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+			expect(rule.body.replace(/var\([^)]*\)/g, ""), rule.selector).not.toMatch(/\brgb\(/)
+		}
+	})
+
 	it("has Timeline rules to check", () => {
 		expect(themeRules.length).toBeGreaterThan(10)
 	})
