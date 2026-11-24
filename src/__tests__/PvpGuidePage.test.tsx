@@ -577,7 +577,10 @@ describe("PvpGuidePage band", () => {
 		const team = within(screen.getByRole("region", { name: "For the whole team" }))
 		expect(team.getByText("Recommended stats")).toBeInTheDocument()
 		expect(team.getByText("Trackblazer")).toBeInTheDocument()
-		expect(team.getByText("2 Front + 1 Late")).toBeInTheDocument()
+		// Team comps sit with the ranking and the Meta analysis (review item 5).
+		expect(team.queryByText("2 Front + 1 Late")).not.toBeInTheDocument()
+		const ranking = within(screen.getByRole("region", { name: "Style ranking" }))
+		expect(ranking.getByText("2 Front + 1 Late")).toBeInTheDocument()
 	})
 
 	it("draws one plain stats row as five tiles, and more rows as the table", async () => {

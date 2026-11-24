@@ -384,6 +384,40 @@ function CompPlaces({ text }: { text: string }) {
 	)
 }
 
+/**
+ * The guide's team comps: a recommended team shape and why, each with its
+ * places as chips. They sit under the Meta analysis in the ranking's box
+ * (review item 5, 2026-11-24): both say what shape of team wins, and the
+ * ranking's box no longer stands half empty beside the taller stats box.
+ * Without a ranking or any text they stay in the stats box.
+ */
+function TeamComps({ guide, className = "" }: { guide: PvpGuide; className?: string }) {
+	return (
+		<div role="group" aria-labelledby="pvp-team-comps" className={className}>
+			<h3 id="pvp-team-comps" className={`flex items-center gap-1.5 ${HEADING}`}>
+				<Users className="h-4 w-4" />
+				Team comps
+			</h3>
+			<ul className="mt-2 space-y-1.5 text-sm text-gray-300">
+				{guide.team_comps.map((comp, index) => (
+					<li key={index} className="flex items-center gap-2.5">
+						<CompPlaces text={comp.text} />
+						<span className="min-w-0">
+							<span className="font-medium text-gray-100">{comp.text}</span>
+							{comp.note && (
+								<>
+									<span className="text-gray-500"> · </span>
+									<InlineNote text={comp.note} />
+								</>
+							)}
+						</span>
+					</li>
+				))}
+			</ul>
+		</div>
+	)
+}
+
 export function GuideBand({ guide, active, onStyleChange }: {
 	guide: PvpGuide
 	/** The style tab on screen, for the ladder's pressed step. */
@@ -392,7 +426,10 @@ export function GuideBand({ guide, active, onStyleChange }: {
 }) {
 	const steps = parseStyleRanking(guide.style_ranking)
 	const hasLeft = steps.length > 0 || Boolean(guide.short_description || guide.meta_analysis)
-	const hasRight = guide.stat_configs.length > 0 || guide.scenario !== null || guide.team_comps.length > 0
+	const hasText = steps.length > 0 || Boolean(guide.short_description || guide.meta_analysis)
+	// Team comps join the ranking's box whenever there is one (TeamComps).
+	const compsLeft = hasText && guide.team_comps.length > 0
+	const hasRight = guide.stat_configs.length > 0 || guide.scenario !== null || (!compsLeft && guide.team_comps.length > 0)
 	if (!hasLeft && !hasRight) return null
 	return (
 		// The two boxes stretch to the taller one (a grid's default), so their
@@ -406,6 +443,7 @@ export function GuideBand({ guide, active, onStyleChange }: {
 					<div className={steps.length > 0 ? "mt-1" : ""}>
 						<GuideText guide={guide} />
 					</div>
+					{compsLeft && <TeamComps guide={guide} className="mt-4 border-t border-gray-700/70 pt-3" />}
 				</section>
 			)}
 			{hasRight && (
@@ -429,30 +467,7 @@ export function GuideBand({ guide, active, onStyleChange }: {
 							</div>
 						</div>
 					)}
-					{guide.team_comps.length > 0 && (
-						<div role="group" aria-labelledby="pvp-team-comps">
-							<h3 id="pvp-team-comps" className={`flex items-center gap-1.5 ${HEADING}`}>
-								<Users className="h-4 w-4" />
-								Team comps
-							</h3>
-							<ul className="mt-2 space-y-1.5 text-sm text-gray-300">
-								{guide.team_comps.map((comp, index) => (
-									<li key={index} className="flex items-center gap-2.5">
-										<CompPlaces text={comp.text} />
-										<span className="min-w-0">
-											<span className="font-medium text-gray-100">{comp.text}</span>
-											{comp.note && (
-												<>
-													<span className="text-gray-500"> · </span>
-													<InlineNote text={comp.note} />
-												</>
-											)}
-										</span>
-									</li>
-								))}
-							</ul>
-						</div>
-					)}
+					{!compsLeft && guide.team_comps.length > 0 && <TeamComps guide={guide} />}
 				</section>
 			)}
 		</div>

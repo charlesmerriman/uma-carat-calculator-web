@@ -43,7 +43,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react"
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Link, Navigate, useLocation, useSearchParams, type NavigateOptions } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -336,9 +336,8 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 
 	// The pinned rows' offsets, as CSS variables on the page root.
 	const rootRef = useRef<HTMLDivElement>(null)
-	const bandRef = useRef<HTMLDivElement>(null)
 	const tabsRef = useRef<HTMLDivElement>(null)
-	usePvpStickyOffsets(rootRef, bandRef, tabsRef, event !== null)
+	usePvpStickyOffsets(rootRef, tabsRef, event !== null)
 
 	/**
 	 * A link to what is on screen, for someone else: the event, always (a bare
@@ -370,7 +369,6 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	return (
 		<div ref={rootRef} className="w-full pb-8">
 			<ControlBand
-				ref={bandRef}
 				events={choices}
 				event={event}
 				index={index}
@@ -420,7 +418,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 							guide={guideState.status === "ready" ? guideState.guide : null}
 						/>
 
-						{/* Pinned under the event band (desktop) or the navbar (phone)
+						{/* Pinned to the top of the scroller (desktop) or under the navbar (phone)
 						    while the page scrolls, so the views stay one tap away
 						    (Daptrius, 2026-10-22). Opaque, or the page shows through. */}
 						<div ref={tabsRef} className="sticky top-(--pvp-tabs-top,0px) z-20 bg-gray-900">
@@ -580,8 +578,7 @@ function optionLabel(event: RaceEvent): string {
 	return `${event.has_guide ? "★ " : ""}${event.name} (${formatDate(event.start_date)})`
 }
 
-function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogglePast, onSelect }: {
-	ref: Ref<HTMLDivElement>
+function ControlBand({ events, event, index, now, showPast, hasPast, onTogglePast, onSelect }: {
 	events: RaceEvent[]
 	event: RaceEvent | null
 	index: number
@@ -602,7 +599,7 @@ function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogg
 		)
 	}
 	return (
-		<div ref={ref} className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950">
+		<div className="border-y border-gray-700/60 bg-gray-950/40">
 			{/* From `md:`, three columns: the past toggle at the far left, under the
 			    site's logo, and Previous / the event / Next centred, the right column
 			    empty to balance them. The toggle sat right beside Previous for a

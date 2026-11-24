@@ -1304,8 +1304,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   style's count beside "Open Pace", the way to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
   `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up and a thumbs-down with the score between (`useCommentWrites().vote`; staff see the split in the score's title).
-- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
-  shell) or the navbar (phone, document scrolling); the running-style tabs, the guide's side
+- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick at the top of the shell's
+  scroller (desktop) or under the navbar (phone, document scrolling); the event band
+  (Previous, the event, Next) scrolls away in both (review item 4, 2026-11-24: it held 52px
+  of the screen for the whole read). The running-style tabs, the guide's side
   column, the gallery's open post and the team builder's docked panels stick under them.
   The offsets are MEASURED by `hooks/usePvpStickyOffsets.ts` into CSS variables on the page
   root (`--pvp-tabs-top`, `--pvp-below-tabs`, `--pvp-viewport-h`); a new pinned row reads
@@ -1376,11 +1378,14 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   own classes never fired), each step the rank, the name in its colour and three top-star
   faces, a button to the tab ("Pace, rank 1"); `>>` is "≫ gap", `=`/`>=` "level", with
   words for screen readers; a non-style word is a plain step. Then the short description
-  and the meta analysis (on a phone about three lines, faded, "Read more" when longer).
+  and the meta analysis (on a phone cut at the last whole line under 5.25rem, with no fade,
+  and "Read more" when longer), then the team comps with three places in the styles' colours
+  (`parseTeamComp`; a comp it can't count stays words only). They sat in the right panel
+  until review item 5 (2026-11-24) left the ranking's box half empty beside it; with no
+  ranking or text they still go right.
   Right, one panel: Recommended stats (one plain row as five tiles, otherwise the table
   with every row's label and footnote: Henry asked for several rows with notes), the
-  scenario ("Cards marked Link are linked to it."), the team comps with three places in
-  the styles' colours (`parseTeamComp`; a comp it can't count stays words only).
+  scenario ("Cards marked Link are linked to it.").
 - **Running-style colours are Hakuraku's** (Henry, 2026-10-23), the `--color-style-*`
   variables in `index.css`'s `:root` (NOT `@theme`: Tailwind emits a `@theme` variable only
   when a utility uses it, and these are read through inline `var()`, so all but one went
