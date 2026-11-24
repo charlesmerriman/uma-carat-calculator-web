@@ -24,9 +24,9 @@ function itemParts(parts: [number, string][]): string {
 export function RaceRewards({ rewards }: { rewards: RaceRewardsData }) {
 	const { days, total, tickets, shards, rankName, counted } = rewards
 	return (
-		<section className="card-panel p-3">
+		<section data-kind="rewards" className="tl-panel card-panel p-3">
 			<div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-				<div className="flex items-center gap-2 text-sm font-semibold text-brand">
+				<div className="tl-panel-title flex items-center gap-2 text-sm font-semibold text-brand">
 					<Gift className="h-4 w-4" />
 					<span>Your rewards</span>
 				</div>

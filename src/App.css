@@ -97,29 +97,6 @@
 	}
 }
 
-/* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
-
-   The ordinary banner row is image | umas | supports at 1.28fr | 0.88fr |
-   0.78fr with two 1rem gaps, so its art is (row - 2rem) * 1.28/2.94 wide.
-   Every other shape used to size its art some other way: the one-panel row
-   gave it half the row, the art-only and marker cards gave it the whole row,
-   and each then hit the 41rem cap somewhere the ordinary row never reaches.
-   Side by side down the list that read as four different banner sizes.
-
-   This is that ordinary fraction, written once as a length so the other
-   shapes can ask for it. 100cqw rather than 100%, because a percentage
-   resolves against the element's own parent and the marker pair's art sits
-   in a half-width column: cqw measures the nearest `@container` instead,
-   which every timeline card panel declares, so the art is the same width
-   however deeply it is nested inside the panel. Read where it is used, not
-   where it is declared: var() substitutes the expression into the using
-   element and cqw resolves there.
-
-   The 41rem cap on the art stays as the ceiling for the single-column
-   layouts below xl, where this variable is not applied. */
-:root {
-	--timeline-art-width: calc((100cqw - 2rem) * 0.4354);
-}
 
 /* ===== BANNER ROW ===== */
 
@@ -553,60 +530,6 @@
 	box-shadow: inset 0 0 0 1px var(--color-pull-over-border);
 }
 
-/* ── Banner category chip ─────────────────────────────────────────────────
-   The marker on a timeline section whose banner isn't an ordinary one. A
-   `standard` banner gets no chip at all — most banners are standard, and a
-   badge on every card is noise rather than signal.
-
-   Same @apply restriction as the pull-input classes above: --color-category-*
-   lives in index.css's @theme, which `@reference "tailwindcss"` doesn't load,
-   so the color properties are written against the variables directly. The
-   layout half is plain CSS for the same reason — splitting it across a
-   Tailwind class string and a stylesheet rule would put the chip's padding
-   somewhere other than its color. */
-.category-chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	flex-shrink: 0;
-	border-radius: 9999px;
-	border-width: 1px;
-	border-style: solid;
-	padding: 0.125rem 0.625rem;
-	font-size: 0.75rem;
-	line-height: 1.25rem;
-	font-weight: 600;
-	letter-spacing: 0.02em;
-}
-
-.category-chip--revival {
-	color: var(--color-category-revival);
-	border-color: var(--color-category-revival-border);
-	background-color: var(--color-gray-800);
-}
-
-/* Reruns and race-prep batches. Deliberately achromatic: they are worth
-   labelling but not worth interrupting the scroll for, and leaving the one hue
-   to the revival keeps that signal meaningful. */
-.category-chip--quiet {
-	color: var(--color-gray-300);
-	border-color: var(--color-gray-600);
-	background-color: var(--color-gray-800);
-}
-
-/* Tinted fill behind the same @supports guard as the pull inputs, and for the
-   same reason — see the comment on that guard. Without color-mix the chip keeps
-   its flat card-colored fill and still reads through border and text. */
-@supports (background-color: color-mix(in srgb, red 12%, blue)) {
-	.category-chip--revival {
-		background-color: color-mix(
-			in srgb,
-			var(--color-category-revival-border) 14%,
-			var(--color-gray-800)
-		);
-	}
-}
-
 /* ── Recommended banner: the SSR panel ────────────────────────────────────
    A Timeline feature panel ("Featured Umamusume" / "Featured Support Cards")
    whose banner an editor has ticked as Recommended, dressed as an SSR pull: a
@@ -894,38 +817,6 @@
 	box-shadow: inset 0 0 0 1px var(--color-gallery-rose-edge);
 }
 
-/* The "★ Recommended" chip in a recommended panel's title line.
-
-   SIZED TO THE TITLE'S LINE BOX: 16px of line-height plus 2px of padding top
-   and bottom, and no border, is exactly the 20px a text-sm title already
-   occupies — so the chip can never make the row taller. It shrinks (label
-   first, via its own truncation) rather than wrapping the title onto a second
-   line, which would.
-
-   It is also the signal that doesn't depend on colour: the SSR surface says
-   "special" to a sighted reader, the word says it to everyone. */
-.recommended-chip {
-	/* No `display` here, for the reason given on .free-pulls-chip below: beside
-	   that chip this one hides and shows through container-query utilities. */
-	align-items: center;
-	gap: 0.25rem;
-	min-width: 0;
-	margin-left: auto;
-	border-radius: 9999px;
-	padding: 0.125rem 0.5rem;
-	font-size: 0.6875rem;
-	line-height: 1rem;
-	font-weight: 700;
-	letter-spacing: 0.02em;
-	color: var(--color-recommended-ink);
-	background: linear-gradient(
-		135deg,
-		#fff1b8 0%,
-		var(--color-recommended-fill) 45%,
-		#e0a526 100%
-	);
-	box-shadow: 0 0 6px var(--color-ssr-glow);
-}
 
 /* A gold skill on a PvP guide (SkillChip, SkillMention in PvpTiles.tsx), drawn
    the way the game draws one: the SR card's gold gradient behind the name, the
@@ -1071,31 +962,6 @@
 	background: repeating-linear-gradient(-45deg, var(--color-staging) 0 10px, transparent 10px 20px);
 }
 
-/* The free-pulls chip that can share the title line with it: a 20px box too
-   (see its padding note below), so it is zero-layout in the same way. The 1px ring is an inset shadow rather than a border because a border
-   would add 2px to the box, and to the title line with it.
-
-   No `display` here on purpose. The chip hides and shows through
-   container-query utilities on the element, and a display set in this file
-   would outrank them — these rules are unlayered, Tailwind's utilities are not. */
-.free-pulls-chip {
-	align-items: center;
-	gap: 0.25rem;
-	flex-shrink: 0;
-	border-radius: 9999px;
-	/* The title's own size (text-sm, 14px on a 20px line), so it reads at a
-	   glance like the words beside it. The box is still 20px: the line-height
-	   IS the box now, with no vertical padding left to add to it. */
-	padding: 0 0.5rem;
-	font-size: 0.875rem;
-	line-height: 1.25rem;
-	font-weight: 700;
-	letter-spacing: 0.02em;
-	white-space: nowrap;
-	color: var(--color-gray-100);
-	background-color: var(--color-gray-800);
-	box-shadow: inset 0 0 0 1px var(--color-gray-600);
-}
 
 /* Icon-only delete button on the right edge. Width comes from .banner-grid's
    last track — this is a table cell, not a free-standing button. */
