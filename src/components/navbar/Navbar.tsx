@@ -8,7 +8,6 @@ import { useAccount } from "../../services/AuthContext"
 import { Wordmark } from "../Wordmark"
 import { OguriSpinner } from "../OguriSpinner"
 import { ThemePicker } from "./ThemePicker"
-import { SettingsMenu } from "./SettingsMenu"
 import { TeamDrawerButton } from "./TeamDrawerButton"
 import { ProfileMenu } from "./ProfileMenu"
 import { NAV_BUTTON, NAV_SAVE_BUTTON } from "./navStyles"
@@ -47,15 +46,17 @@ export const Navbar = () => {
 	// while it loads, so the item appears after load and never flashes.
 	const showRankings = Boolean(account?.early_access)
 
-	// Search + team drawer + settings gear + theme picker, grouped so the desktop
-	// nav's branches render the same controls. TeamDrawerButton and SettingsMenu
-	// render nothing outside app mode.
+	// Search + team drawer + theme picker, grouped so the desktop nav's branches
+	// render the same controls. TeamDrawerButton renders nothing outside app
+	// mode. The projection settings were a gear here until 2026-11-24; they are
+	// a row of the calculator's Income & Resources panel now
+	// (carat-calculator/ProjectionSettings.tsx), since only the calculator
+	// reads them.
 	const searchButton = <SiteSearchButton onOpen={() => siteSearch.setOpen(true)} />
 	const navControls = (
 		<>
 			{searchButton}
 			<TeamDrawerButton />
-			<SettingsMenu />
 			<ThemePicker />
 		</>
 	)
@@ -66,7 +67,6 @@ export const Navbar = () => {
 		<>
 			{searchButton}
 			<TeamDrawerButton />
-			<SettingsMenu />
 			<ThemePicker />
 		</>
 	)
@@ -186,9 +186,10 @@ export const Navbar = () => {
 			<SiteSearchDialog open={siteSearch.open} onClose={() => siteSearch.setOpen(false)} />
 			{/* Mobile nav */}
 			<nav className="site-navbar border-b border-gray-700 bg-gray-900 desktop-nav:hidden">
-				{/* Tighter gaps under 360px: signed in, the row holds five buttons
-				    (search, team, gear, palette, profile), and at 320px the 6px gaps
-				    pushed the wordmark onto a third line, clipping "Uma". */}
+				{/* Tighter gaps under 360px: signed in, the row held five buttons
+				    until the gear left (four now: search, team, palette, profile),
+				    and at 320px the 6px gaps pushed the wordmark onto a third line,
+				    clipping "Uma". Kept: four is not measured at 320px yet. */}
 				<div className="flex h-14 items-center justify-between gap-2 px-3 min-[360px]:gap-3">
 					<div className="flex min-w-0 items-center">
 						{logo}

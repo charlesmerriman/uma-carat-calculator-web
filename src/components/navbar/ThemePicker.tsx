@@ -41,8 +41,8 @@ const Swatch = ({ theme, large = false }: { theme: Theme; large?: boolean }) => 
 
 /**
  * The theme list and the colorblind switch: the palette button's panel, on
- * desktop and phones alike (the gear menu carried it on phones until
- * 2026-11-18). `onPicked` closes the panel after a theme is chosen.
+ * desktop and phones alike (the old projection-settings gear carried it on
+ * phones until 2026-11-18). `onPicked` closes the panel after a theme is chosen.
  *
  * Laid out as two columns so the split is obvious at a glance: every dark
  * theme on the left, every light one on the right. The two defaults sit on
