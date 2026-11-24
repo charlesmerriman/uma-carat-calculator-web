@@ -135,7 +135,7 @@ export function usePlanFeed(
 	return useQuery({
 		queryKey: galleryKeys.planFeed(sort, window, filters, limit),
 		queryFn: async () =>
-			readJson<PlanFeed>(await planFeedFetch({ sort, window, filters, limit }), "Community plans didn't load."),
+			readJson<PlanFeed>(await planFeedFetch({ sort, window, filters, limit }), "The Pull Plan Library didn't load."),
 		placeholderData: (previous, previousQuery) =>
 			previousQuery && previousQuery.queryKey[2] === "plans" ? previous : undefined,
 		enabled,

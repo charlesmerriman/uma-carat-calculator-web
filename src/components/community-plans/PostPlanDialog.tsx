@@ -67,7 +67,7 @@ export function PostPlanDialog({ plan, onClose }: { plan: Plan; onClose: () => v
 	const loading = (updating && existing.isPending) || feed.isPending
 
 	return (
-		<GalleryModal title={updating ? "Update your plan's post" : "Post this plan to Community plans"} onClose={onClose}>
+		<GalleryModal title={updating ? "Update your plan's post" : "Post this plan to the Pull Plan Library"} onClose={onClose}>
 			{!displayName ? (
 				<div className="flex flex-col gap-4 text-sm text-gray-300">
 					<p>A post shows your display name, and you haven't set one yet.</p>
@@ -87,7 +87,7 @@ export function PostPlanDialog({ plan, onClose }: { plan: Plan; onClose: () => v
 				</div>
 			) : feed.isError || !feed.data ? (
 				<p className="text-sm text-gray-300" role="alert">
-					{failureText(feed.error, "Community plans didn't load. Try again in a moment.")}
+					{failureText(feed.error, "The Pull Plan Library didn't load. Try again in a moment.")}
 				</p>
 			) : (
 				<PostForm plan={plan} displayName={displayName} choices={feed.data.filters} initial={existing.data} onClose={onClose} />
@@ -151,7 +151,7 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 		rememberPublished(queryClient, result.post)
 		onClose()
 		// After the close, so it is not hidden under the dialog.
-		toast.success(updating ? "Your post is updated." : "Your plan is in Community plans.", {
+		toast.success(updating ? "Your post is updated." : "Your plan is in the Pull Plan Library.", {
 			action: { label: "Open", onClick: () => navigate(planPostHref(result.post.public_id)) },
 		})
 	}
@@ -190,7 +190,7 @@ function PostForm({ plan, displayName, choices, initial, onClose }: {
 			}}
 		>
 			<p>
-				Everyone who opens Community plans will see this plan's banners and pulls with your display name,{" "}
+				Everyone who opens the Pull Plan Library will see this plan's banners and pulls with your display name,{" "}
 				<span className="font-semibold text-gray-100">{displayName}</span>, your favorite uma picture and, if you support us on
 				Patreon, your tier. You can take it down any time.
 			</p>
