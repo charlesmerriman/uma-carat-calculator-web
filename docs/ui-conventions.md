@@ -2180,10 +2180,11 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
   colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
   components only.
-- **The navbar**: the Encyclopedia is everyone's sixth tab, and Rankings the seventh for
-  early access. Both counts use the breakpoints the seven-tab bar was fitted at (icons only
-  below 440px on a phone; the Encyclopedia and Rankings labels are icons below 1536px),
-  because six tabs with the long "Encyclopedia" label was never measured.
+- **The navbar**: the Encyclopedia is everyone's fifth tab since Selectors moved into the
+  Calculator screen's bar (2026-11-24), and Rankings the sixth for early access. Both counts
+  keep the breakpoints the seven-tab bar was fitted at (icons only below 440px on a phone;
+  the Encyclopedia and Rankings labels are icons below 1536px): fewer tabs only gives each
+  more room, and the looser fit was never measured.
 - **The catalogue is 106 KB on the wire** and the links and cards need it
   (`useEncyclopediaHrefs`). `HoverCardLayer` sits on every `/app` page, so it skips the load
   where no tile can open a card (`pageDrawsHoverCards`: the calculator and Selectors), and
@@ -2433,6 +2434,24 @@ keep the links above). The code says "hover" because they opened on hover for on
   nothing opens two cards. **A guide uma tile (`UmaTile`) has no hover** when her card exists
   (`hover={false}`; Daptrius, 2026-11-19): the card already holds the note and the unique's
   verdict, and opening it lights the course map. Keyboard focus still opens the small popup.
+
+## Calculator screen bar (`carat-calculator/CalculatorTabs.tsx`)
+
+The Calculator screen owns three pages (owner, 2026-11-24): the calculator (`/app`),
+Selectors (`/app/selectors`) and the Pull Plan Library (`/app/plans`, early access until it
+opens). One bar at the top switches between them, drawn like the PvP page's view tabs
+(Henry's ask) but as `NavLink`s, since they are three addresses.
+
+- **The list is `calculatorTabs.ts`** (`CALCULATOR_TABS`, `calculatorTabsFor`,
+  `isCalculatorScreen`). The navbar asks `isCalculatorScreen` to keep its Calculator tab lit
+  on all three, and has no Selectors tab any more (five tabs, six with Rankings).
+- **AppShell draws it above the loading gate**, so the build-time render of `/app` and
+  `/app/selectors` has it. It reads the path and the account only; the Library tab joins
+  after the account loads, and the bar's height never changes.
+- **Sticky** at `--navbar-h` where the document scrolls (phone), at `0` in the desktop
+  shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`,
+  opaque.
+- A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
 
 ## Selectors page (`components/selectors/`)
 
@@ -2784,12 +2803,16 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
   (`usePlanFeed` under the same `["gallery", "feed"]` prefix, so `patchPost` reaches it).
 - Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
   its keys: the account page's list and the profile card hold both kinds.
-- **The way in** (decisions 1 and 11): a "Pull Plan Library" button on the Plans bar
-  (`PlanSwitcher`; "Library" below 40rem of bar, never a bare icon, which nobody found on a
-  phone), and "Post this plan" in the plan menu with a "Posted" mark from `post_public_id`;
-  both early access only, and the item hidden on an API without the field. The page's
-  heading has "My plans" and "Post a plan" (the open plan). The share card links "Browse the
-  Pull Plan Library" under the same gate.
+- **The way in is the Calculator screen's bar** (owner, 2026-11-24, replacing decisions 1
+  and 11's Plans bar button): see "Calculator screen bar" below. "Post this plan" in the plan
+  menu has a "Posted" mark from `post_public_id`; early access only, and hidden on an API
+  without the field. The page's heading has "Post a plan" (the open plan) and no "My plans":
+  the bar is the way back. The share card links "Browse the Pull Plan Library" under the
+  same gate.
+- **A plan may have several posts** (owner, 2026-11-24, api `0145`). `post_public_id` is the
+  plan's NEWEST post. The dialog asks on a posted plan: "Update my post" (the default; keeps
+  the link, comments and votes, and offers "Take it down") or "Post it as a new plan"
+  (`as_new: true`, still within the 5-post cap).
 - **Posting** (`PostPlanDialog`, the `PublishDialog` pattern on `GalleryModal`): title,
   About, the three optional picks worded by the feed's `filters`, the range shown never
   asked, "Include my notes" and "Include my income" UNTICKED ON EVERY OPEN, the agree box,
