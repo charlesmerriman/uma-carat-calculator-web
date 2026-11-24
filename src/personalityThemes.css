@@ -77,6 +77,15 @@
 	background-color: var(--key-face-hover);
 }
 
+/* A control that has something open (the Menu, the Team window's button)
+   says so with a brand border, set by a utility the key's border above
+   outranks. So it is restated: the brand as the edge, and the face a step on,
+   like a key held down. Read off aria-expanded, which both buttons set. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-control[aria-expanded="true"] {
+	border-color: color-mix(in srgb, var(--color-brand) 70%, transparent);
+	background-color: var(--key-face-hover);
+}
+
 /* The tabs sit in a well, and the one you are on is the only solid brand
    thing in the bar. */
 :root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-tabs {
@@ -401,6 +410,16 @@
 
 [data-theme="tracen"] .nav-control:hover {
 	background-color: var(--color-gray-700);
+}
+
+/* Open (the Menu, the Team window's button): the key's edge turns the deep
+   green and so do its words. The control's own open look is a pair of
+   utilities, which the key above outranks, colour included. */
+[data-theme="tracen"] .nav-control[aria-expanded="true"] {
+	border-color: #4f9a00;
+	background-color: var(--color-gray-700);
+	color: var(--color-brand);
+	box-shadow: 0 2px 0 #4f9a00;
 }
 
 /* The tabs sit in a grey tray, like the game's side menu, and the one you are
