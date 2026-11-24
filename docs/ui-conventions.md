@@ -1475,6 +1475,14 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
   otherwise a markdown link. Token `--color-highlight`. **Except on a card**: a deck slot's note is
   drawn with no red and no bold (Henry, 2026-10-23), whatever it holds.
+- **`((Uma name))` is her picture** (Henry, board 1572760259066601513; review items 6 and C,
+  2026-11-24): the same plugin emits `<span data-uma>`, a caller's `renderUma` and
+  `InlineNote` draw `UmaMention` (her `FramedUma` at 2.4em, opening her card), resolved
+  through the guide's `uma_mentions` (`UmaMentionsContext`, beside the skills'). An
+  outfit's own brackets sit inside: `((Oguri Cap (Christmas)))`. Exact catalogue names only;
+  a nickname stays words. A style-ranking step that is a whole `((Name))` (`umaStepName`)
+  shows her picture where a style's faces go. The editor offers names on `((`
+  (`MentionField`), and `hydrateGuide` / `validateDocument` resolve and check them.
 - **A deck slot's note is read as parts** (`utils/deckNotes.ts`, `parseSlotNote`; release 2
   of `guide-visuals-plan.md`): `[[skills]]` become small same-size `SkillCell`s the card's
   width, the fixed tags ("1SP"/"2SP", "Stats", "Hints", "Initial Friendship", in the

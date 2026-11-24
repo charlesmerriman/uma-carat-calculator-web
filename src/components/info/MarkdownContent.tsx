@@ -39,7 +39,11 @@ function isInternalHref(href: string): boolean {
  * inheriting the paragraph top margin, and `[&>code]` on <pre> strips the inline-code
  * chip styling from a fenced block, since react-markdown routes both through `code`.
  */
-function buildComponents(paragraph: string, renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode): Components {
+function buildComponents(
+	paragraph: string,
+	renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode,
+	renderUma?: (name: string) => ReactNode,
+): Components {
 	return {
 		h2: ({ node: _node, children, ...props }) => (
 			<h2
@@ -118,6 +122,9 @@ function buildComponents(paragraph: string, renderSkill?: (name: string, options
 			if (typeof name === "string") {
 				return <>{renderSkill ? renderSkill(name, { scenarioLink: data["data-scenario-link"] !== undefined }) : name}</>
 			}
+			// `((Uma name))` arrives as a span with data-uma; without a renderer, her name.
+			const uma = data["data-uma"]
+			if (typeof uma === "string") return <>{renderUma ? renderUma(uma) : uma}</>
 			return <span {...props}>{children}</span>
 		},
 	}
@@ -137,13 +144,16 @@ export function MarkdownContent({
 	markdown,
 	paragraphClassName = PARAGRAPH,
 	renderSkill,
+	renderUma,
 }: {
 	markdown: string
 	paragraphClassName?: string
 	/** Renders a `[[Skill name]]` mention. Without it the bare name shows. */
 	renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode
+	/** Renders a `((Uma name))` mention. Without it the bare name shows. */
+	renderUma?: (name: string) => ReactNode
 }) {
-	const components = useMemo(() => buildComponents(paragraphClassName, renderSkill), [paragraphClassName, renderSkill])
+	const components = useMemo(() => buildComponents(paragraphClassName, renderSkill, renderUma), [paragraphClassName, renderSkill, renderUma])
 	return (
 		<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
 			{escapeMentions(markdown)}

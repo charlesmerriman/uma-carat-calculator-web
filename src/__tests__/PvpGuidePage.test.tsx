@@ -942,6 +942,20 @@ describe("PvpGuidePage style links and memory", () => {
 		expect(styleTabs().getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front#2", "End#1"])
 	})
 
+	it("draws a ((Uma name)) ranking step as her picture and name (Henry's ask)", async () => {
+		respond(200, {
+			...GUIDE,
+			style_ranking: "((Gold Ship)) > End >> Front",
+			uma_mentions: { "gold ship": { id: 77, name: "Gold Ship", portrait: "https://example.test/gs.png", portrait_layers: null } },
+		})
+		renderPage("/app/pvp?event=cm-10")
+		const ranking = within(await screen.findByRole("list", { name: "Style ranking" }))
+		const first = ranking.getAllByRole("listitem")[0]
+		expect(first).toHaveTextContent("#1Gold Ship")
+		expect(first).not.toHaveTextContent("((")
+		expect(first.querySelector('[title="Gold Ship"]')).not.toBeNull()
+	})
+
 	it("opens on the first style when the guide ranks none it has", async () => {
 		respond(200, { ...GUIDE, style_ranking: "" })
 		renderPage("/app/pvp?event=cm-10")

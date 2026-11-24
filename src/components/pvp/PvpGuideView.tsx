@@ -25,10 +25,10 @@ import { GuideComments } from "./GuideComments"
 import { GuideBand } from "./GuideBand"
 import { AllStylesPreview } from "./AllStylesPreview"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
-import { AlternateCard, AnyTypeLine, InlineNote, NoteOnlyTile, SkillCell, SkillMention, Stars, SupportTile, SwapInCard, UmaTile } from "./PvpTiles"
+import { AlternateCard, AnyTypeLine, InlineNote, NoteOnlyTile, SkillCell, SkillMention, UmaMention, Stars, SupportTile, SwapInCard, UmaTile } from "./PvpTiles"
 import { recalledDeckBudget, rememberDeckBudget } from "../../services/pvpPageMemory"
 import { parseSlotNote, type DeckStatType } from "../../utils/deckNotes"
-import { SkillMentionsContext } from "./skillMentionsContext"
+import { SkillMentionsContext, UmaMentionsContext } from "./skillMentionsContext"
 import {
 	ALL_STYLES_LABEL,
 	ALL_STYLES_TAB,
@@ -64,6 +64,7 @@ import type {
 	PvpSkillRecommendation,
 	PvpStyle,
 	PvpStyleTab,
+	PvpUmaMention,
 	PvpUmaRecommendation,
 } from "../../types/pvpGuide"
 import { useRememberedOpen } from "../../hooks/useRememberedOpen"
@@ -73,6 +74,7 @@ import { useRememberedOpen } from "../../hooks/useRememberedOpen"
 const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
 	<SkillMention name={name} scenarioLink={scenarioLink} />
 )
+const renderUma = (name: string) => <UmaMention name={name} />
 
 // The category labels and order are shared with the team builder's skills
 // panel: utils/pvpGuide.ts SKILL_CATEGORY_LABELS / SKILL_CATEGORY_ORDER.
@@ -565,7 +567,7 @@ function StylePane({ guide, style, budget, onBudget, event, onUseDeck }: {
 			)}
 			{note && (
 				<div className="text-sm">
-					<MarkdownContent markdown={note.body} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
+					<MarkdownContent markdown={note.body} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} renderUma={renderUma} />
 				</div>
 			)}
 			{skills.length > 0 && <RecommendedSkills rows={skills} />}
@@ -772,6 +774,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 
 	return (
 		<SkillMentionsContext.Provider value={guide.skill_mentions ?? EMPTY_MENTIONS}>
+		<UmaMentionsContext.Provider value={guide.uma_mentions ?? EMPTY_UMA_MENTIONS}>
 		<div className="flex flex-col gap-4">
 			{guide.visibility === "private" && (
 				<div className="flex items-center gap-2 rounded-lg border border-staging/60 bg-staging/10 px-3 py-2 text-sm font-semibold text-gray-100">
@@ -825,6 +828,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 				</div>
 			)}
 		</div>
+		</UmaMentionsContext.Provider>
 		</SkillMentionsContext.Provider>
 	)
 }
@@ -833,6 +837,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 const NARROW_QUERY = "(max-width: 79.98rem)"
 
 const EMPTY_MENTIONS = {}
+const EMPTY_UMA_MENTIONS: Record<string, PvpUmaMention> = {}
 
 // The whole guide's thread (section ""), in the side column.
 const WHOLE_GUIDE_LABEL = "Comments on the whole guide"

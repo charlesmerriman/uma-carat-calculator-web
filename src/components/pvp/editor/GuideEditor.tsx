@@ -23,7 +23,7 @@ import { useSkillList } from "../../../hooks/useSkillList"
 import { withShownSkills } from "../../../utils/skillList"
 import { useCardReleases } from "../../../hooks/useCardReleases"
 import { useGuideDocument } from "../../../hooks/useGuideDocument"
-import { SkillMentionsContext } from "../skillMentionsContext"
+import { SkillMentionsContext, UmaMentionsContext } from "../skillMentionsContext"
 import { GuideEditorContext, type GuideEditorContextType } from "./GuideEditorContext"
 import { Checklist } from "./Checklist"
 import { EditorHeader, type EditorDialog } from "./EditorHeader"
@@ -163,6 +163,7 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 	return (
 		<GuideEditorContext.Provider value={context}>
 			<SkillMentionsContext.Provider value={hydrated.skill_mentions ?? {}}>
+			<UmaMentionsContext.Provider value={hydrated.uma_mentions ?? {}}>
 				<div className="flex flex-col gap-3">
 					<EditorHeader
 						visibility={document.visibility}
@@ -227,6 +228,7 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 						onClose={closeDialog}
 					/>
 				)}
+			</UmaMentionsContext.Provider>
 			</SkillMentionsContext.Provider>
 		</GuideEditorContext.Provider>
 	)

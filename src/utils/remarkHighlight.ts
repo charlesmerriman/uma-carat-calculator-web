@@ -4,6 +4,9 @@
  *   ==words==        red text, the sheet's "must have"
  *   [[Skill name]]   a link to a skill in the skill database, shown as a chip
  *                    with the skill's icon and its description on hover
+ *   ((Uma name))     an uma's framed picture, which opens her card (Henry,
+ *                    board 1572760259066601513). An outfit's own brackets sit
+ *                    inside: ((Oguri Cap (Christmas))).
  *
  * Two halves, one rule:
  * - `remarkHighlight`, a remark plugin for markdown blocks. It splits text
@@ -23,8 +26,23 @@
  * `scenarioLink` (see SCENARIO_LINK_AFTER), so it can be marked out.
  */
 
-const TOKEN = /==([^=\n]+)==|\[\[([^[\]\n]+)\]\]/g
-const MENTION = /\[\[([^[\]\n]+)\]\]/g
+// An uma's name, with at most one bracketed group inside it (her outfit).
+const UMA_NAME = String.raw`((?:[^()\n]|\([^()\n]*\))+?)`
+const TOKEN = new RegExp(String.raw`==([^=\n]+)==|\[\[([^[\]\n]+)\]\]|\(\(${UMA_NAME}\)\)`, "g")
+// A skill or an uma, inside a highlight.
+const ANY_MENTION = new RegExp(String.raw`\[\[([^[\]\n]+)\]\]|\(\(${UMA_NAME}\)\)`, "g")
+const UMA_MENTION = new RegExp(String.raw`\(\(${UMA_NAME}\)\)`, "g")
+
+/** The names inside ((...)) in one text, trimmed, in order. */
+export function umaMentionsIn(text: string): string[] {
+	return [...text.matchAll(UMA_MENTION)].map((match) => match[1].trim())
+}
+
+/** The uma a whole style-ranking step names, "((Copano Rickey))" -> "Copano Rickey", or null. */
+export function umaStepName(label: string): string | null {
+	const match = new RegExp(String.raw`^\(\(${UMA_NAME}\)\)$`).exec(label.trim())
+	return match ? match[1].trim() : null
+}
 
 export type NotePiece =
 	| { kind: "text"; text: string }
@@ -32,14 +50,15 @@ export type NotePiece =
 	// `scenarioLink` is set (true) only on a flagged mention, so pieces
 	// compare equal to a plain `{ kind, name }` everywhere else.
 	| { kind: "skill"; name: string; scenarioLink?: true }
+	| { kind: "uma"; name: string }
 
 function splitMentions(text: string): NotePiece[] {
 	const pieces: NotePiece[] = []
 	let last = 0
-	for (const match of text.matchAll(MENTION)) {
+	for (const match of text.matchAll(ANY_MENTION)) {
 		const index = match.index ?? 0
 		if (index > last) pieces.push({ kind: "text", text: text.slice(last, index) })
-		pieces.push({ kind: "skill", name: match[1].trim() })
+		pieces.push(match[1] !== undefined ? { kind: "skill", name: match[1].trim() } : { kind: "uma", name: match[2].trim() })
 		last = index + match[0].length
 	}
 	if (last < text.length) pieces.push({ kind: "text", text: text.slice(last) })
@@ -89,8 +108,10 @@ function flagScenarioLinks(pieces: NotePiece[]): NotePiece[] {
  * caption where a chip or red would not fit; the full note stays on hover.
  */
 export function plainNoteText(text: string): string {
-	return text.replace(TOKEN, (_, highlight: string | undefined, skill: string | undefined) =>
-		highlight !== undefined ? highlight.replace(MENTION, (__, name: string) => name.trim()) : (skill ?? "").trim()
+	return text.replace(TOKEN, (_, highlight: string | undefined, skill: string | undefined, uma: string | undefined) =>
+		highlight !== undefined
+			? highlight.replace(ANY_MENTION, (__, name: string | undefined, umaName: string | undefined) => (name ?? umaName ?? "").trim())
+			: (skill ?? uma ?? "").trim()
 	)
 }
 
@@ -106,7 +127,8 @@ function splitTokens(text: string): NotePiece[] {
 		const index = match.index ?? 0
 		if (index > last) pieces.push({ kind: "text", text: text.slice(last, index) })
 		if (match[1] !== undefined) pieces.push({ kind: "highlight", pieces: splitMentions(match[1]) })
-		else pieces.push({ kind: "skill", name: match[2].trim() })
+		else if (match[2] !== undefined) pieces.push({ kind: "skill", name: match[2].trim() })
+		else pieces.push({ kind: "uma", name: match[3].trim() })
 		last = index + match[0].length
 	}
 	if (last < text.length) pieces.push({ kind: "text", text: text.slice(last) })
@@ -121,10 +143,10 @@ export interface HighlightPiece {
 /** Highlights only, with mentions flattened to their names. */
 export function splitHighlights(text: string): HighlightPiece[] {
 	const flatten = (pieces: NotePiece[]): string =>
-		pieces.map((piece) => (piece.kind === "text" ? piece.text : piece.kind === "skill" ? piece.name : flatten(piece.pieces))).join("")
+		pieces.map((piece) => (piece.kind === "text" ? piece.text : piece.kind === "highlight" ? flatten(piece.pieces) : piece.name)).join("")
 	return splitNoteText(text).reduce<HighlightPiece[]>((out, piece) => {
 		const highlighted = piece.kind === "highlight"
-		const value = piece.kind === "text" ? piece.text : piece.kind === "skill" ? piece.name : flatten(piece.pieces)
+		const value = piece.kind === "text" ? piece.text : piece.kind === "highlight" ? flatten(piece.pieces) : piece.name
 		const previous = out[out.length - 1]
 		if (previous && previous.highlighted === highlighted) previous.text += value
 		else out.push({ text: value, highlighted })
@@ -153,6 +175,9 @@ function toNodes(pieces: NotePiece[]): MdNode[] {
 				},
 				children: [{ type: "text", value: piece.name }],
 			}
+		}
+		if (piece.kind === "uma") {
+			return { type: "umaMention", data: { hName: "span", hProperties: { dataUma: piece.name } }, children: [{ type: "text", value: piece.name }] }
 		}
 		return { type: "highlight", data: { hName: "mark" }, children: toNodes(piece.pieces) }
 	})
