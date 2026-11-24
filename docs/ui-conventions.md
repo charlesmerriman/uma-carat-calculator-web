@@ -1198,14 +1198,14 @@ revival (4), launch banner (1) — and any change here should be checked against
 - The art cell needs **real art** to appear once anything has banded. A "Banner art coming
   soon" placeholder is a third of an ordinary three-column row and reads as pending, but
   beside a lone uma tile with the real content banded below it is ~1030px of empty box. Where
-  dropping it leaves a single panel, the panel keeps its column width (`max-w-md`) rather
+  dropping it leaves a single panel, the panel keeps its column width (`.tl-lone-panel`) rather
   than stretching across a row it is the only occupant of.
 - Two column panels implies nothing banded — a banded panel is by definition not in a column
-  — so `SECTION_COLUMNS` is only ever reached by the ordinary case and can be reasoned about
+  — so the `three` row is only ever reached by the ordinary case and can be reasoned about
   as such.
 - **From `xl` up, every piece of timeline art is ONE width: `--timeline-art-width`.** It is
   the ordinary three-column row's art share, `(row - 2rem) * 1.28/2.94`, declared once in
-  `App.css` and used as the first track of every banner template, as the width
+  `timeline.css` and used as the first track of every banner template, as the width
   of the art-only branch, and as the width of the marker cards' art, paired or alone. The
   length is in `cqw` against the card panel's `@container`, not `%`, so it resolves to the
   same pixels however deeply the art is nested — the marker pair's art sits in a half-width
@@ -1213,13 +1213,14 @@ revival (4), launch banner (1) — and any change here should be checked against
   the art half the row and the marker cards gave it the whole row, and each hit the 41rem cap
   at a width the ordinary row never reaches: four visibly different banner sizes down one
   list. Below `xl` the templates collapse to one column and the cap below is the rule.
-  The track is spelled out in full in each of the three templates, never interpolated from
-  a constant: Tailwind generates a class only where it finds the complete string in the
-  source, and an interpolated template literal quietly yields a single stacked column.
-- **Banner art is capped on its WIDTH (`BANNER_ART`, 41rem), never its height, and it sits
+  The three templates are rules in `timeline.css` (`.tl-row[data-shape="three" |
+  "support-led" | "pair"]`), not class strings in the component: Tailwind generates a class
+  only where it finds the complete string in the source, and a template built from a shared
+  constant quietly yielded a single stacked column.
+- **Banner art is capped on its WIDTH (`.tl-art`, `--tl-art-max`: 41rem), never its height, and it sits
   hard left.** The assets are 16:9, so an uncapped `w-full` makes the height a function of
   whichever column template the section landed in: ~358px on an ordinary three-column row,
-  but ~580px under the old weighted `SECTION_COLUMNS_PAIR`, and taller still below `xl`
+  but ~580px under the old weighted pair template, and taller still below `xl`
   where the grid collapses to one column. 41rem sits just above the three-column ceiling, so
   ordinary rows are untouched and only the wider shapes clamp, landing at ~369px.
   Do **not** reach for `max-h` instead: with a percentage width the used width is already
@@ -1228,10 +1229,10 @@ revival (4), launch banner (1) — and any change here should be checked against
   ratio. The cap only ever eats space to the art's *right*, so its left edge stays on the
   section's left edge in every template — the ordinary three-column row has no slack to
   distribute, and centring the capped shapes was what put them out of line with it.
-  `BANNER_ART_ALONE` is the sole exception: the art-only branch (every panel banded, e.g.
+  `data-place="alone"` is the sole exception: the art-only branch (every panel banded, e.g.
   race-prep with no uma) has a full-width row and no column edge to align to, so it centres.
-- **`SECTION_COLUMNS_PAIR` is the art track then the rest, and both occupants are pinned to
-  an outer edge** — art hard left at the shared width, panel hard right (`PAIR_PANEL_CELL`)
+- **The `pair` row is the art track then the rest, and both occupants are pinned to
+  an outer edge** — art hard left at the shared width, panel hard right (`.tl-pair-cell`)
   and capped at 28rem, the width it has in a three-column row, rather than filling what is
   left. It was two equal halves before the shared track, and a weighted 1.6fr/0.7fr split
   before that, which only worked while the art expanded to fill whatever column it was
@@ -1645,7 +1646,7 @@ the same UTC day and renders as `EventMarkerPairCard`.
   w-full px-2` wrapper carries the ref and scroll margin, the `card-panel` inside it is
   padded `p-2 sm:p-3` and carries the ring. That is what lines the panel edges up down
   the list. Art is centred in a lone card (nothing beside it) and hard left in a pair
-  (a column edge beside it), the same rule as `BANNER_ART_ALONE`.
+  (a column edge beside it), the same rule as the banner art's `data-place="alone"`.
 - **A scenario has no end date and never will** — it stays playable after release. The card
   branches on the *presence* of an end date rather than on the kind, showing
   "Releases &lt;date&gt;" instead of a range. The past/future toggle classifies a scenario by

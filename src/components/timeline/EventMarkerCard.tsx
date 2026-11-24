@@ -76,8 +76,8 @@ const panelClass = (tinted: boolean, isFocused: boolean): string =>
  *   - "center": the lone card, and the pair's scenario. Its cut-out has no
  *     edge to line up with, and hard left it looked off to one side.
  *   - "row": the pair's campaign, which sits in the same left column as the
- *     banner art in the rows around it, so it follows BANNER_ART_IN_ROW
- *     (BannerWindowCard) to the letter: centred below xl, hard left from xl,
+ *     banner art in the rows around it, so it follows the banner art's own
+ *     "row" placement to the letter: centred below xl, hard left from xl,
  *     where it lines up with the banner art above and below.
  */
 const EventMarkerBody = ({
@@ -127,34 +127,22 @@ const EventMarkerBody = ({
 
 			{marker.image && (
 			/*
-			 * Capped on WIDTH and never on height: the art is 16:9, and a height
-			 * clamp on a definite percentage width squashes the picture rather
-			 * than fitting it. Same rule as the banner art.
+			 * The frame caps the width and places the art per `artAlign` (see the
+			 * component note); the picture declares its 16:9. Both are
+			 * `.tl-art-frame` and `.tl-art` in timeline.css, the same rules the
+			 * banner art follows.
 			 *
-			 * The 16:9 is also DECLARED, so the box exists before the image
-			 * loads and nothing below it moves when it does — see BANNER_ART in
-			 * BannerWindowCard for why that matters to the planner's deep links.
-			 *
-			 * Placed per `artAlign`; see the component note. Literal class
-			 * strings, so Tailwind finds them.
-			 *
-			 * From xl up the art is `--timeline-art-width`, the width every
-			 * banner card's art has (see timeline.css): resolved against the panel
-			 * through its `@container`, so it holds inside the pair's half-width
-			 * column too. Below xl the cap matches BANNER_ART, so a marker's art
-			 * is never wider than a banner's there either.
+			 * From xl up the frame is `--timeline-art-width`, resolved against the
+			 * panel through its `@container`, so it holds inside the pair's
+			 * half-width column too.
 			 */
-			<div
-				className={`mx-auto max-w-[41rem] xl:w-[var(--timeline-art-width)] ${
-					artAlign === "row" ? "xl:mx-0" : ""
-				}`}
-			>
+			<div className="tl-art-frame" data-place={artAlign}>
 				<img
 					src={marker.image}
 					alt={marker.name}
 					loading="lazy"
 					decoding="async"
-					className="aspect-[16/9] h-auto w-full object-contain rounded-xl"
+					className="tl-art"
 				/>
 			</div>
 			)}
