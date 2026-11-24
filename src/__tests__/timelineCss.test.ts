@@ -18,6 +18,7 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as {
 	readFileSync: (path: URL, encoding: "utf8") => string
 }
 const css = readFileSync(new URL("../timeline.css", import.meta.url), "utf8")
+const themeCss = readFileSync(new URL("../personalityThemes.css", import.meta.url), "utf8")
 
 type Rule = { selector: string; body: string; media: string | null }
 
@@ -135,6 +136,65 @@ describe("timeline.css", () => {
 		expect(css).toMatch(/@layer components\s*\{/)
 		for (const rule of matching(/^\.(recommended|free-pulls)-chip$/)) {
 			expect(rule.body, rule.selector).not.toMatch(/(^|[;\s])display\s*:/)
+		}
+	})
+})
+
+// A theme may repaint the Timeline through its hooks (personalityThemes.css).
+// It is held to the same promises as the layout: paint, never clip, and never
+// split a tile's picture from its name.
+describe("personalityThemes.css, on the Timeline's hooks", () => {
+	const themeRules = parseRules(themeCss).filter((rule) => /\.tl-/.test(rule.selector))
+
+	it("has Timeline rules to check", () => {
+		expect(themeRules.length).toBeGreaterThan(10)
+	})
+
+	it("never clips or contains a Timeline part, so layered ears and hats still leave their frames", () => {
+		for (const rule of themeRules) {
+			expect(rule.body, rule.selector).not.toMatch(/overflow(-[xy])?\s*:/)
+			expect(rule.body, rule.selector).not.toMatch(/clip-path/)
+			expect(rule.body, rule.selector).not.toMatch(/\bcontain\s*:/)
+		}
+	})
+
+	it("paints and never sizes: no width, height, display or position on a Timeline part", () => {
+		// Padding may only appear with a margin in the same rule that gives it
+		// back (the title strip, the stat header); the geometry check holds the sum.
+		for (const rule of themeRules) {
+			expect(rule.body, rule.selector).not.toMatch(/(^|[;\s])(min-|max-)?(width|height)\s*:/)
+			expect(rule.body, rule.selector).not.toMatch(/(^|[;\s])(display|position|flex|grid[a-z-]*|gap|font-size|line-height|border-width)\s*:/)
+			if (/(^|[;\s])padding[a-z-]*\s*:/.test(rule.body)) expect(rule.body, rule.selector).toMatch(/(^|[;\s])margin[a-z-]*\s*:/)
+		}
+	})
+
+	it("never gives a tile's name block a fill its skirt doesn't share", () => {
+		// The picture and the name are one plane (the owner, 2026-11-24): the
+		// strip behind the art and the name block always have the same fill.
+		for (const rule of themeRules) {
+			if (!/background/.test(rule.body)) continue
+			const paintsPlate = /\.tl-plate(?![-\w])/.test(rule.selector)
+			const paintsSkirt = /\.tl-plate-skirt\b/.test(rule.selector)
+			expect(paintsPlate, rule.selector).toBe(paintsSkirt)
+		}
+	})
+
+	it("draws nothing across the top of a tile's name block", () => {
+		// A top edge on the plate is a line between the picture and its name.
+		for (const rule of themeRules.filter((r) => /\.tl-plate(?![-\w])/.test(r.selector))) {
+			expect(rule.body, rule.selector).not.toMatch(/border(-top)?(-color|-width|-style)?\s*:/)
+			expect(rule.body, rule.selector).not.toMatch(/outline/)
+			// An inset shadow with a positive y offset is a line along the top.
+			expect(rule.body.replace(/\s+/g, " "), rule.selector).not.toMatch(/inset 0 [1-9]/)
+		}
+	})
+
+	it("restates hover or focus for every control it repaints", () => {
+		// An unlayered rule beats the element's own hover: and focus: utilities
+		// on the properties it sets.
+		for (const hook of [".tl-stage", ".tl-control"]) {
+			const states = themeRules.filter((r) => r.selector.includes(hook) && /:(hover|focus)/.test(r.selector))
+			expect(states.length, hook).toBeGreaterThan(0)
 		}
 	})
 })

@@ -27,7 +27,9 @@
      tl-title          a card's title
      tl-pill           any rounded-full label or button in a card; its
                        shape and its two sizes (data-size) are in section 5
-     tl-countdown      the countdown pill (also a tl-pill)
+     tl-countdown      the countdown pill (also a tl-pill); data-state is
+                       where the window stands: "upcoming", "open",
+                       "closing", "ended"
      tl-panel          a panel inside a card; data-kind says which:
                        "uma", "support", "course", "rewards"
      tl-panel-title    a panel's title line

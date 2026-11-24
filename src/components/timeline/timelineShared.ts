@@ -48,6 +48,43 @@ export function getCountdownLabel(startDate: string, endDate: string, today: Dat
 	return "Ended"
 }
 
+/** A running window with this many days left, or fewer, is "closing". */
+export const CLOSING_SOON_DAYS = 3
+
+/**
+ * Where a window stands today: the countdown pill's `data-state`, which a
+ * theme may colour (Tracen does; `tl-countdown` in timeline.css).
+ *
+ * Decided from the dates by the same calendar-day rule as the label above,
+ * never read back off the label's words, so the colour and the words cannot
+ * disagree:
+ *
+ *   upcoming   not open yet                  "In 12 Days", "Starts Tomorrow"
+ *   open       running, more than three days left, or opening today
+ *                                            "Starts Today", "Ends in 9 Days"
+ *   closing    running, three days or fewer  "Ends in 3 Days" ... "Ends Today"
+ *   ended      over                          "Ended"
+ *
+ * A window that opens today is "open" even if it also ends within three days:
+ * the pill says "Starts Today", and a warning colour around those words would
+ * contradict them. Null when a date is missing, as the label is empty then.
+ */
+export type CountdownState = "upcoming" | "open" | "closing" | "ended"
+
+export function getCountdownState(startDate: string, endDate: string, today: Date): CountdownState | null {
+	const start = parseApiDate(startDate)
+	const end = parseApiDate(endDate)
+	if (!start || !end) return null
+
+	const daysUntilStart = differenceInCalendarDays(start, today)
+	if (daysUntilStart > 0) return "upcoming"
+	if (daysUntilStart === 0) return "open"
+
+	const daysUntilEnd = differenceInCalendarDays(end, today)
+	if (daysUntilEnd < 0) return "ended"
+	return daysUntilEnd <= CLOSING_SOON_DAYS ? "closing" : "open"
+}
+
 /**
  * Display names for the banner categories, in the order the filter offers them.
  *

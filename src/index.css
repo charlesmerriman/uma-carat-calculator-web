@@ -1032,6 +1032,19 @@ html {
 	--tracen-stat-line: #8f8cab;
 	--tracen-numeral: #8a4a1c;
 	--tracen-shortfall-fill: #ffd6e2;
+	/* The Timeline's parts (personalityThemes.css, "The Timeline on Tracen").
+	   The stat panel's header, and the countdown pill's two coloured states:
+	   OPEN is the theme's good green as a pale fill with deep ink (7.2:1), and
+	   CLOSING is the game's own "Closing in 5d" pink, deepened: white on the
+	   sampled #fc3074 is 3.5:1, on this it is 4.9:1. Pink stays the warning
+	   colour and nothing else (notes/theme-options.md). */
+	--tracen-stat-head: #605c78;
+	--tracen-open-fill: #eef9dc;
+	--tracen-open-ink: #2f5c00;
+	--tracen-open-line: #4f9a00;
+	--tracen-closing-fill: #d81b60;
+	--tracen-closing-ink: #ffffff;
+	--tracen-closing-line: #a50d44;
 }
 
 /* Blue/orange is distinguishable for the common red-green colour vision
@@ -1109,6 +1122,14 @@ html {
 	--kind-uma-band: #2563eb;
 	--kind-support-band: #dc2626;
 	--kind-step-up-band: #dc2626;
+	/* The countdown pill: blue for open and orange for closing, the mode's own
+	   pair, never the green and pink it exists to replace. White on the
+	   orange is 5.2:1; the deep blue on its pale fill is 9.6:1. */
+	--tracen-open-fill: #dbeafe;
+	--tracen-open-ink: #1e3a8a;
+	--tracen-open-line: #2563eb;
+	--tracen-closing-fill: #c2410c;
+	--tracen-closing-line: #9a3412;
 }
 
 /* ===== PAGE GLOW =====

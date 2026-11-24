@@ -74,6 +74,26 @@ Three rules ride on them:
 - **A theme paints, it never sizes.** Anything that changes a box's size belongs in
   `timeline.css`, behind the geometry check.
 
+### The Timeline on Tracen
+
+Tracen is the one theme that repaints the Timeline so far (`personalityThemes.css`, "The
+Timeline on Tracen"; the owner's picks of 2026-11-24). What it does, all through hooks:
+
+| Part | On Tracen |
+|---|---|
+| `tl-stage` | "Stage banner" is the game's lime action button. A banner already staged, in the calculator or ended is a plain white key with readable words. |
+| `tl-panel-title` | A tinted strip in the kind's colour: blue for Umamusume, orange for Support Cards. A recommended panel keeps its gold. |
+| `tl-countdown` | Coloured by `data-state` (`getCountdownState`, from the dates): a white key when not open yet or over, pale green while open, the warning pink when three days or fewer are left. Colorblind mode swaps in its blue and orange. |
+| `tl-control` | The bar's buttons, filter and search field as the navbar's key buttons. |
+| `tl-plate`, `tl-plate-skirt` | A tile that links to its Encyclopedia page is a key on three sides: down both sides of the name and under it, never across the top. |
+| `tl-stat` | A race card's course boxes as the game's stat panel, a slate header over a white value. |
+
+A restyle like this is checked with `geometry.mjs diff --boxes`: paint may change, no box
+may move, except the title strips and stat labels, which grow into padding that is given
+back as negative margin. The themes it must not reach are checked at plain zero.
+`timelineCss.test.ts` holds a theme's Timeline rules to the same promises as the layout:
+no clip, no size, the plate and its skirt one fill, nothing across the top of a name.
+
 ## The list
 
 Renders `organizedTimelineData` — banner timelines, Champions Meetings and League of
