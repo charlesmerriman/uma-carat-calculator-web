@@ -23,10 +23,9 @@ export function TimelineTabs() {
 			kind="links"
 			title="Timeline"
 			icon={CalendarDays}
-			description="Every banner and event coming to global, and when."
 			label="Timeline"
 			column="max-w-[96rem]"
-			// Legend Races draws its own <h1> (the admin's title); the Timeline's is the masthead's.
+			// Legend Races draws its own <h1> (the admin's title); the Timeline's is the header's.
 			tabs={TIMELINE_TABS.map((tab) => ({ ...tab, icon: ICONS[tab.to], ownHeading: tab.to === "/app/legend-races" }))}
 		/>
 	)

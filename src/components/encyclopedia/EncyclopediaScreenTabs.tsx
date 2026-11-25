@@ -1,7 +1,6 @@
 /**
- * The Encyclopedia screen's header: its title, what it holds, and Umas,
- * Support cards and Skills as tabs, pinned as a slim bar under the navbar
- * while a list scrolls (Daptrius, board "Encyclopedia sticky nav",
+ * The Encyclopedia screen's header: its title, and Umas, Support cards and
+ * Skills as tabs, pinned as a slim bar under the navbar while a list scrolls (Daptrius, board "Encyclopedia sticky nav",
  * 2026-11-25). Names only, no counts (the owner dropped them the same day).
  *
  * The header is the shared ScreenHeader (components/ScreenHeader.tsx), as the
@@ -30,7 +29,6 @@ export function EncyclopediaScreenTabs() {
 			kind="links"
 			title="Encyclopedia"
 			icon={BookOpen}
-			description="Every uma, support card and skill in the game, on global and in JP."
 			label="Encyclopedia lists"
 			// The lists' column (utils/encyclopedia.ts, PAGE_CONTAINER).
 			column="max-w-6xl"

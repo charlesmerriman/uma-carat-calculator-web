@@ -6,7 +6,7 @@
  * The header itself is the shared ScreenHeader (components/ScreenHeader.tsx,
  * which carries the why of its markup, where it mounts and how it sticks). This
  * file is the Calculator screen's part: which pages this reader gets, their
- * icons and the masthead's words. It reads only the account, which is safe
+ * icons and the title. It reads only the account, which is safe
  * above AppShell's loading gate: unknown at build time and while it loads, so
  * the Library tab (early access) joins after load.
  */
@@ -22,7 +22,7 @@ const ICONS: Record<CalculatorTab["to"], LucideIcon> = {
 	"/app/plans": Users,
 }
 
-/** Selectors and the Library have their own <h1>; the calculator's is the masthead's. */
+/** Selectors and the Library have their own <h1>; the calculator's is the header's. */
 const OWN_HEADING: ReadonlySet<CalculatorTab["to"]> = new Set(["/app/selectors", "/app/plans"])
 
 export function CalculatorTabs() {
@@ -33,10 +33,9 @@ export function CalculatorTabs() {
 			kind="links"
 			title="Calculator"
 			icon={CalculatorIcon}
-			description="Plan your pulls and see the carats and tickets you'll have for each banner."
 			label="Calculator"
 			// 94rem: the calculator's panels sit 1rem inside a 96rem box (CaratCalculator,
-			// `max-w-[96rem]` then `sm:mx-4`), so this keeps the masthead on their edges.
+			// `max-w-[96rem]` then `sm:mx-4`), so this keeps the header on their edges.
 			column="max-w-[94rem]"
 			tabs={tabs.map((tab) => ({ ...tab, icon: ICONS[tab.to], ownHeading: OWN_HEADING.has(tab.to) }))}
 		/>
