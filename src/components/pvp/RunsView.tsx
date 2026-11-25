@@ -1843,14 +1843,15 @@ function WatchBar({ watch, onLook }: { watch: ReplayWatch; onLook: () => void })
 	return (
 		<div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-edge bg-gray-900/40 px-3 py-2 text-xs text-gray-300 sm:text-[13px]">
 			{watch.state === "watching" ? (
-				<span className="flex min-w-0 flex-1 items-center gap-2">
+				// Its own line on a phone, the buttons under it; beside them from sm.
+				<span className="flex min-w-0 basis-full items-center gap-2 sm:flex-1 sm:basis-auto">
 					<span className="size-2 shrink-0 rounded-full bg-status-running" aria-hidden="true" />
 					<span className="min-w-0">
 						Watching <code className="text-gray-100">{name}</code>. {watch.last ? `${watch.last}.` : "Each race is saved as it lands."}
 					</span>
 				</span>
 			) : (
-				<span className="min-w-0 flex-1">
+				<span className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
 					Your browser needs your OK to read <code className="text-gray-100">{name}</code> again.
 				</span>
 			)}
