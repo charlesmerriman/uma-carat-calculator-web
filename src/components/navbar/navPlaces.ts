@@ -6,7 +6,7 @@
  *
  * A PLACE IS NOT A PAGE. Calculator is three pages and Timeline is two; the
  * pages inside a place are switched by that screen's own bar
- * (components/ScreenTabs.tsx), and the place stays lit on all of them, which
+ * (components/ScreenHeader.tsx), and the place stays lit on all of them, which
  * is what `isOpen` answers. Selectors (2026-11-24, web #456) and Legend Races
  * (PR 3) each had a tab here until they moved under a place; seven tabs was
  * more than a phone could name, and Encyclopedia and Rankings were icons

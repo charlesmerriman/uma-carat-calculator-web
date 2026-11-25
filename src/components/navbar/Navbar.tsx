@@ -66,7 +66,7 @@ export const Navbar = () => {
 
 	// A place stays lit on every page inside it: the Calculator on Selectors
 	// and the Pull Plan Library, the Timeline on Legend Races. Those pages are
-	// switched by the screen's own bar (components/ScreenTabs.tsx), which is why
+	// switched by the screen's own bar (components/ScreenHeader.tsx), which is why
 	// neither has a tab here any more.
 
 	const timerIsGoing = calculatorData?.timerIsGoing ?? false

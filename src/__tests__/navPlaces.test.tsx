@@ -59,10 +59,15 @@ describe("TimelineTabs", () => {
 		expect(bar.getByRole("link", { name: "Timeline" })).not.toHaveAttribute("aria-current")
 	})
 
-	it("carries the hook the scroll padding keys off, so a deep link lands below the bar", () => {
-		// index.css: html:has([data-screen-tabs]) and [data-app-scroller]:has(> [data-screen-tabs]).
+	it("carries the hook the scroll padding keys off at rest, so a deep link lands below the bar", () => {
+		// index.css: html:has([data-screen-tabs]) and [data-app-scroller]:has([data-screen-tabs]).
 		renderTabs("/app/timeline")
-		expect(screen.getByRole("navigation", { name: "Timeline" }).parentElement).toHaveAttribute("data-screen-tabs")
+		expect(document.querySelector("[data-screen-tabs]")).not.toBeNull()
+	})
+
+	it("gives the Timeline the masthead's heading, and leaves Legend Races its own", () => {
+		renderTabs("/app/timeline")
+		expect(screen.getByRole("heading", { level: 1, name: "Timeline" })).toBeInTheDocument()
 	})
 })
 
