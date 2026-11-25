@@ -1931,7 +1931,10 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   `PvpCardPicker`) open by themselves only on a loss just logged; an older unnamed loss shows
   a quiet "Won by…", a named one "Won by Kitasan Black · Change". Mid-placing, the race is a
   loss in the data (setPlace's rule) but Won by waits for the third place.
-- **Fill from replays** (`ReplayImport.tsx`, CM only): umadump's race replay files, dropped
+- **Fill from replays** (`ReplayImport.tsx`, CM only) is a panel under the day tabs whose
+  title folds it (owner, 2026-11-25: open, it took a lot of room). Open to start, then the
+  player's choice per device (`useReplaysOpen`, the same `deviceSwitch` store as "Log
+  places"); folded it is one line. It reads umadump's race replay files, dropped
   or chosen (files, or a folder through `webkitdirectory`), read in the browser by
   `utils/gameImport/umadumpReplays.ts` (by shape; only the player's three and the winning
   uma ever leave a file), slotted by `utils/replayTickets.ts` (the day from each file's

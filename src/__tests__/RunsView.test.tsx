@@ -601,10 +601,24 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		expect(within(summary).getAllByText("Average place 1.0 · top 3 in 1 of 1")).toHaveLength(1)
 	})
 
+	it("folds the replays panel and remembers it on this device, open to start", async () => {
+		show()
+		const toggle = await screen.findByRole("button", { name: "Fill from replays" })
+		expect(toggle).toHaveAttribute("aria-expanded", "true")
+		expect(screen.getByLabelText("Choose files")).toBeInTheDocument()
+		fireEvent.click(toggle)
+		expect(toggle).toHaveAttribute("aria-expanded", "false")
+		expect(screen.queryByLabelText("Choose files")).toBeNull()
+		expect(localStorage.getItem("uma-runs-replays-open")).toBe("off")
+		// Open again: the store outlives a test, and the others want it open.
+		fireEvent.click(toggle)
+		expect(localStorage.getItem("uma-runs-replays-open")).toBe("on")
+	})
+
 	it("fills a ticket from a race replay: previewed, then saved through the same PUT", async () => {
 		show()
-		fireEvent.click(await screen.findByRole("button", { name: "Fill from replays" }))
-		const panel = screen.getByRole("region", { name: "Fill from replays" })
+		// Open to start (the player can fold it, kept per device).
+		const panel = await screen.findByRole("region", { name: "Fill from replays" })
 		// Day 1 of the test CM (it starts 2099-03-06): the file's time is the race's.
 		const file = new File([JSON.stringify(replayFixture)], "anything.json", { lastModified: Date.UTC(2099, 2, 6, 2) })
 		fireEvent.change(within(panel).getByLabelText("Choose files"), { target: { files: [file] } })
@@ -648,8 +662,7 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		async function startWatching(files: File[]) {
 			;(window as unknown as Record<string, unknown>).showDirectoryPicker = vi.fn(async () => fakeFolder(files))
 			show()
-			fireEvent.click(await screen.findByRole("button", { name: "Fill from replays" }))
-			fireEvent.click(screen.getByRole("button", { name: "Watch the umadump folder" }))
+			fireEvent.click(await screen.findByRole("button", { name: "Watch the umadump folder" }))
 			return screen.findByText(/^Watching/)
 		}
 
