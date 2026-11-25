@@ -1916,6 +1916,21 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   offer it opens the picker first; with fewer than two empty slots it isn't shown.
 - **The Finals**: radio buttons for the group (A / B) and the placement (1st to 3rd), a tap
   on the chosen one clears it, and the same tap row for the race; a winner fills a blank 1st.
+- **Places and Won by** (`notes/cm-runs-plan-2.md`, mocks in `notes/cm-runs-plan-2/mocks/`).
+  "Log places" is a per-device switch (an external store over `localStorage`, off on the
+  server) in a CM ticket's grid and the Finals; a League of Heroes never draws it (the API
+  refuses LoH places). With it on, ONE race is open at a time, with a 1 to 9 strip per uma
+  under it (`PlaceStrips`): the places are the input (a 1st is a win, three places with no
+  1st a loss), a place another of yours holds is greyed and disabled, and the race to open
+  is `nextRaceToPlace` (part-placed or unlogged, never a winner-only race) unless the player
+  tapped a race's name or result. The tap that places the third uma opens the next race. A
+  cell shows its uma's place whatever the switch says. At 390 px the portrait sits beside
+  the strip (`grid-cols-9`, so it can't overflow): a place button is about 30 x 40 px.
+  **Every loss gets Won by** (`WonBy`), switch or not: the chips (the four umas that beat the
+  player most this event, most recent first on a tie, `beatenBy`) and "Other…" (the uma
+  `PvpCardPicker`) open by themselves only on a loss just logged; an older unnamed loss shows
+  a quiet "Won by…", a named one "Won by Kitasan Black · Change". Mid-placing, the race is a
+  loss in the data (setPlace's rule) but Won by waits for the third place.
 - **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,
   the Finals, per-uma bars with the veteran link, per day); below `lg` they fall under the
   day. On a phone a three-number strip (`WinRateStrip`) goes above the tabs and the side

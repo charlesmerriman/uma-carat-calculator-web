@@ -77,7 +77,9 @@ import {
 	emptyContent,
 	findRun,
 	formatRate,
+	fullyPlaced,
 	isPastDay,
+	nextRaceToPlace,
 	lineupFromTeam,
 	logRace,
 	openingTab,
@@ -109,7 +111,7 @@ import {
 } from "../../utils/pvpRuns"
 import type { CalculationConstants, RaceEvent } from "../../types"
 import type { CatalogueSkill, CatalogueUma, MemberStyle, PvpTeam } from "../../types/pvpTeam"
-import type { PvpFinalsGroup, PvpRun, PvpRunContent, PvpRunRunner, PvpRunSlot } from "../../types/pvpRun"
+import type { PvpFinalsGroup, PvpRun, PvpRunContent, PvpRunRace, PvpRunRunner, PvpRunSlot } from "../../types/pvpRun"
 import { hoverCardProps } from "../../utils/hoverCards"
 
 /**
@@ -136,6 +138,8 @@ const INSET = "rounded-[10px] border border-edge bg-gray-900/60"
 const NO_VETERANS: TrainedUma[] = []
 // The Won by picker recommends nothing.
 const NO_PICKS = new Set<number>()
+/** Won by's quick chips, before "Other…" (notes/cm-runs-plan-2.md, "Won by"). */
+const WON_BY_CHIPS = 4
 
 /** A day tab's id: a CM day 1..4, or the Finals. */
 type DayTab = number | "final"
@@ -173,9 +177,13 @@ interface Shared {
 	umas: CatalogueUma[]
 	skillsById: Map<number, CatalogueSkill>
 	event: RaceEvent
-	/** "Log places" (on this device): a place per uma under every race. */
+	/** "Log places" (on this device): the 1 to 9 strips under the open race. */
 	logPlaces: boolean
 	onLogPlaces: (on: boolean) => void
+	/** A CM: places are allowed. The API refuses them on a League of Heroes. */
+	placesAllowed: boolean
+	/** Won by's quick picks: the umas that beat the player most this event, at most four. */
+	wonByChips: number[]
 	oshiIds: ReadonlySet<number>
 	/** The account's veterans (the Collection page), for each runner's pick. */
 	veterans: TrainedUma[]
@@ -293,6 +301,8 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		event,
 		logPlaces,
 		onLogPlaces: setLogPlaces,
+		placesAllowed: shape.rounds,
+		wonByChips: beatenBy(runs).umas.slice(0, WON_BY_CHIPS).map((entry) => entry.uma),
 		oshiIds,
 		veterans,
 		onOpenMyTeam,
@@ -949,8 +959,7 @@ function TicketRow({ title, eyebrow, run, choices, open, onOpen, shared, onWrite
 				<div className="flex flex-col gap-3.5 px-2.5 pb-3.5 pt-1 sm:gap-4.5 sm:px-3.5 sm:pb-4.5 sm:pt-1.5">
 					<LineupBlock title={title} eyebrow={eyebrow} run={run} choices={choices} shared={shared} onWrite={onWrite} />
 					<RaceGrid title={title} run={run} shared={shared} onWrite={onWrite} />
-					<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2.5">
-						<p className="text-xs text-gray-400 sm:text-[13px]">Tap the uma that finished first, or Loss. Tap it again to clear.</p>
+					<div className="flex flex-col gap-2 empty:hidden sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2.5">
 						{state === "started" && (
 							<button type="button" className={`${soft({ size: "min-h-10 px-3 sm:min-h-9" })} self-start`} onClick={() => onWrite((current) => ({ ...current, skipped: true }))}>
 								{raced ? "Skip the rest" : "Skip this ticket"}
@@ -1229,11 +1238,6 @@ function StyleTag({ style }: { style: MemberStyle }) {
 }
 
 /**
- * The open ticket's races: a column per runner and one for Loss, a row per
- * race, and a Total row counting each column. One tap logs a race, a tap on
- * the chosen button clears it back to "not run".
- */
-/**
  * "Log places", per device (notes/cm-runs-plan-2.md: a PC filling places and
  * a phone tapping want different answers). An external store with a server
  * snapshot of off, like courseMapStore's switches: /app is prerendered, so a
@@ -1271,29 +1275,122 @@ function useLogPlaces(): [boolean, (on: boolean) => void] {
 	return [on, setLogPlacesOn]
 }
 
+/** 1st to 9th: a CM race has nine runners (PVP_CM_RACE_RUNNERS in the API). */
 const PLACE_CHOICES = Array.from({ length: 9 }, (_, index) => index + 1)
 
+/**
+ * The "Log places" switch over a CM ticket's races (mock 01). A League of
+ * Heroes never draws it: the API refuses places there until its field size
+ * is known.
+ */
+function PlacesSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+	return (
+		<button
+			type="button"
+			role="switch"
+			aria-checked={on}
+			aria-label="Log places"
+			onClick={() => onChange(!on)}
+			className="flex shrink-0 items-center gap-2.5 rounded-lg py-0.5 text-left"
+		>
+			{/* The track and knob. A white knob on brand: the grey scale flips on the light themes, so grey-50 went dark there. */}
+			<span className={`relative h-5.5 w-10 shrink-0 rounded-full border transition ${on ? "border-brand bg-brand" : "border-gray-600 bg-gray-700"}`} aria-hidden="true">
+				<span className={`absolute top-0.5 size-4 rounded-full transition-all ${on ? "left-5 bg-white" : "left-0.5 bg-gray-300"}`} />
+			</span>
+			<span className="flex flex-col" aria-hidden="true">
+				<span className="text-xs font-bold text-gray-50 sm:text-[13px]">Log places</span>
+				<span className="text-[11px] text-gray-400">On this device</span>
+			</span>
+		</button>
+	)
+}
+
+/**
+ * The open ticket's races: a column per runner and one for Loss, a row per
+ * race, and a Total row counting each column. One tap logs a race, a tap on
+ * the chosen button clears it back to "not run". A cell shows where its uma
+ * finished whenever that's known, switch or not (decision 1).
+ *
+ * With "Log places" on (a CM only) one race at a time is open, with a 1 to 9
+ * strip per uma under it, and the places ARE the input (notes/cm-runs-plan-2.md,
+ * decision 7): a 1st is a win, all three placed with no 1st a loss. The open
+ * race is the next one to place (nextRaceToPlace) unless the player tapped a
+ * race's name or result; placing the last of the three hands it back, so the
+ * next race opens by itself and a race is 3 taps. A result button still works
+ * with the switch on: a winner is her 1st, and the strips stay for the rest.
+ *
+ * Every loss gets a Won by, switch or not (decision 6). Its chips open by
+ * themselves only on the loss just logged, never on older ones.
+ *
+ * Note that setPlace makes a race a loss on its FIRST non-1st place (a race
+ * row always has a winner field), so "a loss was just logged" is worked out
+ * from the race as the tap leaves it: all placed with no 1st, or a Loss tap.
+ */
 function RaceGrid({ title, run, shared, onWrite }: {
 	title: string
 	run: PvpRun
 	shared: Shared
 	onWrite: (change: RunChange) => void
 }) {
-	// The race whose Won by picker is open, or null.
-	const [pickingLoss, setPickingLoss] = useState<number | null>(null)
+	// The race the strips sit under: undefined follows nextRaceToPlace, null is none.
+	const [chosenRace, setChosenRace] = useState<number | null | undefined>(undefined)
+	// The loss whose Won by chips are open, or null.
+	const [wonByOpen, setWonByOpen] = useState<number | null>(null)
 	// A spot per runner, then null for Loss.
 	const columns: Array<number | null> = [...run.runners.map((runner) => runner.position), null]
+	const placing = shared.placesAllowed && shared.logPlaces
+	const openRace = placing ? (chosenRace === undefined ? nextRaceToPlace(run) : chosenRace) : null
+	// The race `race` as a change would leave it, read from the run on screen
+	// (the cache is written before the save, so that is the latest).
+	const after = (change: (content: PvpRunContent) => PvpRunContent, race: number) =>
+		change(contentOf(run)).races.find((entry) => entry.race === race)
+
+	const onResult = (race: number, column: number | null, on: boolean) => {
+		if (on) {
+			// The second tap clears the race: nothing left to place or name.
+			setChosenRace(undefined)
+			if (wonByOpen === race) setWonByOpen(null)
+			onWrite((current) => logRace(current, race, undefined))
+			return
+		}
+		if (column === null) setWonByOpen(race)
+		else if (wonByOpen === race) setWonByOpen(null)
+		// With places on, a winner tapped is her 1st (setPlace logs the win).
+		const change = (current: PvpRunContent) =>
+			placing && column !== null ? setPlace(current, race, column, 1) : logRace(current, race, column)
+		// The strips stay on this race until all three are placed.
+		if (placing) setChosenRace(fullyPlaced(after(change, race), run.runners) ? undefined : race)
+		onWrite(change)
+	}
+
+	const onPlace = (race: number, position: number, place: number | null) => {
+		const before = run.races.find((entry) => entry.race === race)
+		const change = (current: PvpRunContent) => setPlace(current, race, position, place)
+		const next = after(change, race)
+		// The tap that places the last of the three moves on; a fix to a race
+		// already placed stays put, so a second fix needs no reopening.
+		if (!fullyPlaced(before, run.runners) && fullyPlaced(next, run.runners)) {
+			setChosenRace(undefined)
+			// Three places and no 1st: a loss, so ask who won it.
+			if (next?.winner === null) setWonByOpen(race)
+		}
+		if (next?.winner !== null && wonByOpen === race) setWonByOpen(null)
+		onWrite(change)
+	}
+
 	// The label column is a CSS variable so one class switches it at sm.
 	const grid = "grid gap-1.25 [--label:50px] sm:gap-1.5 sm:[--label:76px]"
 	const template: CSSProperties = { gridTemplateColumns: `var(--label) repeat(${columns.length}, minmax(0, 1fr))` }
 	return (
 		<div className="flex flex-col gap-1.5" role="group" aria-label="Who won each race">
-			{/* Places are optional; a loss can say who won it either way. */}
-			<label className="flex items-center justify-end gap-2 text-xs font-semibold text-gray-200">
-				<input type="checkbox" role="switch" checked={shared.logPlaces} onChange={(change) => shared.onLogPlaces(change.target.checked)} />
-				Log places
-				<span className="font-normal text-gray-400">on this device</span>
-			</label>
+			<div className="mb-1 flex items-start justify-between gap-3">
+				<p className="text-xs text-gray-300 sm:text-[13px]">
+					{placing
+						? "Tap where each of your umas finished. A 1st is a win, and three places with no 1st is a loss."
+						: "Tap the uma that finished first, or Loss. Tap it again to clear."}
+				</p>
+				{shared.placesAllowed && <PlacesSwitch on={shared.logPlaces} onChange={shared.onLogPlaces} />}
+			</div>
 			<div className={`${grid} items-end pb-0.5 sm:pb-1`} style={template}>
 				<span className={`${EYEBROW} pb-1.5 max-sm:invisible`}>Who won</span>
 				{columns.map((column) => {
@@ -1335,108 +1432,72 @@ function RaceGrid({ title, run, shared, onWrite }: {
 				const entry = run.races.find((candidate) => candidate.race === race)
 				// A race a stopped ticket doesn't list was skipped: the player said it never ran.
 				const skipped = entry === undefined && run.skipped
-				// Places show with the switch on, or wherever some are logged;
-				// Won by on every loss, switch or not (decision 6).
-				const showPlaces = shared.logPlaces || (entry?.places?.length ?? 0) > 0
+				const open = openRace === race
 				const loss = entry !== undefined && entry.winner === null
+				// Mid-placing (some of the three placed), a race is a loss only
+				// until a 1st turns up, so its Won by waits unless asked for.
+				const midPlacing = open && (entry?.places?.length ?? 0) > 0 && !fullyPlaced(entry, run.runners)
+				const showWonBy = loss && (wonByOpen === race || Boolean(entry?.lost_to) || !midPlacing)
+				const label = `${title}, race ${race}`
+				const status = open ? "Open" : skipped ? "Skipped" : null
 				return (
 					<Fragment key={race}>
-					<div className={`${grid} items-center`} style={template}>
-						<span className="flex flex-col">
-							<span className={`text-xs font-semibold sm:text-[13px] ${entry ? "text-gray-100" : "text-gray-400"}`}>Race {race}</span>
-							{skipped && <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-500 sm:text-[11px]">Skipped</span>}
-						</span>
-						{columns.map((column) => {
-							const runner = run.runners.find((candidate) => candidate.position === column)
-							return (
-								<RaceButton
-									key={column ?? "loss"}
-									label={`${title}, race ${race}: ${column === null ? "Loss" : `${umaName(shared.umasById, runner)} won`}`}
-									loss={column === null}
-									decided={entry !== undefined}
-									skipped={skipped}
-									on={entry !== undefined && entry.winner === column}
-									onClick={(on) => onWrite((current) => logRace(current, race, on ? undefined : column))}
-								/>
-							)
-						})}
-					</div>
-					{(showPlaces || loss) && (
-						<div className={`${grid} -mt-0.5 items-center`} style={template}>
-							<span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-500 sm:text-[11px]">{showPlaces ? "Places" : ""}</span>
+						<div className={`${grid} items-center`} style={template}>
+							{placing ? (
+								// With places on, a race's name opens its strips (to fix an
+								// older race, or place one logged with a winner only).
+								<button
+									type="button"
+									aria-expanded={open}
+									aria-label={`${label}: places`}
+									onClick={() => setChosenRace(open ? null : race)}
+									className="flex min-h-11 flex-col items-start justify-center rounded-md text-left hover:text-brand"
+								>
+									<RaceName race={race} logged={entry !== undefined} status={status} />
+								</button>
+							) : (
+								<span className="flex flex-col">
+									<RaceName race={race} logged={entry !== undefined} status={status} />
+								</span>
+							)}
 							{columns.map((column) => {
-								if (column === null) {
-									if (!loss) return <span key="loss" />
-									const beaten = entry?.lost_to ? shared.umasById.get(entry.lost_to) : undefined
-									return (
-										<button
-											key="loss"
-											type="button"
-											onClick={() => setPickingLoss(race)}
-											aria-label={`${title}, race ${race}: won by ${beaten?.name ?? "not said"}`}
-											className="flex h-8 min-w-0 items-center justify-center gap-1 rounded-lg border border-edge px-1 text-[11px] text-gray-300 hover:border-brand sm:text-xs"
-										>
-											{beaten ? (
-												<>
-													<FramedUma src={beaten.portrait ?? beaten.image ?? null} layers={beaten.portrait_layers} oshi={shared.oshiIds.has(beaten.id)} alt="" className="w-5 shrink-0" />
-													<span className="truncate">{beaten.name}</span>
-												</>
-											) : (
-												<span className="truncate">Won by…</span>
-											)}
-										</button>
-									)
-								}
-								if (!showPlaces) return <span key={column} />
 								const runner = run.runners.find((candidate) => candidate.position === column)
-								const place = placeOf(entry, column)
 								return (
-									<select
-										key={column}
-										aria-label={`${title}, race ${race}: where ${umaName(shared.umasById, runner)} finished`}
-										value={place ?? ""}
-										onChange={(change) => {
-											const next = change.target.value === "" ? null : Number(change.target.value)
-											onWrite((current) => setPlace(current, race, column, next))
-										}}
-										className={`h-8 min-w-0 rounded-lg border bg-gray-900/60 px-1 text-center text-xs font-semibold ${place === 1 ? "border-brand text-brand" : "border-edge text-gray-200"}`}
-									>
-										<option value="">–</option>
-										{PLACE_CHOICES.map((choice) => (
-											<option key={choice} value={choice}>
-												{ordinal(choice)}
-											</option>
-										))}
-									</select>
+									<RaceButton
+										key={column ?? "loss"}
+										label={`${label}: ${column === null ? "Loss" : `${umaName(shared.umasById, runner)} won`}`}
+										loss={column === null}
+										decided={entry !== undefined}
+										skipped={skipped}
+										on={entry !== undefined && entry.winner === column}
+										place={column === null ? null : placeOf(entry, column)}
+										onClick={(on) => onResult(race, column, on)}
+									/>
 								)
 							})}
 						</div>
-					)}
+						{open && (
+							<PlaceStrips
+								label={label}
+								entry={entry}
+								runners={run.runners}
+								shared={shared}
+								onPlace={(position, place) => onPlace(race, position, place)}
+							/>
+						)}
+						{showWonBy && entry && (
+							<WonBy
+								label={label}
+								entry={entry}
+								open={wonByOpen === race}
+								onOpen={(isOpen) => setWonByOpen(isOpen ? race : null)}
+								shared={shared}
+								onPick={(uma) => onWrite((current) => setLostTo(current, race, uma))}
+							/>
+						)}
 					</Fragment>
 				)
 			})}
-			{pickingLoss !== null && (
-				<PvpCardPicker
-					pool="uma"
-					items={shared.umas}
-					title={`Race ${pickingLoss}: the uma that won`}
-					skillsById={shared.skillsById}
-					event={shared.event}
-					style={null}
-					recommended={NO_PICKS}
-					blockReason={() => null}
-					selectedId={run.races.find((entry) => entry.race === pickingLoss)?.lost_to ?? null}
-					onPick={(id) => {
-						onWrite((current) => setLostTo(current, pickingLoss, id))
-						setPickingLoss(null)
-					}}
-					onRemove={() => {
-						onWrite((current) => setLostTo(current, pickingLoss, null))
-						setPickingLoss(null)
-					}}
-					onClose={() => setPickingLoss(null)}
-				/>
-			)}
 			<div className={`${grid} mt-0.5 items-center border-t border-edge pt-2 sm:mt-1 sm:pt-2.5`} style={template}>
 				<span className="text-xs font-semibold text-gray-300 sm:text-[13px]">Total</span>
 				{columns.map((column) => {
@@ -1457,19 +1518,196 @@ function RaceGrid({ title, run, shared, onWrite }: {
 	)
 }
 
+/** "Race 3" over its state ("Open", "Skipped"). */
+function RaceName({ race, logged, status }: { race: number; logged: boolean; status: string | null }) {
+	return (
+		<>
+			<span className={`text-xs font-semibold sm:text-[13px] ${logged ? "text-gray-100" : "text-gray-400"}`}>Race {race}</span>
+			{status && <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-400 sm:text-[11px]">{status}</span>}
+		</>
+	)
+}
+
+/**
+ * A 1 to 9 strip per uma for one race (mocks 01 and 02). One tap places her,
+ * a tap on her place clears it. A place another of yours holds is greyed and
+ * can't be tapped: two of yours never share one, and the API refuses it.
+ *
+ * At 390 px the portrait sits beside the strip (the canvas's layout): the
+ * nine buttons share what's left through `grid-cols-9`, equal fractions with
+ * a zero minimum, so the strip shrinks with the card and can't push the page
+ * sideways. They're taller than wide there, which a thumb can still hit.
+ */
+function PlaceStrips({ label, entry, runners, shared, onPlace }: {
+	label: string
+	entry: PvpRunRace | undefined
+	runners: PvpRunRunner[]
+	shared: Shared
+	onPlace: (position: number, place: number | null) => void
+}) {
+	return (
+		<div role="group" aria-label={`${label}: where your umas finished`} className="flex flex-col gap-1.5 py-0.5">
+			{runners.map((runner) => {
+				const uma = shared.umasById.get(runner.uma)
+				const mine = placeOf(entry, runner.position)
+				const name = umaName(shared.umasById, runner)
+				return (
+					<div key={runner.position} className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-1.5 sm:grid-cols-[2rem_minmax(0,1fr)] sm:gap-2">
+						<FramedUma
+							src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers}
+							oshi={shared.oshiIds.has(runner.uma)}
+							hover={hoverCardProps("uma", runner.uma)}
+							alt=""
+							className="w-7 sm:w-8"
+						/>
+						<div className="grid grid-cols-9 gap-1 sm:gap-1.5">
+							{PLACE_CHOICES.map((place) => {
+								const on = mine === place
+								const taken = !on && (entry?.places ?? []).some((held) => held.place === place && held.position !== runner.position)
+								const look = on
+									? place === 1
+										? "border-brand bg-brand text-black"
+										: "border-brand bg-brand/20 text-gray-50"
+									: taken
+										? "cursor-not-allowed border-dashed border-gray-700 text-gray-600 line-through"
+										: "border-edge bg-gray-900/60 text-gray-200 hover:border-brand"
+								return (
+									<button
+										key={place}
+										type="button"
+										aria-pressed={on}
+										disabled={taken}
+										aria-label={`${label}: ${name} finished ${ordinal(place)}`}
+										onClick={() => onPlace(runner.position, on ? null : place)}
+										className={`h-10 min-w-0 rounded-lg border text-[13px] font-bold transition ${look}`}
+									>
+										{place}
+									</button>
+								)
+							})}
+						</div>
+					</div>
+				)
+			})}
+		</div>
+	)
+}
+
+/**
+ * Who won a lost race (decision 6: on every loss, and skippable). Open, it
+ * offers up to four chips, the umas that beat this player most this event
+ * (the most recent first on a tie: beatenBy), and "Other…", the full uma
+ * picker. Named, it's one line with Change; unnamed and closed, one quiet
+ * button. Only the uma is set by hand: its style comes from replays, since a
+ * guessed style would muddy the stats.
+ */
+function WonBy({ label, entry, open, onOpen, shared, onPick }: {
+	/** "Ticket 2, race 4" or "The Finals race". */
+	label: string
+	entry: PvpRunRace
+	open: boolean
+	onOpen: (open: boolean) => void
+	shared: Shared
+	onPick: (uma: number | null) => void
+}) {
+	const [picking, setPicking] = useState(false)
+	const beaten = entry.lost_to ? shared.umasById.get(entry.lost_to) : undefined
+	const pick = (uma: number | null) => {
+		setPicking(false)
+		onOpen(false)
+		onPick(uma)
+	}
+	const chip = "inline-flex min-h-9 min-w-0 max-w-full items-center gap-1.5 rounded-full border text-xs font-semibold transition"
+	return (
+		<>
+			{open ? (
+				<div role="group" aria-label={`${label}: who won it`} className="flex flex-wrap items-center gap-1.5 rounded-[10px] border border-highlight/40 bg-highlight/10 px-2.5 py-2 sm:gap-2 sm:px-3">
+					<span className="mr-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-highlight sm:text-[11px]">Won by</span>
+					{shared.wonByChips.map((id) => {
+						const uma = shared.umasById.get(id)
+						if (!uma) return null
+						const on = entry.lost_to === id
+						return (
+							<button
+								key={id}
+								type="button"
+								aria-pressed={on}
+								title={uma.title}
+								onClick={() => pick(id)}
+								className={`${chip} py-1 pl-1 pr-3 ${on ? "border-brand text-gray-50" : "border-edge bg-gray-900/60 text-gray-100 hover:border-brand"}`}
+							>
+								<FramedUma src={uma.portrait ?? uma.image ?? null} layers={uma.portrait_layers} oshi={shared.oshiIds.has(id)} alt="" className="w-6 shrink-0" />
+								<span className="truncate">{uma.name}</span>
+							</button>
+						)
+					})}
+					<button type="button" onClick={() => setPicking(true)} className={`${chip} border-edge bg-gray-900/60 px-3 text-gray-100 hover:border-brand`}>
+						Other…
+					</button>
+					<button type="button" onClick={() => onOpen(false)} className="ml-auto min-h-9 px-1.5 text-xs text-gray-400 underline underline-offset-2 hover:text-gray-200">
+						Skip
+					</button>
+				</div>
+			) : beaten ? (
+				<div className="flex min-w-0 items-center gap-2 text-xs text-gray-400 sm:text-[13px]">
+					<span className="shrink-0">Won by</span>
+					<FramedUma src={beaten.portrait ?? beaten.image ?? null} layers={beaten.portrait_layers} oshi={shared.oshiIds.has(beaten.id)} alt="" className="w-5.5 shrink-0" />
+					<span className="truncate font-semibold text-gray-100" title={beaten.title}>{beaten.name}</span>
+					<button
+						type="button"
+						aria-label={`${label}: change who won it`}
+						onClick={() => onOpen(true)}
+						className="min-h-8 shrink-0 px-1 text-gray-400 underline underline-offset-2 hover:text-gray-200"
+					>
+						Change
+					</button>
+				</div>
+			) : (
+				<button
+					type="button"
+					aria-label={`${label}: who won it?`}
+					onClick={() => onOpen(true)}
+					className="min-h-8 self-start px-0.5 text-xs text-gray-400 underline underline-offset-2 hover:text-gray-200 sm:text-[13px]"
+				>
+					Won by…
+				</button>
+			)}
+			{picking && (
+				<PvpCardPicker
+					pool="uma"
+					items={shared.umas}
+					title={`${label}: the uma that won`}
+					skillsById={shared.skillsById}
+					event={shared.event}
+					style={null}
+					recommended={NO_PICKS}
+					blockReason={() => null}
+					selectedId={entry.lost_to ?? null}
+					onPick={(id) => pick(id)}
+					onRemove={() => pick(null)}
+					onClose={() => setPicking(false)}
+				/>
+			)}
+		</>
+	)
+}
+
 /**
  * One button of the race grid: gold with "Won" when it won, red with "Lost" for
- * a picked loss, a hollow ring while the race is open. A race the player
- * skipped (a stopped ticket) is faded and dashed with a dash in it, like its
- * square on the closed row. It still takes a tap: logging it means it ran after
- * all, and logRace takes the stop back.
+ * a picked loss, a hollow ring while the race is open, and the uma's place
+ * ("4th") once it's logged. A race the player skipped (a stopped ticket) is
+ * faded and dashed with a dash in it, like its square on the closed row. It
+ * still takes a tap: logging it means it ran after all, and logRace takes the
+ * stop back.
  */
-function RaceButton({ label, loss, decided, skipped, on, onClick }: {
+function RaceButton({ label, loss, decided, skipped, on, place, onClick }: {
 	label: string
 	loss: boolean
 	decided: boolean
 	skipped: boolean
 	on: boolean
+	/** Where this column's uma finished, or null (always null for Loss). */
+	place: number | null
 	onClick: (on: boolean) => void
 }) {
 	const look = on
@@ -1490,10 +1728,13 @@ function RaceButton({ label, loss, decided, skipped, on, onClick }: {
 			className={`flex h-11 min-w-0 items-center justify-center gap-1 rounded-[9px] border text-xs font-bold transition sm:gap-1.5 sm:rounded-[10px] sm:text-[13px] ${look}`}
 		>
 			{on && !loss && (
-				<>
-					<Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-					<span>Won</span>
-				</>
+				<span className="flex flex-col items-center leading-tight">
+					<span className="flex items-center gap-1">
+						<Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+						Won
+					</span>
+					{place !== null && <span className="text-[11px] font-semibold">{ordinal(place)}</span>}
+				</span>
 			)}
 			{on && loss && (
 				<>
@@ -1501,6 +1742,7 @@ function RaceButton({ label, loss, decided, skipped, on, onClick }: {
 					<span>Lost</span>
 				</>
 			)}
+			{!on && place !== null && <span className="text-gray-200">{ordinal(place)}</span>}
 			{!decided && !skipped && <span className="size-3 rounded-full border-[1.5px] border-gray-600 sm:size-3.5" aria-hidden="true" />}
 			{skipped && <span className="h-0.5 w-2.5 rounded-full bg-gray-500 sm:w-3" aria-hidden="true" />}
 		</button>
@@ -1707,6 +1949,8 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 	shared: Shared
 	onWrite: (change: RunChange) => void
 }) {
+	// The Won by chips, open on the loss just logged (RaceGrid's rule).
+	const [wonByOpen, setWonByOpen] = useState(false)
 	if (!run || run.runners.length === 0) {
 		return (
 			<div className="px-3.5 pb-5.5 pt-5 sm:px-5 sm:pb-8 sm:pt-7">
@@ -1724,6 +1968,35 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 
 	const race = run.races.find((entry) => entry.race === 1)
 	const columns: Array<number | null> = [...run.runners.map((runner) => runner.position), null]
+	// One race, so no open race to pick: the strips show with the switch on,
+	// or once a place is logged (decision 1).
+	const placing = shared.placesAllowed && (shared.logPlaces || (race?.places?.length ?? 0) > 0)
+	// A win is 1st place for the player, so a winner fills a blank placement.
+	// Two different places: `placement` is the player's 1st to 3rd of the
+	// three trainers, the strips each uma's 1st to 9th of the nine runners.
+	const withPlacement = (next: PvpRunContent): PvpRunContent => {
+		const winner = next.races.find((entry) => entry.race === 1)?.winner
+		return { ...next, placement: typeof winner === "number" && next.placement === null ? 1 : next.placement }
+	}
+	const onResult = (column: number | null, on: boolean) => {
+		setWonByOpen(!on && column === null)
+		onWrite((current) => {
+			if (on) return { ...current, races: setRace(current.races, 1, undefined) }
+			// With places on, a winner tapped is her 1st, as on a ticket.
+			if (placing && column !== null) return withPlacement(setPlace(current, 1, column, 1))
+			return withPlacement({ ...current, races: setRace(current.races, 1, column) })
+		})
+	}
+	const onPlace = (position: number, place: number | null) => {
+		const change = (current: PvpRunContent) => withPlacement(setPlace(current, 1, position, place))
+		const next = change(contentOf(run)).races.find((entry) => entry.race === 1)
+		// The last of the three placed with no 1st: a loss, so ask who won it.
+		if (!fullyPlaced(race, run.runners) && fullyPlaced(next, run.runners) && next?.winner === null) setWonByOpen(true)
+		if (next?.winner !== null) setWonByOpen(false)
+		onWrite(change)
+	}
+	const lostRace = race !== undefined && race.winner === null
+	const midPlacing = (race?.places?.length ?? 0) > 0 && !fullyPlaced(race, run.runners)
 	return (
 		<div className="flex flex-col gap-4 px-3 pb-4.5 pt-3.5 sm:gap-5.5 sm:px-5 sm:pb-6 sm:pt-4.5">
 			<LineupBlock title="Finals" eyebrow="Finals" run={run} choices={choices} shared={shared} onWrite={onWrite} />
@@ -1738,7 +2011,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 					}
 				/>
 				<ChoiceGroup
-					label="Where you placed"
+					label="Your placement"
 					options={[1, 2, 3].map((place) => ({ key: String(place), label: ordinal(place), on: run.placement === place }))}
 					onPick={(place) =>
 						onWrite((current) => ({ ...current, placement: current.placement === Number(place) ? null : Number(place) }))
@@ -1746,7 +2019,10 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 				/>
 			</div>
 			<div className="flex flex-col gap-1.5 sm:gap-2" role="group" aria-label="Who won the Finals race">
-				<span className={EYEBROW}>Who won the race</span>
+				<span className="flex items-end justify-between gap-3">
+					<span className={EYEBROW}>Who won the race</span>
+					{shared.placesAllowed && <PlacesSwitch on={shared.logPlaces} onChange={shared.onLogPlaces} />}
+				</span>
 				<div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
 					{columns.map((column) => {
 						const runner = run.runners.find((candidate) => candidate.position === column)
@@ -1766,17 +2042,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 								type="button"
 								aria-pressed={on}
 								aria-label={`The Finals race: ${loss ? "Loss" : `${umaName(shared.umasById, runner)} won`}`}
-								// A win is 1st place, so a winner fills a blank placement.
-								onClick={() =>
-									onWrite((current) => {
-										const winner = on ? undefined : column
-										return {
-											...current,
-											races: setRace(current.races, 1, winner),
-											placement: typeof winner === "number" && current.placement === null ? 1 : current.placement,
-										}
-									})
-								}
+								onClick={() => onResult(column, on)}
 								className={`flex min-h-13 min-w-0 items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-left text-xs font-bold transition sm:min-h-14 sm:text-[13px] ${look}`}
 							>
 								{runner ? (
@@ -1798,10 +2064,26 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 						)
 					})}
 				</div>
+				{lostRace && race && (wonByOpen || Boolean(race.lost_to) || !midPlacing) && (
+					<WonBy
+						label="The Finals race"
+						entry={race}
+						open={wonByOpen}
+						onOpen={setWonByOpen}
+						shared={shared}
+						onPick={(uma) => onWrite((current) => setLostTo(current, 1, uma))}
+					/>
+				)}
 				<p className="mt-1 text-xs text-gray-400 sm:mt-1.5 sm:text-[13px]">
 					One of yours winning means you placed 1st, so that fills in by itself.
 				</p>
 			</div>
+			{placing && (
+				<div className="flex flex-col gap-1.5 sm:gap-2">
+					<span className={EYEBROW}>Where your umas finished, of nine</span>
+					<PlaceStrips label="The Finals race" entry={race} runners={run.runners} shared={shared} onPlace={onPlace} />
+				</div>
+			)}
 			<NoteField note={run.note} label="Note for the Finals" onWrite={onWrite} />
 		</div>
 	)
