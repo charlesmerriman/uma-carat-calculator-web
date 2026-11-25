@@ -181,12 +181,26 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	// click goes at once.
 	const [touch, setTouch] = useState(false)
 	const armedRef = useRef<number | null>(null)
+
+	// THE DOT IS THE TARGET (a player's report, 2026-11-25: "you have to pixel
+	// hunt"). Recharts opens its readout for the vertex NEAREST the pointer's x,
+	// and the line has a vertex for every day, about one per pixel. So a
+	// banner's readout showed only within a pixel or two of its dot's centre,
+	// and anywhere else on the 13px dot showed the next day's balance
+	// (measured: 2 of the 17 pixels across a dot). Each dot reports the pointer
+	// entering its 24px hit area, and while it is there the readout shows that
+	// dot's row, whatever vertex Recharts picked. The series' own hover marker
+	// is hidden meanwhile: it sits on that nearby vertex, a pixel or two off the
+	// dot, and read as a second dot.
+	const [hovered, setHovered] = useState<HoverDatum | null>(null)
 	const select = (marker: ForecastMarker) => {
 		if (touch && armedRef.current !== marker.index) {
 			armedRef.current = marker.index
 			return
 		}
 		armedRef.current = null
+		// The page scrolls to the row, out from under the pointer.
+		setHovered(null)
 		onSelectMarker(marker)
 	}
 
@@ -306,8 +320,10 @@ const ForecastPlot: React.FC<PlotProps> = ({
 		<Tooltip
 			content={(props) => (
 				<ForecastTooltip
+					// Shown when Recharts says so (the pointer is in the plot), so a dot
+					// left hovered when the page scrolled away never pins it open.
 					active={props.active}
-					payload={props.payload}
+					payload={hovered ? [{ payload: hovered }] : props.payload}
 					touch={touch}
 					hasPaid={hasPaid}
 					pityPulls={pityPulls}
@@ -326,7 +342,10 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	return (
 		<div
 			// ResponsiveContainer fills this box, so its height is the chart's.
-			className="h-[198px] px-1 pb-2 sm:h-[248px]"
+			// The marker Recharts draws at the nearest vertex lands a pixel or two
+			// from a banner's dot, often under the pointer. Taking the pointer, it
+			// would end the dot's hover the moment it was drawn.
+			className="h-[198px] px-1 pb-2 sm:h-[248px] [&_.recharts-active-dot]:pointer-events-none"
 			onPointerDown={(event) => setTouch(event.pointerType === "touch")}
 		>
 			<ResponsiveContainer width="100%" height="100%">
@@ -390,9 +409,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 							dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) => (
 								// A step-up's dot rides the paid band instead (below), unless
 								// there is no band to ride.
-								<LineDot key={`dot-${props.index}`} {...props} onSelect={select} skipStepUps={hasPaid} />
+								<LineDot key={`dot-${props.index}`} {...props} onSelect={select} onHover={setHovered} skipStepUps={hasPaid} />
 							)}
-							activeDot={{ r: 5, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-brand)" }}
+							activeDot={hovered ? false : { r: 5, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-brand)" }}
 						/>
 						{hasPaid && (
 							// Grey on purpose: the free layer wears each theme's brand
@@ -411,9 +430,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								isAnimationActive={animate}
 								animationDuration={900}
 								dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) => (
-									<StepUpDot key={`paid-dot-${props.index}`} {...props} onSelect={select} />
+									<StepUpDot key={`paid-dot-${props.index}`} {...props} onSelect={select} onHover={setHovered} />
 								)}
-								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-gray-400)" }}
+								activeDot={hovered ? false : { r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: "var(--color-gray-400)" }}
 							/>
 						)}
 						{caratLeaders.map((leader) => (
@@ -439,9 +458,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 							activeDot={false}
 							dot={(props: { cx?: number; cy?: number; index?: number; payload?: LineDatum }) =>
 								props.payload?.marker?.stepUp && hasPaid ? (
-									<StepUpDot key={`float-${props.index}`} {...props} onSelect={select} floating />
+									<StepUpDot key={`float-${props.index}`} {...props} onSelect={select} onHover={setHovered} floating />
 								) : (
-									<LineDot key={`float-${props.index}`} {...props} onSelect={select} skipStepUps={false} floating />
+									<LineDot key={`float-${props.index}`} {...props} onSelect={select} onHover={setHovered} skipStepUps={false} floating />
 								)
 							}
 						/>
@@ -504,9 +523,9 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								animationDuration={900}
 								onAnimationEnd={entered}
 								dot={(props: { cx?: number; cy?: number; index?: number; payload?: PullDatum }) => (
-									<PullDot key={`${line}-${props.index}`} {...props} line={line} onSelect={select} />
+									<PullDot key={`${line}-${props.index}`} {...props} line={line} onSelect={select} onHover={setHovered} />
 								)}
-								activeDot={{ r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: LINE_COLOR[line] }}
+								activeDot={hovered ? false : { r: 4, stroke: "var(--card-fill)", strokeWidth: 2, fill: LINE_COLOR[line] }}
 							/>
 						))}
 						{pullLeaders.map((leader) => (
@@ -534,6 +553,7 @@ const ForecastPlot: React.FC<PlotProps> = ({
 									{...props}
 									line={props.payload?.kind ?? "uma"}
 									onSelect={select}
+									onHover={setHovered}
 									floating
 								/>
 							)}
@@ -602,11 +622,28 @@ function withSkips<R extends { t: number }>(
 	return out
 }
 
+/** A dot's row, handed to the readout while the pointer is on the dot. */
+type HoverDatum = LineDatum | PullDatum
+type OnHover = (datum: HoverDatum | null) => void
+
+/**
+ * What every dot's group carries for the readout: entering its hit area shows
+ * its row, leaving hands the choice back to Recharts.
+ */
+const hoverProps = (datum: HoverDatum, onHover: OnHover) => ({
+	onMouseEnter: () => onHover(datum),
+	onMouseLeave: () => onHover(null),
+})
+
 /** The red dot for a skipped PvP event, on whichever line it sits. */
-const SkipDot: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
-	// Red, the over-budget token: a skip is rewards left on the table, and the
-	// token follows the theme and colorblind mode like the rest.
-	<circle cx={cx} cy={cy} r={4.5} strokeWidth={2} style={{ stroke: "var(--card-fill)", fill: "var(--color-pull-over)" }} />
+const SkipDot: React.FC<{ cx: number; cy: number; datum: HoverDatum; onHover: OnHover }> = ({ cx, cy, datum, onHover }) => (
+	<g {...hoverProps(datum, onHover)}>
+		{/* A hit area like a banner dot's, so its readout opens anywhere on it too. */}
+		<circle cx={cx} cy={cy} r={12} fill="transparent" />
+		{/* Red, the over-budget token: a skip is rewards left on the table, and the
+		    token follows the theme and colorblind mode like the rest. */}
+		<circle cx={cx} cy={cy} r={4.5} strokeWidth={2} style={{ stroke: "var(--card-fill)", fill: "var(--color-pull-over)" }} />
+	</g>
 )
 
 /**
@@ -619,16 +656,17 @@ const PullDot: React.FC<{
 	payload?: PullDatum
 	line: PullLine
 	onSelect: (marker: ForecastMarker) => void
+	onHover: OnHover
 	/** Draw only the dots of banners charged early (the float series), or only the rest. */
 	floating?: boolean
-}> = ({ cx, cy, payload, line, onSelect, floating = false }) => {
+}> = ({ cx, cy, payload, line, onSelect, onHover, floating = false }) => {
 	if (cx === undefined || cy === undefined || !payload) return <g />
-	if (payload.skip) return floating ? <g /> : <SkipDot cx={cx} cy={cy} />
+	if (payload.skip) return floating ? <g /> : <SkipDot cx={cx} cy={cy} datum={payload} onHover={onHover} />
 	if (!payload.bar || payload.kind !== line) return <g />
 	const { marker } = payload.bar
 	if (Boolean(marker.chargedEarly) !== floating) return <g />
 	return (
-		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
+		<g className="cursor-pointer" onClick={() => onSelect(marker)} {...hoverProps(payload, onHover)}>
 			<circle cx={cx} cy={cy} r={12} fill="transparent" />
 			<circle
 				cx={cx}
@@ -655,14 +693,15 @@ const StepUpDot: React.FC<{
 	cy?: number
 	payload?: LineDatum
 	onSelect: (marker: ForecastMarker) => void
+	onHover: OnHover
 	/** Draw only the dots of banners charged early (the float series), or only the rest. */
 	floating?: boolean
-}> = ({ cx, cy, payload, onSelect, floating = false }) => {
+}> = ({ cx, cy, payload, onSelect, onHover, floating = false }) => {
 	const marker = payload?.marker
-	if (cx === undefined || cy === undefined || !marker?.stepUp) return <g />
+	if (cx === undefined || cy === undefined || !payload || !marker?.stepUp) return <g />
 	if (Boolean(marker.chargedEarly) !== floating) return <g />
 	return (
-		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
+		<g className="cursor-pointer" onClick={() => onSelect(marker)} {...hoverProps(payload, onHover)}>
 			<circle cx={cx} cy={cy} r={12} fill="transparent" />
 			<circle
 				cx={cx}
@@ -687,19 +726,20 @@ const LineDot: React.FC<{
 	cy?: number
 	payload?: LineDatum
 	onSelect: (marker: ForecastMarker) => void
+	onHover: OnHover
 	/** Leave step-ups to the paid band's StepUpDot. */
 	skipStepUps: boolean
 	/** Draw only the dots of banners charged early (the float series), or only the rest. */
 	floating?: boolean
-}> = ({ cx, cy, payload, onSelect, skipStepUps, floating = false }) => {
+}> = ({ cx, cy, payload, onSelect, onHover, skipStepUps, floating = false }) => {
 	if (cx === undefined || cy === undefined || !payload) return <g />
-	if (payload.skip) return floating ? <g /> : <SkipDot cx={cx} cy={cy} />
+	if (payload.skip) return floating ? <g /> : <SkipDot cx={cx} cy={cy} datum={payload} onHover={onHover} />
 	const marker = payload.marker
 	if (!marker || (skipStepUps && marker.stepUp)) return <g />
 	if (Boolean(marker.chargedEarly) !== floating) return <g />
 	const short = marker.after < 0 && !marker.excluded
 	return (
-		<g className="cursor-pointer" onClick={() => onSelect(marker)}>
+		<g className="cursor-pointer" onClick={() => onSelect(marker)} {...hoverProps(payload, onHover)}>
 			{/* The hit area: a 24px target around an 9px dot. */}
 			<circle cx={cx} cy={cy} r={12} fill="transparent" />
 			<circle
