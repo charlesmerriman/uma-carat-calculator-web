@@ -5,6 +5,7 @@ import {
 	ChevronRight,
 	History,
 	Infinity as InfinityIcon,
+	RotateCcw,
 	Search,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
@@ -169,8 +170,10 @@ function storePage(page: number): void {
 // needs an `lg:` prefix here and Tailwind only finds complete class strings.
 const countClass =
 	"order-last text-xs text-gray-400 lg:order-none lg:inline-flex lg:items-center lg:justify-center lg:rounded-md lg:border lg:border-gray-700 lg:bg-gray-950/50 lg:px-4 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-gray-200 lg:shadow-inner"
+// No right padding here: the input adds it, more while "Reset filters" sits
+// inside its right end (see the search box below).
 const searchInputClass =
-	"w-full rounded-md border border-gray-600 bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
+	"w-full rounded-md border border-gray-600 bg-gray-800 py-2 pl-9 text-sm text-gray-100 shadow-sm placeholder:text-gray-400 transition focus:border-gray-500 focus:bg-gray-800 focus:outline-none md:py-1.5"
 
 /**
  * The filter's value: the absence of a filter, a banner category, a marker
@@ -937,6 +940,27 @@ export const Timeline = () => {
 		rebuildList(anchor)
 	}
 
+	/**
+	 * "Reset filters": the search box and the filter back to the whole list in
+	 * one go, like the Encyclopedia's button (Daptrius, 2026-11-25). Shown only
+	 * while either is set, read from `activeFilter` so a stored filter the data
+	 * no longer offers doesn't show a button that does nothing.
+	 *
+	 * Both controls going back to their un-narrowed values is a widening, so it
+	 * keeps the reader's place exactly as clearing either one on its own does:
+	 * the row being read is measured FIRST, while the DOM still holds the
+	 * narrowed list, and handed to rebuildList, which re-applies it after its
+	 * reset (see the note on rebuildList for why that order matters).
+	 */
+	const filtersActive = searchQuery !== "" || activeFilter !== "all"
+	const resetFilters = (): void => {
+		const anchor = measureAnchorRow()
+		setSearchQuery("")
+		setEventFilter("all")
+		storeFilter("all")
+		rebuildList(anchor)
+	}
+
 	const changeViewMode = (mode: TimelineViewMode): void => {
 		setViewMode(mode)
 		storeViewMode(mode)
@@ -1160,11 +1184,35 @@ export const Timeline = () => {
 							<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 							<input
 								type="text"
-								className={`tl-control ${searchInputClass}`}
+								className={`tl-control ${searchInputClass} ${filtersActive ? "pr-9 sm:pr-28" : "pr-3"}`}
 								placeholder="Search characters or events..."
 								value={searchQuery}
 								onChange={(e) => handleSearchChange(e.target.value)}
 							/>
+							{/* "Reset filters", the Encyclopedia's look (encyclopedia.css
+							    .enc-reset: brand text, no box), INSIDE the search box's right
+							    end. The band has no room for it beside the controls: from lg
+							    its three columns already fill 1,024px, and a ~100px button
+							    there pushed the band 29 to 38px past the screen up to about
+							    1,385px wide (measured 2026-11-25). In here it takes no room at
+							    all, so nothing in the band moves when it appears, and it sits
+							    where the reader is already looking. Nothing at rest. On a
+							    phone only its icon shows; the input's right padding (above)
+							    keeps typed text clear of it either way. */}
+							{filtersActive && (
+								<button
+									type="button"
+									onClick={resetFilters}
+									aria-label="Reset filters"
+									title="Reset filters"
+									className="absolute top-1/2 right-1 inline-flex -translate-y-1/2 items-center gap-1 rounded px-1.5 py-1 text-xs whitespace-nowrap text-brand transition hover:opacity-75"
+								>
+									<RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+									<span className="hidden sm:inline" aria-hidden="true">
+										Reset filters
+									</span>
+								</button>
+							)}
 						</div>
 					</div>
 				</div>
