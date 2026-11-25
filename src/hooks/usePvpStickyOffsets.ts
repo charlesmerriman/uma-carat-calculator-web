@@ -81,9 +81,9 @@ export function usePvpStickyOffsets(
 			const pinnedRow = bandElement.querySelector<HTMLElement>("[data-band-pinned]")
 			const toggle = bandElement.querySelector<HTMLElement>("[data-band-scrolls]")
 			const stacked = pinnedRow !== null && toggle !== null && pinnedRow.offsetTop >= toggle.offsetTop + toggle.offsetHeight
-			// Everything down to the toggle's bottom edge goes, so the row keeps the
-			// stack's gap above it as its padding.
-			const hidden = stacked ? toggle.offsetTop + toggle.offsetHeight : 0
+			// Everything down to 4px above the event row goes: the toggle's shadow
+			// reaches past its box, and a line of it showed under the navbar.
+			const hidden = stacked ? pinnedRow.offsetTop - 4 : 0
 			const line = top + bandElement.offsetHeight - hidden
 			const stuck = document.querySelector<HTMLElement>("[data-course-stuck]")?.offsetHeight ?? 0
 			const tabsTop = line + stuck
