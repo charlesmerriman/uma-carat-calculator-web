@@ -2396,7 +2396,7 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   hover card too; Daptrius, 2026-11-17). On a ◎ page a giver of its ○ is listed with the ○'s
   name on its second line (`via`): a hint for the ○ counts for the ◎.
 - **The lists**: the shared screen header (`EncyclopediaScreenTabs`, see "Screen bars"):
-  the title, one line, and the three lists by name. The count tabs ("270 Umas") were dropped
+  the title and the three lists by name. The count tabs ("270 Umas") were dropped
   with their counting code (owner, 2026-11-25). A tile is its art, no box; an uma's carries her colours as a bar.
   A list gets group headings and a thumb index whatever it is sorted by and filtered by (`groups.tsx`,
   `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
@@ -2658,40 +2658,66 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   `TimelineTabs.tsx`: the Timeline and Legend Races), the Encyclopedia's (`ENCYCLOPEDIA_TABS`
   + `EncyclopediaScreenTabs.tsx`, the three lists only, names without counts) and Rankings'
   (`kind="buttons"`, `?view=` tabs with badges, mounted by the page). A new screen is a list
-  and a wrapper, never a copy of the markup. Its props: the title, icon and one line, the
-  tabs' label, the page's column (`max-w-*`), and links (`NavLink`s, `aria-current`) or
-  buttons (`role="tab"`, `aria-selected`, `active` + `onSelect`).
-- **Two looks.** At rest it is the masthead (`.enc-head--mast` in `encyclopedia.css`): the
-  title large at the top left, the line under it, the tabs on the right with an icon (or a
-  badge) over each name. It scrolls away. Once its bottom reaches the bar's line (the stick
-  line plus `--screen-tabs-h`), the slim bar (the tabs alone, one equal grid column each,
-  like the PvP rows) slides in pinned under the navbar. **The bar lives in a zero-height
-  sticky anchor**, so showing it moves nothing: a box that shrank as it stuck would move the
-  page, the scroll position with it, and flicker at the threshold. The anchor must be a child
-  of the long container (`sticky` only sticks inside its parent), so the header renders a
-  fragment, never a wrapper. The switch is measured by rect on a capture scroll listener,
-  so it works in both scrollers; the build-time render is the masthead alone.
-- **`data-screen-tabs` is the bar's box**: in the page at rest (zero tall) for the scroll
-  padding, the bar's height once shown, for the hover cards (a zero-tall box doesn't count;
-  the slide-in moves its child, so its rect never shifts). **`data-screen-bar-line` is its
-  ruler**, the bar's full height at its place whether shown or not: the Encyclopedia's
-  finder is pinned when its top is on the ruler's bottom. A one-shot jump runs both scroll
-  listeners in one frame, before the bar grows, so the bar's own box would read zero. The
-  slim `<nav>` is mounted only while it shows, so there is never a second live copy of the
-  tabs.
-- **One `<h1>` a page**: the masthead's title is the heading unless the open tab is
+  and a wrapper, never a copy of the markup. Its props: the title and icon, the tabs' label,
+  the page's column (`max-w-*`), and links (`NavLink`s, `aria-current`) or buttons
+  (`role="tab"`, `aria-selected`, `active` + `onSelect`). No line under the title (owner,
+  2026-11-25, the same call as every hero).
+- **Two shapes, picked by width at 64rem** (owner, 2026-11-25, from the canvas kept in the
+  notes repo's `notes/screen-header-options/`), where the navbar itself turns into its phone
+  layout. The stylesheet owns the switch (`.enc-head--mast` in `encyclopedia.css`).
+  - **Below 64rem, one bar.** The header is a single row of the pages, edge to edge, and is
+    itself what sticks under the navbar: the same row at rest and pinned, so nothing swaps.
+    The title is not drawn (the navbar has the place lit right above) but stays in the page
+    as its `<h1>`. Tabs are sized by their words, like the places row; a row of four or more
+    drops its icons under 360px (Rankings').
+  - **From 64rem, the masthead.** The title large at the left, the tabs at the right on the
+    rule, one line each: icon, name, and a chip for a badge ("51", "CM 22"). It scrolls away.
+    Once its bottom reaches the bar's line (the stick line plus `--screen-tabs-h`), the
+    compact bar (`.enc-pin`: the same tab a size down, one equal grid column each, no chips)
+    slides in pinned under the navbar. **The compact bar lives in a zero-height sticky
+    anchor**, so showing it moves nothing: a box that shrank as it stuck would move the page,
+    the scroll position with it, and flicker at the threshold.
+  - **One tab, `.enc-tab`, in all three rows.** Every tab is at full strength; the open one
+    is pointed at with white ink, the brand's colour on its icon and the brand's rule, plus a
+    raised panel in the masthead and the compact bar.
+  - **`position: sticky` on the header is also the signal**: `ScreenHeader` reads the
+    header's computed `position` in its scroll effect to know the header is the bar, and then
+    never mounts the compact copy (a stuck header's bottom sits exactly on the line the copy
+    shows at). So the breakpoint lives in the stylesheet alone; `--screen-tabs-h` in
+    `index.css` switches at the same 64rem.
+  What sticks must be a child of the long container (`sticky` only sticks inside its parent),
+  so the header renders a fragment, never a wrapper. The measure runs on a capture scroll
+  listener, so it works in both scrollers; the build-time render is the header alone.
+- **What reads the header from outside.** `data-screen-top` is a plain, unstuck marker at the
+  very top, where "Back to top" goes (below). `data-screen-tabs` is the compact bar's box: in
+  the page at rest (zero tall) for the scroll padding, the bar's height once shown, for the
+  hover cards (a zero-tall box doesn't count; the slide-in moves its child, so its rect never
+  shifts). `data-popup-top-bar` is on the header only while the header is the bar, so the
+  hover cards keep below the phone's bar too, and never below a masthead that is scrolling
+  away. **`data-screen-bar-line` is the ruler**, the bar's full height at its place in either
+  shape, shown or not: the Encyclopedia's finder is pinned when its top is on the ruler's
+  bottom. A one-shot jump runs both scroll listeners in one frame, before the compact bar
+  grows, so the bar's own box would read zero. The compact `<nav>` is mounted only while it
+  shows, so there is never a second live copy of the tabs.
+- **One `<h1>` a page**: the header's title is the heading unless the open tab is
   `ownHeading` (Selectors, Legend Races and the Library draw their own), where it is text.
-- **"Back to top" goes to the masthead** (`useBackToTop` scrolls `[data-screen-head]` when
-  there is one), since it sits above the page's own anchor.
+  Below 64rem it is hidden from sight only (clipped, never `display: none`).
+- **"Back to top" goes to `data-screen-top`** (`useBackToTop` scrolls it when there is one),
+  since the header sits above the page's own anchor. Never the header itself: below 64rem it
+  is stuck in view, and scrolling to a stuck element goes nowhere. The marker's scroll margin
+  is a screen tall, so the scroll padding can't stop it short of zero (it stopped 12px short
+  on a phone without it).
 - **AppShell draws a screen's header above the loading gate**, a direct child of the
   scroller, so the build-time render of the screen's pages has it. A wrapper reads the path
   and the account only; a gated tab (the Library) joins after the account loads. Rankings
   mounts its own in the page area, outside its column (it is behind the gate anyway).
-- **Sticky** at `--navbar-h` + `--navbar-reveal` where the document scrolls (phone), at `0`
-  in the desktop shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump
-  bar. `z-30`, opaque.
-- **Its height is one variable, `--screen-tabs-h` (`index.css`), and whatever sits under the
-  bar reads it.** The scroll padding (`html:has([data-screen-tabs])` where the document
+- **Sticky** at `--navbar-h` + `--navbar-reveal` where the document scrolls (the phone's
+  bar, and the compact bar in a short desktop window), at `0` in the desktop shell
+  (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`, opaque.
+  Checked in WebKit 2026-11-25: scroll down, then up 60px, and the bar moves down with the
+  returning wordmark row.
+- **Its height is one variable, `--screen-tabs-h` (`index.css`: 2.75rem below 64rem, 2.375rem
+  from there), and whatever sits under the bar reads it.** The scroll padding (`html:has([data-screen-tabs])` where the document
   scrolls, `[data-app-scroller]:has([data-screen-tabs])` in the desktop shell) is what
   lands a deep link below the bar: without it a planner row's link to its Timeline card, or a
   campaign strip's link to Selectors, parks its target under the bar. A band a page pins
@@ -2701,8 +2727,8 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   Timeline deep link lands where it did before the bar existed, relative to the bands, at
   1440px and 390px.
 - A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
-- **The slim bar's tabs share its whole width at every size**, one equal grid column each,
-  like the PvP rows (owner, 2026-11-24); never bunched at the left.
+- **The compact bar's tabs share its whole width**, one equal grid column each, like the PvP
+  rows (owner, 2026-11-24); never bunched at the left. The phone's bar fills its row too.
 
 ## Selectors page (`components/selectors/`)
 

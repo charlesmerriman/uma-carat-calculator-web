@@ -78,14 +78,14 @@ const RankingsBody = () => {
 		{/* Outside the column, so the anchor adds no gap to its flex stack. */}
 		<div ref={topRef} aria-hidden="true" />
 		<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="76rem" />
-		{/* The shared screen header (components/ScreenHeader.tsx): the masthead at rest,
-		    a slim pinned row of the tabs once it scrolls away. Outside the column: its
-		    pinned bar has to be a child of the whole page area to stick through it. */}
+		{/* The shared screen header (components/ScreenHeader.tsx): one pinned row of the
+		    tabs on a phone; on a computer the masthead, then a slim pinned row once it
+		    scrolls away. Outside the column: what pins has to be a child of the whole
+		    page area to stick through it. */}
 		<ScreenHeader
 			kind="buttons"
 			title="Rankings"
 			icon={ListOrdered}
-			description="What the guides recommend, what players plan to pull, and what they build and win with."
 			label="Rankings"
 			column="max-w-[76rem]"
 			tabs={shown.map((entry) => ({ id: entry.id, label: entry.label, icon: entry.icon, badge: badges[entry.id] }))}
