@@ -163,21 +163,25 @@ function footerAdInset(): number {
  * keep below them instead, and a card whose row has gone under them hides
  * until the row comes back (`hideUnderTopBars`).
  *
- * A bar counts only while it is part of the stack that starts at the
- * window's top edge: one further down the page, not stuck yet, doesn't.
- * Read on every positioning, like the footer ad: the phone's wordmark row
- * comes and goes (hooks/useNavbarReveal.ts).
+ * The stack starts at the navbar's pinned part, whatever sits above it: on a
+ * phone the wordmark row shows above the places row after a scroll up
+ * (hooks/useNavbarReveal.ts), and it isn't marked, so a stack started at the
+ * window's edge never began. Below it, a bar counts only while it touches the
+ * stack: one further down the page, not stuck yet, doesn't. Read on every
+ * positioning, like the footer ad, since the wordmark row comes and goes.
  */
-const TOP_BARS = "[data-sticky-navbar], [data-screen-tabs], [data-popup-top-bar]"
+const NAVBAR = "[data-sticky-navbar]"
+const TOP_BARS = "[data-screen-tabs], [data-popup-top-bar]"
 
 /** How far down from the window's top the pinned bars reach, in px; 0 with none. */
 function topBarsInset(): number {
 	if (typeof document === "undefined") return 0
+	const navbar = [...document.querySelectorAll(NAVBAR)].map((bar) => bar.getBoundingClientRect()).filter((box) => box.height > 0)
 	const boxes = [...document.querySelectorAll(TOP_BARS)]
 		.map((bar) => bar.getBoundingClientRect())
 		.filter((box) => box.height > 0)
 		.sort((a, b) => a.top - b.top)
-	let inset = 0
+	let inset = Math.max(0, ...navbar.map((box) => box.bottom))
 	for (const box of boxes) {
 		// Touching the stack so far (a pixel's rounding allowed), and reaching past it.
 		if (box.top <= inset + 1 && box.bottom > inset) inset = box.bottom
