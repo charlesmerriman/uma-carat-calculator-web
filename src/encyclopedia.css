@@ -192,6 +192,102 @@
 		gap: 0.75rem;
 		margin-left: auto;
 	}
+
+	/* ---- The pinned finder (Toolbar's `pinned`, the three lists) -----------
+	   The search box, the count and a Filters button, pinned under the
+	   screen's bar (ScreenTabs) while a list scrolls (Daptrius, board
+	   "Encyclopedia sticky nav", 2026-11-25). Its top is the screen bar's
+	   own offset plus the bar: the navbar's measured height and the phone's
+	   wordmark row where the document scrolls, the scroller's top in the
+	   desktop shell (the same three cases as .enc-jump below). Opaque, or
+	   the list shows through. --enc-finder-h is its height on a computer,
+	   for the jump list and the headings, which park below it. */
+	:root {
+		--enc-finder-h: 3.75rem;
+	}
+	.enc-finder {
+		position: sticky;
+		top: calc(var(--navbar-h, 4.125rem) + var(--navbar-reveal, 0px) + var(--screen-tabs-h));
+		/* Under the screen bar (z-30) and the navbar, over the list and its jump list. */
+		z-index: 20;
+	}
+	@media (min-width: 64rem) {
+		.enc-finder {
+			top: calc(var(--navbar-h, 4.125rem) + var(--screen-tabs-h));
+		}
+	}
+	@media (min-width: 64rem) and (min-height: 32rem) {
+		.enc-finder {
+			top: var(--screen-tabs-h);
+		}
+	}
+	.enc-finder__bar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1rem;
+		min-height: var(--enc-finder-h);
+		padding: 0.5rem 1.125rem;
+		border-radius: 0 0 1.125rem 1.125rem;
+		background: var(--card-fill);
+		box-shadow: var(--card-shadow);
+	}
+	.enc-finder__toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		border: 1px solid var(--color-gray-600);
+		border-radius: 0.5rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-gray-200);
+		transition: border-color 0.15s, color 0.15s;
+	}
+	.enc-finder__toggle:hover {
+		border-color: var(--color-gray-500);
+		color: var(--color-gray-100);
+	}
+	.enc-finder__toggle[aria-expanded="true"] {
+		border-color: var(--color-brand);
+	}
+	.enc-finder__toggle svg {
+		width: 0.95rem;
+		height: 0.95rem;
+	}
+	.enc-finder__toggle[aria-expanded="true"] .enc-finder__chevron {
+		transform: rotate(180deg);
+	}
+	/* Something is narrowing the list: a dot in the brand's colour on the button. */
+	.enc-finder__on {
+		width: 0.45rem;
+		height: 0.45rem;
+		border-radius: 999px;
+		background: var(--color-brand);
+	}
+	/* The filters dropped down from the pinned bar, over the list. */
+	.enc-finder__drop {
+		position: absolute;
+		top: calc(100% + 0.375rem);
+		right: 0;
+		left: 0;
+		max-height: min(32rem, calc(100dvh - var(--navbar-h, 4.125rem) - var(--screen-tabs-h) - var(--enc-finder-h) - 2rem));
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		border: 1px solid var(--color-edge);
+	}
+	/* A jump to a heading parks it below the pinned finder, and the jump list
+	   pins below it too (it pinned 1rem from the top before there was one). */
+	.enc-finder ~ .enc-listwrap .enc-letter {
+		scroll-margin-top: calc(var(--enc-finder-h) + 0.75rem);
+	}
+	@media (min-width: 82rem) {
+		.enc-finder ~ .enc-listwrap .enc-index {
+			top: calc(var(--screen-tabs-h) + var(--enc-finder-h) + 1rem);
+		}
+	}
+
 	.enc-reset {
 		display: inline-flex;
 		align-items: center;

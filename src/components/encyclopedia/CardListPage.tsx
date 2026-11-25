@@ -167,6 +167,7 @@ const CardListBody = () => {
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
 			<Toolbar
+				pinned
 				scope="cards"
 				search={<SearchBox label="Search support cards" placeholder="Search by name or ID..." value={query} onChange={setQuery} />}
 				count={catalogue.status === "ready" && <Count>{countLine(shown.length, "card", "cards")}</Count>}
