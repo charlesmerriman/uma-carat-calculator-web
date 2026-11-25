@@ -22,13 +22,22 @@ export interface BarPart {
 	label: string
 }
 
+export type BarTone = "win" | "loss"
+
+/** Each tone's full bar (a tint with a solid end) and its hairline. Whole class names, so Tailwind sees them. */
+const TONES: Record<BarTone | "brand", { ink: string; line: string }> = {
+	brand: { ink: "bg-brand/35 border-brand", line: "bg-brand" },
+	win: { ink: "bg-status-running/35 border-status-running", line: "bg-status-running" },
+	loss: { ink: "bg-highlight/35 border-highlight", line: "bg-highlight" },
+}
+
 export function Bar({ fill = 0, parts, tone, hairline = false, className = "" }: {
 	/** 0 to 1 of the track. Ignored when `parts` is given. */
 	fill?: number
 	/** A stacked bar: values are summed and each part takes its share of `fill`'s width. */
 	parts?: BarPart[]
-	/** "win": the running green, for a win rate. */
-	tone?: "win"
+	/** "win": the running green, for a win rate. "loss": the highlight red, for what beats players. */
+	tone?: BarTone
 	hairline?: boolean
 	className?: string
 }) {
@@ -51,11 +60,11 @@ export function Bar({ fill = 0, parts, tone, hairline = false, className = "" }:
 			</span>
 		)
 	}
-	const ink = tone === "win" ? "bg-status-running/35 border-status-running" : "bg-brand/35 border-brand"
+	const { ink, line } = TONES[tone ?? "brand"]
 	return (
 		<span aria-hidden="true" className={`relative block min-w-0 overflow-hidden bg-gray-900/70 ${track} ${className}`}>
 			<span
-				className={`absolute inset-y-0 left-0 ${hairline ? (tone === "win" ? "bg-status-running" : "bg-brand") : `rounded-l-[5px] border-r-2 ${ink}`}`}
+				className={`absolute inset-y-0 left-0 ${hairline ? line : `rounded-l-[5px] border-r-2 ${ink}`}`}
 				style={{ width }}
 			/>
 		</span>
