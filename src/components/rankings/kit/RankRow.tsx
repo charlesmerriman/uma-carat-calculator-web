@@ -161,9 +161,15 @@ export function RankRow(props: RankRowProps) {
 			)}
 		</>
 	)
-	// The count column has a floor so "176 decks" and "86 decks" don't shift the bars beside them.
+	// The count column is a FIXED width, so every bar in a list ends on one edge (owner,
+	// 2026-11-25: "bars need to end on one edge"). Each row is its own grid: an `auto` or
+	// floored column sized to "176 decks" or "84 decks" row by row and the bars ended unevenly.
+	// Its width is `--rk-count` (rankings.css): what "176 decks" needs in the theme's display
+	// face, measured, so it never spills left into the bar (right-aligned text overflows to the
+	// left, where nothing scrolls). Winning Live's Unbounded needs 7.25rem, the rest 5.5rem.
+	// The phone uses it too: the hairline under the name ends where this column starts.
 	const grid =
-		"grid w-full grid-cols-[1.6rem_auto_minmax(0,1fr)_minmax(4rem,auto)_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[40rem]:grid-cols-[2rem_auto_minmax(0,1.5fr)_minmax(0,1fr)_minmax(4rem,auto)_14px]"
+		"grid w-full grid-cols-[1.6rem_auto_minmax(0,1fr)_var(--rk-count)_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[40rem]:grid-cols-[2rem_auto_minmax(0,1.5fr)_minmax(0,1fr)_var(--rk-count)_14px]"
 
 	if (!detail) {
 		return href ? (

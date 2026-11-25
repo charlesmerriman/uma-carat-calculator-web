@@ -173,7 +173,8 @@ function Budget({ rows }: { rows: NonNullable<PlayersRankingsPayload["budget"]> 
 		<Panel title="Typical budget by class" hint="The middle player's carats held and pulls planned.">
 			<ul className="flex flex-col gap-1">
 				{rows.map((row) => (
-					<li key={row.name} className="grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2.5 py-0.5 @max-[30rem]:grid-cols-[5rem_minmax(0,1fr)]">
+					// The figures' column is fixed, so every bar ends on one edge (an `auto` column sized per row).
+					<li key={row.name} className="grid grid-cols-[5rem_minmax(0,1fr)_12.5rem] items-center gap-2.5 py-0.5 @max-[30rem]:grid-cols-[5rem_minmax(0,1fr)]">
 						<span className="text-sm text-gray-100">{row.name}</span>
 						<Bar fill={top ? (row.carats ?? 0) / top : 0} className="@max-[30rem]:hidden" />
 						<span className="whitespace-nowrap text-right text-xs tabular-nums text-gray-400">

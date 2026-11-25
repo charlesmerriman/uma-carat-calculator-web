@@ -33,6 +33,14 @@
 		--c1: var(--color-brand);
 		--c2: var(--color-gray-400);
 		--enc-inset: color-mix(in oklab, var(--color-gray-900) 70%, var(--color-gray-700));
+		/* A RankRow's count column, FIXED so every bar in a list ends on one edge (owner,
+		   2026-11-25). Sized to "176 decks" at 17px in the display face: 78 to 81px in
+		   Outfit and Nunito (measured 2026-11-25). */
+		--rk-count: 5.5rem;
+	}
+	/* Unbounded is about 40% wider (index.css): "176 decks" measured 109px. */
+	[data-theme="winning-live"] .rk-vars {
+		--rk-count: 7.25rem;
 	}
 	.rk-vars,
 	.rk-paint {
