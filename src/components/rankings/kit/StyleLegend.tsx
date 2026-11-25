@@ -12,10 +12,10 @@ import { STYLE_LABELS } from "../../../utils/pvpGuide"
 
 export function StyleLegend({ entries, className = "" }: { entries: Array<[PvpStyle, number | string | null]>; className?: string }) {
 	return (
-		<span className={`flex flex-wrap gap-x-2.5 gap-y-1 text-[11px] tabular-nums text-gray-400 ${className}`}>
+		<span className={`flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-gray-400 ${className}`}>
 			{entries.map(([style, count]) => (
-				<span key={style} className="inline-flex items-center gap-1">
-					<i className="inline-block h-2 w-2 rounded-sm" style={{ background: `var(--color-style-${style})` }} aria-hidden="true" />
+				<span key={style} className="inline-flex items-center gap-1.5">
+					<i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: `var(--color-style-${style})` }} aria-hidden="true" />
 					{STYLE_LABELS[style]}
 					{count !== null && ` ${typeof count === "number" ? count.toLocaleString() : count}`}
 				</span>

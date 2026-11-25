@@ -21,17 +21,23 @@ export interface OptionRow {
 
 export function OptionRows({ rows }: { rows: OptionRow[] }) {
 	const leader = Math.max(0, ...rows.map((row) => row.value))
+	// The figure column is FIXED, so every bar ends on one edge ("100%" and "0%" sized an
+	// `auto` column row by row). Wider when a row carries a count beside its share.
+	const withCount = rows.some((row) => row.count !== undefined)
+	const columns = withCount
+		? "grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_7rem] @max-[30rem]:grid-cols-[minmax(0,1fr)_7rem]"
+		: "grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_3.5rem] @max-[30rem]:grid-cols-[minmax(0,1fr)_3.5rem]"
 	return (
 		<ul className="flex flex-col gap-1">
 			{rows.map((row) => (
-				<li key={row.key} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] items-center gap-2.5 py-0.5 @max-[30rem]:grid-cols-[minmax(0,1fr)_auto]">
-					<span className="min-w-0 text-[13px] text-gray-100">
+				<li key={row.key} className={`grid ${columns} items-center gap-2.5 py-0.5`}>
+					<span className="min-w-0 text-sm text-gray-100">
 						{row.label}
-						{row.note && <span className="ml-1.5 text-[10px] text-gray-400">{row.note}</span>}
+						{row.note && <span className="ml-1.5 text-[11px] text-gray-400">{row.note}</span>}
 					</span>
 					<Bar fill={leader > 0 ? row.value / leader : 0} className="@max-[30rem]:hidden" />
 					<span className="whitespace-nowrap text-right text-xs tabular-nums text-gray-400">
-						<b className="text-[13px] font-semibold text-gray-100">{row.share}</b>
+						<b className="font-display text-[15px] font-bold text-gray-100">{row.share}</b>
 						{row.count !== undefined && <> · {row.count}</>}
 					</span>
 				</li>

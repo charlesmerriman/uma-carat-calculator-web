@@ -5,7 +5,7 @@ import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../type
 
 /**
  * The team builder's picker: search by name or skill, skill chips that pin,
- * the aptitude badges, the guide's star, and blocked tiles that stay visible.
+ * the aptitude badges, the guide's ring, and blocked tiles that stay visible.
  */
 
 const skill = (id: number, name: string): CatalogueSkill => ({
@@ -151,12 +151,45 @@ describe("PvpCardPicker", () => {
 		expect(within(screen.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "SR" })).toHaveAttribute("aria-pressed", "true")
 	})
 
-	it("edges the guide's picks, puts them first, and can show them alone", () => {
+	it("rings the guide's picks, puts them first, and can show them alone", () => {
 		renderSupportPicker({ recommended: new Set([12]) })
 		expect(tileNames()[0]).toBe("Super Creek")
-		expect(screen.getAllByLabelText("Recommended by the guide")).toHaveLength(1)
+		expect(screen.getAllByText("Recommended by the guide")).toHaveLength(1)
+		expect(screen.getByTitle("Super Creek: recommended by the guide")).toHaveClass("ring-recommended")
 		fireEvent.click(screen.getByRole("checkbox", { name: /Recommended only/ }))
 		expect(tileNames()).toEqual(["Super Creek"])
+	})
+
+	it("with no style yet, shows every style's picks a section each, and picks with that style", () => {
+		const onPick = vi.fn()
+		render(
+			<PvpCardPicker
+				pool="uma"
+				items={[uma(1, "Maruzensky", 8, 7), uma(2, "Oguri Cap", 5, 8), uma(3, "Gold Ship", 1, 6)]}
+				title="Uma 3"
+				skillsById={SKILLS}
+				event={COURSE}
+				style={null}
+				recommended={new Set([1, 2])}
+				recommendedByStyle={[
+					{ style: "front", ids: new Set([1]) },
+					{ style: "pace", ids: new Set([1, 2]) },
+				]}
+				blockReason={() => null}
+				selectedId={null}
+				onPick={onPick}
+				onClose={() => {}}
+			/>
+		)
+		// Off: one grid, every uma.
+		expect(tileNames()).toEqual(["Maruzensky", "Oguri Cap", "Gold Ship"])
+		fireEvent.click(screen.getByRole("checkbox", { name: /Recommended only/ }))
+		const front = within(screen.getByRole("region", { name: "Recommended for Front" }))
+		const pace = within(screen.getByRole("region", { name: "Recommended for Pace" }))
+		expect(front.getAllByRole("button").map((tile) => tile.textContent)).toEqual([expect.stringContaining("Maruzensky")])
+		expect(pace.getAllByRole("button")).toHaveLength(2)
+		fireEvent.click(pace.getByTitle("Maruzensky: recommended by the guide"))
+		expect(onPick).toHaveBeenCalledWith(1, "pace")
 	})
 
 	it("offers no Recommended only without a guide's picks", () => {
@@ -171,7 +204,7 @@ describe("PvpCardPicker", () => {
 		fireEvent.click(blocked)
 		expect(onPick).not.toHaveBeenCalled()
 		fireEvent.click(screen.getByTitle("Fine Motion"))
-		expect(onPick).toHaveBeenCalledWith(10)
+		expect(onPick).toHaveBeenCalledWith(10, undefined)
 	})
 
 	it("badges umas with the race's surface, distance and style letters", () => {
@@ -228,7 +261,7 @@ describe("the Owned filter (the player's Collection)", () => {
 	it("shows only owned cards by default, with their limit break, and everything once switched off", () => {
 		renderSupportPicker({ owned })
 		expect(tileNames()).toEqual(["Kitasan Black"])
-		expect(within(screen.getByRole("dialog")).getByText("MLB")).toBeInTheDocument()
+		expect(within(screen.getByRole("dialog")).getByText("In your collection, MLB")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("checkbox", { name: /Owned only/ }))
 		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "Super Creek"])
 	})

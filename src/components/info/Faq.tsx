@@ -1,6 +1,8 @@
 import type React from "react"
 import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
+import { Link2 } from "lucide-react"
+import { toast } from "sonner"
 import { Navbar } from "../navbar/Navbar"
 import { Footer } from "../footer/Footer"
 import { useDocumentMeta } from "../../hooks/useDocumentMeta"
@@ -9,12 +11,50 @@ import { FloatingBackToTop } from "../BackToTop"
 import { useSiteContent } from "../../services/SiteContentContext"
 import { MarkdownContent } from "./MarkdownContent"
 import { ContentLoading } from "./ContentLoading"
+import { faqQuestionLinkPath } from "../../utils/appRoutes"
 
 // Same text-style vocabulary as PrivacyPolicy, so the two public content pages stay
 // visually consistent without a shared layout component that would have to accommodate
 // both a prose page and a Q&A page.
 const categoryHeading = "text-xl font-semibold text-brand"
 const question = "text-lg font-semibold text-gray-100"
+
+/**
+ * "Copy link" on one question: its /help/<slug> link (faqQuestionLinkPath),
+ * which Discord and X unfurl with the question and the start of its answer
+ * (backend views/faq_share.py), then open here at /faq#<slug>. A /faq#slug
+ * link can only ever preview as the whole FAQ: the #fragment never reaches a
+ * server.
+ *
+ * The URL is built in the click handler, never at render time: this page is
+ * prerendered, and render-time code must not touch `window` (frontend-ui
+ * rules). A refused clipboard shows the link in a toast to copy by hand, as
+ * the Timeline's and the PvP guide's "Copy link" do.
+ */
+const CopyQuestionLink = ({ slug, question }: { slug: string; question: string }) => {
+	const copy = async () => {
+		const url = `${window.location.origin}${faqQuestionLinkPath(slug)}`
+		try {
+			await navigator.clipboard.writeText(url)
+			toast.success("Link copied.")
+		} catch {
+			toast(url)
+		}
+	}
+
+	return (
+		<button
+			type="button"
+			onClick={copy}
+			// Starts with the visible text, so voice control users can say what they see.
+			aria-label={`Copy link to ${question}`}
+			className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-xs font-semibold text-gray-100 transition hover:border-brand/60 hover:text-brand"
+		>
+			<Link2 className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+			Copy link
+		</button>
+	)
+}
 
 /**
  * Public FAQ page (route: /faq).
@@ -113,7 +153,12 @@ export const Faq: React.FC = () => {
 													id={item.slug}
 													className="card-panel scroll-mt-6 p-5"
 												>
-													<h3 className={question}>{item.question}</h3>
+													{/* The button sits beside the question, top-aligned, so a
+													    question that wraps keeps its first line level with it. */}
+													<div className="flex items-start justify-between gap-3">
+														<h3 className={question}>{item.question}</h3>
+														<CopyQuestionLink slug={item.slug} question={item.question} />
+													</div>
 													<MarkdownContent markdown={item.answer} />
 												</article>
 											))}

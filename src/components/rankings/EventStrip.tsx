@@ -1,5 +1,6 @@
 /**
- * The PvP tab's event picker (mock 09-pvp.png): a sideways row of event
+ * The PvP tab's event picker (mock 09-pvp.png; soft tabs since the
+ * 2026-11-25 polish, notes/rankings-polish-plan.md): a sideways row of event
  * cards, each its short name and title and a status pill (no team count:
  * the Rankings page never says how many). Replaces the native <select>. Shows the events around
  * the one running now or next (three either side), plus the chosen one if
@@ -27,7 +28,8 @@ export function EventStrip({ events, anchor, chosen, now, onPick }: {
 		chosenRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
 	}, [chosen])
 	return (
-		<div role="group" aria-label="Event" className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+		// pb-1: room for the chosen tab's shadow inside the scroller.
+		<div role="group" aria-label="Event" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
 			{eventsAround(events, anchor, chosen).map((event) => {
 				const on = event === chosen
 				const status = isRunning(event, now) ? "running" : hasEnded(event, now) ? "ended" : "upcoming"
@@ -39,11 +41,10 @@ export function EventStrip({ events, anchor, chosen, now, onPick }: {
 						type="button"
 						aria-pressed={on}
 						onClick={() => onPick(event)}
-						className={`flex min-w-[9.5rem] shrink-0 flex-col gap-0.5 rounded-[10px] border px-[11px] py-[7px] text-left transition ${
-							on ? "border-brand bg-brand/15" : "border-gray-600 bg-gray-800 hover:border-gray-500"
-						}`}
+						// A soft tab (rk-event in rankings.css), the chosen one tinted with the brand's rule under it.
+						className="rk-event flex min-w-[10.5rem] shrink-0 flex-col gap-1 rounded-[0.875rem] px-3.5 py-2.5 text-left transition hover:brightness-110"
 					>
-						<b className={`whitespace-nowrap text-xs font-semibold ${on ? "text-brand" : "text-gray-100"}`}>
+						<b className={`whitespace-nowrap font-display text-[15px] font-bold ${on ? "text-brand" : "text-gray-100"}`}>
 							{shortEventName(event)}
 							{title !== event.name ? ` ${title}` : ""}
 						</b>

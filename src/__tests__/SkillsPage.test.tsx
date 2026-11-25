@@ -236,12 +236,41 @@ describe("SkillsPage", () => {
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
-		// The Encyclopedia's tab strip, Skills open.
-		expect(screen.getByRole("link", { name: /Skills$/ })).toHaveAttribute("aria-current", "page")
+		// No tab strip in the page: the screen bar above it (ApplicationViews) names the lists.
+		expect(screen.queryByRole("link", { name: /Skills$/ })).not.toBeInTheDocument()
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill", { selector: ".enc-count" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
+	})
+
+	it("draws the rows as plates, an uma's skill in her character's colours once the catalogue is in", async () => {
+		// The owner's pick on the 2026-11-25 canvas (notes/skills-list-plan.md, option A).
+		const owner = { id: 7, game_id: 100601, name: "Oguri Cap", portrait: null }
+		fetchMock.mockImplementation((url: string) => {
+			if (url.endsWith("/pvp-catalogue")) {
+				return Promise.resolve(new Response(JSON.stringify({
+					umas: [{ id: 7, name: "Oguri Cap", character_id: 1006 }],
+					support_cards: [],
+					skills: [],
+					character_colours: { 1006: ["#3A7AD2", "#ECE7E7"] },
+				}), { status: 200 }))
+			}
+			return Promise.resolve(new Response(JSON.stringify([
+				row(1, "Triumphant Pulse", { game_id: 100061, rarity: 5, version: "○ white", owners: ["Oguri Cap"], owner_umas: [owner] }),
+				row(2, "Gourmand", { rarity: 2, version: "◎ gold", cost: 180 }),
+			]), { status: 200 }))
+		})
+		renderPage()
+		const pulse = await screen.findByRole("link", { name: /Triumphant Pulse/ })
+		expect(pulse.closest("ul")).toHaveClass("enc-skills--plates")
+		expect(pulse).toHaveAttribute("data-owned")
+		await waitFor(() => expect(pulse.style.getPropertyValue("--c1")).toBe("#3A7AD2"))
+		expect(pulse.style.getPropertyValue("--c2")).toBe("#ECE7E7")
+		// A skill that is nobody's has no face, so nothing to colour.
+		const gourmand = screen.getByRole("link", { name: /Gourmand/ })
+		expect(gourmand).not.toHaveAttribute("data-owned")
+		expect(gourmand.style.getPropertyValue("--c1")).toBe("")
 	})
 
 	it("sorts by skill point cost either way, a skill with no cost last both times", async () => {
@@ -313,5 +342,56 @@ describe("SkillsPage", () => {
 		} finally {
 			clearAuthToken()
 		}
+	})
+})
+
+describe("coming back to a scrolled list (board \"Skills Load Issues with Scrolled Pages\")", () => {
+	const many = Array.from({ length: 150 }, (_, index) => row(100 + index, `Skill ${String(index).padStart(3, "0")}`))
+
+	beforeEach(() => {
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(url.endsWith("/skills") ? new Response(JSON.stringify(many), { status: 200 }) : new Response("{}", { status: 404 }))
+		)
+	})
+
+	it("draws as many rows as it had, in its first render, with no fetch and no skeleton", async () => {
+		const first = renderPage()
+		expect(await screen.findByText("Showing 60 of 150")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Show more" }))
+		expect(screen.getByText("Showing 120 of 150")).toBeInTheDocument()
+		first.unmount()
+
+		const calls = fetchMock.mock.calls.length
+		renderPage()
+		// Synchronously: no findBy, so a render that waited on the promise would fail here.
+		expect(screen.queryByRole("status", { name: "Loading skills" })).not.toBeInTheDocument()
+		expect(screen.getByText("Showing 120 of 150")).toBeInTheDocument()
+		expect(fetchMock.mock.calls.length).toBe(calls)
+	})
+
+	it("starts at one page again when the search differs from the one it was left with", async () => {
+		const first = renderPage()
+		fireEvent.click(await screen.findByRole("button", { name: "Show more" }))
+		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "skill" } })
+		expect(await screen.findByText("Showing 60 of 150")).toBeInTheDocument()
+		first.unmount()
+		renderPage()
+		expect(screen.getByText("Showing 60 of 150")).toBeInTheDocument()
+	})
+})
+
+describe("the pinned finder (board \"Encyclopedia sticky nav\")", () => {
+	it("folds the filters away under a Filters button, and back", async () => {
+		renderPage()
+		const button = await screen.findByRole("button", { name: "Filters" })
+		expect(button).toHaveAttribute("aria-expanded", "true")
+		expect(screen.getByRole("group", { name: "Color" })).toBeVisible()
+		fireEvent.click(button)
+		expect(button).toHaveAttribute("aria-expanded", "false")
+		expect(screen.queryByRole("group", { name: "Color" })).not.toBeInTheDocument()
+		// The search box stays in the bar.
+		expect(screen.getByRole("searchbox", { name: "Search skills" })).toBeVisible()
+		fireEvent.click(button)
+		expect(screen.getByRole("group", { name: "Color" })).toBeVisible()
 	})
 })

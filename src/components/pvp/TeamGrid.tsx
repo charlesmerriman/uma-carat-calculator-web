@@ -30,6 +30,7 @@ import { VeteranPicker } from "../collection/VeteranPicker"
 import type { TrainedUma } from "../../types/trainedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { CARD_LINK_TITLE, hoverCardProps, ringFor } from "../../utils/hoverCards"
+import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import type { PortraitLayers } from "../../types/portraitLayers"
 
 /**
@@ -56,8 +57,6 @@ export interface TeamGridProps {
 	isFavorite?: (umaId: number) => boolean
 	/** The event's release check, for the During / Too late flags. */
 	releaseFor?: ReleaseCheck
-	/** Does the event's guide recommend this pick for this style? Draws a star. */
-	isRecommended?: (pool: "uma" | "support", id: number, style: MemberStyle) => boolean
 	onPickUma: (position: number) => void
 	onPickCard: (position: number, slot: number) => void
 	onStyleChange: (position: number, style: MemberStyle) => void
@@ -80,9 +79,6 @@ const POSITIONS = Array.from({ length: PVP_TEAM_SIZE }, (_, index) => index)
 const DEAL_STEP = 0.12
 // How far a card rises as it goes, and from how far below the new one comes.
 const DEAL_RISE = 28
-
-/** The guide's pick's edge, named for a screen reader and the hover title. */
-const PICK_LABEL = "Recommended by the guide"
 
 /**
  * Two layouts, as Tailwind classes so a breakpoint can switch them.
@@ -119,7 +115,6 @@ function MemberPanel({
 	course,
 	releaseFor,
 	isFavorite,
-	isRecommended,
 	onPickUma,
 	onPickCard,
 	onStyleChange,
@@ -136,12 +131,11 @@ function MemberPanel({
 	const dealtNow = deal?.now === position
 	const uma = member ? umasById.get(member.uma) : undefined
 	const umaLabel = uma?.name ?? `uma ${position + 1}`
-	const starred = (pool: "uma" | "support", id: number) =>
-		member !== undefined && (isRecommended?.(pool, id, member.style) ?? false)
 	// Encyclopedia pages (early access; null for everyone else, and for a
-	// placeholder card). Every tile is already a button (pick, drag), and the
-	// corners hold the star, the flag, the badge and the x, so the NAMES are
-	// the links: the uma's in the header, each card's caption under it.
+	// placeholder card). Every tile is already a button (pick, drag), so the
+	// NAMES are links (the uma's in the header, each card's caption under it)
+	// and each tile has the picker's book button on its bottom-right corner
+	// (Daptrius, 2026-11-25), which a phone needs: it hides the captions.
 	const pages = useEncyclopediaHrefs()
 
 	const cardTile = (slot: number) => {
@@ -162,7 +156,7 @@ function MemberPanel({
 				disabledHint="Pick an uma first"
 				shape="card"
 				flag={entry ? releaseFor?.("support", entry.support_card) : undefined}
-				starred={entry ? starred("support", entry.support_card) : false}
+				page={entry ? { href: pages.card(entry.support_card), name: card?.name ?? "this card", hover: hoverCardProps("card", entry.support_card) } : undefined}
 				badge={borrow && entry ? <Handshake className="h-3 w-3" aria-label="Borrowed" /> : null}
 				label={
 					entry
@@ -298,7 +292,7 @@ function MemberPanel({
 						layers={uma?.portrait_layers}
 						framed
 						large
-						starred={starred("uma", member.uma)}
+						page={{ href: pages.uma(member.uma), name: umaLabel, hover: hoverCardProps("uma", member.uma, { ring: ringFor(course, member.style) }) }}
 						flag={releaseFor?.("uma", member.uma)}
 						favorite={isFavorite?.(member.uma) ?? false}
 						label={`Change uma ${position + 1}: ${umaLabel}`}
@@ -333,7 +327,7 @@ function Tile({
 	large: _large = false,
 	disabled = false,
 	disabledHint,
-	starred = false,
+	page,
 	favorite = false,
 	flag,
 	badge = null,
@@ -364,7 +358,8 @@ function Tile({
 	large?: boolean
 	disabled?: boolean
 	disabledHint?: string
-	starred?: boolean
+	/** The tile's Encyclopedia page, a book on its bottom-right corner; none while empty. */
+	page?: { href: string | null; name: string; hover?: Record<string, string> }
 	/** A favorite uma: the rainbow frame (FramedUma). */
 	favorite?: boolean
 	flag?: ReleaseStatus
@@ -400,7 +395,7 @@ function Tile({
 					}`}
 				>
 					{filled && framed ? (
-						<FramedUma src={art} layers={layers} oshi={favorite} edge={starred ? PICK_LABEL : undefined} className="w-full" />
+						<FramedUma src={art} layers={layers} oshi={favorite} className="w-full" />
 					) : filled && card ? (
 						<FramedCard card={card} className="h-full w-full" />
 					) : filled ? (
@@ -413,21 +408,24 @@ function Tile({
 						empty
 					)}
 				</button>
-				{/* The guide's pick: an edge around the box, nothing on the art (Daptrius, 2026-11-20).
-				    A framed uma draws hers inside FramedUma, under her ears and hat. */}
-				{starred && !(filled && framed) && (
-					<span
-						role="img"
-						aria-label={PICK_LABEL}
-						title={PICK_LABEL}
-						className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${shape === "card" ? "rounded-[6%/4.5%]" : "rounded-[10.75%]"}`}
-					/>
-				)}
 				<ReleaseFlag status={flag} />
+				{/* Top left, the one corner nothing else uses: the card's type icon
+				    is top right, the book bottom right, the release flag bottom left. */}
 				{badge && (
-					<span className="pointer-events-none absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
+					<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
 						{badge}
 					</span>
+				)}
+				{/* A sibling of the tile's button (a link inside a button is invalid).
+				    A click opens the card over the page (hover), a tap or the keyboard
+				    follows the link. Smaller on a phone, where a card is about 55px wide. */}
+				{filled && page && (
+					<EncyclopediaIconLink
+						href={page.href}
+						name={page.name}
+						hover={page.hover}
+						className="absolute bottom-0.5 right-0.5 max-sm:h-5 max-sm:w-5"
+					/>
 				)}
 				{onClear && (
 					<button

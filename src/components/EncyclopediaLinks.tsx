@@ -13,7 +13,7 @@ import { InsidePopupContext } from "./pvp/hoverPopup"
 import { CARD_LINK_TITLE } from "../utils/hoverCards"
 
 /**
- * A round book button over a tile's corner, for tiles that are already a
+ * A book button over a tile's corner, for tiles that are already a
  * button (pick, add, edit). It must be the tile's SIBLING inside a `relative`
  * box, never its child: a link inside a button is invalid HTML and the click
  * would do both. The caller places it with `className` (`absolute left-1 bottom-1`).
@@ -21,6 +21,10 @@ import { CARD_LINK_TITLE } from "../utils/hoverCards"
  * With `hover` (utils/hoverCards.ts hoverCardProps) a mouse click opens the
  * uma's or card's card instead, and the card's "Open Encyclopedia" goes on to
  * the page; a tap or the keyboard still follows the link.
+ *
+ * A rounded square, its corner the card frame's type icon's (rx 31 on its
+ * 151px square in src/assets/card-overlays, 20.5%), so it sits on a card like
+ * the icon in the opposite corner (Daptrius, 2026-11-25; it was a circle).
  */
 export function EncyclopediaIconLink({ href, name, className = "", hover }: {
 	href: string | null
@@ -35,7 +39,7 @@ export function EncyclopediaIconLink({ href, name, className = "", hover }: {
 			{...hover}
 			aria-label={`Open ${name} in the Encyclopedia`}
 			title={hover ? CARD_LINK_TITLE : "Open in the Encyclopedia"}
-			className={`flex h-6 w-6 items-center justify-center rounded-full border border-gray-600 bg-gray-900/90 text-gray-300 transition hover:border-brand hover:text-brand focus-visible:outline-2 focus-visible:outline-brand ${className}`}
+			className={`flex h-6 w-6 items-center justify-center rounded-[20.5%] border border-gray-600 bg-gray-900/90 text-gray-300 transition hover:border-brand hover:text-brand focus-visible:outline-2 focus-visible:outline-brand ${className}`}
 		>
 			<BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
 		</Link>

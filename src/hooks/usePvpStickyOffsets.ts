@@ -1,35 +1,39 @@
 /**
  * Where the PvP page's pinned rows stick, measured.
  *
- * The page pins rows as it scrolls (Daptrius, 2026-10-22): the View tabs,
- * and under them the running-style tabs,
- * the guide's side column, the gallery's open post and the team builder's
- * docked panels. Each sticks under the row above it, and those rows change
- * height with the breakpoint, the editors' fourth tab and a phone's wrapping
- * labels, so the offsets are measured here rather than written down as rem
- * values that drift out of step (the old 4.5rem panels sat under the band
- * only because nothing else was pinned).
+ * The page pins rows as it scrolls (Daptrius, 2026-10-22): the event band
+ * (Previous, the event, Next), the View tabs under it, and under those the
+ * running-style tabs, the guide's side column, the gallery's open post and the
+ * team builder's docked panels. Each sticks under the row above it, and those
+ * rows change height with the breakpoint, the editors' fourth tab and a
+ * phone's wrapping labels, so the offsets are measured here rather than
+ * written down as rem values that drift out of step.
  *
- * The event band (Previous, the event, Next) scrolls away with the page in
- * every set-up: you change cups at the top, and while it was pinned in the
- * desktop shell it held 52px of the screen for the whole read (review item 4,
- * 2026-11-24).
+ * THE EVENT BAND PINS FROM `md` UP (Daptrius asked, the owner chose desktop
+ * only, 2026-11-25). It scrolled away everywhere from 2026-11-24 (web #473)
+ * because it held 52px of the screen for the whole read. On a phone it still
+ * scrolls away: there it stacks two rows under the navbar, the View tabs and
+ * the style tabs. Its computed `position` says which: sticky counts its
+ * height into the line, static counts nothing.
  *
  * Two scrolling set-ups (index.css, "app-shell"):
  *   desktop shell  the page scrolls an inner div that the navbar sits
- *                  outside of, so the tabs stick at that div's top.
+ *                  outside of, so the band sticks at that div's top.
  *   otherwise      the document scrolls under the site's sticky navbar, so
- *                  the tabs stick under the navbar.
+ *                  the band (from md) sticks under the navbar, and on a phone
+ *                  the View tabs do.
  * A sticky `top` counts from the scroller's top edge in both: the inner div's
  * in the shell, the viewport's in the document.
  *
- * The course map's stuck strip (CourseSection, "Stick to top") docks on the
- * same line, so while it is there the View tabs and everything under them stick
+ * The course map's stuck strip (CourseSection, "Stick to top") docks under
+ * the band (or the navbar, on a phone), so while it is there the View tabs and everything under them stick
  * lower by its height: it is found by `data-course-stuck` and measured on the
  * `pvp-sticky-change` event its block sends when it docks or leaves.
  *
  * Sets on `root`, for everything inside it:
- *   --pvp-stick-line  the top of the scroller's visible area, where the course strip docks
+ *   --pvp-band-top    where the event band sticks (from md)
+ *   --pvp-stick-line  the pinned band's bottom edge, or the top on a phone: where
+ *                     the course strip docks
  *   --pvp-tabs-top    where the View tabs stick
  *   --pvp-below-tabs  the View tabs' bottom edge: where the rows under them stick
  *   --pvp-viewport-h  the scroller's visible height, so a pinned column can be
@@ -47,14 +51,16 @@ export const STICKY_CHANGE = "pvp-sticky-change"
 
 export function usePvpStickyOffsets(
 	root: RefObject<HTMLElement | null>,
+	band: RefObject<HTMLElement | null>,
 	tabs: RefObject<HTMLElement | null>,
 	// The tabs render only once there is an event: re-run when they appear.
 	hasTabs: boolean,
 ) {
 	useEffect(() => {
 		const rootElement = root.current
+		const bandElement = band.current
 		const tabsElement = tabs.current
-		if (!rootElement || !tabsElement) return
+		if (!rootElement || !bandElement || !tabsElement) return
 		// Navbar.tsx marks its sticky wrapper; the PvP page doesn't own it.
 		const navbar = document.querySelector<HTMLElement>("[data-sticky-navbar]")
 
@@ -64,25 +70,29 @@ export function usePvpStickyOffsets(
 			// overflow the test for which set-up is live.
 			const shellScroller = rootElement.closest<HTMLElement>(APP_SCROLLER_SELECTOR)
 			const shell = shellScroller !== null && /auto|scroll/.test(getComputedStyle(shellScroller).overflowY)
-			// In the shell the navbar is outside the scroller, so the line is its top.
-			// Outside it the line is the navbar's pinned part, plus the phone's
+			// In the shell the navbar is outside the scroller, so the top is its top.
+			// Outside it the top is the navbar's pinned part, plus the phone's
 			// wordmark row while scrolling up has brought it back (useNavbarReveal).
-			const line = shell ? 0 : (navbar?.offsetHeight ?? 0) + navbarRevealPx()
+			const top = shell ? 0 : (navbar?.offsetHeight ?? 0) + navbarRevealPx()
+			// The band pins from md only (its md:sticky); on a phone it scrolls away.
+			const bandPinned = getComputedStyle(bandElement).position === "sticky"
+			const line = top + (bandPinned ? bandElement.offsetHeight : 0)
 			const stuck = document.querySelector<HTMLElement>("[data-course-stuck]")?.offsetHeight ?? 0
-			const top = line + stuck
+			const tabsTop = line + stuck
 			const scroller = shell ? shellScroller : null
+			rootElement.style.setProperty("--pvp-band-top", `${top}px`)
 			rootElement.style.setProperty("--pvp-stick-line", `${line}px`)
-			rootElement.style.setProperty("--pvp-tabs-top", `${top}px`)
-			rootElement.style.setProperty("--pvp-below-tabs", `${top + tabsElement.offsetHeight}px`)
+			rootElement.style.setProperty("--pvp-tabs-top", `${tabsTop}px`)
+			rootElement.style.setProperty("--pvp-below-tabs", `${tabsTop + tabsElement.offsetHeight}px`)
 			rootElement.style.setProperty("--pvp-viewport-h", `${scroller?.clientHeight ?? window.innerHeight}px`)
 		}
 
 		update()
-		// A size change of either moves the offsets; a window resize can also
-		// cross the shell breakpoint without resizing them.
+		// A size change of any of the three moves the offsets; a window resize
+		// can also cross the shell breakpoint without resizing them.
 		// No ResizeObserver (jsdom in the tests): the resize listener alone.
 		const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update)
-		for (const element of [tabsElement, navbar]) if (element) observer?.observe(element)
+		for (const element of [bandElement, tabsElement, navbar]) if (element) observer?.observe(element)
 		window.addEventListener("resize", update)
 		window.addEventListener(STICKY_CHANGE, update)
 		window.addEventListener(NAVBAR_REVEAL_EVENT, update)
@@ -92,5 +102,5 @@ export function usePvpStickyOffsets(
 			window.removeEventListener(STICKY_CHANGE, update)
 			window.removeEventListener(NAVBAR_REVEAL_EVENT, update)
 		}
-	}, [root, tabs, hasTabs])
+	}, [root, band, tabs, hasTabs])
 }

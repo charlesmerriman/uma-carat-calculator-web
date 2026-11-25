@@ -6,13 +6,14 @@
  */
 
 import type { CSSProperties } from "react"
-import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
+import type { AptitudeKey, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { StoryEvent } from "../types/storyEvent"
 import type { Status } from "../components/rankings/kit/StatusPill"
 import { CARD_TYPE_LABELS } from "./cardTypes"
 import { formatDate, parseApiDate } from "./dateFormat"
 import { nameMatches } from "./searchText"
+import { compareNames } from "./nameOrder"
 
 export const PAGE_CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
@@ -80,6 +81,26 @@ const HEX_COLOUR = /^#[0-9a-f]{6}$/i
 export function colourStyle(colours: readonly string[] | null | undefined): CSSProperties | undefined {
 	if (!colours || colours.length !== 2 || !colours.every((value) => HEX_COLOUR.test(value))) return undefined
 	return { "--c1": colours[0], "--c2": colours[1] } as CSSProperties
+}
+
+/**
+ * Each outfit's character colours, by the outfit's row id (`CatalogueUma.id`,
+ * the id a skill's `owner_umas` carry): the Skills list paints an owned row's
+ * plate with them (notes/skills-list-plan.md). Looked up through the outfit's
+ * `character_id`, the way the Umas list colours a tile, never worked out from
+ * her game id. Empty until the catalogue is there, and an outfit whose
+ * character the game files don't cover is simply missing: its row keeps the
+ * stylesheet's grey.
+ */
+export function umaColourLookup(catalogue: PvpCatalogue | null | undefined): Map<number, readonly [string, string]> {
+	const lookup = new Map<number, readonly [string, string]>()
+	const pairs = catalogue?.character_colours
+	if (!catalogue || !pairs) return lookup
+	for (const uma of catalogue.umas) {
+		const pair = uma.character_id != null ? pairs[String(uma.character_id)] : undefined
+		if (pair) lookup.set(uma.id, pair)
+	}
+	return lookup
 }
 
 /** "No. 1006 · 01": the game's own id for an outfit, as character and outfit. */
@@ -217,7 +238,7 @@ export function filterUmas(umas: CatalogueUma[], query: string, where: WhereFilt
 		.filter((uma) => whereMatches(where, uma.on_global))
 		// A blank rarity counts as ★3, the rule Uma.is_three_star follows.
 		.filter((uma) => picked(stars, String(uma.rarity ?? 3) as StarFilter))
-		.sort((a, b) => a.name.localeCompare(b.name))
+		.sort((a, b) => compareNames(a.name, b.name))
 }
 
 export type TypeFilter = keyof typeof CARD_TYPE_LABELS
@@ -254,7 +275,7 @@ export function filterCards(
 		.filter((card) => picked(types, card.card_type ?? ""))
 		.filter((card) => picked(rarities, String(card.rarity) as RarityFilter))
 		.filter((card) => whereMatches(where, card.on_global))
-		.sort((a, b) => a.name.localeCompare(b.name) || (b.rarity ?? 0) - (a.rarity ?? 0))
+		.sort((a, b) => compareNames(a.name, b.name) || (b.rarity ?? 0) - (a.rarity ?? 0))
 }
 
 // ── Sorting the lists (Daptrius, board "Encyclopedia Filter Sorts", 2026-11-13) ──
@@ -400,7 +421,7 @@ export function sortList<T extends { id: number; name: string; game_id?: number 
 	dates: Map<number, ReleaseDates> = new Map(),
 	reversed = false,
 ): T[] {
-	const byName = (a: T, b: T) => a.name.localeCompare(b.name)
+	const byName = (a: T, b: T) => compareNames(a.name, b.name)
 	if (order === "name") return [...items].sort((a, b) => (reversed ? -1 : 1) * byName(a, b))
 	if (order === "game_id") return sortByValue(items, (item) => item.game_id ?? null, reversed)
 	const direction = sortsHighFirst(order, reversed) ? -1 : 1
@@ -428,8 +449,8 @@ export function sortByValue<T extends { name: string }>(items: T[], valueOf: (it
 	return [...items].sort((a, b) => {
 		const valueA = valueOf(a)
 		const valueB = valueOf(b)
-		if (valueA === null || valueB === null) return (valueA === null ? 1 : 0) - (valueB === null ? 1 : 0) || a.name.localeCompare(b.name)
-		return direction * (valueA - valueB) || a.name.localeCompare(b.name)
+		if (valueA === null || valueB === null) return (valueA === null ? 1 : 0) - (valueB === null ? 1 : 0) || compareNames(a.name, b.name)
+		return direction * (valueA - valueB) || compareNames(a.name, b.name)
 	})
 }
 
@@ -587,6 +608,6 @@ export function sortByEffect<T extends { id: number; name: string }>(
 	return [...cards].sort((a, b) => {
 		const [bucketA, valueA] = keyOf(a)
 		const [bucketB, valueB] = keyOf(b)
-		return bucketA - bucketB || direction * (valueA - valueB) || a.name.localeCompare(b.name)
+		return bucketA - bucketB || direction * (valueA - valueB) || compareNames(a.name, b.name)
 	})
 }

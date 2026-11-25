@@ -96,7 +96,15 @@ export function FramedCard({ card, limitBreaks = null, alt = "", className = "",
 					{icon && <img src={icon} alt="" aria-hidden="true" className="card-frame__layer" />}
 				</>
 			) : card.image ? (
-				<img src={card.image} alt={alt} loading="lazy" decoding="async" className="card-frame__whole" />
+				<>
+					{/* Behind the bordered picture, where the art would be. Hidden by an
+					    ordinary card's own art; a placeholder ("SSR Group") is only a
+					    frame and an icon around a see-through middle, and drew whatever
+					    sat behind it (half the Timeline tile's fill, half its name
+					    plate; Daptrius, 2026-11-24). */}
+					<span className="card-frame__backing" aria-hidden="true" />
+					<img src={card.image} alt={alt} loading="lazy" decoding="async" className="card-frame__whole" />
+				</>
 			) : (
 				<span className="card-frame__empty" aria-hidden="true" />
 			)}

@@ -31,8 +31,9 @@
  * of 5 races, Round 1 days 1-2 and Round 2 days 3-4, then one final race. A
  * League of Heroes is 30 tickets of 5 races with no rounds, then the Top 96:
  * the team the player entered, one they registered, and a placement they type
- * in, 1 to 96, with no race (the two brackets are only watched; Daptrius,
- * 2026-10-30).
+ * in, with no race (the two brackets are only watched; Daptrius, 2026-10-30).
+ * Every player gets a placement, not only the Top 96, so it runs 1 to
+ * LOH_MAX_PLACEMENT (Daptrius, 2026-11-25).
  *
  * A LoH TICKET ISN'T TIED TO A DAY. Five arrive each day, but a player can hold
  * up to ten and race them later (Daptrius, 2026-10-30), so a ticket logged
@@ -55,7 +56,8 @@ export const CM_RUN_TICKETS = 4
 export const RUN_RACES = 5
 /** Round 1 is days 1-2, Round 2 days 3-4. */
 export const CM_DAYS_PER_ROUND = 2
-export const LOH_TOP_PLACEMENTS = 96
+/** The highest LoH placement the API takes (PVP_LOH_MAX_PLACEMENT): a ceiling, not a field size. */
+export const LOH_MAX_PLACEMENT = 1_000_000
 
 /** What an event kind's runs look like. `rounds`: a CM's two rounds and its one final race. */
 export interface RunShape {
@@ -670,9 +672,11 @@ export function formatRate({ wins, raced }: Tally): string {
 	return raced ? `${Math.round((wins / raced) * 100)}%` : "–"
 }
 
-/** "1st", "2nd", "3rd", "11th", "22nd". */
+/** "1st", "2nd", "3rd", "11th", "22nd", "12,345th" (a LoH placement can run to 1,000,000). */
 export function ordinal(place: number): string {
+	// en-US always: the suffix is English, so the digits follow it.
+	const digits = place.toLocaleString("en-US")
 	const lastTwo = place % 100
-	if (lastTwo >= 11 && lastTwo <= 13) return `${place}th`
-	return `${place}${["th", "st", "nd", "rd"][place % 10] ?? "th"}`
+	if (lastTwo >= 11 && lastTwo <= 13) return `${digits}th`
+	return `${digits}${["th", "st", "nd", "rd"][place % 10] ?? "th"}`
 }

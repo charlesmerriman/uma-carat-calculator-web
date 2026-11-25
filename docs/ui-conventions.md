@@ -1304,13 +1304,16 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   style's count beside "Open Pace", the way to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
   `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up and a thumbs-down with the score between (`useCommentWrites().vote`; staff see the split in the score's title).
-- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick at the top of the shell's
-  scroller (desktop) or under the navbar (phone, document scrolling); the event band
-  (Previous, the event, Next) scrolls away in both (review item 4, 2026-11-24: it held 52px
-  of the screen for the whole read). The running-style tabs, the guide's side
+- **Pinned rows** (Daptrius, 2026-10-22): from `md` up the event band (Previous, the
+  event, Next) sticks at the top of the shell's scroller (desktop) or under the navbar,
+  and the View tabs under it; on a phone the band scrolls away and the View tabs stick
+  under the navbar. The band scrolled away everywhere from 2026-11-24 (review item 4: it
+  held 52px of the screen for the whole read) until Daptrius asked for it back and the
+  owner chose desktop only (2026-11-25). The
+  running-style tabs, the guide's side
   column, the gallery's open post and the team builder's docked panels stick under them.
   The offsets are MEASURED by `hooks/usePvpStickyOffsets.ts` into CSS variables on the page
-  root (`--pvp-tabs-top`, `--pvp-below-tabs`, `--pvp-viewport-h`); a new pinned row reads
+  root (`--pvp-band-top`, `--pvp-tabs-top`, `--pvp-below-tabs`, `--pvp-viewport-h`); a new pinned row reads
   those, never a rem guess. The side column (`.pvp-side-sticky`, App.css) pins when it fits
   and otherwise scrolls with the page until its end shows. Pinning works on a phone only
   because the /app scroller is `overflow-x-clip` below app-shell, not a scroll container
@@ -2152,17 +2155,36 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 ## Rankings page (`components/rankings/`)
 
 Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; the redesign
-(approved 2026-10-28, built step by step) is `notes/rankings-redesign-plan.md`.
+(approved 2026-10-28, built step by step) is `notes/rankings-redesign-plan.md`; the look
+(the Encyclopedia's, approved 2026-11-25) is `notes/rankings-polish-plan.md`.
 
+- **The look is the Encyclopedia's, reused, never copied** (owner's canvas, 2026-11-25): the
+  masthead (`.enc-head`, `.enc-tabs`; a Rankings tab is a `role="tab"` button and
+  `encyclopedia.css` styles it by `aria-selected` beside `aria-current`), the hero (`Hero` from
+  `encyclopedia/pieces.tsx` at `level={2}`, sized by `enc-hero--rank`), the flagged heading
+  (`.enc-section__title`) and the silk. `src/rankings.css` holds only Rankings' own: the colour
+  variables (`rk-vars` on the page and the window; `rk-paint` beside any `colourStyle`, so
+  `--c1-ink` re-derives), the panel surface (`rk-panel`, not `card-panel`), the hero's size,
+  the silk fills, the event tabs and the window's surface. A change to those Encyclopedia
+  rules shows on both pages. **No hero has a description line** (owner, 2026-11-25: "users
+  can understand what's going on without the extra text"), and no privacy aside: the eyebrow
+  names what is ranked, the line under the name says the figure. **The hero follows the
+  screen, not the container**, like the Encyclopedia's: the window has its own body, so a tab
+  is only ever as wide as the page. Everything inside the tabs stays on container queries.
 - **The kit** (`components/rankings/kit/`, redesign step 1): every list is `RankRow`s in a
   `RankedList` (top ten, then "Show all"). A row's `Bar` is **scaled to the list's leader**
   (`fill = count / first count`), never to 100%; the share stays as text. Under 40rem of
-  CONTAINER the bar column goes and a 3 px hairline under the name carries the fill. Also
-  `Podium` (the top three), `StatBand` (a lead and three figures), `Lens` (one list, many
-  views), `FilterToolbar` / `FilterPill` / `TickOptions` / `Tokens` (pills that state their
-  filter, a token per changed one), `Movement`, `Sparkline` (inline SVG), `CardArt`,
-  `CardTypeChip` (a dot of the type's hue, never coloured text). The `--color-status-*`
-  tokens (running, upcoming, ended, predicted) are `@theme`, redrawn for the light themes.
+  CONTAINER the bar column goes and a 4 px hairline under the name carries the fill. **Bars
+  are solid in a colour that means something**: a card's type hue (`barColor`, the chip's
+  dot, `CARD_TYPE_COLORS`), the running green for a win rate, the loss red, else the accent;
+  never a tint. A row under a floor (`muted`) dims nothing, only its text is muted. Also
+  `RankHero` (the tab's first place on her colours, with its figures), `Podium` (second and
+  third, by each entry's `place`), `Panel` / `PANEL` (the panel surface and head), `Lens` (the
+  Encyclopedia's switch), `FilterToolbar` / `FilterPill` / `TickItems` / `Tokens` (pills that
+  state their filter, a token per changed one), `Wall` (Encyclopedia tiles with her silk),
+  `Movement`, `Sparkline` (inline SVG), `CardArt`, `CardTypeChip` (a dot of the type's hue,
+  never coloured text). The `--color-status-*` tokens (running, upcoming, ended, predicted)
+  are `@theme`, redrawn for the light themes.
 
 - **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
   navbar item (both bars, named at every width since 2026-11-24). Every `/rankings/*` route checks `benefits.early_access`
@@ -2216,8 +2238,9 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   guide from a picked one), Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions,
   plus "Other decks" for one-off decks the sheet has no column for), Strategy, Scenario ("Not
   set" for a guide without one), Card type ("Friend", as elsewhere on the site, for the
-  sheet's "Pal"); every box ticked to start, and a changed one draws a token. Then the band,
-  the top three, and ONE list with a lens (Overall, each card type, Umas), the lens
+  sheet's "Pal"); every box ticked to start, and a changed one draws a token. The pills sit
+  in one filter card with the search first; then the hero (first place, with what is
+  counted), second and third, and ONE list with a lens (Overall, each card type, Umas), the lens
   remembered on the device (`rankingsPinStore` choices, `rankings-choices`), beside a rail:
   search (any card or uma, with its place under the filters), the QC note, the guides with no
   scenario. **Every rule is `utils/guideRankings.ts`**: a card counts once per deck (the
@@ -2372,21 +2395,35 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   later one waits on the first, then "Part 1, 2" (`slotLabel` in `utils/skillWords.ts`, the
   hover card too; Daptrius, 2026-11-17). On a ◎ page a giver of its ○ is listed with the ○'s
   name on its second line (`via`): a hint for the ○ counts for the ◎.
-- **The lists**: a masthead whose tabs lead with how many each list holds
-  (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
-  another's data to count it; the uma and card lists report the Skills tab's number too, from
-  the catalogue's `skill_count`, so all three show from the first list opened). A tile is its art, no box; an uma's carries her colours as a bar.
+- **The lists**: a masthead with the title alone; the Encyclopedia's screen bar names the
+  three lists (`EncyclopediaScreenTabs`). The masthead's count tabs ("270 Umas") were dropped
+  with their counting code (owner, 2026-11-25); `.enc-tabs` / `.enc-tab` stay in
+  `encyclopedia.css` for the Rankings page. A tile is its art, no box; an uma's carries her colours as a bar.
   A list gets group headings and a thumb index whatever it is sorted by and filtered by (`groups.tsx`,
   `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
   by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
   by an aptitude, the value by an effect (a value one or two cards reach is merged into a
   range). Filters never turn them off (owner, 2026-11-25). A heading is a `role="presentation"` item, so the
-  list's items stay the tiles. The Skills list has them too: letters (a name past Z, mostly
-  Japanese, under "あ"), the SP by cost (uniques last), the first three digits by game ID (no
+  list's items stay the tiles. **A to Z is one helper, `utils/nameOrder.ts`**: `compareNames`
+  sorts and `letterKey` files by the same reading of a name (a leading sign skipped, so
+  "#LookatCurren" is an L; a digit under "#", first; another script under "あ", last), so a
+  letter is always one run. Every list sorts by name in the client, never in the API's order:
+  production's Postgres skipped the sign while the headings didn't, and split letters
+  (Daptrius, 2026-11-25). The Skills list has them too: letters, the SP by cost (uniques last), the first three digits by game ID (no
   index: skill ids run 5 to 9 digits). It draws a page of rows at a time and grows as "Show
   more" scrolls into view; a jump to a heading not drawn yet draws up to it
-  (`GroupedGrid` `limit` / `onReveal`). A unique or evolved skill's row ends with its owner's
+  (`GroupedGrid` `limit` / `onReveal`). Back on the list with the same filters it draws as many rows as it had, in its first render (`skillRowsDrawn`, `skillListIfLoaded`), so the restored scroll lands on them. A unique or evolved skill's row ends with its owner's
   face (`SkillRow` `face`).
+- **The Skills list's rows are plates** (owner's pick, 2026-11-25, `notes/skills-list-plan.md`):
+  the list's grid carries `.enc-skills--plates`, and every plate rule is scoped under it, so
+  the same `SkillRow` inside an uma's, a card's or a skill's page stays the quiet row above.
+  A plate has its own surface and shadow, a 46 px icon, the name in the display face on up to
+  two lines, and the kind as a 5 px spine and a wash (each kind names its own spine: a
+  default would outrank the gold and pink ones). A row that draws its owner's face is
+  `data-owned` and ends in her silks, one skewed box of `--c2` and `--c1` behind the face;
+  the pair is the catalogue's `character_colours` by her `character_id`
+  (`umaColourLookup`, `utils/encyclopedia.ts`), passed as `SkillRow` `colours` through
+  `colourStyle`. Grey until the catalogue lands; nothing moves when it does.
 
 - **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
   in `@layer components` so a Tailwind utility at the call site still wins. Classes are
@@ -2620,7 +2657,12 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   access until it opens; web #456) and the Timeline's (`timeline/timelineTabs.ts` +
   `TimelineTabs.tsx`: the Timeline and Legend Races). Drawn like the PvP page's view tabs
   (Henry's ask) but as `NavLink`s, since they are separate addresses. A third screen is a
-  list and a wrapper, never a copy of the markup.
+  list and a wrapper, never a copy of the markup. The Encyclopedia's is the third
+  (`ENCYCLOPEDIA_TABS` in `utils/encyclopediaRoutes.ts` + `EncyclopediaScreenTabs.tsx`; on
+  the three lists only, names without counts; Daptrius, 2026-11-25). Under it the lists pin
+  their search bar (`Toolbar` `pinned`, `.enc-finder`), whose Filters button folds the
+  filters at the top and drops them down from the bar further down; it is
+  `data-popup-top-bar`, so a skill card stays below it.
 - **AppShell draws a screen's bar above the loading gate**, so the build-time render of the
   screen's pages has it. A wrapper reads the path and the account only; a gated tab (the
   Library) joins after the account loads, and the bar's height never changes.
@@ -2885,6 +2927,14 @@ what a prerendered load sees, because the row is always present there. `Markdown
 is the one renderer for all of it, and it turns a site-relative href into a router
 `<Link>` so `[FAQ](/faq#anchor)` typed in the admin navigates client-side. It relies on
 react-markdown's default of not rendering raw HTML; do not add `rehype-raw`.
+
+Each FAQ question has a **Copy link** pill beside it (`CopyQuestionLink` in `Faq.tsx`) that
+copies `/help/<slug>` (`faqQuestionLinkPath`), never `/faq#<slug>`: a `#fragment` never
+reaches a server, so every `/faq#…` link unfurls in Discord as the whole FAQ. The API serves
+`/help/<slug>` with the question and the start of its answer (backend
+`views/faq_share.py`) and sends people on to `/faq#<slug>`, where the effect above scrolls
+to it. Not `/faq/<slug>`: App Platform's ingress matches prefixes only, so a `/faq` rule
+would take this page too. Built in the click handler, as every share link is.
 
 The "Last updated" line formats `updated_at.slice(0, 10)`, the date half only. The build
 renders in UTC and the browser in local time, and an instant near midnight would

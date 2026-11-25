@@ -15,10 +15,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
-import { useSkillListState } from "../../hooks/useSkillList"
+import { rememberSkillRowsDrawn, skillRowsDrawn, useSkillListState } from "../../hooks/useSkillList"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
-import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
-import { reportCounts } from "../../utils/encyclopediaCounts"
 import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
@@ -26,7 +24,7 @@ import { SkillRow } from "../encyclopedia/skillRows"
 import { GroupedGrid } from "../encyclopedia/groups"
 import { costKey, groupsFor, letterKey, mergeSmallGroups, skillIdKey } from "../../utils/encyclopediaGroups"
 import {
-	PAGE_CONTAINER, REVERSED_VALUES, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, countLine, sortByValue, sortList, values,
+	PAGE_CONTAINER, REVERSED_VALUES, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, countLine, sortByValue, sortList, umaColourLookup, values,
 	type SharedWhere,
 } from "../../utils/encyclopedia"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
@@ -113,24 +111,32 @@ const SkillsPageBody = () => {
 	// remembered pick never hides behind a closed button.
 	const [openFlag, setOpen] = useRememberedFilter<string>("skills-panel:conditions", "0", REVERSED_VALUES)
 	const conditionsOpen = openFlag === "1" || tagPicks.length > 0
-	const [shown, setShown] = useState(PAGE)
-
-	// The tabs' headline numbers. The Umas and Support cards tabs count from the
-	// catalogue, which the hover cards already load on this page; the Skills
-	// tab's own number, once the list is here, is the list's length.
-	useCatalogueCounts(usePvpCatalogue())
-	const total = list.status === "ready" ? list.rows.length : null
+	// Every setting that changes which rows the list holds and in what order.
+	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
+	// Back on the list with the filters it was left with, it draws as many rows
+	// as it had then, in one go, so the restored scroll lands on them
+	// (skillRowsDrawn, hooks/useSkillList.ts). Otherwise one page.
+	const [shown, setShown] = useState(() => skillRowsDrawn(filterKey) ?? PAGE)
 	useEffect(() => {
-		if (total !== null) reportCounts({ skills: total })
-	}, [total])
+		rememberSkillRowsDrawn(filterKey, shown)
+	}, [filterKey, shown])
+
+	// The catalogue (which the hover cards already load on this page) paints an
+	// owned skill's plate in her character's two colours
+	// (notes/skills-list-plan.md). The list draws without waiting for it: until
+	// it lands those plates keep their grey, and nothing moves.
+	const catalogue = usePvpCatalogue()
+	const colourOf = useMemo(() => umaColourLookup(catalogue.status === "ready" ? catalogue.catalogue : null), [catalogue])
 
 	const rows = useMemo(() => {
 		if (list.status !== "ready") return []
 		const found = filterSkills(list.rows, query, colours, where, types, { picks: tagPicks, match })
-		// By name the API's order stands (it sorts names the way the game does), turned round on asking.
-		if (sort === "name") return reversed ? [...found].reverse() : found
 		// A unique has no cost and goes last either way round.
 		if (sort === "cost") return sortByValue(found, (row) => row.cost ?? null, reversed)
+		// By name, the client's own order (utils/nameOrder.ts), never the API's:
+		// production's database skipped a leading "#" or "…" while the headings
+		// didn't, so every such name split its letter in two (Daptrius, 2026-11-25).
+		// The sort is stable, so a unique and its inherited copy keep the API's id order.
 		return sortList(found, sort, undefined, reversed)
 	}, [list, query, colours, where, types, tagPicks, match, sort, reversed])
 
@@ -158,7 +164,6 @@ const SkillsPageBody = () => {
 	}, [hasMore, shown])
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
@@ -169,6 +174,7 @@ const SkillsPageBody = () => {
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
 			<Toolbar
+				pinned
 				scope="skills"
 				search={<SearchBox label="Search skills" placeholder="Search by skill, uma or ID..." value={query} onChange={setQuery} />}
 				count={list.status === "ready" && <Count>{countLine(rows.length, "skill", "skills")}</Count>}
@@ -250,8 +256,9 @@ const SkillsPageBody = () => {
 			</Toolbar>
 
 			{list.status === "loading" ? (
-				<div role="status" aria-label="Loading skills" className="enc-skills">
-					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-12" />)}
+				<div role="status" aria-label="Loading skills" className="enc-skills enc-skills--plates">
+					{/* The plates' own height, so the list doesn't jump when it lands. */}
+					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-[4.75rem] rounded-2xl" />)}
 				</div>
 			) : list.status === "error" ? (
 				<EmptyNote>The skill list didn't load. Reload the page to try again.</EmptyNote>
@@ -267,12 +274,14 @@ const SkillsPageBody = () => {
 						// A jump to a heading not drawn yet draws up to it, and a page past it.
 						onReveal={(before) => setShown((count) => Math.max(count, before + PAGE))}
 						noun={["skill", "skills"]}
-						className="enc-skills"
+						// Plates: the list's own look for the shared row (encyclopedia.css).
+						className="enc-skills enc-skills--plates"
 						tile={(row) => (
 							<SkillRow
 								key={row.game_id}
 								skill={row}
 								face
+								colours={colourOf.get(row.owner_umas?.[0]?.id ?? -1)}
 								// Sorted by game ID, the row says its ID first, as the other lists' tiles do.
 								sub={sort === "game_id"
 									? [`ID ${row.game_id}`, SKILL_TYPE_WORDS[row.type ?? ""], row.owners?.join(", ")].filter(Boolean).join(" · ")

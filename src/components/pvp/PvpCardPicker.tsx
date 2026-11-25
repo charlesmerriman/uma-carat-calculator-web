@@ -12,8 +12,9 @@
  *     matters because nothing teaches a ◎ and the guides recommend the ◎.
  *   - APTITUDE BADGES (umas). The letters for this event's surface and
  *     distance and the style the place runs, from utils/courseAptitude.ts.
- *   - THE GUIDE'S STAR. Cards the event's guide recommends for this style
- *     carry a star and sort first.
+ *   - THE GUIDE'S PICKS. What the event's guide recommends for this style
+ *     gets a gold ring round its tile and sorts first. Only here: the team
+ *     itself and Guide picks draw no such edge (Daptrius, 2026-11-25).
  *   - RELEASE DATES. A card out after the event is blocked; one out during
  *     it carries a note (utils/cardRelease.ts, through the caller).
  *   - BLOCKED, NOT HIDDEN. A tile the team's rules refuse (already on the
@@ -47,11 +48,15 @@ import { FramedCard, type FramedCardArt } from "../FramedCard"
 import { limitBreakLabel, type OwnedForPicker } from "../../utils/roster"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { whiteSkillPairs } from "../../utils/pvpTeams"
+import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 import type { PortraitLayers } from "../../types/portraitLayers"
 import { nameMatches } from "../../utils/searchText"
+
+/** The guide's pick, named for a screen reader and the tile's title. */
+const RECOMMENDED_LABEL = "Recommended by the guide"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -119,12 +124,22 @@ type PvpCardPickerProps = {
 	/** The style this place runs, for the aptitude badge and the star. */
 	style: MemberStyle | null
 	recommended: Set<number>
+	/**
+	 * The guide's picks style by style, for a place with no style yet (an empty
+	 * spot): Recommended only then shows them all in a section per style, and
+	 * `recommended` should be every style's (recommendedForPlace).
+	 */
+	recommendedByStyle?: { style: MemberStyle; ids: Set<number> }[]
 	/** Why an id can't go here, or null when it can. Blocked tiles sort last. */
 	blockReason: (id: number) => string | null
 	/** A note on a pickable tile, such as "Out 2026/11/5, during this event". */
 	noteFor?: (id: number) => string | null
 	selectedId: number | null
-	onPick: (id: number) => void
+	/**
+	 * `style`: the section the tile was picked from, when the place has no
+	 * style yet and Recommended only groups the guide's picks by style.
+	 */
+	onPick: (id: number, style?: MemberStyle) => void
 	/** Shown when the place is filled: empties it. */
 	onRemove?: () => void
 	/** What the search box starts with: a skill's name, from the skills panel. */
@@ -189,7 +204,7 @@ function toItems(props: PvpCardPickerProps): PickerItem[] {
 }
 
 export function PvpCardPicker(props: PvpCardPickerProps) {
-	const { title, skillsById, event, style, recommended, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place, pageLinks = false } = props
+	const { title, skillsById, event, style, recommended, recommendedByStyle, blockReason, noteFor, selectedId, onPick, onRemove, onClose, pool, initialSearch, tabs, owned, place, pageLinks = false } = props
 	const [search, setSearch] = useState(initialSearch ?? "")
 	// The person's favorite umas get the rainbow frame (FramedUma).
 	const oshiIds = useOshiIds()
@@ -278,6 +293,15 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 				Number(recommended.has(b.id)) - Number(recommended.has(a.id))
 		)
 
+	// Recommended only with no style yet: the shown tiles, a section per style
+	// with picks among them. Null draws the one flat grid.
+	const groups =
+		recommendedOnly && style === null && recommendedByStyle
+			? recommendedByStyle
+					.map((group) => ({ style: group.style, items: shown.filter((item) => group.ids.has(item.id)) }))
+					.filter((group) => group.items.length > 0)
+			: null
+
 	const aptitudes = pool === "uma" ? aptitudeKeysForEvent(event, style) : []
 	// The card each tile's book opens (early access): an uma's rings this race
 	// at this place's style.
@@ -291,6 +315,108 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 
 	const togglePin = (id: number) =>
 		setPinnedSkills((pinned) => (pinned.includes(id) ? pinned.filter((kept) => kept !== id) : [...pinned, id]))
+
+	// One tile. `group`: the style section it sits in when the place has no
+	// style yet (an uma can be in several, so the key carries it), handed to
+	// onPick as the style a new member starts on.
+	const renderTile = (item: PickerItem, group?: MemberStyle) => {
+		const reason = blockReason(item.id)
+		const note = reason === null ? (noteFor?.(item.id) ?? null) : null
+		const isRecommended = recommended.has(item.id)
+		const isSelected = item.id === selectedId
+		// An owned card's limit break, drawn as the Collection draws
+		// it: FramedCard's diamonds along the bottom (Daptrius,
+		// 2026-11-25: a text badge top right hid the type icon).
+		const limitBreak = item.card ? (owned?.limitBreaks.get(item.id) ?? null) : null
+		return (
+			<li key={group ? `${group}-${item.id}` : item.id} className="relative min-w-0">
+				<button
+					type="button"
+					disabled={reason !== null}
+					aria-pressed={isSelected}
+					title={reason ?? (isRecommended ? `${item.name}: ${RECOMMENDED_LABEL.toLowerCase()}` : item.name)}
+					onClick={() => onPick(item.id, group)}
+					// The guide's pick is the tile's outermost edge, a gold ring
+					// outside its border, never a mark on the art (Daptrius,
+					// 2026-11-25). A ring, so the tile keeps its size and the
+					// book button's 7px inset (below) still lands on the art;
+					// gold, so it reads apart from a selected tile's green border.
+					className={`flex w-full min-w-0 flex-col items-center rounded-lg border p-1.5 text-center transition disabled:cursor-not-allowed disabled:opacity-40 ${
+						isSelected
+							? "border-brand bg-brand/10"
+							: "border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700"
+					} ${isRecommended ? "ring-2 ring-recommended" : ""}`}
+				>
+					{isRecommended && <span className="sr-only">{RECOMMENDED_LABEL}</span>}
+					<span className="relative block w-full">
+						{item.portrait ? (
+							<FramedUma src={item.portrait} layers={item.portrait_layers} oshi={oshiIds.has(item.id)} className="w-full" />
+						) : item.card ? (
+							<FramedCard card={item.card} limitBreaks={limitBreak} className="w-full" />
+						) : item.image ? (
+							<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
+						) : (
+							<span className={`block ${artAspect} w-full rounded bg-gray-700`} aria-hidden="true" />
+						)}
+						{limitBreak !== null ? (
+							// The diamonds are only a look; the words are for a screen reader.
+							<span className="sr-only">In your collection, {limitBreakLabel(limitBreak)}</span>
+						) : (
+							owned?.ids.has(item.id) && (
+								<span
+									className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black"
+									title="In your collection"
+								>
+									<Check className="h-3 w-3" aria-hidden="true" />
+								</span>
+							)
+						)}
+					</span>
+					<span className="mt-1 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">{item.name}</span>
+					{item.apt && aptitudes.length > 0 && (
+						<span className="mt-1 flex gap-1" aria-label="Aptitudes for this race">
+							{aptitudes.map((aptitude) => (
+								<span
+									key={aptitude.key}
+									title={aptitude.label}
+									className="rounded border border-gray-600 bg-gray-900 px-1 text-[10px] font-bold text-gray-200"
+								>
+									{aptitudeLetter(item.apt?.[aptitude.key]) ?? "?"}
+								</span>
+							))}
+						</span>
+					)}
+					{reason && <span className="mt-0.5 text-[10px] leading-tight text-gray-400">{reason}</span>}
+					{note && (
+						<span className="mt-1 rounded bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-brand" title={note}>
+							{note}
+						</span>
+					)}
+				</button>
+				{/* The tile's Encyclopedia page, on the art's bottom-right
+				    corner, the one corner the art leaves free (the owned tick
+				    and the card's type icon are top right, the limit-break
+				    diamonds bottom left, their band's right end empty under
+				    the book). A SIBLING of the tile, since a link
+				    inside a button is invalid HTML. This box traces the art: the
+				    button's 1px border plus its p-1.5 put the art 7px in, at its
+				    own aspect, so the corner lands on it at any column width.
+				    A click opens the card over the picker (hover); a tap or the
+				    keyboard follows the link. Leaving either way closes the
+				    picker (CloseOnLeave, below). */}
+				{pageLinks && (
+					<span className={`pointer-events-none absolute left-[7px] right-[7px] top-[7px] ${artAspect}`}>
+						<EncyclopediaIconLink
+							href={pool === "uma" ? pages.uma(item.id) : pages.card(item.id)}
+							name={item.name}
+							hover={hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring })}
+							className="pointer-events-auto absolute bottom-0.5 right-0.5"
+						/>
+					</span>
+				)}
+			</li>
+		)
+	}
 
 	return createPortal(
 		<div
@@ -352,6 +478,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 						{recommended.size > 0 && (
 							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
 								<input type="checkbox" checked={recommendedOnly} onChange={(change) => setRecommendedOnly(change.target.checked)} />
+								{/* The key to the tiles' gold ring. */}
+								<span className="h-3 w-3 shrink-0 rounded-sm ring-2 ring-inset ring-recommended" aria-hidden="true" />
 								Recommended only
 								<span className="text-gray-500">(the guide's {recommended.size})</span>
 							</label>
@@ -460,113 +588,24 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 							{ownedOnly && " Turn off Owned only to see everything."}
 							{recommendedOnly && " Turn off Recommended only to see everything."}
 						</p>
+					) : groups ? (
+						// No style yet: every style's picks, a section each (Daptrius,
+						// 2026-11-25: it read Front's alone before a style was chosen).
+						<div className="flex flex-col gap-4">
+							{groups.map((group) => (
+								<section key={group.style} aria-label={`Recommended for ${STYLE_LABELS[group.style]}`}>
+									<h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+										{STYLE_LABELS[group.style]} <span className="font-normal normal-case tracking-normal text-gray-500">({group.items.length})</span>
+									</h3>
+									<ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
+										{group.items.map((item) => renderTile(item, group.style))}
+									</ul>
+								</section>
+							))}
+						</div>
 					) : (
 						<ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
-							{shown.map((item) => {
-								const reason = blockReason(item.id)
-								const note = reason === null ? (noteFor?.(item.id) ?? null) : null
-								const isRecommended = recommended.has(item.id)
-								const isSelected = item.id === selectedId
-								return (
-									<li key={item.id} className="relative min-w-0">
-										<button
-											type="button"
-											disabled={reason !== null}
-											aria-pressed={isSelected}
-											title={reason ?? item.name}
-											onClick={() => onPick(item.id)}
-											className={`flex w-full min-w-0 flex-col items-center rounded-lg border p-1.5 text-center transition disabled:cursor-not-allowed disabled:opacity-40 ${
-												isSelected
-													? "border-brand bg-brand/10"
-													: "border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700"
-											}`}
-										>
-											<span className="relative block w-full">
-												{item.portrait ? (
-													<FramedUma
-														src={item.portrait}
-														layers={item.portrait_layers}
-														oshi={oshiIds.has(item.id)}
-														// The guide's pick, drawn under her ears and hat.
-														edge={isRecommended ? "Recommended by the guide" : undefined}
-														className="w-full"
-													/>
-												) : item.card ? (
-													<FramedCard card={item.card} className="w-full" />
-												) : item.image ? (
-													<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
-												) : (
-													<span className={`block ${artAspect} w-full rounded bg-gray-700`} aria-hidden="true" />
-												)}
-												{owned?.limitBreaks.has(item.id) ? (
-													<span className="absolute right-0.5 top-0.5 rounded bg-brand px-1 text-[10px] font-bold text-black" title="In your collection">
-														{limitBreakLabel(owned.limitBreaks.get(item.id) ?? 0)}
-													</span>
-												) : (
-													owned?.ids.has(item.id) && (
-														<span
-															className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black"
-															title="In your collection"
-														>
-															<Check className="h-3 w-3" aria-hidden="true" />
-														</span>
-													)
-												)}
-												{/* The guide's pick: an edge around the art, nothing on it (Daptrius, 2026-11-20).
-												    An uma's is drawn inside FramedUma above, under her ears and hat. */}
-												{isRecommended && !item.portrait && (
-													<span
-														role="img"
-														aria-label="Recommended by the guide"
-														title="Recommended by the guide"
-														className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${item.card ? "rounded-[6%/4.5%]" : "rounded-[10.75%]"}`}
-													/>
-												)}
-											</span>
-											<span className="mt-1 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">{item.name}</span>
-											{item.apt && aptitudes.length > 0 && (
-												<span className="mt-1 flex gap-1" aria-label="Aptitudes for this race">
-													{aptitudes.map((aptitude) => (
-														<span
-															key={aptitude.key}
-															title={aptitude.label}
-															className="rounded border border-gray-600 bg-gray-900 px-1 text-[10px] font-bold text-gray-200"
-														>
-															{aptitudeLetter(item.apt?.[aptitude.key]) ?? "?"}
-														</span>
-													))}
-												</span>
-											)}
-											{reason && <span className="mt-0.5 text-[10px] leading-tight text-gray-400">{reason}</span>}
-											{note && (
-												<span className="mt-1 rounded bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-brand" title={note}>
-													{note}
-												</span>
-											)}
-										</button>
-										{/* The tile's Encyclopedia page, on the art's bottom-right
-										    corner, the one corner the art leaves free (the star is top
-										    left, the owned tick and the card's type icon top right, the
-										    limit breaks bottom left). A SIBLING of the tile, since a link
-										    inside a button is invalid HTML. This box traces the art: the
-										    button's 1px border plus its p-1.5 put the art 7px in, at its
-										    own aspect, so the corner lands on it at any column width.
-										    A click opens the card over the picker (hover); a tap or the
-										    keyboard follows the link. Leaving either way closes the
-										    picker (CloseOnLeave, below). */}
-										{pageLinks && (
-											<span className={`pointer-events-none absolute left-[7px] right-[7px] top-[7px] ${artAspect}`}>
-												<EncyclopediaIconLink
-													href={pool === "uma" ? pages.uma(item.id) : pages.card(item.id)}
-													name={item.name}
-													hover={hoverCardProps(pool === "uma" ? "uma" : "card", item.id, { ring })}
-													className="pointer-events-auto absolute bottom-0.5 right-0.5"
-												/>
-											</span>
-										)}
-									</li>
-								)
-							})}
+							{shown.map((item) => renderTile(item))}
 						</ul>
 					)}
 				</div>

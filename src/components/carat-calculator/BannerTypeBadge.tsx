@@ -61,6 +61,13 @@ const TAB_CLASS: Record<BannerRowType, string> = {
 	StepUp: "banner-type-tab--step-up",
 }
 
+/** The pill's own fill and ink, without the badge's band (App.css, "One fill and one ink per kind"). */
+const CHIP_CLASS: Record<BannerRowType, string> = {
+	Uma: "banner-type-chip--uma",
+	Support: "banner-type-chip--support",
+	StepUp: "banner-type-chip--step-up",
+}
+
 const LABEL: Record<BannerRowType, string> = {
 	Uma: "UMA",
 	Support: "SUPPORT",
@@ -92,7 +99,7 @@ export const BannerTypeBadge = ({ type }: { type: BannerRowType }) => (
  * redraws both.
  */
 export const BannerTypeChip = ({ type }: { type: BannerRowType }) => (
-	<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] leading-none font-bold tracking-wider ${TAB_CLASS[type]}`}>
+	<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] leading-none font-bold tracking-wider ${CHIP_CLASS[type]}`}>
 		<BannerTypeIcon type={type} className="h-3 w-3 opacity-90" />
 		{LABEL[type]}
 	</span>

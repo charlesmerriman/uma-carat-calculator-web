@@ -2,9 +2,11 @@ import '@testing-library/jest-dom'
 import { afterEach } from 'vitest'
 import { forgetRememberedOpen } from '../hooks/useRememberedOpen'
 import { forgetRememberedFilters } from '../hooks/useRememberedFilter'
+import { forgetSkillRowsDrawn } from '../hooks/useSkillList'
 
 afterEach(forgetRememberedOpen)
 afterEach(forgetRememberedFilters)
+afterEach(forgetSkillRowsDrawn)
 
 // No test talks to a real server. A component that fetches on mount (every uma
 // and card tile asks for the catalogue behind its Encyclopedia link, for

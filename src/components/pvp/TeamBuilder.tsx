@@ -33,7 +33,7 @@ import {
 	preferredTeam,
 	memberStyleFrom,
 	teamSkillSources,
-	recommendedIds,
+	recommendedForPlace,
 	setCard,
 	dropCard,
 	setMemberUma,
@@ -284,6 +284,8 @@ function ReadyBuilder({ event, teamsState, index }: {
 	}
 	const searchMember = skillSearch ? memberAt(members, skillSearch.position) : undefined
 	const searchStyle = searchMember?.style ?? null
+	// The deck's own style, else (a deck with none) every style's picks, grouped.
+	const deckPicks = recommendedForPlace(guide, deckStyle ?? null)
 
 	// What Guide picks offers for a clicked uma or card. Same rules as the
 	// picker (utils/pvpTeams.ts), shown as disabled buttons with a reason.
@@ -542,13 +544,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 						/>
 					)}
 
-					{guide && (
-						<p className="flex items-center gap-1.5 text-xs text-gray-500">
-							<span className="h-3 w-3 shrink-0 rounded-sm ring-2 ring-inset ring-brand" aria-hidden="true" />
-							An edge marks what this event's guide recommends for that running style.
-						</p>
-					)}
-					{mode === "guest" && (
+						{mode === "guest" && (
 						<p className="text-xs text-gray-400">
 							Your teams are saved on this device.{" "}
 							<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
@@ -577,19 +573,20 @@ function ReadyBuilder({ event, teamsState, index }: {
 						owned={ownedForPicker(mode === "account" ? roster : undefined, "uma")}
 						place="uma"
 						pageLinks
-						recommended={recommendedIds(guide, deckStyle ?? "front").umas}
+						recommended={deckPicks.umas}
+						recommendedByStyle={deckPicks.byStyle?.map((group) => ({ style: group.style, ids: group.umas }))}
 						noteFor={(id) => releaseNote(releaseFor("uma", id))}
 						blockReason={(id) => {
 							const candidate = index.umasById.get(id)
 							if (!candidate) return null
 							return releaseBlockReason(releaseFor("uma", id)) ?? umaBlockReason(members, deckUmaSpot, candidate, index)
 						}}
-						onPick={(id) => {
+						onPick={(id, style) => {
 							const uma = index.umasById.get(id)
 							if (!uma) return
 							const position = deckUmaSpot
 							setDeckUmaSpot(null)
-							putDeck(setMemberUma(members, position, uma, deckStyle), position)
+							putDeck(setMemberUma(members, position, uma, deckStyle ?? style), position)
 						}}
 						onClose={() => setDeckUmaSpot(null)}
 					/>
@@ -605,9 +602,9 @@ function ReadyBuilder({ event, teamsState, index }: {
 						releaseFor={releaseFor}
 						members={members}
 						style={searchStyle}
-						recommended={recommendedIds(guide, searchStyle ?? "front")}
-						onPickUma={(uma) => {
-							applyMembers(setMemberUma(members, skillSearch.position, uma))
+						recommended={recommendedForPlace(guide, searchStyle)}
+						onPickUma={(uma, style) => {
+							applyMembers(setMemberUma(members, skillSearch.position, uma, style))
 							setSkillSearch(null)
 						}}
 						onPickCard={(slot, id) => {
@@ -655,8 +652,8 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 	releaseFor: ReleaseCheck
 	members: PvpTeamMember[]
 	style: MemberStyle | null
-	recommended: { umas: Set<number>; cards: Set<number> }
-	onPickUma: (uma: CatalogueUma) => void
+	recommended: ReturnType<typeof recommendedForPlace>
+	onPickUma: (uma: CatalogueUma, style?: MemberStyle) => void
 	onPickCard: (slot: number, cardId: number) => void
 	onClose: () => void
 }) {
@@ -725,6 +722,7 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 			pool="uma"
 			items={index.catalogue.umas}
 			recommended={recommended.umas}
+			recommendedByStyle={recommended.byStyle?.map((group) => ({ style: group.style, ids: group.umas }))}
 			noteFor={(id) => releaseNote(releaseFor("uma", id))}
 			blockReason={(id) => {
 				const candidate = index.umasById.get(id)
@@ -734,9 +732,9 @@ function SkillSearchPicker({ target, onTab, index, event, member, releaseFor, me
 				if (member?.uma === id) return "Already in this spot"
 				return umaBlockReason(members, target.position, candidate, index)
 			}}
-			onPick={(id) => {
+			onPick={(id, style) => {
 				const uma = index.umasById.get(id)
-				if (uma) onPickUma(uma)
+				if (uma) onPickUma(uma, style)
 			}}
 		/>
 	) : (

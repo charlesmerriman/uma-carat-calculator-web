@@ -28,6 +28,24 @@ export function parseGameId(raw: string | undefined): number | null {
 	return Number.isSafeInteger(value) && value > 0 ? value : null
 }
 
+/**
+ * The Encyclopedia screen's bar: its three lists, by name only (Daptrius,
+ * board "Encyclopedia sticky nav", 2026-11-25: "Just name, not numbers"; the
+ * masthead's tabs keep the counts). Drawn by the shared ScreenTabs
+ * (components/encyclopedia/EncyclopediaScreenTabs.tsx) on the three lists.
+ */
+export const ENCYCLOPEDIA_TABS = [
+	{ to: UMA_LIST_PATH, label: "Umas" },
+	{ to: CARD_LIST_PATH, label: "Support cards", short: "Supports" },
+	{ to: SKILL_LIST_PATH, label: "Skills" },
+] as const
+
+/** Whether `pathname` is one of the three lists (not a detail page), with or without a trailing slash. */
+export function isEncyclopediaList(pathname: string): boolean {
+	const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
+	return ENCYCLOPEDIA_TABS.some((tab) => tab.to === path)
+}
+
 /** Whether a pathname is one of the Encyclopedia's lists or pages. */
 export function isEncyclopediaPath(pathname: string): boolean {
 	return /^\/app\/(umas|cards|skills)(\/|$)/.test(pathname)

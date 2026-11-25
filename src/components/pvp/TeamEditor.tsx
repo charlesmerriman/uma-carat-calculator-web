@@ -8,25 +8,24 @@
  * in one shows in the other at once. The caller owns which team it is and
  * what an edit does (both create the team on the first pick).
  *
- * The guide is optional: with it, recommended picks get their star in the
- * grid and sort first in the pickers.
+ * The guide is optional: with it, recommended picks get a gold ring and sort
+ * first in the pickers. The grid draws no such mark (Daptrius, 2026-11-25).
  */
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import type { PvpCatalogueIndex } from "../../hooks/usePvpCatalogue"
 import { useCardReleases } from "../../hooks/useCardReleases"
 import { releaseBlockReason, releaseNote } from "../../utils/cardRelease"
 import {
-	MEMBER_STYLES,
 	PVP_BORROW_SLOT,
 	addCardToEveryDeck,
 	cardBlockReason,
 	clearCard,
 	clearMember,
 	memberAt,
-	recommendedIds,
+	recommendedForPlace,
 	setCard,
 	setMemberStyle,
 	setMemberVeteran,
@@ -38,7 +37,7 @@ import { CompactTeamGrid } from "./CompactTeamGrid"
 import { TeamGrid, type DeckDeal } from "./TeamGrid"
 import type { RaceEvent } from "../../types"
 import type { PvpGuide } from "../../types/pvpGuide"
-import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
+import type { PvpTeamMember } from "../../types/pvpTeam"
 import type { TrainedUma } from "../../types/trainedUma"
 import type { Roster } from "../../types/roster"
 import { ownedForPicker } from "../../utils/roster"
@@ -72,19 +71,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 	// mid-event is marked (utils/cardRelease.ts).
 	const releaseFor = useCardReleases(event, index)
 
-	// The guide's picks per style, worked out once per guide for the stars.
-	const picksByStyle = useMemo(
-		() => new Map(MEMBER_STYLES.map((style) => [style, recommendedIds(guide, style)])),
-		[guide]
-	)
-	const isRecommended = (pool: "uma" | "support", id: number, style: MemberStyle): boolean => {
-		const picks = picksByStyle.get(style)
-		return picks !== undefined && (pool === "uma" ? picks.umas : picks.cards).has(id)
-	}
-
 	const pickerMember = picker ? memberAt(members, picker.position) : undefined
 	const pickerStyle = pickerMember?.style ?? null
-	const recommended = recommendedIds(guide, pickerStyle ?? "front")
+	// An empty spot has no style yet: every style's picks, grouped in the picker.
+	const recommended = recommendedForPlace(guide, pickerStyle)
 	const umaName = (position: number): string => {
 		const member = memberAt(members, position)
 		return (member && index.umasById.get(member.uma)?.name) || `uma ${position + 1}`
@@ -104,7 +94,6 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 				course={event}
 				releaseFor={releaseFor}
 				isFavorite={isFavorite}
-				isRecommended={isRecommended}
 				onPickUma={(position) => setPicker({ pool: "uma", position })}
 				onPickCard={(position, slot) => {
 					setAddToEveryDeck(false)
@@ -130,6 +119,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					event={event}
 					style={pickerStyle}
 					recommended={recommended.umas}
+					recommendedByStyle={recommended.byStyle?.map((group) => ({ style: group.style, ids: group.umas }))}
 					blockReason={(id) => {
 						const candidate = index.umasById.get(id)
 						return (
@@ -139,9 +129,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					}}
 					noteFor={(id) => releaseNote(releaseFor("uma", id))}
 					selectedId={pickerMember?.uma ?? null}
-					onPick={(id) => {
+					onPick={(id, style) => {
 						const uma = index.umasById.get(id)
-						if (uma) apply(setMemberUma(members, picker.position, uma))
+						// Picked from a style's section: she starts on that style.
+						if (uma) apply(setMemberUma(members, picker.position, uma, style))
 						else setPicker(null)
 					}}
 					onRemove={pickerMember ? () => apply(clearMember(members, picker.position)) : undefined}

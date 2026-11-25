@@ -470,7 +470,7 @@ function umaKey(name: string): string {
 }
 
 /**
- * The guide's picks for one style, as id sets, for the picker's star: umas
+ * The guide's picks for one style, as id sets, for the picker's ring: umas
  * the guide rates for the style, cards in its decks for the style. A runaway reads the front picks too, since the guide often
  * files a runaway under Front.
  */
@@ -489,6 +489,36 @@ export function recommendedIds(guide: PvpGuide | null, style: MemberStyle): { um
 		}
 	}
 	return { umas, cards }
+}
+
+/**
+ * The guide's picks for a picker: the place's style's, or with no style yet
+ * (an empty spot) every style's, so nothing reads as Front's by default
+ * (Daptrius, 2026-11-25). `byStyle` is set only then, a group per style the
+ * guide fills, for the picker's sections: each holds the rows filed under that
+ * style alone, so Runaway doesn't repeat Front's.
+ */
+export function recommendedForPlace(guide: PvpGuide | null, style: MemberStyle | null): {
+	umas: Set<number>
+	cards: Set<number>
+	byStyle: { style: MemberStyle; umas: Set<number>; cards: Set<number> }[] | null
+} {
+	if (style !== null) return { ...recommendedIds(guide, style), byStyle: null }
+	const byStyle = MEMBER_STYLES.map((each) => {
+		const umas = new Set<number>()
+		const cards = new Set<number>()
+		for (const row of guide?.uma_recommendations ?? []) if (row.style === each) umas.add(row.uma.id)
+		for (const deck of guide?.decks ?? []) {
+			if (deck.style !== each) continue
+			for (const slot of deck.slots) if (slot.support_card) cards.add(slot.support_card.id)
+		}
+		return { style: each, umas, cards }
+	}).filter((group) => group.umas.size > 0 || group.cards.size > 0)
+	return {
+		umas: new Set(byStyle.flatMap((group) => [...group.umas])),
+		cards: new Set(byStyle.flatMap((group) => [...group.cards])),
+		byStyle,
+	}
 }
 
 /**

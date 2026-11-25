@@ -42,6 +42,11 @@ describe("FramedCard", () => {
 		expect(picture).toHaveAttribute("src", "bordered.png")
 		expect(picture).toHaveClass("card-frame__whole")
 		expect(layers(container)).toEqual([])
+		// A backing behind it, under the picture: a placeholder's picture is a
+		// frame around a see-through middle.
+		const backing = container.querySelector(".card-frame__backing")
+		expect(backing).not.toBeNull()
+		expect(backing!.compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 	})
 
 	it("treats an API older than the field like a card with no texture", () => {

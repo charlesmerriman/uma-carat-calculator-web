@@ -261,23 +261,33 @@
 		py-2 px-1 font-bold select-none;
 }
 
-/* One fill and one ink per kind, shared by the desktop badge and the mobile
-   card's header strip. Both come from --color-type-* tokens (index.css), which
-   the light themes and colorblind mode redraw; nothing here is mode-specific. */
+/* One fill and one ink per kind, shared by the desktop badge, the mobile
+   card's header strip and the share picture's pill (BannerTypeChip). All come
+   from --color-type-* tokens (index.css), which the light themes and
+   colorblind mode redraw; nothing here is mode-specific.
+
+   The pill has a class of its own (`banner-type-chip--*`), never the badge's:
+   the themes draw a 4px band along the bottom of `banner-type-tab--*`
+   (personalityThemes.css), which suits a tall table cell and on a 16px pill
+   was a stripe across its lower edge, drawn into every downloaded picture
+   (Daptrius, 2026-11-25). */
 .banner-type-tab--uma,
-.banner-type-tile--uma {
+.banner-type-tile--uma,
+.banner-type-chip--uma {
 	background-color: var(--color-type-uma);
 	color: var(--color-type-uma-ink);
 }
 
 .banner-type-tab--support,
-.banner-type-tile--support {
+.banner-type-tile--support,
+.banner-type-chip--support {
 	background-color: var(--color-type-support);
 	color: var(--color-type-support-ink);
 }
 
 .banner-type-tab--step-up,
-.banner-type-tile--step-up {
+.banner-type-tile--step-up,
+.banner-type-chip--step-up {
 	background-color: var(--color-type-step-up);
 	color: var(--color-type-step-up-ink);
 }
@@ -1169,12 +1179,23 @@
 	display: block;
 }
 
+/* `fill`, never `cover` (Daptrius, 2026-11-25: small cards blocky in Chrome
+   and Edge, smooth in Firefox and on iOS). The box is a hair narrower than
+   the art's 3:4 (0.739 against 0.75), so `cover` cut ~1.5% off the sides, and
+   Chrome draws a CROPPED picture on its GPU path without mipmaps: a 450px-wide
+   texture shrunk 7x to a 61px tile by plain bilinear sampling, which skips
+   most of the source pixels. Measured in headless Chrome on its GPU raster
+   path: the aliasing metric of a 61px tile went from 67 (the unfiltered
+   reference is 68) to 44 (a Lanczos downscale is 54); software raster was
+   fine either way. `fill` squeezes the art 1.5% across instead of cropping,
+   which is what Daptrius's own pipeline does when it scales his padded
+   canvas to 3:4. */
 .card-frame__art {
 	left: 3.0562%;
 	top: 2.3277%;
 	width: 93.8875%;
 	height: 95.3445%;
-	object-fit: cover;
+	object-fit: fill;
 	border-radius: 7.8125% / 5.8594%;
 }
 
@@ -1187,6 +1208,18 @@
 
 .card-frame__layer {
 	pointer-events: none;
+}
+
+/* The bordered picture's backing (FramedCard): the art's box, so it stays
+   inside the picture's own frame, in the empty card's grey. */
+.card-frame__backing {
+	position: absolute;
+	left: 3.0562%;
+	top: 2.3277%;
+	width: 93.8875%;
+	height: 95.3445%;
+	border-radius: 7.8125% / 5.8594%;
+	background-color: var(--color-gray-700);
 }
 
 /* A card with no picture at all: a grey card, about the frame's corner. */

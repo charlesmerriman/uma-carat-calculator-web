@@ -33,6 +33,7 @@ import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { MEMBER_STYLES, knownUmas, stylesOf, type UmaBuildRow } from "./teamCounts"
 import { CARD_LINK_TITLE, hoverCardProps } from "../../utils/hoverCards"
+import { CARD_TYPE_COLORS } from "../../utils/cardTypes"
 
 export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, moves }: {
 	label: string
@@ -63,7 +64,7 @@ export function UmaBuildList({ label, hint, counts, catalogue, sub, detail, move
 				return (
 					<RankRow
 						place={index + 1}
-						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-12" />}
+						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-14" />}
 						name={uma?.name ?? "Unknown uma"}
 						movement={moves?.get(row.uma)}
 						sub={sub?.(row.uma)}
@@ -105,7 +106,7 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 				return (
 					<RankRow
 						place={index + 1}
-						art={<CardArt card={card} />}
+						art={<CardArt card={card} className="w-12" />}
 						name={card?.name ?? "Unknown card"}
 						movement={moves?.get(row.card)}
 						sub={
@@ -116,6 +117,8 @@ export function CardBuildList({ label, hint, counts, catalogue, sub, moves }: {
 							</>
 						}
 						fill={leader > 0 ? row.share / leader : 0}
+						// The type's hue, the same as the chip's dot.
+						barColor={card?.card_type ? CARD_TYPE_COLORS[card.card_type] : undefined}
 						count={formatShare(row.share)}
 						href={hrefs.card(row.card)}
 						hover={hoverCardProps("card", row.card)}
@@ -141,8 +144,8 @@ export function TrioList({ trios, catalogue }: {
 				{shown.map((trio, index) => {
 					const umas = trio.umas.map((id) => catalogue.umasById.get(id)!)
 					return (
-						<li key={trio.umas.join("-")} className="flex min-w-0 items-center gap-2.5 px-1">
-							<span className="w-4 shrink-0 text-right font-mono text-xs tabular-nums text-gray-400">{index + 1}</span>
+						<li key={trio.umas.join("-")} className="flex min-w-0 items-center gap-3 px-1">
+							<span className="w-5 shrink-0 text-right font-display text-[17px] font-bold tabular-nums text-gray-400">{index + 1}</span>
 							<span className="flex shrink-0 gap-1">
 								{umas.map((uma) => {
 									const face = <FramedUma key={uma.id} src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-9" />
@@ -158,8 +161,8 @@ export function TrioList({ trios, catalogue }: {
 								})}
 							</span>
 							<span className="flex min-w-0 flex-col">
-								<b className="text-[13px] font-semibold text-gray-100">{umas.map((uma) => uma.name).join(" · ")}</b>
-								<span className="text-[11px] tabular-nums text-gray-400">
+								<b className="text-sm font-bold text-gray-100">{umas.map((uma) => uma.name).join(" · ")}</b>
+								<span className="text-xs tabular-nums text-gray-400">
 									{formatShare(trio.share)} of teams
 								</span>
 							</span>

@@ -13,7 +13,7 @@ import { ChevronDown, Plus, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { PageName, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
-import type { MemberStyle, PvpTeamMember } from "../../types/pvpTeam"
+import type { MemberStyle } from "../../types/pvpTeam"
 import { FramedUma } from "../FramedUma"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
@@ -31,15 +31,12 @@ export function CompactTeamGrid({
 	course,
 	releaseFor,
 	isFavorite,
-	isRecommended,
 	onPickUma,
 	onPickCard,
 	onStyleChange,
 	onClearUma,
 	onClearCard,
 }: TeamGridProps) {
-	const starred = (pool: "uma" | "support", id: number, member: PvpTeamMember) =>
-		isRecommended?.(pool, id, member.style) ?? false
 	// Each uma's name under her portrait opens her card (early access), since
 	// her tile opens the picker. The cards here are too small for a corner
 	// button and have no caption; their cards are a click away in the picker
@@ -74,8 +71,6 @@ export function CompactTeamGrid({
 													src={uma?.portrait ?? uma?.image ?? null}
 													layers={uma?.portrait_layers}
 													oshi={favorite}
-													// The guide's pick: an edge round the tile, under her ears and hat.
-													edge={starred("uma", member.uma, member) ? "Recommended by the guide" : undefined}
 													className="w-full"
 												/>
 											</button>
@@ -169,7 +164,6 @@ export function CompactTeamGrid({
 								>
 									{card ? <FramedCard card={card} className="h-full w-full" /> : <Art src={null} />}
 								</button>
-								{starred("support", entry.support_card, member) && <PickEdge round="rounded-md" />}
 								<ReleaseFlag status={releaseFor?.("support", entry.support_card)} />
 								<ClearButton label={`Remove ${card?.name ?? "this card"}`} onClick={() => onClearCard(position, slot)} small />
 							</div>
@@ -202,16 +196,6 @@ function Art({ src }: { src: string | null }): ReactNode {
 	) : (
 		<span className="block h-full w-full bg-gray-700" aria-hidden="true" />
 	)
-}
-
-/**
- * The guide's mark on a pick it recommends for this uma's style: an edge in
- * the site's colour around the tile, with nothing drawn on the art (Daptrius,
- * board 2026-11-20: "probably the border around the box, I don't like having
- * clutter on the card or Umas itself"; it was a red star in the corner).
- */
-function PickEdge({ round }: { round: string }) {
-	return <span role="img" aria-label="Recommended by the guide" title="Recommended by the guide" className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${round}`} />
 }
 
 /** The x in a filled place's corner, on hover and keyboard focus; the picker's Remove does the same on touch. */

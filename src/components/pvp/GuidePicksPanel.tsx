@@ -225,10 +225,11 @@ function PickTile({ item, shape, open, onClick }: {
 }) {
 	const aspect = shape === "card" ? "aspect-[3/4]" : "aspect-square"
 	const oshiIds = useOshiIds()
-	// The open / on-team ring is a state, drawn round whatever the art is;
-	// on an uma or a card it follows the frame's corner (App.css "Uma frames",
-	// "Card frames").
-	const ring = open ? "ring-2 ring-brand" : item.onTeam ? "ring-2 ring-brand/70" : ""
+	// The open ring is a state, drawn round whatever the art is; on an uma or
+	// a card it follows the frame's corner (App.css "Uma frames", "Card
+	// frames"). On the team is the tick alone: a ring there read as the
+	// picker's "recommended" edge (Daptrius, 2026-11-25).
+	const ring = open ? "ring-2 ring-brand" : ""
 	return (
 		<li className="min-w-0">
 			<PickDrag item={item}>

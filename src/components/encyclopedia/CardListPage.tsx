@@ -24,7 +24,6 @@ import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { GroupedGrid } from "./groups"
 import { cardIdKey, effectKey, groupsFor, letterKey, mergeSmallGroups, releaseKey } from "../../utils/encyclopediaGroups"
-import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { Chips, Count, PickChips, SearchBox, SelectFilter, SortControl, Toolbar } from "./listFilters"
 import { useCardEffects } from "../../services/encyclopediaQueries"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
@@ -104,8 +103,6 @@ const CardListBody = () => {
 		[cards, effectData, effectType, limitBreakOf, reversed]
 	)
 
-	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
-	useCatalogueCounts(catalogue)
 	// Headings for the whole list, whatever it is sorted by: a letter, a quarter,
 	// a rarity or an effect's value (utils/encyclopediaGroups.ts), filtered or not.
 	const groups = useMemo(() => {
@@ -167,6 +164,7 @@ const CardListBody = () => {
 		<div className={PAGE_CONTAINER}>
 			<EncyclopediaTabs />
 			<Toolbar
+				pinned
 				scope="cards"
 				search={<SearchBox label="Search support cards" placeholder="Search by name or ID..." value={query} onChange={setQuery} />}
 				count={catalogue.status === "ready" && <Count>{countLine(shown.length, "card", "cards")}</Count>}

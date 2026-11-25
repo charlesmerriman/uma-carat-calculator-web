@@ -632,6 +632,38 @@ describe('Timeline keeps its place when a filter is lifted', () => {
     expect(cardCount()).toBe(TOTAL_EVENTS)
   })
 
+  it('offers Reset filters only while something is set, and clears the search and the filter together', () => {
+    events = BASE_EVENTS.map((event, i) =>
+      i % 5 === 4 ? { ...event, banner_category: 'rerun' as BannerCategory } : event
+    )
+    renderTimeline()
+    const reset = () => screen.queryByRole('button', { name: 'Reset filters' })
+    expect(reset()).toBeNull()
+
+    const filter = screen.getByLabelText('Filter events') as HTMLSelectElement
+    fireEvent.change(filter, { target: { value: 'rerun' } })
+    fireEvent.change(search(), { target: { value: 'Window 1' } })
+    expect(cardCount()).toBe(2) // Windows 10 and 15
+    expect(reset()).not.toBeNull()
+
+    fireEvent.click(reset()!)
+    expect((search() as HTMLInputElement).value).toBe('')
+    expect(filter.value).toBe('all')
+    expect(sessionStorage.getItem('uma-planner-timeline-filter')).toBe('all')
+    expect(reset()).toBeNull()
+  })
+
+  it('holds the row when Reset filters widens the list, like clearing either control', () => {
+    renderTimeline()
+    fireEvent.change(search(), { target: { value: 'Window 1' } })
+
+    scrollListTo(3) // Window 13, row 12 of the unfiltered list
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
+
+    expect(screen.getByText(/2099\/1\/13 through/)).toBeInTheDocument()
+    expect(cardCount()).toBe(TOTAL_EVENTS)
+  })
+
   it('still restarts the list when a filter is tightened rather than lifted', () => {
     renderTimeline()
     fireEvent.change(search(), { target: { value: 'Window 1' } })

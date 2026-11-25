@@ -20,9 +20,11 @@ const CM21 = {
 	start_date: "2026-10-28T00:00:00Z", end_date: "2026-11-03T00:00:00Z",
 } as unknown as RaceEvent
 
+// Gentildonna's banner (88), with the uma on it: its Pull plans row draws her face.
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({
-		championsMeetingData: [CM21], leagueOfHeroesData: [], umaBannerData: [], supportBannerData: [], stepUpBannerData: [],
+		championsMeetingData: [CM21], leagueOfHeroesData: [], supportBannerData: [], stepUpBannerData: [],
+		umaBannerData: [{ id: 88, banner_timeline: { id: 5 }, umas: [{ id: 41, name: "Maruzensky", portrait: "maruzensky.png", image: "maruzensky.png" }] }],
 	}),
 }))
 // The reader's own saved teams: one for CM 21 with Maruzensky on Pace.
@@ -39,10 +41,12 @@ vi.mock("../hooks/usePvpCatalogue", () => ({
 		status: "ready",
 		umas: [],
 		cards: [],
-		umasById: new Map([[41, { id: 41, name: "Maruzensky", portrait: null, image: null }]]),
+		// Maruzensky and Kitasan Black have their game colours; Fine Motion has none (the accent).
+		catalogue: { umas: [], support_cards: [], character_colours: { "1004": ["#E44E3A", "#2C2F80"], "1068": ["#3B3B3B", "#D63A3A"] } },
+		umasById: new Map([[41, { id: 41, name: "Maruzensky", portrait: null, image: null, character_id: 1004 }]]),
 		cardsById: new Map([
-			[1, { id: 1, name: "Kitasan Black", card_type: "speed", image: null }],
-			[2, { id: 2, name: "Fine Motion", card_type: "wit", image: null }],
+			[1, { id: 1, name: "Kitasan Black", card_type: "speed", image: null, character_id: 1068 }],
+			[2, { id: 2, name: "Fine Motion", card_type: "wit", image: null, character_id: null }],
 		]),
 	}),
 }))
@@ -157,9 +161,26 @@ describe("RankingsPage", () => {
 		expect(rows[1]).toHaveTextContent("Fine Motion")
 		expect(rows[1]).toHaveTextContent("1 borrowed")
 		expect(fetchMock.mock.calls[0][0]).toMatch(/\/rankings\/guides$/)
-		// The band says what is counted.
-		expect(within(screen.getByRole("region", { name: "What the guides recommend" })).getByText("Guides counted")).toBeInTheDocument()
 		expect((await screen.findByText(/^Updated /)).tagName).toBe("TIME")
+	})
+
+	it("opens on first place as the hero, on her colours, with what is counted and no description", async () => {
+		renderPage(true)
+		await screen.findByRole("region", { name: "Overall" })
+		const hero = screen.getByRole("region", { name: "What the guides recommend" })
+		expect(within(hero).getByRole("heading", { level: 2, name: "Kitasan Black" })).toBeInTheDocument()
+		expect(hero).toHaveTextContent("#1 overall")
+		expect(hero).toHaveTextContent("In 2 decks, 100% of those counted")
+		expect(within(hero).getByText("Guides counted")).toBeInTheDocument()
+		// Her two colours paint the field (a fill, never ink).
+		expect(hero.getAttribute("style")).toContain("--c1: #3B3B3B")
+		// The owner, 2026-11-25: no line explaining the page.
+		expect(hero).not.toHaveTextContent(/published guides|source sheet/)
+		// Second place sits under the hero; first isn't drawn twice there.
+		const podium = screen.getByRole("list", { name: "Second and third, Overall" })
+		expect(within(podium).getAllByRole("listitem")).toHaveLength(1)
+		expect(within(podium).getByText("Fine Motion")).toBeInTheDocument()
+		expect(within(podium).getByLabelText("Place 2")).toBeInTheDocument()
 	})
 
 	it("draws each row's movement since the week's start, counted under the same filters", async () => {
@@ -250,9 +271,15 @@ describe("RankingsPage", () => {
 		expect(row).toHaveTextContent("36%of planners")
 		expect(row).toHaveTextContent("typical · avg 165")
 		expect(row).toHaveTextContent("Predicted")
-		const band = screen.getByRole("region", { name: "What players plan to pull on" })
-		expect(band).not.toHaveTextContent("16,000")
-		expect(within(band).getByText("Plan the top banner")).toBeInTheDocument()
+		// The banner's face: the uma on it, in the site's frame.
+		expect(row.querySelector(".uma-frame img")).toHaveAttribute("src", "maruzensky.png")
+		// The hero is the banner most planners plan, its share in its own line.
+		const hero = screen.getByRole("region", { name: "What players plan to pull on" })
+		expect(hero).not.toHaveTextContent("16,000")
+		expect(within(hero).getByRole("heading", { level: 2, name: "Gentildonna" })).toBeInTheDocument()
+		expect(hero).toHaveTextContent("36% of planners have it in their plan")
+		expect(within(hero).getByText("Banners ahead")).toBeInTheDocument()
+		expect(hero).not.toHaveTextContent(/staff left out|middle planner/)
 		expect(screen.getByRole("region", { name: "When the pulls fall due" })).toBeInTheDocument()
 	})
 
@@ -292,6 +319,12 @@ describe("RankingsPage", () => {
 		// What beats players: a share of the named losses, never a count.
 		const beats = screen.getByRole("region", { name: "What beats players" })
 		expect(within(beats).getByText("14%")).toBeInTheDocument()
+		// The hero: the uma built most, and beside her the uma players lose to most.
+		const hero = screen.getByRole("region", { name: "Libra Cup: what players build, and what wins" })
+		expect(within(hero).getByRole("heading", { level: 2, name: "Maruzensky" })).toBeInTheDocument()
+		expect(hero).toHaveTextContent("On 75% of the teams saved for this event")
+		expect(within(hero).getByText("Beats players most").parentElement).toHaveTextContent("14%Maruzensky")
+		expect(hero).not.toHaveTextContent(/Every team of three/)
 		expect(within(screen.getByRole("region", { name: "Your team" })).getByText("#1")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Trios players build most" })).getByText("50% of teams")).toBeInTheDocument()
 		// The opened row reads the gallery and CM Runs beside the build count.
@@ -304,7 +337,12 @@ describe("RankingsPage", () => {
 		renderPage(true, { url: "/app/rankings?view=players" })
 		const favourites = await screen.findByRole("region", { name: "Favorite umas" })
 		expect(within(favourites).getByText("12")).toBeInTheDocument()
-		expect(screen.getByRole("region", { name: "Who plays here" })).not.toHaveTextContent("200")
+		const hero = screen.getByRole("region", { name: "Who plays here" })
+		expect(hero).not.toHaveTextContent("200")
+		expect(within(hero).getByRole("heading", { level: 2, name: "Maruzensky" })).toBeInTheDocument()
+		expect(hero).toHaveTextContent("Picked as a favorite by 12 players")
+		// No privacy aside nobody asked for (the owner, 2026-11-25).
+		expect(hero).not.toHaveTextContent(/staff left out|never a name/)
 		expect(within(screen.getByRole("region", { name: "Ranks" })).getByRole("img", { name: "Team Trials: Class 6 38%" })).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Income options" })).getByText("42%")).toBeInTheDocument()
 		// The one on sale leads, with when it ends; the past one waits behind "Show earlier".

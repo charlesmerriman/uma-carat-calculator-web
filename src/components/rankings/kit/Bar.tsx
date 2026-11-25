@@ -1,5 +1,6 @@
 /**
- * A ranking's bar (mock 02-kit-row.png in notes/rankings-redesign/mocks/).
+ * A ranking's bar (mock 02-kit-row.png in notes/rankings-redesign/mocks/;
+ * the 2026-11-25 polish in notes/rankings-polish-plan.md).
  *
  * SCALED TO THE LEADER, NOT TO 100%: shares are small (29% at the top of
  * Overall), so a bar out of 100% would flatten the whole list. The caller
@@ -7,10 +8,13 @@
  * full and every other row reads against it. The share stays as text beside
  * the count.
  *
- * Three looks: the plain bar (a brand/35 fill with a 2 px brand edge where it
- * stops), a stacked bar (`parts`, e.g. an uma's running styles, each part a
- * share of the WHOLE track) and the hairline (`hairline`, 3 px, for the
- * window's compact rows and phones, where the bar column goes).
+ * SOLID, IN A COLOUR THAT MEANS SOMETHING: a card's type hue (`color`, the
+ * chip's dot), the running green for a win rate, the loss red, else the
+ * theme's accent. No tinted fills (the old brand/35 read as muddy khaki).
+ * Three shapes: the plain bar on the inset track, a stacked bar (`parts`,
+ * e.g. an uma's running styles, each part a share of the WHOLE track) and the
+ * hairline (`hairline`, 4 px, for the window's compact rows and phones,
+ * where the bar column goes).
  */
 
 export interface BarPart {
@@ -24,34 +28,31 @@ export interface BarPart {
 
 export type BarTone = "win" | "loss"
 
-/** Each tone's full bar (a tint with a solid end) and its hairline. Whole class names, so Tailwind sees them. */
-const TONES: Record<BarTone | "brand", { ink: string; line: string }> = {
-	brand: { ink: "bg-brand/35 border-brand", line: "bg-brand" },
-	win: { ink: "bg-status-running/35 border-status-running", line: "bg-status-running" },
-	loss: { ink: "bg-highlight/35 border-highlight", line: "bg-highlight" },
+/** Each tone's fill. Whole class names, so Tailwind sees them. */
+const TONES: Record<BarTone, string> = {
+	win: "bg-status-running",
+	loss: "bg-highlight",
 }
 
-export function Bar({ fill = 0, parts, tone, hairline = false, className = "" }: {
+export function Bar({ fill = 0, parts, tone, color, hairline = false, className = "" }: {
 	/** 0 to 1 of the track. Ignored when `parts` is given. */
 	fill?: number
 	/** A stacked bar: values are summed and each part takes its share of `fill`'s width. */
 	parts?: BarPart[]
 	/** "win": the running green, for a win rate. "loss": the highlight red, for what beats players. */
 	tone?: BarTone
+	/** A plain bar's colour (a card type's hue). Without it, and without a tone, the theme's accent. */
+	color?: string
 	hairline?: boolean
 	className?: string
 }) {
 	const width = `${Math.max(0, Math.min(1, fill)) * 100}%`
-	const track = hairline ? "h-[3px] rounded-full" : "h-[18px] rounded-[5px]"
+	const track = `relative block min-w-0 overflow-hidden rounded-full bg-(--enc-inset) ${hairline ? "h-1" : "h-3.5"}`
 	if (parts) {
 		const total = parts.reduce((sum, part) => sum + part.value, 0)
 		return (
-			<span
-				role="img"
-				aria-label={parts.map((part) => `${part.label} ${part.value}`).join(", ")}
-				className={`relative block min-w-0 overflow-hidden bg-gray-900/70 ${track} ${className}`}
-			>
-				<span className="absolute inset-y-0 left-0 flex" style={{ width }}>
+			<span role="img" aria-label={parts.map((part) => `${part.label} ${part.value}`).join(", ")} className={`${track} ${className}`}>
+				<span className="absolute inset-y-0 left-0 flex overflow-hidden rounded-full" style={{ width }}>
 					{total > 0 &&
 						parts.map((part) => (
 							<span key={part.key} className="h-full" style={{ width: `${(part.value / total) * 100}%`, background: part.color }} />
@@ -60,12 +61,12 @@ export function Bar({ fill = 0, parts, tone, hairline = false, className = "" }:
 			</span>
 		)
 	}
-	const { ink, line } = TONES[tone ?? "brand"]
 	return (
-		<span aria-hidden="true" className={`relative block min-w-0 overflow-hidden bg-gray-900/70 ${track} ${className}`}>
+		<span aria-hidden="true" className={`${track} ${className}`}>
 			<span
-				className={`absolute inset-y-0 left-0 ${hairline ? line : `rounded-l-[5px] border-r-2 ${ink}`}`}
-				style={{ width }}
+				data-bar-fill={hairline ? "hairline" : "bar"}
+				className={`absolute inset-y-0 left-0 rounded-full ${tone ? TONES[tone] : color ? "" : "bg-brand"}`}
+				style={{ width, ...(color && !tone ? { background: color } : {}) }}
 			/>
 		</span>
 	)

@@ -11,41 +11,163 @@
  * menu with a button that turns it round.
  */
 
-import type { CSSProperties, ReactNode } from "react"
-import { ArrowDownUp, RotateCcw, Search } from "lucide-react"
-import { resetRememberedFilters, useHasRememberedFilters } from "../../hooks/useRememberedFilter"
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { ArrowDownUp, ChevronDown, RotateCcw, Search, SlidersHorizontal } from "lucide-react"
+import { resetRememberedFilters, useHasRememberedFilters, useRememberedFilter } from "../../hooks/useRememberedFilter"
 import { directionWords } from "../../utils/encyclopedia"
 
-/** The card: `search` and `count` on its first line, then the shared `settings`, then the filters. */
-export function Toolbar({ search, count, scope, settings, children }: {
+/**
+ * The card: `search` and `count` on its first line, then the shared `settings`, then the filters.
+ *
+ * `pinned` (the Encyclopedia's three lists; Daptrius, board "Encyclopedia
+ * sticky nav", 2026-11-25): the first line becomes a bar that stays in view
+ * under the screen's bar while the list scrolls, with a Filters button that
+ * shows and hides the filters under it. The filters drop down from the bar
+ * wherever the list is scrolled to, so they are always one click away and
+ * never in the way. Closed or open is remembered for the tab, for every list
+ * at once.
+ */
+export function Toolbar({ search, count, scope, settings, pinned = false, children }: {
 	search: ReactNode
 	count?: ReactNode
 	/** The list's remembered-filter scope ("cards"); with it, a "Reset filters" button shows while anything is set. */
 	scope?: string
 	/** Where and Collection: one setting for every list, so Reset leaves them (utils/encyclopedia.ts SHARED_WHERE_KEY). */
 	settings?: ReactNode
+	pinned?: boolean
 	children: ReactNode
 }) {
+	// One grid for both, so every row's chips start at one left edge.
+	const filters = (
+		<div className="enc-filters">
+			{settings && (
+				<>
+					{settings}
+					<p className="enc-filters__divider">Set once for every list</p>
+				</>
+			)}
+			{children}
+		</div>
+	)
+	const end = (
+		<>
+			{scope && <ResetFilters scope={scope} />}
+			{count}
+		</>
+	)
+	if (pinned) return <PinnedToolbar search={search} end={end} scope={scope}>{filters}</PinnedToolbar>
 	return (
 		<div className="enc-toolbar">
 			<div className="enc-toolbar__top">
 				{search}
-				<div className="enc-toolbar__end">
-					{scope && <ResetFilters scope={scope} />}
-					{count}
-				</div>
+				<div className="enc-toolbar__end">{end}</div>
 			</div>
-			{/* One grid for both, so every row's chips start at one left edge. */}
-			<div className="enc-filters">
-				{settings && (
-					<>
-						{settings}
-						<p className="enc-filters__divider">Set once for every list</p>
-					</>
+			{filters}
+		</div>
+	)
+}
+
+// Outside every list's own scope ("skills:"), so Reset filters leaves it alone.
+const FILTERS_OPEN_KEY = "enc-panel:filters"
+const FLAG_VALUES = ["0", "1"] as const
+
+/**
+ * The pinned bar and its filters (Toolbar's `pinned`). Two ways to show the
+ * filters, one button:
+ *
+ *   - AT THE TOP of the list they sit under the bar in the page, as before,
+ *     and the button folds them away (remembered for the tab, every list).
+ *   - SCROLLED DOWN, with those out of sight above, the button drops the
+ *     same filters down from the pinned bar, over the list, scrolling inside
+ *     themselves when tall. Scrolling back to the top folds the drop-down.
+ *
+ * Why not one block that pins with its filters: the filters would then cover a
+ * third of the screen all the way down, and folding them when the bar pinned
+ * would pull the list up under the reader by their height.
+ *
+ * `data-popup-top-bar` keeps a skill's card below the bar (pvp/hoverPopup.tsx).
+ */
+function PinnedToolbar({ search, end, scope, children }: { search: ReactNode; end: ReactNode; scope?: string; children: ReactNode }) {
+	const [openFlag, setOpenFlag] = useRememberedFilter<"0" | "1">(FILTERS_OPEN_KEY, "1", FLAG_VALUES)
+	const open = openFlag === "1"
+	// A mark on the button while a filter, the sort or the search is set, so
+	// filters out of sight never narrow the list unannounced.
+	const active = useHasRememberedFilters(scope ?? "")
+	const finderRef = useRef<HTMLDivElement>(null)
+	const panelRef = useRef<HTMLDivElement>(null)
+	// True while the filters in the page are out of sight under the pinned bar
+	// (or folded) and the bar is pinned: the button then works the drop-down.
+	const [away, setAway] = useState(false)
+	const [dropped, setDropped] = useState(false)
+	useEffect(() => {
+		let frame = 0
+		const measure = () => {
+			frame = 0
+			const finder = finderRef.current
+			if (!finder) return
+			const bar = finder.getBoundingClientRect()
+			// Pinned: sitting right under the screen's bar (ScreenTabs), whichever scroller moves.
+			const tabs = document.querySelector("[data-screen-tabs]")?.getBoundingClientRect()
+			const pinnedNow = tabs !== undefined && bar.height > 0 && Math.abs(bar.top - tabs.bottom) < 1
+			const panel = panelRef.current?.getBoundingClientRect()
+			const panelInSight = panel !== undefined && panel.height > 0 && panel.bottom > bar.bottom + 8
+			const next = pinnedNow && !panelInSight
+			setAway(next)
+			if (!next) setDropped(false)
+		}
+		const later = () => {
+			if (!frame) frame = requestAnimationFrame(measure)
+		}
+		// Capture: the desktop shell scrolls an inner box, and a scroll doesn't bubble.
+		window.addEventListener("scroll", later, { capture: true, passive: true })
+		window.addEventListener("resize", later)
+		measure()
+		return () => {
+			cancelAnimationFrame(frame)
+			window.removeEventListener("scroll", later, { capture: true })
+			window.removeEventListener("resize", later)
+		}
+	}, [])
+	const panelId = useId()
+	const dropId = useId()
+	const expanded = away ? dropped : open
+	return (
+		<>
+			<div ref={finderRef} className="enc-finder" data-popup-top-bar="">
+				<div className="enc-finder__bar">
+					{search}
+					<div className="enc-toolbar__end">
+						{end}
+						<button
+							type="button"
+							className="enc-finder__toggle"
+							aria-expanded={expanded}
+							aria-controls={away ? dropId : panelId}
+							onClick={() => (away ? setDropped(!dropped) : setOpenFlag(open ? "0" : "1"))}
+						>
+							<SlidersHorizontal aria-hidden="true" />
+							Filters
+							{scope && active && (
+								<>
+									<span className="enc-finder__on" aria-hidden="true" />
+									<span className="sr-only"> (some set)</span>
+								</>
+							)}
+							<ChevronDown aria-hidden="true" className="enc-finder__chevron" />
+						</button>
+					</div>
+				</div>
+				{away && dropped && (
+					<div id={dropId} className="enc-finder__drop enc-toolbar">
+						{children}
+					</div>
 				)}
+			</div>
+			{/* The filters in the page. Out of reach while the drop-down holds the same chips. */}
+			<div ref={panelRef} id={panelId} className="enc-toolbar" hidden={!open} inert={away && dropped}>
 				{children}
 			</div>
-		</div>
+		</>
 	)
 }
 

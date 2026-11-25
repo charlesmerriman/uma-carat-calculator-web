@@ -28,6 +28,19 @@ describe("CopyTimelineLink", () => {
 		expect(toast.success).toHaveBeenCalledWith("Link copied.")
 	})
 
+	it("copies a banner's /banner/<id> link, which unfurls with the banner's own preview", async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined)
+		setClipboard(writeText)
+		render(<CopyTimelineLink focus={{ kind: "banner", id: 73 }} name="Taiki Shuttle (Camping)" />)
+
+		await userEvent.click(screen.getByRole("button", { name: "Copy link to Taiki Shuttle (Camping)" }))
+
+		// The API answers it (backend views/banner_share.py) and sends people on
+		// to /app/timeline?focus=banner-73.
+		expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/banner/73`)
+		expect(toast.success).toHaveBeenCalledWith("Link copied.")
+	})
+
 	it("shows the link to copy by hand when the clipboard is refused", async () => {
 		setClipboard(vi.fn().mockRejectedValue(new Error("denied")))
 		render(<CopyTimelineLink focus={{ kind: "banner", id: 3 }} name="Special Week" />)
@@ -35,7 +48,7 @@ describe("CopyTimelineLink", () => {
 		await userEvent.click(screen.getByRole("button", { name: /copy link/i }))
 
 		await waitFor(() =>
-			expect(toast).toHaveBeenCalledWith(`${window.location.origin}/app/timeline?focus=banner-3`)
+			expect(toast).toHaveBeenCalledWith(`${window.location.origin}/banner/3`)
 		)
 		expect(toast.success).not.toHaveBeenCalled()
 	})
