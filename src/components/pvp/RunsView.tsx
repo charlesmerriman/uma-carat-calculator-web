@@ -46,7 +46,7 @@
 import { Fragment, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeftRight, Check, ChevronDown, Crown, FileUp, Medal, Loader2, Repeat, Trash2, Trophy, Users, X } from "lucide-react"
+import { ArrowLeftRight, Check, ChevronDown, Crown, Medal, Loader2, Repeat, Trash2, Trophy, Users, X } from "lucide-react"
 import { useAccount } from "../../services/AuthContext"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
@@ -378,16 +378,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 				) : (
 					<LeagueTabs tab={tab} runs={runs} final={final} shape={shape} onChange={setTab} />
 				)}
-				<span className="flex items-center gap-2.5">
-					{/* A CM only: the import reads Champions replays (notes/cm-runs-plan-2.md, PR 5). */}
-					{shape.rounds && (
-						<button type="button" className={SOFT_BUTTON} aria-expanded={fillingFromReplays} onClick={() => setFillingFromReplays((open) => !open)}>
-							<FileUp className="h-4 w-4" aria-hidden="true" />
-							Fill from replays
-						</button>
-					)}
-					<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
-				</span>
+				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
 			</div>
 
 			{shape.rounds && watch.state !== "off" && (
