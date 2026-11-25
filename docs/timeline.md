@@ -491,6 +491,11 @@ Every Timeline card also carries a **Copy link** pill (`CopyTimelineLink`) that 
 same URL for itself: a banner window by its first banner, a race by its `cm`/`loh` ref, a
 marker by `kind` + `sourceId` (each half of a pair links to itself; both land on the pair).
 The URL is built in the click handler from `window.location.origin`, never at render time.
+**A banner window's pill copies `/banner/<id>` instead** (`bannerLinkPath`, 2026-11-25): the
+API serves that path with the banner's own link preview (its name, dates, support cards and
+art; backend `views/banner_share.py`) and sends people on to `?focus=banner-<id>`, since the
+static host answers every `?focus=` with the one prerendered Timeline page and its generic
+tags. Races and markers keep the `?focus=` link.
 
 - **Why not a `#hash`.** The Timeline windows its list (ten cards a page, or a growing
   prefix under infinite scroll) and hides past events by default, so the element a browser
