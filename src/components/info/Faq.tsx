@@ -20,7 +20,7 @@ const categoryHeading = "text-xl font-semibold text-brand"
 const question = "text-lg font-semibold text-gray-100"
 
 /**
- * "Copy link" on one question: its /question/<slug> link (faqQuestionLinkPath),
+ * "Copy link" on one question: its /help/<slug> link (faqQuestionLinkPath),
  * which Discord and X unfurl with the question and the start of its answer
  * (backend views/faq_share.py), then open here at /faq#<slug>. A /faq#slug
  * link can only ever preview as the whole FAQ: the #fragment never reaches a

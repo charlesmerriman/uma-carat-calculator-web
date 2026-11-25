@@ -58,7 +58,7 @@ export function bannerLinkPath(timelineId: number): string {
 }
 
 /**
- * The path of a FAQ question's link, /question/<slug>: what a question's
+ * The path of a FAQ question's link, /help/<slug>: what a question's
  * "Copy link" copies. A /faq#slug link can't unfurl as one question (the
  * #fragment never reaches a server), so the API serves this one (backend
  * views/faq_share.py) with the question's own preview, then sends people on
@@ -66,5 +66,5 @@ export function bannerLinkPath(timelineId: number): string {
  * the FAQ page too. The dev server redirects it itself (vite.config.ts).
  */
 export function faqQuestionLinkPath(slug: string): string {
-	return `/question/${encodeURIComponent(slug)}`
+	return `/help/${encodeURIComponent(slug)}`
 }

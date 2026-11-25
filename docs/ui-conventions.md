@@ -2926,9 +2926,9 @@ is the one renderer for all of it, and it turns a site-relative href into a rout
 react-markdown's default of not rendering raw HTML; do not add `rehype-raw`.
 
 Each FAQ question has a **Copy link** pill beside it (`CopyQuestionLink` in `Faq.tsx`) that
-copies `/question/<slug>` (`faqQuestionLinkPath`), never `/faq#<slug>`: a `#fragment` never
+copies `/help/<slug>` (`faqQuestionLinkPath`), never `/faq#<slug>`: a `#fragment` never
 reaches a server, so every `/faq#…` link unfurls in Discord as the whole FAQ. The API serves
-`/question/<slug>` with the question and the start of its answer (backend
+`/help/<slug>` with the question and the start of its answer (backend
 `views/faq_share.py`) and sends people on to `/faq#<slug>`, where the effect above scrolls
 to it. Not `/faq/<slug>`: App Platform's ingress matches prefixes only, so a `/faq` rule
 would take this page too. Built in the click handler, as every share link is.

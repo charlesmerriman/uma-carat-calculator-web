@@ -64,7 +64,7 @@ function buildVersionPlugin(): Plugin {
 /**
  * A shared plan's link is /plan/<id> (src/utils/appRoutes.ts sharedPlanLinkPath),
  * a guide's is /guide/cm-21 (guideLinkPath), a Timeline banner's /banner/73
- * (bannerLinkPath) and a FAQ question's /question/<slug> (faqQuestionLinkPath).
+ * (bannerLinkPath) and a FAQ question's /help/<slug> (faqQuestionLinkPath).
  * Deployed, ingress rules send them to the API, which serves the link-preview
  * page and moves people on to /app/<id>, /app/pvp?event=cm-21,
  * /app/timeline?focus=banner-73 or /faq#<slug>. The dev server has no such rules, so
@@ -81,13 +81,13 @@ function sharedPlanLinkPlugin(): Plugin {
         const plan = path.match(/^\/plan\/([A-Za-z0-9]{8})\/?$/)
         const guide = path.match(/^\/guide\/((?:cm|loh)-\d+)\/?$/)
         const banner = path.match(/^\/banner\/(\d+)\/?$/)
-        const question = path.match(/^\/question\/([A-Za-z0-9_-]+)\/?$/)
+        const help = path.match(/^\/help\/([A-Za-z0-9_-]+)\/?$/)
         const style = new URLSearchParams(query).get('style')
         let location: string
         if (plan) location = `/app/${plan[1]}`
         else if (guide) location = `/app/pvp?event=${guide[1]}${style ? `&style=${encodeURIComponent(style)}` : ''}`
         else if (banner) location = `/app/timeline?focus=banner-${banner[1]}`
-        else if (question) location = `/faq#${question[1]}`
+        else if (help) location = `/faq#${help[1]}`
         else return next()
         res.statusCode = 302
         res.setHeader('Location', location)

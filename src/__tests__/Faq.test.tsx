@@ -43,7 +43,7 @@ describe("Faq page", () => {
 		expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "/privacy-policy")
 	})
 
-	it("copies a question's /question/<slug> link, which unfurls as that question", async () => {
+	it("copies a question's /help/<slug> link, which unfurls as that question", async () => {
 		const writeText = vi.fn().mockResolvedValue(undefined)
 		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true })
 		renderPage(SNAPSHOT as SiteContent)
@@ -52,7 +52,7 @@ describe("Faq page", () => {
 		await userEvent.click(screen.getByRole("button", { name: `Copy link to ${item.question}` }))
 
 		// The API answers it (backend views/faq_share.py), then sends people on to /faq#<slug>.
-		expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/question/${item.slug}`)
+		expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/help/${item.slug}`)
 		expect(toast.success).toHaveBeenCalledWith("Link copied.")
 	})
 
