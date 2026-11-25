@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
-import { useSkillListState } from "../../hooks/useSkillList"
+import { rememberSkillRowsDrawn, skillRowsDrawn, useSkillListState } from "../../hooks/useSkillList"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { reportCounts } from "../../utils/encyclopediaCounts"
@@ -113,7 +113,15 @@ const SkillsPageBody = () => {
 	// remembered pick never hides behind a closed button.
 	const [openFlag, setOpen] = useRememberedFilter<string>("skills-panel:conditions", "0", REVERSED_VALUES)
 	const conditionsOpen = openFlag === "1" || tagPicks.length > 0
-	const [shown, setShown] = useState(PAGE)
+	// Every setting that changes which rows the list holds and in what order.
+	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
+	// Back on the list with the filters it was left with, it draws as many rows
+	// as it had then, in one go, so the restored scroll lands on them
+	// (skillRowsDrawn, hooks/useSkillList.ts). Otherwise one page.
+	const [shown, setShown] = useState(() => skillRowsDrawn(filterKey) ?? PAGE)
+	useEffect(() => {
+		rememberSkillRowsDrawn(filterKey, shown)
+	}, [filterKey, shown])
 
 	// The tabs' headline numbers. The Umas and Support cards tabs count from the
 	// catalogue, which the hover cards already load on this page; the Skills
@@ -165,7 +173,6 @@ const SkillsPageBody = () => {
 	}, [hasMore, shown])
 
 	// A new search starts from the first page again.
-	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
 	const [shownFor, setShownFor] = useState(filterKey)
 	if (shownFor !== filterKey) {
 		setShownFor(filterKey)
