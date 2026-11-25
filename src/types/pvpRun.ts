@@ -28,6 +28,27 @@ export interface PvpRunRace {
 	/** 1..5 on a day's ticket, 1 in the final. */
 	race: number
 	winner: number | null
+	/**
+	 * Where the player's umas finished, 1st to 9th, each optional (CM only;
+	 * notes/cm-runs-plan-2.md). The winner is 1st when placed; a loss has none
+	 * of them 1st. Left out of a PUT, the server keeps what it has, so an
+	 * older build never wipes them.
+	 */
+	places?: PvpRunPlace[]
+	/** On a loss, the uma that won it (catalogue id), or null. Left out of a PUT: kept. */
+	lost_to?: number | null
+	/** Its style, from a replay import later; "" until then. */
+	lost_to_style?: string
+}
+
+/** One of the player's umas' finishing place in a race. */
+export interface PvpRunPlace {
+	/** The runner's spot, 0..2. */
+	position: number
+	/** 1..9. */
+	place: number
+	/** The game's code for why she lost, from a replay; "" by hand. */
+	loss_reason?: string
 }
 
 export type PvpFinalsGroup = "" | "A" | "B"
