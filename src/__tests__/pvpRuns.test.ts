@@ -8,6 +8,10 @@ import {
 	openingTab,
 	ticketNumber,
 	ordinal,
+	formatPoints,
+	placePoints,
+	racePoints,
+	tallyPoints,
 	registeredLineups,
 	runDayAt,
 	runShape,
@@ -335,7 +339,7 @@ describe("a League of Heroes", () => {
 	const at = (iso: string) => runDayAt(loh, DEFAULT_CONSTANTS, new Date(iso), shape)
 
 	it("is thirty tickets in fives, with no rounds", () => {
-		expect(shape).toEqual({ days: 6, tickets: 5, rounds: false })
+		expect(shape).toEqual({ days: 6, tickets: 5, rounds: false, places: 12, points: true })
 	})
 
 	it("only says whether it's on: a saved ticket can run on any later day", () => {
@@ -379,6 +383,18 @@ describe("a League of Heroes", () => {
 		expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 42, 93, 96].map(ordinal)).toEqual(
 			["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "42nd", "93rd", "96th"]
 		)
+	})
+
+	it("scores a LoH race by places, once all three are placed", () => {
+		const runners = [{ position: 0 }, { position: 1 }, { position: 2 }]
+		const race = (...places: number[]) => ({ race: 1, winner: null, places: places.map((place, position) => ({ position, place, loss_reason: "" })) })
+		expect([1, 2, 3, 4, 5, 6, 12].map(placePoints)).toEqual([100, 60, 40, 30, 20, 10, 10])
+		// The plan's worked example: 4th, 1st, 11th.
+		expect(racePoints(race(4, 1, 11), runners)).toBe(140)
+		expect(racePoints(race(4, 1), runners)).toBeNull()
+		const run = { runners, races: [race(4, 1, 11), race(2, 3), { race: 3, winner: 0 }] }
+		expect(tallyPoints([run, { runners, races: [] }] as never)).toEqual({ points: 140, scored: 1, tickets: 1 })
+		expect(formatPoints(1240)).toBe("1,240")
 	})
 
 	it("groups the thousands of a LoH placement", () => {

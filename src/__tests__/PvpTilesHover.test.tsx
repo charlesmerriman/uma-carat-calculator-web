@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { InlineNote, SkillCell, SkillChip, UmaTile } from "../components/pvp/PvpTiles"
 import { SkillMentionsContext } from "../components/pvp/skillMentionsContext"
@@ -133,6 +133,34 @@ describe("the drawn popup", () => {
 
 		await user.unhover(chip)
 		await waitFor(() => expect(drawnPopup()).toBeNull())
+	})
+
+	// The course map scrolls the page by itself to keep a lit skill's tile under
+	// the pointer when the map above changes height. Closing on ANY scroll shut
+	// the card a moment after it opened, round and round (the owner, 2026-11-25,
+	// on v2.25). It closes only when the scroll carries its tile out from under
+	// the pointer.
+	it("stays open through a scroll that leaves its tile under the pointer, and closes when the tile moves away", async () => {
+		const user = userEvent.setup()
+		render(inGuide(<SkillChip skill={skill()} note="" />))
+		const chip = screen.getByRole("group", { name: "Dominator" })
+		await user.hover(chip)
+		await waitFor(() => expect(drawnPopup()).not.toBeNull())
+
+		// jsdom has no elementFromPoint: what the pointer is over, set per step.
+		const under = vi.fn<(x: number, y: number) => Element | null>(() => chip)
+		Object.defineProperty(document, "elementFromPoint", { value: under, configurable: true })
+		try {
+			window.dispatchEvent(new Event("scroll"))
+			await new Promise((resolve) => setTimeout(resolve, 50))
+			expect(drawnPopup()).not.toBeNull()
+
+			under.mockReturnValue(document.body)
+			window.dispatchEvent(new Event("scroll"))
+			await waitFor(() => expect(drawnPopup()).toBeNull())
+		} finally {
+			delete (document as { elementFromPoint?: unknown }).elementFromPoint
+		}
 	})
 
 	it("opens on a tap on a touch screen, and Escape closes it", async () => {

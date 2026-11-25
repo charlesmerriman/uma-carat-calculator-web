@@ -78,6 +78,7 @@ import {
 	contentOf,
 	emptyContent,
 	findRun,
+	formatPoints,
 	formatRate,
 	fullyPlaced,
 	isPastDay,
@@ -90,6 +91,7 @@ import {
 	ordinal,
 	placeOf,
 	placeTallies,
+	racePoints,
 	beatenBy,
 	setLostTo,
 	setPlace,
@@ -102,6 +104,7 @@ import {
 	sameLineup,
 	setRace,
 	summarizeRuns,
+	tallyPoints,
 	tallyRun,
 	ticketCounts,
 	ticketNumber,
@@ -109,6 +112,7 @@ import {
 	ticketState,
 	unloggedTickets,
 	unracedSlots,
+	type PointsTally,
 	type RunShape,
 	type Tally,
 	type TicketState,
@@ -183,11 +187,13 @@ interface Shared {
 	umas: CatalogueUma[]
 	skillsById: Map<number, CatalogueSkill>
 	event: RaceEvent
-	/** "Log places" (on this device): the 1 to 9 strips under the open race. */
+	/** "Log places" (on this device): the place strips under the open race. */
 	logPlaces: boolean
 	onLogPlaces: (on: boolean) => void
-	/** A CM: places are allowed. The API refuses them on a League of Heroes. */
-	placesAllowed: boolean
+	/** Runners in a race, so the strip runs 1st to this: 9 in a CM, 12 in a LoH (RunShape). */
+	places: number
+	/** A LoH: races are scored (LOH_PLACE_POINTS), and points show where a CM shows wins. */
+	points: boolean
 	/** Won by's quick picks: the umas that beat the player most this event, at most four. */
 	wonByChips: number[]
 	oshiIds: ReadonlySet<number>
@@ -325,7 +331,8 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 		event,
 		logPlaces,
 		onLogPlaces: setLogPlaces,
-		placesAllowed: shape.rounds,
+		places: shape.places,
+		points: shape.points,
 		wonByChips: beatenBy(runs).umas.slice(0, WON_BY_CHIPS).map((entry) => entry.uma),
 		oshiIds,
 		veterans,
@@ -748,6 +755,7 @@ function DayTabButton({ day, today, runs, shape, active, onPick, row }: {
 	row?: string
 }) {
 	const tally = summarizeRuns(runsOf(runs, { day })).total
+	const points = tallyPoints(runsOf(runs, { day }))
 	return (
 		<TabFrame active={active} onPick={onPick} row={row}>
 			<span className="flex w-full items-center justify-center gap-1 sm:justify-between sm:gap-2.5">
@@ -773,8 +781,18 @@ function DayTabButton({ day, today, runs, shape, active, onPick, row }: {
 				})}
 			</span>
 			<span className="text-[11px] text-gray-300 sm:text-xs">
-				<span className="sm:hidden">{tally.raced ? `${tally.wins}/${tally.raced}` : "–"}</span>
-				<span className="max-sm:hidden">{tally.raced ? `${tally.wins} of ${tally.raced} won` : "Not started"}</span>
+				{shape.points ? (
+					// A LoH: the tickets' points (utils/pvpRuns.ts, "A LoH race is scored").
+					<>
+						<span className="sm:hidden">{points.scored ? formatPoints(points.points) : "–"}</span>
+						<span className="max-sm:hidden">{points.scored ? `${formatPoints(points.points)} points` : tally.raced ? "No places yet" : "Not started"}</span>
+					</>
+				) : (
+					<>
+						<span className="sm:hidden">{tally.raced ? `${tally.wins}/${tally.raced}` : "–"}</span>
+						<span className="max-sm:hidden">{tally.raced ? `${tally.wins} of ${tally.raced} won` : "Not started"}</span>
+					</>
+				)}
 			</span>
 		</TabFrame>
 	)
@@ -807,14 +825,25 @@ function CardHeader({ eyebrow, title, score, detail }: { eyebrow: string; title:
 
 function DayHeader({ event, day, today, runs, shape }: { event: RaceEvent; day: number; today: number | null; runs: PvpRun[]; shape: RunShape }) {
 	const tally = summarizeRuns(runsOf(runs, { day })).total
+	const points = tallyPoints(runsOf(runs, { day }))
 	// During registration Day 1 says when Round 1 starts, as the Finals header gives its date.
 	const when = shape.rounds && day === today ? " · Today" : day === 1 && today === CM_NOT_STARTED ? ` · Starts ${formatDate(event.start_date)}` : ""
 	return (
 		<CardHeader
 			eyebrow={`${shape.rounds ? `Round ${roundOfDay(day)}` : "League of Heroes"}${when}`}
 			title={dayLabel(day, shape)}
-			score={tally.raced ? `${tally.wins} of ${tally.raced}` : "–"}
-			detail={tally.raced ? `races won · ${formatRate(tally)}` : "Nothing logged yet"}
+			score={shape.points ? (points.scored ? formatPoints(points.points) : "–") : tally.raced ? `${tally.wins} of ${tally.raced}` : "–"}
+			detail={
+				shape.points
+					? points.scored
+						? `points from ${points.scored} ${points.scored === 1 ? "race" : "races"}`
+						: tally.raced
+							? "Log places to add up points"
+							: "Nothing logged yet"
+					: tally.raced
+						? `races won · ${formatRate(tally)}`
+						: "Nothing logged yet"
+			}
 		/>
 	)
 }
@@ -972,6 +1001,8 @@ function TicketRow({ title, eyebrow, run, choices, open, onOpen, shared, onWrite
 	}
 
 	const { wins, raced } = tallyRun(run)
+	// A LoH ticket's points: its races with all three placed (utils/pvpRuns.ts).
+	const ticketPoints = shared.points ? tallyPoints([run]) : null
 	const status =
 		state === "stopped"
 			? `Stopped after ${raced}`
@@ -985,7 +1016,7 @@ function TicketRow({ title, eyebrow, run, choices, open, onOpen, shared, onWrite
 			<button
 				type="button"
 				aria-expanded={open}
-				aria-label={`${title}, ${status}${raced ? `, ${wins} of ${raced} won` : ""}`}
+				aria-label={`${title}, ${status}${ticketPoints ? (ticketPoints.scored ? `, ${formatPoints(ticketPoints.points)} points` : "") : raced ? `, ${wins} of ${raced} won` : ""}`}
 				onClick={() => onOpen(!open)}
 				className="flex min-h-14.5 w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left sm:min-h-15.5 sm:gap-4.5 sm:px-3.5 sm:py-2.5"
 			>
@@ -1000,8 +1031,17 @@ function TicketRow({ title, eyebrow, run, choices, open, onOpen, shared, onWrite
 					))}
 				</span>
 				<span className="min-w-10 text-right font-display text-xl font-bold text-gray-50 sm:min-w-12 sm:text-2xl">
-					{raced ? wins : "–"}
-					{raced > 0 && <span className="text-[13px] font-medium text-gray-400 sm:text-[15px]">/{raced}</span>}
+					{ticketPoints ? (
+						<>
+							{ticketPoints.scored ? formatPoints(ticketPoints.points) : "–"}
+							{ticketPoints.scored > 0 && <span className="text-[13px] font-medium text-gray-400 sm:text-[15px]"> pts</span>}
+						</>
+					) : (
+						<>
+							{raced ? wins : "–"}
+							{raced > 0 && <span className="text-[13px] font-medium text-gray-400 sm:text-[15px]">/{raced}</span>}
+						</>
+					)}
 				</span>
 				<ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
 			</button>
@@ -1335,13 +1375,17 @@ const useLogPlaces = deviceSwitch("uma-runs-log-places", false)
  */
 const useReplaysOpen = deviceSwitch("uma-runs-replays-open", true)
 
-/** 1st to 9th: a CM race has nine runners (PVP_CM_RACE_RUNNERS in the API). */
-const PLACE_CHOICES = Array.from({ length: 9 }, (_, index) => index + 1)
+/**
+ * The strip's buttons, 1st to the race's runners (PVP_RACE_RUNNERS in the API:
+ * 9 in a CM, 12 in a LoH), with each width's grid as a literal class so
+ * Tailwind sees it.
+ */
+const PLACE_GRID: Record<number, string> = { 9: "grid-cols-9", 12: "grid-cols-12" }
+const placeChoices = (places: number) => Array.from({ length: places }, (_, index) => index + 1)
 
 /**
- * The "Log places" switch over a CM ticket's races (mock 01). A League of
- * Heroes never draws it: the API refuses places there until its field size
- * is known.
+ * The "Log places" switch over a ticket's races (mock 01), a CM's or a League
+ * of Heroes' (notes/loh-places-plan.md). One switch for both, per device.
  */
 function PlacesSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
 	return (
@@ -1371,8 +1415,8 @@ function PlacesSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) =
  * the chosen button clears it back to "not run". A cell shows where its uma
  * finished whenever that's known, switch or not (decision 1).
  *
- * With "Log places" on (a CM only) one race at a time is open, with a 1 to 9
- * strip per uma under it, and the places ARE the input (notes/cm-runs-plan-2.md,
+ * With "Log places" on one race at a time is open, with a place strip per uma
+ * under it (1 to 9 in a CM, 1 to 12 in a LoH), and the places ARE the input (notes/cm-runs-plan-2.md,
  * decision 7): a 1st is a win, all three placed with no 1st a loss. The open
  * race is the next one to place (nextRaceToPlace) unless the player tapped a
  * race's name or result; placing the last of the three hands it back, so the
@@ -1398,7 +1442,7 @@ function RaceGrid({ title, run, shared, onWrite }: {
 	const [wonByOpen, setWonByOpen] = useState<number | null>(null)
 	// A spot per runner, then null for Loss.
 	const columns: Array<number | null> = [...run.runners.map((runner) => runner.position), null]
-	const placing = shared.placesAllowed && shared.logPlaces
+	const placing = shared.logPlaces
 	const openRace = placing ? (chosenRace === undefined ? nextRaceToPlace(run) : chosenRace) : null
 	// The race `race` as a change would leave it, read from the run on screen
 	// (the cache is written before the save, so that is the latest).
@@ -1439,17 +1483,29 @@ function RaceGrid({ title, run, shared, onWrite }: {
 	}
 
 	// The label column is a CSS variable so one class switches it at sm.
-	const grid = "grid gap-1.25 [--label:50px] sm:gap-1.5 sm:[--label:76px]"
-	const template: CSSProperties = { gridTemplateColumns: `var(--label) repeat(${columns.length}, minmax(0, 1fr))` }
+	const grid = "grid gap-1.25 [--label:50px] [--points:38px] sm:gap-1.5 sm:[--label:76px] sm:[--points:56px]"
+	// A LoH adds a Points column at the end: each race's, the ticket's in Total.
+	const template: CSSProperties = {
+		gridTemplateColumns: `var(--label) repeat(${columns.length}, minmax(0, 1fr))${shared.points ? " var(--points)" : ""}`,
+	}
+	const pointsCell = (value: number | null, strong = false) => (
+		<span className={`text-right font-display font-bold tabular-nums ${strong ? "text-base sm:text-lg" : "text-sm sm:text-base"} ${value === null ? "text-gray-500" : "text-gray-50"}`}>
+			{value === null ? "–" : formatPoints(value)}
+		</span>
+	)
 	return (
 		<div className="flex flex-col gap-1.5" role="group" aria-label="Who won each race">
 			<div className="mb-1 flex items-start justify-between gap-3">
 				<p className="text-xs text-gray-300 sm:text-[13px]">
 					{placing
-						? "Tap where each of your umas finished. A 1st is a win, and three places with no 1st is a loss."
-						: "Tap the uma that finished first, or Loss. Tap it again to clear."}
+						? shared.points
+							? "Tap where each of your umas finished. Their points add up once all three are placed."
+							: "Tap where each of your umas finished. A 1st is a win, and three places with no 1st is a loss."
+						: shared.points
+							? "Tap the uma that finished first, or Loss. Turn on Log places to count points."
+							: "Tap the uma that finished first, or Loss. Tap it again to clear."}
 				</p>
-				{shared.placesAllowed && <PlacesSwitch on={shared.logPlaces} onChange={shared.onLogPlaces} />}
+				<PlacesSwitch on={shared.logPlaces} onChange={shared.onLogPlaces} />
 			</div>
 			<div className={`${grid} items-end pb-0.5 sm:pb-1`} style={template}>
 				<span className={`${EYEBROW} pb-1.5 max-sm:invisible`}>Who won</span>
@@ -1487,6 +1543,7 @@ function RaceGrid({ title, run, shared, onWrite }: {
 						</div>
 					)
 				})}
+				{shared.points && <span className={`${EYEBROW} pb-1.5 text-right`}>Points</span>}
 			</div>
 			{RACES.map((race) => {
 				const entry = run.races.find((candidate) => candidate.race === race)
@@ -1535,6 +1592,7 @@ function RaceGrid({ title, run, shared, onWrite }: {
 									/>
 								)
 							})}
+							{shared.points && pointsCell(racePoints(entry, run.runners))}
 						</div>
 						{open && (
 							<PlaceStrips
@@ -1573,6 +1631,7 @@ function RaceGrid({ title, run, shared, onWrite }: {
 						</span>
 					)
 				})}
+				{shared.points && pointsCell(tallyPoints([run]).scored ? tallyPoints([run]).points : null, true)}
 			</div>
 		</div>
 	)
@@ -1589,14 +1648,16 @@ function RaceName({ race, logged, status }: { race: number; logged: boolean; sta
 }
 
 /**
- * A 1 to 9 strip per uma for one race (mocks 01 and 02). One tap places her,
+ * A place strip per uma for one race (mocks 01 and 02): 1 to 9 in a CM, 1 to
+ * 12 in a LoH. One tap places her,
  * a tap on her place clears it. A place another of yours holds is greyed and
  * can't be tapped: two of yours never share one, and the API refuses it.
  *
  * At 390 px the portrait sits beside the strip (the canvas's layout): the
- * nine buttons share what's left through `grid-cols-9`, equal fractions with
- * a zero minimum, so the strip shrinks with the card and can't push the page
- * sideways. They're taller than wide there, which a thumb can still hit.
+ * buttons share what's left through `grid-cols-9` / `grid-cols-12`, equal
+ * fractions with a zero minimum, so the strip shrinks with the card and can't
+ * push the page sideways. They're taller than wide there, which a thumb can
+ * still hit; a LoH's twelve are about 20px wide at 390, so their gap shrinks.
  */
 function PlaceStrips({ label, entry, runners, shared, onPlace }: {
 	label: string
@@ -1620,8 +1681,8 @@ function PlaceStrips({ label, entry, runners, shared, onPlace }: {
 							alt=""
 							className="w-7 sm:w-8"
 						/>
-						<div className="grid grid-cols-9 gap-1 sm:gap-1.5">
-							{PLACE_CHOICES.map((place) => {
+						<div className={`grid ${PLACE_GRID[shared.places] ?? "grid-cols-9"} ${shared.places > 9 ? "gap-0.5" : "gap-1"} sm:gap-1.5`}>
+							{placeChoices(shared.places).map((place) => {
 								const on = mine === place
 								const taken = !on && (entry?.places ?? []).some((held) => held.place === place && held.position !== runner.position)
 								const look = on
@@ -2070,7 +2131,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 	const columns: Array<number | null> = [...run.runners.map((runner) => runner.position), null]
 	// One race, so no open race to pick: the strips show with the switch on,
 	// or once a place is logged (decision 1).
-	const placing = shared.placesAllowed && (shared.logPlaces || (race?.places?.length ?? 0) > 0)
+	const placing = shared.logPlaces || (race?.places?.length ?? 0) > 0
 	// A win is 1st place for the player, so a winner fills a blank placement.
 	// Two different places: `placement` is the player's 1st to 3rd of the
 	// three trainers, the strips each uma's 1st to 9th of the nine runners.
@@ -2121,7 +2182,7 @@ function FinalsBody({ run, choices, shared, onWrite }: {
 			<div className="flex flex-col gap-1.5 sm:gap-2" role="group" aria-label="Who won the Finals race">
 				<span className="flex items-end justify-between gap-3">
 					<span className={EYEBROW}>Who won the race</span>
-					{shared.placesAllowed && <PlacesSwitch on={shared.logPlaces} onChange={shared.onLogPlaces} />}
+					<PlacesSwitch on={shared.logPlaces} onChange={shared.onLogPlaces} />
 				</span>
 				<div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
 					{columns.map((column) => {
@@ -2241,6 +2302,17 @@ function bestText(runs: PvpRun[], round?: number): string {
 	return best === null ? "–" : `${best} of ${RUN_RACES}`
 }
 
+/** A LoH's best ticket by points, or an en dash before any race has all three placed. */
+function bestPointsText(runs: PvpRun[]): string {
+	const scored = runsOf(runs, {}).map((run) => tallyPoints([run])).filter((tally) => tally.scored > 0)
+	return scored.length ? formatPoints(Math.max(...scored.map((tally) => tally.points))) : "–"
+}
+
+/** "220 per ticket" over the tickets with points, or null before any. */
+function perTicketText(points: PointsTally): string | null {
+	return points.tickets ? `${formatPoints(Math.round(points.points / points.tickets))} per ticket` : null
+}
+
 /**
  * The phone's three numbers, over the tabs: the win rate, today's races (the
  * Finals once Round 2 has ended) and the current round's best ticket. The per-uma
@@ -2248,6 +2320,7 @@ function bestText(runs: PvpRun[], round?: number): string {
  */
 function WinRateStrip({ event, runs, today, shape }: { event: RaceEvent; runs: PvpRun[]; today: number | null; shape: RunShape }) {
 	const { total } = summarizeRuns(runsOf(runs, {}))
+	const points = tallyPoints(runsOf(runs, {}))
 	// Before Round 1 no day is today, so the middle cell shows Day 1, the day the view opens on.
 	const shown = today === null ? null : Math.max(1, today)
 	// A LoH has no today to show (utils/pvpRuns.ts), so that cell is its Top 96.
@@ -2256,17 +2329,25 @@ function WinRateStrip({ event, runs, today, shape }: { event: RaceEvent; runs: P
 	const round = shown === null ? 2 : roundOfDay(shown)
 	const cell = "border-l border-edge pl-2.5"
 	return (
-		<section aria-label="Win rate so far" className="card-panel flex flex-col gap-2.5 px-3.5 pb-3.5 pt-3 sm:hidden">
+		<section aria-label={shape.points ? "Points so far" : "Win rate so far"} className="card-panel flex flex-col gap-2.5 px-3.5 pb-3.5 pt-3 sm:hidden">
 			<h2 className="flex items-center gap-1.5 font-display text-[15px] font-bold text-gray-50">
 				<Trophy className="h-4 w-4 text-brand" aria-hidden="true" />
 				{splitEventName(event).title} so far
 			</h2>
 			<dl className="grid grid-cols-[1.2fr_1fr_1fr] gap-2">
-				<div>
-					<dt className="text-[11px] text-gray-400">Win rate</dt>
-					<dd className="mt-0.5 font-display text-[30px] font-bold leading-none text-gray-50">{formatRate(total)}</dd>
-					<dd className="mt-1 text-[11px] text-gray-400">{`${total.wins} of ${total.raced} races`}</dd>
-				</div>
+				{shape.points ? (
+					<div>
+						<dt className="text-[11px] text-gray-400">Points</dt>
+						<dd className="mt-0.5 font-display text-[30px] font-bold leading-none text-gray-50">{points.scored ? formatPoints(points.points) : "–"}</dd>
+						<dd className="mt-1 text-[11px] text-gray-400">{perTicketText(points) ?? "Log places to count"}</dd>
+					</div>
+				) : (
+					<div>
+						<dt className="text-[11px] text-gray-400">Win rate</dt>
+						<dd className="mt-0.5 font-display text-[30px] font-bold leading-none text-gray-50">{formatRate(total)}</dd>
+						<dd className="mt-1 text-[11px] text-gray-400">{`${total.wins} of ${total.raced} races`}</dd>
+					</div>
+				)}
 				{day ? (
 					<div className={cell}>
 						<dt className="text-[11px] text-gray-400">{today === CM_NOT_STARTED ? "Day 1" : "Today"}</dt>
@@ -2282,11 +2363,11 @@ function WinRateStrip({ event, runs, today, shape }: { event: RaceEvent; runs: P
 				)}
 				<div className={cell}>
 					<dt className="text-[11px] text-gray-400">{shape.rounds ? `Round ${round} best` : "Best"}</dt>
-					<dd className="mt-0.5 font-display text-[22px] font-bold leading-tight text-gray-50">{bestText(runs, shape.rounds ? round : undefined)}</dd>
-					<dd className="mt-0.5 text-[11px] text-gray-400">one ticket</dd>
+					<dd className="mt-0.5 font-display text-[22px] font-bold leading-tight text-gray-50">{shape.points ? bestPointsText(runs) : bestText(runs, shape.rounds ? round : undefined)}</dd>
+					<dd className="mt-0.5 text-[11px] text-gray-400">{shape.points ? "points, one ticket" : "one ticket"}</dd>
 				</div>
 			</dl>
-			<RateBar tally={total} className="h-1.5" label={`Win rate ${formatRate(total)}`} />
+			{!shape.points && <RateBar tally={total} className="h-1.5" label={`Win rate ${formatRate(total)}`} />}
 			<p className="text-[11px] text-gray-400">{ticketsText(ticketCounts(runs))}</p>
 		</section>
 	)
@@ -2307,6 +2388,8 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 }) {
 	const dayRuns = runsOf(runs, {})
 	const { total, umas: tallies } = summarizeRuns(dayRuns)
+	// A LoH's headline is points, not a win rate (notes/loh-places-plan.md).
+	const points = tallyPoints(dayRuns)
 	// Places and who beat you (notes/cm-runs-plan-2.md): over every logged race, the Finals included.
 	// Places over the same day tickets as the win rates beside them ("Days 1
 	// to 4. The Finals race counts on its own."): with the Finals in, a line
@@ -2325,21 +2408,34 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 	}
 	const footnote = shape.rounds ? `Days 1 to ${shape.days}. The Finals race counts on its own.` : `All ${shape.days * shape.tickets} tickets.`
 	return (
-		<aside aria-label="Your win rates" className="card-panel min-w-0">
+		<aside aria-label={shape.points ? "Your points" : "Your win rates"} className="card-panel min-w-0">
 			<div className="hidden flex-col gap-3.5 border-b border-edge px-5 py-4.5 sm:flex">
 				<div className="flex items-center gap-2 text-brand">
 					<Trophy className="h-4 w-4" aria-hidden="true" />
 					<h2 className="font-display text-lg font-bold text-gray-50">{splitEventName(event).title} so far</h2>
 				</div>
-				<div className="flex items-end gap-3">
-					<span className="font-display text-[56px] font-bold leading-[0.9] text-gray-50">{formatRate(total)}</span>
-					<span className="flex flex-col gap-0.5 pb-0.5">
-						<span className="text-sm font-semibold text-gray-200">win rate</span>
-						<span className="text-[13px] text-gray-400">{`${total.wins} of ${total.raced} races`}</span>
-						<span className="text-[13px] text-gray-400">{ticketsText(ticketCounts(runs))}</span>
-					</span>
-				</div>
-				<RateBar tally={total} className="h-2" label={`Win rate ${formatRate(total)}`} />
+				{shape.points ? (
+					<div className="flex items-end gap-3">
+						<span className="font-display text-[56px] font-bold leading-[0.9] text-gray-50">{points.scored ? formatPoints(points.points) : "–"}</span>
+						<span className="flex flex-col gap-0.5 pb-0.5">
+							<span className="text-sm font-semibold text-gray-200">points</span>
+							<span className="text-[13px] text-gray-400">{perTicketText(points) ?? "Log places to count them"}</span>
+							<span className="text-[13px] text-gray-400">{ticketsText(ticketCounts(runs))}</span>
+						</span>
+					</div>
+				) : (
+					<>
+						<div className="flex items-end gap-3">
+							<span className="font-display text-[56px] font-bold leading-[0.9] text-gray-50">{formatRate(total)}</span>
+							<span className="flex flex-col gap-0.5 pb-0.5">
+								<span className="text-sm font-semibold text-gray-200">win rate</span>
+								<span className="text-[13px] text-gray-400">{`${total.wins} of ${total.raced} races`}</span>
+								<span className="text-[13px] text-gray-400">{ticketsText(ticketCounts(runs))}</span>
+							</span>
+						</div>
+						<RateBar tally={total} className="h-2" label={`Win rate ${formatRate(total)}`} />
+					</>
+				)}
 				{shape.rounds ? (
 					<dl className="grid grid-cols-3 gap-2">
 						<Stat label="Round 1 best" value={bestText(runs, 1)} />
@@ -2352,7 +2448,7 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 					</dl>
 				) : (
 					<dl className="grid grid-cols-2 gap-2">
-						<Stat label="Best ticket" value={bestText(runs)} />
+						<Stat label="Best ticket" value={bestPointsText(runs)} detail="points" />
 						<Stat label="Placement" value={final?.placement ? ordinal(final.placement) : "–"} detail={final?.placement ? undefined : "Not logged"} />
 					</dl>
 				)}
@@ -2368,6 +2464,8 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 							const key = `${tally.uma}:${tally.trained_uma ?? ""}`
 							const uma = umasById.get(tally.uma)
 							const style = styles.get(key)
+							// A LoH uma's headline is her points over the races she has a place in.
+							const placed = places.get(key)
 							return (
 								<li key={key} className="flex items-center gap-2.5 sm:gap-3">
 									<FramedUma
@@ -2382,9 +2480,11 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 											<span className="truncate text-[13px] font-semibold text-gray-100 sm:text-sm" title={uma?.name}>
 												{uma?.name ?? "Unknown uma"}
 											</span>
-											<span className="font-display text-base font-bold text-gray-50 sm:text-[17px]">{formatRate(tally)}</span>
+											<span className="font-display text-base font-bold text-gray-50 sm:text-[17px]">
+												{shape.points ? (placed ? `${formatPoints(placed.points)} pts` : "–") : formatRate(tally)}
+											</span>
 										</div>
-										<RateBar tally={tally} className="h-1.5" />
+										{!shape.points && <RateBar tally={tally} className="h-1.5" />}
 										<div className="flex justify-between gap-2 text-[11px] text-gray-400 sm:text-xs">
 											<span className="flex min-w-0 items-center gap-1.5">
 												{style && <StyleTag style={style} />}
@@ -2394,17 +2494,19 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 													hasVeterans={veteransOf(veterans, tally.uma).length > 0}
 												/>
 											</span>
-											<span className="shrink-0">{`${tally.wins} of ${tally.raced} won`}</span>
+											<span className="shrink-0">
+												{shape.points
+													? placed
+														? `${formatPoints(Math.round(placed.points / placed.placed))} a race`
+														: "No places yet"
+													: `${tally.wins} of ${tally.raced} won`}
+											</span>
 										</div>
-										{(() => {
-											const placed = places.get(key)
-											if (!placed) return null
-											return (
-												<div className="text-[11px] text-gray-400 sm:text-xs">
-													{`Average place ${(placed.total / placed.placed).toFixed(1)} · top 3 in ${placed.top3} of ${placed.placed}`}
-												</div>
-											)
-										})()}
+										{placed && (
+											<div className="text-[11px] text-gray-400 sm:text-xs">
+												{`Average place ${(placed.total / placed.placed).toFixed(1)} · top 3 in ${placed.top3} of ${placed.placed}`}
+											</div>
+										)}
 										{/* From replays only: the game's reason, per race she lost (mock 04). */}
 										{(reasons.get(key)?.length ?? 0) > 0 && (
 											<div className="text-[11px] text-gray-400 sm:text-xs">
@@ -2447,11 +2549,21 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 					{Array.from({ length: shape.days }, (_, index) => {
 						const day = index + 1
 						const tally = summarizeRuns(runsOf(runs, { day })).total
+						const dayPoints = tallyPoints(runsOf(runs, { day }))
 						return (
 							<div key={day} className={`${INSET} min-w-0 p-2 text-center`}>
 								<div className="text-[11px] font-semibold text-gray-400">{shape.rounds ? `Day ${day}` : ticketRange(day, shape)}</div>
-								<div className={`font-display text-lg font-bold ${tally.raced ? "text-gray-50" : "text-gray-400"}`}>{formatRate(tally)}</div>
-								<div className="text-[11px] text-gray-400">{tally.raced ? `${tally.wins} of ${tally.raced}` : "Not started"}</div>
+								{shape.points ? (
+									<>
+										<div className={`font-display text-lg font-bold ${dayPoints.scored ? "text-gray-50" : "text-gray-400"}`}>{dayPoints.scored ? formatPoints(dayPoints.points) : "–"}</div>
+										<div className="text-[11px] text-gray-400">{dayPoints.scored ? "points" : tally.raced ? "No places yet" : "Not started"}</div>
+									</>
+								) : (
+									<>
+										<div className={`font-display text-lg font-bold ${tally.raced ? "text-gray-50" : "text-gray-400"}`}>{formatRate(tally)}</div>
+										<div className="text-[11px] text-gray-400">{tally.raced ? `${tally.wins} of ${tally.raced}` : "Not started"}</div>
+									</>
+								)}
 							</div>
 						)
 					})}

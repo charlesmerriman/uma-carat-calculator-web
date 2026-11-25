@@ -87,6 +87,8 @@ const PHONE_STRIP_PX = 660
 // 1,400px of empty bar (owner, 2026-11-24): it gets 360 and its words, and the
 // reader who picks Track takes the taller bar.
 const STUCK_TRACK_PX = { width: 480, height: 240 }
+// The strip's layer rows held for a lit skill in a guide: its zones, then its carry-over window.
+const LIT_LANES = 2
 const STUCK_TRACK_ALONE_PX = { width: 900, height: 360 }
 // The stuck strip's race width beside that track (a 1440 screen leaves it
 // about 780), what its words and metres are spaced for.
@@ -226,6 +228,15 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 	// one per skill of hers that can fire here), remembered on the device.
 	const veteranPicks = useVeteranPicks()
 
+	// In a guide, hovering a skill lights it on the map. Everything that light
+	// adds keeps its room while nothing is lit (the strip's lit lanes, the
+	// verdict card's slot, the legend's line), so a hover never changes the
+	// map's height and the page never jumps or shakes (the owner, 2026-11-25:
+	// the stuck map grew on every hover). A lit skill takes lane 0, and lane 1
+	// for its carry-over window (focusLayer); the zones aren't fetched until the
+	// first hover, so both are held.
+	const reserveLit = guide !== null
+	const litLanes = reserveLit ? LIT_LANES : 0
 	const layer = useMemo(() => {
 		const spans: LayerSpan[] = []
 		const markers: CourseMarker[] = []
@@ -256,8 +267,9 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 			const keep = (skillId: number, veteran: VeteranInLayer) => inScope(skillId, veteran)
 				&& veteranShown(veteranPicks, veteran)
 				&& skillShown(veteranPicks, veteran, skillId, zones[String(skillId)])
-			// Below whatever lanes the open skill used.
-			const offset = spans.length > 0 ? Math.max(...spans.map((span) => span.lane ?? 0)) + 1 : 0
+			// Below whatever lanes the open skill used, and never above the lanes
+			// held for it, so a veteran's rows don't move when a skill lights up.
+			const offset = Math.max(litLanes, spans.length > 0 ? Math.max(...spans.map((span) => span.lane ?? 0)) + 1 : 0)
 			const veterans = veteranLayer(veteranData.veterans, zones, course.distance, veteranData.names, keep, { chains: layers.chains, images: veteranData.images })
 			// Her colour follows her team spot, on her spans and at the head of her rows.
 			const colourOf = (lane: number) => {
@@ -289,7 +301,7 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 			}
 		}
 		return { overlays: { spans, markers }, heads, menu }
-	}, [zones, focus, veteransOn, veteranData, veteranPicks, guide, layers.scope, layers.chains, styleTab, course.distance])
+	}, [zones, focus, veteransOn, veteranData, veteranPicks, guide, layers.scope, layers.chains, styleTab, course.distance, litLanes])
 	const hasLayer = layer.overlays.spans.length > 0
 	// The lit skills, one entry each, for the legend under the track: hovering
 	// one bolds its arc (owner, 2026-11-04: several skills on one line were
@@ -491,10 +503,10 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 				{stuckView === "both" && (
 					// Spaced for the narrower room beside the track, so a part's metres
 					// show only where they fit (at the default 1,000 they ran into its words).
-					<CourseStrip course={course} orientation="horizontal" slim widthPx={STUCK_BOTH_STRIP_PX} overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
+					<CourseStrip course={course} orientation="horizontal" slim widthPx={STUCK_BOTH_STRIP_PX} overlays={layer.overlays} laneHeads={layer.heads} reservedLanes={litLanes} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
 				)}
 				{stuckView === "strip" && (
-					<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
+					<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} reservedLanes={litLanes} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
 				)}
 			</div>
 		</div>,
@@ -550,6 +562,9 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 			    or the row holds two cards for 200 ms, wraps, and the track jumps. */}
 			<div className="relative mb-3 flex flex-wrap items-start justify-between gap-3">
 				<CourseHeadline course={course} className="flex-1 basis-[22rem]" />
+				{/* Held while nothing is lit, so the card arriving fills it rather
+				    than pushing the track down (see reserveLit). */}
+				{reserveLit && !focus && <div aria-hidden="true" className="w-full max-w-[380px] min-h-[7rem]" />}
 				<AnimatePresence initial={false} mode="popLayout">
 					{focus && (
 						// Slides in from the headline's side; a plain fade under reduced motion.
@@ -588,9 +603,10 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 								</div>
 							)
 							: <CourseTrack course={course} shape={shape} colours={trackColours} overlays={layer.overlays} preview={preview} onPreview={setPreview} />)}
-						{view !== "strip" && litSkills.length > 0 && (
+						{view !== "strip" && (litSkills.length > 0 || reserveLit) && (
 							// The lit skills by icon and name, each a hover target for its arc.
-							<ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px]" aria-label="Lit skills">
+							// In a guide the line stays while empty (see reserveLit).
+							<ul className="mt-1 flex min-h-[22px] flex-wrap gap-x-3 gap-y-1 text-[11px]" aria-label="Lit skills">
 								{litSkills.map((skill) => (
 									<li
 										key={skill.key}
@@ -614,6 +630,7 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 								className={view === "both" ? "mt-4" : ""}
 								overlays={layer.overlays}
 								laneHeads={layer.heads}
+								reservedLanes={litLanes}
 								preview={preview}
 								onPreview={setPreview}
 							/>

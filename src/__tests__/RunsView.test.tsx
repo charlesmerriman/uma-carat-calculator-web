@@ -690,13 +690,25 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		})
 	})
 
-	it("has no places in a League of Heroes, where the API refuses them", async () => {
-		runs.list = [logged(1, [{ race: 1, winner: null }], { kind: "loh" })]
+	it("places a League of Heroes race 1st to 12th and adds up its points", async () => {
+		// Race 1 placed already: 1st, 4th, 7th is 100 + 30 + 10 (notes/loh-places-plan.md).
+		const placed = { race: 1, winner: 0, places: [{ position: 0, place: 1 }, { position: 1, place: 4 }, { position: 2, place: 7 }] }
+		runs.list = [logged(1, [placed as never], { kind: "loh" })]
 		show(LOH)
 		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
-		expect(within(ticket).queryByRole("switch", { name: "Log places" })).toBeNull()
-		expect(within(ticket).queryByRole("button", { name: /finished/ })).toBeNull()
-		// Won by still shows on a loss.
-		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: who won it?" })).toBeTruthy()
+		expect(within(ticket).getByRole("button", { name: /^Ticket 1, .*, 140 points$/ })).toBeTruthy()
+		placesOn(ticket)
+		// Twelve runners in a LoH race, so the strip goes to 12th.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Oguri Cap finished 12th" })).toBeTruthy()
+		expect(within(ticket).queryByRole("button", { name: /finished 13th/ })).toBeNull()
+
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Oguri Cap finished 12th" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Maruzensky finished 2nd" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Gold Ship finished 5th" }))
+		await waitFor(() => expect(placesOf(lastRaces()[1])).toEqual([[0, 12], [1, 2], [2, 5]]))
+		// No 1st of yours, so `winner` reads a loss, as in a CM.
+		expect(lastRaces()[1].winner).toBeNull()
+		// 10 + 60 + 20 = 90, and the ticket is 140 + 90.
+		expect(within(ticket).getByRole("button", { name: /^Ticket 1, .*, 230 points$/ })).toBeTruthy()
 	})
 })
