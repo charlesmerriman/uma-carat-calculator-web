@@ -261,23 +261,33 @@
 		py-2 px-1 font-bold select-none;
 }
 
-/* One fill and one ink per kind, shared by the desktop badge and the mobile
-   card's header strip. Both come from --color-type-* tokens (index.css), which
-   the light themes and colorblind mode redraw; nothing here is mode-specific. */
+/* One fill and one ink per kind, shared by the desktop badge, the mobile
+   card's header strip and the share picture's pill (BannerTypeChip). All come
+   from --color-type-* tokens (index.css), which the light themes and
+   colorblind mode redraw; nothing here is mode-specific.
+
+   The pill has a class of its own (`banner-type-chip--*`), never the badge's:
+   the themes draw a 4px band along the bottom of `banner-type-tab--*`
+   (personalityThemes.css), which suits a tall table cell and on a 16px pill
+   was a stripe across its lower edge, drawn into every downloaded picture
+   (Daptrius, 2026-11-25). */
 .banner-type-tab--uma,
-.banner-type-tile--uma {
+.banner-type-tile--uma,
+.banner-type-chip--uma {
 	background-color: var(--color-type-uma);
 	color: var(--color-type-uma-ink);
 }
 
 .banner-type-tab--support,
-.banner-type-tile--support {
+.banner-type-tile--support,
+.banner-type-chip--support {
 	background-color: var(--color-type-support);
 	color: var(--color-type-support-ink);
 }
 
 .banner-type-tab--step-up,
-.banner-type-tile--step-up {
+.banner-type-tile--step-up,
+.banner-type-chip--step-up {
 	background-color: var(--color-type-step-up);
 	color: var(--color-type-step-up-ink);
 }
