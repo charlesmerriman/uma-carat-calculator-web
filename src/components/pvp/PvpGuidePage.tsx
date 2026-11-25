@@ -43,7 +43,7 @@
  * clock freely. Its head tags come from AppRouteMeta.
  */
 
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react"
 import { Link, Navigate, useLocation, useSearchParams, type NavigateOptions } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -336,8 +336,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 
 	// The pinned rows' offsets, as CSS variables on the page root.
 	const rootRef = useRef<HTMLDivElement>(null)
+	const bandRef = useRef<HTMLDivElement>(null)
 	const tabsRef = useRef<HTMLDivElement>(null)
-	usePvpStickyOffsets(rootRef, tabsRef, event !== null)
+	usePvpStickyOffsets(rootRef, bandRef, tabsRef, event !== null)
 
 	/**
 	 * A link to what is on screen, for someone else: the event, always (a bare
@@ -369,6 +370,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	return (
 		<div ref={rootRef} className="w-full pb-8">
 			<ControlBand
+				ref={bandRef}
 				events={choices}
 				event={event}
 				index={index}
@@ -419,8 +421,7 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 							mapPlace={view === "recommendations" ? "guide" : "tools"}
 						/>
 
-						{/* Pinned to the top of the scroller (desktop) or under the navbar (phone)
-						    while the page scrolls, so the views stay one tap away
+						{/* Pinned under the event band (from md) or the navbar (phone) while the page scrolls, so the views stay one tap away
 						    (Daptrius, 2026-10-22). Opaque, or the page shows through. */}
 						<div ref={tabsRef} className="sticky top-(--pvp-tabs-top,0px) z-20 bg-gray-900">
 							<ViewTabs view={view} reader={reader} league={event.event_type !== "champions_meeting"} onChange={(next) => setParam(VIEW_PARAM, next === "recommendations" ? null : next)} />
@@ -579,7 +580,15 @@ function optionLabel(event: RaceEvent): string {
 	return `${event.has_guide ? "★ " : ""}${event.name} (${formatDate(event.start_date)})`
 }
 
-function ControlBand({ events, event, index, now, showPast, hasPast, onTogglePast, onSelect }: {
+/**
+ * Previous, the event, Next, and the past-events toggle. From `md` up it is
+ * pinned to the top of the scroller (desktop shell) or under the navbar while
+ * the page scrolls, opaque so the page doesn't show through (Daptrius asked,
+ * the owner chose desktop only, 2026-11-25). On a phone it scrolls away
+ * (hooks/usePvpStickyOffsets.ts).
+ */
+function ControlBand({ ref, events, event, index, now, showPast, hasPast, onTogglePast, onSelect }: {
+	ref: Ref<HTMLDivElement>
 	events: RaceEvent[]
 	event: RaceEvent | null
 	index: number
@@ -600,7 +609,7 @@ function ControlBand({ events, event, index, now, showPast, hasPast, onTogglePas
 		)
 	}
 	return (
-		<div className="border-y border-gray-700/60 bg-gray-950/40">
+		<div ref={ref} className="border-y border-gray-700/60 bg-gray-950/40 md:sticky md:top-(--pvp-band-top,0px) md:z-30 md:bg-gray-950 md:shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
 			{/* From `md:`, three columns: the past toggle at the far left, under the
 			    site's logo, and Previous / the event / Next centred, the right column
 			    empty to balance them. The toggle sat right beside Previous for a
