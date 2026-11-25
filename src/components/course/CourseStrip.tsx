@@ -87,6 +87,13 @@ interface CourseStripProps {
 	 * screen while the guide scrolls under it.
 	 */
 	slim?: boolean
+	/**
+	 * Layer rows drawn across the page even while empty, so lighting a skill
+	 * fills rows that are already there instead of adding them: the map never
+	 * changes height on a hover (the owner, 2026-11-25). The caller keeps its
+	 * other layers below these lanes (CourseSection, LIT_LANES).
+	 */
+	reservedLanes?: number
 }
 
 // The label column across the page, and the marks' margin down it.
@@ -327,6 +334,7 @@ export default function CourseStrip({
 	preview = null,
 	widthPx = STRIP_PX,
 	slim = false,
+	reservedLanes = 0,
 }: CourseStripProps) {
 	const vertical = orientation === "vertical"
 	const distance = course.distance
@@ -373,7 +381,9 @@ export default function CourseStrip({
 	const hills = slopeParts(course)
 	const phases = spans.filter((span) => span.kind === "phase")
 	const layerSpans = (overlays?.spans.filter((span) => span.kind !== "phase") ?? []) as (CourseSpan & { key?: string })[]
-	const layerRows = Math.max(0, ...layerSpans.map((span) => (span.lane ?? 0) + 1), ...laneHeads.map((head) => head.firstLane + head.lanes))
+	// Across the page, at least the reserved lanes; down the page a group is a
+	// column, so a new one widens the strip rather than lengthening it.
+	const layerRows = Math.max(vertical ? 0 : reservedLanes, ...layerSpans.map((span) => (span.lane ?? 0) + 1), ...laneHeads.map((head) => head.firstLane + head.lanes))
 	// Corners alternate between two shades, so corners 3 and 4 read as two.
 	let cornerIndex = 0
 	// A layer row's name: the veteran's avatar on her first row, "Lit" on the

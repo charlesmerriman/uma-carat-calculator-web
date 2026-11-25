@@ -68,16 +68,25 @@ const HOVER_OPEN_DELAY_MS = 120
  * under the pointer, and the browser counts each as the pointer entering it.
  * The popups opened on those, and the one left open followed its tile out of
  * the window (Daptrius, board "Extra Scroll Bar on the Skills page",
- * 2026-11-25). So a popup the pointer opened closes when anything under it
- * scrolls (useDismiss's `ancestorScroll`), and the pointer "entering" a tile
- * within SCROLL_QUIET_MS of a scroll opens nothing. Moving the mouse onto a
- * tile once the list has stopped opens it as before.
+ * 2026-11-25). So:
+ * - the pointer "entering" a tile opens nothing when the page scrolled after
+ *   the mouse last moved (the tile came to the pointer, not the pointer to
+ *   the tile); moving the mouse onto it opens it as before;
+ * - a popup the pointer opened closes on a scroll that carries its tile out
+ *   from under the pointer.
+ * Never "any scroll": the PvP guide's course map scrolls the page by itself
+ * to keep a lit skill's tile under the pointer when the map above it changes
+ * height (CourseSection), and closing on that scroll closed the skill's card
+ * a moment after it opened, which un-lit the map, which scrolled again, round
+ * and round (the owner, 2026-11-25, on v2.25).
  *
- * One listener for the whole page (capture: a scroll doesn't bubble, and the
- * desktop shell scrolls an inner box), added the first time a popup is built.
+ * One pair of listeners for the whole page (capture: a scroll doesn't bubble,
+ * and the desktop shell scrolls an inner box), added the first time a popup
+ * is built.
  */
-const SCROLL_QUIET_MS = 150
 let lastScrollAt = Number.NEGATIVE_INFINITY
+let lastPointerMoveAt = Number.NEGATIVE_INFINITY
+let pointerAt: { x: number; y: number } | null = null
 let hearingScrolls = false
 
 function hearScrolls(): void {
@@ -86,10 +95,23 @@ function hearScrolls(): void {
 	window.addEventListener("scroll", () => {
 		lastScrollAt = performance.now()
 	}, { capture: true, passive: true })
+	window.addEventListener("pointermove", (event) => {
+		if (event.pointerType !== "mouse") return
+		lastPointerMoveAt = performance.now()
+		pointerAt = { x: event.clientX, y: event.clientY }
+	}, { capture: true, passive: true })
 }
 
-function scrolledJustNow(): boolean {
-	return performance.now() - lastScrollAt < SCROLL_QUIET_MS
+/** The page scrolled since the mouse last moved: a hover now came from the page moving. */
+function scrolledUnderStillMouse(): boolean {
+	return lastScrollAt > lastPointerMoveAt
+}
+
+/** Whether the mouse's last position is still over `element` (or, with none known, assume so). */
+function pointerStillOver(element: Element | null): boolean {
+	if (!element || !pointerAt || typeof document.elementFromPoint !== "function") return true
+	const under = document.elementFromPoint(pointerAt.x, pointerAt.y)
+	return under !== null && element.contains(under)
 }
 
 /**
@@ -343,7 +365,7 @@ export function useHoverPopup(
 	// Floating UI's own opens and closes. A hover that a SCROLL caused (rows
 	// sliding under a still mouse) is refused: see "SCROLLING" above.
 	const changeFromFloating = (next: boolean, _event?: Event, reason?: string) => {
-		if (next && reason === "hover" && scrolledJustNow()) return
+		if (next && reason === "hover" && scrolledUnderStillMouse()) return
 		if (next) setByHover(reason === "hover")
 		setOpen(next)
 	}
@@ -416,12 +438,35 @@ export function useHoverPopup(
 			handleClose: interactive ? safePolygon() : undefined,
 		}),
 		useFocus(context, { enabled: hovers, visibleOnly: true }),
-		// Escape, or a tap anywhere else, closes it. So does a scroll, for a
-		// popup the resting pointer opened ("SCROLLING" above); one opened by a
-		// click, a tap or the keyboard stays (a Tab's own scroll-into-view would
-		// otherwise close the popup it just opened).
-		useDismiss(context, { ancestorScroll: byHover && !pinned && held === null }),
+		// Escape, or a tap anywhere else, closes it. A scroll is the effect
+		// below, never useDismiss's `ancestorScroll`, which closes on ANY scroll.
+		useDismiss(context),
 	])
+	// A popup the resting pointer opened closes when a scroll carries its tile
+	// out from under the pointer ("SCROLLING" above). One opened by a click, a
+	// tap or the keyboard stays (a Tab's own scroll-into-view would otherwise
+	// close the popup it just opened). Checked a frame later, once the layout
+	// the scroll caused has settled.
+	const closesOnScroll = open && byHover && !pinned && held === null
+	useEffect(() => {
+		if (!closesOnScroll) return
+		let frame = 0
+		const check = () => {
+			frame = 0
+			const tile = refs.domReference.current
+			if (!pointerStillOver(tile) && !pointerStillOver(refs.floating.current)) setOpen(false)
+		}
+		const onScroll = () => {
+			if (!frame) frame = requestAnimationFrame(check)
+		}
+		window.addEventListener("scroll", onScroll, { capture: true, passive: true })
+		return () => {
+			cancelAnimationFrame(frame)
+			window.removeEventListener("scroll", onScroll, { capture: true })
+		}
+		// setOpen is rebuilt each render; the effect only needs to follow the open state.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [closesOnScroll, refs])
 	// A short fade in and out; none for a reader who asked for less motion.
 	const { isMounted, styles } = useTransitionStyles(context, { duration: reducedMotion ? 0 : 150 })
 	const referenceProps = {
