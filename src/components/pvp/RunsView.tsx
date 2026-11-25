@@ -43,7 +43,7 @@
  * Inside the /app loading gate, so it may read the clock during render.
  */
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
+import { Fragment, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { ArrowLeftRight, Check, ChevronDown, Crown, Medal, Loader2, Repeat, Trash2, Trophy, Users, X } from "lucide-react"
@@ -60,6 +60,7 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { useOshiIds } from "../../hooks/useOshiIds"
 import { useSignInPrompt } from "../../hooks/useSignInPrompt"
 import { FramedUma } from "../FramedUma"
+import { PvpCardPicker } from "./PvpCardPicker"
 import { SaveStatus } from "./SaveStatus"
 import { STYLE_LABELS, styleColor } from "../../utils/pvpGuide"
 import { formatDate, parseApiDate } from "../../utils/dateFormat"
@@ -81,6 +82,11 @@ import {
 	logRace,
 	openingTab,
 	ordinal,
+	placeOf,
+	placeTallies,
+	beatenBy,
+	setLostTo,
+	setPlace,
 	previousRun,
 	registeredLineups,
 	roundOfDay,
@@ -102,7 +108,7 @@ import {
 	type TicketState,
 } from "../../utils/pvpRuns"
 import type { CalculationConstants, RaceEvent } from "../../types"
-import type { CatalogueUma, MemberStyle, PvpTeam } from "../../types/pvpTeam"
+import type { CatalogueSkill, CatalogueUma, MemberStyle, PvpTeam } from "../../types/pvpTeam"
 import type { PvpFinalsGroup, PvpRun, PvpRunContent, PvpRunRunner, PvpRunSlot } from "../../types/pvpRun"
 import { hoverCardProps } from "../../utils/hoverCards"
 
@@ -128,6 +134,8 @@ const INSET = "rounded-[10px] border border-edge bg-gray-900/60"
 
 /** One shared empty list, so "no veterans yet" is the same array on every render. */
 const NO_VETERANS: TrainedUma[] = []
+// The Won by picker recommends nothing.
+const NO_PICKS = new Set<number>()
 
 /** A day tab's id: a CM day 1..4, or the Finals. */
 type DayTab = number | "final"
@@ -161,6 +169,13 @@ interface DayTabsProps {
 /** Everything a ticket or the Finals needs to draw umas and save. */
 interface Shared {
 	umasById: Map<number, CatalogueUma>
+	/** The catalogue, for the Won by picker (PvpCardPicker). */
+	umas: CatalogueUma[]
+	skillsById: Map<number, CatalogueSkill>
+	event: RaceEvent
+	/** "Log places" (on this device): a place per uma under every race. */
+	logPlaces: boolean
+	onLogPlaces: (on: boolean) => void
 	oshiIds: ReadonlySet<number>
 	/** The account's veterans (the Collection page), for each runner's pick. */
 	veterans: TrainedUma[]
@@ -226,6 +241,10 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	const oshiIds = useOshiIds()
 	// The account's veterans, for "which veteran ran" under each runner.
 	const veterans = useTrainedUmas(true).data ?? NO_VETERANS
+	const [logPlaces, setLogPlaces] = useLogPlaces()
+	// The catalogue's umas, for the Won by picker.
+	const catalogueById = catalogue.status === "ready" ? catalogue.umasById : null
+	const catalogueUmas = useMemo(() => [...(catalogueById?.values() ?? [])], [catalogueById])
 	const saving = useRunsSaving(ref)
 	const [failed, setFailed] = useState(false)
 	const save = useSaveRun(ref, (message) => {
@@ -267,7 +286,17 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	}
 
 	const runs = runsQuery.data
-	const shared: Shared = { umasById: catalogue.umasById, oshiIds, veterans, onOpenMyTeam }
+	const shared: Shared = {
+		umasById: catalogue.umasById,
+		umas: catalogueUmas,
+		skillsById: catalogue.skillsById,
+		event,
+		logPlaces,
+		onLogPlaces: setLogPlaces,
+		oshiIds,
+		veterans,
+		onOpenMyTeam,
+	}
 	const today = runDayAt(event, calculationConstants, new Date(), shape)
 	const tab: DayTab = chosenTab ?? openingTab(runs, today, shape)
 	const openOn = (day: number) => (day in openByDay ? openByDay[day] : defaultOpenTicket(runs, day, shape.tickets))
@@ -1204,12 +1233,54 @@ function StyleTag({ style }: { style: MemberStyle }) {
  * race, and a Total row counting each column. One tap logs a race, a tap on
  * the chosen button clears it back to "not run".
  */
+/**
+ * "Log places", per device (notes/cm-runs-plan-2.md: a PC filling places and
+ * a phone tapping want different answers). An external store with a server
+ * snapshot of off, like courseMapStore's switches: /app is prerendered, so a
+ * render never reads localStorage itself.
+ */
+const LOG_PLACES_KEY = "uma-runs-log-places"
+let logPlacesOn: boolean | null = null
+const logPlacesListeners = new Set<() => void>()
+
+function readLogPlaces(): boolean {
+	try {
+		return localStorage.getItem(LOG_PLACES_KEY) === "on"
+	} catch {
+		return false
+	}
+}
+
+function subscribeLogPlaces(listener: () => void) {
+	logPlacesListeners.add(listener)
+	return () => logPlacesListeners.delete(listener)
+}
+
+function setLogPlacesOn(next: boolean) {
+	logPlacesOn = next
+	try {
+		localStorage.setItem(LOG_PLACES_KEY, next ? "on" : "off")
+	} catch {
+		// Storage blocked: this page's life only.
+	}
+	logPlacesListeners.forEach((listener) => listener())
+}
+
+function useLogPlaces(): [boolean, (on: boolean) => void] {
+	const on = useSyncExternalStore(subscribeLogPlaces, () => (logPlacesOn ??= readLogPlaces()), () => false)
+	return [on, setLogPlacesOn]
+}
+
+const PLACE_CHOICES = Array.from({ length: 9 }, (_, index) => index + 1)
+
 function RaceGrid({ title, run, shared, onWrite }: {
 	title: string
 	run: PvpRun
 	shared: Shared
 	onWrite: (change: RunChange) => void
 }) {
+	// The race whose Won by picker is open, or null.
+	const [pickingLoss, setPickingLoss] = useState<number | null>(null)
 	// A spot per runner, then null for Loss.
 	const columns: Array<number | null> = [...run.runners.map((runner) => runner.position), null]
 	// The label column is a CSS variable so one class switches it at sm.
@@ -1217,6 +1288,12 @@ function RaceGrid({ title, run, shared, onWrite }: {
 	const template: CSSProperties = { gridTemplateColumns: `var(--label) repeat(${columns.length}, minmax(0, 1fr))` }
 	return (
 		<div className="flex flex-col gap-1.5" role="group" aria-label="Who won each race">
+			{/* Places are optional; a loss can say who won it either way. */}
+			<label className="flex items-center justify-end gap-2 text-xs font-semibold text-gray-200">
+				<input type="checkbox" role="switch" checked={shared.logPlaces} onChange={(change) => shared.onLogPlaces(change.target.checked)} />
+				Log places
+				<span className="font-normal text-gray-400">on this device</span>
+			</label>
 			<div className={`${grid} items-end pb-0.5 sm:pb-1`} style={template}>
 				<span className={`${EYEBROW} pb-1.5 max-sm:invisible`}>Who won</span>
 				{columns.map((column) => {
@@ -1258,8 +1335,13 @@ function RaceGrid({ title, run, shared, onWrite }: {
 				const entry = run.races.find((candidate) => candidate.race === race)
 				// A race a stopped ticket doesn't list was skipped: the player said it never ran.
 				const skipped = entry === undefined && run.skipped
+				// Places show with the switch on, or wherever some are logged;
+				// Won by on every loss, switch or not (decision 6).
+				const showPlaces = shared.logPlaces || (entry?.places?.length ?? 0) > 0
+				const loss = entry !== undefined && entry.winner === null
 				return (
-					<div key={race} className={`${grid} items-center`} style={template}>
+					<Fragment key={race}>
+					<div className={`${grid} items-center`} style={template}>
 						<span className="flex flex-col">
 							<span className={`text-xs font-semibold sm:text-[13px] ${entry ? "text-gray-100" : "text-gray-400"}`}>Race {race}</span>
 							{skipped && <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-500 sm:text-[11px]">Skipped</span>}
@@ -1279,8 +1361,82 @@ function RaceGrid({ title, run, shared, onWrite }: {
 							)
 						})}
 					</div>
+					{(showPlaces || loss) && (
+						<div className={`${grid} -mt-0.5 items-center`} style={template}>
+							<span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-500 sm:text-[11px]">{showPlaces ? "Places" : ""}</span>
+							{columns.map((column) => {
+								if (column === null) {
+									if (!loss) return <span key="loss" />
+									const beaten = entry?.lost_to ? shared.umasById.get(entry.lost_to) : undefined
+									return (
+										<button
+											key="loss"
+											type="button"
+											onClick={() => setPickingLoss(race)}
+											aria-label={`${title}, race ${race}: won by ${beaten?.name ?? "not said"}`}
+											className="flex h-8 min-w-0 items-center justify-center gap-1 rounded-lg border border-edge px-1 text-[11px] text-gray-300 hover:border-brand sm:text-xs"
+										>
+											{beaten ? (
+												<>
+													<FramedUma src={beaten.portrait ?? beaten.image ?? null} layers={beaten.portrait_layers} oshi={shared.oshiIds.has(beaten.id)} alt="" className="w-5 shrink-0" />
+													<span className="truncate">{beaten.name}</span>
+												</>
+											) : (
+												<span className="truncate">Won by…</span>
+											)}
+										</button>
+									)
+								}
+								if (!showPlaces) return <span key={column} />
+								const runner = run.runners.find((candidate) => candidate.position === column)
+								const place = placeOf(entry, column)
+								return (
+									<select
+										key={column}
+										aria-label={`${title}, race ${race}: where ${umaName(shared.umasById, runner)} finished`}
+										value={place ?? ""}
+										onChange={(change) => {
+											const next = change.target.value === "" ? null : Number(change.target.value)
+											onWrite((current) => setPlace(current, race, column, next))
+										}}
+										className={`h-8 min-w-0 rounded-lg border bg-gray-900/60 px-1 text-center text-xs font-semibold ${place === 1 ? "border-brand text-brand" : "border-edge text-gray-200"}`}
+									>
+										<option value="">–</option>
+										{PLACE_CHOICES.map((choice) => (
+											<option key={choice} value={choice}>
+												{ordinal(choice)}
+											</option>
+										))}
+									</select>
+								)
+							})}
+						</div>
+					)}
+					</Fragment>
 				)
 			})}
+			{pickingLoss !== null && (
+				<PvpCardPicker
+					pool="uma"
+					items={shared.umas}
+					title={`Race ${pickingLoss}: the uma that won`}
+					skillsById={shared.skillsById}
+					event={shared.event}
+					style={null}
+					recommended={NO_PICKS}
+					blockReason={() => null}
+					selectedId={run.races.find((entry) => entry.race === pickingLoss)?.lost_to ?? null}
+					onPick={(id) => {
+						onWrite((current) => setLostTo(current, pickingLoss, id))
+						setPickingLoss(null)
+					}}
+					onRemove={() => {
+						onWrite((current) => setLostTo(current, pickingLoss, null))
+						setPickingLoss(null)
+					}}
+					onClose={() => setPickingLoss(null)}
+				/>
+			)}
 			<div className={`${grid} mt-0.5 items-center border-t border-edge pt-2 sm:mt-1 sm:pt-2.5`} style={template}>
 				<span className="text-xs font-semibold text-gray-300 sm:text-[13px]">Total</span>
 				{columns.map((column) => {
@@ -1769,6 +1925,9 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 }) {
 	const dayRuns = runsOf(runs, {})
 	const { total, umas: tallies } = summarizeRuns(dayRuns)
+	// Places and who beat you (notes/cm-runs-plan-2.md): over every logged race, the Finals included.
+	const places = placeTallies(runs)
+	const beaten = beatenBy(runs)
 	// A ticket with a lineup and nothing raced yet makes a "0 of 0" row: left out.
 	const umas = tallies.filter((tally) => tally.raced > 0)
 	const final = findRun(runs, { stage: "final" })
@@ -1850,6 +2009,15 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 											</span>
 											<span className="shrink-0">{`${tally.wins} of ${tally.raced} won`}</span>
 										</div>
+										{(() => {
+											const placed = places.get(key)
+											if (!placed) return null
+											return (
+												<div className="text-[11px] text-gray-400 sm:text-xs">
+													{`Average place ${(placed.total / placed.placed).toFixed(1)} · top 3 in ${placed.top3} of ${placed.placed}`}
+												</div>
+											)
+										})()}
 									</div>
 								</li>
 							)
@@ -1858,6 +2026,24 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 				)}
 				<p className="border-t border-edge pt-2.5 text-[11px] text-gray-400 sm:hidden">{footnote}</p>
 			</div>
+
+			{beaten.named > 0 && (
+				<div className="flex flex-col gap-2.5 border-t border-edge p-3.5 sm:px-5 sm:py-4.5">
+					<h3 className={EYEBROW}>Beaten by</h3>
+					<ul className="flex flex-col gap-2">
+						{beaten.umas.slice(0, 5).map(({ uma: id, losses }) => {
+							const uma = umasById.get(id)
+							return (
+								<li key={id} className="flex items-center gap-2.5">
+									<FramedUma src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers} oshi={oshiIds.has(id)} hover={hoverCardProps("uma", id)} alt="" className="w-8 shrink-0" />
+									<span className="min-w-0 flex-1 truncate text-[13px] text-gray-100" title={uma?.name}>{uma?.name ?? "Unknown uma"}</span>
+									<span className="shrink-0 text-xs text-gray-400">{`${losses} of ${beaten.named} named losses`}</span>
+								</li>
+							)
+						})}
+					</ul>
+				</div>
+			)}
 
 			<div className="hidden flex-col gap-3 px-5 py-4.5 sm:flex">
 				<h3 className={EYEBROW}>{shape.rounds ? "By day" : "By tickets"}</h3>

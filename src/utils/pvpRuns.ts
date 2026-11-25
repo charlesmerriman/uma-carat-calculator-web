@@ -246,8 +246,114 @@ export function contentOf(run: PvpRun): PvpRunContent {
  */
 export function setRace(races: PvpRunRace[], race: number, winner: number | null | undefined): PvpRunRace[] {
 	const others = races.filter((entry) => entry.race !== race)
-	const next = winner === undefined ? others : [...others, { race, winner }]
+	const old = races.find((entry) => entry.race === race)
+	const next = winner === undefined ? others : [...others, coherentRace({ ...old, race, winner })]
 	return next.sort((a, b) => a.race - b.race)
+}
+
+/**
+ * A race kept coherent with its winner (notes/cm-runs-plan-2.md): a win
+ * drops another runner's 1st and its own place unless it is 1st, a loss
+ * drops any 1st, and only a loss keeps a Won by. A field the race never had
+ * stays left out: the server keeps what it stores for a field a PUT leaves
+ * out, so a key is only sent once this client knows it.
+ */
+function coherentRace(entry: PvpRunRace): PvpRunRace {
+	const { winner } = entry
+	const loss = winner === null
+	const next: PvpRunRace = { race: entry.race, winner }
+	if (entry.places !== undefined) {
+		next.places = entry.places.filter((place) =>
+			loss ? place.place !== 1 : place.position === winner ? place.place === 1 : place.place !== 1
+		)
+	}
+	if (entry.lost_to !== undefined) next.lost_to = loss ? entry.lost_to : null
+	if (entry.lost_to_style !== undefined) next.lost_to_style = loss ? entry.lost_to_style : ""
+	return next
+}
+
+/** Where the uma in `position` finished race `race`, or null. */
+export function placeOf(entry: PvpRunRace | undefined, position: number): number | null {
+	return entry?.places?.find((place) => place.position === position)?.place ?? null
+}
+
+/**
+ * The ticket with one runner's place in a race set (or cleared with null).
+ * With places on, the places are the input (the plan's decision 7): 1st makes
+ * her the winner; a place for a race not logged yet logs it as a loss until
+ * one of yours is 1st; taking 1st away from the winner makes it a loss. A
+ * place another of yours held moves to this one.
+ */
+export function setPlace(content: PvpRunContent, race: number, position: number, place: number | null): PvpRunContent {
+	const entry = content.races.find((candidate) => candidate.race === race)
+	const places = (entry?.places ?? []).filter((candidate) => candidate.position !== position && candidate.place !== place)
+	if (place !== null) places.push({ position, place, loss_reason: "" })
+	places.sort((a, b) => a.position - b.position)
+	const first = places.find((candidate) => candidate.place === 1)?.position
+	const winner = first !== undefined ? first : entry?.winner === position ? null : (entry?.winner ?? null)
+	const next = coherentRace({ ...entry, race, winner, places })
+	const added = entry === undefined
+	const races = [...content.races.filter((candidate) => candidate.race !== race), next].sort((a, b) => a.race - b.race)
+	return { ...content, races, skipped: content.skipped && !added }
+}
+
+/** The ticket with the uma that won a lost race set, or cleared with null. Only a loss has one. */
+export function setLostTo(content: PvpRunContent, race: number, uma: number | null): PvpRunContent {
+	return {
+		...content,
+		races: content.races.map((entry) => (entry.race === race && entry.winner === null ? { ...entry, lost_to: uma } : entry)),
+	}
+}
+
+/** An uma's (and veteran's) places over the races she has one in. */
+export interface PlaceTally {
+	uma: number
+	trained_uma: number | null
+	placed: number
+	/** The sum of her places, for the average. */
+	total: number
+	/** Races she finished 1st to 3rd. */
+	top3: number
+}
+
+/** Each uma and veteran's places, keyed `uma:veteran` like the win tallies. Only races with a place count. */
+export function placeTallies(runs: Array<Pick<PvpRun, "races" | "runners">>): Map<string, PlaceTally> {
+	const tallies = new Map<string, PlaceTally>()
+	for (const run of runs) {
+		for (const race of run.races) {
+			for (const place of race.places ?? []) {
+				const runner = run.runners.find((candidate) => candidate.position === place.position)
+				if (!runner) continue
+				const key = `${runner.uma}:${runner.trained_uma ?? ""}`
+				const tally = tallies.get(key) ?? { uma: runner.uma, trained_uma: runner.trained_uma ?? null, placed: 0, total: 0, top3: 0 }
+				tally.placed += 1
+				tally.total += place.place
+				if (place.place <= 3) tally.top3 += 1
+				tallies.set(key, tally)
+			}
+		}
+	}
+	return tallies
+}
+
+/** The umas that beat the player, most losses first (the most recent first on a tie), over the losses that name one. */
+export function beatenBy(runs: Array<Pick<PvpRun, "races" | "updated_at">>): { umas: Array<{ uma: number; losses: number }>; named: number } {
+	const counts = new Map<number, { losses: number; latest: string }>()
+	let named = 0
+	for (const run of runs) {
+		for (const race of run.races) {
+			if (race.winner !== null || !race.lost_to) continue
+			named += 1
+			const entry = counts.get(race.lost_to) ?? { losses: 0, latest: "" }
+			entry.losses += 1
+			if (run.updated_at > entry.latest) entry.latest = run.updated_at
+			counts.set(race.lost_to, entry)
+		}
+	}
+	const umas = [...counts.entries()]
+		.sort(([, a], [, b]) => b.losses - a.losses || b.latest.localeCompare(a.latest))
+		.map(([uma, { losses }]) => ({ uma, losses }))
+	return { umas, named }
 }
 
 /**
