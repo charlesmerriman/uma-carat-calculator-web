@@ -20,6 +20,7 @@
 
 import { formatQuarterName } from "./dateFormat"
 import { RARITY_WORDS, effectValue, gradeLetter, type ReleaseDates } from "./encyclopedia"
+import { DIGIT_LETTER, OTHER_SCRIPT_LETTER, nameInitial } from "./nameOrder"
 
 /** What one row of a list files under. Neighbouring rows with the same `key` share a heading. */
 export interface GroupKey {
@@ -133,19 +134,17 @@ export const groupId = (scope: string, key: string) => `enc-${scope}-group-${key
 // ── One key per sort ─────────────────────────────────────────────────────────
 
 /**
- * Name: its first letter (an accent dropped, so "Él" files under E), "#" for
- * a name that starts with a digit or a sign, and "あ" for one that starts
- * outside plain ASCII. The Skills list's API sorts those last (a JP only
- * skill with no English name yet, plus a few like "¡Qué alegría!" and
- * "…found you."), and one heading keeps them together where the game's own
- * order interleaves them. No uma or card name starts that way (2026-11-25).
+ * Name: the section `nameInitial` reads (utils/nameOrder.ts), the same one
+ * `compareNames` sorts by, so a list in that order is one run per letter. A
+ * leading sign is skipped ("#LookatCurren" is an L, "…found you." an F), an
+ * accent dropped ("Élan" is an E), a digit files under "#" (first) and
+ * another script under "あ" (last).
  */
 export function letterKey(name: string): GroupKey {
-	const raw = name.trim().charAt(0)
-	const first = raw.normalize("NFD").charAt(0).toUpperCase()
-	if (/[A-Z]/.test(first)) return { key: first, label: first, index: first }
-	if (raw.charCodeAt(0) > 127) return { key: "kana", label: "あ", index: "あ" }
-	return { key: "other", label: "#", index: "#" }
+	const { letter } = nameInitial(name)
+	if (letter === DIGIT_LETTER) return { key: "other", label: letter, index: letter }
+	if (letter === OTHER_SCRIPT_LETTER) return { key: "kana", label: letter, index: letter }
+	return { key: letter, label: letter, index: letter }
 }
 
 /**
