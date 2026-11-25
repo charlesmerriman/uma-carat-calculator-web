@@ -125,6 +125,18 @@ describe("planReplays and mergeReplays", () => {
 		expect(mergeReplays(stopped, day4(2), CTX).outcome.status).toBe("mismatch")
 	})
 
+	it("finds the tapped ticket that agrees, wherever it sits, before a free one", () => {
+		// Ticket 1 was another run (Kitasan won race 1); Ticket 2 is these races, tapped.
+		const other = run(1, { runners: LINEUP, races: [{ race: 1, winner: 1 }] })
+		const these = run(2, { runners: LINEUP, races: [{ race: 1, winner: null }, { race: 2, winner: null }] })
+		const plan = planReplays(day4(5), [other, these], CTX)
+		expect(plan.groups[0].slot).toEqual({ stage: "day", day: 4, ticket: 2 })
+		expect(plan.groups[0].outcome.status).toBe("fill")
+		// With no ticket agreeing and none free after it, the next logged one says why.
+		const lone = planReplays(day4(2), [other, run(2, { runners: LINEUP, races: [{ race: 1, winner: 0 }] }), run(3, { skipped: true }), run(4, { runners: LINEUP, races: [{ race: 1, winner: 2 }] })], CTX)
+		expect(lone.groups[0]).toMatchObject({ slot: { ticket: 1 }, outcome: { status: "mismatch" } })
+	})
+
 	it("passes over a ticket skipped whole, and says when a day runs out of tickets", () => {
 		const skipped = run(1, { skipped: true })
 		const plan = planReplays(day4(20), [skipped], CTX)

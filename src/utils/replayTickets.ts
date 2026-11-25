@@ -12,9 +12,10 @@
  *      is the Finals; anything else outside the event is left out.
  *   2. WITHIN A DAY, oldest first, a new ticket starts every 5 races, or when
  *      the three umas change (by veteran, else by outfit).
- *   3. THE GROUPS TAKE THE DAY'S TICKETS IN ORDER, passing over a ticket the
- *      player skipped whole. More groups than tickets: the rest are shown and
- *      left out.
+ *   3. EACH GROUP TAKES A TICKET (pickTicket): one the player logged whose
+ *      results agree race for race, wherever it sits; else the next free one
+ *      after the last ticket used, passing over a ticket skipped whole. More
+ *      groups than tickets: the rest are shown and left out.
  *   4. EACH GROUP MERGES INTO ITS TICKET (mergeReplays), all or nothing:
  *      - a ticket with nothing raced takes the replays' lineup and races;
  *      - a logged ticket must have the same three, and every race it lists
@@ -113,21 +114,27 @@ export function groupReplays(races: ReplayRace[], ctx: Pick<ReplayContext, "even
 /** The plan the preview shows: each group's ticket and what saving it would do. */
 export function planReplays(races: ReplayRace[], runs: PvpRun[], ctx: ReplayContext): ReplayPlan {
 	const { groups, outside } = groupReplays(races, ctx)
-	const next = new Map<number | "final", number>()
+	// Per day: the tickets a group has taken, and the latest one.
+	const used = new Map<number | "final", Set<number>>()
+	const last = new Map<number | "final", number>()
 	const planned: PlannedGroup[] = []
 	for (const group of groups) {
+		const taken = used.get(group.day) ?? new Set<number>()
 		let slot: PvpRunSlot | null = null
 		if (group.day === "final") {
 			// One Finals race; a second one is left out.
-			if (!next.has("final")) slot = { stage: "final" }
-			next.set("final", 1)
+			if (!taken.has(1)) slot = { stage: "final" }
+			taken.add(1)
 		} else {
-			let ticket = next.get(group.day) ?? 1
-			// A ticket the player skipped whole wasn't played: the races are a later one's.
-			while (ticket <= CM_RUN_TICKETS && isSkippedWhole(findRun(runs, { stage: "day", day: group.day, ticket }))) ticket += 1
-			if (ticket <= CM_RUN_TICKETS) slot = { stage: "day", day: group.day, ticket }
-			next.set(group.day, ticket + 1)
+			const day = group.day
+			const ticket = pickTicket(day, group.races, runs, ctx, taken, last.get(day) ?? 0)
+			if (ticket !== null) {
+				slot = { stage: "day", day, ticket }
+				taken.add(ticket)
+				last.set(day, Math.max(last.get(day) ?? 0, ticket))
+			}
 		}
+		used.set(group.day, taken)
 		const run = slot ? findRun(runs, slot) : undefined
 		const outcome: ReplayOutcome = slot
 			? mergeReplays(run ? toContent(run) : null, group.races, ctx, slot.stage === "final").outcome
@@ -135,6 +142,34 @@ export function planReplays(races: ReplayRace[], runs: PvpRun[], ctx: ReplayCont
 		planned.push({ day: group.day, slot, races: group.races, outcome })
 	}
 	return { groups: planned, outside }
+}
+
+/**
+ * The ticket a day's group goes to (the plan's rule): a ticket the player
+ * logged whose results agree with the replays race for race claims them,
+ * wherever it sits; otherwise the next free ticket after the last one used
+ * (so umadump started mid-day fills from the first free ticket). With
+ * neither, the next logged ticket, so the preview can say why it disagrees.
+ * A ticket skipped whole was never played and is passed over.
+ */
+function pickTicket(day: number, races: ReplayRace[], runs: PvpRun[], ctx: ReplayContext, taken: Set<number>, after: number): number | null {
+	const open = Array.from({ length: CM_RUN_TICKETS }, (_, index) => index + 1).filter((ticket) => {
+		const run = findRun(runs, { stage: "day", day, ticket })
+		return !taken.has(ticket) && !isSkippedWhole(run)
+	})
+	const logged = (ticket: number) => !isUnracedContent(toContentOrNull(findRun(runs, { stage: "day", day, ticket })))
+	const agrees = open.find((ticket) => {
+		if (!logged(ticket)) return false
+		const status = mergeReplays(toContentOrNull(findRun(runs, { stage: "day", day, ticket })), races, ctx).outcome.status
+		return status === "fill" || status === "same"
+	})
+	if (agrees !== undefined) return agrees
+	const later = open.filter((ticket) => ticket > after)
+	return later.find((ticket) => !logged(ticket)) ?? later[0] ?? null
+}
+
+function toContentOrNull(run: PvpRun | undefined): PvpRunContent | null {
+	return run ? toContent(run) : null
 }
 
 function isSkippedWhole(run: PvpRun | undefined): boolean {

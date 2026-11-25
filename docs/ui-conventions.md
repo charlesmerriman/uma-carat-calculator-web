@@ -1935,8 +1935,8 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   or chosen (files, or a folder through `webkitdirectory`), read in the browser by
   `utils/gameImport/umadumpReplays.ts` (by shape; only the player's three and the winning
   uma ever leave a file), slotted by `utils/replayTickets.ts` (the day from each file's
-  modified time; five races a ticket or a new three; the day's tickets in order, past one
-  skipped whole), previewed per day, then saved ticket by ticket through `useSaveRun`, each
+  modified time; five races a ticket or a new three; a logged ticket that agrees race for
+  race claims a group, else the next free one, past a ticket skipped whole), previewed per day, then saved ticket by ticket through `useSaveRun`, each
   change merged again on the ticket as it is at save time. **A tapped result is never
   overwritten**: a ticket that disagrees is shown and left alone, and the import only adds
   races, places, loss reasons and a blank Won by. The totals then show "Why she lost" per uma

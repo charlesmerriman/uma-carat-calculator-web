@@ -14,8 +14,8 @@
  *
  * Folders: "Choose the folder" uses `webkitdirectory`, which every desktop
  * browser has; any file in it that isn't a CM race replay is counted and
- * skipped, so picking umadump's whole folder works too. A dropped folder isn't
- * read (that needs the entry API); dropping its files is.
+ * skipped, so picking umadump's whole folder works too, and so does dropping
+ * it (droppedFiles walks a dropped folder).
  */
 
 import { useMemo, useState, type DragEvent } from "react"
@@ -110,7 +110,8 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 	const drop = (dropped: DragEvent<HTMLElement>) => {
 		dropped.preventDefault()
 		setDragging(false)
-		void open(dropped.dataTransfer.files)
+		// The entries are taken now, inside the event: after it the list is empty.
+		void droppedFiles(dropped.dataTransfer).then(open)
 	}
 
 	const save = () => {
@@ -150,7 +151,7 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 					dragging ? "border-brand text-gray-100" : "border-gray-600 text-gray-300"
 				}`}
 			>
-				Drop the replay files here, or
+				Drop the replay files or their folder here, or
 				<span className="flex flex-wrap justify-center gap-2">
 					<label className={`${ACTION_BUTTON} cursor-pointer`}>
 						<FileUp className="h-4 w-4" aria-hidden="true" />
@@ -183,8 +184,9 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 						{read.notReplays > 0 && <li>{plural(read.notReplays, "file isn't a race replay", "files aren't race replays")}, skipped.</li>}
 					</ul>
 					<p className="text-xs text-gray-400">
-						Races are grouped by when each file was written: five to a ticket, or a new ticket when your three change. Anything
-						you already logged stays as you logged it. The replays only add what&apos;s missing.
+						Races are grouped by when each file was written: five to a ticket, or a new ticket when your three change. Each group
+						goes to the ticket you logged that matches it, or else the next free one. Anything you already logged stays as you
+						logged it. The replays only add what&apos;s missing.
 					</p>
 				</section>
 			)}
@@ -200,6 +202,34 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 			</div>
 		</section>
 	)
+}
+
+/**
+ * Every file in what was dropped: files as they are, and a folder walked
+ * through its entries (umadump's whole folder works; what isn't a replay is
+ * counted and skipped). The entries are read synchronously, while the drop
+ * event lasts; each file keeps its own modified time.
+ */
+function droppedFiles(transfer: DataTransfer): Promise<File[]> {
+	const entries = Array.from(transfer.items)
+		.map((item) => item.webkitGetAsEntry?.() ?? null)
+		.filter((entry): entry is FileSystemEntry => entry !== null)
+	if (entries.length === 0) return Promise.resolve(Array.from(transfer.files))
+	const files: File[] = []
+	const walk = async (entry: FileSystemEntry): Promise<void> => {
+		if (entry.isFile) {
+			files.push(await new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject)))
+		} else if (entry.isDirectory) {
+			const reader = (entry as FileSystemDirectoryEntry).createReader()
+			// readEntries hands a folder over in batches; an empty one is the end.
+			for (;;) {
+				const batch = await new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject))
+				if (batch.length === 0) break
+				for (const child of batch) await walk(child)
+			}
+		}
+	}
+	return entries.reduce((chain, entry) => chain.then(() => walk(entry)), Promise.resolve()).then(() => files)
 }
 
 /** Per day: each group's ticket and what saving does there. */
