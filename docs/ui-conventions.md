@@ -1942,6 +1942,17 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   races, places, loss reasons and a blank Won by. The totals then show "Why she lost" per uma
   from the day tickets, the codes in words only where confirmed (`lossReasonLabel`). The copy
   says "if you use umadump" and never tells a player to run it.
+- **Watching the umadump folder** (`hooks/useReplayWatch.ts`, `services/replayFolder.ts`;
+  Chrome and Edge, File System Access API): the button is drawn only where the API exists
+  (`canWatchFolder`, through `useSyncExternalStore` with a server snapshot of false). The
+  folder's handle is kept per device in IndexedDB (`idb-keyval`), and a later visit
+  re-checks the grant, one click to ask again. While the view is open and the tab
+  visible, the folder is read every 5 seconds, each file opened once. A group holding a
+  race that arrived WHILE watching and adding cleanly is saved at once (`watchStep`). Files
+  already there when the watch started, and fresh races that disagree, show as "N replays
+  need a look", which opens the preview with every race read. It polls only once the runs
+  and the catalogue are loaded. `WatchBar` under the tabs says what it last saved, and Stop
+  forgets the folder.
 - **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,
   the Finals, per-uma bars with the veteran link, per day); below `lg` they fall under the
   day. On a phone a three-number strip (`WinRateStrip`) goes above the tabs and the side

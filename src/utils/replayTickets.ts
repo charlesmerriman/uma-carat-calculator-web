@@ -172,6 +172,23 @@ function toContentOrNull(run: PvpRun | undefined): PvpRunContent | null {
 	return run ? toContent(run) : null
 }
 
+/**
+ * What the folder watch does with a plan (notes/cm-runs-plan-2.md, PR 6): a
+ * group holding a race that arrived WHILE WATCHING (`fresh`), which adds
+ * cleanly (a new ticket, or a fill), is saved at once. The rest that needs
+ * the player waits for a look: a clean group of older files (umadump ran
+ * before the watch), and a fresh one that disagrees with what they logged.
+ * An older disagreement isn't raised again; the preview still shows it.
+ */
+export function watchStep(plan: ReplayPlan, fresh: ReadonlySet<ReplayRace>): { save: PlannedGroup[]; look: PlannedGroup[] } {
+	const clean = (group: PlannedGroup) => group.slot !== null && (group.outcome.status === "new" || group.outcome.status === "fill")
+	const isFresh = (group: PlannedGroup) => group.races.some((race) => fresh.has(race))
+	return {
+		save: plan.groups.filter((group) => clean(group) && isFresh(group)),
+		look: plan.groups.filter((group) => (clean(group) && !isFresh(group)) || (group.outcome.status === "mismatch" && isFresh(group))),
+	}
+}
+
 function isSkippedWhole(run: PvpRun | undefined): boolean {
 	return Boolean(run?.skipped) && (run?.races.length ?? 0) === 0
 }

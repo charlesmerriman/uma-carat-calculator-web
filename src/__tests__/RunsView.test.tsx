@@ -59,6 +59,8 @@ const toastError = vi.hoisted(() => vi.fn())
 const toastSuccess = vi.hoisted(() => vi.fn())
 
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: toastError, success: toastSuccess }) }))
+// The folder watch keeps its handle in IndexedDB; here nothing is kept between visits.
+vi.mock("idb-keyval", () => ({ get: vi.fn(async () => undefined), set: vi.fn(async () => undefined), del: vi.fn(async () => undefined) }))
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({ calculationConstants: DEFAULT_CONSTANTS }),
 }))
@@ -619,6 +621,60 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		expect(placesOf(lastRaces()[0])).toEqual([[0, 8], [1, 9], [2, 7]])
 		// Nothing about another player is sent.
 		expect(JSON.stringify(puts()[0].body)).not.toMatch(/Trainer|viewer/)
+	})
+
+	describe("watching the umadump folder (Chrome and Edge)", () => {
+		/** A fake umadump folder: race_replays/champions_race holds `files`. */
+		function fakeFolder(files: File[]) {
+			const listing = async function* () {
+				for (const file of files) yield { kind: "file" as const, name: file.name, getFile: async () => file }
+			}
+			const champions = { kind: "directory", name: "champions_race", getDirectoryHandle: async () => Promise.reject(new Error("none")), values: listing }
+			const replays = { kind: "directory", name: "race_replays", getDirectoryHandle: async () => champions, values: async function* () {} }
+			return {
+				kind: "directory",
+				name: "umadump",
+				getDirectoryHandle: async (name: string) => (name === "race_replays" ? replays : Promise.reject(new Error("none"))),
+				values: async function* () {},
+				queryPermission: async () => "granted",
+			}
+		}
+		const replayFile = (name: string) => new File([JSON.stringify(replayFixture)], name, { lastModified: Date.UTC(2099, 2, 6, 2) })
+
+		afterEach(() => {
+			delete (window as unknown as Record<string, unknown>).showDirectoryPicker
+		})
+
+		async function startWatching(files: File[]) {
+			;(window as unknown as Record<string, unknown>).showDirectoryPicker = vi.fn(async () => fakeFolder(files))
+			show()
+			fireEvent.click(await screen.findByRole("button", { name: "Fill from replays" }))
+			fireEvent.click(screen.getByRole("button", { name: "Watch the umadump folder" }))
+			return screen.findByText(/^Watching/)
+		}
+
+		it("saves a race that lands while watching, straight away", async () => {
+			const files: File[] = []
+			await startWatching(files)
+			// umadump writes a race; the next read (here, the tab coming back) saves it.
+			files.push(replayFile("race-1.json"))
+			await waitFor(() => {
+				fireEvent(document, new Event("visibilitychange"))
+				expect(puts()).toHaveLength(1)
+			})
+			expect(puts()[0].path).toBe("/pvp-runs/cm/10/day/1/ticket/1")
+			expect(lastRaces()[0]).toMatchObject({ race: 1, winner: null, lost_to: 44 })
+			expect(await screen.findByText(/Day 1, Ticket 1: race 1 added at/)).toBeInTheDocument()
+		})
+
+		it("asks before saving files that were there when the watch started", async () => {
+			await startWatching([replayFile("race-0.json")])
+			const look = await screen.findByRole("button", { name: "1 replay needs a look" })
+			expect(puts()).toHaveLength(0)
+			fireEvent.click(look)
+			const preview = await screen.findByRole("region", { name: "What the replays fill" })
+			expect(preview).toHaveTextContent("Ticket 1 · 1 race · new")
+		})
 	})
 
 	it("has no places in a League of Heroes, where the API refuses them", async () => {

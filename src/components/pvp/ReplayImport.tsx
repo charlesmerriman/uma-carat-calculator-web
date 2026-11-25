@@ -20,16 +20,12 @@
 
 import { useMemo, useState, type DragEvent } from "react"
 import { toast } from "sonner"
-import { FileUp, FolderOpen } from "lucide-react"
-import { useCalculatorData } from "../../services/CalculatorContext"
+import { Eye, FileUp, FolderOpen } from "lucide-react"
 import { readReplayFile, type ReplayRace } from "../../utils/gameImport/umadumpReplays"
 import { mergeReplays, planReplays, type PlannedGroup, type ReplayContext } from "../../utils/replayTickets"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "./gallery/galleryStyles"
 import type { RunChange } from "../../services/pvpRunQueries"
-import type { RaceEvent } from "../../types"
-import type { CatalogueUma, PvpTeam } from "../../types/pvpTeam"
 import type { PvpRun, PvpRunSlot } from "../../types/pvpRun"
-import type { TrainedUma } from "../../types/trainedUma"
 
 /** Where umadump is published: a community tool the site does not make. */
 const UMADUMP_URL = "https://github.com/Werseter/umadump"
@@ -48,33 +44,23 @@ const plural = (count: number, one: string, many = `${one}s`) => `${count} ${cou
 // `webkitdirectory` isn't in React's input types; every desktop browser has it.
 const FOLDER_PICKER = { webkitdirectory: "" } as Record<string, string>
 
-export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSaved, onClose }: {
-	event: RaceEvent
+export function ReplayImport({ ctx, runs, initialRaces, watch, onSave, onSaved, onClose }: {
+	/** The game's ids to the site's (useReplayContext), shared with the folder watch. */
+	ctx: ReplayContext
 	runs: PvpRun[]
-	/** The event's teams: a new ticket takes a matching one's spots and id. */
-	teams: PvpTeam[]
-	umas: CatalogueUma[]
-	veterans: TrainedUma[]
+	/** Races the folder watch read: the preview opens on them, no files to pick. */
+	initialRaces?: ReplayRace[]
+	/** "Watch the umadump folder" (Chrome and Edge), drawn only while the watch is off. */
+	watch?: { onStart: () => void }
 	onSave: (slot: PvpRunSlot, change: RunChange) => void
 	/** After saving: the first day written, to show it. */
 	onSaved: (day: number | "final") => void
 	onClose: () => void
 }) {
-	const { calculationConstants } = useCalculatorData()
-	const [read, setRead] = useState<ReadReplays | null>(null)
+	const [read, setRead] = useState<ReadReplays | null>(() => (initialRaces ? { races: initialRaces, otherRaces: 0, notReplays: 0 } : null))
 	const [reading, setReading] = useState(false)
 	const [dragging, setDragging] = useState(false)
 
-	const ctx: ReplayContext = useMemo(
-		() => ({
-			event,
-			constants: calculationConstants,
-			umaByCard: new Map(umas.filter((uma) => uma.game_id != null).map((uma) => [uma.game_id as number, uma.id])),
-			veteranByKey: new Map(veterans.filter((veteran) => veteran.import_key != null).map((veteran) => [veteran.import_key as number, veteran.id])),
-			teams,
-		}),
-		[event, calculationConstants, umas, veterans, teams]
-	)
 	// Worked out against the runs as they are now, so a tap meanwhile shows.
 	const plan = useMemo(() => (read ? planReplays(read.races, runs, ctx) : null), [read, runs, ctx])
 	const saving = plan?.groups.filter((group) => group.slot && (group.outcome.status === "new" || group.outcome.status === "fill")) ?? []
@@ -163,7 +149,18 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 						Choose the folder
 						<input type="file" {...FOLDER_PICKER} className="sr-only" onChange={(change) => void open(change.target.files)} />
 					</label>
+					{watch && (
+						<button type="button" className={ACTION_BUTTON} onClick={watch.onStart}>
+							<Eye className="h-4 w-4" aria-hidden="true" />
+							Watch the umadump folder
+						</button>
+					)}
 				</span>
+				{watch && (
+					<span className="text-xs text-gray-400">
+						Chrome and Edge can watch the folder while this page is open, and save each race as it lands.
+					</span>
+				)}
 			</div>
 
 			{reading && <p className="text-sm text-gray-400" role="status">Reading the files…</p>}
