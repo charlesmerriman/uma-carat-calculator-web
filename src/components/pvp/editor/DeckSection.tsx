@@ -28,7 +28,6 @@ import {
 	duplicateDeck,
 	moveDeck,
 	removeDeck,
-	setBorrowSlot,
 	setSlotCard,
 	swapSlots,
 	updateDeck,
@@ -71,7 +70,7 @@ export function DeckSection({ style }: { style: MemberStyle }) {
 		<section id={`editor-${style}-decks`} aria-label="Example decks" className="flex flex-col gap-3">
 			<div className="flex flex-wrap items-baseline justify-between gap-2">
 				<h4 className={SECTION_HEADING}>Example decks</h4>
-				<span className={SUBTLE}>Six slots; slot 6 is usually the borrow. Drag a card onto another slot to move it, or a deck's grip to reorder.</span>
+				<span className={SUBTLE}>Six slots; slot 6 is the borrow, except on swap-ins. Drag a card onto another slot to move it, or a deck's grip to reorder.</span>
 			</div>
 			<SortableGroup ids={decks.map(({ i }) => i)} layout="list" onMove={(from, to) => update((doc) => moveDeck(doc, from, to))}>
 				<div className="flex flex-col gap-3" role="list" aria-label={`${STYLE_LABELS[style]} decks`}>
@@ -95,7 +94,8 @@ function DeckEditor({ deck, index: i }: { deck: GuideDeckRow; index: number }) {
 	const labelErrors = useFieldErrors(`decks[${i}].label`)
 	const noteErrors = useFieldErrors(`decks[${i}].note`)
 	const inDeck = new Set(deck.slots.map((row) => row.support_card).filter((card): card is number => card !== null))
-	const borrowSlot = deck.slots.find((row) => row.is_borrow)?.slot ?? null
+	// Slot 6, except on a swap-ins deck (guideDocumentEdits.ts, withBorrow).
+	const borrowSlot = deck.is_highlighted ? null : DECK_SLOTS
 
 	const targetRow = target
 		? deck.slots.find((row) => row.slot === target.slot && row.order === target.order) ?? null
@@ -296,15 +296,6 @@ function SlotEditor({ deckIndex, slot, rows, isBorrow, onPick }: {
 						Note
 					</button>
 				)}
-				<button
-					type="button"
-					className={`${SMALL_BUTTON} ${isBorrow ? "text-brand" : ""}`}
-					aria-pressed={isBorrow}
-					title="The borrowed card"
-					onClick={() => update((doc) => setBorrowSlot(doc, deckIndex, isBorrow ? null : slot))}
-				>
-					Borrow
-				</button>
 				{main && (
 					<button type="button" className={ICON_BUTTON} aria-label={`Clear slot ${slot}`} title="Clear" onClick={() => update((doc) => clearSlot(doc, deckIndex, slot))}>
 						<X className="h-3.5 w-3.5" />

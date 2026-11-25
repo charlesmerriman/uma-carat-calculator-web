@@ -31,10 +31,10 @@ import {
 	moveRow,
 	moveUma,
 	removeUma,
-	setBorrowSlot,
 	setSlotCard,
 	setStyleNote,
 	swapSlots,
+	updateDeck,
 	updateSlot,
 	updateUma,
 } from "../utils/guideDocumentEdits"
@@ -329,10 +329,6 @@ describe("edits", () => {
 		expect(setSlotCard(doc, 1, 3, null).decks[1].slots[0]).toMatchObject({ support_card: null, limit_break: null })
 		doc = addAlternative(doc, 1, 3, null, "or any speed")
 		expect(doc.decks[1].slots[1]).toMatchObject({ slot: 3, order: 1, support_card: null, note: "or any speed" })
-		doc = setBorrowSlot(doc, 1, 3)
-		expect(doc.decks[1].slots.every((slot) => slot.is_borrow)).toBe(true)
-		doc = setBorrowSlot(doc, 0, 1)
-		expect(doc.decks[0].slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[6, false], [1, true], [1, true]])
 		doc = clearSlot(doc, 1, 3, 1)
 		expect(doc.decks[1].slots).toHaveLength(1)
 		doc = clearSlot(doc, 1, 3)
@@ -365,21 +361,36 @@ describe("edits", () => {
 		expect(countNoteCopies(everywhere, 999, "2SP", null)).toBe(0)
 	})
 
+	it("keeps the borrow on slot 6, and off a swap-ins deck (Henry, 2026-11-25)", () => {
+		let doc = addDeck(document(), "front", "Whale")
+		doc = setSlotCard(doc, 1, 6, 303)
+		const borrow = (d: typeof doc) => d.decks[1].slots.map((row) => [row.slot, row.is_borrow])
+		expect(borrow(doc)).toEqual([[6, true]])
+		// Cleared and filled again, it is still the borrow.
+		doc = setSlotCard(clearSlot(doc, 1, 6), 1, 6, 302)
+		expect(borrow(doc)).toEqual([[6, true]])
+		doc = setSlotCard(doc, 1, 2, 303)
+		expect(borrow(doc)).toEqual([[6, true], [2, false]])
+		// A swap-ins deck has no borrow, and gets it back when switched off.
+		doc = updateDeck(doc, 1, { is_highlighted: true })
+		expect(borrow(doc)).toEqual([[6, false], [2, false]])
+		expect(borrow(updateDeck(doc, 1, { is_highlighted: false }))).toEqual([[6, true], [2, false]])
+	})
+
 	it("drags a slot onto another: everything on it travels, an empty slot is a move", () => {
 		let doc = addDeck(document(), "front", "Whale")
 		doc = setSlotCard(doc, 1, 1, 302)
 		doc = updateSlot(doc, 1, 1, 0, { note: "2SP", limit_break: 4 })
 		doc = addAlternative(doc, 1, 1, null, "any speed")
 		doc = setSlotCard(doc, 1, 6, 303)
-		doc = setBorrowSlot(doc, 1, 6)
 		const rows = (d: typeof doc) => d.decks[1].slots.map((row) => [row.slot, row.order, row.support_card, row.note, row.limit_break, row.is_borrow])
 
-		// Swap 1 and 6: the note, limit break and "or" row go with Kitasan, the borrow with Creek.
+		// Swap 1 and 6: the note, limit break and "or" row go with Kitasan; the borrow stays on slot 6.
 		const swapped = swapSlots(doc, 1, 6, 1)
 		expect(rows(swapped)).toEqual([
-			[6, 0, 302, "2SP", 4, false],
-			[6, 1, null, "any speed", null, false],
-			[1, 0, 303, "", null, true],
+			[6, 0, 302, "2SP", 4, true],
+			[6, 1, null, "any speed", null, true],
+			[1, 0, 303, "", null, false],
 		])
 		expect(validateDocument(swapped, INDEX).filter((error) => error.path.startsWith("decks[1]"))).toEqual([])
 
