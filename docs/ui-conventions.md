@@ -2158,7 +2158,11 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   decks" the same way. "What wins" is CM Runs' win rate per uma and strategy
   (`utils/runResults.ts`): **shown from `min_races` (20), ranked from `RANKED_RACES` (100)**;
   20 to 99 races sit under the ranked rows, muted, with no place; one to three marks say how
-  much to trust a rate (20, 100, 300 races). "Your team" reads the reader's own saved team
+  much to trust a rate (20, 100, 300 races). A row's second small line (`RankRow`'s `note`)
+  is its average place and top-3 rate when the server sends them (20 placed races; places
+  are optional). "What beats players", at the top of the column beside it, is each uma's
+  share of the event's named losses (`beaten_by`, from 20 named losses, a row from 5), drawn
+  in the loss red (`Bar`'s `loss` tone); a payload without it reads as empty. "Your team" reads the reader's own saved team
   (`usePvpTeams`) and gives each uma's place. "Trios players build most" is the server's exact
   three-uma teams (`count_teams` `trios`).
 - **Players** (`PlayersTab.tsx`): Team Trials class and club rank as stacked bars, highest

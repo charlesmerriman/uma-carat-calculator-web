@@ -1,8 +1,10 @@
 /**
  * The Rankings page's PvP tab (`?view=pvp`), one event at a time: what
  * players build (every finished saved team, posted or not; the PvP page's own
- * Rankings view counts only the gallery) and what wins (CM Runs' win rate
- * per uma and strategy, utils/runResults.ts).
+ * Rankings view counts only the gallery), what wins (CM Runs' win rate
+ * per uma and strategy, utils/runResults.ts, with the average place and top-3
+ * rate where enough races have places), and what beats players (each uma's
+ * share of the losses players named; notes/cm-runs-plan-2.md, mock 05).
  *
  * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 09, 10, 21):
  * the event strip, the band, then two ranked lists on the kit (umas with a
@@ -26,7 +28,7 @@ import { useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import type { RaceEvent } from "../../types"
-import type { PvpRankingsPayload, WinRateRow } from "../../types/rankingsTabs"
+import type { BeatenByRow, PvpRankingsPayload, WinRateRow } from "../../types/rankingsTabs"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinStore"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
@@ -157,6 +159,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 									<span key={entry.style}>
 										{index > 0 && " · "}
 										{STYLE_LABELS[entry.style]} wins <b className="font-semibold text-gray-100">{formatShare(entry.rate)}</b>
+										{placeText(entry) && `, ${placeText(entry)}`}
 									</span>
 								))
 							: "Not enough races logged yet"}
@@ -205,7 +208,9 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 
 			<div className={GRID}>
 				<WhatWins runs={runs} umas={umas} catalogue={catalogue} previous={payload.previous?.runs} />
+				{/* Beside What wins at the top of the column (mock 05). A payload cached before api #321 has no list. */}
 				<div className="flex min-w-0 flex-col gap-3">
+					<WhatBeatsPlayers rows={payload.beaten_by ?? []} catalogue={catalogue} />
 					{built.trios && <TrioList trios={built.trios} catalogue={catalogue} />}
 					<YourTeam event={event} ranked={umas.map((row) => row.uma)} catalogue={catalogue} />
 				</div>
@@ -252,6 +257,8 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 						{styleShare > 0 && ` · ${formatShare(styleShare)} of teams`}
 					</span>
 				}
+				// Its own line: at the end of the sub it was cut off on a phone.
+				note={placeText(entry) || undefined}
 				fill={leader > 0 ? Math.min(1, entry.rate / leader) : 0}
 				tone="win"
 				count={formatShare(entry.rate)}
@@ -265,12 +272,61 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 		<RankedList
 			label="What wins"
 			title
-			hint="Win rate from CM Runs, with how much to trust it. Under 100 races sinks to the bottom."
+			hint="Win rate from CM Runs, with how much to trust it. Under 100 races sinks to the bottom. Average place and top 3 count the races with places, once there are 20."
 			items={ranked}
 			itemKey={(entry) => `${entry.uma}-${entry.style}`}
 			empty="Not enough runs yet."
 			render={(entry, index) => row(entry, index + 1)}
 			after={unranked.map((entry) => <li key={`${entry.uma}-${entry.style}`}>{row(entry, null)}</li>)}
+		/>
+	)
+}
+
+/**
+ * "avg place 3.1, top 3 in 58%", or "" when the server sent no places (under
+ * 20 placed races, or a payload cached before api #321).
+ */
+function placeText(entry: WinRateRow): string {
+	if (entry.avg_place == null) return ""
+	const top3 = entry.top3 == null ? "" : `, top 3 in ${formatShare(entry.top3)}`
+	return `avg place ${entry.avg_place.toFixed(1)}${top3}`
+}
+
+/**
+ * "What beats players" (notes/cm-runs-plan-2.md, mock 05): each uma's share
+ * of the event's named losses, the losses where the player said which uma
+ * won. Shares only, most first, as the server sends them; nothing until the
+ * event has 20 named losses, and a row from 5. The bar is the loss red,
+ * scaled to the top row.
+ */
+function WhatBeatsPlayers({ rows, catalogue }: { rows: BeatenByRow[]; catalogue: PvpCatalogueIndex }) {
+	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
+	const known = rows.filter((row) => catalogue.umasById.has(row.uma))
+	const leader = known[0]?.share ?? 0
+	return (
+		<RankedList
+			label="What beats players"
+			title
+			hint="Share of the losses players named that each uma won. A loss counts here once the player says who won it."
+			items={known}
+			itemKey={(row) => row.uma}
+			empty="Not enough named losses yet."
+			render={(row, index) => {
+				const uma = catalogue.umasById.get(row.uma)
+				return (
+					<RankRow
+						place={index + 1}
+						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-12" />}
+						name={uma?.name ?? "Unknown uma"}
+						fill={leader > 0 ? Math.min(1, row.share / leader) : 0}
+						tone="loss"
+						count={formatShare(row.share)}
+						href={hrefs.uma(row.uma)}
+						hover={hoverCardProps("uma", row.uma)}
+					/>
+				)
+			}}
 		/>
 	)
 }

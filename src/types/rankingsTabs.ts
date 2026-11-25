@@ -39,6 +39,19 @@ export interface WinRateRow {
 	/** How much to trust the rate: 1 (20+ races), 2 (100+), 3 (300+). */
 	marks: 1 | 2 | 3
 	ranked: boolean
+	/**
+	 * Her average place (one decimal) and top-3 rate over the races she has a
+	 * place in (places are optional; notes/cm-runs-plan-2.md). Null under 20
+	 * such races; absent from a payload cached before api #321.
+	 */
+	avg_place?: number | null
+	top3?: number | null
+}
+
+/** "What beats players": an uma's share of the event's named losses (a loss that says who won it). */
+export interface BeatenByRow {
+	uma: number
+	share: number
 }
 
 export interface PvpRankingsPayload {
@@ -46,6 +59,11 @@ export interface PvpRankingsPayload {
 	/** Every saved team for the event. */
 	built: TeamSharesData
 	runs: WinRateRow[]
+	/**
+	 * Most first; empty until the event has 20 named losses, a row from 5 (the
+	 * server's floors). Absent from a payload cached before api #321: read as empty.
+	 */
+	beaten_by?: BeatenByRow[]
 	/**
 	 * The lists at the start of the week, ids in rank order, for rank movement
 	 * (api #193): `runs` keys are "<uma>-<style>", ranked from 100 races.
