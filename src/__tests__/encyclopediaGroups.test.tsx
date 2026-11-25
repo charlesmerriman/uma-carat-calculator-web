@@ -9,6 +9,7 @@ import {
 } from "../utils/encyclopediaGroups"
 import { reportCounts } from "../utils/encyclopediaCounts"
 import { sortList } from "../utils/encyclopedia"
+import { compareNames } from "../utils/nameOrder"
 
 /** The lists' group headings and index, and the tabs' counts (notes/encyclopedia-redesign-plan.md). */
 
@@ -114,6 +115,13 @@ describe("the Skills list's keys", () => {
 		const sorted = sortList(ODD.map((name, id) => ({ id, name })), "name").map((row) => row.name)
 		expect(sorted.slice(0, 4)).toEqual(["♡ 3D Nail Art", "9 Lives", "564 Escapades", "1000% Output!"])
 		expect(sorted.filter((name) => letterKey(name).label === "L")).toEqual(["Lay Low", "#LookatCurren", "Lucky Star"])
+	})
+
+	it("still reads a name word by word past its first character, as the uma and card lists always did", () => {
+		const names = ["Winning Ticket", "Kitasan Black", "Win Variation", "K.S.Miracle", "Katsuragi Ace", "Ines Fujin ♡", "Ines Fujin (Valentine)"]
+		expect([...names].sort(compareNames)).toEqual(
+			["Ines Fujin (Valentine)", "Ines Fujin ♡", "K.S.Miracle", "Katsuragi Ace", "Kitasan Black", "Win Variation", "Winning Ticket"],
+		)
 	})
 
 	it("files a skill id by its first three digits, whatever its length, with no index", () => {
