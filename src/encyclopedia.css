@@ -9,6 +9,11 @@
    guide's hover: a hero, a filter bar, tiles, skill rows, the aptitude
    letters, the stat bars, the career rail and the skill card.
 
+   THE RANKINGS PAGE WEARS THIS LOOK TOO (notes/rankings-polish-plan.md): the
+   masthead (.enc-head, .enc-tabs), the hero (Hero, .enc-hero), the flagged
+   heading (.enc-section__title) and the silk, with its own sizes in
+   rankings.css. A change to those rules shows on both pages: look at both.
+
    RULES THIS FILE KEEPS
    - Every colour is a theme token (var(--color-*), --card-fill), so all
      twelve themes restyle it for free. The exceptions are the game's own
@@ -105,14 +110,19 @@
 	.enc-tab:hover {
 		color: var(--color-gray-100);
 	}
-	.enc-tab[aria-current="page"] {
+	/* The open tab: a link here (aria-current), a button on the Rankings page
+	   (aria-selected), which wears this masthead too (rankings.css). */
+	.enc-tab[aria-current="page"],
+	.enc-tab[aria-selected="true"] {
 		background: var(--card-fill);
 		color: var(--color-gray-100);
 	}
-	.enc-tab[aria-current="page"] b {
+	.enc-tab[aria-current="page"] b,
+	.enc-tab[aria-selected="true"] b {
 		color: var(--color-brand);
 	}
-	.enc-tab[aria-current="page"]::after {
+	.enc-tab[aria-current="page"]::after,
+	.enc-tab[aria-selected="true"]::after {
 		position: absolute;
 		right: 0.75rem;
 		bottom: -1px;
@@ -149,7 +159,8 @@
 		.enc-tab b {
 			font-size: 1.875rem;
 		}
-		.enc-tab[aria-current="page"]::after {
+		.enc-tab[aria-current="page"]::after,
+		.enc-tab[aria-selected="true"]::after {
 			right: 1.1rem;
 			left: 1.1rem;
 		}

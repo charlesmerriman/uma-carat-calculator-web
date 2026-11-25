@@ -82,8 +82,10 @@ const FLOATING_POSITION = {
 	"64rem": "right-[max(1.5rem,calc((100vw-64rem)/2-4.5rem))]",
 	/** `page-container` pages: the Timeline and Selectors. */
 	"96rem": "right-[max(1.5rem,calc((100vw-96rem)/2-4.5rem))]",
-	/** The home page (104rem until 2026-10-18), and the Rankings page (`max-w-7xl`). */
+	/** The home page (104rem until 2026-10-18). */
 	"80rem": "right-[max(1.5rem,calc((100vw-80rem)/2-4.5rem))]",
+	/** The Rankings page (`max-w-[76rem]`, notes/rankings-polish-plan.md). */
+	"76rem": "right-[max(1.5rem,calc((100vw-76rem)/2-4.5rem))]",
 	/** The Encyclopedia's pages (`max-w-6xl`, utils/encyclopedia.ts PAGE_CONTAINER). */
 	"72rem": "right-[max(1.5rem,calc((100vw-72rem)/2-4.5rem))]",
 } as const

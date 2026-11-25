@@ -5,11 +5,15 @@
  * The admin analytics' Popular banners tables, shown to supporters
  * (notes/rankings-page-plan.md).
  *
- * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 07, 08, 20):
- * the band, the month strip ("When the pulls fall due", six divs in place
+ * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 07, 08, 20;
+ * the 2026-11-25 polish, notes/rankings-polish-plan.md, canvas shots 14, 15):
+ * the hero (the banner ahead most planners plan, its umas' faces on the first
+ * one's colours), the month strip ("When the pulls fall due", six divs in place
  * of the Recharts chart and its table), the type and sort lenses (both
  * remembered on the device with the pinned window's choices), and one list
- * of PullPlanRow, each opening to its pull spread and "also planning".
+ * of PullPlanRow, each with its banner's faces (the umas or cards on it,
+ * from the calculator's banners; a step-up has none), opening to its pull
+ * spread and "also planning".
  *
  * BEHIND THE RAPTIVE GATE: guide editors only (useRankingsPullPlans) until
  * the owner lifts it; the API refuses everyone else the same way.
@@ -23,20 +27,26 @@
  * they stay.
  */
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { Loader2 } from "lucide-react"
 import { useRankingsPayload } from "../../hooks/useRankingsPayload"
+import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { useOshiIds } from "../../hooks/useOshiIds"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { chooseRankings, useRankingsChoices } from "../../services/rankingsPinStore"
+import type { SupportCard, Uma } from "../../types/banner"
 import type { PlannedBannerType, PullPlanRankingsPayload } from "../../types/pullPlanRankings"
+import { cardFrameArt } from "../../utils/cardFrame"
 import { formatShare } from "../../utils/guideRankings"
 import { pullPlanRows, stripColumns, type PullPlanSort, type StripColumn } from "../../utils/pullPlanRankings"
 import { movement } from "../../utils/rankingsMovement"
+import { FramedCard } from "../FramedCard"
+import { FramedUma } from "../FramedUma"
 import { useReportUpdated } from "./rankingsUpdated"
 import { Lens } from "./kit/Lens"
 import { Panel } from "./kit/Panel"
 import { RankedList } from "./kit/RankedList"
-import { StatBand } from "./kit/StatBand"
+import { RankHero } from "./kit/RankHero"
 import { PullPlanRow } from "./PullPlanRow"
 
 type TypeChoice = PlannedBannerType | "all"
@@ -51,7 +61,13 @@ const SORTS: Array<{ id: PullPlanSort; label: string }> = [
 	{ id: "planners", label: "By planners" },
 ]
 
-const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
+const PANEL_NOTE = "rk-panel p-4 text-sm text-gray-300"
+
+/** What is on a banner: its umas, or its cards. A step-up has neither. */
+interface BannerFaces {
+	umas: Uma[]
+	cards: SupportCard[]
+}
 
 export function PullPlans() {
 	const state = useRankingsPayload<PullPlanRankingsPayload>("/rankings/pull-plans")
@@ -107,20 +123,68 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 		return map
 	}, [umaBannerData, supportBannerData, stepUpBannerData])
 	const timelineOf = (type: PlannedBannerType, id: number) => timelines.get(`${type}-${id}`) ?? null
+	// Who is on each banner, from the banners the page already holds (the payload's ids are banner ids).
+	const onBanner = useMemo(() => {
+		const map = new Map<string, BannerFaces>()
+		for (const banner of umaBannerData) map.set(`uma-${banner.id}`, { umas: banner.umas, cards: [] })
+		for (const banner of supportBannerData) map.set(`support-${banner.id}`, { umas: [], cards: banner.support_cards })
+		return map
+	}, [umaBannerData, supportBannerData])
+	const oshiIds = useOshiIds()
+	/** A banner's faces in the site's frames, at a row's size or the hero's. Null for a step-up. */
+	const facesOf = (type: PlannedBannerType, id: number, size: "row" | "hero"): ReactNode => {
+		const on = onBanner.get(`${type}-${id}`)
+		if (!on || (on.umas.length === 0 && on.cards.length === 0)) return null
+		const umaClass = size === "hero" ? "enc-hero__art" : "w-12"
+		const cardClass = size === "hero" ? "enc-hero__art enc-hero__art--card" : "w-[2.4rem]"
+		return (
+			<>
+				{on.umas.map((uma) => (
+					<FramedUma key={`u-${uma.id}`} src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className={umaClass} />
+				))}
+				{on.cards.map((card) => (
+					<FramedCard key={`c-${card.id}`} card={cardFrameArt(card)} className={cardClass} />
+				))}
+			</>
+		)
+	}
+	// The hero's colours are its first uma's: the catalogue knows her character (it loads
+	// for the other tabs anyway). Until it lands, or for a card banner, the page's accent.
+	const catalogue = usePvpCatalogue()
+	const heroFaces = mostPlanned ? facesOf(mostPlanned.type, mostPlanned.id, "hero") : null
+	const heroOn = mostPlanned ? onBanner.get(`${mostPlanned.type}-${mostPlanned.id}`) : undefined
+	// One face is drawn at a portrait's or a card's size; two or more side by side, smaller.
+	const faceCount = (heroOn?.umas.length ?? 0) + (heroOn?.cards.length ?? 0)
+	const heroShape = faceCount > 1 ? "pair" : heroOn?.cards.length ? "card" : "uma"
+	const firstUma = heroOn?.umas[0]
+	const characterId = firstUma && catalogue.status === "ready" ? catalogue.umasById.get(firstUma.id)?.character_id : undefined
+	const heroColours = characterId != null && catalogue.status === "ready" ? catalogue.catalogue.character_colours?.[String(characterId)] : undefined
 
 	return (
-		<div className="flex flex-col gap-3.5">
-			<StatBand
+		<div className="flex flex-col gap-[1.125rem]">
+			<RankHero
 				title="What players plan to pull on"
-				stats={[
+				top={
+					mostPlanned
+						? {
+								place: "#1 most planned",
+								name: mostPlanned.name,
+								line: (
+									<>
+										<b>{formatShare(mostPlanned.share)}</b> of planners have it in their plan
+									</>
+								),
+								art: heroFaces && <span className="rk-faces">{heroFaces}</span>,
+								shape: heroShape,
+								colours: heroColours,
+							}
+						: null
+				}
+				figures={[
 					{ label: "Banners ahead", value: ahead.length.toLocaleString() },
-					...(mostPlanned ? [{ label: "Plan the top banner", value: formatShare(mostPlanned.share), suffix: mostPlanned.name }] : []),
 					...(busiest && busiest.share > 0 ? [{ label: "Busiest month", value: formatShare(busiest.share), suffix: busiest.label }] : []),
 				]}
-			>
-				From the plan each player has open, staff left out. Typical is the middle planner's number; a few huge budgets can't pull
-				it up.
-			</StatBand>
+			/>
 
 			{payload.demand.length > 0 && (
 				<Panel title="When the pulls fall due" hint={'Share of planned pulls by the month a banner ends. Undated banners sit in "Later".'}>
@@ -128,10 +192,10 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 				</Panel>
 			)}
 
-			<div className="flex flex-wrap items-center gap-2">
+			<div className="flex flex-wrap items-center gap-2.5">
 				<Lens label="Banner type" options={TYPES} value={type} onChange={(next) => chooseRankings("pull-plans", { type: next })} />
 				<Lens label="Order" options={SORTS} value={sort} onChange={(next) => chooseRankings("pull-plans", { sort: next })} />
-				<span className="text-[11px] text-gray-400">
+				<span className="text-[13px] text-gray-400">
 					{showEnded ? "Ended banners shown" : "Ended banners hidden"} ·{" "}
 					<button type="button" aria-pressed={showEnded} onClick={() => setShowEnded(!showEnded)} className="text-brand transition hover:text-brand/75">
 						{showEnded ? "hide" : "show"}
@@ -144,7 +208,15 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
 				items={rows}
 				start={20}
 				itemKey={(row) => `${row.type}-${row.id}`}
-				render={(row) => <PullPlanRow row={row} fill={leader > 0 ? row.share / leader : 0} timelineOf={timelineOf} movement={moves.get(`${row.type}-${row.id}`)} />}
+				render={(row) => (
+					<PullPlanRow
+						row={row}
+						fill={leader > 0 ? row.share / leader : 0}
+						faces={facesOf(row.type, row.id, "row")}
+						timelineOf={timelineOf}
+						movement={moves.get(`${row.type}-${row.id}`)}
+					/>
+				)}
 				empty="Nobody plans a banner like that yet."
 				footnote={
 					<span className="text-gray-400">
@@ -160,14 +232,15 @@ function PullPlansBody({ payload }: { payload: PullPlanRankingsPayload }) {
  * Eleven columns: this month and the next five, four quarters, then "Later"
  * (stripColumns), each a bar of its share of the pulls planned (tallest = the
  * biggest column). The running month is drawn in the running colour and says
- * "now"; a quarter's bar is a shade lighter, since it holds three months.
- * Divs, no chart library. On a phone the strip scrolls sideways rather than
- * squeezing eleven labels into ~30px each.
+ * "now". Solid bars on the inset surface (the 2026-11-25 polish; a quarter is
+ * no longer a lighter shade: nothing is dimmed, and its label says it holds
+ * three months). Divs, no chart library. On a phone the strip scrolls
+ * sideways rather than squeezing eleven labels into ~30px each.
  */
 function MonthStrip({ columns }: { columns: StripColumn[] }) {
 	const top = Math.max(0, ...columns.map((column) => column.share))
 	return (
-		<div className="overflow-x-auto [scrollbar-width:thin]">
+		<div className="overflow-x-auto rounded-[0.875rem] bg-(--enc-inset) px-2.5 pb-3 pt-3.5 [scrollbar-width:thin]">
 			<ol
 				className="grid items-end gap-2 px-1 @min-[40rem]:gap-3"
 				style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(3.25rem, 1fr))` }}
@@ -177,18 +250,12 @@ function MonthStrip({ columns }: { columns: StripColumn[] }) {
 					<li key={column.key} className="flex min-w-0 flex-col items-center gap-1">
 						<span className="flex h-20 w-full max-w-[3.5rem] items-end" aria-hidden="true">
 							<span
-								className={`block w-full rounded-t-[4px] border-t-2 ${
-									column.current
-										? "border-status-running bg-status-running/35"
-										: column.kind === "month"
-											? "border-brand bg-brand/35"
-											: "border-brand/70 bg-brand/20"
-								}`}
+								className={`block w-full rounded-t-md ${column.current ? "bg-status-running" : "bg-brand"}`}
 								style={{ height: `${top > 0 ? Math.max(2, (column.share / top) * 100) : 2}%` }}
 							/>
 						</span>
-						<b className="text-xs font-semibold tabular-nums text-gray-100">{formatShare(column.share)}</b>
-						<span className="text-center text-[10px] leading-tight tabular-nums text-gray-400">
+						<b className="font-display text-base font-bold tabular-nums text-gray-100">{formatShare(column.share)}</b>
+						<span className="text-center text-xs leading-tight tabular-nums text-gray-400">
 							{column.label}
 							{column.current ? " · now" : ""}
 						</span>

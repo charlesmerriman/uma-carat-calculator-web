@@ -22,16 +22,17 @@ export function DistBar({ label, rows }: { label: string; rows: Array<{ name: st
 			<span
 				role="img"
 				aria-label={`${label}: ${rows.map((row) => `${row.name} ${formatShare(row.share)}`).join(", ")}`}
-				className="flex h-[22px] overflow-hidden rounded-md bg-gray-900/70"
+				// A 2 px gap between parts, so neighbouring shades of the ramp read as separate.
+				className="flex h-6 gap-[2px] overflow-hidden rounded-[0.6rem]"
 			>
 				{rows.map((row, index) => (
 					<span key={row.name} className="h-full" style={{ width: `${row.share * 100}%`, background: rampColor(index) }} />
 				))}
 			</span>
-			<span className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400" aria-hidden="true">
+			<span className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-gray-400" aria-hidden="true">
 				{rows.map((row, index) => (
-					<span key={row.name} className="inline-flex items-center gap-1">
-						<i className="inline-block h-2 w-2 rounded-sm" style={{ background: rampColor(index) }} />
+					<span key={row.name} className="inline-flex items-center gap-1.5">
+						<i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: rampColor(index) }} />
 						{row.name} <b className="font-semibold tabular-nums text-gray-100">{formatShare(row.share)}</b>
 					</span>
 				))}

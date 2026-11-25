@@ -11,9 +11,9 @@ import { tickSummary } from "../components/rankings/kit/tickSummary"
  * that say when they differ from "everything on", and the token line.
  */
 
-/** The width of a row's plain bar fill: the bar column's inner span. */
+/** The width of a row's plain bar fill: the bar column's inner span (not the phone's hairline). */
 function barWidths(container: HTMLElement): string[] {
-	return [...container.querySelectorAll<HTMLElement>("span.border-r-2")].map((fill) => fill.style.width)
+	return [...container.querySelectorAll<HTMLElement>('[data-bar-fill="bar"]')].map((fill) => fill.style.width)
 }
 
 describe("RankRow", () => {
@@ -28,6 +28,22 @@ describe("RankRow", () => {
 			</ol>
 		)
 		expect(barWidths(container)).toEqual(["100%", "50%"])
+	})
+
+	it("paints a card's bar in its type's colour, solid, and a win rate green", () => {
+		const { container, rerender } = render(<RankRow place={1} art={null} name="Agnes Tachyon" fill={1} count="176 decks" barColor="var(--color-stat-speed)" />)
+		const fill = container.querySelector<HTMLElement>('[data-bar-fill="bar"]')!
+		expect(fill.style.background).toBe("var(--color-stat-speed)")
+		expect(fill.className).not.toMatch(/\//)
+		rerender(<RankRow place={1} art={null} name="Tamamo Cross" fill={1} count="29%" tone="win" />)
+		expect(container.querySelector('[data-bar-fill="bar"]')).toHaveClass("bg-status-running")
+	})
+
+	it("draws the top three on a plate, and a row under the floor at full strength", () => {
+		const { container, rerender } = render(<RankRow place={2} art={null} name="El Condor Pasa" fill={1} count="126 decks" />)
+		expect(screen.getByLabelText("Place 2")).toHaveClass("bg-(--c1-ink)")
+		rerender(<RankRow place={null} muted art={null} name="Inari One" fill={0.5} count="19%" />)
+		expect(container.querySelector('[class*="opacity"]')).toBeNull()
 	})
 
 	it("opens to its detail only when it has one", () => {

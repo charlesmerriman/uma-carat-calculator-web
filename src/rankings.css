@@ -1,0 +1,228 @@
+/* ==========================================================================
+   THE RANKINGS PAGE (components/rankings/): what utilities can't say.
+
+   The page wears the Encyclopedia's look (notes/rankings-polish-plan.md, the
+   owner's canvas of 2026-11-25): its masthead (.enc-head, .enc-tabs), its
+   hero (.enc-hero, through Hero in components/encyclopedia/pieces.tsx), its
+   flagged heading (.enc-section__title) and its silk. Those rules live in
+   encyclopedia.css and are USED here, never copied, so the two pages can't
+   drift apart. This file holds only Rankings' own: the colour variables, the
+   hero's smaller size, the panel surface, the silk fills and the event tabs.
+   Sizes and spacing inside a row stay Tailwind utilities in the kit, where
+   the row is written.
+
+   RULES THIS FILE KEEPS (encyclopedia.css's, for the same reasons)
+   - Every colour is a theme token. A character's two colours, --c1 and --c2
+     (from colourStyle in utils/encyclopedia.ts), are only ever a fill, or
+     mixed into a token before they touch text (--c1-ink, --c1-line).
+   - Nothing is dimmed to de-emphasise it.
+
+   In @layer components, imported by App.tsx after encyclopedia.css, so a
+   rule here wins over the Encyclopedia's on order and a utility at the call
+   site still wins over both.
+   ========================================================================== */
+
+@layer components {
+	/* ---- The colour variables ------------------------------------------------
+	   On the page and on the pinned window (which floats outside the page).
+	   The same derivations .enc-page makes. Anything painted with a pair
+	   (.rk-paint, beside its colourStyle) derives them again: a custom property
+	   resolves where it is declared, so a child that only sets --c1 would keep
+	   the page's ink. */
+	.rk-vars {
+		--c1: var(--color-brand);
+		--c2: var(--color-gray-400);
+		--enc-inset: color-mix(in oklab, var(--color-gray-900) 70%, var(--color-gray-700));
+	}
+	.rk-vars,
+	.rk-paint {
+		--c1-ink: color-mix(in oklab, var(--c1) 55%, var(--color-gray-50));
+		--c1-line: color-mix(in oklab, var(--c1) 42%, var(--color-gray-600));
+	}
+
+	/* ---- A panel: the Encyclopedia section's surface --------------------------
+	   One soft surface, no border. Not .card-panel: a theme may restyle that
+	   one, and the Encyclopedia's sections opt out of it too. */
+	.rk-panel {
+		border-radius: 1.125rem;
+		background: var(--card-fill);
+		box-shadow: var(--card-shadow);
+	}
+
+	/* ---- The masthead's tabs --------------------------------------------------
+	   .enc-tab, as buttons (role="tab"); encyclopedia.css styles the open one by
+	   aria-selected as well as aria-current. The lead is the tab's badge ("51",
+	   "CM 22") or its icon. */
+	.rk-tabs .enc-tab {
+		min-width: 7.25rem;
+		flex: 0 1 auto;
+		text-align: left;
+	}
+	.rk-tabs .enc-tab b {
+		display: flex;
+		min-height: 1.375rem;
+		align-items: center;
+		white-space: nowrap;
+	}
+	.rk-tabs .enc-tab b svg {
+		width: 1.375rem;
+		height: 1.375rem;
+		stroke-width: 2.4;
+	}
+	@media (max-width: 47.99rem) {
+		.rk-tabs .enc-tab {
+			min-width: 0;
+			flex: 1;
+			padding-inline: 0.5rem;
+		}
+		.rk-tabs .enc-tab b {
+			font-size: 1.125rem;
+		}
+	}
+
+	/* ---- The hero: Hero, smaller than a detail page's -------------------------
+	   Two classes, so it beats .enc-hero--uma / --card inside their media
+	   query. The hero follows the SCREEN, like the Encyclopedia's: the pinned
+	   window has its own body, so a tab is only ever as wide as the page (the
+	   plan's named exception to the container-query rule). */
+	.enc-hero.enc-hero--rank .enc-hero__art {
+		width: 9rem;
+		height: auto;
+	}
+	.enc-hero.enc-hero--rank .enc-hero__art--card {
+		width: 8rem;
+		aspect-ratio: 3 / 4;
+	}
+	.enc-hero--rank .enc-hero__name {
+		font-size: 2.25rem;
+	}
+	.enc-hero--rank .enc-hero__title b {
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-50);
+	}
+	.enc-hero--rank .enc-hero__tags {
+		font-size: 0.8125rem;
+		color: var(--color-gray-300);
+	}
+	/* A figure's suffix: "Tamamo Cross" after "29%". */
+	.enc-hero--rank .enc-fact__value small {
+		font-family: var(--font-sans);
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-gray-400);
+	}
+	/* A banner's faces, side by side. */
+	.rk-faces {
+		display: flex;
+		gap: 0.6rem;
+	}
+	@media (max-width: 63.99rem) {
+		.enc-hero.enc-hero--rank {
+			--field: 7.5rem;
+		}
+		.enc-hero--rank .enc-hero__artbox {
+			padding-top: 2.4rem;
+		}
+		.enc-hero--rank .enc-hero__artbox:has(.uma-frame--layered) {
+			padding-top: 3.1rem;
+		}
+		.enc-hero.enc-hero--rank .enc-hero__art {
+			width: 6.5rem;
+		}
+		.enc-hero.enc-hero--rank .enc-hero__art--card {
+			width: 5.25rem;
+		}
+		.enc-hero--rank .enc-hero__name {
+			font-size: 1.875rem;
+		}
+		.enc-hero--rank .enc-hero__facts {
+			gap: 0.6rem 1.5rem;
+		}
+	}
+	@media (min-width: 64rem) {
+		.enc-hero.enc-hero--rank {
+			--art-col: 21rem;
+			--field: 19.5rem;
+			--hero-min: 15.5rem;
+		}
+		.enc-hero.rk-hero--uma .enc-hero__art {
+			width: 11rem;
+		}
+		.enc-hero.rk-hero--card .enc-hero__art--card {
+			width: 9.25rem;
+		}
+		.enc-hero.rk-hero--pair .enc-hero__art {
+			width: 7.25rem;
+		}
+		.enc-hero--rank .enc-hero__artbox {
+			justify-content: center;
+			padding: 1.75rem 4.5rem 1.5rem 1rem;
+		}
+		.enc-hero--rank .enc-hero__artbox:has(.uma-frame--layered),
+		.rk-hero--card .enc-hero__artbox {
+			padding-top: 2.75rem;
+		}
+		.rk-hero--pair .enc-hero__artbox {
+			padding-right: 5rem;
+		}
+		.enc-hero--rank .enc-hero__name {
+			font-size: 3rem;
+		}
+		.enc-hero--rank .enc-hero__body {
+			padding: 1.5rem 1.5rem 1.5rem 1.75rem;
+		}
+		/* The figures in a column, ruled off in her colour on the left. */
+		.enc-hero--rank .enc-hero__facts {
+			min-width: 11rem;
+			max-width: 15rem;
+			flex-direction: column;
+			flex-wrap: nowrap;
+			gap: 0.85rem;
+			margin: 0 1.75rem 0 0.5rem;
+			padding: 0.25rem 0 0.25rem 1.5rem;
+			border-top: 0;
+			border-left: 2px solid var(--c1-line);
+		}
+		.enc-hero--rank .enc-fact__value {
+			font-size: 1.5rem;
+		}
+	}
+
+	/* One long word ("Matikanetannhauser") can't wrap: set smaller at every width. */
+	.enc-hero.enc-hero--rank .enc-hero__name[data-long="true"] {
+		font-size: 1.875rem;
+	}
+
+	/* ---- Her silk -------------------------------------------------------------
+	   Second and third place's bottom fill: her main colour as far as the fill
+	   reaches, a notch, then her second. A favorite's tile: the Encyclopedia
+	   tile's bar, sized for the wall. */
+	.rk-silk-fill {
+		background: linear-gradient(
+			90deg,
+			var(--c1) 0 calc(100% - 2.4rem),
+			transparent 0 calc(100% - 2.1rem),
+			var(--c2) 0
+		);
+	}
+	.rk-silk {
+		display: block;
+		width: calc(100% - 0.7rem);
+		max-width: 4.6rem;
+		height: 5px;
+		margin: 0.3rem 0 0.15rem;
+		border-radius: 3px;
+		background: linear-gradient(90deg, var(--c1) 0 68%, transparent 68% 71%, var(--c2) 71%);
+	}
+
+	/* ---- The PvP tab's events, as soft tabs ------------------------------------ */
+	.rk-event {
+		background: var(--card-fill);
+		box-shadow: var(--card-shadow);
+	}
+	.rk-event[aria-pressed="true"] {
+		background: color-mix(in oklab, var(--color-brand) 16%, var(--card-fill));
+		box-shadow: inset 0 -3px 0 var(--color-brand), var(--card-shadow);
+	}
+}

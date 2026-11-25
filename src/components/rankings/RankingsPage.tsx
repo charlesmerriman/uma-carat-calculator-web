@@ -32,7 +32,12 @@ import { parseSection, useSectionBadges, useVisibleSections } from "./sections"
 
 const VIEW_PARAM = "view"
 
-const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-7xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
+/**
+ * The column, and the colour variables the kit reads (`rk-vars`, rankings.css).
+ * 76rem, a little narrower than the other /app pages, as the canvas drew it
+ * (notes/rankings-polish-plan.md, "What changes beyond style").
+ */
+const CONTAINER = "rk-vars mx-auto mb-3 mt-5 flex w-[calc(100%-1rem)] max-w-[76rem] flex-col gap-[1.125rem] sm:w-[calc(100%-2rem)]"
 
 export const RankingsPage = () => {
 	const auth = useContext(AuthContext)
@@ -71,15 +76,28 @@ const RankingsBody = () => {
 		<>
 		{/* Outside the column, so the anchor adds no gap to its flex stack. */}
 		<div ref={topRef} aria-hidden="true" />
-		<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="80rem" />
+		<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="76rem" />
 		<div className={CONTAINER}>
-			<header className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
-				<h1 className="font-display mr-auto flex items-center gap-2 text-xl font-bold text-brand">
-					<ListOrdered className="h-5 w-5 shrink-0" />
-					Rankings
-				</h1>
+			{/* The Encyclopedia's masthead (encyclopedia.css .enc-head): the title, one line, and the tabs. */}
+			<header className="enc-head enc-head--mast">
+				<div>
+					<h1 className="enc-head__title">
+						<ListOrdered aria-hidden="true" />
+						Rankings
+					</h1>
+					<p className="enc-head__sub">What the guides recommend, what players plan to pull, and what they build and win with.</p>
+				</div>
+				<div role="tablist" aria-label="Rankings" className="enc-tabs rk-tabs">
+					{shown.map((entry) => (
+						<Tab key={entry.id} active={entry.id === view} icon={entry.icon} badge={badges[entry.id]} onClick={() => open(entry.id)}>
+							{entry.label}
+						</Tab>
+					))}
+				</div>
+			</header>
+			<div className="-my-1.5 flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2 sm:justify-end">
 				{updated && (
-					<time dateTime={updated} title={formatDate(updated)} className="text-xs text-gray-400">
+					<time dateTime={updated} title={formatDate(updated)} className="text-[13px] text-gray-400">
 						Updated {formatTimeAgo(updated, now)}
 					</time>
 				)}
@@ -89,20 +107,13 @@ const RankingsBody = () => {
 					type="button"
 					aria-pressed={pinned}
 					onClick={() => pinRankings(pinned ? null : view)}
-					className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-						pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500 hover:text-gray-100"
+					className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-semibold transition ${
+						pinned ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-200 hover:border-gray-500 hover:text-gray-50"
 					}`}
 				>
 					{pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
 					{pinned ? "Unpin" : "Pin to the side"}
 				</button>
-			</header>
-			<div role="tablist" aria-label="Rankings" className="flex gap-0.5 overflow-x-auto border-b border-gray-600 [scrollbar-width:none]">
-				{shown.map((entry) => (
-					<Tab key={entry.id} active={entry.id === view} icon={entry.icon} badge={badges[entry.id]} onClick={() => open(entry.id)}>
-						{entry.label}
-					</Tab>
-				))}
 			</div>
 			<div role="tabpanel" aria-label={shown.find((entry) => entry.id === view)?.label}>
 				<RankingsUpdatedContext.Provider value={setUpdated}>
@@ -119,33 +130,25 @@ const RankingsBody = () => {
 	)
 }
 
+/**
+ * One tab, as the Encyclopedia's (`.enc-tab`): its lead over its name. The
+ * lead is what the tab holds ("51" guides, "CM 22") when the bar knows it
+ * without a payload (useSectionBadges), else the tab's icon: Players never
+ * leads with a number (shares, never a count of players), and Pull plans'
+ * "banners ahead" needs that tab's payload. The lead is decoration for a
+ * screen reader, so the tab's name is its label alone.
+ */
 function Tab({ active, icon: Icon, badge, onClick, children }: {
 	active: boolean
 	icon: LucideIcon
-	/** "51", "CM 21": a hint after the name, not part of the tab's name for a screen reader. */
 	badge?: string
 	onClick: () => void
 	children: ReactNode
 }) {
 	return (
-		<button
-			type="button"
-			role="tab"
-			aria-selected={active}
-			onClick={onClick}
-			className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition ${
-				active
-					? "border-brand text-brand"
-					: "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-100"
-			}`}
-		>
-			<Icon className="h-4 w-4 shrink-0" />
-			{children}
-			{badge && (
-				<span aria-hidden="true" className="rounded-full bg-gray-700 px-[7px] py-px text-[11px] font-medium tabular-nums text-gray-400">
-					{badge}
-				</span>
-			)}
+		<button type="button" role="tab" aria-selected={active} onClick={onClick} className="enc-tab shrink-0">
+			<b aria-hidden="true">{badge ?? <Icon />}</b>
+			<span>{children}</span>
 		</button>
 	)
 }

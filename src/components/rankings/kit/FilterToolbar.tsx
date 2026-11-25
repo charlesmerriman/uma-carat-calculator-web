@@ -79,8 +79,8 @@ export function FilterPill({ label, state, changed, title, onAll, children }: {
 				aria-expanded={open}
 				aria-controls={`${id}-menu`}
 				onClick={() => menu?.setOpen(open ? null : id)}
-				className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border py-[5px] pl-[11px] pr-2.5 text-xs transition ${
-					changed ? "border-brand bg-brand/15 text-brand" : "border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500"
+				className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border py-[0.3rem] pl-[0.8rem] pr-[0.7rem] text-[13px] leading-5 transition ${
+					changed ? "border-brand bg-brand/15 text-brand" : "border-gray-600 text-gray-300 hover:border-gray-500"
 				}`}
 			>
 				{label} <b className={`font-semibold ${changed ? "text-brand" : "text-gray-100"}`}>{state}</b>
@@ -174,8 +174,8 @@ export interface FilterToken {
 /** The line under the toolbar: what's counted, a token per changed filter, and Reset. */
 export function Tokens({ summary, tokens, onReset }: { summary: ReactNode; tokens: FilterToken[]; onReset: () => void }) {
 	return (
-		<p className="flex flex-wrap items-center gap-1.5 text-[11px] text-gray-400">
-			<span>{summary}</span>
+		<p className="flex flex-wrap items-center gap-1.5 text-[13px] text-gray-400">
+			<span className="font-display text-[15px] font-semibold text-gray-200">{summary}</span>
 			{tokens.map((token) => (
 				<span
 					key={token.key}
