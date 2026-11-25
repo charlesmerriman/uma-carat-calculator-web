@@ -492,8 +492,8 @@ same URL for itself: a banner window by its first banner, a race by its `cm`/`lo
 marker by `kind` + `sourceId` (each half of a pair links to itself; both land on the pair).
 The URL is built in the click handler from `window.location.origin`, never at render time.
 **A banner window's pill copies `/banner/<id>` instead** (`bannerLinkPath`, 2026-11-25): the
-API serves that path with the banner's own link preview (its name, dates, support cards and
-art; backend `views/banner_share.py`) and sends people on to `?focus=banner-<id>`, since the
+API serves that path with the banner's own link preview (the card's title, its dates and
+its art; backend `views/banner_share.py`) and sends people on to `?focus=banner-<id>`, since the
 static host answers every `?focus=` with the one prerendered Timeline page and its generic
 tags. Races and markers keep the `?focus=` link.
 
