@@ -22,6 +22,7 @@ import {
 	useInteractions,
 	useTransitionStyles,
 	type Placement,
+	type Middleware,
 	type ReferenceElement,
 } from "@floating-ui/react"
 import { useReducedMotion } from "framer-motion"
@@ -116,12 +117,12 @@ export const cardPopupMiddleware = () => [
 	offset(8),
 	flip(() => ({ crossAxis: false, fallbackPlacements: ["left-start"], padding: popupEdges() })),
 	shift(() => ({ crossAxis: true, padding: popupEdges() })),
-	// The box's height limit, less the ad (CARD_POPUP_BOX's own limit can't
+	// The box's height limit, less the ad and the pinned top bars (CARD_POPUP_BOX's own limit can't
 	// know it). A card that grows shorter here is measured again by Floating
 	// UI before the slide above runs on it.
 	size({
 		apply({ elements }) {
-			elements.floating.style.maxHeight = `calc(100dvh - 1rem - ${footerAdInset()}px)`
+			elements.floating.style.maxHeight = `calc(100dvh - 1rem - ${footerAdInset() + topBarsInset()}px)`
 		},
 	}),
 ]
@@ -153,10 +154,56 @@ function footerAdInset(): number {
 	return Math.max(0, Math.min(box.height, window.innerHeight - box.top))
 }
 
-/** The edges a popup stays inside: 8px from the window's, and above the footer ad. */
-export function popupEdges() {
-	return { top: 8, right: 8, left: 8, bottom: 8 + footerAdInset() }
+/**
+ * THE BARS PINNED ACROSS THE TOP: the navbar's pinned row, a screen's bar
+ * (ScreenTabs) and anything else that marks itself `data-popup-top-bar`. A
+ * pinned card is placed level with its row, and its row scrolls up under
+ * those bars, so the card used to slide over the menus with it (Daptrius,
+ * board "Skills Pop-Up Clipping into the Top Menus", 2026-11-25). The popups
+ * keep below them instead, and a card whose row has gone under them hides
+ * until the row comes back (`hideUnderTopBars`).
+ *
+ * A bar counts only while it is part of the stack that starts at the
+ * window's top edge: one further down the page, not stuck yet, doesn't.
+ * Read on every positioning, like the footer ad: the phone's wordmark row
+ * comes and goes (hooks/useNavbarReveal.ts).
+ */
+const TOP_BARS = "[data-sticky-navbar], [data-screen-tabs], [data-popup-top-bar]"
+
+/** How far down from the window's top the pinned bars reach, in px; 0 with none. */
+function topBarsInset(): number {
+	if (typeof document === "undefined") return 0
+	const boxes = [...document.querySelectorAll(TOP_BARS)]
+		.map((bar) => bar.getBoundingClientRect())
+		.filter((box) => box.height > 0)
+		.sort((a, b) => a.top - b.top)
+	let inset = 0
+	for (const box of boxes) {
+		// Touching the stack so far (a pixel's rounding allowed), and reaching past it.
+		if (box.top <= inset + 1 && box.bottom > inset) inset = box.bottom
+	}
+	return inset
 }
+
+/** The edges a popup stays inside: 8px from the window's, below the pinned top bars and above the footer ad. */
+export function popupEdges() {
+	return { top: 8 + topBarsInset(), right: 8, left: 8, bottom: 8 + footerAdInset() }
+}
+
+/**
+ * Hides a popup while its tile is out of sight: wholly under the pinned top
+ * bars, or below the window (above the footer ad). `shift` would otherwise
+ * keep the card on screen with nothing beside it. A pinned card stays
+ * pinned and shows again when its tile scrolls back.
+ */
+const hideUnderTopBars = (): Middleware => ({
+	name: "hideUnderTopBars",
+	fn({ elements }) {
+		const box = elements.reference.getBoundingClientRect()
+		const hidden = box.bottom <= topBarsInset() || box.top >= window.innerHeight - footerAdInset()
+		return { data: { hidden } }
+	},
+})
 
 // How often an open popup checks where the footer ad is.
 const AD_CHECK_MS = 250
@@ -302,7 +349,7 @@ export function useHoverPopup(
 	// State, not a ref: the handlers below are built during render.
 	const [pressedWith, setPressedWith] = useState("")
 	const reducedMotion = useReducedMotion()
-	const { refs, floatingStyles, context, placement: shownPlacement } = useFloating({
+	const { refs, floatingStyles, context, placement: shownPlacement, middlewareData } = useFloating({
 		open,
 		onOpenChange: changeFromFloating,
 		// Fixed to the window, never absolute in <body>: an absolute popup that
@@ -313,7 +360,8 @@ export function useHoverPopup(
 		// is only cut off.
 		strategy: "fixed",
 		placement: held ?? (pinned ? CARD_POPUP_PLACEMENT : placement),
-		middleware: held
+		// Every kind ends with the check that hides it while its tile is out of sight.
+		middleware: [...(held
 			? [
 					offset(4),
 					// Kept on screen sideways only: no flip, so it never jumps to the other side.
@@ -339,9 +387,10 @@ export function useHoverPopup(
 						},
 					})),
 				]
-			: [offset(4), flip(() => ({ padding: popupEdges() })), shift(() => ({ padding: popupEdges() }))],
+			: [offset(4), flip(() => ({ padding: popupEdges() })), shift(() => ({ padding: popupEdges() }))]), hideUnderTopBars()],
 		whileElementsMounted: autoUpdateClearOfAds,
 	})
+	const outOfSight = middlewareData.hideUnderTopBars?.hidden === true
 	// A PINNED popup answers only to the click that pinned it, Escape and a
 	// press elsewhere (useDismiss). Hover and focus are switched off for as
 	// long as it is pinned: left on, the pointer leaving the card closed it,
@@ -413,7 +462,7 @@ export function useHoverPopup(
 				<div
 					ref={refs.setFloating}
 					aria-hidden="true"
-					style={{ ...floatingStyles, ...styles }}
+					style={{ ...floatingStyles, ...styles, ...(outOfSight ? { visibility: "hidden" } : {}) }}
 					{...(takesPointer ? getFloatingProps() : {})}
 					className={`z-50 rounded-lg border border-gray-600 bg-gray-900 p-2 text-left text-xs leading-snug text-gray-200 shadow-lg ${
 						takesPointer ? "" : "pointer-events-none"
