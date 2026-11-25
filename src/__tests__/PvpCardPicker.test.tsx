@@ -160,6 +160,38 @@ describe("PvpCardPicker", () => {
 		expect(tileNames()).toEqual(["Super Creek"])
 	})
 
+	it("with no style yet, shows every style's picks a section each, and picks with that style", () => {
+		const onPick = vi.fn()
+		render(
+			<PvpCardPicker
+				pool="uma"
+				items={[uma(1, "Maruzensky", 8, 7), uma(2, "Oguri Cap", 5, 8), uma(3, "Gold Ship", 1, 6)]}
+				title="Uma 3"
+				skillsById={SKILLS}
+				event={COURSE}
+				style={null}
+				recommended={new Set([1, 2])}
+				recommendedByStyle={[
+					{ style: "front", ids: new Set([1]) },
+					{ style: "pace", ids: new Set([1, 2]) },
+				]}
+				blockReason={() => null}
+				selectedId={null}
+				onPick={onPick}
+				onClose={() => {}}
+			/>
+		)
+		// Off: one grid, every uma.
+		expect(tileNames()).toEqual(["Maruzensky", "Oguri Cap", "Gold Ship"])
+		fireEvent.click(screen.getByRole("checkbox", { name: /Recommended only/ }))
+		const front = within(screen.getByRole("region", { name: "Recommended for Front" }))
+		const pace = within(screen.getByRole("region", { name: "Recommended for Pace" }))
+		expect(front.getAllByRole("button").map((tile) => tile.textContent)).toEqual([expect.stringContaining("Maruzensky")])
+		expect(pace.getAllByRole("button")).toHaveLength(2)
+		fireEvent.click(pace.getByTitle("Maruzensky: recommended by the guide"))
+		expect(onPick).toHaveBeenCalledWith(1, "pace")
+	})
+
 	it("offers no Recommended only without a guide's picks", () => {
 		renderSupportPicker({})
 		expect(screen.queryByRole("checkbox", { name: /Recommended only/ })).toBeNull()
@@ -172,7 +204,7 @@ describe("PvpCardPicker", () => {
 		fireEvent.click(blocked)
 		expect(onPick).not.toHaveBeenCalled()
 		fireEvent.click(screen.getByTitle("Fine Motion"))
-		expect(onPick).toHaveBeenCalledWith(10)
+		expect(onPick).toHaveBeenCalledWith(10, undefined)
 	})
 
 	it("badges umas with the race's surface, distance and style letters", () => {

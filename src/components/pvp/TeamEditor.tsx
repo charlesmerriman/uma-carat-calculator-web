@@ -25,7 +25,7 @@ import {
 	clearCard,
 	clearMember,
 	memberAt,
-	recommendedIds,
+	recommendedForPlace,
 	setCard,
 	setMemberStyle,
 	setMemberVeteran,
@@ -73,7 +73,8 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 
 	const pickerMember = picker ? memberAt(members, picker.position) : undefined
 	const pickerStyle = pickerMember?.style ?? null
-	const recommended = recommendedIds(guide, pickerStyle ?? "front")
+	// An empty spot has no style yet: every style's picks, grouped in the picker.
+	const recommended = recommendedForPlace(guide, pickerStyle)
 	const umaName = (position: number): string => {
 		const member = memberAt(members, position)
 		return (member && index.umasById.get(member.uma)?.name) || `uma ${position + 1}`
@@ -118,6 +119,7 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					event={event}
 					style={pickerStyle}
 					recommended={recommended.umas}
+					recommendedByStyle={recommended.byStyle?.map((group) => ({ style: group.style, ids: group.umas }))}
 					blockReason={(id) => {
 						const candidate = index.umasById.get(id)
 						return (
@@ -127,9 +129,10 @@ export function TeamEditor({ event, members, index, guide, layout = "full", deal
 					}}
 					noteFor={(id) => releaseNote(releaseFor("uma", id))}
 					selectedId={pickerMember?.uma ?? null}
-					onPick={(id) => {
+					onPick={(id, style) => {
 						const uma = index.umasById.get(id)
-						if (uma) apply(setMemberUma(members, picker.position, uma))
+						// Picked from a style's section: she starts on that style.
+						if (uma) apply(setMemberUma(members, picker.position, uma, style))
 						else setPicker(null)
 					}}
 					onRemove={pickerMember ? () => apply(clearMember(members, picker.position)) : undefined}
