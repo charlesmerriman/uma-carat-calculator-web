@@ -257,7 +257,7 @@ const SkillsPageBody = () => {
 			{list.status === "loading" ? (
 				<div role="status" aria-label="Loading skills" className="enc-skills enc-skills--plates">
 					{/* The plates' own height, so the list doesn't jump when it lands. */}
-					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-[4.375rem] rounded-2xl" />)}
+					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-[4.75rem] rounded-2xl" />)}
 				</div>
 			) : list.status === "error" ? (
 				<EmptyNote>The skill list didn't load. Reload the page to try again.</EmptyNote>

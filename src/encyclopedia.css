@@ -2002,7 +2002,8 @@
 		gap: 0.625rem 0.75rem;
 	}
 	.enc-skills--plates .enc-skill {
-		min-height: 4.375rem;
+		/* Tall enough for a centred face's ears to clear the top (".enc-skill__face" below). */
+		min-height: 4.75rem;
 		gap: 0.8rem;
 		padding: 0.6rem 0.9rem 0.6rem 1.05rem;
 		border-radius: 1rem;
@@ -2105,15 +2106,15 @@
 		position: relative;
 		z-index: 1;
 	}
-	/* Her face stands low in the plate: a layered portrait's ears rise a sixth
-	   of it above the frame, and the plate clips at its edge. Centred, a tall
-	   pair (Curren Chan's) was cut flat on a one-line plate; set into the
-	   bottom padding they clear the top with no extra height for every row. */
+	/* Her face is centred in the plate (owner, 2026-11-25: set low, it "drifts
+	   towards the bottom"). A layered portrait's ears rise a sixth of the face
+	   above its frame (8 px at 3.1rem) and the plate clips at its edge, so the
+	   plate's minimum height above is what gives them room: at 4.375rem a tall
+	   pair (Curren Chan's) was cut flat. */
 	.enc-skills--plates .enc-skill__face {
 		width: 3.1rem;
 		height: 3.1rem;
-		align-self: flex-end;
-		margin: 0 0 -0.3rem 0.55rem;
+		margin-left: 0.55rem;
 		box-shadow: 0 4px 10px rgb(0 0 0 / 30%);
 	}
 	.enc-skills--plates .enc-letter {
