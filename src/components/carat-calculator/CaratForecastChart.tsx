@@ -63,12 +63,15 @@ const LAYERS_STORAGE_KEY = "uma-planner-forecast-layers"
  * baseline everyone sees. A new layer is one entry here plus its drawing.
  */
 const FORECAST_LAYERS = [
-	{ key: "paid", label: "Paid carats", views: ["carats"] },
-] as const satisfies readonly { key: string; label: string; views: readonly ForecastUnit[] }[]
+	{ key: "paid", label: "Paid carats", views: ["carats"], swatch: true },
+	// Each banner's dot labelled with its carats (ForecastPlot's
+	// CaratCountLabels). Text, not a series, so it has no line key to show.
+	{ key: "counts", label: "Carat counts", views: ["carats"], swatch: false },
+] as const satisfies readonly { key: string; label: string; views: readonly ForecastUnit[]; swatch: boolean }[]
 
 type LayerKey = (typeof FORECAST_LAYERS)[number]["key"]
 type LayerState = Record<LayerKey, boolean>
-const NO_LAYERS: LayerState = { paid: false }
+const NO_LAYERS: LayerState = { paid: false, counts: false }
 
 /** A stored layer set, read defensively: only known keys, only booleans. */
 function readLayers(raw: string | null): LayerState {
@@ -466,7 +469,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 											onChange={() => toggleLayer(layer.key)}
 											className="h-3.5 w-3.5 accent-(--color-brand)"
 										/>
-										<span className="h-0.5 w-3 rounded-full bg-gray-400" aria-hidden="true" />
+										{layer.swatch && <span className="h-0.5 w-3 rounded-full bg-gray-400" aria-hidden="true" />}
 										{layer.label}
 									</label>
 								))}
@@ -498,6 +501,7 @@ export const CaratForecastChart: React.FC<CaratForecastChartProps> = ({
 							unit={unit}
 							pullSeries={pullSeries}
 							showPaid={showPaid}
+							showCounts={layers.counts}
 							skipMarkers={skipMarkers}
 							pityPulls={PULLS_PER_PITY_COPY}
 							pullCost={calculationConstants.pull_cost_carats}
