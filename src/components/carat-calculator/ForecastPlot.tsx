@@ -12,6 +12,9 @@ import {
 	Tooltip,
 	XAxis,
 	YAxis,
+	usePlotArea,
+	useXAxisScale,
+	useYAxisScale,
 } from "recharts"
 import type {
 	CaratForecast,
@@ -23,6 +26,8 @@ import type {
 import { forecastValueAt, formatCarats } from "../../utils/caratForecast"
 import { formatDate, formatMonth, formatUtcDay } from "../../utils/dateFormat"
 import { startOfUtcDay } from "../../utils/utcDates"
+import type { Box, LabelPoint, PixelLine } from "../../utils/forecastLabels"
+import { LABEL_FONT_SIZE, estimateTextWidth, formatLabelCarats, placeForecastLabels } from "../../utils/forecastLabels"
 
 /**
  * THE FORECAST PLOT, drawn with Recharts. Loaded lazily (loadForecastPlot):
@@ -123,6 +128,8 @@ export interface PlotProps {
 	unit: ForecastUnit
 	/** Draw the paid band (an optional layer, switched on by the viewer). */
 	showPaid: boolean
+	/** Label each banner's dot with its carats (an optional layer, carats view only). */
+	showCounts: boolean
 	/** The pulls view's two lines (buildPullSeries). */
 	pullSeries: PullPoint[]
 	skipMarkers: SkipMarker[]
@@ -154,6 +161,7 @@ const ForecastPlot: React.FC<PlotProps> = ({
 	forecast,
 	unit,
 	showPaid,
+	showCounts,
 	pullSeries,
 	skipMarkers,
 	pityPulls,
@@ -481,6 +489,14 @@ const ForecastPlot: React.FC<PlotProps> = ({
 								fontWeight: 600,
 							}}
 						/>
+						{showCounts && (
+							<CaratCountLabels
+								lineData={lineData}
+								hasPaid={hasPaid}
+								last={last}
+								pity={showCaratPity ? { value: pityCarats, label: pityLabel } : null}
+							/>
+						)}
 					</ComposedChart>
 				) : (
 					<ComposedChart data={pullData} margin={{ top: 16, right: 20, bottom: 4, left: 4 }}>
@@ -602,6 +618,109 @@ const ForecastPlot: React.FC<PlotProps> = ({
 				))}
 			</ul>
 		</div>
+	)
+}
+
+/**
+ * THE CARAT COUNTS LAYER (a player's request, 2026-11-25: "it would be nice if
+ * we could see crystal count ... instead of manually checking everything").
+ * Off until the viewer checks it, like every layer added after the chart's
+ * first release (owner, 2026-10-19).
+ *
+ * Each banner's dot gets the number its hover readout leads with: the free
+ * carats on hand when it ends, or a step-up's paid carats. Where the labels go
+ * is utils/forecastLabels.ts, a pure function of pixel positions; this only
+ * turns the plot's data into pixels through Recharts' own scales (so a label
+ * sits on the dot the series drew) and draws the result. A dot whose number
+ * has nowhere clear to go gets none, rather than a pile of overlapping
+ * numbers; the readout still has it.
+ *
+ * Rendered as a child of the chart, inside its SVG, which Recharts 3 allows
+ * for any component that reads the chart through its hooks.
+ */
+const CaratCountLabels: React.FC<{
+	lineData: LineDatum[]
+	hasPaid: boolean
+	/** The line's last point, whose own label (the end label) is kept clear. */
+	last: { t: number; value: number }
+	/** The pity line and its label, when drawn, kept clear too. */
+	pity: { value: number; label: string } | null
+}> = ({ lineData, hasPaid, last, pity }) => {
+	const xScale = useXAxisScale()
+	const yScale = useYAxisScale()
+	const plot = usePlotArea()
+	const placed = useMemo(() => {
+		if (!xScale || !yScale || !plot) return []
+		const px = (t: number, value: number) => ({ x: xScale(t) ?? NaN, y: yScale(value) ?? NaN })
+
+		const texts = new Map<number, string>()
+		const points: LabelPoint[] = []
+		for (const datum of lineData) {
+			const marker = datum.marker
+			if (!marker) continue
+			// Where its dot is drawn: off the line for a banner charged early, on
+			// the paid band's top for a step-up when the band shows, else on the line.
+			const dotValue = marker.chargedEarly
+				? floatingDotValue(marker, hasPaid)
+				: marker.stepUp && hasPaid
+				? datum.value + datum.paid
+				: datum.value
+			const at = px(datum.t, dotValue)
+			if (!Number.isFinite(at.x) || !Number.isFinite(at.y)) continue
+			const text = formatLabelCarats(marker.stepUp ? marker.paidBefore : marker.before)
+			texts.set(marker.index, text)
+			points.push({ key: marker.index, ...at, text })
+		}
+
+		const lines: PixelLine[] = [lineData.map((d) => px(d.t, d.value))]
+		if (hasPaid) lines.push(lineData.map((d) => px(d.t, d.value + d.paid)))
+
+		// The end label: right-aligned 8px left of the last point, 8px above it
+		// (the ReferenceDot above, "insideBottomRight" at offset 8, 11px type).
+		const end = px(last.t, last.value)
+		const endWidth = estimateTextWidth(formatCarats(last.value), 11)
+		const reserved: Box[] = [{ x0: end.x - 8 - endWidth, y0: end.y - 22, x1: end.x, y1: end.y }]
+		// The pity label: "insideBottomLeft" of its line, 11px type.
+		if (pity) {
+			const y = yScale(pity.value) ?? NaN
+			if (Number.isFinite(y)) {
+				reserved.push({ x0: plot.x, y0: y - 18, x1: plot.x + 10 + estimateTextWidth(pity.label, 11), y1: y + 2 })
+			}
+		}
+		// The plot, plus most of the 20px right margin so the last dots can use it.
+		const bounds: Box = { x0: plot.x, y0: plot.y, x1: plot.x + plot.width + 16, y1: plot.y + plot.height }
+		return placeForecastLabels(points, lines, reserved, bounds).map((label) => ({
+			...label,
+			text: texts.get(label.key as number) ?? "",
+		}))
+	}, [xScale, yScale, plot, lineData, hasPaid, last, pity])
+
+	return (
+		// Out of the pointer's way: the dots underneath keep their hover.
+		<g className="pointer-events-none" aria-hidden="true">
+			{placed.map((label) => (
+				<text
+					key={label.key}
+					x={label.x}
+					y={label.y}
+					textAnchor={label.anchor}
+					fontSize={LABEL_FONT_SIZE}
+					fontWeight={600}
+					// A halo in the card's colour keeps a label readable where it
+					// has to cross the line or the grid.
+					style={{
+						fill: "var(--color-gray-200)",
+						stroke: "var(--card-fill)",
+						strokeWidth: 3,
+						strokeLinejoin: "round",
+						paintOrder: "stroke",
+						fontVariantNumeric: "tabular-nums",
+					}}
+				>
+					{label.text}
+				</text>
+			))}
+		</g>
 	)
 }
 
