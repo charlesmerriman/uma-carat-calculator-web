@@ -155,7 +155,7 @@ function EventRow({ row, umasById, oshiIds }: { row: EventHistory; umasById: Map
 					// (up to "1,000,000th") ran out of its box.
 					<dl className="grid min-w-0 flex-1 basis-full grid-cols-2 gap-2 sm:max-w-xs sm:basis-auto">
 						<Stat label="Best ticket" value={bestText(runs)} />
-						<Stat label="Top 96" value={final?.placement ? ordinal(final.placement) : "–"} detail={final?.placement ? undefined : "Not logged"} />
+						<Stat label="Placement" value={final?.placement ? ordinal(final.placement) : "–"} detail={final?.placement ? undefined : "Not logged"} />
 					</dl>
 				)}
 				{isCm && (

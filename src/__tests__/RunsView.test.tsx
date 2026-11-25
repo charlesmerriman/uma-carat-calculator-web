@@ -157,7 +157,7 @@ describe("who can log runs", () => {
 		fireEvent.click(screen.getByRole("tab", { name: /Tickets\s*6-10/ }))
 		expect(screen.getByText("Ticket 6")).toBeTruthy()
 
-		fireEvent.click(screen.getByRole("tab", { name: /Top 96/ }))
+		fireEvent.click(screen.getByRole("tab", { name: /Placement/ }))
 		// The team has to be one registered on the days, so that's what's offered.
 		fireEvent.click(screen.getByRole("button", { name: "Same three as Ticket 6" }))
 		await waitFor(() => expect(puts().at(-1)?.path).toMatch(/\/pvp-runs\/loh\/10\/final$/))
@@ -171,7 +171,7 @@ describe("who can log runs", () => {
 
 	it("sends a placement the game can't give back to the saved one", async () => {
 		show(LOH)
-		fireEvent.click(await screen.findByRole("tab", { name: /Top 96/ }))
+		fireEvent.click(await screen.findByRole("tab", { name: /Placement/ }))
 		const placement = await screen.findByLabelText("Your placement")
 		fireEvent.change(placement, { target: { value: "1000001" } })
 		fireEvent.blur(placement)

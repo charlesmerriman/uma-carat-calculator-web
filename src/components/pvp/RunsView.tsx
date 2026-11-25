@@ -420,7 +420,7 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 			)}
 
 			<div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:gap-5">
-				<section className="card-panel min-w-0" aria-label={tab === "final" ? (shape.rounds ? "Finals" : "Top 96") : dayLabel(tab, shape)}>
+				<section className="card-panel min-w-0" aria-label={tab === "final" ? (shape.rounds ? "Finals" : "Placement") : dayLabel(tab, shape)}>
 					{tab !== "final" ? (
 						<DayHeader event={event} day={tab} today={today} runs={runs} shape={shape} />
 					) : shape.rounds ? (
@@ -714,7 +714,7 @@ function LeagueTabs({ tab, runs, final, shape, onChange }: Omit<DayTabsProps, "t
 			<TabFrame active={tab === "final"} onPick={() => onChange("final")} row="">
 				<span className={`flex items-center gap-2 text-xs font-bold sm:text-[15px] ${tab === "final" ? "text-brand" : "text-gray-100"} max-sm:flex-col max-sm:gap-1.5`}>
 					<Medal className="h-4 w-4" aria-hidden="true" />
-					Top 96
+					Placement
 				</span>
 				<span className="hidden text-xs text-gray-300 sm:block">{final?.placement ? ordinal(final.placement) : "Your placement"}</span>
 			</TabFrame>
@@ -1921,7 +1921,7 @@ function TopHeader({ run }: { run: PvpRun | undefined }) {
 	return (
 		<CardHeader
 			eyebrow="Final bracket"
-			title="Top 96"
+			title="Placement"
 			score={placement ? ordinal(placement) : "–"}
 			detail={placement ? "your placement" : "Not logged yet"}
 		/>
@@ -1954,7 +1954,7 @@ function TopBody({ run, choices, shared, onWrite }: {
 	}
 	return (
 		<div className="flex flex-col gap-4 px-3.5 pb-5 pt-4 sm:gap-5 sm:px-5 sm:pb-6 sm:pt-5">
-			<p className="text-sm text-gray-200 sm:text-[15px]">Made the Top 96? Add the team you entered. Everyone gets a placement, so add yours either way.</p>
+			<p className="text-sm text-gray-200 sm:text-[15px]">Everyone in a League of Heroes gets a placement, Top 96 or not. Made the Top 96? Add the team you entered too.</p>
 			{run && run.runners.length > 0 ? (
 				<LineupBlock
 					title="Top 96"
@@ -1991,7 +1991,7 @@ function TopBody({ run, choices, shared, onWrite }: {
 					className="min-h-11 rounded-lg border border-gray-600 bg-gray-900 px-3 text-sm font-normal text-gray-100 focus:border-brand focus:outline-none sm:min-h-10"
 				/>
 			</label>
-			<NoteField note={run?.note ?? ""} label="Note for the Top 96" onWrite={onWrite} />
+			<NoteField note={run?.note ?? ""} label="Note for your placement" onWrite={onWrite} />
 		</div>
 	)
 }
@@ -2275,7 +2275,7 @@ function WinRateStrip({ event, runs, today, shape }: { event: RaceEvent; runs: P
 					</div>
 				) : (
 					<div className={cell}>
-						<dt className="text-[11px] text-gray-400">{shape.rounds ? "Finals" : "Top 96"}</dt>
+						<dt className="text-[11px] text-gray-400">{shape.rounds ? "Finals" : "Placement"}</dt>
 						<dd className="mt-0.5 font-display text-[22px] font-bold leading-tight text-gray-50">{final?.placement ? ordinal(final.placement) : "–"}</dd>
 						<dd className="mt-0.5 text-[11px] text-gray-400">{final?.finals_group ? `Group ${final.finals_group}` : shape.rounds ? "One race" : "your placement"}</dd>
 					</div>
@@ -2353,7 +2353,7 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 				) : (
 					<dl className="grid grid-cols-2 gap-2">
 						<Stat label="Best ticket" value={bestText(runs)} />
-						<Stat label="Top 96" value={final?.placement ? ordinal(final.placement) : "–"} detail={final?.placement ? undefined : "Not logged"} />
+						<Stat label="Placement" value={final?.placement ? ordinal(final.placement) : "–"} detail={final?.placement ? undefined : "Not logged"} />
 					</dl>
 				)}
 			</div>
