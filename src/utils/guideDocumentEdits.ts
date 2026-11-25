@@ -168,7 +168,20 @@ export function addDeck(doc: Doc, style: PvpStyle, label = "Standard"): Doc {
 }
 
 export function updateDeck(doc: Doc, index: number, patch: Partial<Omit<GuideDeckRow, "slots">>): Doc {
-	return { ...doc, decks: replaceAt(doc.decks, index, { ...doc.decks[index], ...patch }) }
+	return { ...doc, decks: replaceAt(doc.decks, index, withBorrow({ ...doc.decks[index], ...patch })) }
+}
+
+/**
+ * The borrow is slot 6, always, and a swap-ins deck (the guide's row of cards
+ * that can replace one, Henry's "Honorable Mentions") has none (Henry, board
+ * 1575020815450116199, 2026-11-25: a card put back in slot 6 lost its BORROW
+ * band, because the mark was a per-slot button). Applied on every slot edit
+ * and on the Swap-ins switch, so no edit can leave it anywhere else.
+ */
+function withBorrow(deck: GuideDeckRow): GuideDeckRow {
+	const borrowed = (row: GuideSlotRow) => !deck.is_highlighted && row.slot === DECK_SLOTS
+	if (deck.slots.every((row) => row.is_borrow === borrowed(row))) return deck
+	return { ...deck, slots: deck.slots.map((row) => ({ ...row, is_borrow: borrowed(row) })) }
 }
 
 export function removeDeck(doc: Doc, index: number): Doc {
@@ -206,7 +219,7 @@ function slotRows(deck: GuideDeckRow, slot: number): GuideSlotRow[] {
 }
 
 function withSlots(doc: Doc, index: number, slots: GuideSlotRow[]): Doc {
-	return { ...doc, decks: replaceAt(doc.decks, index, { ...doc.decks[index], slots }) }
+	return { ...doc, decks: replaceAt(doc.decks, index, withBorrow({ ...doc.decks[index], slots })) }
 }
 
 /**
@@ -295,12 +308,6 @@ export function copyNoteToCard(doc: Doc, cardId: number, note: string, style: Pv
 				: deck
 		),
 	}
-}
-
-/** Mark one slot as the borrowed card (every row of that slot), and no other. */
-export function setBorrowSlot(doc: Doc, deckIndex: number, slot: number | null): Doc {
-	const deck = doc.decks[deckIndex]
-	return withSlots(doc, deckIndex, deck.slots.map((row) => ({ ...row, is_borrow: row.slot === slot })))
 }
 
 /** Add an "or" alternative under a slot: a card, or a note like "or any speed". */
