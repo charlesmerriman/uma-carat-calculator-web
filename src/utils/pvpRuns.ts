@@ -40,9 +40,19 @@
  * under "day" 2 may have run on day 3. The API still stores them as days 1-6 of
  * 5 (`PVP_RUN_DAYS`), and here that is only a way to group them: the view says
  * "Tickets 6-10" and "Ticket 7", never a day, and nothing is called today or
- * over until the whole event is. A LoH race is
- * counted like a CM's, won when one of your three finishes first. RunShape is
- * the one place the two differ.
+ * over until the whole event is. RunShape is the one place the two differ.
+ *
+ * A LoH RACE IS SCORED, NOT WON (Daptrius, 2026-11-25; notes/loh-places-plan.md).
+ * Twelve run (your three, the opponent's three and six NPCs) and each of yours
+ * earns points by where she finished (LOH_PLACE_POINTS). A race's points are
+ * your three's added up, once all three have a place; a ticket's are its
+ * races'. They're worked out here from the stored places and never saved, so
+ * a balance change is one edit to the table. `winner` keeps its meaning, "one
+ * of yours finished 1st", so the place rules are a CM's; only the view swaps
+ * the win rate for points. Worked example, one race:
+ *
+ *   places  Oguri 4th, Maruzensky 1st, Gold Ship 11th
+ *   points  30 + 100 + 10 = 140
  */
 
 import { parseApiDate } from "./dateFormat"
@@ -59,14 +69,21 @@ export const CM_DAYS_PER_ROUND = 2
 /** The highest LoH placement the API takes (PVP_LOH_MAX_PLACEMENT): a ceiling, not a field size. */
 export const LOH_MAX_PLACEMENT = 1_000_000
 
-/** What an event kind's runs look like. `rounds`: a CM's two rounds and its one final race. */
+/**
+ * What an event kind's runs look like. `rounds`: a CM's two rounds and its one
+ * final race. `places`: runners in a race, so a place is 1st to this (the
+ * API's PVP_RACE_RUNNERS). `points`: a race is scored by LOH_PLACE_POINTS, and
+ * the view shows points where a CM shows a win rate.
+ */
 export interface RunShape {
 	days: number
 	tickets: number
 	rounds: boolean
+	places: number
+	points: boolean
 }
-export const CM_SHAPE: RunShape = { days: CM_RUN_DAYS, tickets: CM_RUN_TICKETS, rounds: true }
-const LOH_SHAPE: RunShape = { days: 6, tickets: 5, rounds: false }
+export const CM_SHAPE: RunShape = { days: CM_RUN_DAYS, tickets: CM_RUN_TICKETS, rounds: true, places: 9, points: false }
+const LOH_SHAPE: RunShape = { days: 6, tickets: 5, rounds: false, places: 12, points: true }
 
 export function runShape(event: Pick<RaceEvent, "event_type">): RunShape {
 	return event.event_type === "champions_meeting" ? CM_SHAPE : LOH_SHAPE
@@ -307,6 +324,55 @@ export function setLostTo(content: PvpRunContent, race: number, uma: number | nu
 	}
 }
 
+/**
+ * A League of Heroes uma's points by where she finished: 1st 100, 2nd 60, 3rd
+ * 40, 4th 30, 5th 20, and 6th to 12th all LOH_POINTS_PAST_FIFTH. The JP table
+ * (Daptrius, via the Suppenpen wiki, 2026-11-25); check it again when LoH
+ * reaches Global. Never stored: every total is worked out from the places.
+ */
+export const LOH_PLACE_POINTS = [100, 60, 40, 30, 20] as const
+export const LOH_POINTS_PAST_FIFTH = 10
+
+export function placePoints(place: number): number {
+	return LOH_PLACE_POINTS[place - 1] ?? LOH_POINTS_PAST_FIFTH
+}
+
+/** A race's points: its runners' added up once every one has a place, else null. */
+export function racePoints(entry: PvpRunRace | undefined, runners: Array<Pick<PvpRunRunner, "position">>): number | null {
+	if (!entry || !fullyPlaced(entry, runners)) return null
+	return runners.reduce((sum, runner) => sum + placePoints(placeOf(entry, runner.position) ?? 0), 0)
+}
+
+/** Points over some tickets: the sum, and how many races and tickets it came from. */
+export interface PointsTally {
+	points: number
+	/** Races with all three placed: the only ones with points. */
+	scored: number
+	/** Tickets with at least one scored race, for "points per ticket". */
+	tickets: number
+}
+
+export function tallyPoints(runs: Array<Pick<PvpRun, "races" | "runners">>): PointsTally {
+	const tally: PointsTally = { points: 0, scored: 0, tickets: 0 }
+	for (const run of runs) {
+		let any = false
+		for (const race of run.races) {
+			const points = racePoints(race, run.runners)
+			if (points === null) continue
+			tally.points += points
+			tally.scored += 1
+			any = true
+		}
+		if (any) tally.tickets += 1
+	}
+	return tally
+}
+
+/** "1,240": points read with a thousands comma. */
+export function formatPoints(points: number): string {
+	return points.toLocaleString("en-US")
+}
+
 /** An uma's (and veteran's) places over the races she has one in. */
 export interface PlaceTally {
 	uma: number
@@ -316,6 +382,8 @@ export interface PlaceTally {
 	total: number
 	/** Races she finished 1st to 3rd. */
 	top3: number
+	/** Her League of Heroes points over those races (placePoints). */
+	points: number
 }
 
 /** Each uma and veteran's places, keyed `uma:veteran` like the win tallies. Only races with a place count. */
@@ -327,9 +395,10 @@ export function placeTallies(runs: Array<Pick<PvpRun, "races" | "runners">>): Ma
 				const runner = run.runners.find((candidate) => candidate.position === place.position)
 				if (!runner) continue
 				const key = `${runner.uma}:${runner.trained_uma ?? ""}`
-				const tally = tallies.get(key) ?? { uma: runner.uma, trained_uma: runner.trained_uma ?? null, placed: 0, total: 0, top3: 0 }
+				const tally = tallies.get(key) ?? { uma: runner.uma, trained_uma: runner.trained_uma ?? null, placed: 0, total: 0, top3: 0, points: 0 }
 				tally.placed += 1
 				tally.total += place.place
+				tally.points += placePoints(place.place)
 				if (place.place <= 3) tally.top3 += 1
 				tallies.set(key, tally)
 			}
