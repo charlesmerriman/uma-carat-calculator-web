@@ -383,8 +383,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const quiet = (span: { key?: string }, base: number) => (previewing && span.key !== preview ? 0.25 : base)
 	const groups = [...new Set(layerSpans.map((span) => span.group ?? "lit"))]
 	const laneOf = (span: CourseSpan) => groups.indexOf(span.group ?? "lit")
-	// The lanes' distance out and stroke, in track widths (layerLanes): beside
-	// its own lap on a course drawn as rings.
+	// The lanes' place across the track and stroke, in track widths
+	// (layerLanes): on the track itself, on every course.
 	const lanes = layerLanes(ringed, groups.length)
 	const laneOffset = (lane: number) => track * lanes.offset(lane) * outside
 	const laneStroke = lanes.stroke
@@ -747,9 +747,10 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 						<line {...halfTick(hill.bracket[hill.bracket.length - 1], P(hill.end))} />
 					</g>
 				))}
-				{/* The layers: an arc outside the hills per group, solid where it
-				    fires, dashed for a random point, dotted for the carry-over
-				    window, a dot for a spot. */}
+				{/* The layers: an arc ON the track per group, solid where it fires,
+				    dashed for a random point, dotted for the carry-over window, a dot
+				    for a spot; each over a dark edge so it reads on every phase's
+				    colour. */}
 				{layerSpans.map((span, index) => {
 					const colour = span.colour ?? LIT
 					const offset = laneOffset(laneOf(span))
@@ -759,14 +760,27 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 						return <circle key={`layer-${index}`} cx={x + n[0] * offset} cy={y + n[1] * offset} r={track * 0.28 * Math.max(1, emphasis(span))} fill={colour} opacity={quiet(span, 1)} data-preview={span.key === preview || undefined} onMouseEnter={onPreview && span.key ? () => onPreview(span.key ?? null) : undefined} onMouseLeave={onPreview ? () => onPreview(null) : undefined} />
 					}
 					const section = slice(shape, span.start, Math.max(span.end, span.start + distance / 400), distance)
+					const line = points(parallel(section, offset))
+					const width = (span.kind === "window" ? track * laneStroke * 0.47 : track * laneStroke) * Math.max(1, emphasis(span))
+					const dashes = span.kind === "random" ? `${track * 0.5} ${track * 0.32}` : span.kind === "window" ? `${track * 0.12} ${track * 0.22}` : undefined
 					return (
+						<g key={`layer-${index}`}>
 						<polyline
-							key={`layer-${index}`}
-							points={points(parallel(section, offset))}
+							points={line}
+							fill="none"
+							stroke="var(--color-gray-950)"
+							strokeWidth={width + track * 0.14}
+							strokeDasharray={dashes}
+							strokeLinecap="round"
+							opacity={quiet(span, 0.9)}
+							aria-hidden="true"
+						/>
+						<polyline
+							points={line}
 							fill="none"
 							stroke={colour}
-							strokeWidth={(span.kind === "window" ? track * laneStroke * 0.47 : track * laneStroke) * Math.max(1, emphasis(span))}
-							strokeDasharray={span.kind === "random" ? `${track * 0.5} ${track * 0.32}` : span.kind === "window" ? `${track * 0.12} ${track * 0.22}` : undefined}
+							strokeWidth={width}
+							strokeDasharray={dashes}
 							strokeLinecap="round"
 							opacity={quiet(span, span.kind === "window" ? 0.8 : 1)}
 							data-preview={span.key === preview || undefined}
@@ -775,6 +789,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 						>
 							{span.label && <title>{span.detail ? `${span.label}. ${span.detail}` : span.label}</title>}
 						</polyline>
+						</g>
 					)
 				})}
 				{/* Each lit skill's icon at its arc's start, ringed in its colour; a
