@@ -169,13 +169,13 @@ describe("who can log runs", () => {
 		await waitFor(() => expect(puts().at(-1)?.body.placement).toBe(42))
 	})
 
-	it("sends a placement the Top 96 can't give back to the saved one", async () => {
+	it("sends a placement the game can't give back to the saved one", async () => {
 		show(LOH)
 		fireEvent.click(await screen.findByRole("tab", { name: /Top 96/ }))
 		const placement = await screen.findByLabelText("Your placement")
-		fireEvent.change(placement, { target: { value: "97" } })
+		fireEvent.change(placement, { target: { value: "1000001" } })
 		fireEvent.blur(placement)
-		expect(toastError).toHaveBeenCalledWith("A Top 96 placement is 1 to 96.")
+		expect(toastError).toHaveBeenCalledWith("A placement is 1 to 1,000,000.")
 		expect(puts()).toEqual([])
 	})
 

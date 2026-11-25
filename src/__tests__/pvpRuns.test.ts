@@ -380,6 +380,10 @@ describe("a League of Heroes", () => {
 			["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "42nd", "93rd", "96th"]
 		)
 	})
+
+	it("groups the thousands of a LoH placement", () => {
+		expect([1111, 12_345, 1_000_000].map(ordinal)).toEqual(["1,111th", "12,345th", "1,000,000th"])
+	})
 })
 
 

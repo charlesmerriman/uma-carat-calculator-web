@@ -69,7 +69,7 @@ import { formatDate, parseApiDate } from "../../utils/dateFormat"
 import { refForRaceEvent, sameEvent, splitEventName } from "../../utils/pvpEvent"
 import {
 	CM_NOT_STARTED,
-	LOH_TOP_PLACEMENTS,
+	LOH_MAX_PLACEMENT,
 	RUN_RACES,
 	bestTicketWins,
 	dayLabel,
@@ -716,7 +716,7 @@ function LeagueTabs({ tab, runs, final, shape, onChange }: Omit<DayTabsProps, "t
 					<Medal className="h-4 w-4" aria-hidden="true" />
 					Top 96
 				</span>
-				<span className="hidden text-xs text-gray-300 sm:block">{final?.placement ? ordinal(final.placement) : "If you made it"}</span>
+				<span className="hidden text-xs text-gray-300 sm:block">{final?.placement ? ordinal(final.placement) : "Your placement"}</span>
 			</TabFrame>
 		</div>
 	)
@@ -1945,16 +1945,16 @@ function TopBody({ run, choices, shared, onWrite }: {
 	const save = (input: HTMLInputElement) => {
 		const text = input.value.trim()
 		const next = text === "" ? null : Number(text)
-		if (next !== null && !(Number.isInteger(next) && next >= 1 && next <= LOH_TOP_PLACEMENTS)) {
+		if (next !== null && !(Number.isInteger(next) && next >= 1 && next <= LOH_MAX_PLACEMENT)) {
 			input.value = saved === null ? "" : String(saved)
-			toast.error(`A Top 96 placement is 1 to ${LOH_TOP_PLACEMENTS}.`)
+			toast.error(`A placement is 1 to ${LOH_MAX_PLACEMENT.toLocaleString("en-US")}.`)
 			return
 		}
 		if (next !== saved) onWrite((current) => ({ ...current, placement: next }))
 	}
 	return (
 		<div className="flex flex-col gap-4 px-3.5 pb-5 pt-4 sm:gap-5 sm:px-5 sm:pb-6 sm:pt-5">
-			<p className="text-sm text-gray-200 sm:text-[15px]">Made the Top 96? Add the team you entered and where you finished. If you didn't, leave this empty.</p>
+			<p className="text-sm text-gray-200 sm:text-[15px]">Made the Top 96? Add the team you entered. Everyone gets a placement, so add yours either way.</p>
 			{run && run.runners.length > 0 ? (
 				<LineupBlock
 					title="Top 96"
@@ -1982,7 +1982,7 @@ function TopBody({ run, choices, shared, onWrite }: {
 					type="number"
 					inputMode="numeric"
 					min={1}
-					max={LOH_TOP_PLACEMENTS}
+					max={LOH_MAX_PLACEMENT}
 					defaultValue={saved ?? ""}
 					onBlur={(blur) => save(blur.target)}
 					onKeyDown={(key) => {
