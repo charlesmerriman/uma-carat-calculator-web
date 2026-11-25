@@ -2654,7 +2654,12 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   access until it opens; web #456) and the Timeline's (`timeline/timelineTabs.ts` +
   `TimelineTabs.tsx`: the Timeline and Legend Races). Drawn like the PvP page's view tabs
   (Henry's ask) but as `NavLink`s, since they are separate addresses. A third screen is a
-  list and a wrapper, never a copy of the markup.
+  list and a wrapper, never a copy of the markup. The Encyclopedia's is the third
+  (`ENCYCLOPEDIA_TABS` in `utils/encyclopediaRoutes.ts` + `EncyclopediaScreenTabs.tsx`; on
+  the three lists only, names without counts; Daptrius, 2026-11-25). Under it the lists pin
+  their search bar (`Toolbar` `pinned`, `.enc-finder`), whose Filters button folds the
+  filters at the top and drops them down from the bar further down; it is
+  `data-popup-top-bar`, so a skill card stays below it.
 - **AppShell draws a screen's bar above the loading gate**, so the build-time render of the
   screen's pages has it. A wrapper reads the path and the account only; a gated tab (the
   Library) joins after the account loads, and the bar's height never changes.

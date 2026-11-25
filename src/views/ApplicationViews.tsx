@@ -24,11 +24,12 @@ import { CalculatorTabs } from "../components/carat-calculator/CalculatorTabs"
 import { isCalculatorScreen } from "../components/carat-calculator/calculatorTabs"
 import { TimelineTabs } from "../components/timeline/TimelineTabs"
 import { isTimelineScreen } from "../components/timeline/timelineTabs"
+import { EncyclopediaScreenTabs } from "../components/encyclopedia/EncyclopediaScreenTabs"
 import { loadCommunityPlans } from "../components/community-plans/loadCommunityPlans"
 import { AppRouteMeta } from "./AppRouteMeta"
 import { SharedPlanLanding } from "../components/shared-plan/SharedPlanLanding"
 import { isPublicId } from "../utils/appRoutes"
-import { encyclopediaPageOf } from "../utils/encyclopediaRoutes"
+import { encyclopediaPageOf, isEncyclopediaList } from "../utils/encyclopediaRoutes"
 import { PvpTeamsProvider } from "../services/PvpTeamsProvider"
 import { TeamDrawerProvider } from "../services/TeamDrawerProvider"
 import { useTeamDrawer } from "../services/TeamDrawerContext"
@@ -104,6 +105,7 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 	const ungated = encyclopediaPageOf(pathname) !== null
 	const showCalculatorTabs = isCalculatorScreen(pathname)
 	const showTimelineTabs = isTimelineScreen(pathname)
+	const showEncyclopediaTabs = isEncyclopediaList(pathname)
 	useEffect(() => {
 		if (onCalculator) void loadForecastPlot().catch(() => {})
 	}, [onCalculator])
@@ -174,6 +176,8 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 						{showCalculatorTabs && <CalculatorTabs />}
 						{/* The Timeline screen's bar (Timeline, Legend Races), the same way. */}
 						{showTimelineTabs && <TimelineTabs />}
+						{/* The Encyclopedia's three lists (Umas, Support cards, Skills), the same way. */}
+						{showEncyclopediaTabs && <EncyclopediaScreenTabs />}
 						{/* The routed pages mount only once the data is here — they
 						    all assume their collections are populated. The
 						    Encyclopedia's detail pages are the exception (`ungated`). */}

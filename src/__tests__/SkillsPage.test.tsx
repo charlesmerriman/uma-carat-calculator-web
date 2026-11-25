@@ -379,3 +379,19 @@ describe("coming back to a scrolled list (board \"Skills Load Issues with Scroll
 		expect(screen.getByText("Showing 60 of 150")).toBeInTheDocument()
 	})
 })
+
+describe("the pinned finder (board \"Encyclopedia sticky nav\")", () => {
+	it("folds the filters away under a Filters button, and back", async () => {
+		renderPage()
+		const button = await screen.findByRole("button", { name: "Filters" })
+		expect(button).toHaveAttribute("aria-expanded", "true")
+		expect(screen.getByRole("group", { name: "Color" })).toBeVisible()
+		fireEvent.click(button)
+		expect(button).toHaveAttribute("aria-expanded", "false")
+		expect(screen.queryByRole("group", { name: "Color" })).not.toBeInTheDocument()
+		// The search box stays in the bar.
+		expect(screen.getByRole("searchbox", { name: "Search skills" })).toBeVisible()
+		fireEvent.click(button)
+		expect(screen.getByRole("group", { name: "Color" })).toBeVisible()
+	})
+})

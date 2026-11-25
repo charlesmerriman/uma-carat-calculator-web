@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cardHref, isEncyclopediaPath, parseGameId, umaHref } from "../utils/encyclopediaRoutes"
+import { cardHref, isEncyclopediaList, isEncyclopediaPath, parseGameId, umaHref } from "../utils/encyclopediaRoutes"
 import { cardReleases, umaReleases } from "../utils/encyclopediaBanners"
 import type { BannerSupport, BannerUma } from "../types"
 
@@ -48,5 +48,12 @@ describe("a page's banners", () => {
 
 	it("knows nothing about a card on no banner", () => {
 		expect(cardReleases([] as BannerSupport[], 1)).toEqual({ banners: [], jpDate: null, globalDate: null, predicted: false })
+	})
+})
+
+describe("the Encyclopedia screen's bar", () => {
+	it("shows on the three lists, not on a page or elsewhere", () => {
+		expect(["/app/umas", "/app/cards/", "/app/skills"].map(isEncyclopediaList)).toEqual([true, true, true])
+		expect(["/app/umas/100101", "/app/skills/200012", "/app", "/app/timeline"].map(isEncyclopediaList)).toEqual([false, false, false, false])
 	})
 })
