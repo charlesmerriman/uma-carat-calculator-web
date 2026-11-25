@@ -20,16 +20,12 @@
 
 import { useMemo, useState, type DragEvent } from "react"
 import { toast } from "sonner"
-import { FileUp, FolderOpen } from "lucide-react"
-import { useCalculatorData } from "../../services/CalculatorContext"
+import { ChevronDown, Eye, FileUp, FolderOpen } from "lucide-react"
 import { readReplayFile, type ReplayRace } from "../../utils/gameImport/umadumpReplays"
 import { mergeReplays, planReplays, type PlannedGroup, type ReplayContext } from "../../utils/replayTickets"
 import { ACTION_BUTTON, PRIMARY_BUTTON } from "./gallery/galleryStyles"
 import type { RunChange } from "../../services/pvpRunQueries"
-import type { RaceEvent } from "../../types"
-import type { CatalogueUma, PvpTeam } from "../../types/pvpTeam"
 import type { PvpRun, PvpRunSlot } from "../../types/pvpRun"
-import type { TrainedUma } from "../../types/trainedUma"
 
 /** Where umadump is published: a community tool the site does not make. */
 const UMADUMP_URL = "https://github.com/Werseter/umadump"
@@ -45,42 +41,39 @@ interface ReadReplays {
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
 
+/** The folding body's id, for the title's aria-controls; one panel on the page. */
+const BODY_ID = "replay-import-body"
+
 // `webkitdirectory` isn't in React's input types; every desktop browser has it.
 const FOLDER_PICKER = { webkitdirectory: "" } as Record<string, string>
 
-export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSaved, onClose }: {
-	event: RaceEvent
+export function ReplayImport({ open, onToggle, ctx, runs, initialRaces, watch, onSave, onSaved, onClear }: {
+	/** Unfolded (the player's choice, kept per device by the CM Runs view; open to start). */
+	open: boolean
+	onToggle: () => void
+	/** The game's ids to the site's (useReplayContext), shared with the folder watch. */
+	ctx: ReplayContext
 	runs: PvpRun[]
-	/** The event's teams: a new ticket takes a matching one's spots and id. */
-	teams: PvpTeam[]
-	umas: CatalogueUma[]
-	veterans: TrainedUma[]
+	/** Races the folder watch read: the preview opens on them, no files to pick. */
+	initialRaces?: ReplayRace[]
+	/** "Watch the umadump folder" (Chrome and Edge), drawn only while the watch is off. */
+	watch?: { onStart: () => void }
 	onSave: (slot: PvpRunSlot, change: RunChange) => void
 	/** After saving: the first day written, to show it. */
 	onSaved: (day: number | "final") => void
-	onClose: () => void
+	/** Start over: the view remounts the panel empty (after Save, or Clear). */
+	onClear: () => void
 }) {
-	const { calculationConstants } = useCalculatorData()
-	const [read, setRead] = useState<ReadReplays | null>(null)
+	const [read, setRead] = useState<ReadReplays | null>(() => (initialRaces ? { races: initialRaces, otherRaces: 0, notReplays: 0 } : null))
 	const [reading, setReading] = useState(false)
 	const [dragging, setDragging] = useState(false)
 
-	const ctx: ReplayContext = useMemo(
-		() => ({
-			event,
-			constants: calculationConstants,
-			umaByCard: new Map(umas.filter((uma) => uma.game_id != null).map((uma) => [uma.game_id as number, uma.id])),
-			veteranByKey: new Map(veterans.filter((veteran) => veteran.import_key != null).map((veteran) => [veteran.import_key as number, veteran.id])),
-			teams,
-		}),
-		[event, calculationConstants, umas, veterans, teams]
-	)
 	// Worked out against the runs as they are now, so a tap meanwhile shows.
 	const plan = useMemo(() => (read ? planReplays(read.races, runs, ctx) : null), [read, runs, ctx])
 	const saving = plan?.groups.filter((group) => group.slot && (group.outcome.status === "new" || group.outcome.status === "fill")) ?? []
 	const savedRaces = saving.reduce((sum, group) => sum + group.races.length, 0)
 
-	const open = async (files: FileList | File[] | null) => {
+	const readFiles = async (files: FileList | File[] | null) => {
 		const list = Array.from(files ?? [])
 		if (list.length === 0) return
 		setReading(true)
@@ -111,7 +104,7 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 		dropped.preventDefault()
 		setDragging(false)
 		// The entries are taken now, inside the event: after it the list is empty.
-		void droppedFiles(dropped.dataTransfer).then(open)
+		void droppedFiles(dropped.dataTransfer).then(readFiles)
 	}
 
 	const save = () => {
@@ -122,84 +115,118 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 		}
 		toast.success(`Filled ${plural(saving.length, "ticket")} from ${plural(savedRaces, "race")}.`)
 		if (saving[0]) onSaved(saving[0].day)
-		onClose()
+		onClear()
 	}
 
 	return (
-		<section className="card-panel flex flex-col gap-3 p-4" aria-label="Fill from replays">
-			<h3 className="text-sm font-semibold text-gray-100">Fill from replays</h3>
-			<p className="text-xs leading-relaxed text-gray-400">
-				If you use{" "}
-				<a href={UMADUMP_URL} target="_blank" rel="noreferrer" className="text-brand hover:text-brand/75">
-					umadump
-				</a>{" "}
-				(a community tool we don&apos;t make, for the Steam version), its daemon mode writes a file for each race you run, in{" "}
-				<code className="text-gray-300">race_replays/champions_race</code> inside the folder umadump ran from. Run as administrator,
-				that&apos;s <code className="text-gray-300">C:\Windows\System32</code>. The files are read here, in your browser. Only your own
-				umas&apos; places, running styles and why they lost, and the uma that won each race, are saved. Other players&apos; names and builds stay on your
-				device.
-			</p>
-
-			<div
-				onDragOver={(over) => {
-					over.preventDefault()
-					setDragging(true)
-				}}
-				onDragLeave={() => setDragging(false)}
-				onDrop={drop}
-				className={`flex flex-col items-center gap-2.5 rounded-xl border-2 border-dashed px-4 py-5 text-center text-sm ${
-					dragging ? "border-brand text-gray-100" : "border-gray-600 text-gray-300"
-				}`}
-			>
-				Drop the replay files or their folder here, or
-				<span className="flex flex-wrap justify-center gap-2">
-					<label className={`${ACTION_BUTTON} cursor-pointer`}>
-						<FileUp className="h-4 w-4" aria-hidden="true" />
-						Choose files
-						<input type="file" multiple accept=".json,application/json" className="sr-only" onChange={(change) => void open(change.target.files)} />
-					</label>
-					<label className={`${ACTION_BUTTON} cursor-pointer`}>
-						<FolderOpen className="h-4 w-4" aria-hidden="true" />
-						Choose the folder
-						<input type="file" {...FOLDER_PICKER} className="sr-only" onChange={(change) => void open(change.target.files)} />
-					</label>
-				</span>
-			</div>
-
-			{reading && <p className="text-sm text-gray-400" role="status">Reading the files…</p>}
-
-			{read && plan && (
-				<section className="flex flex-col gap-2" aria-label="What the replays fill">
-					{read.races.length === 0 ? (
-						<p className="text-sm text-highlight" role="alert">
-							None of these files is a Champions Meeting race replay.
-						</p>
-					) : (
-						<p className="text-sm text-gray-300">{plural(read.races.length, "CM race")} in the files.</p>
-					)}
-					<Preview groups={plan.groups} />
-					<ul className="flex flex-col gap-0.5 text-xs text-gray-400">
-						{plan.outside > 0 && <li>{plural(plan.outside, "race isn't", "races aren't")} from this CM&apos;s days, left out.</li>}
-						{read.otherRaces > 0 && <li>{plural(read.otherRaces, "replay is", "replays are")} of another kind of race, left out.</li>}
-						{read.notReplays > 0 && <li>{plural(read.notReplays, "file isn't a race replay", "files aren't race replays")}, skipped.</li>}
-					</ul>
-					<p className="text-xs text-gray-400">
-						Races are grouped by when each file was written: five to a ticket, or a new ticket when your three change. Each group
-						goes to the ticket you logged that matches it, or else the next free one. Anything you already logged stays as you
-						logged it. The replays only add what&apos;s missing.
+		<section className={`card-panel flex flex-col gap-3 ${open ? "p-4" : "px-4 py-2.5"}`} aria-label="Fill from replays">
+			{/* The title folds the panel (owner, 2026-11-25: open, it took a lot of room). */}
+			<h3>
+				<button
+					type="button"
+					aria-expanded={open}
+					aria-controls={BODY_ID}
+					onClick={onToggle}
+					className="flex min-h-9 w-full items-center justify-between gap-3 text-left text-sm font-semibold text-gray-100 hover:text-brand"
+				>
+					<span className="flex items-center gap-2">
+						<FileUp className="h-4 w-4 shrink-0" aria-hidden="true" />
+						Fill from replays
+						{!open && read && <span className="text-xs font-normal text-gray-400">{plural(read.races.length, "race")} read</span>}
+					</span>
+					<ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+				</button>
+			</h3>
+			{open && (
+				<div id={BODY_ID} className="flex flex-col gap-3">
+					<p className="text-xs leading-relaxed text-gray-400">
+						If you use{" "}
+						<a href={UMADUMP_URL} target="_blank" rel="noreferrer" className="text-brand hover:text-brand/75">
+							umadump
+						</a>{" "}
+						(a community tool we don&apos;t make, for the Steam version), its daemon mode writes a file for each race you run, in{" "}
+						<code className="text-gray-300">race_replays/champions_race</code> inside the folder umadump ran from. Run as administrator,
+						that&apos;s <code className="text-gray-300">C:\Windows\System32</code>. The files are read here, in your browser. Only your own
+						umas&apos; places, running styles and why they lost, and the uma that won each race, are saved. Other players&apos; names and builds stay on your
+						device.
 					</p>
-				</section>
-			)}
 
-			<div className="flex justify-end gap-2">
-				<button type="button" className={ACTION_BUTTON} onClick={onClose}>
-					Cancel
-				</button>
-				<button type="button" className={PRIMARY_BUTTON} disabled={saving.length === 0} onClick={save}>
-					{/* Mock 06's label: the races the save writes. */}
-					{savedRaces > 1 ? `Save ${savedRaces} races` : "Save"}
-				</button>
-			</div>
+					<div
+						onDragOver={(over) => {
+							over.preventDefault()
+							setDragging(true)
+						}}
+						onDragLeave={() => setDragging(false)}
+						onDrop={drop}
+						className={`flex flex-col items-center gap-2.5 rounded-xl border-2 border-dashed px-4 py-5 text-center text-sm ${
+							dragging ? "border-brand text-gray-100" : "border-gray-600 text-gray-300"
+						}`}
+					>
+						Drop the replay files or their folder here, or
+						<span className="flex flex-wrap justify-center gap-2">
+							<label className={`${ACTION_BUTTON} cursor-pointer`}>
+								<FileUp className="h-4 w-4" aria-hidden="true" />
+								Choose files
+								<input type="file" multiple accept=".json,application/json" className="sr-only" onChange={(change) => void readFiles(change.target.files)} />
+							</label>
+							<label className={`${ACTION_BUTTON} cursor-pointer`}>
+								<FolderOpen className="h-4 w-4" aria-hidden="true" />
+								Choose the folder
+								<input type="file" {...FOLDER_PICKER} className="sr-only" onChange={(change) => void readFiles(change.target.files)} />
+							</label>
+							{watch && (
+								<button type="button" className={ACTION_BUTTON} onClick={watch.onStart}>
+									<Eye className="h-4 w-4" aria-hidden="true" />
+									Watch the umadump folder
+								</button>
+							)}
+						</span>
+						{watch && (
+							<span className="text-xs text-gray-400">
+								Chrome and Edge can watch the folder while this page is open, and save each race as it lands.
+							</span>
+						)}
+				</div>
+
+					{reading && <p className="text-sm text-gray-400" role="status">Reading the files…</p>}
+
+					{read && plan && (
+						<section className="flex flex-col gap-2" aria-label="What the replays fill">
+							{read.races.length === 0 ? (
+								<p className="text-sm text-highlight" role="alert">
+									None of these files is a Champions Meeting race replay.
+								</p>
+							) : (
+								<p className="text-sm text-gray-300">{plural(read.races.length, "CM race")} in the files.</p>
+							)}
+							<Preview groups={plan.groups} />
+							<ul className="flex flex-col gap-0.5 text-xs text-gray-400">
+								{plan.outside > 0 && <li>{plural(plan.outside, "race isn't", "races aren't")} from this CM&apos;s days, left out.</li>}
+								{read.otherRaces > 0 && <li>{plural(read.otherRaces, "replay is", "replays are")} of another kind of race, left out.</li>}
+								{read.notReplays > 0 && <li>{plural(read.notReplays, "file isn't a race replay", "files aren't race replays")}, skipped.</li>}
+							</ul>
+							<p className="text-xs text-gray-400">
+								Races are grouped by when each file was written: five to a ticket, or a new ticket when your three change. Each group
+								goes to the ticket you logged that matches it, or else the next free one. Anything you already logged stays as you
+								logged it. The replays only add what&apos;s missing.
+							</p>
+						</section>
+					)}
+
+					{/* Nothing to save or clear until files are read. */}
+					{read && (
+						<div className="flex justify-end gap-2">
+							<button type="button" className={ACTION_BUTTON} onClick={onClear}>
+								Clear
+							</button>
+							<button type="button" className={PRIMARY_BUTTON} disabled={saving.length === 0} onClick={save}>
+								{/* Mock 06's label: the races the save writes. */}
+								{savedRaces > 1 ? `Save ${savedRaces} races` : "Save"}
+							</button>
+						</div>
+					)}
+				</div>
+			)}
 		</section>
 	)
 }

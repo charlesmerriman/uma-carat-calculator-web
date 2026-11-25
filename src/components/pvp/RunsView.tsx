@@ -46,7 +46,7 @@
 import { Fragment, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeftRight, Check, ChevronDown, Crown, FileUp, Medal, Loader2, Repeat, Trash2, Trophy, Users, X } from "lucide-react"
+import { ArrowLeftRight, Check, ChevronDown, Crown, Medal, Loader2, Repeat, Trash2, Trophy, Users, X } from "lucide-react"
 import { useAccount } from "../../services/AuthContext"
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { usePvpTeams } from "../../services/PvpTeamsContext"
@@ -62,6 +62,7 @@ import { useSignInPrompt } from "../../hooks/useSignInPrompt"
 import { FramedUma } from "../FramedUma"
 import { PvpCardPicker } from "./PvpCardPicker"
 import { ReplayImport } from "./ReplayImport"
+import { useReplayContext, useReplayWatch, type ReplayWatch } from "../../hooks/useReplayWatch"
 import { SaveStatus } from "./SaveStatus"
 import { STYLE_LABELS, styleColor } from "../../utils/pvpGuide"
 import { formatDate, parseApiDate } from "../../utils/dateFormat"
@@ -139,6 +140,8 @@ const INSET = "rounded-[10px] border border-edge bg-gray-900/60"
 
 /** One shared empty list, so "no veterans yet" is the same array on every render. */
 const NO_VETERANS: TrainedUma[] = []
+/** The same for runs not loaded yet (the folder watch's deps). */
+const NO_RUNS: PvpRun[] = []
 // The Won by picker recommends nothing.
 const NO_PICKS = new Set<number>()
 /** Won by's quick chips, before "Other…" (notes/cm-runs-plan-2.md, "Won by"). */
@@ -276,14 +279,30 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	// (defaultOpenTicket), worked out afresh on each render; the first write
 	// pins it, so logging a ticket's fifth race doesn't fold it away.
 	const [openByDay, setOpenByDay] = useState<Record<number, number | null>>({})
-	// The "Fill from replays" panel (ReplayImport).
-	const [fillingFromReplays, setFillingFromReplays] = useState(false)
+	// The "Fill from replays" panel (ReplayImport): open or folded (per device),
+	// and what it previews: files the player picks, or what the folder watch read.
+	const [replaysOpen, setReplaysOpen] = useReplaysOpen()
+	const [replaySource, setReplaySource] = useState<{ from: "files" | "watch"; round: number }>({ from: "files", round: 0 })
 
 	// The event's teams with at least one uma: the lineups a ticket can copy.
 	const eventTeams = useMemo(() => {
 		const eventRef = refForRaceEvent(event)
 		return teams.filter((team) => sameEvent({ kind: team.kind, id: team.event }, eventRef) && team.members.length > 0)
 	}, [teams, event])
+
+	// Replays: one context for the files and the folder watch (notes/cm-runs-plan-2.md, PRs 5 and 6).
+	const replayContext = useReplayContext(event, calculationConstants, catalogueUmas, veterans, eventTeams)
+	const saveReplay = (slot: PvpRunSlot, change: RunChange) => {
+		setFailed(false)
+		save(slot, change)
+	}
+	const watch = useReplayWatch({
+		// A CM only, and never against runs or a catalogue not loaded yet.
+		ready: shape.rounds && runsQuery.data !== undefined && catalogue.status === "ready",
+		runs: runsQuery.data ?? NO_RUNS,
+		ctx: replayContext,
+		onSave: saveReplay,
+	})
 
 	if (runsQuery.isError) return <Notice>Your runs didn't load. Reload the page to try again.</Notice>
 	if (catalogue.status === "error") {
@@ -359,31 +378,33 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 				) : (
 					<LeagueTabs tab={tab} runs={runs} final={final} shape={shape} onChange={setTab} />
 				)}
-				<span className="flex items-center gap-2.5">
-					{/* A CM only: the import reads Champions replays (notes/cm-runs-plan-2.md, PR 5). */}
-					{shape.rounds && (
-						<button type="button" className={SOFT_BUTTON} aria-expanded={fillingFromReplays} onClick={() => setFillingFromReplays((open) => !open)}>
-							<FileUp className="h-4 w-4" aria-hidden="true" />
-							Fill from replays
-						</button>
-					)}
-					<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
-				</span>
+				<SaveStatus mode="account" saveState={failed ? "error" : saving ? "saving" : "saved"} hasTeam={runs.length > 0} />
 			</div>
 
-			{fillingFromReplays && (
-				<ReplayImport
-					event={event}
-					runs={runs}
-					teams={eventTeams}
-					umas={catalogueUmas}
-					veterans={veterans}
-					onSave={(slot, change) => {
-						setFailed(false)
-						save(slot, change)
+			{shape.rounds && watch.state !== "off" && (
+				<WatchBar
+					watch={watch}
+					onLook={() => {
+						setReplaysOpen(true)
+						setReplaySource({ from: "watch", round: replaySource.round + 1 })
 					}}
+				/>
+			)}
+
+			{/* A CM only: the import reads Champions replays (notes/cm-runs-plan-2.md, PR 5). */}
+			{shape.rounds && (
+				<ReplayImport
+					// A fresh panel per source and after each Save or Clear.
+					key={`${replaySource.from}-${replaySource.round}`}
+					open={replaysOpen}
+					onToggle={() => setReplaysOpen(!replaysOpen)}
+					ctx={replayContext}
+					runs={runs}
+					initialRaces={replaySource.from === "watch" ? watch.races : undefined}
+					watch={watch.supported && watch.state === "off" ? { onStart: watch.start } : undefined}
+					onSave={saveReplay}
 					onSaved={(day) => setTab(day)}
-					onClose={() => setFillingFromReplays(false)}
+					onClear={() => setReplaySource({ from: "files", round: replaySource.round + 1 })}
 				/>
 			)}
 
@@ -1268,42 +1289,51 @@ function StyleTag({ style }: { style: MemberStyle }) {
 }
 
 /**
- * "Log places", per device (notes/cm-runs-plan-2.md: a PC filling places and
- * a phone tapping want different answers). An external store with a server
- * snapshot of off, like courseMapStore's switches: /app is prerendered, so a
- * render never reads localStorage itself.
+ * A yes/no kept per device in localStorage ("on" / "off"), as an external
+ * store whose server snapshot is its fallback, like courseMapStore's
+ * switches: /app is prerendered, so a render never reads localStorage
+ * itself. Storage blocked: it lasts this page's life.
  */
-const LOG_PLACES_KEY = "uma-runs-log-places"
-let logPlacesOn: boolean | null = null
-const logPlacesListeners = new Set<() => void>()
-
-function readLogPlaces(): boolean {
-	try {
-		return localStorage.getItem(LOG_PLACES_KEY) === "on"
-	} catch {
-		return false
+function deviceSwitch(key: string, fallback: boolean): () => [boolean, (on: boolean) => void] {
+	let value: boolean | null = null
+	const listeners = new Set<() => void>()
+	const read = () => {
+		try {
+			const stored = localStorage.getItem(key)
+			return stored === null ? fallback : stored === "on"
+		} catch {
+			return fallback
+		}
+	}
+	const subscribe = (listener: () => void) => {
+		listeners.add(listener)
+		return () => listeners.delete(listener)
+	}
+	const set = (next: boolean) => {
+		value = next
+		try {
+			localStorage.setItem(key, next ? "on" : "off")
+		} catch {
+			// Storage blocked: this page's life only.
+		}
+		listeners.forEach((listener) => listener())
+	}
+	return function useDeviceSwitch() {
+		return [useSyncExternalStore(subscribe, () => (value ??= read()), () => fallback), set]
 	}
 }
 
-function subscribeLogPlaces(listener: () => void) {
-	logPlacesListeners.add(listener)
-	return () => logPlacesListeners.delete(listener)
-}
+/**
+ * "Log places", per device (notes/cm-runs-plan-2.md: a PC filling places and
+ * a phone tapping want different answers). Off to start.
+ */
+const useLogPlaces = deviceSwitch("uma-runs-log-places", false)
 
-function setLogPlacesOn(next: boolean) {
-	logPlacesOn = next
-	try {
-		localStorage.setItem(LOG_PLACES_KEY, next ? "on" : "off")
-	} catch {
-		// Storage blocked: this page's life only.
-	}
-	logPlacesListeners.forEach((listener) => listener())
-}
-
-function useLogPlaces(): [boolean, (on: boolean) => void] {
-	const on = useSyncExternalStore(subscribeLogPlaces, () => (logPlacesOn ??= readLogPlaces()), () => false)
-	return [on, setLogPlacesOn]
-}
+/**
+ * The "Fill from replays" panel open or folded, per device (owner, 2026-11-25:
+ * it took a lot of room). Open to start, so a player finds it once.
+ */
+const useReplaysOpen = deviceSwitch("uma-runs-replays-open", true)
 
 /** 1st to 9th: a CM race has nine runners (PVP_CM_RACE_RUNNERS in the API). */
 const PLACE_CHOICES = Array.from({ length: 9 }, (_, index) => index + 1)
@@ -1805,6 +1835,46 @@ function NoteField({ note, label, onWrite }: { note: string; label: string; onWr
 				className="min-h-11 rounded-lg border border-gray-600 bg-gray-900 px-3 text-sm font-normal text-gray-100 placeholder:text-gray-500 focus:border-brand focus:outline-none sm:min-h-10"
 			/>
 		</label>
+	)
+}
+
+/**
+ * The folder watch's line (mock 06's foot), under the tabs while it runs:
+ * what it last saved, the replays that need a look (they open the preview),
+ * and Stop, which forgets the folder on this device. When the browser didn't
+ * keep the grant, one click asks again.
+ */
+function WatchBar({ watch, onLook }: { watch: ReplayWatch; onLook: () => void }) {
+	const name = watch.folderName ?? "the folder"
+	return (
+		<div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-edge bg-gray-900/40 px-3 py-2 text-xs text-gray-300 sm:text-[13px]">
+			{watch.state === "watching" ? (
+				// Its own line on a phone, the buttons under it; beside them from sm.
+				<span className="flex min-w-0 basis-full items-center gap-2 sm:flex-1 sm:basis-auto">
+					<span className="size-2 shrink-0 rounded-full bg-status-running" aria-hidden="true" />
+					<span className="min-w-0">
+						Watching <code className="text-gray-100">{name}</code>. {watch.last ? `${watch.last}.` : "Each race is saved as it lands."}
+					</span>
+				</span>
+			) : (
+				<span className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
+					Your browser needs your OK to read <code className="text-gray-100">{name}</code> again.
+				</span>
+			)}
+			{watch.state === "needs-grant" && (
+				<button type="button" className={soft({ size: "min-h-8 px-2.5" })} onClick={watch.regrant}>
+					Watch it again
+				</button>
+			)}
+			{watch.state === "watching" && watch.needLook > 0 && (
+				<button type="button" className={soft({ size: "min-h-8 px-2.5", look: "border-brand text-gray-50 hover:border-brand/70" })} onClick={onLook}>
+					{watch.needLook === 1 ? "1 replay needs a look" : `${watch.needLook} replays need a look`}
+				</button>
+			)}
+			<button type="button" className={soft({ size: "min-h-8 px-2.5" })} onClick={watch.stop}>
+				Stop watching
+			</button>
+		</div>
 	)
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
-import { groupReplays, mergeReplays, planReplays, replayDay, type ReplayContext } from "../utils/replayTickets"
+import { groupReplays, mergeReplays, planReplays, replayDay, watchStep, type ReplayContext } from "../utils/replayTickets"
 import type { ReplayRace, ReplayRunner } from "../utils/gameImport/umadumpReplays"
 import type { RaceEvent } from "../types"
 import type { PvpRun, PvpRunContent } from "../types/pvpRun"
@@ -151,6 +151,22 @@ describe("planReplays and mergeReplays", () => {
 		const { content } = mergeReplays(null, [finals], CTX, true)
 		expect(content?.placement).toBe(1)
 		expect(content?.races).toHaveLength(1)
+	})
+
+	it("saves a group with a race that arrived while watching, and asks about the rest", () => {
+		const old = day4(5)
+		const fresh = day4(7).slice(5).map((entry) => ({ ...entry }))
+		// The old ticket (five races from before the watch) and a new one with two fresh races.
+		const plan = planReplays([...old, ...fresh], [], CTX)
+		const step = watchStep(plan, new Set(fresh))
+		expect(step.save.map((group) => group.slot)).toEqual([{ stage: "day", day: 4, ticket: 2 }])
+		expect(step.look.map((group) => group.slot)).toEqual([{ stage: "day", day: 4, ticket: 1 }])
+		// A fresh race that disagrees with a tapped ticket waits for a look; an old one doesn't nag.
+		const tapped = run(1, { runners: LINEUP, races: [{ race: 1, winner: 2 }] })
+		const others = [run(2, { skipped: true }), run(3, { skipped: true }), run(4, { skipped: true })]
+		const clash = planReplays(old, [tapped, ...others], CTX)
+		expect(watchStep(clash, new Set([old[4]])).look).toHaveLength(1)
+		expect(watchStep(clash, new Set()).look).toHaveLength(0)
 	})
 
 	it("leaves out a race with an uma the site doesn't have", () => {

@@ -1931,7 +1931,10 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   `PvpCardPicker`) open by themselves only on a loss just logged; an older unnamed loss shows
   a quiet "Won by…", a named one "Won by Kitasan Black · Change". Mid-placing, the race is a
   loss in the data (setPlace's rule) but Won by waits for the third place.
-- **Fill from replays** (`ReplayImport.tsx`, CM only): umadump's race replay files, dropped
+- **Fill from replays** (`ReplayImport.tsx`, CM only) is a panel under the day tabs whose
+  title folds it (owner, 2026-11-25: open, it took a lot of room). Open to start, then the
+  player's choice per device (`useReplaysOpen`, the same `deviceSwitch` store as "Log
+  places"); folded it is one line. It reads umadump's race replay files, dropped
   or chosen (files, or a folder through `webkitdirectory`), read in the browser by
   `utils/gameImport/umadumpReplays.ts` (by shape; only the player's three and the winning
   uma ever leave a file), slotted by `utils/replayTickets.ts` (the day from each file's
@@ -1942,6 +1945,17 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   races, places, loss reasons and a blank Won by. The totals then show "Why she lost" per uma
   from the day tickets, the codes in words only where confirmed (`lossReasonLabel`). The copy
   says "if you use umadump" and never tells a player to run it.
+- **Watching the umadump folder** (`hooks/useReplayWatch.ts`, `services/replayFolder.ts`;
+  Chrome and Edge, File System Access API): the button is drawn only where the API exists
+  (`canWatchFolder`, through `useSyncExternalStore` with a server snapshot of false). The
+  folder's handle is kept per device in IndexedDB (`idb-keyval`), and a later visit
+  re-checks the grant, one click to ask again. While the view is open and the tab
+  visible, the folder is read every 5 seconds, each file opened once. A group holding a
+  race that arrived WHILE watching and adding cleanly is saved at once (`watchStep`). Files
+  already there when the watch started, and fresh races that disagree, show as "N replays
+  need a look", which opens the preview with every race read. It polls only once the runs
+  and the catalogue are loaded. `WatchBar` under the tabs says what it last saved, and Stop
+  forgets the folder.
 - **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,
   the Finals, per-uma bars with the veteran link, per day); below `lg` they fall under the
   day. On a phone a three-number strip (`WinRateStrip`) goes above the tabs and the side
