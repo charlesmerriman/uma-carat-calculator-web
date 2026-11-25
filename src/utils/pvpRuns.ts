@@ -347,6 +347,51 @@ function raceOrder(run: Pick<PvpRun, "stage" | "day" | "ticket">, race: number):
 	return day * 10_000 + (run.ticket ?? 0) * 100 + race
 }
 
+/**
+ * The game's loss reasons in words, only where someone has checked the game
+ * says the same (notes/cm-runs-plan-2.md, "Loss reasons"). The owner's CM 22
+ * replays showed the two aptitude codes on exactly the runners with a G on
+ * dirt and an E at a mile. Every other code shows as the game's own word
+ * until it's confirmed: a relabel is this map, never a migration.
+ */
+const LOSS_REASON_LABELS: Record<string, string> = {
+	ProperGround: "Ground aptitude",
+	ProperDistance: "Distance aptitude",
+}
+
+export function lossReasonLabel(code: string): string {
+	return LOSS_REASON_LABELS[code] ?? code
+}
+
+/**
+ * Each uma and veteran's loss reasons (from replays), keyed `uma:veteran`
+ * like placeTallies, most first. "Win", "Lose" and blank say nothing about
+ * why, so they're left out.
+ */
+export function lossReasons(runs: Array<Pick<PvpRun, "races" | "runners">>): Map<string, Array<{ code: string; count: number }>> {
+	const counts = new Map<string, Map<string, number>>()
+	for (const run of runs) {
+		for (const race of run.races) {
+			for (const place of race.places ?? []) {
+				const code = place.loss_reason ?? ""
+				if (!code || code === "Win" || code === "Lose") continue
+				const runner = run.runners.find((candidate) => candidate.position === place.position)
+				if (!runner) continue
+				const key = `${runner.uma}:${runner.trained_uma ?? ""}`
+				const byCode = counts.get(key) ?? new Map<string, number>()
+				byCode.set(code, (byCode.get(code) ?? 0) + 1)
+				counts.set(key, byCode)
+			}
+		}
+	}
+	return new Map(
+		[...counts.entries()].map(([key, byCode]) => [
+			key,
+			[...byCode.entries()].sort(([a, x], [b, y]) => y - x || a.localeCompare(b)).map(([code, count]) => ({ code, count })),
+		])
+	)
+}
+
 /** The umas that beat the player, most losses first (the most recent loss first on a tie), over the losses that name one. */
 export function beatenBy(runs: Array<Pick<PvpRun, "races" | "stage" | "day" | "ticket">>): { umas: Array<{ uma: number; losses: number }>; named: number } {
 	const counts = new Map<number, { losses: number; latest: number }>()

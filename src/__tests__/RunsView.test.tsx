@@ -5,6 +5,7 @@ import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { RaceEvent } from "../types"
 import type { CatalogueUma, PvpTeam } from "../types/pvpTeam"
+import replayFixture from "./fixtures/umadumpReplay.json"
 
 /**
  * The CM Runs view: who may use it, starting a ticket's lineup (one ticket,
@@ -26,9 +27,11 @@ const CM = {
 } as RaceEvent
 const LOH = { ...CM, event_type: "league_of_heroes", loh_number: 1 } as unknown as RaceEvent
 
-const uma = (id: number, name: string) => ({ id, name, portrait: null, image: null, skills: [], apt: {} }) as unknown as CatalogueUma
-// Kitasan Black is never on the team: she's the uma that beats it.
-const UMAS = [uma(41, "Oguri Cap"), uma(42, "Maruzensky"), uma(43, "Gold Ship"), uma(44, "Kitasan Black")]
+const uma = (id: number, name: string, game_id: number) => ({ id, name, game_id, portrait: null, image: null, skills: [], apt: {} }) as unknown as CatalogueUma
+// Kitasan Black is never on the team: she's the uma that beats it. The game
+// ids are the outfits in the replay fixture (fixtures/umadumpReplay.json), so
+// its three are this team and its winner is uma 44.
+const UMAS = [uma(41, "Oguri Cap", 106801), uma(42, "Maruzensky", 102001), uma(43, "Gold Ship", 101502), uma(44, "Kitasan Black", 100601)]
 
 const TEAM: PvpTeam = {
 	key: "t1",
@@ -594,6 +597,28 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		show()
 		const summary = await screen.findByRole("complementary", { name: "Your win rates" })
 		expect(within(summary).getAllByText("Average place 1.0 · top 3 in 1 of 1")).toHaveLength(1)
+	})
+
+	it("fills a ticket from a race replay: previewed, then saved through the same PUT", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("button", { name: "Fill from replays" }))
+		const panel = screen.getByRole("region", { name: "Fill from replays" })
+		// Day 1 of the test CM (it starts 2099-03-06): the file's time is the race's.
+		const file = new File([JSON.stringify(replayFixture)], "anything.json", { lastModified: Date.UTC(2099, 2, 6, 2) })
+		fireEvent.change(within(panel).getByLabelText("Choose files"), { target: { files: [file] } })
+
+		const preview = await within(panel).findByRole("region", { name: "What the replays fill" })
+		expect(preview).toHaveTextContent("Day 1: 1 race")
+		expect(preview).toHaveTextContent("Ticket 1 · 1 race · new")
+		fireEvent.click(within(panel).getByRole("button", { name: "Save" }))
+
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].path).toBe("/pvp-runs/cm/10/day/1/ticket/1")
+		expect(puts()[0].body.runners).toMatchObject([{ uma: 41 }, { uma: 42 }, { uma: 43 }])
+		expect(lastRaces()[0]).toMatchObject({ race: 1, winner: null, lost_to: 44, lost_to_style: "late" })
+		expect(placesOf(lastRaces()[0])).toEqual([[0, 8], [1, 9], [2, 7]])
+		// Nothing about another player is sent.
+		expect(JSON.stringify(puts()[0].body)).not.toMatch(/Trainer|viewer/)
 	})
 
 	it("has no places in a League of Heroes, where the API refuses them", async () => {

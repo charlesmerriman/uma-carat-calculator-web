@@ -155,7 +155,10 @@ export const PrivacyPolicy: React.FC = () => {
 						they say about your veterans, umas and cards, including your game account id and
 						the notes you wrote on your veterans. Other players&apos; account ids in them (a
 						veteran you borrowed, or a borrowed parent) are removed in your browser and never
-						reach us.
+						reach us. If you fill CM Runs from umadump&apos;s race replay files, they are read in
+						your browser, and only your own umas&apos; places and the uma that won each race
+						reach us. Other players&apos; names, account ids and builds in those files never
+						leave your device.
 					</p>
 
 					<h2 className={heading}>The PvP Gallery</h2>
