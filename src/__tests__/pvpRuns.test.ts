@@ -14,6 +14,8 @@ import {
 	cmDayAt,
 	emptyContent,
 	beatenBy,
+	fullyPlaced,
+	nextRaceToPlace,
 	placeTallies,
 	setLostTo,
 	setPlace,
@@ -412,7 +414,9 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 	it("averages places and counts who beat you", () => {
 		const run = {
 			runners,
-			updated_at: "2026-11-25T10:00:00Z",
+			stage: "day" as const,
+			day: 1,
+			ticket: 1,
 			races: [
 				{ race: 1, winner: 0, places: [{ position: 0, place: 1 }, { position: 2, place: 9 }] },
 				{ race: 2, winner: null, places: [{ position: 0, place: 2 }, { position: 2, place: 8 }], lost_to: 99 },
@@ -424,5 +428,28 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		expect(places.get("11:")).toMatchObject({ placed: 2, total: 3, top3: 2 })
 		expect(places.get("13:")).toMatchObject({ placed: 2, total: 17, top3: 0 })
 		expect(beatenBy([run])).toEqual({ umas: [{ uma: 99, losses: 2 }], named: 2 })
+	})
+
+	it("puts the most recent loss first on a tie, by day, ticket and race", () => {
+		const loss = (race: number, lost_to: number) => ({ race, winner: null, lost_to })
+		const runs = [
+			{ stage: "day" as const, day: 2, ticket: 1, races: [loss(1, 70), loss(4, 80)] },
+			{ stage: "day" as const, day: 1, ticket: 4, races: [loss(5, 90)] },
+			// The Finals come after every day.
+			{ stage: "final" as const, day: null, ticket: null, races: [loss(1, 60)] },
+		]
+		expect(beatenBy(runs).umas.map((entry) => entry.uma)).toEqual([60, 80, 70, 90])
+	})
+
+	it("opens the strips on the first race part-placed or not logged, never a winner-only one", () => {
+		const placed = (position: number, place: number) => ({ position, place, loss_reason: "" })
+		// Logged before places existed: races 1-2 have winners only, so race 3 opens.
+		expect(nextRaceToPlace({ runners, skipped: false, races: [{ race: 1, winner: 0 }, { race: 2, winner: null }] })).toBe(3)
+		// Race 1 has one place of three: it stays open.
+		expect(nextRaceToPlace({ runners, skipped: false, races: [{ race: 1, winner: 0, places: [placed(0, 1)] }] })).toBe(1)
+		// Fully placed races, and a stopped ticket's unlisted races, are done.
+		const full = { race: 1, winner: 0, places: [placed(0, 1), placed(1, 4), placed(2, 9)] }
+		expect(fullyPlaced(full, runners)).toBe(true)
+		expect(nextRaceToPlace({ runners, skipped: true, races: [full] })).toBeNull()
 	})
 })

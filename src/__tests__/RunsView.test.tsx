@@ -26,8 +26,9 @@ const CM = {
 } as RaceEvent
 const LOH = { ...CM, event_type: "league_of_heroes", loh_number: 1 } as unknown as RaceEvent
 
-const uma = (id: number, name: string) => ({ id, name, portrait: null, image: null }) as unknown as CatalogueUma
-const UMAS = [uma(41, "Oguri Cap"), uma(42, "Maruzensky"), uma(43, "Gold Ship")]
+const uma = (id: number, name: string) => ({ id, name, portrait: null, image: null, skills: [], apt: {} }) as unknown as CatalogueUma
+// Kitasan Black is never on the team: she's the uma that beats it.
+const UMAS = [uma(41, "Oguri Cap"), uma(42, "Maruzensky"), uma(43, "Gold Ship"), uma(44, "Kitasan Black")]
 
 const TEAM: PvpTeam = {
 	key: "t1",
@@ -66,7 +67,7 @@ vi.mock("../services/PvpTeamsContext", () => ({
 	usePvpTeams: () => ({ teams: teams.list, ensureLoaded: () => {} }),
 }))
 vi.mock("../hooks/usePvpCatalogue", () => ({
-	usePvpCatalogue: () => ({ status: "ready", umasById: new Map(UMAS.map((entry) => [entry.id, entry])) }),
+	usePvpCatalogue: () => ({ status: "ready", umasById: new Map(UMAS.map((entry) => [entry.id, entry])), skillsById: new Map() }),
 }))
 
 const { RunsView } = await import("../components/pvp/RunsView")
@@ -502,5 +503,94 @@ describe("veterans", () => {
 		expect(within(summary).getByRole("link", { name: "S 15,120" })).toHaveAttribute("href", "/app/collection?veteran=6")
 		expect(within(summary).getByText("1 of 1 won")).toBeInTheDocument()
 		expect(within(summary).getByText("0 of 1 won")).toBeInTheDocument()
+	})
+})
+
+describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
+	type SentRace = { race: number; winner: number | null; places?: Array<{ position: number; place: number }>; lost_to?: number | null }
+	/** The races of the last PUT sent. */
+	const lastRaces = () => (puts().at(-1)?.body.races ?? []) as SentRace[]
+	const placesOf = (race: SentRace | undefined) => race?.places?.map(({ position, place }) => [position, place])
+
+	/**
+	 * "Log places" is a per-device store that outlives a test (a module-level
+	 * cache over localStorage), so each test turns it on only if it's off.
+	 */
+	function placesOn(scope: HTMLElement) {
+		const toggle = within(scope).getByRole("switch", { name: "Log places" })
+		if (toggle.getAttribute("aria-checked") !== "true") fireEvent.click(toggle)
+	}
+
+	it("logs a win in three taps, greys a taken place, and opens the next race", async () => {
+		runs.list = [logged(1, [])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		placesOn(ticket)
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: places" })).toHaveAttribute("aria-expanded", "true")
+
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Maruzensky finished 4th" }))
+		// Two of yours can't share a place, so Oguri's 4th can't be tapped.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap finished 4th" })).toBeDisabled()
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Gold Ship finished 9th" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap finished 1st" }))
+
+		await waitFor(() => expect(placesOf(lastRaces()[0])).toEqual([[0, 1], [1, 4], [2, 9]]))
+		expect(lastRaces()[0].winner).toBe(0)
+		// The cells show the places, and race 2 opens by itself.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap won" })).toHaveTextContent("Won1st")
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Maruzensky won" })).toHaveTextContent("4th")
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 2: places" })).toHaveAttribute("aria-expanded", "true")
+		expect(within(ticket).queryByRole("button", { name: /race 1: .* finished/ })).toBeNull()
+	})
+
+	it("asks who won once three places have no 1st, with the umas that beat you as chips", async () => {
+		// Race 1, a loss to Kitasan Black logged before places: winner only, so race 2 is open.
+		runs.list = [logged(1, [{ race: 1, winner: null, lost_to: 44 } as never])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		placesOn(ticket)
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Oguri Cap finished 2nd" }))
+		// Mid-placing, the race isn't a loss yet as far as Won by goes.
+		expect(within(ticket).queryByRole("group", { name: "Ticket 1, race 2: who won it" })).toBeNull()
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Maruzensky finished 5th" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Gold Ship finished 8th" }))
+
+		const panel = within(ticket).getByRole("group", { name: "Ticket 1, race 2: who won it" })
+		fireEvent.click(within(panel).getByRole("button", { name: "Kitasan Black" }))
+		await waitFor(() => expect(lastRaces()[1]).toMatchObject({ race: 2, winner: null, lost_to: 44 }))
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 2: change who won it" })).toBeTruthy()
+	})
+
+	it("opens the full uma picker from Other", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: null }])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: who won it?" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Other…" }))
+		expect(screen.getByRole("dialog")).toBeTruthy()
+	})
+
+	it("places the Finals' umas, and a 1st fills the player's placement", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("tab", { name: /Finals/ }))
+		const finals = screen.getByRole("region", { name: "Finals" })
+		fireEvent.click(within(finals).getByRole("button", { name: "Use Team 1" }))
+		await within(finals).findByRole("button", { name: "The Finals race: Maruzensky won" })
+		placesOn(finals)
+		fireEvent.click(within(finals).getByRole("button", { name: "The Finals race: Maruzensky finished 1st" }))
+
+		await waitFor(() => expect(puts().at(-1)?.body).toMatchObject({ placement: 1 }))
+		expect(lastRaces()[0]).toMatchObject({ race: 1, winner: 1 })
+		expect(placesOf(lastRaces()[0])).toEqual([[1, 1]])
+	})
+
+	it("has no places in a League of Heroes, where the API refuses them", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: null }], { kind: "loh" })]
+		show(LOH)
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		expect(within(ticket).queryByRole("switch", { name: "Log places" })).toBeNull()
+		expect(within(ticket).queryByRole("button", { name: /finished/ })).toBeNull()
+		// Won by still shows on a loss.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: who won it?" })).toBeTruthy()
 	})
 })
