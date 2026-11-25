@@ -2152,17 +2152,36 @@ Teams players posted for the selected event (`GalleryView`), from `GET /pvp-gall
 ## Rankings page (`components/rankings/`)
 
 Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; the redesign
-(approved 2026-10-28, built step by step) is `notes/rankings-redesign-plan.md`.
+(approved 2026-10-28, built step by step) is `notes/rankings-redesign-plan.md`; the look
+(the Encyclopedia's, approved 2026-11-25) is `notes/rankings-polish-plan.md`.
 
+- **The look is the Encyclopedia's, reused, never copied** (owner's canvas, 2026-11-25): the
+  masthead (`.enc-head`, `.enc-tabs`; a Rankings tab is a `role="tab"` button and
+  `encyclopedia.css` styles it by `aria-selected` beside `aria-current`), the hero (`Hero` from
+  `encyclopedia/pieces.tsx` at `level={2}`, sized by `enc-hero--rank`), the flagged heading
+  (`.enc-section__title`) and the silk. `src/rankings.css` holds only Rankings' own: the colour
+  variables (`rk-vars` on the page and the window; `rk-paint` beside any `colourStyle`, so
+  `--c1-ink` re-derives), the panel surface (`rk-panel`, not `card-panel`), the hero's size,
+  the silk fills, the event tabs and the window's surface. A change to those Encyclopedia
+  rules shows on both pages. **No hero has a description line** (owner, 2026-11-25: "users
+  can understand what's going on without the extra text"), and no privacy aside: the eyebrow
+  names what is ranked, the line under the name says the figure. **The hero follows the
+  screen, not the container**, like the Encyclopedia's: the window has its own body, so a tab
+  is only ever as wide as the page. Everything inside the tabs stays on container queries.
 - **The kit** (`components/rankings/kit/`, redesign step 1): every list is `RankRow`s in a
   `RankedList` (top ten, then "Show all"). A row's `Bar` is **scaled to the list's leader**
   (`fill = count / first count`), never to 100%; the share stays as text. Under 40rem of
-  CONTAINER the bar column goes and a 3 px hairline under the name carries the fill. Also
-  `Podium` (the top three), `StatBand` (a lead and three figures), `Lens` (one list, many
-  views), `FilterToolbar` / `FilterPill` / `TickOptions` / `Tokens` (pills that state their
-  filter, a token per changed one), `Movement`, `Sparkline` (inline SVG), `CardArt`,
-  `CardTypeChip` (a dot of the type's hue, never coloured text). The `--color-status-*`
-  tokens (running, upcoming, ended, predicted) are `@theme`, redrawn for the light themes.
+  CONTAINER the bar column goes and a 4 px hairline under the name carries the fill. **Bars
+  are solid in a colour that means something**: a card's type hue (`barColor`, the chip's
+  dot, `CARD_TYPE_COLORS`), the running green for a win rate, the loss red, else the accent;
+  never a tint. A row under a floor (`muted`) dims nothing, only its text is muted. Also
+  `RankHero` (the tab's first place on her colours, with its figures), `Podium` (second and
+  third, by each entry's `place`), `Panel` / `PANEL` (the panel surface and head), `Lens` (the
+  Encyclopedia's switch), `FilterToolbar` / `FilterPill` / `TickItems` / `Tokens` (pills that
+  state their filter, a token per changed one), `Wall` (Encyclopedia tiles with her silk),
+  `Movement`, `Sparkline` (inline SVG), `CardArt`, `CardTypeChip` (a dot of the type's hue,
+  never coloured text). The `--color-status-*` tokens (running, upcoming, ended, predicted)
+  are `@theme`, redrawn for the light themes.
 
 - **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
   navbar item (both bars, named at every width since 2026-11-24). Every `/rankings/*` route checks `benefits.early_access`
@@ -2216,8 +2235,9 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   guide from a picked one), Include (CM, LoH, Beginner, Standard, Whale, Honorable Mentions,
   plus "Other decks" for one-off decks the sheet has no column for), Strategy, Scenario ("Not
   set" for a guide without one), Card type ("Friend", as elsewhere on the site, for the
-  sheet's "Pal"); every box ticked to start, and a changed one draws a token. Then the band,
-  the top three, and ONE list with a lens (Overall, each card type, Umas), the lens
+  sheet's "Pal"); every box ticked to start, and a changed one draws a token. The pills sit
+  in one filter card with the search first; then the hero (first place, with what is
+  counted), second and third, and ONE list with a lens (Overall, each card type, Umas), the lens
   remembered on the device (`rankingsPinStore` choices, `rankings-choices`), beside a rail:
   search (any card or uma, with its place under the filters), the QC note, the guides with no
   scenario. **Every rule is `utils/guideRankings.ts`**: a card counts once per deck (the

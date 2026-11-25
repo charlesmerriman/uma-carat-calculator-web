@@ -18,6 +18,8 @@
  * (Guides and PvP), the top ten as compact rows, "Full page" in the footer.
  * The list comes from WindowSources.tsx; the settings are the page's
  * remembered choices, so the full page opens on what the window showed.
+ * It wears the page's look (notes/rankings-polish-plan.md, PR 2): the soft
+ * surface, the flagged title, plates for the top three, at the same size.
  *
  * THREE STATES
  *   unpinned            nothing
@@ -127,8 +129,10 @@ function Dock({ entry, shown, docked, list }: { entry: SectionEntry; shown: Sect
 							// Only Escapes from inside the window itself, and not one a menu inside it used.
 							if (keydown.key === "Escape" && !keydown.defaultPrevented && windowRef.current?.contains(keydown.target as Node)) close()
 						}}
-						// rk-vars: the kit's colour variables (rankings.css); the window floats outside the page.
-						className={`rk-vars fixed inset-x-2 top-2 z-50 max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-[14px] border border-gray-600 bg-gray-800 shadow-2xl desktop-nav:inset-auto desktop-nav:left-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[23rem] desktop-nav:-translate-y-1/2 ${windowShown}`}
+						// rk-vars: the kit's colour variables (rankings.css), since the window floats outside the
+						// page; rk-window: the page's soft surface, with the deeper shadow and hairline it needs
+						// to stand off whatever page it floats over.
+						className={`rk-vars rk-window fixed inset-x-2 top-2 z-50 max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-[1.125rem] desktop-nav:inset-auto desktop-nav:left-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[23rem] desktop-nav:-translate-y-1/2 ${windowShown}`}
 					>
 						<header className="flex items-center gap-1 border-b border-edge py-2 pl-2.5 pr-2">
 							<div className="flex gap-0.5" role="group" aria-label="Rankings section">
@@ -184,7 +188,7 @@ function WindowBody({ entry, list, onNavigate }: { entry: SectionEntry; list: Wi
 	return (
 		<div className="flex min-h-0 flex-col gap-2 p-2.5">
 			<div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
-				<b className="font-semibold text-gray-100">{entry.label}</b>
+				<b className="rk-window__title">{entry.label}</b>
 				<span className="min-w-0">
 					· {list.context}
 					{list.moved ? ` · ${list.moved} moved this week` : ""}
