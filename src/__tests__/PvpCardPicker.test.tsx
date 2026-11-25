@@ -5,7 +5,7 @@ import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../type
 
 /**
  * The team builder's picker: search by name or skill, skill chips that pin,
- * the aptitude badges, the guide's star, and blocked tiles that stay visible.
+ * the aptitude badges, the guide's ring, and blocked tiles that stay visible.
  */
 
 const skill = (id: number, name: string): CatalogueSkill => ({
@@ -151,10 +151,11 @@ describe("PvpCardPicker", () => {
 		expect(within(screen.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "SR" })).toHaveAttribute("aria-pressed", "true")
 	})
 
-	it("edges the guide's picks, puts them first, and can show them alone", () => {
+	it("rings the guide's picks, puts them first, and can show them alone", () => {
 		renderSupportPicker({ recommended: new Set([12]) })
 		expect(tileNames()[0]).toBe("Super Creek")
-		expect(screen.getAllByLabelText("Recommended by the guide")).toHaveLength(1)
+		expect(screen.getAllByText("Recommended by the guide")).toHaveLength(1)
+		expect(screen.getByTitle("Super Creek: recommended by the guide")).toHaveClass("ring-recommended")
 		fireEvent.click(screen.getByRole("checkbox", { name: /Recommended only/ }))
 		expect(tileNames()).toEqual(["Super Creek"])
 	})
@@ -228,7 +229,7 @@ describe("the Owned filter (the player's Collection)", () => {
 	it("shows only owned cards by default, with their limit break, and everything once switched off", () => {
 		renderSupportPicker({ owned })
 		expect(tileNames()).toEqual(["Kitasan Black"])
-		expect(within(screen.getByRole("dialog")).getByText("MLB")).toBeInTheDocument()
+		expect(within(screen.getByRole("dialog")).getByText("In your collection, MLB")).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("checkbox", { name: /Owned only/ }))
 		expect(tileNames()).toEqual(["Fine Motion", "Kitasan Black", "Super Creek"])
 	})
