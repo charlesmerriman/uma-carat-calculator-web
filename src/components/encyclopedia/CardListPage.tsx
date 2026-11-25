@@ -13,7 +13,7 @@
  * type's word is still there for a screen reader.
  */
 
-import { Fragment, useMemo } from "react"
+import { useMemo } from "react"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedCard } from "../FramedCard"
@@ -22,8 +22,8 @@ import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { CARD_TYPE_ICONS } from "../../utils/cardTypeIcons"
 import { cardHref } from "../../utils/encyclopediaRoutes"
 import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
-import { LetterHeading, LetterIndex } from "./letters"
-import { lettersFor } from "../../utils/encyclopediaLetters"
+import { GroupedGrid } from "./groups"
+import { cardIdKey, effectKey, groupsFor, letterKey, mergeSmallGroups, releaseKey } from "../../utils/encyclopediaGroups"
 import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { Chips, Count, PickChips, SearchBox, SelectFilter, SortControl, Toolbar } from "./listFilters"
 import { useCardEffects } from "../../services/encyclopediaQueries"
@@ -105,9 +105,29 @@ const CardListBody = () => {
 	)
 
 	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
-	const totals = useCatalogueCounts(catalogue)
-	// Letter headings for the whole list in name order only (letters.tsx).
-	const letters = lettersFor(shown, (card) => card.name, sort === "name" && totals !== null && shown.length === totals.cards)
+	useCatalogueCounts(catalogue)
+	// Headings for the whole list, whatever it is sorted by: a letter, a quarter,
+	// a rarity or an effect's value (utils/encyclopediaGroups.ts), filtered or not.
+	const groups = useMemo(() => {
+		if (byEffect) {
+			// Until the effects land the list is in name order, so it gets no headings.
+			if (!effectData || !effectType) return null
+			const format = effectType.format
+			const byValue = groupsFor(shown, (card) => {
+				const row = effectData.cards[String(card.id)]
+				const at = limitBreakOf(card)
+				const reading = at !== null && row ? effectReading(row, effectType.type, at) : null
+				return effectKey(reading?.value ?? null, at !== null, format)
+			})
+			// A value only one or two cards reach (a unique effect's) shares its neighbour's heading.
+			return mergeSmallGroups(byValue, 3, (low, high) => `${effectValue(low, format)} to ${effectValue(high, format)}`)
+		}
+		return groupsFor(shown, (card) => {
+			if (sort === "release") return releaseKey(dates.get(card.id))
+			if (sort === "game_id") return cardIdKey(card)
+			return letterKey(card.name)
+		})
+	}, [shown, byEffect, effectData, effectType, limitBreakOf, sort, dates])
 
 	const tile = (card: (typeof shown)[number]) => {
 		const limitBreak = showOwned ? owned.cards.get(card.id) : undefined
@@ -184,19 +204,7 @@ const CardListBody = () => {
 			) : shown.length === 0 ? (
 				<EmptyNote>No card matches that.</EmptyNote>
 			) : (
-				<div className="enc-listwrap">
-					{letters && <LetterIndex scope="cards" letters={letters.map((group) => group.letter)} />}
-					<ul className="enc-grid enc-grid--cards">
-						{letters
-							? letters.map((group) => (
-								<Fragment key={group.letter}>
-									<LetterHeading scope="cards" letter={group.letter} count={group.items.length} noun={["card", "cards"]} />
-									{group.items.map(tile)}
-								</Fragment>
-							))
-							: shown.map(tile)}
-					</ul>
-				</div>
+				<GroupedGrid scope="cards" items={shown} groups={groups} tile={tile} noun={["card", "cards"]} className="enc-grid enc-grid--cards" />
 			)}
 			{/* A JP-only card's title is UmaTL's until Global (or an editor) names it. */}
 			{shown.some((card) => !card.on_global && card.title) && <TranslationCredit what="Some JP only titles are" />}

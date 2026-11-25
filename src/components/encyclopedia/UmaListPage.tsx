@@ -6,7 +6,7 @@
  * outfit's page.
  */
 
-import { Fragment, useMemo } from "react"
+import { useMemo } from "react"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import { Link } from "react-router-dom"
 import { FramedUma } from "../FramedUma"
@@ -15,8 +15,8 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
 import { splitOutfit } from "../../utils/umaName"
 import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
-import { LetterHeading, LetterIndex } from "./letters"
-import { lettersFor } from "../../utils/encyclopediaLetters"
+import { GroupedGrid } from "./groups"
+import { gradeKey, groupsFor, letterKey, releaseKey, umaIdKey } from "../../utils/encyclopediaGroups"
 import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { Chips, Count, GradeSelect, PickChips, SearchBox, SortControl, Toolbar } from "./listFilters"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
@@ -77,9 +77,18 @@ const UmaListBody = () => {
 
 	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
 	const all = catalogue.status === "ready" ? catalogue.catalogue : null
-	const totals = useCatalogueCounts(catalogue)
-	// Letter headings for the whole list in name order only (components/encyclopedia/letters.tsx).
-	const letters = lettersFor(umas, (uma) => uma.name, sort === "name" && totals !== null && umas.length === totals.umas)
+	useCatalogueCounts(catalogue)
+	// Headings for the whole list, whatever it is sorted by: a letter, a quarter,
+	// an id block or a grade (utils/encyclopediaGroups.ts), filtered or not.
+	const groups = useMemo(
+		() => groupsFor(umas, (uma) => {
+			if (sortedAptitude) return gradeKey(uma.apt[sortedAptitude])
+			if (sort === "release") return releaseKey(dates.get(uma.id))
+			if (sort === "game_id") return umaIdKey(uma.game_id)
+			return letterKey(uma.name)
+		}),
+		[umas, sort, sortedAptitude, dates]
+	)
 	const colours = all?.character_colours
 
 	const tile = (uma: (typeof umas)[number]) => {
@@ -165,19 +174,7 @@ const UmaListBody = () => {
 			) : umas.length === 0 ? (
 				<EmptyNote>No uma matches that.</EmptyNote>
 			) : (
-				<div className="enc-listwrap">
-					{letters && <LetterIndex scope="umas" letters={letters.map((group) => group.letter)} />}
-					<ul className="enc-grid enc-grid--umas">
-						{letters
-							? letters.map((group) => (
-								<Fragment key={group.letter}>
-									<LetterHeading scope="umas" letter={group.letter} count={group.items.length} noun={["uma", "umas"]} />
-									{group.items.map(tile)}
-								</Fragment>
-							))
-							: umas.map(tile)}
-					</ul>
-				</div>
+				<GroupedGrid scope="umas" items={umas} groups={groups} tile={tile} noun={["uma", "umas"]} className="enc-grid enc-grid--umas" />
 			)}
 		</div>
 	)

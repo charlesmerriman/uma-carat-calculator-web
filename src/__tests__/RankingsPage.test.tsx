@@ -81,8 +81,9 @@ const PVP: PvpRankingsPayload = {
 		umas: [{ uma: 41, share: 0.75, styles: { pace: 0.75 } }], cards: [{ card: 1, share: 0.5, borrowed: 0.33 }],
 		trios: [{ umas: [41, 41, 41], share: 0.5 }],
 	},
-	// 30 races: shown (over the floor of 20) but not ranked (under 100).
-	runs: [{ uma: 41, style: "pace", rate: 0.4, marks: 1, ranked: false }],
+	// 30 races: shown (over the floor of 20) but not ranked (under 100), 24 of them placed.
+	runs: [{ uma: 41, style: "pace", rate: 0.4, marks: 1, ranked: false, avg_place: 3.1, top3: 0.58 }],
+	beaten_by: [{ uma: 41, share: 0.14 }],
 	previous: { generated_at: "2026-10-26T00:00:00Z", umas: [], cards: [1], runs: [] },
 }
 
@@ -287,6 +288,10 @@ describe("RankingsPage", () => {
 		const wins = screen.getByRole("region", { name: "What wins" })
 		expect(within(wins).getByText("40%")).toBeInTheDocument()
 		expect(within(wins).queryByLabelText("Place 1")).not.toBeInTheDocument()
+		expect(within(wins).getByText(/avg place 3\.1, top 3 in 58%/)).toBeInTheDocument()
+		// What beats players: a share of the named losses, never a count.
+		const beats = screen.getByRole("region", { name: "What beats players" })
+		expect(within(beats).getByText("14%")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Your team" })).getByText("#1")).toBeInTheDocument()
 		expect(within(screen.getByRole("region", { name: "Trios players build most" })).getByText("50% of teams")).toBeInTheDocument()
 		// The opened row reads the gallery and CM Runs beside the build count.

@@ -94,9 +94,9 @@ describe("UmaListPage", () => {
 	it("keeps Where for every list, so the cards and skills see it too", async () => {
 		const Providers = providers(false)
 		render(<Providers><UmaListPage /></Providers>)
-		expect(await screen.findByText("4 umas")).toBeInTheDocument()
+		expect(await screen.findByText("4 umas", { selector: ".enc-count" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "JP only" }))
-		expect(screen.getByText("1 uma")).toBeInTheDocument()
+		expect(screen.getByText("1 uma", { selector: ".enc-count" })).toBeInTheDocument()
 		expect(sessionStorage.getItem("enc-filter:shared:where")).toBe("jp")
 		// The list's own Reset leaves the shared setting alone.
 		fireEvent.click(screen.getByRole("button", { name: "★3" }))
@@ -117,14 +117,14 @@ describe("UmaListPage", () => {
 		try {
 			const Providers = providers(false)
 			render(<Providers><UmaListPage /></Providers>)
-			expect(await screen.findByText("2 umas")).toBeInTheDocument()
+			expect(await screen.findByText("2 umas", { selector: ".enc-count" })).toBeInTheDocument()
 			const surface = within(screen.getByRole("group", { name: "Surface" }))
 			fireEvent.click(surface.getByRole("button", { name: "Turf" }))
 			fireEvent.click(surface.getByRole("button", { name: "Dirt" }))
 			// Both at A: neither has Dirt A.
 			expect(screen.getByText("No uma matches that.")).toBeInTheDocument()
 			fireEvent.change(screen.getByRole("combobox", { name: "Lowest Dirt grade" }), { target: { value: "5" } })
-			expect(screen.getByText("1 uma")).toBeInTheDocument()
+			expect(screen.getByText("1 uma", { selector: ".enc-count" })).toBeInTheDocument()
 			expect(screen.getByRole("link", { name: /Both/ })).toBeInTheDocument()
 			// Sorted by Dirt, the tile says its grade.
 			fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "apt_dirt" } })
@@ -137,18 +137,18 @@ describe("UmaListPage", () => {
 	it("marks what the player owns and filters to it", async () => {
 		const Providers = providers(true)
 		render(<Providers><UmaListPage /></Providers>)
-		expect(await screen.findByText("4 umas")).toBeInTheDocument()
+		expect(await screen.findByText("4 umas", { selector: ".enc-count" })).toBeInTheDocument()
 		await waitFor(() => expect(screen.getByRole("link", { name: /Silence Suzuka/ })).toHaveTextContent("Owned"))
 		fireEvent.click(screen.getByRole("button", { name: "Owned" }))
-		expect(screen.getByText("1 uma")).toBeInTheDocument()
+		expect(screen.getByText("1 uma", { selector: ".enc-count" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Not owned" }))
-		expect(screen.getByText("3 umas")).toBeInTheDocument()
+		expect(screen.getByText("3 umas", { selector: ".enc-count" })).toBeInTheDocument()
 	})
 
 	it("shows a guest no Collection filter and no marks", async () => {
 		const Providers = providers(false)
 		render(<Providers><UmaListPage /></Providers>)
-		expect(await screen.findByText("4 umas")).toBeInTheDocument()
+		expect(await screen.findByText("4 umas", { selector: ".enc-count" })).toBeInTheDocument()
 		expect(screen.queryByRole("group", { name: "Collection" })).not.toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Silence Suzuka/ })).not.toHaveTextContent("Owned")
 	})

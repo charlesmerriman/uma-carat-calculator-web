@@ -5,6 +5,7 @@ import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { RaceEvent } from "../types"
 import type { CatalogueUma, PvpTeam } from "../types/pvpTeam"
+import replayFixture from "./fixtures/umadumpReplay.json"
 
 /**
  * The CM Runs view: who may use it, starting a ticket's lineup (one ticket,
@@ -26,8 +27,11 @@ const CM = {
 } as RaceEvent
 const LOH = { ...CM, event_type: "league_of_heroes", loh_number: 1 } as unknown as RaceEvent
 
-const uma = (id: number, name: string) => ({ id, name, portrait: null, image: null }) as unknown as CatalogueUma
-const UMAS = [uma(41, "Oguri Cap"), uma(42, "Maruzensky"), uma(43, "Gold Ship")]
+const uma = (id: number, name: string, game_id: number) => ({ id, name, game_id, portrait: null, image: null, skills: [], apt: {} }) as unknown as CatalogueUma
+// Kitasan Black is never on the team: she's the uma that beats it. The game
+// ids are the outfits in the replay fixture (fixtures/umadumpReplay.json), so
+// its three are this team and its winner is uma 44.
+const UMAS = [uma(41, "Oguri Cap", 106801), uma(42, "Maruzensky", 102001), uma(43, "Gold Ship", 101502), uma(44, "Kitasan Black", 100601)]
 
 const TEAM: PvpTeam = {
 	key: "t1",
@@ -55,6 +59,8 @@ const toastError = vi.hoisted(() => vi.fn())
 const toastSuccess = vi.hoisted(() => vi.fn())
 
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: toastError, success: toastSuccess }) }))
+// The folder watch keeps its handle in IndexedDB; here nothing is kept between visits.
+vi.mock("idb-keyval", () => ({ get: vi.fn(async () => undefined), set: vi.fn(async () => undefined), del: vi.fn(async () => undefined) }))
 vi.mock("../services/CalculatorContext", () => ({
 	useCalculatorData: () => ({ calculationConstants: DEFAULT_CONSTANTS }),
 }))
@@ -66,7 +72,7 @@ vi.mock("../services/PvpTeamsContext", () => ({
 	usePvpTeams: () => ({ teams: teams.list, ensureLoaded: () => {} }),
 }))
 vi.mock("../hooks/usePvpCatalogue", () => ({
-	usePvpCatalogue: () => ({ status: "ready", umasById: new Map(UMAS.map((entry) => [entry.id, entry])) }),
+	usePvpCatalogue: () => ({ status: "ready", umasById: new Map(UMAS.map((entry) => [entry.id, entry])), skillsById: new Map() }),
 }))
 
 const { RunsView } = await import("../components/pvp/RunsView")
@@ -502,5 +508,195 @@ describe("veterans", () => {
 		expect(within(summary).getByRole("link", { name: "S 15,120" })).toHaveAttribute("href", "/app/collection?veteran=6")
 		expect(within(summary).getByText("1 of 1 won")).toBeInTheDocument()
 		expect(within(summary).getByText("0 of 1 won")).toBeInTheDocument()
+	})
+})
+
+describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
+	type SentRace = { race: number; winner: number | null; places?: Array<{ position: number; place: number }>; lost_to?: number | null }
+	/** The races of the last PUT sent. */
+	const lastRaces = () => (puts().at(-1)?.body.races ?? []) as SentRace[]
+	const placesOf = (race: SentRace | undefined) => race?.places?.map(({ position, place }) => [position, place])
+
+	/**
+	 * "Log places" is a per-device store that outlives a test (a module-level
+	 * cache over localStorage), so each test turns it on only if it's off.
+	 */
+	function placesOn(scope: HTMLElement) {
+		const toggle = within(scope).getByRole("switch", { name: "Log places" })
+		if (toggle.getAttribute("aria-checked") !== "true") fireEvent.click(toggle)
+	}
+
+	it("logs a win in three taps, greys a taken place, and opens the next race", async () => {
+		runs.list = [logged(1, [])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		placesOn(ticket)
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: places" })).toHaveAttribute("aria-expanded", "true")
+
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Maruzensky finished 4th" }))
+		// Two of yours can't share a place, so Oguri's 4th can't be tapped.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap finished 4th" })).toBeDisabled()
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Gold Ship finished 9th" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap finished 1st" }))
+
+		await waitFor(() => expect(placesOf(lastRaces()[0])).toEqual([[0, 1], [1, 4], [2, 9]]))
+		expect(lastRaces()[0].winner).toBe(0)
+		// The cells show the places, and race 2 opens by itself.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Oguri Cap won" })).toHaveTextContent("Won1st")
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: Maruzensky won" })).toHaveTextContent("4th")
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 2: places" })).toHaveAttribute("aria-expanded", "true")
+		expect(within(ticket).queryByRole("button", { name: /race 1: .* finished/ })).toBeNull()
+	})
+
+	it("asks who won once three places have no 1st, with the umas that beat you as chips", async () => {
+		// Race 1, a loss to Kitasan Black logged before places: winner only, so race 2 is open.
+		runs.list = [logged(1, [{ race: 1, winner: null, lost_to: 44 } as never])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		placesOn(ticket)
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Oguri Cap finished 2nd" }))
+		// Mid-placing, the race isn't a loss yet as far as Won by goes.
+		expect(within(ticket).queryByRole("group", { name: "Ticket 1, race 2: who won it" })).toBeNull()
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Maruzensky finished 5th" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 2: Gold Ship finished 8th" }))
+
+		const panel = within(ticket).getByRole("group", { name: "Ticket 1, race 2: who won it" })
+		fireEvent.click(within(panel).getByRole("button", { name: "Kitasan Black" }))
+		await waitFor(() => expect(lastRaces()[1]).toMatchObject({ race: 2, winner: null, lost_to: 44 }))
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 2: change who won it" })).toBeTruthy()
+	})
+
+	it("opens the full uma picker from Other", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: null }])]
+		show()
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		fireEvent.click(within(ticket).getByRole("button", { name: "Ticket 1, race 1: who won it?" }))
+		fireEvent.click(within(ticket).getByRole("button", { name: "Other…" }))
+		expect(screen.getByRole("dialog")).toBeTruthy()
+	})
+
+	it("places the Finals' umas, and a 1st fills the player's placement", async () => {
+		show()
+		fireEvent.click(await screen.findByRole("tab", { name: /Finals/ }))
+		const finals = screen.getByRole("region", { name: "Finals" })
+		fireEvent.click(within(finals).getByRole("button", { name: "Use Team 1" }))
+		await within(finals).findByRole("button", { name: "The Finals race: Maruzensky won" })
+		placesOn(finals)
+		fireEvent.click(within(finals).getByRole("button", { name: "The Finals race: Maruzensky finished 1st" }))
+
+		await waitFor(() => expect(puts().at(-1)?.body).toMatchObject({ placement: 1 }))
+		expect(lastRaces()[0]).toMatchObject({ race: 1, winner: 1 })
+		expect(placesOf(lastRaces()[0])).toEqual([[1, 1]])
+	})
+
+	it("averages places over the day tickets, as the win rates beside them do", async () => {
+		const placed = (place: number) => [{ position: 0, place, loss_reason: "" }]
+		runs.list = [
+			logged(1, [{ race: 1, winner: 0, places: placed(1) } as never]),
+			// The Finals race counts on its own: its 9th stays out of Oguri's line.
+			logged(1, [{ race: 1, winner: null, places: placed(9) } as never], { stage: "final", day: null, ticket: null }),
+		]
+		show()
+		const summary = await screen.findByRole("complementary", { name: "Your win rates" })
+		expect(within(summary).getAllByText("Average place 1.0 · top 3 in 1 of 1")).toHaveLength(1)
+	})
+
+	it("folds the replays panel and remembers it on this device, open to start", async () => {
+		show()
+		const toggle = await screen.findByRole("button", { name: "Fill from replays" })
+		expect(toggle).toHaveAttribute("aria-expanded", "true")
+		expect(screen.getByLabelText("Choose files")).toBeInTheDocument()
+		fireEvent.click(toggle)
+		expect(toggle).toHaveAttribute("aria-expanded", "false")
+		expect(screen.queryByLabelText("Choose files")).toBeNull()
+		expect(localStorage.getItem("uma-runs-replays-open")).toBe("off")
+		// Open again: the store outlives a test, and the others want it open.
+		fireEvent.click(toggle)
+		expect(localStorage.getItem("uma-runs-replays-open")).toBe("on")
+	})
+
+	it("fills a ticket from a race replay: previewed, then saved through the same PUT", async () => {
+		show()
+		// Open to start (the player can fold it, kept per device).
+		const panel = await screen.findByRole("region", { name: "Fill from replays" })
+		// Day 1 of the test CM (it starts 2099-03-06): the file's time is the race's.
+		const file = new File([JSON.stringify(replayFixture)], "anything.json", { lastModified: Date.UTC(2099, 2, 6, 2) })
+		fireEvent.change(within(panel).getByLabelText("Choose files"), { target: { files: [file] } })
+
+		const preview = await within(panel).findByRole("region", { name: "What the replays fill" })
+		expect(preview).toHaveTextContent("Day 1: 1 race")
+		expect(preview).toHaveTextContent("Ticket 1 · 1 race · new")
+		fireEvent.click(within(panel).getByRole("button", { name: "Save" }))
+
+		await waitFor(() => expect(puts()).toHaveLength(1))
+		expect(puts()[0].path).toBe("/pvp-runs/cm/10/day/1/ticket/1")
+		expect(puts()[0].body.runners).toMatchObject([{ uma: 41 }, { uma: 42 }, { uma: 43 }])
+		expect(lastRaces()[0]).toMatchObject({ race: 1, winner: null, lost_to: 44, lost_to_style: "late" })
+		expect(placesOf(lastRaces()[0])).toEqual([[0, 8], [1, 9], [2, 7]])
+		// Nothing about another player is sent.
+		expect(JSON.stringify(puts()[0].body)).not.toMatch(/Trainer|viewer/)
+	})
+
+	describe("watching the umadump folder (Chrome and Edge)", () => {
+		/** A fake umadump folder: race_replays/champions_race holds `files`. */
+		function fakeFolder(files: File[]) {
+			const listing = async function* () {
+				for (const file of files) yield { kind: "file" as const, name: file.name, getFile: async () => file }
+			}
+			const champions = { kind: "directory", name: "champions_race", getDirectoryHandle: async () => Promise.reject(new Error("none")), values: listing }
+			const replays = { kind: "directory", name: "race_replays", getDirectoryHandle: async () => champions, values: async function* () {} }
+			return {
+				kind: "directory",
+				name: "umadump",
+				getDirectoryHandle: async (name: string) => (name === "race_replays" ? replays : Promise.reject(new Error("none"))),
+				values: async function* () {},
+				queryPermission: async () => "granted",
+			}
+		}
+		const replayFile = (name: string) => new File([JSON.stringify(replayFixture)], name, { lastModified: Date.UTC(2099, 2, 6, 2) })
+
+		afterEach(() => {
+			delete (window as unknown as Record<string, unknown>).showDirectoryPicker
+		})
+
+		async function startWatching(files: File[]) {
+			;(window as unknown as Record<string, unknown>).showDirectoryPicker = vi.fn(async () => fakeFolder(files))
+			show()
+			fireEvent.click(await screen.findByRole("button", { name: "Watch the umadump folder" }))
+			return screen.findByText(/^Watching/)
+		}
+
+		it("saves a race that lands while watching, straight away", async () => {
+			const files: File[] = []
+			await startWatching(files)
+			// umadump writes a race; the next read (here, the tab coming back) saves it.
+			files.push(replayFile("race-1.json"))
+			await waitFor(() => {
+				fireEvent(document, new Event("visibilitychange"))
+				expect(puts()).toHaveLength(1)
+			})
+			expect(puts()[0].path).toBe("/pvp-runs/cm/10/day/1/ticket/1")
+			expect(lastRaces()[0]).toMatchObject({ race: 1, winner: null, lost_to: 44 })
+			expect(await screen.findByText(/Day 1, Ticket 1: race 1 added at/)).toBeInTheDocument()
+		})
+
+		it("asks before saving files that were there when the watch started", async () => {
+			await startWatching([replayFile("race-0.json")])
+			const look = await screen.findByRole("button", { name: "1 replay needs a look" })
+			expect(puts()).toHaveLength(0)
+			fireEvent.click(look)
+			const preview = await screen.findByRole("region", { name: "What the replays fill" })
+			expect(preview).toHaveTextContent("Ticket 1 · 1 race · new")
+		})
+	})
+
+	it("has no places in a League of Heroes, where the API refuses them", async () => {
+		runs.list = [logged(1, [{ race: 1, winner: null }], { kind: "loh" })]
+		show(LOH)
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		expect(within(ticket).queryByRole("switch", { name: "Log places" })).toBeNull()
+		expect(within(ticket).queryByRole("button", { name: /finished/ })).toBeNull()
+		// Won by still shows on a loss.
+		expect(within(ticket).getByRole("button", { name: "Ticket 1, race 1: who won it?" })).toBeTruthy()
 	})
 })

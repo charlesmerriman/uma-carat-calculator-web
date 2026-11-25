@@ -114,7 +114,7 @@ describe("CardListPage, filters and sorts", () => {
 		fireEvent.click(type.getByRole("button", { name: "Wit" }))
 		expect(screen.getByText("No card matches that.")).toBeInTheDocument()
 		fireEvent.click(type.getByRole("button", { name: "Speed" }))
-		expect(screen.getByText("3 cards")).toBeInTheDocument()
+		expect(screen.getByText("3 cards", { selector: ".enc-count" })).toBeInTheDocument()
 		expect(type.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false")
 	})
 })

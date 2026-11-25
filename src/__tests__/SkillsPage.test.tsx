@@ -182,17 +182,17 @@ describe("SkillsPage", () => {
 			row(22, "Final Accel", { tags: ["accel", "final-corner", "front-runner"] }),
 		]), { status: 200 })))
 		renderPage()
-		expect(await screen.findByText("2 skills")).toBeInTheDocument()
+		expect(await screen.findByText("2 skills", { selector: ".enc-count" })).toBeInTheDocument()
 		// Folded away until asked for.
 		expect(screen.queryByRole("group", { name: "When" })).not.toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Show conditions and effects" }))
 		fireEvent.click(within(screen.getByRole("group", { name: "Does" })).getByRole("button", { name: "Speed" }))
-		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		expect(screen.getByText("1 skill", { selector: ".enc-count" })).toBeInTheDocument()
 		fireEvent.click(within(screen.getByRole("group", { name: "Strategy" })).getByRole("button", { name: "Front Runner" }))
 		// All of them: no skill is both.
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
 		fireEvent.click(within(screen.getByRole("group", { name: "Match" })).getByRole("button", { name: "Any of them" }))
-		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		expect(screen.getByText("2 skills", { selector: ".enc-count" })).toBeInTheDocument()
 		// While a pick is set the rows can't fold away, so nothing filters out of sight.
 		expect(screen.getByRole("button", { name: "Hide conditions and effects" })).toBeDisabled()
 		sessionStorage.clear()
@@ -232,14 +232,14 @@ describe("SkillsPage", () => {
 
 	it("lists the skills, tagged, and narrows on search", async () => {
 		renderPage()
-		expect(await screen.findByText("4 skills")).toBeInTheDocument()
+		expect(await screen.findByText("4 skills", { selector: ".enc-count" })).toBeInTheDocument()
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
 		// The Encyclopedia's tab strip, Skills open.
 		expect(screen.getByRole("link", { name: /Skills$/ })).toHaveAttribute("aria-current", "page")
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
-		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		expect(screen.getByText("1 skill", { selector: ".enc-count" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
 	})
@@ -251,7 +251,7 @@ describe("SkillsPage", () => {
 			row(3, "Dear", { cost: 200 }),
 		]), { status: 200 })))
 		renderPage()
-		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		expect(await screen.findByText("3 skills", { selector: ".enc-count" })).toBeInTheDocument()
 		const order = () => screen.getAllByRole("link").map((link) => link.textContent ?? "").filter((text) => /Cheap|Unique|Dear/.test(text))
 		fireEvent.change(screen.getByRole("combobox", { name: "Sort by" }), { target: { value: "cost" } })
 		expect(order().map((text) => text.match(/Cheap|Unique|Dear/)?.[0])).toEqual(["Cheap", "Dear", "Unique"])
@@ -290,14 +290,14 @@ describe("SkillsPage", () => {
 			row(11, "Straightaway Adept", { type: "velocity" }),
 		]), { status: 200 })))
 		renderPage()
-		expect(await screen.findByText("3 skills")).toBeInTheDocument()
+		expect(await screen.findByText("3 skills", { selector: ".enc-count" })).toBeInTheDocument()
 		expect(screen.queryByRole("group", { name: "Stat boost" })).not.toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Stat boost" }))
-		expect(screen.getByText("2 skills")).toBeInTheDocument()
+		expect(screen.getByText("2 skills", { selector: ".enc-count" })).toBeInTheDocument()
 		const subs = within(screen.getByRole("group", { name: "Stat boost" }))
 		expect(subs.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true")
 		fireEvent.click(subs.getByRole("button", { name: "Stamina" }))
-		expect(screen.getByText("1 skill")).toBeInTheDocument()
+		expect(screen.getByText("1 skill", { selector: ".enc-count" })).toBeInTheDocument()
 		// The type's own chip stays lit while one of its sub-types is picked.
 		expect(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Stat boost" })).toHaveAttribute("aria-pressed", "true")
 		expect(screen.getByRole("link", { name: /Longchamp Racecourse/ })).toHaveTextContent("Stat boost: Stamina")
@@ -307,7 +307,7 @@ describe("SkillsPage", () => {
 		setAuthToken("reader-token")
 		try {
 			renderPage()
-			expect(await screen.findByText("4 skills")).toBeInTheDocument()
+			expect(await screen.findByText("4 skills", { selector: ".enc-count" })).toBeInTheDocument()
 			const sent = fetchMock.mock.calls.map(([url, init]) => [String(url).replace(/^.*(\/skills.*)$/, "$1"), init?.headers])
 			expect(sent).toContainEqual(["/skills", { Authorization: "Token reader-token" }])
 		} finally {

@@ -1916,6 +1916,46 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   offer it opens the picker first; with fewer than two empty slots it isn't shown.
 - **The Finals**: radio buttons for the group (A / B) and the placement (1st to 3rd), a tap
   on the chosen one clears it, and the same tap row for the race; a winner fills a blank 1st.
+- **Places and Won by** (`notes/cm-runs-plan-2.md`, mocks in `notes/cm-runs-plan-2/mocks/`).
+  "Log places" is a per-device switch (an external store over `localStorage`, off on the
+  server) in a CM ticket's grid and the Finals; a League of Heroes never draws it (the API
+  refuses LoH places). With it on, ONE race is open at a time, with a 1 to 9 strip per uma
+  under it (`PlaceStrips`): the places are the input (a 1st is a win, three places with no
+  1st a loss), a place another of yours holds is greyed and disabled, and the race to open
+  is `nextRaceToPlace` (part-placed or unlogged, never a winner-only race) unless the player
+  tapped a race's name or result. The tap that places the third uma opens the next race. A
+  cell shows its uma's place whatever the switch says. At 390 px the portrait sits beside
+  the strip (`grid-cols-9`, so it can't overflow): a place button is about 30 x 40 px.
+  **Every loss gets Won by** (`WonBy`), switch or not: the chips (the four umas that beat the
+  player most this event, most recent first on a tie, `beatenBy`) and "Other…" (the uma
+  `PvpCardPicker`) open by themselves only on a loss just logged; an older unnamed loss shows
+  a quiet "Won by…", a named one "Won by Kitasan Black · Change". Mid-placing, the race is a
+  loss in the data (setPlace's rule) but Won by waits for the third place.
+- **Fill from replays** (`ReplayImport.tsx`, CM only) is a panel under the day tabs whose
+  title folds it (owner, 2026-11-25: open, it took a lot of room). Open to start, then the
+  player's choice per device (`useReplaysOpen`, the same `deviceSwitch` store as "Log
+  places"); folded it is one line. It reads umadump's race replay files, dropped
+  or chosen (files, or a folder through `webkitdirectory`), read in the browser by
+  `utils/gameImport/umadumpReplays.ts` (by shape; only the player's three and the winning
+  uma ever leave a file), slotted by `utils/replayTickets.ts` (the day from each file's
+  modified time; five races a ticket or a new three; a logged ticket that agrees race for
+  race claims a group, else the next free one, past a ticket skipped whole), previewed per day, then saved ticket by ticket through `useSaveRun`, each
+  change merged again on the ticket as it is at save time. **A tapped result is never
+  overwritten**: a ticket that disagrees is shown and left alone, and the import only adds
+  races, places, loss reasons and a blank Won by. The totals then show "Why she lost" per uma
+  from the day tickets, the codes in words only where confirmed (`lossReasonLabel`). The copy
+  says "if you use umadump" and never tells a player to run it.
+- **Watching the umadump folder** (`hooks/useReplayWatch.ts`, `services/replayFolder.ts`;
+  Chrome and Edge, File System Access API): the button is drawn only where the API exists
+  (`canWatchFolder`, through `useSyncExternalStore` with a server snapshot of false). The
+  folder's handle is kept per device in IndexedDB (`idb-keyval`), and a later visit
+  re-checks the grant, one click to ask again. While the view is open and the tab
+  visible, the folder is read every 5 seconds, each file opened once. A group holding a
+  race that arrived WHILE watching and adding cleanly is saved at once (`watchStep`). Files
+  already there when the watch started, and fresh races that disagree, show as "N replays
+  need a look", which opens the preview with every race read. It polls only once the runs
+  and the catalogue are loaded. `WatchBar` under the tabs says what it last saved, and Stop
+  forgets the folder.
 - **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,
   the Finals, per-uma bars with the veteran link, per day); below `lg` they fall under the
   day. On a phone a three-number strip (`WinRateStrip`) goes above the tabs and the side
@@ -2143,7 +2183,11 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   decks" the same way. "What wins" is CM Runs' win rate per uma and strategy
   (`utils/runResults.ts`): **shown from `min_races` (20), ranked from `RANKED_RACES` (100)**;
   20 to 99 races sit under the ranked rows, muted, with no place; one to three marks say how
-  much to trust a rate (20, 100, 300 races). "Your team" reads the reader's own saved team
+  much to trust a rate (20, 100, 300 races). A row's second small line (`RankRow`'s `note`)
+  is its average place and top-3 rate when the server sends them (20 placed races; places
+  are optional). "What beats players", at the top of the column beside it, is each uma's
+  share of the event's named losses (`beaten_by`, from 20 named losses, a row from 5), drawn
+  in the loss red (`Bar`'s `loss` tone); a payload without it reads as empty. "Your team" reads the reader's own saved team
   (`usePvpTeams`) and gives each uma's place. "Trios players build most" is the server's exact
   three-uma teams (`count_teams` `trios`).
 - **Players** (`PlayersTab.tsx`): Team Trials class and club rank as stacked bars, highest
@@ -2332,10 +2376,17 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
   another's data to count it; the uma and card lists report the Skills tab's number too, from
   the catalogue's `skill_count`, so all three show from the first list opened). A tile is its art, no box; an uma's carries her colours as a bar.
-  A full list in name order gets letter headings and an A to Z index (`letters.tsx`,
-  `utils/encyclopediaLetters.ts`); filtered or re-sorted it is one plain grid. A letter heading
-  is a `role="presentation"` item, so the list's items stay the tiles. On the Skills list a
-  unique or evolved skill's row ends with its owner's face (`SkillList` `faces`).
+  A list gets group headings and a thumb index whatever it is sorted by and filtered by (`groups.tsx`,
+  `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
+  by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
+  by an aptitude, the value by an effect (a value one or two cards reach is merged into a
+  range). Filters never turn them off (owner, 2026-11-25). A heading is a `role="presentation"` item, so the
+  list's items stay the tiles. The Skills list has them too: letters (a name past Z, mostly
+  Japanese, under "あ"), the SP by cost (uniques last), the first three digits by game ID (no
+  index: skill ids run 5 to 9 digits). It draws a page of rows at a time and grows as "Show
+  more" scrolls into view; a jump to a heading not drawn yet draws up to it
+  (`GroupedGrid` `limit` / `onReveal`). A unique or evolved skill's row ends with its owner's
+  face (`SkillRow` `face`).
 
 - **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
   in `@layer components` so a Tailwind utility at the call site still wins. Classes are

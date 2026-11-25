@@ -336,24 +336,104 @@ export function placeTallies(runs: Array<Pick<PvpRun, "races" | "runners">>): Ma
 	return tallies
 }
 
-/** The umas that beat the player, most losses first (the most recent first on a tie), over the losses that name one. */
-export function beatenBy(runs: Array<Pick<PvpRun, "races" | "updated_at">>): { umas: Array<{ uma: number; losses: number }>; named: number } {
-	const counts = new Map<number, { losses: number; latest: string }>()
+/**
+ * Where a race sits in the event, for "most recent": day, then ticket, then
+ * race, with the Finals after every day. A run's `updated_at` can't say it:
+ * two losses on one ticket share it, and a note edit moves it.
+ */
+function raceOrder(run: Pick<PvpRun, "stage" | "day" | "ticket">, race: number): number {
+	const day = run.stage === "final" ? CM_RUN_DAYS + 1 : (run.day ?? 0)
+	// Up to 30 tickets in a LoH tab set and 5 races a ticket: 100s and 1000s keep them apart.
+	return day * 10_000 + (run.ticket ?? 0) * 100 + race
+}
+
+/**
+ * The game's loss reasons in words, only where someone has checked the game
+ * says the same (notes/cm-runs-plan-2.md, "Loss reasons"). The owner's CM 22
+ * replays showed the two aptitude codes on exactly the runners with a G on
+ * dirt and an E at a mile. Every other code shows as the game's own word
+ * until it's confirmed: a relabel is this map, never a migration.
+ */
+const LOSS_REASON_LABELS: Record<string, string> = {
+	ProperGround: "Ground aptitude",
+	ProperDistance: "Distance aptitude",
+}
+
+export function lossReasonLabel(code: string): string {
+	return LOSS_REASON_LABELS[code] ?? code
+}
+
+/**
+ * Each uma and veteran's loss reasons (from replays), keyed `uma:veteran`
+ * like placeTallies, most first. "Win", "Lose" and blank say nothing about
+ * why, so they're left out.
+ */
+export function lossReasons(runs: Array<Pick<PvpRun, "races" | "runners">>): Map<string, Array<{ code: string; count: number }>> {
+	const counts = new Map<string, Map<string, number>>()
+	for (const run of runs) {
+		for (const race of run.races) {
+			for (const place of race.places ?? []) {
+				const code = place.loss_reason ?? ""
+				if (!code || code === "Win" || code === "Lose") continue
+				const runner = run.runners.find((candidate) => candidate.position === place.position)
+				if (!runner) continue
+				const key = `${runner.uma}:${runner.trained_uma ?? ""}`
+				const byCode = counts.get(key) ?? new Map<string, number>()
+				byCode.set(code, (byCode.get(code) ?? 0) + 1)
+				counts.set(key, byCode)
+			}
+		}
+	}
+	return new Map(
+		[...counts.entries()].map(([key, byCode]) => [
+			key,
+			[...byCode.entries()].sort(([a, x], [b, y]) => y - x || a.localeCompare(b)).map(([code, count]) => ({ code, count })),
+		])
+	)
+}
+
+/** The umas that beat the player, most losses first (the most recent loss first on a tie), over the losses that name one. */
+export function beatenBy(runs: Array<Pick<PvpRun, "races" | "stage" | "day" | "ticket">>): { umas: Array<{ uma: number; losses: number }>; named: number } {
+	const counts = new Map<number, { losses: number; latest: number }>()
 	let named = 0
 	for (const run of runs) {
 		for (const race of run.races) {
 			if (race.winner !== null || !race.lost_to) continue
 			named += 1
-			const entry = counts.get(race.lost_to) ?? { losses: 0, latest: "" }
+			const entry = counts.get(race.lost_to) ?? { losses: 0, latest: -1 }
 			entry.losses += 1
-			if (run.updated_at > entry.latest) entry.latest = run.updated_at
+			entry.latest = Math.max(entry.latest, raceOrder(run, race.race))
 			counts.set(race.lost_to, entry)
 		}
 	}
 	const umas = [...counts.entries()]
-		.sort(([, a], [, b]) => b.losses - a.losses || b.latest.localeCompare(a.latest))
+		.sort(([, a], [, b]) => b.losses - a.losses || b.latest - a.latest)
 		.map(([uma, { losses }]) => ({ uma, losses }))
 	return { umas, named }
+}
+
+/** Every spot of the lineup has a place in this race. */
+export function fullyPlaced(entry: PvpRunRace | undefined, runners: Array<Pick<PvpRunRunner, "position">>): boolean {
+	return runners.length > 0 && runners.every((runner) => placeOf(entry, runner.position) !== null)
+}
+
+/**
+ * The race the place strips open on, with "Log places" on: the first race
+ * that is part-placed, or not logged yet (and not skipped). A race logged with
+ * a winner and no places doesn't count, or a ticket logged before places
+ * existed would open on Race 1 forever. null when nothing is left.
+ */
+export function nextRaceToPlace(run: Pick<PvpRun, "races" | "runners" | "skipped">): number | null {
+	for (let race = 1; race <= RUN_RACES; race++) {
+		const entry = run.races.find((candidate) => candidate.race === race)
+		if (entry === undefined) {
+			// A stopped ticket's unlisted races never ran.
+			if (!run.skipped) return race
+			continue
+		}
+		if ((entry.places?.length ?? 0) > 0 && !fullyPlaced(entry, run.runners)) return race
+	}
+	return null
 }
 
 /**

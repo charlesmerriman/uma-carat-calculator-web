@@ -128,6 +128,26 @@ export function formatMonthName(dateStr: string | null | undefined): string {
 }
 
 /**
+ * A quarter in words, for a HEADING over a run of dated things that months
+ * would cut too thin (the Encyclopedia lists sorted by release date):
+ * `{ label: "Q3 2025", months: "Jul to Sep", year: 2025 }`. In the viewer's
+ * own zone like `formatDate`, so a tile always sits under the quarter its own
+ * printed date falls in. Null for unparseable or missing input.
+ */
+export function formatQuarterName(dateStr: string | null | undefined): { label: string; months: string; year: number } | null {
+	if (dateStr == null) return null
+	const date = parseApiDate(dateStr)
+	if (!date) return null
+	const first = Math.floor(date.getMonth() / 3) * 3
+	const short = (month: number) => MONTH_NAMES[month].slice(0, 3)
+	return {
+		label: `Q${first / 3 + 1} ${date.getFullYear()}`,
+		months: `${short(first)} to ${short(first + 2)}`,
+		year: date.getFullYear(),
+	}
+}
+
+/**
  * Format a UTC month as `YYYY/M`, the month-only sibling of `formatDate`.
  *
  * For chart axes, whose ticks are UTC month starts produced by the projection

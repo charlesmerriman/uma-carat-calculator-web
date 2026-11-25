@@ -21,7 +21,7 @@ import { Link } from "react-router-dom"
 import { OpenPageLink } from "../../EncyclopediaLinks"
 import { CARD_LINK_TITLE } from "../../../utils/hoverCards"
 import { ChevronDown } from "lucide-react"
-import { Bar, type BarPart } from "./Bar"
+import { Bar, type BarPart, type BarTone } from "./Bar"
 import { Movement, type MovementValue } from "./Movement"
 
 export interface RankRowProps {
@@ -31,13 +31,19 @@ export interface RankRowProps {
 	name: string
 	/** The small line under the name: a type chip, "15 borrowed". */
 	sub?: ReactNode
+	/**
+	 * A second small line under `sub` ("avg place 4.2, top 3 in 48%"), for a
+	 * figure that would be cut off at the end of a one-line sub in a narrow
+	 * column (a phone, the pinned panel).
+	 */
+	note?: ReactNode
 	movement?: MovementValue | null
 	/** count / the leader's count, 0 to 1: the first row's is 1. */
 	fill: number
 	/** A stacked bar in place of the plain one (an uma's running styles). */
 	parts?: BarPart[]
-	/** "win": the bar in the running green (a win rate). */
-	tone?: "win"
+	/** "win": the bar in the running green (a win rate); "loss": the highlight red. */
+	tone?: BarTone
 	/** "176 decks": drawn bold. */
 	count: ReactNode
 	/** "29%": drawn muted under the count. */
@@ -64,7 +70,7 @@ export interface RankRowProps {
 }
 
 export function RankRow(props: RankRowProps) {
-	const { place, art, name, sub, movement, fill, parts, tone, count, share, detail, compact = false, muted = false, href = null, hover } = props
+	const { place, art, name, sub, note, movement, fill, parts, tone, count, share, detail, compact = false, muted = false, href = null, hover } = props
 	const [open, setOpen] = useState(false)
 	const top = place !== null && place <= 3
 	const nameInk = muted ? "text-gray-400" : "text-gray-100"
@@ -118,6 +124,7 @@ export function RankRow(props: RankRowProps) {
 					<Movement value={movement} />
 				</span>
 				{sub && <span className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-gray-400">{sub}</span>}
+				{note && <span className="min-w-0 truncate text-[11px] text-gray-400">{note}</span>}
 				{/* Under 40rem the bar column goes and this hairline carries the fill. */}
 				<Bar fill={fill} parts={parts} tone={tone} hairline className="mt-1 @min-[40rem]:hidden" />
 			</span>
