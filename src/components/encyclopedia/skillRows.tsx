@@ -3,11 +3,17 @@
  * row is hovered or focused. Used by an uma's page, a card's page, a skill's
  * page (its versions and evolutions) and the Skills list.
  *
- * The row is quiet on purpose (encyclopedia.css, ".enc-skill"): the theme's
- * own surface, with the skill's kind as a thin spine, a faint wash and a
- * small pill in the game's colour. A list of two thousand solid gold and
- * pink rows was the loudest thing on the site; the solid gold stays on the
+ * INSIDE A PAGE'S PANEL the row is quiet (encyclopedia.css, ".enc-skill"):
+ * the theme's own surface, with the skill's kind as a thin spine, a faint
+ * wash and a small pill in the game's colour; the solid gold stays on the
  * PvP guides' chips, where there are a handful.
+ *
+ * ON THE SKILLS LIST it is a plate (".enc-skills--plates", the owner's pick
+ * on the 2026-11-25 canvas, notes/skills-list-plan.md): it stands on the page
+ * as the Umas and Support cards lists' tiles do, and a skill that is one
+ * uma's ends in her two colours with her face. The list sets the modifier on
+ * its grid and hands each row its owner's `colours`; this component draws
+ * the same markup either way.
  *
  * THE HOVER CARD is the guide's own (pvp/SkillDetail.tsx). A row knows only
  * the list's facts, so the card's body is fetched the first time the row is
@@ -32,6 +38,7 @@ import { useSkillPage } from "../../services/encyclopediaQueries"
 import { detailToCardSkill, rowToCardSkill } from "../../utils/skillCard"
 import { nameLang } from "../../utils/skillList"
 import { SKILL_TYPE_WORDS, skillHref, skillKind } from "../../utils/skillSearch"
+import { colourStyle } from "../../utils/encyclopedia"
 import { KindPill, SkillDetail } from "../pvp/SkillDetail"
 import { useHoverPopup } from "../pvp/hoverPopup"
 
@@ -97,8 +104,14 @@ function keepPlainClickOnRow(event: MouseEvent<HTMLAnchorElement>) {
  * One skill, linking to its page. `sub` is the row's second line: how this
  * uma or card has it ("Awakening level 3"), or its type and owner in a list.
  */
-export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, fullCost = false }: {
+export function SkillRow({ skill, sub, hint, face = false, colours, after, hintLevel, fullCost = false }: {
 	skill: RowSkill
+	/**
+	 * The owner's character colours ([main, sub]), with `face`: the Skills
+	 * list's plate wears them behind her face. Missing (the catalogue isn't
+	 * there yet, or the game files don't cover her) leaves the plate's grey.
+	 */
+	colours?: readonly string[] | null
 	/** Show the full cost even with a hint level: the uma page's "Full cost" switch. */
 	fullCost?: boolean
 	/** The player's hint level for this skill on the uma they own, from their imported Collection. */
@@ -132,6 +145,10 @@ export function SkillRow({ skill, sub, hint, face = false, after, hintLevel, ful
 				to={skillHref(skill.game_id)}
 				className="enc-skill"
 				data-kind={kind}
+				// Only a row that draws her face is hers to colour; colourStyle
+				// passes nothing but plain hex into the style attribute.
+				data-owned={owner ? "" : undefined}
+				style={owner ? colourStyle(colours) : undefined}
 			>
 				{skill.image ? (
 					<img src={skill.image} alt="" className="enc-skill__icon" loading="lazy" decoding="async" />

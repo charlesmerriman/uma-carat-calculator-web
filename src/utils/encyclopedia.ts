@@ -6,7 +6,7 @@
  */
 
 import type { CSSProperties } from "react"
-import type { AptitudeKey, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
+import type { AptitudeKey, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 import type { CardEffectsData, CardEffectsRow } from "../types/encyclopedia"
 import type { StoryEvent } from "../types/storyEvent"
 import type { Status } from "../components/rankings/kit/StatusPill"
@@ -80,6 +80,26 @@ const HEX_COLOUR = /^#[0-9a-f]{6}$/i
 export function colourStyle(colours: readonly string[] | null | undefined): CSSProperties | undefined {
 	if (!colours || colours.length !== 2 || !colours.every((value) => HEX_COLOUR.test(value))) return undefined
 	return { "--c1": colours[0], "--c2": colours[1] } as CSSProperties
+}
+
+/**
+ * Each outfit's character colours, by the outfit's row id (`CatalogueUma.id`,
+ * the id a skill's `owner_umas` carry): the Skills list paints an owned row's
+ * plate with them (notes/skills-list-plan.md). Looked up through the outfit's
+ * `character_id`, the way the Umas list colours a tile, never worked out from
+ * her game id. Empty until the catalogue is there, and an outfit whose
+ * character the game files don't cover is simply missing: its row keeps the
+ * stylesheet's grey.
+ */
+export function umaColourLookup(catalogue: PvpCatalogue | null | undefined): Map<number, readonly [string, string]> {
+	const lookup = new Map<number, readonly [string, string]>()
+	const pairs = catalogue?.character_colours
+	if (!catalogue || !pairs) return lookup
+	for (const uma of catalogue.umas) {
+		const pair = uma.character_id != null ? pairs[String(uma.character_id)] : undefined
+		if (pair) lookup.set(uma.id, pair)
+	}
+	return lookup
 }
 
 /** "No. 1006 · 01": the game's own id for an outfit, as character and outfit. */

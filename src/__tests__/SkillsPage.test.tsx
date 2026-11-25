@@ -244,6 +244,35 @@ describe("SkillsPage", () => {
 		expect(screen.getByText("No skill matches that.")).toBeInTheDocument()
 	})
 
+	it("draws the rows as plates, an uma's skill in her character's colours once the catalogue is in", async () => {
+		// The owner's pick on the 2026-11-25 canvas (notes/skills-list-plan.md, option A).
+		const owner = { id: 7, game_id: 100601, name: "Oguri Cap", portrait: null }
+		fetchMock.mockImplementation((url: string) => {
+			if (url.endsWith("/pvp-catalogue")) {
+				return Promise.resolve(new Response(JSON.stringify({
+					umas: [{ id: 7, name: "Oguri Cap", character_id: 1006 }],
+					support_cards: [],
+					skills: [],
+					character_colours: { 1006: ["#3A7AD2", "#ECE7E7"] },
+				}), { status: 200 }))
+			}
+			return Promise.resolve(new Response(JSON.stringify([
+				row(1, "Triumphant Pulse", { game_id: 100061, rarity: 5, version: "○ white", owners: ["Oguri Cap"], owner_umas: [owner] }),
+				row(2, "Gourmand", { rarity: 2, version: "◎ gold", cost: 180 }),
+			]), { status: 200 }))
+		})
+		renderPage()
+		const pulse = await screen.findByRole("link", { name: /Triumphant Pulse/ })
+		expect(pulse.closest("ul")).toHaveClass("enc-skills--plates")
+		expect(pulse).toHaveAttribute("data-owned")
+		await waitFor(() => expect(pulse.style.getPropertyValue("--c1")).toBe("#3A7AD2"))
+		expect(pulse.style.getPropertyValue("--c2")).toBe("#ECE7E7")
+		// A skill that is nobody's has no face, so nothing to colour.
+		const gourmand = screen.getByRole("link", { name: /Gourmand/ })
+		expect(gourmand).not.toHaveAttribute("data-owned")
+		expect(gourmand.style.getPropertyValue("--c1")).toBe("")
+	})
+
 	it("sorts by skill point cost either way, a skill with no cost last both times", async () => {
 		fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify([
 			row(1, "Cheap", { cost: 100 }),

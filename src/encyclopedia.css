@@ -1979,6 +1979,150 @@
 		color: var(--color-gray-400);
 	}
 
+	/* ---- The Skills list's rows: plates ---------------------------------------
+	   The owner's pick on the 2026-11-25 canvas (notes/skills-list-plan.md,
+	   option A). On the list, and only there, a row stands on the page as a
+	   plate, the way a tile does on the Umas and Support cards lists: its own
+	   surface and shadow, a bigger icon, the name in the display face on up to
+	   two lines, a cost you can read across the row, and the kind as a wider
+	   spine with a wash that reaches across the plate.
+
+	   Scoped by the list's modifier, never by changing .enc-skill: an uma's,
+	   a card's and a skill's own page draw the same row inside a panel, where
+	   a raised plate would be a card inside a card. Those stay quiet.
+
+	   A skill that is one uma's (`data-owned`, skillRows.tsx) ends in her
+	   silks, the hero's slanted field in small: a stripe of her second colour,
+	   a gap, then her main colour, with her framed face standing straight on
+	   it. The pair is `--c1` / `--c2` from the catalogue (colourStyle), only
+	   ever a fill; grey until the catalogue lands, so nothing moves when it
+	   does. */
+	.enc-skills--plates {
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+		gap: 0.625rem 0.75rem;
+	}
+	.enc-skills--plates .enc-skill {
+		min-height: 4.375rem;
+		gap: 0.8rem;
+		padding: 0.6rem 0.9rem 0.6rem 1.05rem;
+		border-radius: 1rem;
+		background:
+			linear-gradient(100deg, var(--kind-wash), transparent 78%),
+			var(--card-fill);
+		box-shadow: var(--card-shadow);
+	}
+	.enc-skills--plates .enc-skill::before {
+		width: 5px;
+	}
+	/* Each kind names its own spine: a default here would outrank the gold and
+	   pink ones set above, which have the same specificity and come earlier. */
+	.enc-skills--plates .enc-skill[data-kind="white"] {
+		--kind: linear-gradient(180deg, #f3f5f9, #a9b3c4);
+	}
+	.enc-skills--plates .enc-skill[data-kind="gold"] {
+		--kind-wash: color-mix(in oklab, #e8b51a 46%, transparent);
+	}
+	.enc-skills--plates .enc-skill[data-kind="evolved"] {
+		--kind-wash: color-mix(in oklab, #f28cbc 40%, transparent);
+	}
+	/* A unique's foil across the plate; its inherited copy keeps the foil as
+	   its spine only, on a plain plate, so the two read as a pair. */
+	.enc-skills--plates .enc-skill[data-kind="unique"] {
+		background:
+			linear-gradient(
+				100deg,
+				color-mix(in oklab, #9be7ff 42%, transparent),
+				color-mix(in oklab, #c9b1ff 40%, transparent) 30%,
+				color-mix(in oklab, #ffb3d9 26%, transparent) 52%,
+				transparent 76%
+			),
+			var(--card-fill);
+	}
+	.enc-skills--plates .enc-skill[data-kind="inherited"] {
+		--kind: linear-gradient(180deg, #9be7ff, #c9b1ff 45%, #ffb3d9 75%, #ffe08a);
+	}
+	.enc-skills--plates a.enc-skill:hover,
+	.enc-skills--plates a.enc-skill:focus-visible {
+		box-shadow:
+			var(--card-shadow),
+			inset 0 0 0 2px color-mix(in oklab, var(--color-brand) 70%, transparent);
+		transform: translateY(-2px);
+	}
+	.enc-skills--plates .enc-skill__icon {
+		width: 2.875rem;
+		height: 2.875rem;
+		border-radius: 0.6rem;
+		filter: drop-shadow(0 3px 5px rgb(0 0 0 / 22%));
+	}
+	/* Two lines before it is cut: a plate has the height for it. */
+	.enc-skills--plates .enc-skill__name {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		font-family: var(--font-display);
+		font-size: 1rem;
+		font-weight: 650;
+		line-height: 1.2;
+		color: var(--color-gray-50);
+		white-space: normal;
+	}
+	.enc-skills--plates .enc-skill__sub {
+		margin-top: 0.2rem;
+		font-size: 0.8125rem;
+		color: var(--color-gray-300);
+	}
+	.enc-skills--plates .enc-skill__cost {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-gray-50);
+	}
+	.enc-skills--plates .enc-skill__cost small {
+		font-size: 0.6875rem;
+	}
+	/* Her silks: one skewed box, so the stripe, the gap and the field keep
+	   their widths however tall a two-line name makes the plate. It hangs off
+	   the plate's right edge, which clips it. */
+	.enc-skills--plates .enc-skill[data-owned] {
+		--c1: var(--color-gray-500);
+		--c2: var(--color-gray-400);
+		padding-right: 0.7rem;
+	}
+	.enc-skills--plates .enc-skill[data-owned]::after {
+		position: absolute;
+		inset: 0 -1.2rem 0 auto;
+		z-index: 0;
+		width: 5.8rem;
+		background: linear-gradient(90deg, var(--c2) 0 0.3rem, transparent 0.3rem 0.52rem, var(--c1) 0.52rem);
+		filter: drop-shadow(0 0 1px rgb(0 0 0 / 35%));
+		transform: skewX(-13deg);
+		transform-origin: bottom;
+		content: "";
+	}
+	/* Everything in the plate stands above the silks. */
+	.enc-skills--plates .enc-skill > * {
+		position: relative;
+		z-index: 1;
+	}
+	/* Her face stands low in the plate: a layered portrait's ears rise a sixth
+	   of it above the frame, and the plate clips at its edge. Centred, a tall
+	   pair (Curren Chan's) was cut flat on a one-line plate; set into the
+	   bottom padding they clear the top with no extra height for every row. */
+	.enc-skills--plates .enc-skill__face {
+		width: 3.1rem;
+		height: 3.1rem;
+		align-self: flex-end;
+		margin: 0 0 -0.3rem 0.55rem;
+		box-shadow: 0 4px 10px rgb(0 0 0 / 30%);
+	}
+	.enc-skills--plates .enc-letter {
+		margin-top: 1.1rem;
+	}
+	.enc-skills--plates .enc-letter:first-child {
+		margin-top: 0;
+	}
+
 	/* A skill's kind as a word: "gold" on the gold, "evolved" on the pink. */
 	.kind-pill {
 		display: inline-flex;
@@ -3370,7 +3514,10 @@
 		.enc-tile:hover,
 		a.enc-skill:hover,
 		a.enc-uniq:hover,
-		a.enc-pic:hover {
+		a.enc-pic:hover,
+		/* The plates' lift is a more specific rule, so it is named here too. */
+		.enc-skills--plates a.enc-skill:hover,
+		.enc-skills--plates a.enc-skill:focus-visible {
 			transform: none;
 		}
 	}
