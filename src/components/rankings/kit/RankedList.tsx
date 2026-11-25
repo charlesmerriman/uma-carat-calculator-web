@@ -4,11 +4,11 @@
  * caller, usually as a RankRow, so the panel owns only the cut and the
  * hairlines between rows. With a `title` it draws Panel's head (mock
  * 09-pvp.png); `footnote` sits at the footer's left (a legend), "Show all"
- * at its right.
+ * at its right. The panel is the Encyclopedia section's surface (Panel.tsx).
  */
 
 import { useState, type ReactNode } from "react"
-import { PanelHead } from "./Panel"
+import { PANEL, PanelHead } from "./Panel"
 
 export function RankedList<T>({ label, title, hint, items, render, itemKey, empty, start = 10, footnote, after }: {
 	/** The list's accessible name ("Overall", "Umas"); also the drawn title when `title` is true. */
@@ -38,7 +38,7 @@ export function RankedList<T>({ label, title, hint, items, render, itemKey, empt
 	// Whatever room the ranked rows leave under the cut goes to the thin rows.
 	const shownAfter = all ? extra : extra.slice(0, Math.max(0, start - shown.length))
 	return (
-		<section className="card-panel flex min-w-0 flex-col gap-2 p-3" aria-label={label}>
+		<section className={`${PANEL} gap-2`} aria-label={label}>
 			{title && <PanelHead title={label} hint={hint} />}
 			{total === 0 ? (
 				<p className="px-1 py-2 text-sm text-gray-400">{empty}</p>
@@ -51,10 +51,10 @@ export function RankedList<T>({ label, title, hint, items, render, itemKey, empt
 				</ol>
 			)}
 			{(footnote || total > start) && (
-				<div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1 text-[11px]">
+				<div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-2 text-[13px]">
 					{footnote ?? <span className="text-gray-400">{all ? `Showing all ${total}` : `Showing the top ${start}`}</span>}
 					{total > start && (
-						<button type="button" onClick={() => setAll(!all)} className="ml-auto text-brand transition hover:text-brand/75">
+						<button type="button" onClick={() => setAll(!all)} className="ml-auto font-semibold text-brand transition hover:text-brand/75">
 							{all ? `Show the top ${start}` : `Show all ${total}`}
 						</button>
 					)}

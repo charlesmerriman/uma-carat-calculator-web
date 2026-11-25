@@ -13,9 +13,16 @@
  * OPENED (step 4, mock 07-pull.png's first row): how planners spread what
  * they plan over five buckets, and the banners its planners also plan, each
  * a chip to that banner's Timeline card.
+ *
+ * FACES (the 2026-11-25 polish, notes/rankings-polish-plan.md, canvas shot
+ * 15): the umas or cards on the banner, between the kind badge and the name.
+ * THEY LINE UP (the owner: "those faces need to line up with each other"):
+ * the badge has a FIXED column, never `auto`, so UMA and SUPPORT badges of
+ * different widths can't push the faces to different places, and the faces
+ * have a fixed column of their own, so the names line up too.
  */
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { ChevronDown } from "lucide-react"
 import type { PlannedBannerRank, PlannedBannerType } from "../../types/pullPlanRankings"
@@ -40,12 +47,14 @@ function statusOf(row: PlannedBannerRank): Status {
 	return row.status
 }
 
-export function PullPlanRow({ row, fill, timelineOf, movement }: {
+export function PullPlanRow({ row, fill, faces, timelineOf, movement }: {
 	row: PlannedBannerRank
 	/** Rank movement by planners over the week; only drawn in the planners order. */
 	movement?: MovementValue
 	/** share / the list's leader. */
 	fill: number
+	/** The umas or cards on the banner, framed (PullPlans facesOf); null for a step-up. */
+	faces?: ReactNode
 	/** A banner's Timeline card (its BannerTimeline id), for the "also planning" chips. */
 	timelineOf: (type: PlannedBannerType, id: number) => number | null
 }) {
@@ -58,18 +67,20 @@ export function PullPlanRow({ row, fill, timelineOf, movement }: {
 	const head = (
 		<>
 			<span className="hidden flex-col @min-[47.5rem]:flex">
-				<b className="text-[13px] font-semibold tabular-nums text-gray-100">{row.start_date ? formatDate(row.start_date) : "Undated"}</b>
-				{row.end_date && <span className="text-[11px] tabular-nums text-gray-400">to {formatDate(row.end_date)}</span>}
+				<b className="font-display text-base font-bold tabular-nums text-gray-100">{row.start_date ? formatDate(row.start_date) : "Undated"}</b>
+				{row.end_date && <span className="text-xs tabular-nums text-gray-400">to {formatDate(row.end_date)}</span>}
 			</span>
-			<span className={`${kind.className} self-center rounded-[5px] px-1.5 py-1 text-[9px] font-bold uppercase leading-none tracking-wider`}>
+			{/* Left in its fixed column, so whatever follows starts at one edge on every row. */}
+			<span className={`${kind.className} self-center justify-self-start rounded-[5px] px-1.5 py-1 text-[9px] font-bold uppercase leading-none tracking-wider`}>
 				{kind.label}
 			</span>
+			<span className="hidden items-center gap-1 @min-[47.5rem]:flex">{faces}</span>
 			<span className="flex min-w-0 flex-col gap-0.5">
 				<span className="flex min-w-0 items-center gap-1.5">
-					<span className="truncate text-[13px] font-semibold text-gray-100" title={row.name}>{row.name}</span>
+					<span className="line-clamp-2 min-w-0 text-[15px] font-bold leading-tight text-balance text-gray-100" title={row.name}>{row.name}</span>
 					<Movement value={movement} />
 				</span>
-				<span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] tabular-nums text-gray-400">
+				<span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs tabular-nums text-gray-400">
 					<StatusPill status={statusOf(row)} />
 					<span className="@min-[47.5rem]:hidden">{dates} ·</span>
 					{/* The typical column's figure, for the widths that hide that column. */}
@@ -80,12 +91,12 @@ export function PullPlanRow({ row, fill, timelineOf, movement }: {
 				<Bar fill={fill} hairline className="mt-1 @min-[47.5rem]:hidden" />
 			</span>
 			<Bar fill={fill} className="hidden @min-[47.5rem]:block" />
-			<span className="flex flex-col items-end whitespace-nowrap text-right text-[11px] tabular-nums text-gray-400">
-				<b className="text-[13px] font-semibold text-gray-100">{formatShare(row.share)}</b>
+			<span className="flex flex-col items-end whitespace-nowrap text-right text-xs tabular-nums text-gray-400">
+				<b className="font-display text-[17px] font-bold text-gray-100">{formatShare(row.share)}</b>
 				of planners
 			</span>
-			<span className="hidden flex-col items-end whitespace-nowrap text-right text-[11px] tabular-nums text-gray-400 @min-[47.5rem]:flex">
-				<b className="text-[13px] font-semibold text-gray-100">
+			<span className="hidden flex-col items-end whitespace-nowrap text-right text-xs tabular-nums text-gray-400 @min-[47.5rem]:flex">
+				<b className="font-display text-[17px] font-bold text-gray-100">
 					{figure(row.median)}
 					{steps ? " steps" : ""}
 				</b>
@@ -98,8 +109,11 @@ export function PullPlanRow({ row, fill, timelineOf, movement }: {
 			)}
 		</>
 	)
+	// Fixed columns for the dates (5.9rem), the kind badge (4.6rem) and the faces (6.4rem, two
+	// umas or two cards): an `auto` badge column made the faces zigzag (owner, 2026-11-25). Under
+	// 47.5rem the dates and faces go; the badge keeps its fixed column so the names line up.
 	const grid =
-		"grid w-full grid-cols-[auto_minmax(0,1fr)_auto_14px] items-center gap-2.5 rounded-lg px-1 py-2 text-left @min-[47.5rem]:grid-cols-[5.6rem_auto_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(6rem,auto)_minmax(6.5rem,auto)_14px]"
+		"grid w-full grid-cols-[4.6rem_minmax(0,1fr)_auto_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[47.5rem]:grid-cols-[5.9rem_4.6rem_6.4rem_minmax(0,1.5fr)_minmax(0,1fr)_minmax(5.5rem,auto)_minmax(6.5rem,auto)_14px]"
 	if (!opens) return <div className={grid}>{head}</div>
 	return (
 		<div>
@@ -107,7 +121,7 @@ export function PullPlanRow({ row, fill, timelineOf, movement }: {
 				{head}
 			</button>
 			{open && (
-				<div className="px-2 pb-3 pt-1 @min-[47.5rem]:pl-[6.5rem]">
+				<div className="px-2 pb-4 pt-2 @min-[47.5rem]:pl-[6.7rem]">
 					<Detail>
 						{row.spread && (
 							<DetailBlock heading={steps ? "The steps people plan" : "The pulls people plan"}>
@@ -120,7 +134,7 @@ export function PullPlanRow({ row, fill, timelineOf, movement }: {
 									{row.also.map((other) => {
 										const timeline = timelineOf(other.type, other.id)
 										const label = `${other.name} · ${formatShare(other.share)}`
-										const chip = "rounded-full border border-brand/35 px-2 py-0.5 text-[11px] tabular-nums text-brand"
+										const chip = "rounded-full border border-brand/40 px-2.5 py-0.5 text-[13px] tabular-nums text-brand"
 										return timeline ? (
 											<Link key={`${other.type}-${other.id}`} to={timelineFocusHref({ kind: "banner", id: timeline })} className={`${chip} transition hover:bg-brand/15`}>
 												{label}
@@ -157,10 +171,10 @@ function Spread({ spread, unit }: { spread: NonNullable<PlannedBannerRank["sprea
 			{spread.shares.map((share, index) => (
 				<li key={index} className="flex min-w-0 flex-col items-center gap-0.5">
 					<span className="flex h-8 w-full items-end" aria-hidden="true">
-						<span className="block w-full rounded-t-[3px] border-t-2 border-brand bg-brand/35" style={{ height: `${top ? Math.max(4, (share / top) * 100) : 4}%` }} />
+						<span className="block w-full rounded-t bg-brand" style={{ height: `${top ? Math.max(4, (share / top) * 100) : 4}%` }} />
 					</span>
-					<span className="truncate text-[10px] tabular-nums text-gray-400">{spreadLabel(spread.edges, index)}</span>
-					<b className="text-[11px] font-semibold tabular-nums text-gray-100">{formatShare(share)}</b>
+					<span className="truncate text-xs tabular-nums text-gray-400">{spreadLabel(spread.edges, index)}</span>
+					<b className="font-display text-sm font-bold tabular-nums text-gray-100">{formatShare(share)}</b>
 				</li>
 			))}
 		</ol>

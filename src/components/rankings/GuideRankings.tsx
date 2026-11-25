@@ -7,11 +7,12 @@
  * one per card type. Plus our event window (every guide, or the next 3 / 5 /
  * 10 events from a picked one).
  *
- * THE REDESIGN (notes/rankings-redesign-plan.md, step 1; mocks 03 to 06 and
- * 19 in notes/rankings-redesign/mocks/), top to bottom: the band (what is
- * counted, three figures), the filter pills with their token line, the top
- * three, then ONE list with a lens (Overall, each card type, Umas) in place
- * of nine tables, beside a rail (search, the QC note, guides with no
+ * THE LAYOUT (notes/rankings-redesign-plan.md step 1, then the 2026-11-25
+ * polish, notes/rankings-polish-plan.md, canvas shot 04), top to bottom: one
+ * filter card (the search, the pills, the token line), the hero (first
+ * place on her colours, with what is counted beside her), second and third,
+ * then ONE list with a lens (Overall, each card type, Umas) in place of nine
+ * tables, beside a rail (search results, the QC note, guides with no
  * scenario). The lens is remembered on the device with the pinned window's
  * (rankingsPinStore `choices`).
  *
@@ -33,11 +34,11 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { EncyclopediaName } from "../EncyclopediaLinks"
 
-const RESULT_NAME = "truncate text-[13px] font-semibold text-gray-100"
+const RESULT_NAME = "truncate text-sm font-bold text-gray-100"
 import { FramedUma } from "../FramedUma"
 import { STYLE_LABELS, defaultPvpEvent, hasEnded, isRunning, raceEventsInOrder } from "../../utils/pvpGuide"
 import { pvpEventHref, refForRaceEvent, sameEvent, shortEventName, type PvpEventKind } from "../../utils/pvpEvent"
-import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
+import { CARD_TYPE_COLORS, CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import {
 	NO_SCENARIO,
 	RANKING_TIERS,
@@ -66,11 +67,12 @@ import { FilterPill, FilterToolbar, GroupPill, Tokens, type FilterGroup, type Fi
 import { FilterSheet } from "./kit/FilterSheet"
 import { tickSummary } from "./kit/tickSummary"
 import { Lens, type LensOption } from "./kit/Lens"
+import { PANEL } from "./kit/Panel"
 import { Podium, type PodiumEntry } from "./kit/Podium"
+import { RankHero, type HeroTop } from "./kit/RankHero"
 import { RankRow } from "./kit/RankRow"
 import { RankedList } from "./kit/RankedList"
 import { Sparkline } from "./kit/Sparkline"
-import { StatBand } from "./kit/StatBand"
 import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
 import { StyleLegend } from "./kit/StyleLegend"
@@ -95,8 +97,9 @@ const CARD_TYPE_IDS = ["speed", "stamina", "power", "guts", "wit", "friend", "gr
 /** How many search results show at once. */
 const SEARCH_RESULTS = 5
 
-const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
-const ASIDE = "rounded-[10px] border border-dashed border-gray-600 bg-gray-900/70 px-3 py-2.5 text-[11px] leading-normal text-gray-400"
+const PANEL_NOTE = "rk-panel p-4 text-sm text-gray-300"
+/** A note in the rail: the card surface, ruled off on the left in the page's colour (no dashed box). */
+const ASIDE = "rounded-xl border-l-[3px] border-(--c1-line) bg-(--card-fill) px-4 py-3.5 text-[13px] leading-relaxed text-gray-300"
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 
@@ -147,6 +150,9 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 	)
 	const { cardsById, umasById } = catalogue
 	const typeOf = useCallback((card: number) => cardsById.get(card)?.card_type, [cardsById])
+	// A character's two colours (the hero's field, second and third's silk), by her character id.
+	const pairs = catalogue.catalogue.character_colours
+	const coloursOf = (characterId: number | null | undefined) => (characterId != null ? pairs?.[String(characterId)] : undefined)
 
 	const guides = useMemo(() => countedGuides(events, payload, filters, eventWindow), [events, payload, filters, eventWindow])
 	const cards = useMemo(() => rankCards(guides, filters, typeOf), [guides, filters, typeOf])
@@ -232,7 +238,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 		return (
 			<RankRow
 				place={index + 1}
-				art={<CardArt card={card} />}
+				art={<CardArt card={card} className="w-12" />}
 				name={card?.name ?? "Unknown card"}
 				movement={moves.get(rank.card)}
 				sub={
@@ -242,6 +248,8 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 					</>
 				}
 				fill={fillOf(rank.decks)}
+				// The type's hue, the same as the chip's dot: Speed's blue, Wit's green.
+				barColor={card?.card_type ? CARD_TYPE_COLORS[card.card_type] : undefined}
 				count={plural(rank.decks, "deck")}
 				share={formatShare(rank.share)}
 				detail={<RowDetail appearances={rank.appearances} alternatives={rank.alternatives} events={countedEvents} next={nextEvent} nextLabel={nextLabel} isCard />}
@@ -254,7 +262,7 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 		return (
 			<RankRow
 				place={index + 1}
-				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-12" />}
+				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-14" />}
 				name={uma?.name ?? "Unknown uma"}
 				movement={moves.get(rank.uma)}
 				fill={fillOf(rank.picks)}
@@ -265,37 +273,87 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 			/>
 		)
 	}
+	const lensLabel = lensOptions.find((option) => option.id === lens)?.label ?? "Overall"
+	// "#1 overall", "#1 speed", "#1 uma": the hero's plate; the kicker over second and third.
+	const placeWord = lens === "umas" ? "uma" : lensLabel.toLowerCase()
+
+	// THE TOP THREE: first place is the hero, second and third sit under it.
 	const podium: PodiumEntry[] =
 		lens === "umas"
-			? umas.slice(0, 3).map((rank) => {
+			? umas.slice(1, 3).map((rank, index) => {
 					const uma = umasById.get(rank.uma)
 					return {
 						key: rank.uma,
-						art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-16" />,
+						place: index + 2,
+						art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="w-[5.25rem]" />,
 						name: uma?.name ?? "Unknown uma",
 						count: plural(rank.picks, "pick"),
 						share: formatShare(rank.share),
 						fill: fillOf(rank.picks),
+						colours: coloursOf(uma?.character_id),
 						movement: moves.get(rank.uma),
 						href: hrefs.uma(rank.uma),
 						hover: hoverCardProps("uma", rank.uma),
 					}
 				})
-			: lensCards.slice(0, 3).map((rank) => {
+			: lensCards.slice(1, 3).map((rank, index) => {
 					const card = cardsById.get(rank.card)
 					return {
 						key: rank.card,
-						art: <CardArt card={card} className="w-14" />,
+						place: index + 2,
+						art: <CardArt card={card} className="w-[4.5rem]" />,
 						name: card?.name ?? "Unknown card",
 						count: plural(rank.decks, "deck"),
 						share: formatShare(rank.share),
 						fill: fillOf(rank.decks),
+						colours: coloursOf(card?.character_id),
 						movement: moves.get(rank.card),
 						href: hrefs.card(rank.card),
 						hover: hoverCardProps("card", rank.card),
 					}
 				})
-	const lensLabel = lensOptions.find((option) => option.id === lens)?.label ?? "Overall"
+	const firstUma = lens === "umas" ? umas[0] : undefined
+	const firstCard = lens === "umas" ? undefined : lensCards[0]
+	let top: HeroTop | null = null
+	if (firstUma) {
+		const uma = umasById.get(firstUma.uma)
+		top = {
+			place: `#1 ${placeWord}`,
+			name: uma?.name ?? "Unknown uma",
+			line: (
+				<>
+					<b>{plural(firstUma.picks, "pick")}</b>, <b>{formatShare(firstUma.share)}</b> of those counted
+				</>
+			),
+			art: <FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={uma ? oshiIds.has(uma.id) : false} className="enc-hero__art" />,
+			shape: "uma",
+			colours: coloursOf(uma?.character_id),
+			href: hrefs.uma(firstUma.uma),
+			hover: hoverCardProps("uma", firstUma.uma),
+		}
+	} else if (firstCard) {
+		const card = cardsById.get(firstCard.card)
+		top = {
+			place: `#1 ${placeWord}`,
+			name: card?.name ?? "Unknown card",
+			line: (
+				<>
+					In <b>{plural(firstCard.decks, "deck")}</b>, <b>{formatShare(firstCard.share)}</b> of those counted
+				</>
+			),
+			art: <CardArt card={card} className="enc-hero__art--card" />,
+			shape: "card",
+			colours: coloursOf(card?.character_id),
+			tags: (
+				<>
+					<CardTypeChip type={card?.card_type} />
+					{firstCard.borrows > 0 && <span>{firstCard.borrows} borrowed</span>}
+				</>
+			),
+			href: hrefs.card(firstCard.card),
+			hover: hoverCardProps("card", firstCard.card),
+		}
+	}
 
 	// In event order, for the "no scenario yet" note.
 	const unset = events.filter((event) =>
@@ -387,20 +445,21 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 	}
 
 	return (
-		<div className="flex flex-col gap-3.5">
-			<StatBand
-				title="What the guides recommend"
-				stats={[
-					{ label: "Guides counted", value: guides.length.toLocaleString() },
-					{ label: "Decks", value: deckCount.toLocaleString() },
-					{ label: scenarioCount === 1 ? "Scenario" : "Scenarios", value: scenarioCount.toLocaleString() },
-				]}
-			>
-				Every card and uma the published guides put in a deck, counted. The source sheet's filters, one to one, plus our event window.
-			</StatBand>
-
-			<div className="flex flex-col gap-2">
-				<div className="flex flex-wrap items-center gap-1.5">
+		<div className="flex flex-col gap-[1.125rem]">
+			{/* One filter card, as on the Encyclopedia's lists: the search first, then the pills. */}
+			<div className="rk-panel flex flex-col gap-3 px-4 py-4 @min-[40rem]:px-[1.125rem]">
+				<div className="flex flex-wrap items-center gap-2">
+					<label className="relative w-full @min-[40rem]:mr-2 @min-[40rem]:w-[17rem]">
+						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+						<input
+							type="search"
+							aria-label="Find a card or uma"
+							placeholder="Find a card or uma"
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							className="w-full rounded-lg border border-gray-600 bg-gray-900 py-2 pl-9 pr-3 text-sm text-gray-100 placeholder-gray-500 focus:border-brand focus:outline-none"
+						/>
+					</label>
 					<FilterToolbar className="hidden desktop-nav:flex">
 						<FilterPill label="Events" state={windowSize === null ? "All guides" : `Next ${windowSize}`} changed={windowSize !== null} title="Which guides">
 							{eventsMenu}
@@ -409,17 +468,6 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 							<GroupPill key={group.key} group={group} />
 						))}
 					</FilterToolbar>
-					<label className="relative w-full @min-[40rem]:ml-auto @min-[40rem]:w-auto @min-[40rem]:min-w-[12rem]">
-						<Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-						<input
-							type="search"
-							aria-label="Find a card or uma"
-							placeholder="Find a card or uma"
-							value={query}
-							onChange={(event) => setQuery(event.target.value)}
-							className="w-full rounded-full border border-gray-600 bg-gray-900/70 py-[5px] pl-8 pr-3 text-xs text-gray-100 placeholder-gray-400 focus:border-brand focus:outline-none"
-						/>
-					</label>
 				</div>
 				<Tokens
 					summary={
@@ -445,11 +493,21 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 				/>
 			</div>
 
-			<Podium entries={podium} kicker={lens === "umas" ? "" : lens === "overall" ? "overall" : lensLabel} label={`Top three, ${lensLabel}`} />
+			<RankHero
+				title="What the guides recommend"
+				top={top}
+				figures={[
+					{ label: "Guides counted", value: guides.length.toLocaleString() },
+					{ label: "Decks", value: deckCount.toLocaleString() },
+					{ label: scenarioCount === 1 ? "Scenario" : "Scenarios", value: scenarioCount.toLocaleString() },
+				]}
+			/>
 
-			<div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+			<Podium entries={podium} kicker={lens === "umas" ? "Umas" : lensLabel} label={`Second and third, ${lensLabel}`} />
+
+			<div className="flex flex-col gap-1.5">
 				<Lens label="Which list" options={lensOptions} value={lens} onChange={setLens} />
-				<span className="text-[11px] text-gray-400">
+				<span className="text-[13px] text-gray-400">
 					{lens === "umas"
 						? "Times a guide recommends her for a strategy. Card type and deck filters don't apply."
 						: "Decks a card is in, the borrowed card included. Alternatives don't count."}
@@ -469,16 +527,16 @@ function GuideRankingsBody({ payload, catalogue, events }: {
 						empty={lens === "overall" ? "No card fits these filters." : `No ${lensLabel} card fits these filters.`}
 					/>
 				)}
-				<div className="flex min-w-0 flex-col gap-2.5">
+				<div className="flex min-w-0 flex-col gap-3">
 					<SearchPanel query={query} cards={cards} umas={umas} cardsById={cardsById} umasById={umasById} oshiIds={oshiIds} />
 					<aside className={ASIDE}>
-						<b className="font-semibold text-gray-300">Read the counts loosely.</b> A lot of scenarios still haven't been QC'd, so
+						<b className="font-bold text-gray-50">Read the counts loosely.</b> A lot of scenarios still haven't been QC'd, so
 						some cards may be overrepresented. A score is how often a card or uma was used and found to be effective. It doesn't
 						show how much stronger one is than another.
 					</aside>
 					{unset.length > 0 && (
 						<aside className={ASIDE}>
-							<b className="font-semibold text-gray-300">
+							<b className="font-bold text-gray-50">
 								{unset.length === 1 ? "1 guide has no scenario yet" : `${unset.length} guides have no scenario yet`}
 							</b>{" "}
 							({unset.map(shortEventName).join(", ")}). {unset.length === 1 ? "It counts" : "They count"} only under "Not set".
@@ -515,12 +573,12 @@ function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard 
 	return (
 		<Detail>
 			<DetailBlock heading="By event">
-				<span className="flex flex-wrap gap-1">
+				<span className="flex flex-wrap gap-1.5">
 					{byEvent.map(([event, count]) => (
 						<Link
 							key={`${event.event_type}-${event.id}`}
 							to={pvpEventHref(refForRaceEvent(event))}
-							className="rounded-full border border-brand/35 px-2 py-0.5 text-[11px] tabular-nums text-brand transition hover:bg-brand/15"
+							className="rounded-full border border-brand/40 px-2.5 py-0.5 text-[13px] tabular-nums text-brand transition hover:bg-brand/15"
 						>
 							{shortEventName(event)} {count}
 						</Link>
@@ -533,16 +591,16 @@ function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard 
 			</DetailBlock>
 			{isCard && (
 				<DetailBlock heading="By deck">
-					<span className="flex flex-wrap gap-x-2.5 gap-y-1.5">
+					<span className="flex flex-wrap gap-x-4 gap-y-2">
 						{byTier.map(([tier, count]) => (
-							<span key={tier} className="flex flex-col text-[10px] text-gray-400">
-								<b className="text-xs font-semibold tabular-nums text-gray-100">{count}</b>
+							<span key={tier} className="flex flex-col text-xs text-gray-400">
+								<b className="font-display text-lg font-bold leading-tight tabular-nums text-gray-100">{count}</b>
 								{TIER_LABELS[tier]}
 							</span>
 						))}
 						{alternatives > 0 && (
-							<span className="flex flex-col text-[10px] text-gray-400">
-								<b className="text-xs font-semibold tabular-nums text-gray-100">{alternatives}</b>
+							<span className="flex flex-col text-xs text-gray-400">
+								<b className="font-display text-lg font-bold leading-tight tabular-nums text-gray-100">{alternatives}</b>
 								as an alternative
 							</span>
 						)}
@@ -556,7 +614,7 @@ function RowDetail({ appearances, alternatives, events, next, nextLabel, isCard 
 						marker={next ? events.indexOf(next) : null}
 						label={`${isCard ? "Decks" : "Picks"} per event, oldest first${nextLabel ? `, marked at ${nextLabel}` : ""}`}
 					/>
-					{nextLabel && <span className="text-[10px] text-gray-400">Oldest on the left. The mark is {nextLabel}.</span>}
+					{nextLabel && <span className="text-xs text-gray-400">Oldest on the left. The mark is {nextLabel}.</span>}
 				</DetailBlock>
 			)}
 		</Detail>
@@ -599,12 +657,12 @@ function SearchPanel({ query, cards, umas, cardsById, umasById, oshiIds }: {
 	}, [searching, needle, cards, umas, cardsById, umasById])
 
 	return (
-		<section aria-label="Search" className="card-panel flex flex-col gap-2.5 p-3">
-			<h3 className="font-display text-[15px] font-bold text-brand">Search</h3>
+		<section aria-label="Search" className={`${PANEL} gap-3`}>
+			<h3 className="enc-section__title text-[1.3125rem]">Search</h3>
 			{!searching ? (
-				<p className="text-xs text-gray-400">Type a card or uma's name above to see where it ranks under these filters, even outside the top ten.</p>
+				<p className="text-[13px] text-gray-400">Type a card or uma's name above to see where it ranks under these filters, even outside the top ten.</p>
 			) : results.length === 0 ? (
-				<p className="text-xs text-gray-400">Nothing by that name.</p>
+				<p className="text-[13px] text-gray-400">Nothing by that name.</p>
 			) : (
 				<ul className="flex flex-col gap-2.5">
 					{results.map((entry) =>

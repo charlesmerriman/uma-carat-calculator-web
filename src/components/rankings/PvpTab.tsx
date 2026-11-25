@@ -6,8 +6,11 @@
  * rate where enough races have places), and what beats players (each uma's
  * share of the losses players named; notes/cm-runs-plan-2.md, mock 05).
  *
- * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 09, 10, 21):
- * the event strip, the band, then two ranked lists on the kit (umas with a
+ * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 09, 10, 21;
+ * the 2026-11-25 polish, notes/rankings-polish-plan.md, canvas shot 08):
+ * the event strip, the hero (the uma built most, on her colours, with the
+ * best win rate, the uma that beats players most and the gallery's posts
+ * beside her), then two ranked lists on the kit (umas with a
  * stacked style bar, cards in their decks), "What wins" with how much to
  * trust each rate, and "Your team". An opened uma row reads her build rate,
  * her share of the gallery's posts and her CM Runs win rate together.
@@ -38,7 +41,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { useEncyclopediaHrefs } from "../../hooks/useEncyclopediaHrefs"
 import { FramedUma } from "../FramedUma"
 import { STYLE_LABELS, defaultPvpEvent, findEvent, raceEventsInOrder } from "../../utils/pvpGuide"
-import { PVP_EVENT_PARAM, formatPvpEvent, parsePvpEvent, refForRaceEvent, shortEventName, splitEventName } from "../../utils/pvpEvent"
+import { PVP_EVENT_PARAM, formatPvpEvent, parsePvpEvent, refForRaceEvent, splitEventName } from "../../utils/pvpEvent"
 import { formatShare } from "../../utils/guideRankings"
 import { winRates } from "../../utils/runResults"
 import { movement } from "../../utils/rankingsMovement"
@@ -47,7 +50,7 @@ import { Bar } from "./kit/Bar"
 import { Detail, DetailBlock } from "./kit/Detail"
 import { RankRow } from "./kit/RankRow"
 import { RankedList } from "./kit/RankedList"
-import { StatBand } from "./kit/StatBand"
+import { RankHero } from "./kit/RankHero"
 import { StyleLegend } from "./kit/StyleLegend"
 import { stylePart } from "./kit/stylePart"
 import { CardBuildList, TrioList, UmaBuildList } from "./TeamLists"
@@ -56,9 +59,9 @@ import { EventStrip } from "./EventStrip"
 import { YourTeam } from "./YourTeam"
 import { hoverCardProps } from "../../utils/hoverCards"
 
-const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
+const PANEL_NOTE = "rk-panel p-4 text-sm text-gray-300"
 /** Two lists side by side when both fit at 26rem, else stacked: by the container, like the kit. */
-const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
+const GRID = "grid items-start gap-3.5 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 
@@ -84,7 +87,7 @@ export function PvpTab() {
 
 	if (!event || !anchor) return <p className={PANEL_NOTE}>No PvP events are listed yet.</p>
 	return (
-		<div className="flex flex-col gap-3.5">
+		<div className="flex flex-col gap-[1.125rem]">
 			<EventStrip events={events} anchor={anchor} chosen={event} now={now} onPick={pick} />
 			{/* Keyed by the event, so a new one starts fresh. */}
 			<PvpEventRankings key={key} event={event} />
@@ -116,15 +119,19 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 	const gallery = useGalleryRankings(refForRaceEvent(event))
 	const { built, runs } = payload
 	const umas = knownUmas(built, catalogue)
-	// The band's two shares: the uma built most, and the best ranked win rate.
+	// The hero: the uma built most; beside her the best ranked win rate and the uma
+	// players lose to most (the first row of What beats players the catalogue knows).
 	const topUma = umas[0] ? catalogue.umasById.get(umas[0].uma) : undefined
 	const bestRate = winRates(runs).ranked.find((row) => catalogue.umasById.has(row.uma))
+	const beatsMost = (payload.beaten_by ?? []).find((row) => catalogue.umasById.has(row.uma))
+	const pairs = catalogue.catalogue.character_colours
+	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
 	// Rank movement against the week's start (the server's snapshot), by id.
 	const umaMoves = movement(built.umas.map((row) => row.uma), payload.previous?.umas)
 	const cardMoves = movement(built.cards.map((row) => row.card), payload.previous?.cards)
 	const posted = gallery.status === "ready" ? gallery.payload : null
 	const { title } = splitEventName(event)
-	const short = shortEventName(event)
 
 	/** An uma opened: her strategies, her share of the gallery's posts, her CM Runs win rate per strategy. */
 	const umaDetail = (row: UmaBuildRow) => {
@@ -140,7 +147,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 				</DetailBlock>
 				{posted && (
 					<DetailBlock heading="Posted to the gallery">
-						<span className="text-[11px] text-gray-300">
+						<span className="text-[13px] text-gray-300">
 							{inGallery > 0 ? (
 								<>
 									In <b className="font-semibold text-gray-100">{formatShare(inGallery)}</b> of the{" "}
@@ -153,7 +160,7 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 					</DetailBlock>
 				)}
 				<DetailBlock heading="In CM Runs">
-					<span className="text-[11px] text-gray-300">
+					<span className="text-[13px] text-gray-300">
 						{raced.length > 0
 							? raced.map((entry, index) => (
 									<span key={entry.style}>
@@ -170,19 +177,35 @@ function PvpBody({ event, payload, catalogue }: { event: RaceEvent; payload: Pvp
 	}
 
 	return (
-		<div className="flex flex-col gap-3.5">
-			<StatBand
+		<div className="flex flex-col gap-[1.125rem]">
+			<RankHero
 				title={`${title}: what players build, and what wins`}
-				stats={[
-					...(topUma ? [{ label: `Build ${topUma.name}`, value: formatShare(umas[0].share) }] : []),
+				top={
+					topUma
+						? {
+								place: "#1 most built",
+								name: topUma.name,
+								line: (
+									<>
+										On <b>{formatShare(umas[0].share)}</b> of the teams saved for this event
+									</>
+								),
+								art: <FramedUma src={topUma.portrait ?? topUma.image} layers={topUma.portrait_layers} oshi={oshiIds.has(topUma.id)} className="enc-hero__art" />,
+								shape: "uma",
+								colours: topUma.character_id != null ? pairs?.[String(topUma.character_id)] : undefined,
+								href: hrefs.uma(topUma.id),
+								hover: hoverCardProps("uma", topUma.id),
+							}
+						: null
+				}
+				figures={[
 					...(bestRate ? [{ label: "Best win rate", value: formatShare(bestRate.rate), suffix: catalogue.umasById.get(bestRate.uma)?.name }] : []),
+					...(beatsMost ? [{ label: "Beats players most", value: formatShare(beatsMost.share), suffix: catalogue.umasById.get(beatsMost.uma)?.name }] : []),
 					...(gallery.status === "error" || gallery.status === "refused"
 						? []
 						: [{ label: "Posted to the gallery", value: posted ? posted.posts.toLocaleString() : "…" }]),
 				]}
-			>
-				Every team of three saved for {short} on the site, posted or not, and every ticket logged in CM Runs. Cards count from full decks.
-			</StatBand>
+			/>
 
 			{built.umas.length === 0 ? (
 				<p className={PANEL_NOTE}>Nobody has saved a team for this event yet.</p>
@@ -249,7 +272,8 @@ function WhatWins({ runs, umas, catalogue, previous }: {
 				place={place}
 				muted={place === null}
 				movement={place === null ? undefined : moves.get(`${entry.uma}-${entry.style}`)}
-				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(entry.uma)} className={`w-12 ${place === null ? "opacity-60" : ""}`} />}
+				// At full strength under the floor too: the muted name and the missing place say it (nothing is dimmed).
+				art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(entry.uma)} className="w-14" />}
 				name={uma?.name ?? "Unknown uma"}
 				sub={
 					<span>
@@ -317,7 +341,7 @@ function WhatBeatsPlayers({ rows, catalogue }: { rows: BeatenByRow[]; catalogue:
 				return (
 					<RankRow
 						place={index + 1}
-						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-12" />}
+						art={<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(row.uma)} className="w-14" />}
 						name={uma?.name ?? "Unknown uma"}
 						fill={leader > 0 ? Math.min(1, row.share / leader) : 0}
 						tone="loss"

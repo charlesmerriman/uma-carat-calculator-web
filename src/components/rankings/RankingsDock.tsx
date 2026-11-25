@@ -127,7 +127,8 @@ function Dock({ entry, shown, docked, list }: { entry: SectionEntry; shown: Sect
 							// Only Escapes from inside the window itself, and not one a menu inside it used.
 							if (keydown.key === "Escape" && !keydown.defaultPrevented && windowRef.current?.contains(keydown.target as Node)) close()
 						}}
-						className={`fixed inset-x-2 top-2 z-50 max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-[14px] border border-gray-600 bg-gray-800 shadow-2xl desktop-nav:inset-auto desktop-nav:left-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[23rem] desktop-nav:-translate-y-1/2 ${windowShown}`}
+						// rk-vars: the kit's colour variables (rankings.css); the window floats outside the page.
+						className={`rk-vars fixed inset-x-2 top-2 z-50 max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-[14px] border border-gray-600 bg-gray-800 shadow-2xl desktop-nav:inset-auto desktop-nav:left-4 desktop-nav:top-[calc(50%+2rem)] desktop-nav:z-40 desktop-nav:max-h-[calc(100dvh-7rem)] desktop-nav:w-[23rem] desktop-nav:-translate-y-1/2 ${windowShown}`}
 					>
 						<header className="flex items-center gap-1 border-b border-edge py-2 pl-2.5 pr-2">
 							<div className="flex gap-0.5" role="group" aria-label="Rankings section">

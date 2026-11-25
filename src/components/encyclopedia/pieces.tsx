@@ -87,11 +87,18 @@ export function Page({ colours, labelledBy, children }: {
  * line of tags, and the facts (release dates, cost) beside them. `accent`
  * overrides the field's colour for a page that has no character: a skill's
  * own colour.
+ *
+ * The Rankings page's tabs open on one too (kit/RankHero.tsx): its name is an
+ * h2 there, under the page's own h1, and `className` sizes it (rankings.css).
  */
-export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, nameId, nameLang, title, japanese, tags, lead, owned, facts }: {
+export function Hero({ accent, shape = "uma", level = 1, className = "", art, entry, ghost, eyebrow, name, nameId, nameLang, title, japanese, tags, lead, owned, facts }: {
 	accent?: string
 	/** How much room the art needs: a square portrait, a tall card, a small icon. */
 	shape?: "uma" | "card" | "skill"
+	/** The name's heading level: 1 on a detail page, 2 where the page has a title of its own. */
+	level?: 1 | 2
+	/** Extra classes on the hero: a page's own size for it (`enc-hero--rank`). */
+	className?: string
 	art: ReactNode
 	/** The game's own number for it, in the corner: "No. 1006 · 01". */
 	entry?: string
@@ -102,7 +109,8 @@ export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, 
 	name: string
 	nameId?: string
 	nameLang?: string
-	title?: string
+	/** The line under the name: a card's bracket title, or a Rankings figure with its parts in bold. */
+	title?: ReactNode
 	japanese?: ReactNode
 	tags?: ReactNode
 	lead?: ReactNode
@@ -111,8 +119,9 @@ export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, 
 	/** <Fact> elements. */
 	facts?: ReactNode
 }) {
+	const Name = level === 2 ? "h2" : "h1"
 	return (
-		<header className={`enc-hero enc-hero--${shape}`} style={accent ? ({ "--c1": accent } as CSSProperties) : undefined}>
+		<header className={`enc-hero enc-hero--${shape}${className ? ` ${className}` : ""}`} style={accent ? ({ "--c1": accent } as CSSProperties) : undefined}>
 			<span className="enc-hero__field" aria-hidden="true"><i /><i /></span>
 			{/* Its length sizes it to fit beside the art (encyclopedia.css, .enc-hero__ghost). */}
 			{ghost && (
@@ -125,7 +134,7 @@ export function Hero({ accent, shape = "uma", art, entry, ghost, eyebrow, name, 
 			<div className="enc-hero__body">
 				<span className="enc-hero__eyebrow">{eyebrow}</span>
 				{/* One long word can't wrap ("Matikanetannhauser"), so it is set smaller to fit beside the facts. */}
-				<h1 id={nameId} className="enc-hero__name" data-long={longestWord(name) > 13} lang={nameLang}>{name}</h1>
+				<Name id={nameId} className="enc-hero__name" data-long={longestWord(name) > 13} lang={nameLang}>{name}</Name>
 				{title && <p className="enc-hero__title">{title}</p>}
 				{japanese}
 				{tags && <div className="enc-hero__tags">{tags}</div>}

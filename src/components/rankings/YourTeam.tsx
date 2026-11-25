@@ -41,7 +41,7 @@ export function YourTeam({ event, ranked, catalogue }: {
 			{status !== "ready" ? (
 				<p className="px-1 text-xs text-gray-400">{status === "error" ? "Your teams didn't load." : "Loading your teams..."}</p>
 			) : members.length === 0 ? (
-				<p className="px-1 text-xs text-gray-400">
+				<p className="px-1 text-[13px] text-gray-400">
 					Save a team for this event to see where it sits.{" "}
 					<Link to={pvpEventHref(ref)} className="text-brand transition hover:text-brand/75">
 						Build one on the PvP page
@@ -53,11 +53,11 @@ export function YourTeam({ event, ranked, catalogue }: {
 						const uma = catalogue.umasById.get(member.uma)
 						const place = ranked.indexOf(member.uma) + 1
 						return (
-							<li key={member.position} className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3" {...hoverCardProps("uma", member.uma)}>
-								<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(member.uma)} className="w-10" />
+							<li key={member.position} className="flex min-w-0 items-center gap-2.5 rounded-xl bg-(--enc-inset) py-2 pl-2 pr-3.5" {...hoverCardProps("uma", member.uma)}>
+								<FramedUma src={uma?.portrait ?? uma?.image} layers={uma?.portrait_layers} oshi={oshiIds.has(member.uma)} className="w-12" />
 								<span className="flex min-w-0 flex-col">
-									<EncyclopediaName href={hrefs.uma(member.uma)} name={uma?.name ?? "Unknown uma"} className="truncate text-[13px] font-semibold text-gray-100" />
-									<span className="text-[11px] tabular-nums text-gray-400">
+									<EncyclopediaName href={hrefs.uma(member.uma)} name={uma?.name ?? "Unknown uma"} className="truncate text-sm font-bold text-gray-100" />
+									<span className="text-xs tabular-nums text-gray-400">
 										{place > 0 ? (
 											<>
 												<b className="font-semibold text-brand">#{place}</b> of {ranked.length}

@@ -7,8 +7,10 @@
  * 2026-10-28: nothing on the page may let a reader estimate how many
  * people use the site) and never a name.
  *
- * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 11, 22): the
- * band, the two ranks as stacked distribution bars, favourites as a wall of
+ * THE REDESIGN (notes/rankings-redesign-plan.md step 2, mocks 11, 22; the
+ * 2026-11-25 polish, notes/rankings-polish-plan.md, canvas shot 12): the
+ * hero (the most picked favourite on her colours, the tab's three shares
+ * beside her), the two ranks as stacked distribution bars, favourites as a wall of
  * portraits, income options as labelled bars ("starts off" beside the ones a
  * new account starts without), the typical budget by class (medians from the
  * server, never one person's), and the selectors: the campaign on sale (else
@@ -35,13 +37,13 @@ import { Bar } from "./kit/Bar"
 import { CardArt } from "./kit/CardArt"
 import { DistBar } from "./kit/DistBar"
 import { OptionRows } from "./kit/OptionRows"
-import { Panel, PanelHead } from "./kit/Panel"
-import { StatBand } from "./kit/StatBand"
+import { PANEL, Panel, PanelHead } from "./kit/Panel"
+import { RankHero } from "./kit/RankHero"
 import { Wall } from "./kit/Wall"
 import { hoverCardProps } from "../../utils/hoverCards"
 
-const PANEL_NOTE = "rounded-xl border border-edge bg-gray-800/60 p-4 text-sm text-gray-300"
-const GRID = "grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
+const PANEL_NOTE = "rk-panel p-4 text-sm text-gray-300"
+const GRID = "grid items-start gap-3.5 grid-cols-[repeat(auto-fit,minmax(min(100%,26rem),1fr))]"
 /** The income option the band's third figure reads. */
 const DAILY_CARAT = "daily_carat"
 
@@ -73,24 +75,44 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 	const trials = payload.ranks.find((rank) => rank.label === "Team Trials")
 	const topClass = trials?.rows.reduce<(typeof trials.rows)[number] | null>((best, row) => (best && best.share >= row.share ? best : row), null)
 	const dailyCarat = payload.income.find((row) => row.key === DAILY_CARAT)
+	const oshiIds = useOshiIds()
+	const hrefs = useEncyclopediaHrefs()
+	const pairs = catalogue.catalogue.character_colours
+	const first = favourites[0]
 
 	return (
-		<div className="flex flex-col gap-3.5">
-			<StatBand
+		<div className="flex flex-col gap-[1.125rem]">
+			<RankHero
 				title="Who plays here"
-				stats={[
+				top={
+					first
+						? {
+								place: "#1 favorite",
+								name: first.uma.name,
+								line: (
+									<>
+										Picked as a favorite by <b>{first.count}</b> players
+									</>
+								),
+								art: <FramedUma src={first.uma.portrait ?? first.uma.image} layers={first.uma.portrait_layers} oshi={oshiIds.has(first.uma.id)} className="enc-hero__art" />,
+								shape: "uma",
+								colours: first.uma.character_id != null ? pairs?.[String(first.uma.character_id)] : undefined,
+								href: hrefs.uma(first.uma.id),
+								hover: hoverCardProps("uma", first.uma.id),
+							}
+						: null
+				}
+				figures={[
 					...(trials && topClass ? [{ label: `In ${topClass.name}`, value: formatShare(topClass.share) }] : []),
 					...(dailyCarat ? [{ label: "Buy the Daily Carat Pack", value: formatShare(dailyCarat.share) }] : []),
 					...(trials ? [{ label: "Set their class", value: formatShare(trials.share) }] : []),
 				]}
-			>
-				From the players who use the calculator with an account, staff left out. Shares, never a name.
-			</StatBand>
+			/>
 
 			<div className={GRID}>
-				<div className="flex min-w-0 flex-col gap-3">
+				<div className="flex min-w-0 flex-col gap-3.5">
 					{payload.ranks.length > 0 && (
-						<section aria-label="Ranks" className="card-panel flex min-w-0 flex-col gap-4 p-3">
+						<section aria-label="Ranks" className={`${PANEL} gap-5`}>
 							{payload.ranks.map((rank) => (
 								<div key={rank.label} className="flex flex-col gap-2">
 									<PanelHead title={rank.label === "Team Trials" ? "Team Trials class" : rank.label} hint={`Of the ${formatShare(rank.share)} of players who set it.`} />
@@ -112,12 +134,12 @@ function PlayersBody({ payload, catalogue }: { payload: PlayersRankingsPayload; 
 						/>
 					</Panel>
 				</div>
-				<div className="flex min-w-0 flex-col gap-3">
+				<div className="flex min-w-0 flex-col gap-3.5">
 					<Panel title="Favorite umas" hint="How many players picked her as a favorite. The first favorite is the account picture.">
 						{favourites.length === 0 ? (
-							<p className="px-1 text-xs text-gray-400">Nobody has picked a favorite yet.</p>
+							<p className="px-1 text-[13px] text-gray-400">Nobody has picked a favorite yet.</p>
 						) : (
-							<Wall label="Favorite umas, most picked first" entries={favourites} />
+							<Wall label="Favorite umas, most picked first" entries={favourites} colours={pairs} />
 						)}
 					</Panel>
 					{payload.budget && payload.budget.length > 0 && <Budget rows={payload.budget} />}
@@ -152,14 +174,14 @@ function Budget({ rows }: { rows: NonNullable<PlayersRankingsPayload["budget"]> 
 			<ul className="flex flex-col gap-1">
 				{rows.map((row) => (
 					<li key={row.name} className="grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2.5 py-0.5 @max-[30rem]:grid-cols-[5rem_minmax(0,1fr)]">
-						<span className="text-[13px] text-gray-100">{row.name}</span>
+						<span className="text-sm text-gray-100">{row.name}</span>
 						<Bar fill={top ? (row.carats ?? 0) / top : 0} className="@max-[30rem]:hidden" />
 						<span className="whitespace-nowrap text-right text-xs tabular-nums text-gray-400">
-							<b className="text-[13px] font-semibold text-gray-100">{(row.carats ?? 0).toLocaleString()}</b> carats
+							<b className="font-display text-[15px] font-bold text-gray-100">{(row.carats ?? 0).toLocaleString()}</b> carats
 							{row.pulls !== null && (
 								<>
 									{" · "}
-									<b className="text-[13px] font-semibold text-gray-100">{row.pulls.toLocaleString()}</b> pulls
+									<b className="font-display text-[15px] font-bold text-gray-100">{row.pulls.toLocaleString()}</b> pulls
 								</>
 							)}
 						</span>
@@ -267,7 +289,7 @@ function SelectorPicks({ selector, catalogue }: { selector: Selector; catalogue:
 				return (
 					<li
 						key={`${pick.uma ?? "c"}-${pick.card ?? "u"}`}
-						className="flex min-w-0 items-center gap-2 rounded-[10px] border border-edge bg-gray-900/70 py-1.5 pl-1.5 pr-3"
+						className="flex min-w-0 items-center gap-2.5 rounded-xl bg-(--enc-inset) py-2 pl-2 pr-3.5"
 						{...(uma ? hoverCardProps("uma", uma.id) : hoverCardProps("card", card?.id))}
 					>
 						{uma ? <FramedUma src={uma.portrait ?? uma.image} layers={uma.portrait_layers} oshi={oshiIds.has(uma.id)} className="w-10" /> : <CardArt card={card} className="w-8" />}
