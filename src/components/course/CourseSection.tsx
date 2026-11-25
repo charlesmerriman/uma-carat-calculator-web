@@ -390,11 +390,11 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 			window.removeEventListener("resize", schedule)
 		}
 	}, [sticky, narrow, view])
-	// The page's sticky rows move when the strip docks, leaves or grows (a lit skill's card beside it).
+	// The page's sticky rows move when the strip docks, leaves or switches view.
 	const stuckOn = stuck !== null
 	useLayoutEffect(() => {
 		window.dispatchEvent(new Event(STICKY_CHANGE))
-	}, [stuckOn, focus, stuckView])
+	}, [stuckOn, stuckView])
 	useEffect(() => () => {
 		window.dispatchEvent(new Event(STICKY_CHANGE))
 	}, [])
@@ -456,11 +456,11 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 					</button>
 				</div>
 			</div>
-			{/* Strip: the strip, the card at its right. Track: the track, the
-			    card at the right. Both: the track, then a column with the strip
-			    and the card under it, where the track's height leaves room (the
-			    card beside the strip squeezed the strip's words together). */}
-			{/* Track alone: the track and the card centred together, not pushed apart. */}
+			{/* The stuck bar shows a lit skill on the drawing only, never its
+			    verdict card: a hovered chip already carries the verdict in its own
+			    popup, so the card beside the track repeated it (owner, 2026-11-25).
+			    Strip: the strip. Track: the track, centred. Both: the track, then
+			    the strip in the room beside it. */}
 			<div className={`flex items-start gap-4 ${stuckView === "track" ? "justify-center" : ""}`}>
 				{stuckView !== "strip" && (
 					<div className="shrink-0">
@@ -488,28 +488,13 @@ export default function CourseSection({ course, event = null, guide = null, onFo
 						)}
 					</div>
 				)}
-				{stuckView === "both" ? (
-					<div className="flex min-w-0 flex-1 flex-col gap-2">
-						{/* Spaced for the narrower room beside the track, so a part's metres
-						    show only where they fit (at the default 1,000 they ran into its words). */}
-						<CourseStrip course={course} orientation="horizontal" slim widthPx={STUCK_BOTH_STRIP_PX} overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} />
-						{focus && (
-							<div className="ml-auto w-full max-w-[380px]">
-								<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
-							</div>
-						)}
-					</div>
-				) : (
-					<>
-						{stuckView === "strip" && (
-							<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
-						)}
-						{focus && (
-							<div className={`w-[380px] shrink-0 ${stuckView === "strip" ? "ml-auto" : ""}`}>
-								<CourseVerdictCard course={course} focus={focus} entry={zones?.[String(focus.skillId)]} onClear={() => setCourseFocus(null)} />
-							</div>
-						)}
-					</>
+				{stuckView === "both" && (
+					// Spaced for the narrower room beside the track, so a part's metres
+					// show only where they fit (at the default 1,000 they ran into its words).
+					<CourseStrip course={course} orientation="horizontal" slim widthPx={STUCK_BOTH_STRIP_PX} overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
+				)}
+				{stuckView === "strip" && (
+					<CourseStrip course={course} orientation="horizontal" slim overlays={layer.overlays} laneHeads={layer.heads} preview={preview} onPreview={setPreview} className="min-w-0 flex-1" />
 				)}
 			</div>
 		</div>,
