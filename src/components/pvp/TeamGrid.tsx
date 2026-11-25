@@ -81,6 +81,9 @@ const DEAL_STEP = 0.12
 // How far a card rises as it goes, and from how far below the new one comes.
 const DEAL_RISE = 28
 
+/** The guide's pick's edge, named for a screen reader and the hover title. */
+const PICK_LABEL = "Recommended by the guide"
+
 /**
  * Two layouts, as Tailwind classes so a breakpoint can switch them.
  *
@@ -397,7 +400,7 @@ function Tile({
 					}`}
 				>
 					{filled && framed ? (
-						<FramedUma src={art} layers={layers} oshi={favorite} className="w-full" />
+						<FramedUma src={art} layers={layers} oshi={favorite} edge={starred ? PICK_LABEL : undefined} className="w-full" />
 					) : filled && card ? (
 						<FramedCard card={card} className="h-full w-full" />
 					) : filled ? (
@@ -410,12 +413,13 @@ function Tile({
 						empty
 					)}
 				</button>
-				{/* The guide's pick: an edge around the box, nothing on the art (Daptrius, 2026-11-20). */}
-				{starred && (
+				{/* The guide's pick: an edge around the box, nothing on the art (Daptrius, 2026-11-20).
+				    A framed uma draws hers inside FramedUma, under her ears and hat. */}
+				{starred && !(filled && framed) && (
 					<span
 						role="img"
-						aria-label="Recommended by the guide"
-						title="Recommended by the guide"
+						aria-label={PICK_LABEL}
+						title={PICK_LABEL}
 						className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${shape === "card" ? "rounded-[6%/4.5%]" : "rounded-[10.75%]"}`}
 					/>
 				)}

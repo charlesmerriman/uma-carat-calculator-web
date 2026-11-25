@@ -27,7 +27,7 @@ import type { PortraitLayers } from "../types/portraitLayers"
  * favorite matters to a screen reader, the caller says so beside the name.
  */
 
-export function FramedUma({ src, layers, oshi = false, frame = true, alt = "", title, className = "", onError, hover }: {
+export function FramedUma({ src, layers, oshi = false, frame = true, edge, alt = "", title, className = "", onError, hover }: {
 	/** The borderless art (`portrait`), falling back to the bordered `image`. */
 	src: string | null | undefined
 	/** The layered art (`portrait_layers`), drawn instead of `src` when the frame is on. */
@@ -39,6 +39,14 @@ export function FramedUma({ src, layers, oshi = false, frame = true, alt = "", t
 	 * alone, same size and corner. Never false on a judgement of your own.
 	 */
 	frame?: boolean
+	/**
+	 * An edge in the site's colour round the tile, with this text as its label
+	 * (the PvP guide's pick, "Recommended by the guide"). It is drawn INSIDE
+	 * the frame's own stacking: over the frame, under the layered foreground,
+	 * so her ears and hat stay in front of it. A ring laid over the tile from
+	 * outside can only cover the foreground or hide behind the frame.
+	 */
+	edge?: string
 	alt?: string
 	title?: string
 	className?: string
@@ -52,9 +60,20 @@ export function FramedUma({ src, layers, oshi = false, frame = true, alt = "", t
 	hover?: Record<string, string>
 }) {
 	const layered = frame && layers ? layers : null
+	// z-2 puts the edge over the frame (z-1 on layered art, unstacked
+	// otherwise); the foreground is also z-2 but comes later, so it wins.
+	// `isolate` keeps that z-index inside the tile on unlayered art too.
+	const edgeMark = edge && (
+		<span
+			role="img"
+			aria-label={edge}
+			title={edge}
+			className="pointer-events-none absolute inset-0 z-[2] rounded-[inherit] ring-[3px] ring-inset ring-brand"
+		/>
+	)
 	return (
 		<span
-			className={`uma-frame ${frame ? "" : "uma-frame--bare"} ${layered ? "uma-frame--layered" : ""} ${className}`}
+			className={`uma-frame ${frame ? "" : "uma-frame--bare"} ${layered ? "uma-frame--layered" : ""} ${edge ? "isolate" : ""} ${className}`}
 			data-oshi={frame && oshi ? "" : undefined}
 			title={title}
 			{...hover}
@@ -62,11 +81,15 @@ export function FramedUma({ src, layers, oshi = false, frame = true, alt = "", t
 			{layered ? (
 				<>
 					<img src={layered.base} alt={alt} loading="lazy" decoding="async" onError={onError} />
+					{edgeMark}
 					{/* Decoration over the frame: the base above carries the alt text. */}
 					<img className="uma-frame__over" src={layered.foreground} alt="" aria-hidden="true" loading="lazy" decoding="async" />
 				</>
 			) : (
-				src && <img src={src} alt={alt} loading="lazy" decoding="async" onError={onError} />
+				<>
+					{src && <img src={src} alt={alt} loading="lazy" decoding="async" onError={onError} />}
+					{edgeMark}
+				</>
 			)}
 		</span>
 	)
