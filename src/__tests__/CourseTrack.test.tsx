@@ -70,10 +70,10 @@ describe("CourseTrack", () => {
 		}
 		const { container, rerender } = render(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} overlays={overlays} preview="a" />)
 		expect(container.querySelectorAll("polyline[data-preview]")).toHaveLength(1)
-		expect(container.querySelectorAll('polyline[opacity="0.25"]')).toHaveLength(1)
+		expect(container.querySelectorAll('polyline:not([aria-hidden])[opacity="0.25"]')).toHaveLength(1)
 		// A key the track doesn't hold (the strip's carry-over band, say) quietens nothing.
 		rerender(<CourseTrack course={CHUKYO_1200} shape={schematicShape(CHUKYO_1200)} overlays={overlays} preview="elsewhere" />)
-		expect(container.querySelectorAll('polyline[opacity="0.25"]')).toHaveLength(0)
+		expect(container.querySelectorAll('polyline:not([aria-hidden])[opacity="0.25"]')).toHaveLength(0)
 	})
 
 	it("leaves out where the ground changes, and keeps the spurt on a phone's compact track", () => {
@@ -294,24 +294,24 @@ describe("CourseSection's switches", () => {
 	})
 })
 
-describe("the layer arcs on a course drawn as rings (Henry, 2026-11-20)", () => {
-	// The air between a ring's kerb and the next ring's, in track widths.
-	const KERB = 0.775
-	const NEXT_KERB = 2.4 - 0.775
+describe("the layer arcs run on the track (Henry, 2026-11-25)", () => {
+	// Half the track band, in track widths: every stroke stays inside it, so
+	// none reaches a hill's bracket (1.25 out) or folds in a tight corner.
+	const BAND = 0.5
 
-	it("keeps every lane's stroke between its own lap's kerb and the next lap's", () => {
-		for (const groups of [1, 2, 3, 4]) {
-			const { offset, stroke } = layerLanes(true, groups)
-			for (let lane = 0; lane < groups; lane++) {
-				expect(offset(lane) - stroke / 2).toBeGreaterThan(KERB)
-				expect(offset(lane) + stroke / 2).toBeLessThan(NEXT_KERB)
+	it("keeps every lane's stroke on the track, on one lap and on rings", () => {
+		for (const ringed of [false, true]) {
+			for (const groups of [1, 2, 3, 4]) {
+				const { offset, stroke } = layerLanes(ringed, groups)
+				for (let lane = 0; lane < groups; lane++) {
+					expect(Math.abs(offset(lane)) + stroke / 2).toBeLessThan(BAND)
+				}
 			}
 		}
 	})
 
-	it("leaves a one-lap course's lanes as they were", () => {
-		const { offset, stroke } = layerLanes(false, 3)
-		expect([offset(0), offset(1), offset(2)]).toEqual([1.85, 2.47, 3.09].map((value) => expect.closeTo(value, 5)))
-		expect(stroke).toBe(0.34)
+	it("puts one group on the centre line", () => {
+		expect(layerLanes(false, 1).offset(0)).toBe(0)
+		expect(layerLanes(true, 1).offset(0)).toBe(0)
 	})
 })
