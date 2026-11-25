@@ -1199,6 +1199,18 @@
 	pointer-events: none;
 }
 
+/* The bordered picture's backing (FramedCard): the art's box, so it stays
+   inside the picture's own frame, in the empty card's grey. */
+.card-frame__backing {
+	position: absolute;
+	left: 3.0562%;
+	top: 2.3277%;
+	width: 93.8875%;
+	height: 95.3445%;
+	border-radius: 7.8125% / 5.8594%;
+	background-color: var(--color-gray-700);
+}
+
 /* A card with no picture at all: a grey card, about the frame's corner. */
 .card-frame__empty {
 	display: block;
