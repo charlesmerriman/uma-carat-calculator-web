@@ -12,8 +12,9 @@
  *     matters because nothing teaches a ◎ and the guides recommend the ◎.
  *   - APTITUDE BADGES (umas). The letters for this event's surface and
  *     distance and the style the place runs, from utils/courseAptitude.ts.
- *   - THE GUIDE'S STAR. Cards the event's guide recommends for this style
- *     carry a star and sort first.
+ *   - THE GUIDE'S PICKS. What the event's guide recommends for this style
+ *     gets a gold ring round its tile and sorts first. Only here: the team
+ *     itself and Guide picks draw no such edge (Daptrius, 2026-11-25).
  *   - RELEASE DATES. A card out after the event is blocked; one out during
  *     it carries a note (utils/cardRelease.ts, through the caller).
  *   - BLOCKED, NOT HIDDEN. A tile the team's rules refuse (already on the
@@ -52,6 +53,9 @@ import { EncyclopediaIconLink } from "../EncyclopediaLinks"
 import { hoverCardProps, ringFor } from "../../utils/hoverCards"
 import type { PortraitLayers } from "../../types/portraitLayers"
 import { nameMatches } from "../../utils/searchText"
+
+/** The guide's pick, named for a screen reader and the tile's title. */
+const RECOMMENDED_LABEL = "Recommended by the guide"
 
 /** The most skill chips a search offers at once. */
 const MAX_SKILL_CHIPS = 6
@@ -352,6 +356,8 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 						{recommended.size > 0 && (
 							<label className="flex w-fit items-center gap-1.5 text-xs font-medium text-gray-300">
 								<input type="checkbox" checked={recommendedOnly} onChange={(change) => setRecommendedOnly(change.target.checked)} />
+								{/* The key to the tiles' gold ring. */}
+								<span className="h-3 w-3 shrink-0 rounded-sm ring-2 ring-inset ring-recommended" aria-hidden="true" />
 								Recommended only
 								<span className="text-gray-500">(the guide's {recommended.size})</span>
 							</label>
@@ -467,41 +473,43 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 								const note = reason === null ? (noteFor?.(item.id) ?? null) : null
 								const isRecommended = recommended.has(item.id)
 								const isSelected = item.id === selectedId
+								// An owned card's limit break, drawn as the Collection draws
+								// it: FramedCard's diamonds along the bottom (Daptrius,
+								// 2026-11-25: a text badge top right hid the type icon).
+								const limitBreak = item.card ? (owned?.limitBreaks.get(item.id) ?? null) : null
 								return (
 									<li key={item.id} className="relative min-w-0">
 										<button
 											type="button"
 											disabled={reason !== null}
 											aria-pressed={isSelected}
-											title={reason ?? item.name}
+											title={reason ?? (isRecommended ? `${item.name}: ${RECOMMENDED_LABEL.toLowerCase()}` : item.name)}
 											onClick={() => onPick(item.id)}
+											// The guide's pick is the tile's outermost edge, a gold ring
+											// outside its border, never a mark on the art (Daptrius,
+											// 2026-11-25). A ring, so the tile keeps its size and the
+											// book button's 7px inset (below) still lands on the art;
+											// gold, so it reads apart from a selected tile's green border.
 											className={`flex w-full min-w-0 flex-col items-center rounded-lg border p-1.5 text-center transition disabled:cursor-not-allowed disabled:opacity-40 ${
 												isSelected
 													? "border-brand bg-brand/10"
 													: "border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700"
-											}`}
+											} ${isRecommended ? "ring-2 ring-recommended" : ""}`}
 										>
+											{isRecommended && <span className="sr-only">{RECOMMENDED_LABEL}</span>}
 											<span className="relative block w-full">
 												{item.portrait ? (
-													<FramedUma
-														src={item.portrait}
-														layers={item.portrait_layers}
-														oshi={oshiIds.has(item.id)}
-														// The guide's pick, drawn under her ears and hat.
-														edge={isRecommended ? "Recommended by the guide" : undefined}
-														className="w-full"
-													/>
+													<FramedUma src={item.portrait} layers={item.portrait_layers} oshi={oshiIds.has(item.id)} className="w-full" />
 												) : item.card ? (
-													<FramedCard card={item.card} className="w-full" />
+													<FramedCard card={item.card} limitBreaks={limitBreak} className="w-full" />
 												) : item.image ? (
 													<img src={item.image} alt="" loading="lazy" decoding="async" className={`${artAspect} w-full rounded object-cover`} />
 												) : (
 													<span className={`block ${artAspect} w-full rounded bg-gray-700`} aria-hidden="true" />
 												)}
-												{owned?.limitBreaks.has(item.id) ? (
-													<span className="absolute right-0.5 top-0.5 rounded bg-brand px-1 text-[10px] font-bold text-black" title="In your collection">
-														{limitBreakLabel(owned.limitBreaks.get(item.id) ?? 0)}
-													</span>
+												{limitBreak !== null ? (
+													// The diamonds are only a look; the words are for a screen reader.
+													<span className="sr-only">In your collection, {limitBreakLabel(limitBreak)}</span>
 												) : (
 													owned?.ids.has(item.id) && (
 														<span
@@ -511,16 +519,6 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 															<Check className="h-3 w-3" aria-hidden="true" />
 														</span>
 													)
-												)}
-												{/* The guide's pick: an edge around the art, nothing on it (Daptrius, 2026-11-20).
-												    An uma's is drawn inside FramedUma above, under her ears and hat. */}
-												{isRecommended && !item.portrait && (
-													<span
-														role="img"
-														aria-label="Recommended by the guide"
-														title="Recommended by the guide"
-														className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${item.card ? "rounded-[6%/4.5%]" : "rounded-[10.75%]"}`}
-													/>
 												)}
 											</span>
 											<span className="mt-1 line-clamp-2 min-h-8 text-xs font-medium leading-tight text-gray-100">{item.name}</span>
@@ -545,9 +543,10 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 											)}
 										</button>
 										{/* The tile's Encyclopedia page, on the art's bottom-right
-										    corner, the one corner the art leaves free (the star is top
-										    left, the owned tick and the card's type icon top right, the
-										    limit breaks bottom left). A SIBLING of the tile, since a link
+										    corner, the one corner the art leaves free (the owned tick
+										    and the card's type icon are top right, the limit-break
+										    diamonds bottom left, their band's right end empty under
+										    the book). A SIBLING of the tile, since a link
 										    inside a button is invalid HTML. This box traces the art: the
 										    button's 1px border plus its p-1.5 put the art 7px in, at its
 										    own aspect, so the corner lands on it at any column width.

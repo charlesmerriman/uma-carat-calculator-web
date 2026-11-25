@@ -470,7 +470,7 @@ function umaKey(name: string): string {
 }
 
 /**
- * The guide's picks for one style, as id sets, for the picker's star: umas
+ * The guide's picks for one style, as id sets, for the picker's ring: umas
  * the guide rates for the style, cards in its decks for the style. A runaway reads the front picks too, since the guide often
  * files a runaway under Front.
  */

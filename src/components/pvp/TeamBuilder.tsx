@@ -542,13 +542,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 						/>
 					)}
 
-					{guide && (
-						<p className="flex items-center gap-1.5 text-xs text-gray-500">
-							<span className="h-3 w-3 shrink-0 rounded-sm ring-2 ring-inset ring-brand" aria-hidden="true" />
-							An edge marks what this event's guide recommends for that running style.
-						</p>
-					)}
-					{mode === "guest" && (
+						{mode === "guest" && (
 						<p className="text-xs text-gray-400">
 							Your teams are saved on this device.{" "}
 							<Link to="/login" className="font-medium text-brand transition hover:text-brand/75">
