@@ -13,6 +13,7 @@ import type { Status } from "../components/rankings/kit/StatusPill"
 import { CARD_TYPE_LABELS } from "./cardTypes"
 import { formatDate, parseApiDate } from "./dateFormat"
 import { nameMatches } from "./searchText"
+import { compareNames } from "./nameOrder"
 
 export const PAGE_CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-6xl flex-col gap-4 sm:w-[calc(100%-2rem)]"
 
@@ -237,7 +238,7 @@ export function filterUmas(umas: CatalogueUma[], query: string, where: WhereFilt
 		.filter((uma) => whereMatches(where, uma.on_global))
 		// A blank rarity counts as ★3, the rule Uma.is_three_star follows.
 		.filter((uma) => picked(stars, String(uma.rarity ?? 3) as StarFilter))
-		.sort((a, b) => a.name.localeCompare(b.name))
+		.sort((a, b) => compareNames(a.name, b.name))
 }
 
 export type TypeFilter = keyof typeof CARD_TYPE_LABELS
@@ -274,7 +275,7 @@ export function filterCards(
 		.filter((card) => picked(types, card.card_type ?? ""))
 		.filter((card) => picked(rarities, String(card.rarity) as RarityFilter))
 		.filter((card) => whereMatches(where, card.on_global))
-		.sort((a, b) => a.name.localeCompare(b.name) || (b.rarity ?? 0) - (a.rarity ?? 0))
+		.sort((a, b) => compareNames(a.name, b.name) || (b.rarity ?? 0) - (a.rarity ?? 0))
 }
 
 // ── Sorting the lists (Daptrius, board "Encyclopedia Filter Sorts", 2026-11-13) ──
@@ -420,7 +421,7 @@ export function sortList<T extends { id: number; name: string; game_id?: number 
 	dates: Map<number, ReleaseDates> = new Map(),
 	reversed = false,
 ): T[] {
-	const byName = (a: T, b: T) => a.name.localeCompare(b.name)
+	const byName = (a: T, b: T) => compareNames(a.name, b.name)
 	if (order === "name") return [...items].sort((a, b) => (reversed ? -1 : 1) * byName(a, b))
 	if (order === "game_id") return sortByValue(items, (item) => item.game_id ?? null, reversed)
 	const direction = sortsHighFirst(order, reversed) ? -1 : 1
@@ -448,8 +449,8 @@ export function sortByValue<T extends { name: string }>(items: T[], valueOf: (it
 	return [...items].sort((a, b) => {
 		const valueA = valueOf(a)
 		const valueB = valueOf(b)
-		if (valueA === null || valueB === null) return (valueA === null ? 1 : 0) - (valueB === null ? 1 : 0) || a.name.localeCompare(b.name)
-		return direction * (valueA - valueB) || a.name.localeCompare(b.name)
+		if (valueA === null || valueB === null) return (valueA === null ? 1 : 0) - (valueB === null ? 1 : 0) || compareNames(a.name, b.name)
+		return direction * (valueA - valueB) || compareNames(a.name, b.name)
 	})
 }
 
@@ -607,6 +608,6 @@ export function sortByEffect<T extends { id: number; name: string }>(
 	return [...cards].sort((a, b) => {
 		const [bucketA, valueA] = keyOf(a)
 		const [bucketB, valueB] = keyOf(b)
-		return bucketA - bucketB || direction * (valueA - valueB) || a.name.localeCompare(b.name)
+		return bucketA - bucketB || direction * (valueA - valueB) || compareNames(a.name, b.name)
 	})
 }

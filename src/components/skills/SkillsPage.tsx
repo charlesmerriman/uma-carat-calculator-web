@@ -132,10 +132,12 @@ const SkillsPageBody = () => {
 	const rows = useMemo(() => {
 		if (list.status !== "ready") return []
 		const found = filterSkills(list.rows, query, colours, where, types, { picks: tagPicks, match })
-		// By name the API's order stands (it sorts names the way the game does), turned round on asking.
-		if (sort === "name") return reversed ? [...found].reverse() : found
 		// A unique has no cost and goes last either way round.
 		if (sort === "cost") return sortByValue(found, (row) => row.cost ?? null, reversed)
+		// By name, the client's own order (utils/nameOrder.ts), never the API's:
+		// production's database skipped a leading "#" or "…" while the headings
+		// didn't, so every such name split its letter in two (Daptrius, 2026-11-25).
+		// The sort is stable, so a unique and its inherited copy keep the API's id order.
 		return sortList(found, sort, undefined, reversed)
 	}, [list, query, colours, where, types, tagPicks, match, sort, reversed])
 

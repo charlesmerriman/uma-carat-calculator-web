@@ -8,6 +8,7 @@ import {
 	skillIdKey, umaIdKey,
 } from "../utils/encyclopediaGroups"
 import { reportCounts } from "../utils/encyclopediaCounts"
+import { sortList } from "../utils/encyclopedia"
 
 /** The lists' group headings and index, and the tabs' counts (notes/encyclopedia-redesign-plan.md). */
 
@@ -24,9 +25,10 @@ describe("groupsFor by name", () => {
 		expect(byLetter([...names(60)].reverse())?.map((group) => group.label)).toEqual(["C", "B", "A"])
 	})
 
-	it("files a name that doesn't start with a letter under #", () => {
-		const first = byLetter(["#LookatCurren", "1st Place", ...names(60)])?.[0]
-		expect([first?.label, first?.items]).toEqual(["#", ["#LookatCurren", "1st Place"]])
+	it("files a name that starts with a digit under #, and skips a leading sign", () => {
+		const first = byLetter(["1st Place", "♡ 3D Nail Art", ...names(60)])?.[0]
+		expect([first?.label, first?.items]).toEqual(["#", ["1st Place", "♡ 3D Nail Art"]])
+		expect(letterKey("#LookatCurren")).toMatchObject({ label: "L", key: "L" })
 	})
 
 	it("keeps its headings on a filtered list however short, and is nothing for an empty one", () => {
@@ -76,11 +78,42 @@ describe("the other sorts' keys", () => {
 })
 
 describe("the Skills list's keys", () => {
-	it("files a name past Z (Japanese, or a sign like ¡ or …) under one あ, and drops an accent", () => {
+	it("files another script under one あ, a name after its leading sign, and drops an accent", () => {
 		expect(letterKey("黄金を訪ねて")).toMatchObject({ label: "あ", key: "kana" })
-		expect(letterKey("¡Qué alegría!").key).toBe(letterKey("…found you.").key)
+		expect(letterKey("α-star*")).toMatchObject({ label: "あ" })
+		expect(letterKey("¡Qué alegría!")).toMatchObject({ label: "Q" })
+		expect(letterKey("…found you.")).toMatchObject({ label: "F" })
 		expect(letterKey("Élan")).toMatchObject({ label: "E" })
-		expect(letterKey("\"Bon Voyage\"")).toMatchObject({ label: "#" })
+		expect(letterKey("\"Bon Voyage\"")).toMatchObject({ label: "B" })
+	})
+
+	// Production's own first-character oddities, from GET /skills on 2026-11-25,
+	// in the order its database gave them, which split letters (board "Skill
+	// Name Sort: The 49 ABCs").
+	const ODD = [
+		"1000% Output!", "♡ 3D Nail Art", "564 Escapades", "#BeautifulSprint", "\"Bon Voyage\"", "Bold Move",
+		"#CuteChaos♪", "Comeback", "…found you.", "Furious Feat", "#GotYouDownBad♪", "'kay then, let's get movin'!",
+		"Kick Off", "Lay Low", "#LookatCurren", "Lucky Star", "¡Qué alegría!", "Quick Step", "#ThinkOfMe", "Top Runner",
+		"∴win Q.E.D.", "Wild Card", "α-star*", "黄金を訪ねて", "Élan", "Zest", "9 Lives", "Ace",
+	]
+
+	it("sorts and files by one reading, so every section is one unbroken run either way round", () => {
+		for (const reversed of [false, true]) {
+			const sorted = sortList(ODD.map((name, id) => ({ id, name })), "name", undefined, reversed)
+			const groups = groupsFor(sorted, (row) => letterKey(row.name)) ?? []
+			// A key that comes back gets a "~" suffix (groupsFor); none may.
+			expect(groups.filter((group) => group.key.includes("~"))).toEqual([])
+			const labels = groups.map((group) => group.label)
+			expect(reversed ? [...labels].reverse() : labels).toEqual(
+				["#", "A", "B", "C", "E", "F", "G", "K", "L", "Q", "T", "W", "Z", "あ"],
+			)
+		}
+	})
+
+	it("puts the digits in number order and keeps a hashtag among its letter", () => {
+		const sorted = sortList(ODD.map((name, id) => ({ id, name })), "name").map((row) => row.name)
+		expect(sorted.slice(0, 4)).toEqual(["♡ 3D Nail Art", "9 Lives", "564 Escapades", "1000% Output!"])
+		expect(sorted.filter((name) => letterKey(name).label === "L")).toEqual(["Lay Low", "#LookatCurren", "Lucky Star"])
 	})
 
 	it("files a skill id by its first three digits, whatever its length, with no index", () => {
