@@ -6,7 +6,7 @@
  * except `interactive`, below.
  */
 
-import { createContext, useState, type ReactNode } from "react"
+import { createContext, useEffect, useState, type ReactNode } from "react"
 import {
 	autoUpdate,
 	flip,
@@ -61,6 +61,35 @@ export const PopupHoldContext = createContext<(() => void) | null>(null)
 // crossing a grid of skills doesn't flash a popup per cell. Focus and a tap
 // open it at once.
 const HOVER_OPEN_DELAY_MS = 120
+
+/**
+ * SCROLLING. A list scrolled under a still mouse slides tile after tile
+ * under the pointer, and the browser counts each as the pointer entering it.
+ * The popups opened on those, and the one left open followed its tile out of
+ * the window (Daptrius, board "Extra Scroll Bar on the Skills page",
+ * 2026-11-25). So a popup the pointer opened closes when anything under it
+ * scrolls (useDismiss's `ancestorScroll`), and the pointer "entering" a tile
+ * within SCROLL_QUIET_MS of a scroll opens nothing. Moving the mouse onto a
+ * tile once the list has stopped opens it as before.
+ *
+ * One listener for the whole page (capture: a scroll doesn't bubble, and the
+ * desktop shell scrolls an inner box), added the first time a popup is built.
+ */
+const SCROLL_QUIET_MS = 150
+let lastScrollAt = Number.NEGATIVE_INFINITY
+let hearingScrolls = false
+
+function hearScrolls(): void {
+	if (hearingScrolls || typeof window === "undefined") return
+	hearingScrolls = true
+	window.addEventListener("scroll", () => {
+		lastScrollAt = performance.now()
+	}, { capture: true, passive: true })
+}
+
+function scrolledJustNow(): boolean {
+	return performance.now() - lastScrollAt < SCROLL_QUIET_MS
+}
 
 /**
  * WHERE AN UMA'S OR A SUPPORT CARD'S FULL CARD GOES (components/hovercards):
@@ -246,13 +275,26 @@ export function useHoverPopup(
 	const [pinned, setPinned] = useState(false)
 	// Held (PopupHoldContext): the placement it had when held, else null.
 	const [held, setHeld] = useState<Placement | null>(null)
+	// In an effect: the prerender builds these with no window.
+	useEffect(hearScrolls, [])
+	// Opened by the pointer resting on the tile (Floating UI's "hover" reason),
+	// as opposed to focus, a tap or a click: only that kind closes on a scroll.
+	const [byHover, setByHover] = useState(false)
 	const setOpen = (next: boolean) => {
 		setOpenState(next)
 		if (!next) {
 			setPinned(false)
 			setHeld(null)
+			setByHover(false)
 		}
 		onOpenChange?.(next)
+	}
+	// Floating UI's own opens and closes. A hover that a SCROLL caused (rows
+	// sliding under a still mouse) is refused: see "SCROLLING" above.
+	const changeFromFloating = (next: boolean, _event?: Event, reason?: string) => {
+		if (next && reason === "hover" && scrolledJustNow()) return
+		if (next) setByHover(reason === "hover")
+		setOpen(next)
 	}
 	// A pinned or held popup holds links, so it takes the pointer like an interactive one.
 	const takesPointer = interactive || pinned || held !== null
@@ -262,7 +304,14 @@ export function useHoverPopup(
 	const reducedMotion = useReducedMotion()
 	const { refs, floatingStyles, context, placement: shownPlacement } = useFloating({
 		open,
-		onOpenChange: setOpen,
+		onOpenChange: changeFromFloating,
+		// Fixed to the window, never absolute in <body>: an absolute popup that
+		// followed its tile below the window's edge made the DOCUMENT taller, and
+		// the desktop shell (whose page scrolls in its own box) grew a second
+		// scroll bar for as long as the card was open (Daptrius, board "Extra
+		// Scroll Bar on the Skills page", 2026-11-25). A fixed one past the edge
+		// is only cut off.
+		strategy: "fixed",
 		placement: held ?? (pinned ? CARD_POPUP_PLACEMENT : placement),
 		middleware: held
 			? [
@@ -314,8 +363,11 @@ export function useHoverPopup(
 			handleClose: interactive ? safePolygon() : undefined,
 		}),
 		useFocus(context, { enabled: hovers, visibleOnly: true }),
-		// Escape, or a tap anywhere else, closes it.
-		useDismiss(context),
+		// Escape, or a tap anywhere else, closes it. So does a scroll, for a
+		// popup the resting pointer opened ("SCROLLING" above); one opened by a
+		// click, a tap or the keyboard stays (a Tab's own scroll-into-view would
+		// otherwise close the popup it just opened).
+		useDismiss(context, { ancestorScroll: byHover && !pinned && held === null }),
 	])
 	// A short fade in and out; none for a reader who asked for less motion.
 	const { isMounted, styles } = useTransitionStyles(context, { duration: reducedMotion ? 0 : 150 })
