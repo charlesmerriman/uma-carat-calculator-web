@@ -156,8 +156,9 @@ export const PrivacyPolicy: React.FC = () => {
 						the notes you wrote on your veterans. Other players&apos; account ids in them (a
 						veteran you borrowed, or a borrowed parent) are removed in your browser and never
 						reach us. If you fill CM Runs from umadump&apos;s race replay files, they are read in
-						your browser, and only your own umas&apos; places and the uma that won each race
-						reach us. Other players&apos; names, account ids and builds in those files never
+						your browser, and only your own umas&apos; places, running styles and the reasons
+						they lost, and the uma that won each race, reach us. Other players&apos; names,
+						account ids and builds in those files never
 						leave your device.
 					</p>
 

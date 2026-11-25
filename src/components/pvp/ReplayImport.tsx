@@ -136,7 +136,7 @@ export function ReplayImport({ event, runs, teams, umas, veterans, onSave, onSav
 				(a community tool we don&apos;t make, for the Steam version), its daemon mode writes a file for each race you run, in{" "}
 				<code className="text-gray-300">race_replays/champions_race</code> inside the folder umadump ran from. Run as administrator,
 				that&apos;s <code className="text-gray-300">C:\Windows\System32</code>. The files are read here, in your browser. Only your own
-				umas&apos; places, why they lost and the uma that won each race are saved. Other players&apos; names and builds stay on your
+				umas&apos; places, running styles and why they lost, and the uma that won each race, are saved. Other players&apos; names and builds stay on your
 				device.
 			</p>
 
