@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { EncyclopediaTabs } from "../components/encyclopedia/EncyclopediaTabs"
 import {
-	cardIdKey, effectKey, gradeKey, groupsFor, indexEntries, letterKey, mergeSmallGroups, releaseKey, umaIdKey,
+	cardIdKey, costKey, effectKey, firstRows, gradeKey, groupsFor, indexEntries, letterKey, mergeSmallGroups, releaseKey, rowsBefore,
+	skillIdKey, umaIdKey,
 } from "../utils/encyclopediaGroups"
 import { reportCounts } from "../utils/encyclopediaCounts"
 
@@ -71,6 +72,39 @@ describe("the other sorts' keys", () => {
 		expect(effectKey(35, true, "percent")).toMatchObject({ label: "35%", value: 35 })
 		expect(effectKey(null, false, "percent")).toMatchObject({ label: "Not owned", tail: true })
 		expect(effectKey(null, true, "percent")).toMatchObject({ label: "Doesn't give it", tail: true })
+	})
+})
+
+describe("the Skills list's keys", () => {
+	it("files a name past Z (Japanese, or a sign like ¡ or …) under one あ, and drops an accent", () => {
+		expect(letterKey("黄金を訪ねて")).toMatchObject({ label: "あ", key: "kana" })
+		expect(letterKey("¡Qué alegría!").key).toBe(letterKey("…found you.").key)
+		expect(letterKey("Élan")).toMatchObject({ label: "E" })
+		expect(letterKey("\"Bon Voyage\"")).toMatchObject({ label: "#" })
+	})
+
+	it("files a skill id by its first three digits, whatever its length, with no index", () => {
+		expect(skillIdKey(200012)).toMatchObject({ label: "200xxx", index: null })
+		expect(skillIdKey(100100111)).toMatchObject({ label: "100xxxxxx" })
+		expect(skillIdKey(100011).key).not.toBe(skillIdKey(100100111).key)
+	})
+
+	it("files a cost under its SP, a unique last", () => {
+		expect(costKey(200)).toMatchObject({ label: "200 SP", index: "200", value: 200 })
+		expect(costKey(null)).toMatchObject({ label: "No SP cost", tail: true })
+	})
+})
+
+describe("drawing a page at a time", () => {
+	const groups = groupsFor(names(60), letterKey) ?? []
+
+	it("keeps the groups that fit, each with its full count", () => {
+		const shown = firstRows(groups, 25)
+		expect(shown.map((group) => [group.label, group.items.length, group.total])).toEqual([["A", 20, 20], ["B", 5, 20]])
+	})
+
+	it("says how many rows come before a group, to draw up to it", () => {
+		expect(rowsBefore(groups, "C")).toBe(40)
 	})
 })
 

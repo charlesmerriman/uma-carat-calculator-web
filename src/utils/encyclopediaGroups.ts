@@ -47,6 +47,8 @@ export interface GroupKey {
 
 export interface ListGroup<T> extends GroupKey {
 	items: T[]
+	/** How many the group holds when only some of `items` are drawn yet (`firstRows`). */
+	total?: number
 }
 
 /**
@@ -130,11 +132,20 @@ export const groupId = (scope: string, key: string) => `enc-${scope}-group-${key
 
 // ── One key per sort ─────────────────────────────────────────────────────────
 
-/** Name: its first letter, or "#" for a name that doesn't start with one. */
+/**
+ * Name: its first letter (an accent dropped, so "Él" files under E), "#" for
+ * a name that starts with a digit or a sign, and "あ" for one that starts
+ * outside plain ASCII. The Skills list's API sorts those last (a JP only
+ * skill with no English name yet, plus a few like "¡Qué alegría!" and
+ * "…found you."), and one heading keeps them together where the game's own
+ * order interleaves them. No uma or card name starts that way (2026-11-25).
+ */
 export function letterKey(name: string): GroupKey {
-	const first = name.trim().charAt(0).toUpperCase()
-	const letter = /[A-Z]/.test(first) ? first : "#"
-	return { key: letter === "#" ? "other" : letter, label: letter, index: letter }
+	const raw = name.trim().charAt(0)
+	const first = raw.normalize("NFD").charAt(0).toUpperCase()
+	if (/[A-Z]/.test(first)) return { key: first, label: first, index: first }
+	if (raw.charCodeAt(0) > 127) return { key: "kana", label: "あ", index: "あ" }
+	return { key: "other", label: "#", index: "#" }
 }
 
 /**
@@ -184,6 +195,51 @@ export function gradeKey(grade: number | null | undefined): GroupKey {
 	if (grade == null) return { key: "ungraded", label: "No grades yet", index: null, tail: true }
 	const letter = gradeLetter(grade)
 	return { key: `grade-${grade}`, label: letter, index: letter, tone: letter }
+}
+
+/**
+ * A skill's game ID: its first three digits, "200xxx". The game's skill ids
+ * come in five lengths (5 to 9 digits; an evolved skill's has nine), so one
+ * rule by thousands, as the umas have, would give 150 blocks of four. This
+ * gives 57 with a median of 16 (2026-11-25). No index: 57 buttons wouldn't
+ * fit the column, and "100" would mean four different lengths.
+ */
+export function skillIdKey(gameId: number): GroupKey {
+	const digits = String(gameId)
+	const label = digits.slice(0, 3) + "x".repeat(Math.max(digits.length - 3, 0))
+	return { key: `id-${label}`, label, index: null }
+}
+
+/** A skill's cost: the SP, "200 SP". A unique has none and sits last. */
+export function costKey(cost: number | null | undefined): GroupKey {
+	if (cost == null) return { key: "no-cost", label: "No SP cost", note: "uniques", index: null, tail: true }
+	return { key: `sp-${cost}`, label: `${cost} SP`, index: String(cost), value: cost }
+}
+
+/**
+ * The groups that fit in the first `limit` rows, for a list drawn a page at
+ * a time (the Skills list). Each keeps its full count as `total`, so a
+ * heading says how many it holds even before they are all drawn.
+ */
+export function firstRows<T>(groups: ListGroup<T>[], limit: number): ListGroup<T>[] {
+	const shown: ListGroup<T>[] = []
+	let left = limit
+	for (const group of groups) {
+		if (left <= 0) break
+		shown.push({ ...group, total: group.items.length, items: group.items.slice(0, left) })
+		left -= group.items.length
+	}
+	return shown
+}
+
+/** How many rows come before group `key`, so a list drawn a page at a time can draw up to it. */
+export function rowsBefore<T>(groups: ListGroup<T>[], key: string): number {
+	let count = 0
+	for (const group of groups) {
+		if (group.key === key) return count
+		count += group.items.length
+	}
+	return count
 }
 
 /**
