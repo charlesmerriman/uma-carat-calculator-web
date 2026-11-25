@@ -1,4 +1,6 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { toast } from "sonner"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 import { Faq } from "../components/info/Faq"
@@ -9,6 +11,8 @@ import type { SiteContent } from "../types/siteContent"
 
 vi.mock("../components/navbar/Navbar", () => ({ Navbar: () => null }))
 vi.mock("../components/footer/Footer", () => ({ Footer: () => null }))
+// `toast` is called as a function (the fallback) AND has `.success`.
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn() }) }))
 
 function renderPage(content: SiteContent | null) {
 	return render(
@@ -37,6 +41,19 @@ describe("Faq page", () => {
 	it("renders an answer's markdown, links included", () => {
 		renderPage(SNAPSHOT as SiteContent)
 		expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "/privacy-policy")
+	})
+
+	it("copies a question's /help/<slug> link, which unfurls as that question", async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined)
+		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true })
+		renderPage(SNAPSHOT as SiteContent)
+		const item = (SNAPSHOT as SiteContent).faq![0].items[0]
+
+		await userEvent.click(screen.getByRole("button", { name: `Copy link to ${item.question}` }))
+
+		// The API answers it (backend views/faq_share.py), then sends people on to /faq#<slug>.
+		expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/help/${item.slug}`)
+		expect(toast.success).toHaveBeenCalledWith("Link copied.")
 	})
 
 	it("shows a loading state until the content arrives", () => {

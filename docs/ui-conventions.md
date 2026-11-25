@@ -2928,6 +2928,14 @@ is the one renderer for all of it, and it turns a site-relative href into a rout
 `<Link>` so `[FAQ](/faq#anchor)` typed in the admin navigates client-side. It relies on
 react-markdown's default of not rendering raw HTML; do not add `rehype-raw`.
 
+Each FAQ question has a **Copy link** pill beside it (`CopyQuestionLink` in `Faq.tsx`) that
+copies `/help/<slug>` (`faqQuestionLinkPath`), never `/faq#<slug>`: a `#fragment` never
+reaches a server, so every `/faq#…` link unfurls in Discord as the whole FAQ. The API serves
+`/help/<slug>` with the question and the start of its answer (backend
+`views/faq_share.py`) and sends people on to `/faq#<slug>`, where the effect above scrolls
+to it. Not `/faq/<slug>`: App Platform's ingress matches prefixes only, so a `/faq` rule
+would take this page too. Built in the click handler, as every share link is.
+
 The "Last updated" line formats `updated_at.slice(0, 10)`, the date half only. The build
 renders in UTC and the browser in local time, and an instant near midnight would
 otherwise format to different days on the two sides of hydration.

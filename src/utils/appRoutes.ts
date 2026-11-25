@@ -44,3 +44,27 @@ export function sharedPlanLinkPath(publicId: string): string {
 export function guideLinkPath(eventKey: string, style: string | null): string {
 	return `/guide/${eventKey}${style ? `?style=${encodeURIComponent(style)}` : ""}`
 }
+
+/**
+ * The path of a Timeline banner's link, /banner/73 (the BannerTimeline id, as
+ * ?focus=banner-73 names it): what a banner card's "Copy link" copies. The
+ * API serves it (backend views/banner_share.py) so Discord and X show the
+ * banner's art, then sends people on to /app/timeline?focus=banner-73. An
+ * older ?focus= link still works, with the plain Timeline preview. The dev
+ * server redirects it itself (vite.config.ts).
+ */
+export function bannerLinkPath(timelineId: number): string {
+	return `/banner/${timelineId}`
+}
+
+/**
+ * The path of a FAQ question's link, /help/<slug>: what a question's
+ * "Copy link" copies. A /faq#slug link can't unfurl as one question (the
+ * #fragment never reaches a server), so the API serves this one (backend
+ * views/faq_share.py) with the question's own preview, then sends people on
+ * to /faq#<slug>. Not /faq/<slug>: an ingress rule for that prefix would take
+ * the FAQ page too. The dev server redirects it itself (vite.config.ts).
+ */
+export function faqQuestionLinkPath(slug: string): string {
+	return `/help/${encodeURIComponent(slug)}`
+}
