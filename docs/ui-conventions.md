@@ -2356,8 +2356,12 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
   by an aptitude, the value by an effect (a value one or two cards reach is merged into a
   range). Filters never turn them off (owner, 2026-11-25). A heading is a `role="presentation"` item, so the
-  list's items stay the tiles. On the Skills list a
-  unique or evolved skill's row ends with its owner's face (`SkillList` `faces`).
+  list's items stay the tiles. The Skills list has them too: letters (a name past Z, mostly
+  Japanese, under "あ"), the SP by cost (uniques last), the first three digits by game ID (no
+  index: skill ids run 5 to 9 digits). It draws a page of rows at a time and grows as "Show
+  more" scrolls into view; a jump to a heading not drawn yet draws up to it
+  (`GroupedGrid` `limit` / `onReveal`). A unique or evolved skill's row ends with its owner's
+  face (`SkillRow` `face`).
 
 - **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
   in `@layer components` so a Tailwind utility at the call site still wins. Classes are

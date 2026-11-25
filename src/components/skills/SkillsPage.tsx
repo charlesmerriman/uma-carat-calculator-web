@@ -6,11 +6,14 @@
  * (/app/skills/<game id>, SkillPage), and hovering one opens its card; an old
  * `?skill=<game id>` link redirects to the page.
  *
- * The list is long (~2,200), so it shows a page of rows and grows on "Show
- * more" rather than drawing them all.
+ * The list is long (~2,200), so it draws a page of rows and grows as the
+ * last one scrolls into view ("Show more" does the same by hand). Like the
+ * Umas and Support cards lists it files under headings for every sort, with
+ * a jump list down the side (encyclopedia/groups.tsx): letters by name, the
+ * cost by cost, an id block by game ID.
  */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 import { useSkillListState } from "../../hooks/useSkillList"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
@@ -19,14 +22,16 @@ import { reportCounts } from "../../utils/encyclopediaCounts"
 import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
-import { SkillList } from "../encyclopedia/skillRows"
+import { SkillRow } from "../encyclopedia/skillRows"
+import { GroupedGrid } from "../encyclopedia/groups"
+import { costKey, groupsFor, letterKey, mergeSmallGroups, skillIdKey } from "../../utils/encyclopediaGroups"
 import {
 	PAGE_CONTAINER, REVERSED_VALUES, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, countLine, sortByValue, sortList, values,
 	type SharedWhere,
 } from "../../utils/encyclopedia"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
 import {
-	COLOUR_FILTERS, DOES_TAGS, RACE_TAGS, SKILL_PARAM, STYLE_TAGS, TYPE_FILTERS, UMATL_URL, WHEN_TAGS, WHERE_FILTERS,
+	COLOUR_FILTERS, DOES_TAGS, RACE_TAGS, SKILL_PARAM, SKILL_TYPE_WORDS, STYLE_TAGS, TYPE_FILTERS, UMATL_URL, WHEN_TAGS, WHERE_FILTERS,
 	filterSkills, parseSkillParam, pickedParents, skillHref, subTypePicks, toggleSubTypePick, toggleTypePick,
 	type ColourFilter, type SkillTag, type TagMatch, type TypeFilter,
 } from "../../utils/skillSearch"
@@ -128,6 +133,29 @@ const SkillsPageBody = () => {
 		if (sort === "cost") return sortByValue(found, (row) => row.cost ?? null, reversed)
 		return sortList(found, sort, undefined, reversed)
 	}, [list, query, colours, where, types, tagPicks, match, sort, reversed])
+
+	// Headings for whatever the list is sorted by, filtered or not, as the
+	// other two lists have them. A cost only one or two skills have (60 SP,
+	// 320 SP) shares its neighbour's heading as a range.
+	const groups = useMemo(() => {
+		if (sort === "cost") {
+			return mergeSmallGroups(groupsFor(rows, (row) => costKey(row.cost)), 3, (low, high) => `${low} to ${high} SP`)
+		}
+		return groupsFor(rows, (row) => (sort === "game_id" ? skillIdKey(row.game_id) : letterKey(row.name)))
+	}, [rows, sort])
+
+	// The next page draws itself once "Show more" scrolls into view.
+	const moreRef = useRef<HTMLDivElement>(null)
+	const hasMore = rows.length > shown
+	useEffect(() => {
+		const target = moreRef.current
+		if (!hasMore || !target || typeof IntersectionObserver === "undefined") return
+		const observer = new IntersectionObserver((entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) setShown((count) => count + PAGE)
+		}, { rootMargin: "600px 0px" })
+		observer.observe(target)
+		return () => observer.disconnect()
+	}, [hasMore, shown])
 
 	// A new search starts from the first page again.
 	const filterKey = `${query}|${colours.join()}|${where}|${types.join()}|${tagPicks.join()}|${match}|${sort}|${reversed}`
@@ -231,9 +259,29 @@ const SkillsPageBody = () => {
 				<EmptyNote>No skill matches that.</EmptyNote>
 			) : (
 				<>
-					<SkillList skills={rows.slice(0, shown)} faces />
-					{rows.length > shown && (
-						<div className="enc-more">
+					<GroupedGrid
+						scope="skills"
+						items={rows}
+						groups={groups}
+						limit={shown}
+						// A jump to a heading not drawn yet draws up to it, and a page past it.
+						onReveal={(before) => setShown((count) => Math.max(count, before + PAGE))}
+						noun={["skill", "skills"]}
+						className="enc-skills"
+						tile={(row) => (
+							<SkillRow
+								key={row.game_id}
+								skill={row}
+								face
+								// Sorted by game ID, the row says its ID first, as the other lists' tiles do.
+								sub={sort === "game_id"
+									? [`ID ${row.game_id}`, SKILL_TYPE_WORDS[row.type ?? ""], row.owners?.join(", ")].filter(Boolean).join(" · ")
+									: undefined}
+							/>
+						)}
+					/>
+					{hasMore && (
+						<div className="enc-more" ref={moreRef}>
 							<span>Showing {shown.toLocaleString("en-US")} of {rows.length.toLocaleString("en-US")}</span>
 							<button type="button" onClick={() => setShown((count) => count + PAGE)}>Show more</button>
 						</div>

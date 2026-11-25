@@ -11,28 +11,37 @@
 
 import { Fragment, type ReactNode } from "react"
 import { useReducedMotion } from "framer-motion"
-import { groupId, indexEntries, type ListGroup } from "../../utils/encyclopediaGroups"
+import { firstRows, groupId, indexEntries, rowsBefore, type ListGroup } from "../../utils/encyclopediaGroups"
 
-export function GroupedGrid<T>({ scope, items, groups, tile, noun, className }: {
+/**
+ * `limit` draws only the first rows (the Skills list, a page at a time); the
+ * index still lists every group, and a jump to one not drawn yet asks
+ * `onReveal` for enough rows to reach it, then scrolls once it is drawn.
+ */
+export function GroupedGrid<T>({ scope, items, groups, tile, noun, className, limit, onReveal }: {
 	scope: string
 	items: T[]
 	groups: ListGroup<T>[] | null
 	tile: (item: T) => ReactNode
 	noun: [string, string]
 	className: string
+	limit?: number
+	onReveal?: (rows: number) => void
 }) {
+	const drawn = groups && limit !== undefined ? firstRows(groups, limit) : groups
+	const reveal = groups && onReveal ? (key: string) => onReveal(rowsBefore(groups, key)) : undefined
 	return (
 		<div className="enc-listwrap">
-			{groups && <GroupIndex scope={scope} groups={groups} />}
+			{groups && <GroupIndex scope={scope} groups={groups} reveal={reveal} />}
 			<ul className={className}>
-				{groups
-					? groups.map((group) => (
+				{drawn
+					? drawn.map((group) => (
 						<Fragment key={group.key}>
 							<GroupHeading scope={scope} group={group} noun={noun} />
 							{group.items.map(tile)}
 						</Fragment>
 					))
-					: items.map(tile)}
+					: (limit !== undefined ? items.slice(0, limit) : items).map(tile)}
 			</ul>
 		</div>
 	)
@@ -45,7 +54,7 @@ export function GroupedGrid<T>({ scope, items, groups, tile, noun, className }: 
  * letter, and a tail group's ("No date") smaller again.
  */
 function GroupHeading<T>({ scope, group, noun }: { scope: string; group: ListGroup<T>; noun: [string, string] }) {
-	const count = group.items.length
+	const count = group.total ?? group.items.length
 	const extra = [group.note, group.mark].filter(Boolean).join(", ")
 	return (
 		<li
@@ -65,18 +74,26 @@ function GroupHeading<T>({ scope, group, noun }: { scope: string; group: ListGro
 }
 
 /** The thumb index: one button per index label the list has, jumping to its first heading. Wide screens only. */
-function GroupIndex<T>({ scope, groups }: { scope: string; groups: ListGroup<T>[] }) {
+function GroupIndex<T>({ scope, groups, reveal }: { scope: string; groups: ListGroup<T>[]; reveal?: (key: string) => void }) {
 	const reducedMotion = useReducedMotion()
 	const entries = indexEntries(groups)
 	// Years and ids ("2025", "100") need a wider column than letters.
 	const wide = entries.some((entry) => entry.label.length > 2)
+	if (entries.length === 0) return null
+	const jump = (key: string) => {
+		const scroll = () => document.getElementById(groupId(scope, key))?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
+		if (document.getElementById(groupId(scope, key)) || !reveal) return scroll()
+		// Not drawn yet: draw up to it, then scroll once React has painted it.
+		reveal(key)
+		requestAnimationFrame(() => requestAnimationFrame(scroll))
+	}
 	return (
 		<nav aria-label="Jump to a section" className={wide ? "enc-index enc-index--wide" : "enc-index"}>
 			{entries.map((entry) => (
 				<button
 					key={entry.key}
 					type="button"
-					onClick={() => document.getElementById(groupId(scope, entry.key))?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })}
+					onClick={() => jump(entry.key)}
 				>
 					{entry.label}
 				</button>
