@@ -552,8 +552,11 @@
 		line-height: 1.1rem;
 	}
 
-	/* A letter's heading across the grid, and the thumb index down the list's
-	   left edge (letters.tsx): only on a full list in name order. */
+	/* A group's heading across the grid, and the thumb index down the list's
+	   left edge (groups.tsx): on a full list, whatever it is sorted by. A
+	   letter, a grade or "SSR" is the big display size; a longer label
+	   ("Q3 2025", "35%") a size down; a tail group ("No date") is small and
+	   grey, since it is only ever the leftovers at the end. */
 	.enc-letter {
 		display: flex;
 		grid-column: 1 / -1;
@@ -574,6 +577,48 @@
 		font-weight: 800;
 		line-height: 0.8;
 		color: var(--color-brand);
+	}
+	.enc-letter[data-size="long"] h2 {
+		font-size: 2rem;
+		line-height: 0.9;
+	}
+	.enc-letter[data-size="tail"] h2 {
+		font-size: 1.25rem;
+		line-height: 1;
+		color: var(--color-gray-400);
+	}
+	/* Sorted by an aptitude: the grade in the game's colour for it, the same
+	   ring colours as the aptitude badges on an uma's page (S gold, A orange,
+	   B pink, C green, D blue, E violet, F indigo, G grey). */
+	.enc-letter[data-tone="S"] h2 { color: #e0a400; }
+	.enc-letter[data-tone="A"] h2 { color: #f0752e; }
+	.enc-letter[data-tone="B"] h2 { color: #e85d9c; }
+	.enc-letter[data-tone="C"] h2 { color: #3fae52; }
+	.enc-letter[data-tone="D"] h2 { color: #3a8fd6; }
+	.enc-letter[data-tone="E"] h2 { color: #8a63d2; }
+	.enc-letter[data-tone="F"] h2 { color: #5b62b8; }
+	.enc-letter[data-tone="G"] h2 { color: #7c7c88; }
+	/* Cards by game ID: the rarity as a big version of the tile's metal tag
+	   (".enc-tag--ssr"). A fill with dark ink reads on every theme, where
+	   silver or gold text would vanish on a light one. */
+	.enc-letter[data-tone="ssr"] h2,
+	.enc-letter[data-tone="sr"] h2,
+	.enc-letter[data-tone="r"] h2 {
+		padding: 0.3rem 0.7rem 0.2rem;
+		border-radius: 0.6rem;
+		font-size: 1.75rem;
+		line-height: 1;
+		letter-spacing: 0.03em;
+		color: #1b1420;
+	}
+	.enc-letter[data-tone="ssr"] h2 {
+		background: linear-gradient(120deg, #9be7ff 0%, #c9b1ff 45%, #ffb3d9 75%, #ffe08a 100%);
+	}
+	.enc-letter[data-tone="sr"] h2 {
+		background: linear-gradient(135deg, #fff4d7 0%, #e8b51a 100%);
+	}
+	.enc-letter[data-tone="r"] h2 {
+		background: linear-gradient(135deg, #f3f5f9 0%, #a9b3c4 100%);
 	}
 	.enc-letter::after {
 		height: 1px;
@@ -611,6 +656,15 @@
 		.enc-index button:focus-visible {
 			background: var(--color-brand);
 			color: var(--color-gray-900);
+		}
+		/* Years and ids ("2025", "100") need a wider column than letters. */
+		.enc-index--wide {
+			width: 2.5rem;
+			margin-left: -3.75rem;
+		}
+		.enc-index--wide button {
+			width: 2.5rem;
+			font-size: 0.6875rem;
 		}
 	}
 	/* Sorting by an effect: what this card gives for it, under the facts, in

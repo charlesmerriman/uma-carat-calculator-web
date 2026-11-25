@@ -2347,9 +2347,12 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
   another's data to count it; the uma and card lists report the Skills tab's number too, from
   the catalogue's `skill_count`, so all three show from the first list opened). A tile is its art, no box; an uma's carries her colours as a bar.
-  A full list in name order gets letter headings and an A to Z index (`letters.tsx`,
-  `utils/encyclopediaLetters.ts`); filtered or re-sorted it is one plain grid. A letter heading
-  is a `role="presentation"` item, so the list's items stay the tiles. On the Skills list a
+  A list gets group headings and a thumb index whatever it is sorted by and filtered by (`groups.tsx`,
+  `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
+  by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
+  by an aptitude, the value by an effect (a value one or two cards reach is merged into a
+  range). Only a list under 12 tiles is one plain grid. A heading is a `role="presentation"` item, so the
+  list's items stay the tiles. On the Skills list a
   unique or evolved skill's row ends with its owner's face (`SkillList` `faces`).
 
 - **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
