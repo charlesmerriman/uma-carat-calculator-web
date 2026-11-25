@@ -1,17 +1,15 @@
-import { act, render, screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
-import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { EncyclopediaTabs } from "../components/encyclopedia/EncyclopediaTabs"
 import {
 	cardIdKey, costKey, effectKey, firstRows, gradeKey, groupsFor, indexEntries, letterKey, mergeSmallGroups, releaseKey, rowsBefore,
 	skillIdKey, umaIdKey,
 } from "../utils/encyclopediaGroups"
-import { reportCounts } from "../utils/encyclopediaCounts"
 import { sortList } from "../utils/encyclopedia"
 import { compareNames } from "../utils/nameOrder"
 
-/** The lists' group headings and index, and the tabs' counts (notes/encyclopedia-redesign-plan.md). */
+/** The lists' group headings and index, and the masthead (notes/encyclopedia-redesign-plan.md). */
 
 const names = (count: number) => Array.from({ length: count }, (_, index) => `${"ABC"[index % 3]} name ${index}`).sort()
 const byLetter = (list: string[]) => groupsFor(list, letterKey)
@@ -177,15 +175,10 @@ describe("indexEntries", () => {
 	})
 })
 
-describe("the tabs' counts", () => {
-	it("show a list's number once some page has counted it", () => {
-		const auth = { isLoggedIn: true, status: "ready", account: { early_access: true } } as unknown as AuthContextType
-		render(<AuthContext.Provider value={auth}><MemoryRouter><EncyclopediaTabs /></MemoryRouter></AuthContext.Provider>)
-		expect(screen.getByRole("link", { name: "Skills" })).toBeInTheDocument()
-		act(() => reportCounts({ skills: 2223, umas: 270 }))
-		expect(screen.getByRole("link", { name: "2,223 Skills" })).toBeInTheDocument()
-		expect(screen.getByRole("link", { name: "270 Umas" })).toBeInTheDocument()
-		// Nobody has counted the cards yet, so that tab is its name alone.
-		expect(screen.getByRole("link", { name: "Support cards" })).toBeInTheDocument()
+describe("the masthead", () => {
+	it("is the title alone: the screen bar names the lists now (owner, 2026-11-25)", () => {
+		render(<MemoryRouter><EncyclopediaTabs /></MemoryRouter>)
+		expect(screen.getByRole("heading", { level: 1, name: "Encyclopedia" })).toBeInTheDocument()
+		expect(screen.queryByRole("link")).not.toBeInTheDocument()
 	})
 })

@@ -17,7 +17,6 @@ import { splitOutfit } from "../../utils/umaName"
 import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
 import { GroupedGrid } from "./groups"
 import { gradeKey, groupsFor, letterKey, releaseKey, umaIdKey } from "../../utils/encyclopediaGroups"
-import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
 import { Chips, Count, GradeSelect, PickChips, SearchBox, SortControl, Toolbar } from "./listFilters"
 import { useCalculatorDataSafe } from "../../services/CalculatorContext"
 import type { AptitudeKey } from "../../types/pvpTeam"
@@ -75,9 +74,7 @@ const UmaListBody = () => {
 			: sortList(found, sort as "name" | "release" | "game_id", dates, reversed)
 	}, [catalogue, query, where, stars, owned, ownedFilter, showOwned, aptitudes.picks, sort, sortedAptitude, dates, reversed])
 
-	// The tabs' headline numbers: everything each list holds, whatever is filtered right now.
 	const all = catalogue.status === "ready" ? catalogue.catalogue : null
-	useCatalogueCounts(catalogue)
 	// Headings for the whole list, whatever it is sorted by: a letter, a quarter,
 	// an id block or a grade (utils/encyclopediaGroups.ts), filtered or not.
 	const groups = useMemo(

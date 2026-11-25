@@ -17,8 +17,6 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 import { rememberSkillRowsDrawn, skillRowsDrawn, useSkillListState } from "../../hooks/useSkillList"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
-import { useCatalogueCounts } from "../../hooks/useCatalogueCounts"
-import { reportCounts } from "../../utils/encyclopediaCounts"
 import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
@@ -123,19 +121,12 @@ const SkillsPageBody = () => {
 		rememberSkillRowsDrawn(filterKey, shown)
 	}, [filterKey, shown])
 
-	// The tabs' headline numbers. The Umas and Support cards tabs count from the
-	// catalogue, which the hover cards already load on this page; the Skills
-	// tab's own number, once the list is here, is the list's length.
+	// The catalogue (which the hover cards already load on this page) paints an
+	// owned skill's plate in her character's two colours
+	// (notes/skills-list-plan.md). The list draws without waiting for it: until
+	// it lands those plates keep their grey, and nothing moves.
 	const catalogue = usePvpCatalogue()
-	useCatalogueCounts(catalogue)
-	// The same catalogue paints an owned skill's plate in her character's two
-	// colours (notes/skills-list-plan.md). The list draws without waiting for
-	// it: until it lands those plates keep their grey, and nothing moves.
 	const colourOf = useMemo(() => umaColourLookup(catalogue.status === "ready" ? catalogue.catalogue : null), [catalogue])
-	const total = list.status === "ready" ? list.rows.length : null
-	useEffect(() => {
-		if (total !== null) reportCounts({ skills: total })
-	}, [total])
 
 	const rows = useMemo(() => {
 		if (list.status !== "ready") return []
