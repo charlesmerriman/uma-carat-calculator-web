@@ -2392,10 +2392,10 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   later one waits on the first, then "Part 1, 2" (`slotLabel` in `utils/skillWords.ts`, the
   hover card too; Daptrius, 2026-11-17). On a ◎ page a giver of its ○ is listed with the ○'s
   name on its second line (`via`): a hint for the ○ counts for the ◎.
-- **The lists**: a masthead whose tabs lead with how many each list holds
-  (`utils/encyclopediaCounts.ts`: each list reports what it already holds, so no list fetches
-  another's data to count it; the uma and card lists report the Skills tab's number too, from
-  the catalogue's `skill_count`, so all three show from the first list opened). A tile is its art, no box; an uma's carries her colours as a bar.
+- **The lists**: a masthead with the title alone; the Encyclopedia's screen bar names the
+  three lists (`EncyclopediaScreenTabs`). The masthead's count tabs ("270 Umas") were dropped
+  with their counting code (owner, 2026-11-25); `.enc-tabs` / `.enc-tab` stay in
+  `encyclopedia.css` for the Rankings page. A tile is its art, no box; an uma's carries her colours as a bar.
   A list gets group headings and a thumb index whatever it is sorted by and filtered by (`groups.tsx`,
   `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
   by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade

@@ -236,8 +236,8 @@ describe("SkillsPage", () => {
 		expect(screen.getByRole("link", { name: /Fan Skill/ })).toHaveTextContent("JP only")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveAttribute("href", "/app/skills/200002")
 		expect(screen.getByRole("link", { name: /Gourmand/ })).toHaveTextContent("180 SP")
-		// The Encyclopedia's tab strip, Skills open.
-		expect(screen.getByRole("link", { name: /Skills$/ })).toHaveAttribute("aria-current", "page")
+		// No tab strip in the page: the screen bar above it (ApplicationViews) names the lists.
+		expect(screen.queryByRole("link", { name: /Skills$/ })).not.toBeInTheDocument()
 		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "gour" } })
 		expect(screen.getByText("1 skill", { selector: ".enc-count" })).toBeInTheDocument()
 		fireEvent.click(screen.getByRole("button", { name: "Evolved" }))
