@@ -16,14 +16,15 @@
  * page: the content is behind an account.
  */
 
-import { useContext, useState, type ReactNode } from "react"
+import { useContext, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { ListOrdered, Pin, PinOff, type LucideIcon } from "lucide-react"
+import { ListOrdered, Pin, PinOff } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
 import { pinRankings, useRankingsPin, type RankingsSection as Section } from "../../services/rankingsPinStore"
 import { formatDate } from "../../utils/dateFormat"
 import { formatTimeAgo } from "../../utils/relativeDate"
 import { SupportersFirstNote } from "../SupportersFirstNote"
+import { ScreenHeader } from "../ScreenHeader"
 import { FloatingBackToTop } from "../BackToTop"
 import { useBackToTop } from "../../hooks/useBackToTop"
 import { RankingsSection } from "./RankingsSection"
@@ -77,24 +78,21 @@ const RankingsBody = () => {
 		{/* Outside the column, so the anchor adds no gap to its flex stack. */}
 		<div ref={topRef} aria-hidden="true" />
 		<FloatingBackToTop onClick={scrollToTop} visible={isAwayFromTop} column="76rem" />
+		{/* The shared screen header (components/ScreenHeader.tsx): the masthead at rest,
+		    a slim pinned row of the tabs once it scrolls away. Outside the column: its
+		    pinned bar has to be a child of the whole page area to stick through it. */}
+		<ScreenHeader
+			kind="buttons"
+			title="Rankings"
+			icon={ListOrdered}
+			description="What the guides recommend, what players plan to pull, and what they build and win with."
+			label="Rankings"
+			column="max-w-[76rem]"
+			tabs={shown.map((entry) => ({ id: entry.id, label: entry.label, icon: entry.icon, badge: badges[entry.id] }))}
+			active={view}
+			onSelect={open}
+		/>
 		<div className={CONTAINER}>
-			{/* The Encyclopedia's masthead (encyclopedia.css .enc-head): the title, one line, and the tabs. */}
-			<header className="enc-head enc-head--mast">
-				<div>
-					<h1 className="enc-head__title">
-						<ListOrdered aria-hidden="true" />
-						Rankings
-					</h1>
-					<p className="enc-head__sub">What the guides recommend, what players plan to pull, and what they build and win with.</p>
-				</div>
-				<div role="tablist" aria-label="Rankings" className="enc-tabs rk-tabs">
-					{shown.map((entry) => (
-						<Tab key={entry.id} active={entry.id === view} icon={entry.icon} badge={badges[entry.id]} onClick={() => open(entry.id)}>
-							{entry.label}
-						</Tab>
-					))}
-				</div>
-			</header>
 			<div className="-my-1.5 flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2 sm:justify-end">
 				{updated && (
 					<time dateTime={updated} title={formatDate(updated)} className="text-[13px] text-gray-400">
@@ -127,28 +125,5 @@ const RankingsBody = () => {
 			)}
 		</div>
 		</>
-	)
-}
-
-/**
- * One tab, as the Encyclopedia's (`.enc-tab`): its lead over its name. The
- * lead is what the tab holds ("51" guides, "CM 22") when the bar knows it
- * without a payload (useSectionBadges), else the tab's icon: Players never
- * leads with a number (shares, never a count of players), and Pull plans'
- * "banners ahead" needs that tab's payload. The lead is decoration for a
- * screen reader, so the tab's name is its label alone.
- */
-function Tab({ active, icon: Icon, badge, onClick, children }: {
-	active: boolean
-	icon: LucideIcon
-	badge?: string
-	onClick: () => void
-	children: ReactNode
-}) {
-	return (
-		<button type="button" role="tab" aria-selected={active} onClick={onClick} className="enc-tab shrink-0">
-			<b aria-hidden="true">{badge ?? <Icon />}</b>
-			<span>{children}</span>
-		</button>
 	)
 }

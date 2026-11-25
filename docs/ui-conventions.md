@@ -2159,8 +2159,8 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
 (the Encyclopedia's, approved 2026-11-25) is `notes/rankings-polish-plan.md`.
 
 - **The look is the Encyclopedia's, reused, never copied** (owner's canvas, 2026-11-25): the
-  masthead (`.enc-head`, `.enc-tabs`; a Rankings tab is a `role="tab"` button and
-  `encyclopedia.css` styles it by `aria-selected` beside `aria-current`), the hero (`Hero` from
+  masthead (the shared `ScreenHeader` with `kind="buttons"`, see "Screen bars": a Rankings
+  tab is a `role="tab"` button, styled by `aria-selected` beside `aria-current`), the hero (`Hero` from
   `encyclopedia/pieces.tsx` at `level={2}`, sized by `enc-hero--rank`), the flagged heading
   (`.enc-section__title`) and the silk. `src/rankings.css` holds only Rankings' own: the colour
   variables (`rk-vars` on the page and the window; `rk-paint` beside any `colourStyle`, so
@@ -2395,10 +2395,9 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   later one waits on the first, then "Part 1, 2" (`slotLabel` in `utils/skillWords.ts`, the
   hover card too; Daptrius, 2026-11-17). On a ◎ page a giver of its ○ is listed with the ○'s
   name on its second line (`via`): a hint for the ○ counts for the ◎.
-- **The lists**: a masthead with the title alone; the Encyclopedia's screen bar names the
-  three lists (`EncyclopediaScreenTabs`). The masthead's count tabs ("270 Umas") were dropped
-  with their counting code (owner, 2026-11-25); `.enc-tabs` / `.enc-tab` stay in
-  `encyclopedia.css` for the Rankings page. A tile is its art, no box; an uma's carries her colours as a bar.
+- **The lists**: the shared screen header (`EncyclopediaScreenTabs`, see "Screen bars"):
+  the title, one line, and the three lists by name. The count tabs ("270 Umas") were dropped
+  with their counting code (owner, 2026-11-25). A tile is its art, no box; an uma's carries her colours as a bar.
   A list gets group headings and a thumb index whatever it is sorted by and filtered by (`groups.tsx`,
   `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
   by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
@@ -2621,7 +2620,7 @@ page, although only the calculator reads these settings.
 - A guest's "Clear plan and start over" lives under the tiles, two presses, as it did in
   the popover.
 
-## Screen bars (`components/ScreenTabs.tsx`) and the navbar's places
+## Screen bars (`components/ScreenHeader.tsx`) and the navbar's places
 
 **The navbar lists places; a place with more than one page gets a screen bar under it**
 (owner, 2026-11-24; `notes/navigation-plan.md`). Seven navbar tabs were more than a phone
@@ -2651,36 +2650,59 @@ could name, and two of them were icons without a word below 1536px on a desktop.
   none cut (measured: 34px for PvP, 76px for Encyclopedia). Pinned, the phone bar is 66px
   where it was 104px, and `scroll-padding-top` is one figure, 4.125rem, at every width.
   Change the row's `h-14` and the sticky `top` together.
-- **A screen bar is `ScreenTabs`**, fed a list and a one-line wrapper per screen:
-  the Calculator's (`carat-calculator/calculatorTabs.ts` + `CalculatorTabs.tsx`: the
-  calculator `/app`, Selectors `/app/selectors`, the Pull Plan Library `/app/plans`, early
-  access until it opens; web #456) and the Timeline's (`timeline/timelineTabs.ts` +
-  `TimelineTabs.tsx`: the Timeline and Legend Races). Drawn like the PvP page's view tabs
-  (Henry's ask) but as `NavLink`s, since they are separate addresses. A third screen is a
-  list and a wrapper, never a copy of the markup. The Encyclopedia's is the third
-  (`ENCYCLOPEDIA_TABS` in `utils/encyclopediaRoutes.ts` + `EncyclopediaScreenTabs.tsx`; on
-  the three lists only, names without counts; Daptrius, 2026-11-25). Under it the lists pin
-  their search bar (`Toolbar` `pinned`, `.enc-finder`), whose Filters button folds the
-  filters at the top and drops them down from the bar further down; it is
-  `data-popup-top-bar`, so a skill card stays below it.
-- **AppShell draws a screen's bar above the loading gate**, so the build-time render of the
-  screen's pages has it. A wrapper reads the path and the account only; a gated tab (the
-  Library) joins after the account loads, and the bar's height never changes.
-- **Sticky** at `--navbar-h` where the document scrolls (phone), at `0` in the desktop
-  shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`,
-  opaque.
+- **A screen's header is `ScreenHeader`**, fed a list and a one-line wrapper per screen
+  (owner, 2026-11-25: one adjustable component for the Calculator, the Timeline, the
+  Encyclopedia and Rankings; PvP keeps its own rows). The Calculator's
+  (`carat-calculator/calculatorTabs.ts` + `CalculatorTabs.tsx`: `/app`, Selectors, the Pull
+  Plan Library for early access; web #456), the Timeline's (`timeline/timelineTabs.ts` +
+  `TimelineTabs.tsx`: the Timeline and Legend Races), the Encyclopedia's (`ENCYCLOPEDIA_TABS`
+  + `EncyclopediaScreenTabs.tsx`, the three lists only, names without counts) and Rankings'
+  (`kind="buttons"`, `?view=` tabs with badges, mounted by the page). A new screen is a list
+  and a wrapper, never a copy of the markup. Its props: the title, icon and one line, the
+  tabs' label, the page's column (`max-w-*`), and links (`NavLink`s, `aria-current`) or
+  buttons (`role="tab"`, `aria-selected`, `active` + `onSelect`).
+- **Two looks.** At rest it is the masthead (`.enc-head--mast` in `encyclopedia.css`): the
+  title large at the top left, the line under it, the tabs on the right with an icon (or a
+  badge) over each name. It scrolls away. Once its bottom reaches the bar's line (the stick
+  line plus `--screen-tabs-h`), the slim bar (the tabs alone, one equal grid column each,
+  like the PvP rows) slides in pinned under the navbar. **The bar lives in a zero-height
+  sticky anchor**, so showing it moves nothing: a box that shrank as it stuck would move the
+  page, the scroll position with it, and flicker at the threshold. The anchor must be a child
+  of the long container (`sticky` only sticks inside its parent), so the header renders a
+  fragment, never a wrapper. The switch is measured by rect on a capture scroll listener,
+  so it works in both scrollers; the build-time render is the masthead alone.
+- **`data-screen-tabs` is the bar's box**: in the page at rest (zero tall) for the scroll
+  padding, the bar's height once shown, for the hover cards (a zero-tall box doesn't count;
+  the slide-in moves its child, so its rect never shifts). **`data-screen-bar-line` is its
+  ruler**, the bar's full height at its place whether shown or not: the Encyclopedia's
+  finder is pinned when its top is on the ruler's bottom. A one-shot jump runs both scroll
+  listeners in one frame, before the bar grows, so the bar's own box would read zero. The
+  slim `<nav>` is mounted only while it shows, so there is never a second live copy of the
+  tabs.
+- **One `<h1>` a page**: the masthead's title is the heading unless the open tab is
+  `ownHeading` (Selectors, Legend Races and the Library draw their own), where it is text.
+- **"Back to top" goes to the masthead** (`useBackToTop` scrolls `[data-screen-head]` when
+  there is one), since it sits above the page's own anchor.
+- **AppShell draws a screen's header above the loading gate**, a direct child of the
+  scroller, so the build-time render of the screen's pages has it. A wrapper reads the path
+  and the account only; a gated tab (the Library) joins after the account loads. Rankings
+  mounts its own in the page area, outside its column (it is behind the gate anyway).
+- **Sticky** at `--navbar-h` + `--navbar-reveal` where the document scrolls (phone), at `0`
+  in the desktop shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump
+  bar. `z-30`, opaque.
 - **Its height is one variable, `--screen-tabs-h` (`index.css`), and whatever sits under the
   bar reads it.** The scroll padding (`html:has([data-screen-tabs])` where the document
-  scrolls, `[data-app-scroller]:has(> [data-screen-tabs])` in the desktop shell) is what
+  scrolls, `[data-app-scroller]:has([data-screen-tabs])` in the desktop shell) is what
   lands a deep link below the bar: without it a planner row's link to its Timeline card, or a
   campaign strip's link to Selectors, parks its target under the bar. A band a page pins
   beneath the bar takes it as its `top` (the Timeline's controls,
-  `app-shell:top-(--screen-tabs-h)`); at `top-0` the two stack on one line and the later one
-  covers the tabs. Measured 2026-11-24: a Timeline deep link lands where it did before the
-  bar existed, relative to the bands, at 1440px and 390px.
+  `app-shell:top-(--screen-tabs-h)`; the Encyclopedia's finder, `.enc-finder`); at `top-0`
+  the two stack on one line and the later one covers the tabs. Measured 2026-11-24: a
+  Timeline deep link lands where it did before the bar existed, relative to the bands, at
+  1440px and 390px.
 - A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
-- **The tabs share the bar's whole width at every size**, one equal grid column each, like
-  the Rankings and PvP rows (owner, 2026-11-24); never bunched at the left.
+- **The slim bar's tabs share its whole width at every size**, one equal grid column each,
+  like the PvP rows (owner, 2026-11-24); never bunched at the left.
 
 ## Selectors page (`components/selectors/`)
 

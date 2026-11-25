@@ -9,10 +9,13 @@
    guide's hover: a hero, a filter bar, tiles, skill rows, the aptitude
    letters, the stat bars, the career rail and the skill card.
 
-   THE RANKINGS PAGE WEARS THIS LOOK TOO (notes/rankings-polish-plan.md): the
-   masthead (.enc-head, .enc-tabs), the hero (Hero, .enc-hero), the flagged
-   heading (.enc-section__title) and the silk, with its own sizes in
-   rankings.css. A change to those rules shows on both pages: look at both.
+   THE MASTHEAD (.enc-head--mast, .enc-tabs) IS EVERY SCREEN'S HEADER: the
+   shared ScreenHeader (components/ScreenHeader.tsx) draws it for the
+   Calculator, the Timeline, the Encyclopedia's lists and Rankings (owner,
+   2026-11-25). A change to it shows on all four: look at all four.
+   THE RANKINGS PAGE ALSO WEARS the hero (Hero, .enc-hero), the flagged
+   heading (.enc-section__title) and the silk (notes/rankings-polish-plan.md),
+   with its own sizes in rankings.css. A change to those shows on both pages.
 
    RULES THIS FILE KEEPS
    - Every colour is a theme token (var(--color-*), --card-fill), so all
@@ -38,10 +41,12 @@
    ========================================================================== */
 
 @layer components {
-	/* ---- The frame: the masthead and its tabs --------------------------------
-	   The title large in the display face, one line saying what this is, and
-	   the three lists as tabs whose headline is how many each holds. The open
-	   tab is a raised panel with the brand's rule under it. */
+	/* ---- The masthead and its tabs (components/ScreenHeader.tsx) -------------
+	   The title large in the display face, one line saying what the place is
+	   for, and its pages as tabs, each a lead (an icon, or a badge such as
+	   Rankings' "51") over its name. The open tab is a raised panel with the
+	   brand's rule under it. Every screen's header since 2026-11-25; the tabs'
+	   look was Rankings' (rankings.css's .rk-tabs until then). */
 
 	.enc-head {
 		display: flex;
@@ -85,33 +90,42 @@
 		min-width: 0;
 		flex: 1;
 		flex-direction: column;
-		/* A tab whose count isn't known yet keeps its name on the same line as the others'. */
+		/* A tab whose badge isn't known yet keeps its name on the same line as the others'. */
 		justify-content: flex-end;
-		/* And the count's line is held from the first paint (padding, the count, the gap and
-		   the name), so the masthead doesn't grow when the numbers arrive a beat after the page. */
+		/* And the lead's line is held from the first paint (padding, the lead, the gap and
+		   the name), so the masthead doesn't grow when a badge arrives a beat after the page. */
 		min-height: calc(1.25rem + 1.375rem + 0.1rem + 1.21875rem);
 		gap: 0.1rem;
-		padding: 0.5rem 0.75rem 0.75rem;
+		padding: 0.5rem 0.5rem 0.75rem;
+		text-align: left;
 		border-radius: 0.9rem 0.9rem 0 0;
 		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--color-gray-400);
 		transition: color 0.15s;
 	}
-	/* A tab's headline number, when it has one (the Encyclopedia's count tabs went 2026-11-25). */
+	/* A tab's lead: its badge, or its icon. */
 	.enc-tab b {
+		display: flex;
+		min-height: 1.375rem;
+		align-items: center;
+		white-space: nowrap;
 		font-family: var(--font-display);
-		font-size: 1.375rem;
+		font-size: 1.125rem;
 		font-weight: 700;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 		color: var(--color-gray-300);
 	}
+	.enc-tab b svg {
+		width: 1.375rem;
+		height: 1.375rem;
+		stroke-width: 2.4;
+	}
 	.enc-tab:hover {
 		color: var(--color-gray-100);
 	}
-	/* The open tab: a link here (aria-current), a button on the Rankings page
-	   (aria-selected), which wears this masthead too (rankings.css). */
+	/* The open tab: a link (aria-current), or a button on the Rankings page (aria-selected). */
 	.enc-tab[aria-current="page"],
 	.enc-tab[aria-selected="true"] {
 		background: var(--card-fill);
@@ -151,8 +165,8 @@
 			margin-bottom: 1rem;
 		}
 		.enc-tab {
-			min-width: 9.5rem;
-			flex: none;
+			min-width: 7.25rem;
+			flex: 0 1 auto;
 			padding: 0.6rem 1.1rem 0.9rem;
 			font-size: 0.875rem;
 		}
@@ -195,7 +209,7 @@
 
 	/* ---- The pinned finder (Toolbar's `pinned`, the three lists) -----------
 	   The search box, the count and a Filters button, pinned under the
-	   screen's bar (ScreenTabs) while a list scrolls (Daptrius, board
+	   screen's bar (ScreenHeader) while a list scrolls (Daptrius, board
 	   "Encyclopedia sticky nav", 2026-11-25). Its top is the screen bar's
 	   own offset plus the bar: the navbar's measured height and the phone's
 	   wordmark row where the document scrolls, the scroller's top in the

@@ -21,7 +21,7 @@ import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { CARD_TYPE_ICONS } from "../../utils/cardTypeIcons"
 import { cardHref } from "../../utils/encyclopediaRoutes"
-import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
+import { EncyclopediaFrame } from "./EncyclopediaTabs"
 import { GroupedGrid } from "./groups"
 import { cardIdKey, effectKey, groupsFor, letterKey, mergeSmallGroups, releaseKey } from "../../utils/encyclopediaGroups"
 import { Chips, Count, PickChips, SearchBox, SelectFilter, SortControl, Toolbar } from "./listFilters"
@@ -162,7 +162,6 @@ const CardListBody = () => {
 
 	return (
 		<div className={PAGE_CONTAINER}>
-			<EncyclopediaTabs />
 			<Toolbar
 				pinned
 				scope="cards"

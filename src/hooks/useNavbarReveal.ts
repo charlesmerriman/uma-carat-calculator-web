@@ -14,7 +14,7 @@
  * WHAT READS IT. Everything that pins under the navbar adds it to the bar's
  * measured height (--navbar-h), so nothing ends up under the returned row:
  *   - the navbar's own sticky box (Navbar.tsx)
- *   - a screen's bar (components/ScreenTabs.tsx)
+ *   - a screen's bar (components/ScreenHeader.tsx)
  *   - the Encyclopedia's jump bar (encyclopedia.css)
  *   - the PvP page's pinned rows, which are measured in pixels
  *     (hooks/usePvpStickyOffsets.ts), so it re-measures on NAVBAR_REVEAL_EVENT

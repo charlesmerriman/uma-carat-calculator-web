@@ -1036,7 +1036,7 @@ export const Timeline = () => {
 			    changes at rest. z-30 sits above the cards, below FloatingBackToTop.
 
 			    It pins UNDER the Timeline screen's bar (Timeline, Legend Races;
-			    components/ScreenTabs.tsx), which pins at this scroller's top, so
+			    components/ScreenHeader.tsx), which pins at this scroller's top, so
 			    its `top` is that bar's height (--screen-tabs-h, index.css). At
 			    top-0 the two would stack on the same line and this one, later in
 			    the page, would cover the tabs. */}

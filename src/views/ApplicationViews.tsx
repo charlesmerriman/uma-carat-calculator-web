@@ -169,12 +169,14 @@ const AppShell = ({ children }: { children?: ReactNode }) => {
 						    timeline keep a normal block formatting context and don't become
 						    flex items themselves. flex-1 grows it into the slack; min-height:auto
 						    stops it shrinking below its content, so tall content still scrolls. */}
-						{/* The Calculator screen's bar (Calculator, Selectors, the Pull
-						    Plan Library). Above the gate, so the build-time render has
-						    it and it never jumps in when the data lands; it reads only
-						    the path and the account (CalculatorTabs' header). */}
+						{/* The Calculator screen's header (Calculator, Selectors, the Pull
+						    Plan Library; components/ScreenHeader.tsx). Above the gate, so
+						    the build-time render has it and it never jumps in when the data
+						    lands; it reads only the path and the account (CalculatorTabs'
+						    header). A direct child of this scroller on purpose: its pinned
+						    bar only sticks inside its parent, and this is the whole page. */}
 						{showCalculatorTabs && <CalculatorTabs />}
-						{/* The Timeline screen's bar (Timeline, Legend Races), the same way. */}
+						{/* The Timeline screen's header (Timeline, Legend Races), the same way. */}
 						{showTimelineTabs && <TimelineTabs />}
 						{/* The Encyclopedia's three lists (Umas, Support cards, Skills), the same way. */}
 						{showEncyclopediaTabs && <EncyclopediaScreenTabs />}

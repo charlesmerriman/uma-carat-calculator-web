@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
-import { EncyclopediaTabs } from "../components/encyclopedia/EncyclopediaTabs"
+import { EncyclopediaScreenTabs } from "../components/encyclopedia/EncyclopediaScreenTabs"
 import {
 	cardIdKey, costKey, effectKey, firstRows, gradeKey, groupsFor, indexEntries, letterKey, mergeSmallGroups, releaseKey, rowsBefore,
 	skillIdKey, umaIdKey,
@@ -176,9 +176,11 @@ describe("indexEntries", () => {
 })
 
 describe("the masthead", () => {
-	it("is the title alone: the screen bar names the lists now (owner, 2026-11-25)", () => {
-		render(<MemoryRouter><EncyclopediaTabs /></MemoryRouter>)
+	it("is the shared screen header: the title, and the three lists by name (owner, 2026-11-25)", () => {
+		render(<MemoryRouter initialEntries={["/app/cards"]}><EncyclopediaScreenTabs /></MemoryRouter>)
 		expect(screen.getByRole("heading", { level: 1, name: "Encyclopedia" })).toBeInTheDocument()
-		expect(screen.queryByRole("link")).not.toBeInTheDocument()
+		const lists = screen.getByRole("navigation", { name: "Encyclopedia lists" })
+		expect([...lists.querySelectorAll("a")].map((link) => link.getAttribute("href"))).toEqual(["/app/umas", "/app/cards", "/app/skills"])
+		expect(screen.getByRole("link", { name: "Support cards" })).toHaveAttribute("aria-current", "page")
 	})
 })

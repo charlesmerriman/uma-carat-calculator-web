@@ -2,9 +2,10 @@
    THE RANKINGS PAGE (components/rankings/): what utilities can't say.
 
    The page wears the Encyclopedia's look (notes/rankings-polish-plan.md, the
-   owner's canvas of 2026-11-25): its masthead (.enc-head, .enc-tabs), its
-   hero (.enc-hero, through Hero in components/encyclopedia/pieces.tsx), its
-   flagged heading (.enc-section__title) and its silk. Those rules live in
+   owner's canvas of 2026-11-25): its hero (.enc-hero, through Hero in
+   components/encyclopedia/pieces.tsx), its flagged heading
+   (.enc-section__title) and its silk. Its masthead is the shared screen
+   header (components/ScreenHeader.tsx, .enc-head--mast in encyclopedia.css). Those rules live in
    encyclopedia.css and are USED here, never copied, so the two pages can't
    drift apart. This file holds only Rankings' own: the colour variables, the
    hero's smaller size, the panel surface, the silk fills and the event tabs.
@@ -55,37 +56,6 @@
 		border-radius: 1.125rem;
 		background: var(--card-fill);
 		box-shadow: var(--card-shadow);
-	}
-
-	/* ---- The masthead's tabs --------------------------------------------------
-	   .enc-tab, as buttons (role="tab"); encyclopedia.css styles the open one by
-	   aria-selected as well as aria-current. The lead is the tab's badge ("51",
-	   "CM 22") or its icon. */
-	.rk-tabs .enc-tab {
-		min-width: 7.25rem;
-		flex: 0 1 auto;
-		text-align: left;
-	}
-	.rk-tabs .enc-tab b {
-		display: flex;
-		min-height: 1.375rem;
-		align-items: center;
-		white-space: nowrap;
-	}
-	.rk-tabs .enc-tab b svg {
-		width: 1.375rem;
-		height: 1.375rem;
-		stroke-width: 2.4;
-	}
-	@media (max-width: 47.99rem) {
-		.rk-tabs .enc-tab {
-			min-width: 0;
-			flex: 1;
-			padding-inline: 0.5rem;
-		}
-		.rk-tabs .enc-tab b {
-			font-size: 1.125rem;
-		}
 	}
 
 	/* ---- The hero: Hero, smaller than a detail page's -------------------------

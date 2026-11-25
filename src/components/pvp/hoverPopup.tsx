@@ -178,7 +178,7 @@ function footerAdInset(): number {
 
 /**
  * THE BARS PINNED ACROSS THE TOP: the navbar's pinned row, a screen's bar
- * (ScreenTabs) and anything else that marks itself `data-popup-top-bar`. A
+ * (ScreenHeader) and anything else that marks itself `data-popup-top-bar`. A
  * pinned card is placed level with its row, and its row scrolls up under
  * those bars, so the card used to slide over the menus with it (Daptrius,
  * board "Skills Pop-Up Clipping into the Top Menus", 2026-11-25). The popups

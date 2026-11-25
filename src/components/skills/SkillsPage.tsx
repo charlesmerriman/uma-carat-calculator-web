@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 import { rememberSkillRowsDrawn, skillRowsDrawn, useSkillListState } from "../../hooks/useSkillList"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
-import { EncyclopediaFrame, EncyclopediaTabs } from "../encyclopedia/EncyclopediaTabs"
+import { EncyclopediaFrame } from "../encyclopedia/EncyclopediaTabs"
 import { Chips, Count, PickChips, SearchBox, SortControl, Toolbar } from "../encyclopedia/listFilters"
 import { EmptyNote } from "../encyclopedia/pieces"
 import { SkillRow } from "../encyclopedia/skillRows"
@@ -172,7 +172,6 @@ const SkillsPageBody = () => {
 
 	return (
 		<div className={PAGE_CONTAINER}>
-			<EncyclopediaTabs />
 			<Toolbar
 				pinned
 				scope="skills"

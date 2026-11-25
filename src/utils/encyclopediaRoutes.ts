@@ -29,9 +29,9 @@ export function parseGameId(raw: string | undefined): number | null {
 }
 
 /**
- * The Encyclopedia screen's bar: its three lists, by name only (Daptrius,
- * board "Encyclopedia sticky nav", 2026-11-25: "Just name, not numbers"; the
- * masthead's tabs keep the counts). Drawn by the shared ScreenTabs
+ * The Encyclopedia screen's tabs: its three lists, by name only (Daptrius,
+ * board "Encyclopedia sticky nav", 2026-11-25: "Just name, not numbers").
+ * Drawn by the shared ScreenHeader
  * (components/encyclopedia/EncyclopediaScreenTabs.tsx) on the three lists.
  */
 export const ENCYCLOPEDIA_TABS = [

@@ -103,7 +103,11 @@ export function useBackToTop(thresholdPx: number = BACK_TO_TOP_THRESHOLD_PX): Ba
 			typeof window.matchMedia === "function" &&
 			window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-		node.scrollIntoView({ block: "start", behavior: prefersReducedMotion ? "auto" : "smooth" })
+		// A screen header's masthead (components/ScreenHeader.tsx) sits ABOVE the
+		// page's own anchor, mounted by AppShell over the page, so on those screens
+		// the top is the masthead. Read here, in a handler, never at render.
+		const target = document.querySelector<HTMLElement>("[data-screen-head]") ?? node
+		target.scrollIntoView({ block: "start", behavior: prefersReducedMotion ? "auto" : "smooth" })
 	}, [])
 
 	return { topRef, isAwayFromTop, scrollToTop }
