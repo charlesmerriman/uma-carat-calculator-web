@@ -26,7 +26,7 @@ import { SkillRow } from "../encyclopedia/skillRows"
 import { GroupedGrid } from "../encyclopedia/groups"
 import { costKey, groupsFor, letterKey, mergeSmallGroups, skillIdKey } from "../../utils/encyclopediaGroups"
 import {
-	PAGE_CONTAINER, REVERSED_VALUES, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, countLine, sortByValue, sortList, values,
+	PAGE_CONTAINER, REVERSED_VALUES, SHARED_WHERE_KEY, SHARED_WHERE_VALUES, countLine, sortByValue, sortList, umaColourLookup, values,
 	type SharedWhere,
 } from "../../utils/encyclopedia"
 import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRememberedFilter"
@@ -118,7 +118,12 @@ const SkillsPageBody = () => {
 	// The tabs' headline numbers. The Umas and Support cards tabs count from the
 	// catalogue, which the hover cards already load on this page; the Skills
 	// tab's own number, once the list is here, is the list's length.
-	useCatalogueCounts(usePvpCatalogue())
+	const catalogue = usePvpCatalogue()
+	useCatalogueCounts(catalogue)
+	// The same catalogue paints an owned skill's plate in her character's two
+	// colours (notes/skills-list-plan.md). The list draws without waiting for
+	// it: until it lands those plates keep their grey, and nothing moves.
+	const colourOf = useMemo(() => umaColourLookup(catalogue.status === "ready" ? catalogue.catalogue : null), [catalogue])
 	const total = list.status === "ready" ? list.rows.length : null
 	useEffect(() => {
 		if (total !== null) reportCounts({ skills: total })
@@ -250,8 +255,9 @@ const SkillsPageBody = () => {
 			</Toolbar>
 
 			{list.status === "loading" ? (
-				<div role="status" aria-label="Loading skills" className="enc-skills">
-					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-12" />)}
+				<div role="status" aria-label="Loading skills" className="enc-skills enc-skills--plates">
+					{/* The plates' own height, so the list doesn't jump when it lands. */}
+					{Array.from({ length: 18 }, (_, index) => <div key={index} className="enc-skeleton h-[4.375rem] rounded-2xl" />)}
 				</div>
 			) : list.status === "error" ? (
 				<EmptyNote>The skill list didn't load. Reload the page to try again.</EmptyNote>
@@ -267,12 +273,14 @@ const SkillsPageBody = () => {
 						// A jump to a heading not drawn yet draws up to it, and a page past it.
 						onReveal={(before) => setShown((count) => Math.max(count, before + PAGE))}
 						noun={["skill", "skills"]}
-						className="enc-skills"
+						// Plates: the list's own look for the shared row (encyclopedia.css).
+						className="enc-skills enc-skills--plates"
 						tile={(row) => (
 							<SkillRow
 								key={row.game_id}
 								skill={row}
 								face
+								colours={colourOf.get(row.owner_umas?.[0]?.id ?? -1)}
 								// Sorted by game ID, the row says its ID first, as the other lists' tiles do.
 								sub={sort === "game_id"
 									? [`ID ${row.game_id}`, SKILL_TYPE_WORDS[row.type ?? ""], row.owners?.join(", ")].filter(Boolean).join(" · ")

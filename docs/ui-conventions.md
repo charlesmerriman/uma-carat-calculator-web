@@ -2387,6 +2387,16 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   more" scrolls into view; a jump to a heading not drawn yet draws up to it
   (`GroupedGrid` `limit` / `onReveal`). A unique or evolved skill's row ends with its owner's
   face (`SkillRow` `face`).
+- **The Skills list's rows are plates** (owner's pick, 2026-11-25, `notes/skills-list-plan.md`):
+  the list's grid carries `.enc-skills--plates`, and every plate rule is scoped under it, so
+  the same `SkillRow` inside an uma's, a card's or a skill's page stays the quiet row above.
+  A plate has its own surface and shadow, a 46 px icon, the name in the display face on up to
+  two lines, and the kind as a 5 px spine and a wash (each kind names its own spine: a
+  default would outrank the gold and pink ones). A row that draws its owner's face is
+  `data-owned` and ends in her silks, one skewed box of `--c2` and `--c1` behind the face;
+  the pair is the catalogue's `character_colours` by her `character_id`
+  (`umaColourLookup`, `utils/encyclopedia.ts`), passed as `SkillRow` `colours` through
+  `colourStyle`. Grey until the catalogue lands; nothing moves when it does.
 
 - **One stylesheet, `src/encyclopedia.css`**, imported by `App.tsx` beside `App.css`, all of it
   in `@layer components` so a Tailwind utility at the call site still wins. Classes are
