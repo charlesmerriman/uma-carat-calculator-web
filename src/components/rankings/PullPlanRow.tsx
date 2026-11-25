@@ -114,8 +114,12 @@ export function PullPlanRow({ row, fill, faces, timelineOf, movement }: {
 	// row is its own grid, so an `auto` column would size to that row alone. The dates' room fits
 	// "2026/12/26" in the widest theme's display face (Winning Live ran it into the badge at
 	// 5.9rem). Under 47.5rem the dates and faces go; the badge keeps its column so names line up.
+	// The two figure columns after the bar are fixed too (planners 5.75rem, typical 8.5rem), so
+	// every bar ends on one edge (owner, 2026-11-25: "pull plan bars need to end on one edge
+	// too"); `auto` sized them to "1%" or "typical · avg 168.9" row by row. The phone's planners
+	// column is fixed for the same reason: the hairline under the name ends where it starts.
 	const grid =
-		"grid w-full grid-cols-[4.6rem_minmax(0,1fr)_auto_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[47.5rem]:grid-cols-[6.75rem_4.6rem_6.4rem_minmax(0,1.5fr)_minmax(0,1fr)_minmax(5.5rem,auto)_minmax(6.5rem,auto)_14px]"
+		"grid w-full grid-cols-[4.6rem_minmax(0,1fr)_5.75rem_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[47.5rem]:grid-cols-[6.75rem_4.6rem_6.4rem_minmax(0,1.5fr)_minmax(0,1fr)_5.75rem_8.5rem_14px]"
 	if (!opens) return <div className={grid}>{head}</div>
 	return (
 		<div>
