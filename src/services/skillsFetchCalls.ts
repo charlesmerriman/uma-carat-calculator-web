@@ -13,6 +13,15 @@ import { authHeaders } from "./authToken"
 const API_URL = import.meta.env.VITE_API_URL
 
 let listPromise: Promise<SkillListRow[]> | null = null
+// The same rows once they have arrived, so a page coming back to the list can
+// draw them in its FIRST render instead of a render after the promise
+// settles (skillListIfLoaded).
+let loadedRows: SkillListRow[] | null = null
+
+/** The list if this page load has already fetched it, else null. Never fetches. */
+export function skillListIfLoaded(): SkillListRow[] | null {
+	return loadedRows
+}
 
 export function loadSkillList(): Promise<SkillListRow[]> {
 	if (!listPromise) {
@@ -22,7 +31,8 @@ export function loadSkillList(): Promise<SkillListRow[]> {
 		listPromise = fetch(`${API_URL}/skills`, { method: "GET", headers: authHeaders() })
 			.then(async (response) => {
 				if (!response.ok) throw new Error(`GET /skills failed: ${response.status}`)
-				return (await response.json()) as SkillListRow[]
+				loadedRows = (await response.json()) as SkillListRow[]
+				return loadedRows
 			})
 			.catch((error: unknown) => {
 				listPromise = null
@@ -43,4 +53,5 @@ export async function fetchSkillDetail(gameId: number): Promise<SkillDetailData 
 /** For tests: forget the shared list. */
 export function resetSkillListForTests(): void {
 	listPromise = null
+	loadedRows = null
 }

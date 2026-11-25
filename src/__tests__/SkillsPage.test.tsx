@@ -344,3 +344,38 @@ describe("SkillsPage", () => {
 		}
 	})
 })
+
+describe("coming back to a scrolled list (board \"Skills Load Issues with Scrolled Pages\")", () => {
+	const many = Array.from({ length: 150 }, (_, index) => row(100 + index, `Skill ${String(index).padStart(3, "0")}`))
+
+	beforeEach(() => {
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(url.endsWith("/skills") ? new Response(JSON.stringify(many), { status: 200 }) : new Response("{}", { status: 404 }))
+		)
+	})
+
+	it("draws as many rows as it had, in its first render, with no fetch and no skeleton", async () => {
+		const first = renderPage()
+		expect(await screen.findByText("Showing 60 of 150")).toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Show more" }))
+		expect(screen.getByText("Showing 120 of 150")).toBeInTheDocument()
+		first.unmount()
+
+		const calls = fetchMock.mock.calls.length
+		renderPage()
+		// Synchronously: no findBy, so a render that waited on the promise would fail here.
+		expect(screen.queryByRole("status", { name: "Loading skills" })).not.toBeInTheDocument()
+		expect(screen.getByText("Showing 120 of 150")).toBeInTheDocument()
+		expect(fetchMock.mock.calls.length).toBe(calls)
+	})
+
+	it("starts at one page again when the search differs from the one it was left with", async () => {
+		const first = renderPage()
+		fireEvent.click(await screen.findByRole("button", { name: "Show more" }))
+		fireEvent.change(screen.getByRole("searchbox", { name: "Search skills" }), { target: { value: "skill" } })
+		expect(await screen.findByText("Showing 60 of 150")).toBeInTheDocument()
+		first.unmount()
+		renderPage()
+		expect(screen.getByText("Showing 60 of 150")).toBeInTheDocument()
+	})
+})
