@@ -637,9 +637,11 @@ const hoverProps = (datum: HoverDatum, onHover: OnHover) => ({
 
 /** The red dot for a skipped PvP event, on whichever line it sits. */
 const SkipDot: React.FC<{ cx: number; cy: number; datum: HoverDatum; onHover: OnHover }> = ({ cx, cy, datum, onHover }) => (
+	// Its readout opens anywhere on the drawn dot. No wider ring, unlike a
+	// banner's: a skip often falls a few pixels from a banner's end, and a
+	// ring drawn over that banner's dot took its hover and its click (seen on
+	// a plan skipping every PvP event, 2026-11-25).
 	<g {...hoverProps(datum, onHover)}>
-		{/* A hit area like a banner dot's, so its readout opens anywhere on it too. */}
-		<circle cx={cx} cy={cy} r={12} fill="transparent" />
 		{/* Red, the over-budget token: a skip is rewards left on the table, and the
 		    token follows the theme and colorblind mode like the rest. */}
 		<circle cx={cx} cy={cy} r={4.5} strokeWidth={2} style={{ stroke: "var(--card-fill)", fill: "var(--color-pull-over)" }} />
