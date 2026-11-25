@@ -9,31 +9,31 @@
  * phone's wrapping labels, so the offsets are measured here rather than
  * written down as rem values that drift out of step.
  *
- * THE EVENT BAND PINS AGAIN (Daptrius, 2026-11-25: "CM selector buttons should
- * stick to the top of the window"). It scrolled away from 2026-11-24 (web
- * #473) because it held 52px of the screen for the whole read; that trade is
- * the owner's call, which is why this came as its own PR. On a phone the band
- * stacks the past-events toggle over the event row, and only the event row
- * stays: the band sticks at a negative offset, the toggle's height above the
- * line, the navbar's own trick for its wordmark row (Navbar.tsx).
+ * THE EVENT BAND PINS FROM `md` UP (Daptrius asked, the owner chose desktop
+ * only, 2026-11-25). It scrolled away everywhere from 2026-11-24 (web #473)
+ * because it held 52px of the screen for the whole read. On a phone it still
+ * scrolls away: there it stacks two rows under the navbar, the View tabs and
+ * the style tabs. Its computed `position` says which: sticky counts its
+ * height into the line, static counts nothing.
  *
  * Two scrolling set-ups (index.css, "app-shell"):
  *   desktop shell  the page scrolls an inner div that the navbar sits
  *                  outside of, so the band sticks at that div's top.
  *   otherwise      the document scrolls under the site's sticky navbar, so
- *                  the band sticks under the navbar.
+ *                  the band (from md) sticks under the navbar, and on a phone
+ *                  the View tabs do.
  * A sticky `top` counts from the scroller's top edge in both: the inner div's
  * in the shell, the viewport's in the document.
  *
  * The course map's stuck strip (CourseSection, "Stick to top") docks under
- * the band, so while it is there the View tabs and everything under them stick
+ * the band (or the navbar, on a phone), so while it is there the View tabs and everything under them stick
  * lower by its height: it is found by `data-course-stuck` and measured on the
  * `pvp-sticky-change` event its block sends when it docks or leaves.
  *
  * Sets on `root`, for everything inside it:
- *   --pvp-band-top    where the event band sticks (negative by its scrolled-away
- *                     part on a phone)
- *   --pvp-stick-line  the pinned band's bottom edge, where the course strip docks
+ *   --pvp-band-top    where the event band sticks (from md)
+ *   --pvp-stick-line  the pinned band's bottom edge, or the top on a phone: where
+ *                     the course strip docks
  *   --pvp-tabs-top    where the View tabs stick
  *   --pvp-below-tabs  the View tabs' bottom edge: where the rows under them stick
  *   --pvp-viewport-h  the scroller's visible height, so a pinned column can be
@@ -74,21 +74,13 @@ export function usePvpStickyOffsets(
 			// Outside it the top is the navbar's pinned part, plus the phone's
 			// wordmark row while scrolling up has brought it back (useNavbarReveal).
 			const top = shell ? 0 : (navbar?.offsetHeight ?? 0) + navbarRevealPx()
-			// The toggle's share of the band, when it sits ABOVE the event row (a
-			// phone); side by side (from md) nothing scrolls away. offsetTop
-			// counts from the band, which is positioned (sticky). The band marks
-			// both rows (PvpGuidePage's ControlBand).
-			const pinnedRow = bandElement.querySelector<HTMLElement>("[data-band-pinned]")
-			const toggle = bandElement.querySelector<HTMLElement>("[data-band-scrolls]")
-			const stacked = pinnedRow !== null && toggle !== null && pinnedRow.offsetTop >= toggle.offsetTop + toggle.offsetHeight
-			// Everything down to 4px above the event row goes: the toggle's shadow
-			// reaches past its box, and a line of it showed under the navbar.
-			const hidden = stacked ? pinnedRow.offsetTop - 4 : 0
-			const line = top + bandElement.offsetHeight - hidden
+			// The band pins from md only (its md:sticky); on a phone it scrolls away.
+			const bandPinned = getComputedStyle(bandElement).position === "sticky"
+			const line = top + (bandPinned ? bandElement.offsetHeight : 0)
 			const stuck = document.querySelector<HTMLElement>("[data-course-stuck]")?.offsetHeight ?? 0
 			const tabsTop = line + stuck
 			const scroller = shell ? shellScroller : null
-			rootElement.style.setProperty("--pvp-band-top", `${top - hidden}px`)
+			rootElement.style.setProperty("--pvp-band-top", `${top}px`)
 			rootElement.style.setProperty("--pvp-stick-line", `${line}px`)
 			rootElement.style.setProperty("--pvp-tabs-top", `${tabsTop}px`)
 			rootElement.style.setProperty("--pvp-below-tabs", `${tabsTop + tabsElement.offsetHeight}px`)

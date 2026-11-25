@@ -1304,12 +1304,12 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   style's count beside "Open Pace", the way to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
   `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up and a thumbs-down with the score between (`useCommentWrites().vote`; staff see the split in the score's title).
-- **Pinned rows** (Daptrius, 2026-10-22): the event band (Previous, the event, Next) sticks
-  at the top of the shell's scroller (desktop) or under the navbar (phone, document
-  scrolling), and the View tabs under it. The band scrolled away from 2026-11-24 (review
-  item 4: it held 52px of the screen for the whole read) until Daptrius asked for it back
-  (2026-11-25); on a phone only its event row pins, the past-events toggle stacked above it
-  scrolling away (a negative `top`, `data-band-scrolls` / `data-band-pinned`). The
+- **Pinned rows** (Daptrius, 2026-10-22): from `md` up the event band (Previous, the
+  event, Next) sticks at the top of the shell's scroller (desktop) or under the navbar,
+  and the View tabs under it; on a phone the band scrolls away and the View tabs stick
+  under the navbar. The band scrolled away everywhere from 2026-11-24 (review item 4: it
+  held 52px of the screen for the whole read) until Daptrius asked for it back and the
+  owner chose desktop only (2026-11-25). The
   running-style tabs, the guide's side
   column, the gallery's open post and the team builder's docked panels stick under them.
   The offsets are MEASURED by `hooks/usePvpStickyOffsets.ts` into CSS variables on the page
