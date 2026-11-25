@@ -67,7 +67,7 @@ export function PullPlanRow({ row, fill, faces, timelineOf, movement }: {
 	const head = (
 		<>
 			<span className="hidden flex-col @min-[47.5rem]:flex">
-				<b className="font-display text-base font-bold tabular-nums text-gray-100">{row.start_date ? formatDate(row.start_date) : "Undated"}</b>
+				<b className="whitespace-nowrap font-display text-base font-bold tabular-nums text-gray-100">{row.start_date ? formatDate(row.start_date) : "Undated"}</b>
 				{row.end_date && <span className="text-xs tabular-nums text-gray-400">to {formatDate(row.end_date)}</span>}
 			</span>
 			{/* Left in its fixed column, so whatever follows starts at one edge on every row. */}
@@ -109,11 +109,13 @@ export function PullPlanRow({ row, fill, faces, timelineOf, movement }: {
 			)}
 		</>
 	)
-	// Fixed columns for the dates (5.9rem), the kind badge (4.6rem) and the faces (6.4rem, two
-	// umas or two cards): an `auto` badge column made the faces zigzag (owner, 2026-11-25). Under
-	// 47.5rem the dates and faces go; the badge keeps its fixed column so the names line up.
+	// Fixed columns for the dates (6.75rem), the kind badge (4.6rem) and the faces (6.4rem, two
+	// umas or two cards): an `auto` badge column made the faces zigzag (owner, 2026-11-25). Every
+	// row is its own grid, so an `auto` column would size to that row alone. The dates' room fits
+	// "2026/12/26" in the widest theme's display face (Winning Live ran it into the badge at
+	// 5.9rem). Under 47.5rem the dates and faces go; the badge keeps its column so names line up.
 	const grid =
-		"grid w-full grid-cols-[4.6rem_minmax(0,1fr)_auto_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[47.5rem]:grid-cols-[5.9rem_4.6rem_6.4rem_minmax(0,1.5fr)_minmax(0,1fr)_minmax(5.5rem,auto)_minmax(6.5rem,auto)_14px]"
+		"grid w-full grid-cols-[4.6rem_minmax(0,1fr)_auto_14px] items-center gap-3 rounded-xl px-1.5 py-2.5 text-left @min-[47.5rem]:grid-cols-[6.75rem_4.6rem_6.4rem_minmax(0,1.5fr)_minmax(0,1fr)_minmax(5.5rem,auto)_minmax(6.5rem,auto)_14px]"
 	if (!opens) return <div className={grid}>{head}</div>
 	return (
 		<div>
@@ -121,7 +123,7 @@ export function PullPlanRow({ row, fill, faces, timelineOf, movement }: {
 				{head}
 			</button>
 			{open && (
-				<div className="px-2 pb-4 pt-2 @min-[47.5rem]:pl-[6.7rem]">
+				<div className="px-2 pb-4 pt-2 @min-[47.5rem]:pl-[7.55rem]">
 					<Detail>
 						{row.spread && (
 							<DetailBlock heading={steps ? "The steps people plan" : "The pulls people plan"}>
