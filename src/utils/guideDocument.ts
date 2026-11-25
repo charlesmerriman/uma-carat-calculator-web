@@ -10,6 +10,7 @@
  */
 
 import { skillNames } from "./skillList"
+import { umaMentionsIn } from "./remarkHighlight"
 import type {
 	EditorError,
 	GuideDeckRow,
@@ -26,6 +27,7 @@ import type {
 	PvpStyle,
 	PvpSupportCardRef,
 	PvpUmaRef,
+	PvpUmaMention,
 } from "../types/pvpGuide"
 import type { PvpCatalogueIndex } from "../hooks/usePvpCatalogue"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma } from "../types/pvpTeam"
@@ -343,6 +345,18 @@ export function hydrateGuide(
 		}
 	}
 
+	// ((umas)): a trainee outfit's exact name, ignoring case, as the server matches.
+	const umasByLowerName = new Map<string, CatalogueUma>()
+	for (const uma of index.catalogue.umas) if (!umasByLowerName.has(uma.name.toLowerCase())) umasByLowerName.set(uma.name.toLowerCase(), uma)
+	const umaMentions: Record<string, PvpUmaMention> = {}
+	for (const [, text] of texts(document)) {
+		for (const name of umaMentionsIn(text)) {
+			const key = name.toLowerCase()
+			const uma = umasByLowerName.get(key)
+			if (uma && !umaMentions[key]) umaMentions[key] = { id: uma.id, name: uma.name, portrait: uma.portrait, portrait_layers: uma.portrait_layers ?? null }
+		}
+	}
+
 	return {
 		event_type: document.event_type,
 		event: document.event,
@@ -366,6 +380,7 @@ export function hydrateGuide(
 			.map((row) => ({ style: row.style, body: row.body })),
 		decks,
 		skill_mentions: mentions,
+		uma_mentions: umaMentions,
 	}
 }
 
@@ -447,6 +462,12 @@ export function validateDocument(document: GuideDocument, index: PvpCatalogueInd
 	for (const [path, text] of texts(document)) {
 		const unknown = [...new Set(mentionsIn(text).filter((name) => !names.has(name.toLowerCase())))]
 		if (unknown.length > 0) add(path, `No skill has this name: ${unknown.map((name) => `[[${name}]]`).join("; ")}`)
+	}
+	// ((mentions)) name a catalogue uma by her exact name.
+	const umaNames = new Set(index.catalogue.umas.map((uma) => uma.name.toLowerCase()))
+	for (const [path, text] of texts(document)) {
+		const unknown = [...new Set(umaMentionsIn(text).filter((name) => !umaNames.has(name.toLowerCase())))]
+		if (unknown.length > 0) add(path, `No uma has this name: ${unknown.map((name) => `((${name}))`).join("; ")}`)
 	}
 
 	return found

@@ -40,7 +40,7 @@ export interface RowSpendSettings {
  * 0 holds every ticket back with the switch on.
  *
  * Paid carats: the row's choice replaces BOTH paid toggles, so "discount only"
- * means discount on and full price off whatever the gear menu says.
+ * means discount on and full price off whatever the projection settings say.
  */
 export function rowSpendSettings(
 	row: Pick<UserPlannedBanner, "tickets_to_use" | "paid_carat_use">,

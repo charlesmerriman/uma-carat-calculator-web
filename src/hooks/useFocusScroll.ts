@@ -94,7 +94,16 @@ const SETTLE_TOLERANCE_PX = 1
  * operation on an element, named.
  */
 function calibrateScrollOffset(node: HTMLElement, offsetPx: number): void {
-	node.style.scrollMarginTop = `${offsetPx - node.getBoundingClientRect().top}px`
+	// "Flush" is not margin zero: the node parks at the scrollport's edge PLUS
+	// whatever scroll margin it already has, from a class (FOCUS_SCROLL_MARGIN)
+	// or a stylesheet (the Timeline's cards clear their sticky control bar that
+	// way, timeline.css section 6). So the margin that holds the node at
+	// `offsetPx` is the one it has, moved by how far it is from there. Writing
+	// the bare difference instead dropped the existing margin, and the node
+	// landed that much too high: 24px while every card had only the class, then
+	// 86px or more once the Timeline's cards had a larger one (2026-11-24).
+	const current = Number.parseFloat(getComputedStyle(node).scrollMarginTop) || 0
+	node.style.scrollMarginTop = `${current + offsetPx - node.getBoundingClientRect().top}px`
 }
 
 /** Undo it. See the cleanup in useFocusScroll for why this is not optional. */

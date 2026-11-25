@@ -168,7 +168,20 @@ export function addDeck(doc: Doc, style: PvpStyle, label = "Standard"): Doc {
 }
 
 export function updateDeck(doc: Doc, index: number, patch: Partial<Omit<GuideDeckRow, "slots">>): Doc {
-	return { ...doc, decks: replaceAt(doc.decks, index, { ...doc.decks[index], ...patch }) }
+	return { ...doc, decks: replaceAt(doc.decks, index, withBorrow({ ...doc.decks[index], ...patch })) }
+}
+
+/**
+ * The borrow is slot 6, always, and a swap-ins deck (the guide's row of cards
+ * that can replace one, Henry's "Honorable Mentions") has none (Henry, board
+ * 1575020815450116199, 2026-11-25: a card put back in slot 6 lost its BORROW
+ * band, because the mark was a per-slot button). Applied on every slot edit
+ * and on the Swap-ins switch, so no edit can leave it anywhere else.
+ */
+function withBorrow(deck: GuideDeckRow): GuideDeckRow {
+	const borrowed = (row: GuideSlotRow) => !deck.is_highlighted && row.slot === DECK_SLOTS
+	if (deck.slots.every((row) => row.is_borrow === borrowed(row))) return deck
+	return { ...deck, slots: deck.slots.map((row) => ({ ...row, is_borrow: borrowed(row) })) }
 }
 
 export function removeDeck(doc: Doc, index: number): Doc {
@@ -206,7 +219,7 @@ function slotRows(deck: GuideDeckRow, slot: number): GuideSlotRow[] {
 }
 
 function withSlots(doc: Doc, index: number, slots: GuideSlotRow[]): Doc {
-	return { ...doc, decks: replaceAt(doc.decks, index, { ...doc.decks[index], slots }) }
+	return { ...doc, decks: replaceAt(doc.decks, index, withBorrow({ ...doc.decks[index], slots })) }
 }
 
 /**
@@ -244,10 +257,57 @@ export function clearSlot(doc: Doc, deckIndex: number, slot: number, order = 0):
 	)
 }
 
-/** Mark one slot as the borrowed card (every row of that slot), and no other. */
-export function setBorrowSlot(doc: Doc, deckIndex: number, slot: number | null): Doc {
+/**
+ * Swap two slots of one deck, everything with them: the card, its note and
+ * limit break, its "or" alternatives and the borrow mark all travel together,
+ * because each is a field on the slot's rows (Henry, 2026-11-24: "the notes
+ * and everything also transfer over"). An empty `to` makes it a plain move.
+ *
+ * Only the `slot` numbers change, in place: the rows keep their array
+ * positions, so an error drawn at `decks[i].slots[j]` stays on its row, and
+ * `toPayload` sorts by slot anyway. The borrow mark riding with its card is
+ * deliberate: a slot number is only where a card sits, and moving the
+ * borrowed card must not quietly make another card the borrow.
+ */
+export function swapSlots(doc: Doc, deckIndex: number, from: number, to: number): Doc {
+	if (from === to) return doc
 	const deck = doc.decks[deckIndex]
-	return withSlots(doc, deckIndex, deck.slots.map((row) => ({ ...row, is_borrow: row.slot === slot })))
+	return withSlots(
+		doc,
+		deckIndex,
+		deck.slots.map((row) => (row.slot === from ? { ...row, slot: to } : row.slot === to ? { ...row, slot: from } : row))
+	)
+}
+
+/**
+ * The slots a note could be copied to: every deck's main row holding `cardId`
+ * whose note isn't `note` already, in decks of `style` (null: every style).
+ * The slot the note came from matches its own note, so it never counts.
+ * "or" rows are left alone: the editor shows no note on an alternative card.
+ */
+function isCopyTarget(deck: GuideDeckRow, row: GuideSlotRow, cardId: number, note: string, style: PvpStyle | null): boolean {
+	return (style === null || deck.style === style) && row.order === 0 && row.support_card === cardId && row.note !== note
+}
+
+export function countNoteCopies(doc: Doc, cardId: number, note: string, style: PvpStyle | null): number {
+	return doc.decks.reduce((total, deck) => total + deck.slots.filter((row) => isCopyTarget(deck, row, cardId, note, style)).length, 0)
+}
+
+/**
+ * Give every appearance of a card the same slot note (Daptrius, 2026-11-24:
+ * a guide repeats one card's note across many decks, and typing it into
+ * each was the slow part). `style` keeps it to one style's decks; null
+ * reaches every style. Decks with nothing to change keep their identity.
+ */
+export function copyNoteToCard(doc: Doc, cardId: number, note: string, style: PvpStyle | null): Doc {
+	return {
+		...doc,
+		decks: doc.decks.map((deck) =>
+			deck.slots.some((row) => isCopyTarget(deck, row, cardId, note, style))
+				? { ...deck, slots: deck.slots.map((row) => (isCopyTarget(deck, row, cardId, note, style) ? { ...row, note } : row)) }
+				: deck
+		),
+	}
 }
 
 /** Add an "or" alternative under a slot: a card, or a note like "or any speed". */

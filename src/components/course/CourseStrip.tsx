@@ -24,7 +24,7 @@
  * (the prerender's), the sweep runs after mount on a motion value (no React
  * re-render per frame), and reduced motion skips it.
  */
-import { useMemo, type CSSProperties, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import { AnimatePresence, motion, useMotionTemplate, useReducedMotion, useTransform } from "framer-motion"
 import type { RaceCourse } from "../../types"
 import {
@@ -42,6 +42,7 @@ import {
 	type CourseSpan,
 } from "../../utils/courseGeometry"
 import CourseIcon from "./CourseIcon"
+import { segmentText } from "../../utils/courseStripText"
 import { useDrawIn } from "./useDrawIn"
 
 type Orientation = "horizontal" | "vertical"
@@ -114,11 +115,6 @@ const VET_INK = "#0b0b0f"
 const PHASE_FILLS = ["var(--color-course-early)", "var(--color-course-mid)", "var(--color-course-late)", "var(--color-course-spurt)"]
 const PHASE_INKS = ["var(--color-course-ink-early)", "var(--color-course-ink-mid)", "var(--color-course-ink-late)", "var(--color-course-ink-spurt)"]
 
-/** "290–540m": a stretch's metres, as Daptrius's render writes them. */
-function rangeText(start: number, end: number): string {
-	return `${Math.round(start).toLocaleString("en-US")}–${formatMetres(end)}`
-}
-
 /** Where a stretch sits along the strip, as percentages: across or down. */
 function place(start: number, end: number, distance: number, vertical: boolean): CSSProperties {
 	const from = metreToFraction(start, distance) * 100
@@ -151,21 +147,7 @@ function Segment({ start, end, distance, vertical, fill, ink, label, shortLabel,
 	/** The strip's width across the page, to judge what fits (a phone's is ~300px). */
 	stripPx?: number
 }) {
-	const share = metreToFraction(end, distance) - metreToFraction(start, distance)
-	let words: string | undefined
-	let metres: string | undefined
-	if (vertical) {
-		words = share >= 0.035 ? label : undefined
-		metres = share >= 0.08 && end < distance ? formatMetres(end) : undefined
-	} else {
-		words = share >= 0.06 ? label : share >= 0.025 ? shortLabel : undefined
-		const px = share * stripPx
-		const wordsPx = (words?.length ?? 0) * 7 + 8 + (icon ? 14 : 0)
-		const fits = (text: string) => wordsPx + text.length * 5.2 + 22 < px
-		const long = rangeText(start, end)
-		const short = formatMetres(end)
-		metres = ranged && fits(long) ? long : end < distance && fits(short) ? short : undefined
-	}
+	const { words, metres } = segmentText({ start, end, distance, vertical, label, shortLabel, icon: Boolean(icon), ranged, stripPx })
 	return (
 		<div
 			className={`absolute flex items-center justify-center gap-0.5 overflow-hidden ${vertical ? "inset-x-0" : "inset-y-0"}`}
@@ -349,6 +331,21 @@ export default function CourseStrip({
 	const vertical = orientation === "vertical"
 	const distance = course.distance
 	const { ref, clipPath } = useStripDrawIn(vertical)
+	// The bands' real width across the page, once it can be measured: the
+	// stretches' words and metres are fitted against it (segmentText). The
+	// first render, and any render without a measure (the build, a test), uses
+	// the caller's `widthPx`, so the markup matches what was prerendered.
+	const [measuredPx, setMeasuredPx] = useState<number | null>(null)
+	useEffect(() => {
+		const band = vertical ? null : ref.current?.querySelector<HTMLElement>('[data-band="track"]')
+		if (!band || typeof ResizeObserver === "undefined") return
+		const measure = () => setMeasuredPx(band.clientWidth > 0 ? band.clientWidth : null)
+		measure()
+		const observer = new ResizeObserver(measure)
+		observer.observe(band)
+		return () => observer.disconnect()
+	}, [ref, vertical])
+	const segmentPx = measuredPx ?? widthPx
 
 	const facts = useMemo(() => courseFacts(course), [course])
 	const spans = [...facts.spans, ...(overlays?.spans ?? [])]
@@ -418,7 +415,7 @@ export default function CourseStrip({
 			<Row vertical={vertical} label="Phase" band="phases" grow={0.8}>
 				{phases.map((phase, index) => (
 					<Segment
-						stripPx={widthPx}
+						stripPx={segmentPx}
 						key={phase.start}
 						start={phase.start}
 						end={phase.end}
@@ -439,7 +436,7 @@ export default function CourseStrip({
 					const shade = isCorner && cornerIndex++ % 2 === 1
 					return (
 						<Segment
-							stripPx={widthPx}
+							stripPx={segmentPx}
 							key={`${part.kind}-${part.start}`}
 							start={part.start}
 							end={part.end}
@@ -460,7 +457,7 @@ export default function CourseStrip({
 				<Row vertical={vertical} label="Slope" band="hills">
 					{hills.map((hill) => (
 						<Segment
-							stripPx={widthPx}
+							stripPx={segmentPx}
 							key={hill.start}
 							start={hill.start}
 							end={hill.end}

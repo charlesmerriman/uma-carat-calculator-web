@@ -24,14 +24,17 @@ import {
 	addSkill,
 	addUma,
 	clearSlot,
+	copyNoteToCard,
+	countNoteCopies,
 	deckFromCards,
 	duplicateDeck,
 	moveRow,
 	moveUma,
 	removeUma,
-	setBorrowSlot,
 	setSlotCard,
 	setStyleNote,
+	swapSlots,
+	updateDeck,
 	updateSlot,
 	updateUma,
 } from "../utils/guideDocumentEdits"
@@ -216,6 +219,18 @@ describe("validateDocument", () => {
 		expect(paths).toContainEqual(["team_comps[1].text", "Write the team comp, like 2 Front + 1 Pace."])
 	})
 
+	it("checks ((uma)) mentions by exact name, and hydrates the ones it knows", () => {
+		const doc = document()
+		doc.style_ranking = "((Gold Ship)) > Front"
+		doc.meta_analysis = "Watch ((gold ship)) and ((Goldship))."
+		expect(validateDocument(doc, INDEX).map((error) => [error.path, error.message])).toEqual([
+			["meta_analysis", "No uma has this name: ((Goldship))"],
+		])
+		const guide = hydrateGuide(doc, INDEX, SCENARIOS, null)
+		expect(Object.keys(guide.uma_mentions ?? {})).toEqual(["gold ship"])
+		expect(guide.uma_mentions?.["gold ship"]).toMatchObject({ id: 42, name: "Gold Ship" })
+	})
+
 	it("takes a limit break of 0 to 4, and only on a card", () => {
 		const doc = document()
 		doc.decks[0].slots[2].limit_break = 4
@@ -314,10 +329,6 @@ describe("edits", () => {
 		expect(setSlotCard(doc, 1, 3, null).decks[1].slots[0]).toMatchObject({ support_card: null, limit_break: null })
 		doc = addAlternative(doc, 1, 3, null, "or any speed")
 		expect(doc.decks[1].slots[1]).toMatchObject({ slot: 3, order: 1, support_card: null, note: "or any speed" })
-		doc = setBorrowSlot(doc, 1, 3)
-		expect(doc.decks[1].slots.every((slot) => slot.is_borrow)).toBe(true)
-		doc = setBorrowSlot(doc, 0, 1)
-		expect(doc.decks[0].slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[6, false], [1, true], [1, true]])
 		doc = clearSlot(doc, 1, 3, 1)
 		expect(doc.decks[1].slots).toHaveLength(1)
 		doc = clearSlot(doc, 1, 3)
@@ -327,6 +338,67 @@ describe("edits", () => {
 		expect(copied.decks[1].slots).toHaveLength(3)
 		const fromTeam = deckFromCards("late", "Henry's", [{ slot: 1, support_card: 302 }, { slot: 6, support_card: 303 }])
 		expect(fromTeam.slots.map((slot) => [slot.slot, slot.is_borrow])).toEqual([[1, false], [6, true]])
+	})
+
+	it("copies a card's note to its other appearances, in one style or every style", () => {
+		let doc = addDeck(addDeck(addDeck(document(), "front", "A"), "front", "B"), "pace", "C")
+		const front = doc.decks.findIndex((deck) => deck.label === "A")
+		const front2 = doc.decks.findIndex((deck) => deck.label === "B")
+		const pace = doc.decks.findIndex((deck) => deck.label === "C")
+		doc = updateSlot(setSlotCard(doc, front, 1, 999), front, 1, 0, { note: "2SP" })
+		doc = setSlotCard(doc, front2, 4, 999)
+		doc = setSlotCard(doc, pace, 2, 999)
+		// An "or" row with the same card is not a slot note: left alone.
+		doc = addAlternative(doc, pace, 2, 999, "keep")
+
+		expect(countNoteCopies(doc, 999, "2SP", "front")).toBe(1)
+		expect(countNoteCopies(doc, 999, "2SP", null)).toBe(2)
+		const inStyle = copyNoteToCard(doc, 999, "2SP", "front")
+		expect(inStyle.decks[front2].slots[0].note).toBe("2SP")
+		expect(inStyle.decks[pace]).toBe(doc.decks[pace])
+		const everywhere = copyNoteToCard(doc, 999, "2SP", null)
+		expect(everywhere.decks[pace].slots.map((row) => row.note)).toEqual(["2SP", "keep"])
+		expect(countNoteCopies(everywhere, 999, "2SP", null)).toBe(0)
+	})
+
+	it("keeps the borrow on slot 6, and off a swap-ins deck (Henry, 2026-11-25)", () => {
+		let doc = addDeck(document(), "front", "Whale")
+		doc = setSlotCard(doc, 1, 6, 303)
+		const borrow = (d: typeof doc) => d.decks[1].slots.map((row) => [row.slot, row.is_borrow])
+		expect(borrow(doc)).toEqual([[6, true]])
+		// Cleared and filled again, it is still the borrow.
+		doc = setSlotCard(clearSlot(doc, 1, 6), 1, 6, 302)
+		expect(borrow(doc)).toEqual([[6, true]])
+		doc = setSlotCard(doc, 1, 2, 303)
+		expect(borrow(doc)).toEqual([[6, true], [2, false]])
+		// A swap-ins deck has no borrow, and gets it back when switched off.
+		doc = updateDeck(doc, 1, { is_highlighted: true })
+		expect(borrow(doc)).toEqual([[6, false], [2, false]])
+		expect(borrow(updateDeck(doc, 1, { is_highlighted: false }))).toEqual([[6, true], [2, false]])
+	})
+
+	it("drags a slot onto another: everything on it travels, an empty slot is a move", () => {
+		let doc = addDeck(document(), "front", "Whale")
+		doc = setSlotCard(doc, 1, 1, 302)
+		doc = updateSlot(doc, 1, 1, 0, { note: "2SP", limit_break: 4 })
+		doc = addAlternative(doc, 1, 1, null, "any speed")
+		doc = setSlotCard(doc, 1, 6, 303)
+		const rows = (d: typeof doc) => d.decks[1].slots.map((row) => [row.slot, row.order, row.support_card, row.note, row.limit_break, row.is_borrow])
+
+		// Swap 1 and 6: the note, limit break and "or" row go with Kitasan; the borrow stays on slot 6.
+		const swapped = swapSlots(doc, 1, 6, 1)
+		expect(rows(swapped)).toEqual([
+			[6, 0, 302, "2SP", 4, true],
+			[6, 1, null, "any speed", null, true],
+			[1, 0, 303, "", null, false],
+		])
+		expect(validateDocument(swapped, INDEX).filter((error) => error.path.startsWith("decks[1]"))).toEqual([])
+
+		// Onto an empty slot: a move, slot 1 left empty.
+		expect(rows(swapSlots(doc, 1, 1, 4)).map(([slot]) => slot)).toEqual([4, 4, 6])
+		// Dropped where it started: nothing changes, and the other deck is untouched.
+		expect(swapSlots(doc, 1, 3, 3)).toBe(doc)
+		expect(swapped.decks[0]).toBe(doc.decks[0])
 	})
 })
 

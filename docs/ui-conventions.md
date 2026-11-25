@@ -1,6 +1,7 @@
 # UI Conventions
 
-Dates, styling, theming, the brand mark, and the Timeline list. These are the
+Dates, styling, theming and the brand mark (the Timeline list has its own page,
+[`timeline.md`](timeline.md)). These are the
 frontend rules that are easy to break accidentally.
 
 ---
@@ -89,6 +90,51 @@ mode metadata, and the pre-paint script in `index.html` sets both attributes.
 When adding a theme, update that script's ids and light-mode list together with
 the registry; `themeScript.test.ts` checks their agreement.
 
+### The default family: one set of shapes for twelve themes
+
+Every theme that is not Winning Live or Tracen (Dark, Gilded, Midnight, Pace, Violet, Teal,
+Light, Blue, Green, Red, Purple, Pearl) shares one set of shapes (2026-11-24; the owner:
+"the other themes that aren't tracen or winning live will need these changes too"). They are
+the first section of `src/personalityThemes.css`, "The default family":
+
+- **A control is a raised key**: a face one step above the card, a lit top edge, a seat.
+- **The navbar's tabs sit in a well**, and the one you are on is solid brand.
+- **A planner section's title sits on a quiet bar** (a pseudo-element behind the words).
+- **The three add-banner buttons are filled in the theme's kind colours**, and the type
+  tiles carry the same band.
+- **Numbers sit in wells**, one step below the card. Carats are the one brand-coloured number.
+- **The Timeline's "Stage banner" is a solid brand button**, and its controls and countdown
+  pill are keys.
+- **Radii are a step rounder**: 8 / 10 / 14px for `md` / `lg` / `xl`.
+
+So the brand is spent in four places (the solid primary button, the tab you are on, carats,
+links) and is no longer the outline of everything.
+
+**How one set of rules draws twelve palettes: role tokens.** A family rule never names a
+colour. It names a role (`--brand-ink`, `--key-face`, `--key-line`, `--key-lit`,
+`--key-seat`, `--well-fill`, `--tabs-well`, `--bar-fill`, `--kind-*-band`, `--press-filter`),
+and `index.css` ("The default family's roles") gives each role a value for dark themes and
+one for light themes. Two blocks and not raw grays, because the light ramp is inverted and
+not symmetrical: `gray-950` is LIGHTER than the page there, so "one step below the card"
+is a different gray on each side.
+
+- **A theme sets its own value for a role in its ordinary `[data-theme="x"]` block.** That
+  works only because both role blocks are wrapped in `:where()`, which weighs nothing.
+  Unwrapped, the family's selector would outweigh every theme block and a theme's own value
+  would silently lose. Dark sets two roles this way.
+- **The rules are scoped by exclusion**, `:root:not([data-theme="tracen"],
+  [data-theme="winning-live"])`, written out on every rule. A new one-accent theme gets the
+  shapes for free; a new palette theme adds its id to the exclusion (three places: the two
+  role blocks and the rules). Never bare rules for the palette themes to override: Winning
+  Live has no `.planner-section-title::before`, so a bare bar would leak into it.
+- **Every repainted control restates its hover and its focus.** A rule there is unlayered,
+  so it beats the element's own `hover:` and `focus:` utilities on any property it sets.
+- `timelineCss.test.ts` fails if a family rule drops the scope or names a colour.
+
+A change to these shapes is checked with the geometry check (`docs/timeline.md`): `--boxes`
+on the themes it paints (paint may change, no box may move), and plain zero on Tracen and
+Winning Live.
+
 ### The palette themes: Winning Live and Tracen
 
 Twelve themes keep to one accent. These two (2026-11-17) use several colours, each with a job, and change shapes as well as colours. A theme is one of them when its `THEMES` entry
@@ -126,8 +172,8 @@ three rules, which hold for any later theme of this kind:
    `site-navbar`, `nav-tabs`, `nav-tab` / `nav-tab--active`, `nav-control`,
    `wordmark-second`, `planner-panel-title`, `planner-section-title`, `income-value` (with
    `data-income` on its tile), `add-banner-button--{uma,support,step-up}`, `hero-cta`,
-   `forecast-shortfall`, plus the semantic classes `App.css` already had. The default
-   themes have no rule for any of them. The one utility selector is the precedent
+   `forecast-shortfall`, plus the semantic classes `App.css` already had, and the
+   Timeline's `tl-*` hooks (`docs/timeline.md`). The default family uses the same hooks. The one utility selector is the precedent
    `index.css` set, `.bg-brand.text-black` (the solid brand button).
 3. **Read tokens for anything colorblind mode redraws**, so that mode keeps winning.
 
@@ -211,7 +257,7 @@ belongs in `@theme` as its own token.
 
 The `--color-pull-*` tokens (pull-count status, consumed by `.pull-input--*` in
 `App.css`) are the worked example to copy. `--color-category-revival[-border]`
-(`.category-chip--revival`, the Golden Week marker on a timeline section) follows the same
+(`.category-chip--revival` in `timeline.css`, the Golden Week marker on a timeline section) follows the same
 pattern: dark values in `@theme`, deepened counterparts under `[data-theme-mode="light"]`.
 So do `--color-type-*` (the banner-row kinds), `--color-step-up` (every step-up marker,
 including the Timeline strip's chip) and `--color-new-year` / `--color-campaign` (the
@@ -250,7 +296,7 @@ being unable to hold either desktop layout.
 
 | Variant | Condition | Governs |
 |---|---|---|
-| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar, and the `SettingsMenu` panel's anchoring, which must track the navbar |
+| `desktop-nav:` | `min-width: 64rem` | mobile ⇄ desktop navbar |
 | `app-shell:` | `min-width: 64rem` **and** `min-height: 32rem` | the fixed-height, internally-scrolling app shell in `ApplicationViews` |
 
 The height half of `app-shell:` is the load-bearing part. Applied to a landscape phone,
@@ -565,7 +611,7 @@ that opens costs the grid nothing.
 Three things about it are load-bearing:
 
 - **It portals to `<body>` and positions itself from the anchor's rect.** The in-flow
-  `relative`/`absolute` idiom `SettingsMenu` uses cannot work here: the sheet sits inside
+  `relative`/`absolute` idiom the navbar's menus use cannot work here: the sheet sits inside
   an `overflow-hidden` panel (`CaratCalculator`), which clips the pad on the last row, and
   its rows are `motion.div`s carrying `layout` transforms, against which a `position:
   fixed` fallback would resolve instead of the viewport. The cost of the portal is having
@@ -607,7 +653,7 @@ pad, its chips and its per-kind quantities come to both for free — but:
   `window.resize`. Without those listeners the pad is placed against the full-height
   viewport, decides it fits below, and is then covered by the keypad.
 - **Chips are `h-9`, not the `h-7` a pointer would need.** That is the size this app
-  already gives its icon buttons (the card's delete, the navbar's gear), so the pad matches
+  already gives its icon buttons (the card's delete, the navbar's search), so the pad matches
   rather than inventing a target size.
 
 There is no hover affordance to lose on touch, because there is no hover affordance at
@@ -888,14 +934,24 @@ because the image is `aria-hidden` and the caller owns the accessible name.
 
 ## The profile menu and the account page
 
-Signed in, the navbar's auth slot is `components/navbar/ProfileMenu.tsx`: a
+**The last control in the bar is one menu, `components/navbar/SiteMenu.tsx`, for everything
+that is not a place** (owner, 2026-11-24; `notes/navigation-plan.md`, PR 2; it was
+`ProfileMenu`, signed-in only). It holds the account rows, a **Theme** row that names the
+current theme and opens the picker in place (`navbar/ThemeOptions.tsx`, the old palette
+button's panel; a pick does not close the menu), and **About, FAQ, Changelog, Feedback**,
+which only the footer linked before. **A guest gets it too**, behind a plain menu button
+("Menu" beside the icon from `desktop-nav:` up) next to the Sign in button: its first row is
+"Sign in to sync" with the sentence the bar's button keeps in its tooltip, so a phone can
+read it. A new non-place (a setting, a link) goes in this menu, never back in the bar.
+
+Signed in, its trigger is unchanged: a
 pill (`NAV_PROFILE_TRIGGER` in `navStyles.ts`) with the account's avatar as its
 left cap and, from `desktop-nav:` up, the person's name and a chevron beside it,
 opening a menu with **Account**, **Collection** (since 2026-10-26) and **Sign out** (since 2026-09-12; sign-out used
 to be a bare button in the bar; the pill and the name arrived 2026-09-13). Below
 `desktop-nav:` the pill is the avatar ring alone — at 390px the app-mode cluster
-is already save + settings + theme + this. A guest still sees the Login link. The
-menu is the same popover idiom as ThemePicker and SettingsMenu and is always the
+is already save + theme + this. A guest still sees the Login link. The
+menu closes on an outside press, Escape (focus returns to the trigger) and a link, and is always the
 LAST control, so right-anchoring never runs it off a narrow screen.
 
 **The name is the one they chose, else the handle.** `account.display_name`
@@ -908,7 +964,7 @@ so the pill widens once rather than jumping from a placeholder.
 `Avatar.tsx` shows `account.avatar_url` — the server sends the first oshi's art,
 `null` until they pick one — and on `null` or a broken image draws the quiet
 default: a muted `UserRound` silhouette on a `bg-gray-700` rounded square,
-styled like the settings and theme icon buttons beside it so it reads as one
+styled like the icon buttons beside it so it reads as one
 more control. The same default for everyone and for the loading state, on
 purpose: the avatar is only ever shown to its owner, so two empty accounts have
 no reason to look different, and the initials-on-a-hue circle it replaced
@@ -1122,563 +1178,20 @@ the navbar is a shared frame, and the pages under it change independently of it.
 
 ---
 
-## Timeline list (`components/timeline/Timeline.tsx`)
+## Timeline list (`components/timeline/`)
 
-Renders `organizedTimelineData` — banner timelines, Champions Meetings and League of
-Heroes events merged into one date-sorted list (~250 rows) — filtered by past/future and
-a search box.
-
-**Two card shapes, three event types.** Champions Meetings and League of Heroes events
-share one course-details card, `components/timeline/RaceEventCard.tsx`; banner
-windows use the wider card in `components/timeline/BannerWindowCard.tsx`. `RaceEventCard`
-never branches on which of the two it has — if it ever needs to, they've stopped being the
-same card and should be split again. `RaceEventCard.test.tsx` renders one of each from the
-same data and diffs the markup, so a change applied to only one type fails there.
-
-### Concurrent banners are one card, grouped at render time
-
-`groupTimelineEvents` (`timelineShared.ts`) folds banner events sharing an **exact**
-`start_date` into one `BannerWindowGroup`, rendered as a single card: shared header with the
-union window, then one section per constituent banner, each keeping its own panels and its
-own "Add to Planner". A section whose own end date differs from the header's says so.
-
-- **Grouping runs last**, after the past/future and search filters. Grouping first would let
-  a window straddle the boundary and pull an ended banner into the current view.
-- **Exact string equality, not the calendar day.** Both agree on every row in production
-  (eight groups, sixteen rows); exact equality can't merge two banners a reader west of GMT
-  sees on different dates.
-- **The rows must not be merged in the database.** They are separate gacha pools with
-  separate pity, `UserPlannedBanner` foreign-keys `BannerUma` rather than the timeline, and
-  their end dates can differ — and income is a pure function of a banner's end date.
-- A group of one is the common case and is the *same* code path, so there is no second
-  layout to keep in sync.
-- **A shared `jp_start_date` groups too: the staggered release.** JP runs a release as one
-  window; global can open its uma and support banners on different days (first seen
-  2026-10, Hokko Tarumae). That is entered as **two `BannerTimeline` rows with the same JP
-  dates and their own global dates**, and the shared JP start is what puts them on one
-  card. There is no flag to set. The rule is a union with the start rule, never a
-  replacement: the launch window has one global start and two JP starts.
-- **Complementary halves fuse into one section** (`buildWindowSections`): an uma-only row
-  and a support-only row of the same category draw as the ordinary art | umas | supports
-  row, each panel reading its banner, expiry and dates from its own row. When the halves'
-  dates differ, the **card header** says how each side differs from the window it states
-  ("Support banner starts 2026/10/27"). Never inside a panel: a line there makes the panel
-  taller and the art row grows with it. Anything else stacks as separate sections.
-
-### Count drives the layout, category drives the accents
-
-The **card count** decides whether a panel abandons its column for a full-width band
-(`COLUMN_TILE_CAPACITY`, currently 2 — a feature column is ~260px, two tiles across).
-`banner_category` picks the chip and the column weighting (`CATEGORY_CHROME` in
-`BannerWindowCard.tsx`), and can still *force* a band.
-
-That way round because of the JP launch banner: a `standard` row with 9 umas and 20 support
-cards and no art. No category flagged it, and none should have to — the counts are right
-there. A miscategorised revival therefore still renders every card.
-
-**Banding is PER PANEL, not per section.** Only the cards that don't fit take the extra
-width; the other panel keeps its place beside the art. This was briefly section-wide, which
-reads plausibly and is wrong on the commonest shape we hold: 22 of the 29 race-prep rows are
-one uma and ten support cards *with* art, and banding the section threw the art onto its own
-line and left a single uma tile adrift in a full-width panel. Five combinations occur in
-production — race-prep with art (22), race-prep without art (4), race-prep with no uma (3),
-revival (4), launch banner (1) — and any change here should be checked against all five.
-
-- The art cell needs **real art** to appear once anything has banded. A "Banner art coming
-  soon" placeholder is a third of an ordinary three-column row and reads as pending, but
-  beside a lone uma tile with the real content banded below it is ~1030px of empty box. Where
-  dropping it leaves a single panel, the panel keeps its column width (`max-w-md`) rather
-  than stretching across a row it is the only occupant of.
-- Two column panels implies nothing banded — a banded panel is by definition not in a column
-  — so `SECTION_COLUMNS` is only ever reached by the ordinary case and can be reasoned about
-  as such.
-- **From `xl` up, every piece of timeline art is ONE width: `--timeline-art-width`.** It is
-  the ordinary three-column row's art share, `(row - 2rem) * 1.28/2.94`, declared once in
-  `App.css` and used as the first track of every banner template, as the width
-  of the art-only branch, and as the width of the marker cards' art, paired or alone. The
-  length is in `cqw` against the card panel's `@container`, not `%`, so it resolves to the
-  same pixels however deeply the art is nested — the marker pair's art sits in a half-width
-  column and a percentage there would be half the size. Before this the one-panel row gave
-  the art half the row and the marker cards gave it the whole row, and each hit the 41rem cap
-  at a width the ordinary row never reaches: four visibly different banner sizes down one
-  list. Below `xl` the templates collapse to one column and the cap below is the rule.
-  The track is spelled out in full in each of the three templates, never interpolated from
-  a constant: Tailwind generates a class only where it finds the complete string in the
-  source, and an interpolated template literal quietly yields a single stacked column.
-- **Banner art is capped on its WIDTH (`BANNER_ART`, 41rem), never its height, and it sits
-  hard left.** The assets are 16:9, so an uncapped `w-full` makes the height a function of
-  whichever column template the section landed in: ~358px on an ordinary three-column row,
-  but ~580px under the old weighted `SECTION_COLUMNS_PAIR`, and taller still below `xl`
-  where the grid collapses to one column. 41rem sits just above the three-column ceiling, so
-  ordinary rows are untouched and only the wider shapes clamp, landing at ~369px.
-  Do **not** reach for `max-h` instead: with a percentage width the used width is already
-  definite, so a height clamp just squashes the picture (measured 1030×580 → 1030×368,
-  aspect 1.78 → 2.80). Capping width leaves `height: auto` free to track the intrinsic
-  ratio. The cap only ever eats space to the art's *right*, so its left edge stays on the
-  section's left edge in every template — the ordinary three-column row has no slack to
-  distribute, and centring the capped shapes was what put them out of line with it.
-  `BANNER_ART_ALONE` is the sole exception: the art-only branch (every panel banded, e.g.
-  race-prep with no uma) has a full-width row and no column edge to align to, so it centres.
-- **`SECTION_COLUMNS_PAIR` is the art track then the rest, and both occupants are pinned to
-  an outer edge** — art hard left at the shared width, panel hard right (`PAIR_PANEL_CELL`)
-  and capped at 28rem, the width it has in a three-column row, rather than filling what is
-  left. It was two equal halves before the shared track, and a weighted 1.6fr/0.7fr split
-  before that, which only worked while the art expanded to fill whatever column it was
-  handed; once the art was width-capped the two stopped agreeing, leaving the art adrift
-  mid-column beside a panel flush right. Pinning both is what makes that right edge read as
-  deliberate instead of accidental — the slack collects in one span between them rather than
-  in three uneven ones. Both caps are `xl`-only: below that every template collapses to one
-  stacked column and both should fill it.
-- **A band is exactly one line at every width, and nothing about it is breakpoint-driven.**
-- The line is a flex row, and the card count sets a **minimum** tile width rather than an
-  exact one: each tile grows to an equal share of the row, refuses to shrink past
-  `bandMinWidthClass` (7rem uma / 6rem support), and the row overflows into the band's own
-  `overflow-x-auto` scroller when the minimums don't fit. Only the launch banner's twenty
-  supports actually scroll on a desktop screen.
-- **Growth sits on a wrapper around each tile, not on the tile.** That is what reproduces
-  the old grid's `justify-items-center` spread — the wrapper takes its share of the line, the
-  tile stays centred inside it at its own capped width. Put the growth on the tile and a
-  four-uma revival stretches into four wide slabs.
-- The row carries no `justify-*`. The wrappers always fill the line exactly, so there is
-  never free space to distribute — and `justify-center` on a row that *does* overflow strands
-  its first tile off the left edge where scrolling cannot reach it.
-- This replaced a table of `xl:grid-cols-N` classes that produced the line only above
-  1280px; below that the band fell back to two columns, so a ten-card race-prep batch
-  rendered as a 2×5 tower. **Don't reintroduce a breakpoint here.** Tests assert the line by
-  counting a flex row's children, which is what makes "one line" checkable in jsdom at all.
-- **Band names shrink one measured tier** — ~160px column (two lines), band (three lines,
-  13px). The old ~72px "dense" tier went with the squeeze that forced it; no band tile now
-  renders below its minimum width.
-- `race_prep_support` inverts the section's column weights (narrow uma, wide support grid) and
-  must degrade to zero umas; two of the sheet's 32 rows have none.
-- `standard` gets no chip at all. A badge on every card is noise, not signal.
-- **`CATEGORY_LABELS` in `timelineShared.ts` is the only place the category names are
-  written.** They appear both on the chip and in the filter's dropdown, and a reader
-  filtering for "Golden Week Revival" has to see that exact phrase on the cards that
-  come back.
-- **The category filter runs on groups, not events**, and a window survives if *any* of
-  its banners matches — filtering for revivals must keep the ordinary banner sharing that
-  card, or the week looks emptier than it was. Race events drop out whenever a category is
-  selected, since a Champions Meeting has no banner category to match. The dropdown only
-  offers categories actually present in the data, so `race_prep_support` stays hidden until
-  the support backfill lands rather than being an option that can only return
-  "No events found."
-- **Never reintroduce `grid-rows-1`, `xl:overflow-hidden` or `xl:[contain:size]` on a feature
-  panel.** That trio pinned the panel to the banner art's height and silently discarded every
-  tile past the first row — two of eleven umas shown, nine gone, nothing on screen saying so.
-  jsdom applies no CSS, so only the class-name assertions in `Timeline.test.tsx` catch it.
-
-**Narrow with `isRaceEvent()` / `isBannerTimeline()`** (from `types/calculator.ts`), never
-by sniffing properties. The three shapes are not reliably distinguishable structurally: the
-two race types are field-identical apart from their number, and a banner window shares
-every base field with both. The guards read the backend's `event_type` tag instead. The old
-`"track" in event` checks needed `as unknown as` casts to compile — a signal the narrowing
-was fictional — and would have silently mis-sorted every League of Heroes event as a
-Champions Meeting once the two shapes converged.
-
-**Two list modes**, chosen by the user and remembered in
-`localStorage["uma-planner-timeline-view"]`. Infinite scroll is the default; `"paged"` is
-the opt-in value that restores the original 10-per-page view. Anything else (including a
-blocked or absent store) falls back to infinite.
-
-**The paged view's current page is remembered too**, in
-`sessionStorage["uma-planner-timeline-page"]` — the route unmounts on every trip to the
-calculator, so without it the reader was thrown back to page 1 each time. Session, not
-local, storage: a page index is a position within one visit, and the list is date-filtered,
-so restoring page 12 days later would point at unrelated events. `goToPage` is the only
-writer, so the filter resets clear it as well. A restored page that now exceeds
-`totalPages` is clamped in render (`effectivePage`) rather than corrected from an effect —
-the fetch hasn't resolved on the first render, and resetting state there would both flash
-the wrong list and permanently discard the saved position. Search text and the past/future
-toggle deliberately do *not* persist.
-
-### Recommended panels and purpose overlays — both zero-layout
-
-Two editorial layers sit on a banner section, and neither may move anything: a recommended
-card is exactly as tall as the same card unticked.
-
-**A recommended banner's feature panel becomes an SSR card** (`.ssr-panel` in `App.css`,
-switched on by `FeaturePanel`'s `recommended`): a gold surface, a prismatic foil edge, a
-slow light sweep and a few glints, plus a solid gold "★ Recommended" chip in the title line.
-
-- The panel *swaps* its `bg-gray-800 border-gray-600 shadow-sm` for the class rather than
-  layering over them, so nothing has to win a specificity fight with Tailwind.
-- The foil is the existing 1px border made transparent with a gradient painted under it
-  (`padding-box` / `border-box`); the sweep and glints are absolutely positioned
-  pseudo-elements; the glow is a box-shadow. None of it takes space.
-- The glow stays within 6px: `.card-panel` is `overflow-hidden` with only 8px of padding on a
-  phone, so anything wider is sheared off at the card's edge.
-- Only `transform` and `opacity` animate, which the compositor handles without a per-frame
-  repaint. Reduced motion, and ended banners (`ssr-panel--still`), keep the static foil and
-  drop the motion.
-- The chip is sized to the title's 20px line box, and truncates its own label before it lets
-  the title wrap — a wrapped title is a taller row.
-
-**A banner's free pulls are a chip on the same title line** (`.free-pulls-chip`, fed by
-`free_pulls` on the `BannerUma` / `BannerSupport`), under the same rule: the 20px line box,
-and an inset ring instead of a border because a border is 2px of height. Its text is the
-title's own size (14px on a 20px line, no vertical padding), so the line-height IS the box.
-Neither chip truncates when the two share a line; they step down with the title line's own
-width instead (the line is a `@container`), on a ladder measured against the real widths
-(icon + title 213px; chip about 59 / 99 / 144px for "120", "120 free", "120 free pulls";
-gold pill 28px as a star, 104px with its word; 8px gaps):
-
-| Line width | Free pulls alone | With Recommended |
-|---|---|---|
-| under 18rem | nothing | nothing (the chip; the gold pill is hidden too) |
-| from 18rem | `50` | `50`, gold pill hidden |
-| from 20rem | `50 free` | star + `50` |
-| from 23rem | `50 free pulls` | star + `50 free` |
-| from 26rem | | star + `50 free pulls` |
-| from 30rem | | `Recommended` + `50 free pulls` |
-
-Under 18rem is only the ~200px uma column beside a race-prep batch, where the title already
-fills the line. When something has to give, the gold pill goes before the number: the foil
-panel already says "recommended", nothing else says how many pulls are free. Both words stay
-in the accessibility tree at every width, and zero renders no chip at all. A Recommended
-chip with NO free pulls beside it keeps its word and truncates as before. Neither chip class
-sets `display` in App.css: they show and hide through container-query utilities, which an
-unlayered `display` would outrank. If a chip's font, padding or the titles change, re-measure
-before trusting the ladder (the title icon is `shrink-0` so an overflow shows as one instead
-of as a squashed icon).
-
-The Timeline's event filter offers **"Free pulls"** beside "Recommended only", on the same
-terms (`bannerWindowHasFreePulls`): only when some banner has any, and a window stays if
-either side of any banner in it does.
-
-**A card's `purpose` is an overlay on its own tile art** (`FeaturedTileArt`), revealed on
-hover, keyboard focus (`:focus-visible`) or a touch tap. It lives *inside* the art box
-because three ancestors clip — the band scroller, a recommended panel's `overflow: hidden`
-and the card — so a floating tooltip would need a portal and a positioning library. The
-field's 100-character cap is what keeps the text inside the narrowest tile. An empty purpose
-renders the tile exactly as before: no overlay, no tab stop, no handlers.
-
-**Each tile is a link to its Encyclopedia page** (`FeaturedTile`, keyed
-by the payload's `game_id`; none when it is null, as on a placeholder card). The link then
-owns the overlay's triggers: it is the one tab stop and the `group` the hover and focus
-classes answer to, and a tap follows the link, so a touch screen doesn't toggle the note.
-For everyone since the Encyclopedia opened (2026-11-18).
-
-### Infinite scroll — the reveal-count dependency is intentional
-
-The list reveals `INFINITE_CHUNK_SIZE` more cards each time a 1px sentinel `div` at the
-end of the list comes within `INFINITE_ROOT_MARGIN` of the viewport.
-
-**The effect that owns the `IntersectionObserver` lists `revealCount` in its dependencies
-on purpose.** An observer fires only on a *change* in intersection, so one left attached
-across an append goes silent while the sentinel is still on screen — and the list stalls
-one chunk in. That's the failure mode on tall viewports, where a chunk doesn't fill the
-fold. Rebuilding the observer per append forces a fresh evaluation.
-
-`revealCount`, not the raw `visibleCount` state, because a deep link can widen the
-revealed prefix without touching that state — see "Deep links from the sheet to the
-Timeline". `revealMore` measures from the same value, which is what keeps every append
-visible and so keeps this dependency changing on every one of them.
-
-Guarded by `src/__tests__/Timeline.test.tsx`, whose fake observer fires each instance
-**once**. A more permissive fake lets that regression through silently — see Testing below.
-
-### Step-ups are announced on the campaign strip
-
-`AnniversaryEventStrip` renders a chip such as "2 ★3 + 3 SSR Step-Up" from the
-`banner_step_ups` summary on each timeline row, summed per pool by `formatStepUpChip`.
-
-It is there for discoverability, not decoration: nothing else on the site indicates
-step-up banners exist until you press the calculator's third Add button. Because a
-step-up's FK points at the campaign **Part** it runs in, the chip lands on exactly one
-card per campaign with no filtering.
-
-### Free card events sit flush beneath their banner's card
-
-`StoryEventStrip` (`components/timeline/StoryEventStrip.tsx`) draws each free card event
-under the banner it runs with (`story_event_data`, grouped by `storyEventsByBanner`). Four
-kinds share the row (`kind`): story events, main story chapters, anniversary missions and
-special events. Each row has its picture when one is uploaded (one slot and one size for every
-kind; the art is 2:1), the kind's pill, the name (the kind's label when it has no English one),
-the kind's line, the reward chips (non-zero only), and each free card and uma. It is the mirror
-of `AnniversaryEventStrip`: outside the panel, which squares its bottom corners, so the art row
-can't grow. Plans: `notes/story-events-plan.md`, `notes/story-events-plan-2.md`.
-
-- **Every kind's words live in `STORY_EVENT_KINDS` and `storyEventLine()`**
-  (`utils/storyEvents.ts`): the pill, the stacking order under one banner (story event first),
-  and the line. A story event says "Runs with this banner." and no date, a main story chapter
-  never closes, and anniversary missions and special events give their last day through
-  `formatDate`. Read the kind through `storyEventKind()` and the umas through
-  `storyEventUmas()`: an API older than the kinds sends neither.
-- **An uma reward is `FramedUma`** from its `portrait`, rainbow for the viewer's favorites,
-  with the same click and tap rules as a card (`FreeRewardTile` serves both). `cards` stays
-  support cards only, and `umas` is its own list.
-- **An event's uma dates her release** where she is on no banner (Special Week (Commander),
-  Rhein Kraft (Alt Version)): the PvP release check (`cardReleases`), the uma list's date sort
-  (`withEventDates`) and her page's Global date (`firstEventGivingUma`). The Collection's sort
-  doesn't read events.
-
-- **Display only.** The rewards are the event's own and nothing reads them for the projection.
-  The cards carry no `first_jp_date`, and the selectors build their catalogue from banners, so
-  a free card never becomes selectable.
-- **On a computer a click on a free card opens the shared card** (`hoverCardProps("card", id)`,
-  drawn by `HoverCardLayer` like every other tile), whose "Open its page" goes to its page.
-- **On a touch screen a tap opens the row's own details, never navigates** (owner,
-  2026-11-17, for this row; `HoverCardLayer` ignores touch). "Open its page" inside does the
-  navigating. Its popup is `useHoverPopup(..., { tapOnly: true })` (hover and focus off), so a
-  mouse or keyboard never opens it beside the shared card, and `FreeRewardTile` holds the click
-  back only for a touch (a ref,
-  because the tap's own re-render lands before the click). The banner tiles still send a tap
-  to the page.
-- **For everyone**, like the Encyclopedia, since 2026-11-18 (early access only before).
-- **"Must get" is the one mark**, outlined in brand, never filled (black on brand fails on the
-  light theme). No scale.
-- Search finds a banner by its events' names and their free cards' and umas' names.
-
-### Other Timeline rules
-
-- **A featured tile's name breaks at a seam, never mid-word** (`withSeams` in
-  `BannerWindowCard.tsx`). Two names are one 18-letter word, "Matikanetannhauser" and
-  "Matikanefukukitaru", too wide for a support tile at any readable size, so a soft hyphen
-  after "Matikane" (`NAME_SEAMS`) lets them break as "Matikane-" over the rest, at the tile's
-  normal size (Daptrius, board "Timeline, Support Card, Longest Name Fix", 2026-11-17; he
-  agreed). Checked 2026-11-17: no other uma or card name has a word over 12 letters; a new
-  one goes in the list.
-- **`SUPPORTS_INTERSECTION_OBSERVER`** is read once at module scope. Where there is no
-  observer (jsdom, pre-2019 browsers) the list renders unwindowed, rather than stranding
-  the reader partway down with no way to advance.
-- **Both windows reset through `resetListWindow()` in the filter handlers, not from an
-  effect.** Resetting in an effect commits the stale window and re-renders over it — a
-  visible flash, and what `react-hooks/set-state-in-effect` flags.
-- **Narrowing restarts the list; widening holds the reader's place.** Cutting the list
-  down is a new question and belongs at the top of the answer. Going back to the whole
-  list is the opposite — the reader found what they wanted and now wants its context — so
-  `handleSearchChange` / `handleFilterChange` capture the row on screen first and rebuild
-  around it. Each control has one un-narrowed value (an empty query, `"all"`) and the
-  capture happens only on the transition *into* it; a move between two narrow values
-  degrades on its own, because the row simply won't resolve in the new list.
-- **Cards key off `timelineRowKey(row)`** — `cm-` / `loh-` + id for race events, `win-` +
-  the shared start date for a banner window, `sce-` / `ann-` + id for a marker and
-  `sce-N+ann-M` for a paired one. Ids are unique only *within* a model, and
-  positional keys make React reuse a card's DOM — including decoded images — for a
-  different event when the list grows or re-filters. A window keys on its date rather than
-  its first banner's id so the key survives the API reordering banners inside a group.
-- Card images carry `loading="lazy"`; a banner card holds up to five, so a fully-revealed
-  list is several hundred.
-- **Every timeline image DECLARES its aspect ratio, and this is not decoration.** Banner,
-  marker and race art are `aspect-[16/9]`, uma tiles `aspect-square`, support tiles
-  `aspect-[3/4]` — measured across the live CDN (1024×576 / 680×383, 360×360, 450×600,
-  no exceptions). A lazy image with only `h-auto` is 0px tall until it decodes and then
-  snaps to full height: eight banner images measured in Chrome moved the content below
-  them by **2952px**, so a seventy-card reveal shifts by some 26,000px while you read.
-  That is what made the deep-link scroll below unable to arrive. `object-contain` rides
-  along with each ratio so an asset that is ever *not* that shape letterboxes instead of
-  stretching — the same distortion the width-cap rule above is about, from the other side.
-- **`BannerArtPlaceholder` holds the same 16:9 box**, not a min-height of its own. A
-  stand-in of a different height still moves the page when the real art arrives.
-
-### Deep links from the sheet to the Timeline
-
-`/app/timeline?focus=<kind>-<id>`, built by `timelineFocusHref` and parsed by
-`parseTimelineFocus` in `utils/timelineFocus.ts`. The calculator's scenario bands and its
-rows' card art both link through it, and so does the PvP page's "View on Timeline"
-(`cm-<id>` / `loh-<id>`, the same form as its own `?event=`, so a `PvpEventRef` is a
-`TimelineFocus`); the Timeline resolves the target.
-
-Every Timeline card also carries a **Copy link** pill (`CopyTimelineLink`) that copies the
-same URL for itself: a banner window by its first banner, a race by its `cm`/`loh` ref, a
-marker by `kind` + `sourceId` (each half of a pair links to itself; both land on the pair).
-The URL is built in the click handler from `window.location.origin`, never at render time.
-
-- **Why not a `#hash`.** The Timeline windows its list (ten cards a page, or a growing
-  prefix under infinite scroll) and hides past events by default, so the element a browser
-  would scroll to is usually not in the DOM. The link therefore *names* a target and the
-  route widens its own window to reach it.
-- **The id is a `BannerTimeline`**, never the `BannerUma` / `BannerSupport` /
-  `BannerStepUp` a planner row points at. Concurrent banners merge into one card, and all
-  three row kinds carry the same `banner_timeline` FK, so it is the only id that identifies
-  a card from any of them. `rowMatchesFocus` matches a window by **any** banner inside it.
-- **Kind-prefixed, because ids are unique only within a model.** `banner` / `scenario` /
-  `anniversary`; the latter two are `TimelineMarker["kind"]` verbatim, so neither end needs
-  a translation table. Both marker types carry a `sourceId` for this — the primary key,
-  held separately from the React `key` rather than parsed back out of it.
-- **A malformed value degrades to "no focus".** It comes off the URL, where a user can edit
-  or truncate it. Note `Number("")` is `0` and `0` is an integer, so the parser requires a
-  *positive* id or `banner-` focuses primary key 0.
-- **Resolution is DERIVED, not pushed into state from an effect** — the past/future half
-  (`showPastOverride ?? focusIsPast ?? false`), the page, and the revealed prefix
-  (`revealCount`). Writing state once the data arrives commits the un-focused list first
-  and re-renders over it, which is the same flash `resetListWindow()` exists to avoid.
-  Only the `scrollIntoView` is an effect, because it is a genuine DOM side effect —
-  and it is guarded, since jsdom implements no `scrollIntoView` at all. It is a **layout**
-  effect: a passive one can leave a frame of the un-scrolled list on screen first, which
-  is tolerable for a deep link arriving on a fresh route and is the entire bug when the
-  hook is asked to hold a card still (below).
-- **The focus scroll is INSTANT, and then re-corrects until the page stops moving.**
-  Not a downgrade from the smooth scroll it replaced: `scrollIntoView` fixes its
-  destination when called, so anything growing above the target mid-animation leaves it
-  short — and because images are lazy, the animation itself drags the viewport past them
-  and triggers exactly those loads. It missed by more the further it travelled. Reserved
-  art boxes (above) remove the cause; the settle loop — `useFocusScroll`, shared with the
-  Selectors page — covers what a declared ratio cannot
-  predict — a heading that wraps, a font that swaps, a panel that renders late. It
-  re-aligns each frame until the target's `top` holds within `SETTLE_TOLERANCE_PX` for
-  `SETTLE_STABLE_FRAMES`, or `SETTLE_TIMEOUT_MS` elapses. **A `wheel`, `touchstart` or
-  `keydown` abandons it immediately** — hauling the page back under a reader who has
-  taken over is just a different way of losing their place.
-- **`revealMore` measures from `revealCount`, not from `visibleCount`.** After a jump the
-  state still says 10 while 90 rows are on screen, and `count + 10` would append nothing
-  visible for eight scrolls running.
-- **Any control that moves or narrows the list clears the parameter** (`clearFocus`, called
-  from `goToPage`). The focus target overrides the current page, so holding on to it would
-  make "Next" look broken; dropping it also retires the arrival ring
-  (`TIMELINE_FOCUS_HIGHLIGHT`) at the moment the reader moves on. It drops the local
-  anchor (below) as well, and does so *before* its own early return — that return only
-  knows about the URL, and an anchor left standing overrides the page identically.
-- **A target needs ROWS BELOW IT to be scrollable to the top.** `scrollIntoView` cannot
-  scroll past the bottom of a scroller, so a card with nothing under it stays wherever the
-  last scroll position leaves it whatever `block` says. `revealCount` therefore adds
-  `FOCUS_TRAILING_ROWS` (one whole chunk) *past* the target's own chunk — without it the
-  target is always in the LAST revealed chunk, with 0–9 rows beneath it, and the landing
-  looks intermittent because it depends on where the target falls inside that chunk.
-  Measured live: Project L'Arc (row 44, five rows below) landed correctly; Grand Masters
-  (row 19, last of its chunk) did not.
-- **`FOCUS_TAILROOM` covers the case revealing cannot** — a target within one
-  chunk of the end of the whole list, where there are no more rows to reveal. One screen
-  of `dvh` padding, rendered *only* then: permanent padding would put a screen of dead air
-  under every timeline, which is worse than the bug. Paged mode keeps a residual limit —
-  a page holds ten rows, so a target last on its page has nothing below it and no way to
-  reveal more.
-- **It lands on the card's TOP (`block: "start"`), not its middle**, offset by
-  `FOCUS_SCROLL_MARGIN` (`scroll-mt-6`). Cards are tall — banner art alone is
-  ~369px — so centring one put its heading halfway down the screen. The margin goes on
-  whichever node carries `focusRef`, which is *not* always the node wearing
-  `TIMELINE_FOCUS_HIGHLIGHT`: a banner window rings its panel but scrolls its wrapper, so
-  that the campaign strip above the panel comes into view too.
-- **One ref for the ANCHORED card**, handed to whichever card matches via
-  `TimelineFocusProps` — so there is no per-row ref bookkeeping and two cards cannot claim
-  it at once. On `BannerWindowCard` the ref goes on the outer wrapper (so scrolling
-  accounts for the campaign strip) and the ring on the panel (whose rounding it has to
-  follow).
-- **The ref and the ring are no longer the same question.** The ref follows whichever row
-  the list is anchored on, from either source; `isFocused` follows the deep link alone.
-  `RaceEventCard` takes both since the PvP page links to race events: a `cm` / `loh` focus
-  matches through `refForRaceEvent`, and a race event is past once it has ENDED (like a
-  banner), which flips the Timeline to the past for an old meeting.
-
-### The anchor: two sources, one row index
-
-`anchorRowIndex` is the single answer to "which row is the list built around", resolved
-from a deep link's `focus` **or** from `anchorRowKey`, the local state set when a filter is
-lifted (see "Narrowing restarts the list" above). Everything downstream — `revealCount`,
-`anchorPage`, `anchorNeedsTailroom`, the scroll — only ever wanted *which row*, so they
-read one index rather than each learning about both sources. The URL wins where both
-exist, though in practice they cannot: typing in the search box drops the deep link.
-
-- **The anchor is a `timelineRowKey`, not a `TimelineFocus`.** A key exists for every
-  row kind, and a search matches race events, so one is routinely on screen when the box
-  is cleared. It also stays out of the
-  URL, leaving `utils/timelineFocus.ts` to the one job it was written for.
-- **The row is found by measuring, once, at the moment of the lift** — `measureAnchorRow`
-  reads the list container's leading children, which are the rendered cards one-for-one.
-  A standing `IntersectionObserver` would run every scroll frame of a page holding 250
-  image-heavy cards to produce a value wanted once a visit, if ever.
-- **"Topmost" means topmost below the CONTROLS BAND**, which is sticky at the app-shell
-  breakpoint and covers the top of the scrollport. A row is the one being read if any part
-  of it is still below that line — hence `bottom`, not `top`: someone halfway down a tall
-  banner card is reading that card, not the one after it.
-- **The row is put back where it was, not at the top.** `useFocusScroll`'s optional
-  `offset` ref carries the row's pre-lift screen position. It cannot be applied with
-  `scrollBy` — the window is not the scroller at app-shell (see `useBackToTop`) — so it
-  goes on as `scroll-margin-top`, which the browser resolves against whatever scroller is
-  live. The margin is **calibrated, not the offset itself**: park flush, measure where
-  flush landed, and the difference is the margin. Calibrate **once** — re-calibrating a
-  node that already carries a margin measures the margin's own effect and oscillates.
-  The cleanup clears it, or it silently displaces the next landing on that node.
-- **Under jsdom every rect is zero, so the measurement returns null and the ordinary reset
-  stands.** That is why no pre-existing test changed behaviour, and why the new ones stub
-  `getBoundingClientRect` per card to fake a scroll position.
-
-Covered by `src/__tests__/timelineFocus.test.ts`, the "Timeline deep links" suite and
-"Timeline keeps its place when a filter is lifted".
-
-### Marker cards: scenario launches and campaign openings
-
-`EventMarkerCard` is the timeline's third card, fed by a third `TimelineRow` kind
-(`{ kind: "marker" }`) and built by `buildTimelineMarkers` / `mergeTimelineMarkers`.
-A fourth kind, `{ kind: "marker_pair" }`, holds a scenario and a campaign that land on
-the same UTC day and renders as `EventMarkerPairCard`.
-
-- **The marker row kind is a FRONTEND union member, not a backend one.**
-  `organizedTimelineData` narrows on the backend's `event_type` tag, but
-  `AnniversaryEvent.event_type` already means the campaign kind
-  (`anniversary` / `new_year` / `campaign`). Tagging markers server-side would collide with
-  a shipped field. Key prefixes are `sce-` and `ann-`.
-- **`mergeTimelineMarkers` runs AFTER `groupTimelineEvents`**, for the same reason grouping
-  runs after filtering: it inserts against the final row order, so running earlier would
-  let a marker land inside a window that later folds together.
-- **A scenario and a campaign on the same day are ONE row.** Scenarios almost always
-  debut alongside an anniversary, and two full-width cards for one launch read as two
-  events on two dates. `pairSameDayMarkers` folds the sorted markers into a pair row
-  before splicing, so the pair is one card, one page slot and one scroll anchor —
-  `measureAnchorRow` still maps DOM children to rows one-for-one. The panel shows the
-  campaign on the left and the scenario on the right (stacked in that order on a phone),
-  and `rowMatchesFocus` answers for either half, so a deep link to either lands on the
-  shared panel. Only that combination pairs; two campaigns or two scenarios on one day
-  stay separate. The data stays separate too, as with `BannerWindowGroup` — the fold is
-  render-side only.
-- **Marker rows are built before they are filtered, and a pair passes a filter if EITHER
-  half does** (`rowMarkers`, `markerRowMatchesKind`, `markerRowMatchesSearch`). The
-  Scenarios filter, the Campaigns filter and a search that names one half all show the
-  same pair as "All events" does. Filtering the markers first would strip the other half,
-  so the same launch would be a pair under All and a lone marker under Scenarios — a
-  different row with a different key, and the key is what `anchorRowKey` holds the
-  reader's place with when a filter is lifted. The past/future toggle judges a pair by
-  its scenario's instant (`timelineRowStart`), so halves a few hours apart can't split.
-- **The marker cards share the banner card's boxes class for class**: the outer `my-3
-  w-full px-2` wrapper carries the ref and scroll margin, the `card-panel` inside it is
-  padded `p-2 sm:p-3` and carries the ring. That is what lines the panel edges up down
-  the list. Art is centred in a lone card (nothing beside it) and hard left in a pair
-  (a column edge beside it), the same rule as `BANNER_ART_ALONE`.
-- **A scenario has no end date and never will** — it stays playable after release. The card
-  branches on the *presence* of an end date rather than on the kind, showing
-  "Releases &lt;date&gt;" instead of a range. The past/future toggle classifies a scenario by
-  its start instant, since it can never be "over".
-- **Markers are suppressed under a category filter.** They are cross-cutting context rather
-  than banners, so a scenario card stranded in a list of reruns answers a question nobody
-  asked — the same reasoning that drops race events there.
-- **A missing image is the expected state**, not a degraded one: scenarios get entered
-  before the art exists. A marker card with no image **collapses** to its chip, name and
-  dates rather than reserving a 16:9 `BannerArtPlaceholder`: a marker card has nothing
-  beside its art, so the placeholder was a card-wide empty box between two banners. The
-  banner card keeps its placeholder because there it is a third of a row beside real
-  content. Build and review the card with no image first.
+**Moved to [`docs/timeline.md`](timeline.md)** (2026-11-24): how the list is built, the
+card shapes and what decides them, the hook names a theme may select, recommended panels,
+deep links, marker cards, and a table of what changes at which width. The short form of
+its rules loads by itself whenever a session opens the folder (the notes repo's
+`.claude/rules/timeline.md`).
 
 ---
 
-### Deep links from the Timeline to the Selectors page
-
-`/app/selectors?campaign=<AnniversaryEvent id>`, built by `selectorsCampaignHref` and read
-by `parseCampaignFocus` in `utils/selectorsFocus.ts`. A timeline banner belonging to a paid
-campaign wears an `AnniversaryEventStrip`, whose "Plan purchases" link is the only route
-from seeing a campaign to planning what you'd spend at it.
-
-- **The link must NAME its campaign.** It used to be a bare `/app/selectors`, which drops
-  the reader at the top of a page listing every upcoming campaign, to find the one they
-  just clicked among a stack of near-identical cards.
-- **No `kind` prefix, unlike `timelineFocus`.** That module prefixes because the Timeline
-  holds three sorts of target and a bare id would be ambiguous between them; this page
-  holds exactly one, so a kind would never discriminate anything.
-- **A plain `#hash` would not do**, even though this page renders every campaign at once
-  with no windowing: the browser acts on a hash only for a document it is loading, not for
-  a client-side route change, so the element it names does not exist when it would look.
-- **The target legitimately may not be here.** `useSelectorPlanner` drops campaigns whose
-  last banner has closed, so a link followed from the Timeline's *past* view resolves to
-  nothing. It degrades to the ordinary page, like a malformed timeline focus.
-- **Keyed on the resolved INDEX, not the raw id** — campaigns arrive after mount, so the
-  id is known one commit before the card it names exists.
-- Both pages share `hooks/useFocusScroll` (the instant scroll plus settle loop) and its
-  `FOCUS_SCROLL_MARGIN` / `FOCUS_TAILROOM` classes. A second copy would be a second place
-  for the two to drift apart.
-
 ## Legend Races page (`components/legend-races/`)
 
-`/app/legend-races` is the fourth nav destination ("Legends" in the mobile bar). It
+`/app/legend-races` is the second page of the Timeline screen, reached from that screen's
+bar (it had a navbar tab of its own until 2026-11-24; see "Screen bars"). It
 shows when each batch of umas joins the daily legend races and how long grinding one
 takes. Plan and decisions: workspace-root `legend-races-plan.md`.
 
@@ -1791,8 +1304,10 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   style's count beside "Open Pace", the way to its tab. Open, it is the gallery's `GalleryComments` with a `guideThread` source
   (`services/guideComments.ts`), which keeps the guide's counts in step through
   `patchPvpGuide`. Every comment, gallery or guide, has a thumbs-up and a thumbs-down with the score between (`useCommentWrites().vote`; staff see the split in the score's title).
-- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick under the event band (desktop
-  shell) or the navbar (phone, document scrolling); the running-style tabs, the guide's side
+- **Pinned rows** (Daptrius, 2026-10-22): the View tabs stick at the top of the shell's
+  scroller (desktop) or under the navbar (phone, document scrolling); the event band
+  (Previous, the event, Next) scrolls away in both (review item 4, 2026-11-24: it held 52px
+  of the screen for the whole read). The running-style tabs, the guide's side
   column, the gallery's open post and the team builder's docked panels stick under them.
   The offsets are MEASURED by `hooks/usePvpStickyOffsets.ts` into CSS variables on the page
   root (`--pvp-tabs-top`, `--pvp-below-tabs`, `--pvp-viewport-h`); a new pinned row reads
@@ -1833,24 +1348,19 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   with neither half is left out. Editor values that don't parse show as typed.
 - **The view tab row must not set `overflow-x-auto`**: overflow on one axis makes the other
   `auto`, and the tabs' `-mb-px` underline then drew a vertical scrollbar. It wraps instead.
-- **Five views under the header, `?view=`**: Recommendations (the guide, default, no
+- **Four views under the header, `?view=`**: Recommendations (the guide, default, no
   parameter), My team (`team`, the builder), CM Runs (`runs`, the player's logged tickets;
-  see "CM Runs view" below), Gallery (`gallery`, the posted teams; see "Gallery view"
-  below) and, for early access only, Rankings (`rankings`, below). An editor gets Edit guide. On a phone
-  the tabs show their `short` labels (Guide, Team, Runs, Ranks, Edit); the full label stays
-  the accessible name. The guide is fetched only on Recommendations and Rankings.
-- **Rankings** (`PvpGalleryRankings`, owner 2026-10-27): the event on screen only, counting
-  its **gallery posts** (Henry: "teams that people submitted into the gallery"): umas by posted
-  teams with her, cards by member decks with the card (the borrowed card too, "N borrowed"),
-  counts with shares, from `GET /rankings/gallery/<kind>/<id>` (counted on the server,
-  hourly), drawn with the Rankings page's `TeamLists.tsx`. Each row says what the event's
-  guide does with it ("Guide recommends her"; "Guide 3 of 12", the guide's decks holding the
-  card, alternatives out), the band gives the gallery's share of every saved team (the PvP
-  rankings payload), and "Most copied posts" links each post. Every saved team is the
-  Rankings page's PvP tab, linked from the band. **Not drawn at
-  all without early access** (owner, 2026-10-27: "shouldn't be visible at all if you can't
-  access it"): the tab's `earlyAccess` flag, like Edit guide's `editors`, so there is no lock
-  card for it and `?view=rankings` reads as Recommendations; the API refuses it the same way.
+  see "CM Runs view" below) and Gallery (`gallery`, the posted teams; see "Gallery view"
+  below). An editor gets a fifth, Edit guide. On a phone the tabs show their `short` labels
+  (Guide, Team, Runs, Edit); the full label stays the accessible name. The guide is fetched
+  only on Recommendations.
+- **No Rankings view since 2026-11-24.** The PvP page had one (`?view=rankings`,
+  early access only, from 2026-10-27): the event's gallery posts counted, each row beside
+  what the guide does with it, and the most copied posts. The owner removed it as redundant
+  with the Rankings page's PvP tab, which counts every saved team and shows each pick's
+  share of the gallery. An old `?view=rankings` link reads as Recommendations. The API's
+  `GET /rankings/gallery/<kind>/<id>` stays (that PvP tab reads it); its `copied` list
+  (the most copied posts) has no reader now.
 - **Only the guide is fetched**, by `hooks/usePvpGuide.ts`, with a module-level cache for
   the tab's life (errors are not cached). A 404 is "No guide for this event yet"; staff get
   drafts with a "Draft, visible to staff only" bar. A guide an editor marked **Under
@@ -1868,11 +1378,14 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   own classes never fired), each step the rank, the name in its colour and three top-star
   faces, a button to the tab ("Pace, rank 1"); `>>` is "≫ gap", `=`/`>=` "level", with
   words for screen readers; a non-style word is a plain step. Then the short description
-  and the meta analysis (on a phone about three lines, faded, "Read more" when longer).
+  and the meta analysis (on a phone cut at the last whole line under 5.25rem, with no fade,
+  and "Read more" when longer), then the team comps with three places in the styles' colours
+  (`parseTeamComp`; a comp it can't count stays words only). They sat in the right panel
+  until review item 5 (2026-11-24) left the ranking's box half empty beside it; with no
+  ranking or text they still go right.
   Right, one panel: Recommended stats (one plain row as five tiles, otherwise the table
   with every row's label and footnote: Henry asked for several rows with notes), the
-  scenario ("Cards marked Link are linked to it."), the team comps with three places in
-  the styles' colours (`parseTeamComp`; a comp it can't count stays words only).
+  scenario ("Cards marked Link are linked to it.").
 - **Running-style colours are Hakuraku's** (Henry, 2026-10-23), the `--color-style-*`
   variables in `index.css`'s `:root` (NOT `@theme`: Tailwind emits a `@theme` variable only
   when a utility uses it, and these are read through inline `var()`, so all but one went
@@ -1962,6 +1475,14 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   `MarkdownContent` escapes `[[`/`]]` before parsing, because `[[Updrafters]](FF)` is
   otherwise a markdown link. Token `--color-highlight`. **Except on a card**: a deck slot's note is
   drawn with no red and no bold (Henry, 2026-10-23), whatever it holds.
+- **`((Uma name))` is her picture** (Henry, board 1572760259066601513; review items 6 and C,
+  2026-11-24): the same plugin emits `<span data-uma>`, a caller's `renderUma` and
+  `InlineNote` draw `UmaMention` (her `FramedUma` at 2.4em, opening her card), resolved
+  through the guide's `uma_mentions` (`UmaMentionsContext`, beside the skills'). An
+  outfit's own brackets sit inside: `((Oguri Cap (Christmas)))`. Exact catalogue names only;
+  a nickname stays words. A style-ranking step that is a whole `((Name))` (`umaStepName`)
+  shows her picture where a style's faces go. The editor offers names on `((`
+  (`MentionField`), and `hydrateGuide` / `validateDocument` resolve and check them.
 - **A deck slot's note is read as parts** (`utils/deckNotes.ts`, `parseSlotNote`; release 2
   of `guide-visuals-plan.md`): `[[skills]]` become small same-size `SkillCell`s the card's
   width, the fixed tags ("1SP"/"2SP", "Stats", "Hints", "Initial Friendship", in the
@@ -2077,8 +1598,8 @@ takes. Plan and decisions: workspace-root `legend-races-plan.md`.
   so a row's numbers always share one line. A blank cell is an en dash.
 - **"New since <previous event>"** is computed client-side (`newCardsBetween`): a card's
   first global banner start, between the nearest earlier event of either kind and this one.
-- **The mobile bar has five tabs**: labels are 10px and hide (sr-only) below 360px, where
-  the icons carry the bar. Checked at 375px and 320px on 2026-10-13.
+- **The mobile bar has four tabs, five with Rankings** (`navbar/navPlaces.ts`), each with
+  its name at every phone width; see "Screen bars".
 - **Local test content**: `python manage.py load_sheet_pvp_guides` in `backend/` fills the
   local SQLite with the community sheet's guides (local only).
 
@@ -2092,12 +1613,18 @@ name and the bar, the headline (`CourseHeadline`: the spurt sentence from `deriv
 bold, the other facts in one line under it; it replaced the chips), the map, and the same in
 words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidden`).
 
+- **The block folds** (`CourseFold`, review item 3, 2026-11-24): it sits above the View tabs,
+  so it opens on Recommendations at `sm` and wider, and starts folded on the other tabs and
+  on a phone: the title, the spurt sentence (`CourseHeadline leadOnly`) and "Show the map".
+  The reader's Show or Hide is kept on the device for each place ("guide" and "tools",
+  `courseMapStore`'s `useMapOpenChoice`), and a lit skill opens it while lit. Folded, there
+  is no strip to stick. The Timeline's drawer never folds.
 - **The strip is the ruler** (`CourseStrip`, both orientations): a label column (Height,
   Phase, Course, Slope, Ground, the layer rows, Section) and a track cell per row (the
   `data-band`), the marks' words above the rows in lanes (`markerLanes`) with their lines
   through every row, the metres under the sections. A segment shows its words, then its
-  metres only where they fit beside them (an estimate against a 1,000 px strip; nothing is
-  measured). Hills carry Daptrius's triangle (`CourseIcon`). Down the page the rows are
+  metres only where they clear the centred words (`utils/courseStripText.ts`, against the
+  strip's measured width once painted, the caller's `widthPx` before that). Hills carry Daptrius's triangle (`CourseIcon`). Down the page the rows are
   columns and the marks' words sit in a margin at the right. A layer span is drawn in its
   `colour` (a veteran's `--color-course-vet-N`, else the lit `--color-course-lit`), the
   veteran's avatar at the head of her first row and "Lit" at the head of the open skill's.
@@ -2136,6 +1663,17 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   (`showWords`). Down the page the word columns share the width (a `Band` without a
   `size`) and the words wrap; across, they truncate, and a part too narrow for its words
   shows a short form (a hill's percent) or only its colour.
+- **Stick to top** (owner, 2026-11-20; Henry, 2026-11-24) is a fixed copy of the map in a
+  portal on `<body>` (`data-course-stuck`), shown once the in-place strip (in Track view, the
+  block's bottom) passes `--pvp-stick-line`; `usePvpStickyOffsets` adds its height to the
+  tabs' offsets. It shows the slim strip; the track alone, up to 360 px tall with the phone's
+  shorter callout list (`fewCallouts`) and its words, centred with the lit card (owner,
+  2026-11-24: at 240 it was a small drawing in a mostly empty bar); or both, the track bare
+  and capped at 240 px with the lit card under the strip so the strip keeps its room. Never
+  `compact` (its padding shrinks the drawing); the caps are `CourseTrack`'s `maxHeightPx`. By its OWN remembered switch (`useStuckView`),
+  never the in-place Strip | Track | Both: changing that while stuck resizes the block
+  above the reader and jumps the page. Desktop only. Every skill in the guide (`SkillCell`,
+  `SkillChip`, a mention, an uma's unique) lights the map while its detail is open.
 - **The overlay contract**: the strip draws the record, then `courseFacts(course)` plus any
   `overlays` (`{spans, markers}` in metres) and an optional `cursor` (a metre or a motion
   value). A later layer is a pure function to that shape; it never changes the strip.
@@ -2587,8 +2125,7 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
   tokens (running, upcoming, ended, predicted) are `@theme`, redrawn for the light themes.
 
 - **Patreon only for now** (owner, 2026-10-27): `account.early_access` draws the page and its
-  navbar item (both bars; with six phone tabs the labels hide below 390px, and the desktop
-  item is icon-only below `xl`). Every `/rankings/*` route checks `benefits.early_access`
+  navbar item (both bars, named at every width since 2026-11-24). Every `/rankings/*` route checks `benefits.early_access`
   too. Not prerendered, not in the sitemap, `noindex` (`AppRouteMeta`), like the Skills page;
   in the API's `visits.KNOWN_ROUTES` so landings count.
 - **Tabs, `?view=`**: Guides (default, no parameter), Pull plans (`pull-plans`, behind
@@ -2600,7 +2137,7 @@ Plan, decisions and build order: workspace-root `notes/rankings-page-plan.md`; t
 - **PvP** (`PvpTab.tsx`), one event, picked on a sideways strip of event cards
   (`EventStrip.tsx`; `?event=` on the page, else the remembered event, else the one running or
   next; the pinned window uses the remembered one alone). "Umas players build" counts **every
-  saved team**, posted or not (the PvP page's own Rankings view counts the gallery only), with
+  saved team**, posted or not, with
   a bar split by running style; an opened uma reads her strategies, her share of the event's
   gallery posts (`GET /rankings/gallery`) and her CM Runs win rate together. "Cards in their
   decks" the same way. "What wins" is CM Runs' win rate per uma and strategy
@@ -2717,10 +2254,9 @@ first, from 2026-11-12; `notes/encyclopedia-open-plan.md`).
   JP-only outfit's aptitudes and stats carry `JpDataNote`. Plain helpers (filters, words,
   colours, a banner's status) live in `utils/encyclopedia.ts`, so the component files export
   components only.
-- **The navbar**: the Encyclopedia is everyone's sixth tab, and Rankings the seventh for
-  early access. Both counts use the breakpoints the seven-tab bar was fitted at (icons only
-  below 440px on a phone; the Encyclopedia and Rankings labels are icons below 1536px),
-  because six tabs with the long "Encyclopedia" label was never measured.
+- **The navbar**: the Encyclopedia is everyone's fourth place since Selectors and Legend
+  Races moved into their screens' bars (2026-11-24), and Rankings the fifth for early
+  access. Its name shows at every desktop width now; see "Screen bars".
 - **The catalogue is 106 KB on the wire** and the links and cards need it
   (`useEncyclopediaHrefs`). `HoverCardLayer` sits on every `/app` page, so it skips the load
   where no tile can open a card (`pageDrawsHoverCards`: the calculator and Selectors), and
@@ -2835,8 +2371,9 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   document scrolls (a phone, a short window), at 0 inside the desktop app shell. Under the
   navbar it sticks at the navbar's MEASURED height, `--navbar-h` on `<html>`
   (`hooks/useNavbarHeight.ts`, a ResizeObserver from `Navbar`): a written-down height was
-  wrong on a phone under 440px, where the tabs' labels go sr-only and the bar is shorter, and
-  left a gap (Daptrius, 2026-11-17). index.css's `scroll-padding-top` numbers are only its
+  wrong on a phone under 440px, where the tabs' labels went sr-only and the bar was shorter, and
+  left a gap (Daptrius, 2026-11-17). On a phone it is the places row alone since 2026-11-24:
+  the wordmark row above it scrolls away. index.css's `scroll-padding-top` numbers are only its
   first-paint fallback. It
   draws only with three or more sections, and its chips are buttons (`scrollIntoView`), not
   `#hash` links, so Back leaves the page.
@@ -2970,6 +2507,87 @@ keep the links above). The code says "hover" because they opened on hover for on
   nothing opens two cards. **A guide uma tile (`UmaTile`) has no hover** when her card exists
   (`hover={false}`; Daptrius, 2026-11-19): the card already holds the note and the unique's
   verdict, and opening it lights the course map. Keyboard focus still opens the small popup.
+
+## Projection settings (`carat-calculator/ProjectionSettings.tsx`)
+
+The switches that decide what the projection assumes (spend tickets, misc earnings and its
+own amount, the paid pulls, the daily pull on banners outside the plan). **The last row of
+the Income & Resources panel since 2026-11-24** (owner; `notes/navigation-plan.md`, PR 1).
+Until then it was `navbar/SettingsMenu.tsx`, a popover behind a gear drawn on every `/app`
+page, although only the calculator reads these settings.
+
+- **The closed row says what is on.** A count pill ("4 of 6 on") at every width, and from
+  `@3xl` the short names of the settings that are on. A dropdown hides its contents, and
+  the shop ticket counts showed what that costs (3% of players found them behind the gear),
+  so the panel has to show what its numbers assume without being opened. A new setting
+  needs a `short` name for that line.
+- **Closed on every load, open until a reload** (`useRememberedOpen("projection-settings")`),
+  like the panel around it.
+- **Closed means out of reach**: the body is `inert` and `aria-hidden` on a plain wrapper
+  inside the animated box. Height 0 alone would leave six switches in the tab order.
+- **Layout is by container query**, like the rest of the panel: one tile per row on a
+  phone, two from `@3xl`, three from `@income-wide`. A setting that is on gets the brand
+  edge; off is the plain tile, never a dimmed one.
+- **The height animation asks `useReducedMotion()` itself**: `MotionConfig` stops
+  transforms only.
+- A guest's "Clear plan and start over" lives under the tiles, two presses, as it did in
+  the popover.
+
+## Screen bars (`components/ScreenTabs.tsx`) and the navbar's places
+
+**The navbar lists places; a place with more than one page gets a screen bar under it**
+(owner, 2026-11-24; `notes/navigation-plan.md`). Seven navbar tabs were more than a phone
+could name, and two of them were icons without a word below 1536px on a desktop.
+
+- **The places are `navbar/navPlaces.ts`** (`NAV_PLACES`, `navPlacesFor`): Calculator,
+  Timeline, PvP, Encyclopedia, and Rankings for early access. One list for the phone bar and
+  the desktop bar. Each has an `isOpen(pathname)`, so a place stays lit on every page inside
+  it. A new place is one entry there; something that is not a place (a setting, a link, the
+  theme) goes in the menu (`SiteMenu`), never in the bar.
+- **On desktop every place has its name from 1024px** (five are 567px wide; the wordmark
+  wraps to two lines at 1024px with all five, as it did before).
+- **On a phone the places keep their names too, and only they pin** (owner, 2026-11-24,
+  with a bottom bar deferred so the footer ad is untouched). The bar is two pieces: the
+  wordmark row (search, Team, Sign in, the menu, a waiting save) scrolls away with the page,
+  because the sticky box's `top` is minus that row's `h-14`; the places row under it is
+  what stays, and the only part measured (`data-sticky-navbar`, `--navbar-h`). **Scrolling
+  up brings the row back** (`hooks/useNavbarReveal.ts`, web #466): the hook watches the
+  scroll direction and sets `--navbar-reveal` (3.5rem shown, 0 tucked away) on `<html>`.
+  The navbar's sticky box adds it to its `top`, and everything pinned under the navbar adds
+  it too: a screen bar, the Encyclopedia's jump bar, and the PvP rows, which are measured in
+  pixels and so re-measure on `NAVBAR_REVEAL_EVENT`. A new row that pins under the navbar
+  on a phone takes `calc(var(--navbar-h) + var(--navbar-reveal, 0px))`, or it ends up
+  under the returned row. Measured in WebKit: up 60px, the row returns on the calculator,
+  PvP, the Timeline and an uma page, and every bar under it moves down with it. The cells are
+  sized by their words (`flex-auto`) at 11px, 10px below 360px: five names fit 320px with
+  none cut (measured: 34px for PvP, 76px for Encyclopedia). Pinned, the phone bar is 66px
+  where it was 104px, and `scroll-padding-top` is one figure, 4.125rem, at every width.
+  Change the row's `h-14` and the sticky `top` together.
+- **A screen bar is `ScreenTabs`**, fed a list and a one-line wrapper per screen:
+  the Calculator's (`carat-calculator/calculatorTabs.ts` + `CalculatorTabs.tsx`: the
+  calculator `/app`, Selectors `/app/selectors`, the Pull Plan Library `/app/plans`, early
+  access until it opens; web #456) and the Timeline's (`timeline/timelineTabs.ts` +
+  `TimelineTabs.tsx`: the Timeline and Legend Races). Drawn like the PvP page's view tabs
+  (Henry's ask) but as `NavLink`s, since they are separate addresses. A third screen is a
+  list and a wrapper, never a copy of the markup.
+- **AppShell draws a screen's bar above the loading gate**, so the build-time render of the
+  screen's pages has it. A wrapper reads the path and the account only; a gated tab (the
+  Library) joins after the account loads, and the bar's height never changes.
+- **Sticky** at `--navbar-h` where the document scrolls (phone), at `0` in the desktop
+  shell (`app-shell:top-0`), the same two set-ups as the Encyclopedia's jump bar. `z-30`,
+  opaque.
+- **Its height is one variable, `--screen-tabs-h` (`index.css`), and whatever sits under the
+  bar reads it.** The scroll padding (`html:has([data-screen-tabs])` where the document
+  scrolls, `[data-app-scroller]:has(> [data-screen-tabs])` in the desktop shell) is what
+  lands a deep link below the bar: without it a planner row's link to its Timeline card, or a
+  campaign strip's link to Selectors, parks its target under the bar. A band a page pins
+  beneath the bar takes it as its `top` (the Timeline's controls,
+  `app-shell:top-(--screen-tabs-h)`); at `top-0` the two stack on one line and the later one
+  covers the tabs. Measured 2026-11-24: a Timeline deep link lands where it did before the
+  bar existed, relative to the bands, at 1440px and 390px.
+- A phone shows "Library"; the full "Pull Plan Library" stays the link's name.
+- **The tabs share the bar's whole width at every size**, one equal grid column each, like
+  the Rankings and PvP rows (owner, 2026-11-24); never bunched at the left.
 
 ## Selectors page (`components/selectors/`)
 
@@ -3278,15 +2896,24 @@ notes off. The item is hidden on an API older than sharing (no
 ## Community plans (`components/community-plans/`, `/app/plans`)
 
 Pull plans players have posted (`notes/pull-plan-database-plan.md`, Design 6 to 8; the
-canvas shots are in `notes/pull-plan-database/`). Early access only until PR 5: the route
+canvas shots are in `notes/pull-plan-database/`). **Players see it as the Pull Plan
+Library** (renamed 2026-11-24, `notes/pull-plan-database-plan-2.md`): every visible string
+says that, while the folder, the components, the comments and `/app/plans` keep "Community
+plans" as the internal name. Site search still finds it by "community plans". Early access only until PR 5: the route
 exists, the page shows `SupportersFirstNote` without `account.early_access` or on the API's
 403, and it is noindex and out of `prerenderRoutes.ts` and the sitemap, like Rankings.
 Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Navbar`).
 
 - **A list whose posts open in place**, never a side panel or a dialog (decision 8). The
   heading with "My plans"; the sort bar (Top for Today / This week / This month / All time,
-  and New) with the count; the filter sidebar (`PlanFilters`, a column from `lg`, a sheet on
-  `GalleryModal` below) beside the list.
+  and New) with the count; the filter sidebar (`PlanFilters`, a 17rem column from `lg`, a
+  sheet on `GalleryModal` below) beside the list.
+- **A spending level's option says what it means** ("Minnow - Daily Carat Pack only",
+  `spendingOptionLabel` in `utils/planFeedView.ts`), in the filter and the post dialog
+  alike; both halves are the API's (`plan_gallery.SPENDING_MEANINGS`). The feed row's chip
+  keeps the short label with the meaning as its tooltip. The sidebar is 17rem because the
+  longest option has to fit its closed select; the dialog stacks its two pickers for the
+  same reason.
 - **One grid for every row** (`PLAN_ROW_GRID` in `PlanFeedRow.tsx`), shaped by the LIST's
   width (`@container/plans`), never the window's: wide adds the four lead banners' pictures,
   medium drops them, narrow folds the numbers into one line under the poster. The heading
@@ -3312,11 +2939,16 @@ Its own chunk (`loadCommunityPlans.ts`). The Calculator tab stays lit on it (`Na
   (`usePlanFeed` under the same `["gallery", "feed"]` prefix, so `patchPost` reaches it).
 - Narrow a post with `isPlanPost()` / `isTeamPost()` (`utils/galleryPost.ts`), never by
   its keys: the account page's list and the profile card hold both kinds.
-- **The way in** (decisions 1 and 11): a "Community plans" button on the Plans bar
-  (`PlanSwitcher`, icon only below 40rem of bar), and "Post this plan" in the plan menu with
-  a "Posted" mark from `post_public_id`; both early access only, and the item hidden on an
-  API without the field. The page's heading has "My plans" and "Post a plan" (the open plan).
-  The share card links "Browse community plans" under the same gate.
+- **The way in is the Calculator screen's bar** (owner, 2026-11-24, replacing decisions 1
+  and 11's Plans bar button): see "Screen bars" below. "Post this plan" in the plan
+  menu has a "Posted" mark from `post_public_id`; early access only, and hidden on an API
+  without the field. The page's heading has "Post a plan" (the open plan) and no "My plans":
+  the bar is the way back. The share card links "Browse the Pull Plan Library" under the
+  same gate.
+- **A plan may have several posts** (owner, 2026-11-24, api `0145`). `post_public_id` is the
+  plan's NEWEST post. The dialog asks on a posted plan: "Update my post" (the default; keeps
+  the link, comments and votes, and offers "Take it down") or "Post it as a new plan"
+  (`as_new: true`, still within the 5-post cap).
 - **Posting** (`PostPlanDialog`, the `PublishDialog` pattern on `GalleryModal`): title,
   About, the three optional picks worded by the feed's `filters`, the range shown never
   asked, "Include my notes" and "Include my income" UNTICKED ON EVERY OPEN, the agree box,

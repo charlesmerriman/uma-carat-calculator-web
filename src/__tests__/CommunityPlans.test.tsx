@@ -225,14 +225,14 @@ afterEach(() => {
 describe("the gate", () => {
 	it("shows the supporters-first note without early access, and asks for nothing", () => {
 		renderPage({ earlyAccess: false })
-		expect(screen.getByText(/Community plans are for our Patreon supporters/)).toBeInTheDocument()
+		expect(screen.getByText(/The Pull Plan Library is for our Patreon supporters/)).toBeInTheDocument()
 		expect(planFeedFetch).not.toHaveBeenCalled()
 	})
 
 	it("shows the same note when the server refuses", async () => {
-		vi.mocked(planFeedFetch).mockImplementation(() => json({ error: "Community plans are open to supporters first." }, 403))
+		vi.mocked(planFeedFetch).mockImplementation(() => json({ error: "The Pull Plan Library is open to supporters first." }, 403))
 		renderPage()
-		expect(await screen.findByText(/Community plans are for our Patreon supporters/)).toBeInTheDocument()
+		expect(await screen.findByText(/The Pull Plan Library is for our Patreon supporters/)).toBeInTheDocument()
 	})
 })
 
@@ -287,8 +287,9 @@ describe("the address holds the view", () => {
 		const sidebar = screen.getByRole("complementary", { name: "Filters" })
 		fireEvent.change(within(sidebar).getByLabelText("Spending level"), { target: { value: "f2p" } })
 		await waitFor(() => expect(lastFeedCall()?.filters.spending).toBe("f2p"))
-		// The chosen level's meaning, in words.
-		expect(within(sidebar).getByText("No money spent")).toBeInTheDocument()
+		// Each level's meaning is in its option, picked or not.
+		expect(within(sidebar).getByRole("option", { name: "F2P - No money spent" })).toBeInTheDocument()
+		expect(within(sidebar).getByRole("option", { name: "Minnow - Daily Carat Pack only" })).toBeInTheDocument()
 
 		fireEvent.click(within(sidebar).getByLabelText("Late"))
 		fireEvent.click(within(sidebar).getByLabelText("Front"))

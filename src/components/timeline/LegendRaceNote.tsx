@@ -44,7 +44,8 @@ export const LegendRaceNote = ({
 		<Link
 			to={legendRacesReleaseHref(release.id)}
 			title={`${release.name}: see who ${isOut ? "joined" : "joins"}`}
-			className="flex w-fit items-center gap-2 rounded-full border border-legend-race/50 bg-legend-race/10 px-3 py-1 text-sm font-medium text-gray-200 transition hover:bg-legend-race/20"
+			data-size="md"
+			className="tl-pill gap-2 border-legend-race/50 bg-legend-race/10 font-medium text-gray-200 transition hover:bg-legend-race/20"
 		>
 			<Trophy aria-hidden="true" className="h-4 w-4 shrink-0 text-legend-race" />
 			<span>

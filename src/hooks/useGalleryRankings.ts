@@ -1,7 +1,8 @@
 /**
- * GET /rankings/gallery/<kind>/<id> for the PvP page's Rankings tab: one
- * event's gallery posts, counted on the server (backend views/rankings.py)
- * and rebuilt at most once an hour.
+ * GET /rankings/gallery/<kind>/<id> for the Rankings page's PvP tab (each
+ * pick's share of the gallery's posts): one event's gallery posts, counted
+ * on the server (backend views/rankings.py) and rebuilt at most once an
+ * hour.
  */
 
 import type { TeamSharesData } from "../types/rankingsTabs"
@@ -19,11 +20,6 @@ export interface GalleryRankingsPayload extends TeamSharesData {
 	posts: number
 	/** Every member's deck in them. */
 	decks: number
-	/**
-	 * The event's three most copied posts, without the poster's name: the post
-	 * page shows that (api #192; absent before).
-	 */
-	copied?: Array<{ public_id: string; caption: string; copies: number; umas: number[] }>
 	/** The lists at the start of the week, for rank movement (api #193). */
 	previous?: { generated_at: string; umas: number[]; cards: number[] } | null
 }

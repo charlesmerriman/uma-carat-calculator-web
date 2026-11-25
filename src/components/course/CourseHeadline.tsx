@@ -9,11 +9,16 @@ import type { RaceCourse } from "../../types"
 import { derivedFacts } from "../../utils/courseGeometry"
 import CourseIcon from "./CourseIcon"
 
-export default function CourseHeadline({ course, className = "" }: { course: RaceCourse; className?: string }) {
+export default function CourseHeadline({ course, leadOnly = false, className = "" }: {
+	course: RaceCourse
+	/** The spurt sentence alone, for the folded map (CourseFold). */
+	leadOnly?: boolean
+	className?: string
+}) {
 	const facts = derivedFacts(course)
 	if (facts.length === 0) return null
 	const lead = facts.find((fact) => fact.startsWith("Last spurt can start")) ?? facts[0]
-	const rest = facts.filter((fact) => fact !== lead)
+	const rest = leadOnly ? [] : facts.filter((fact) => fact !== lead)
 	return (
 		<div className={`min-w-0 ${className}`} aria-label="Read off the course">
 			<p className="flex items-center gap-2 text-[17px] font-bold leading-tight tracking-tight text-gray-100">

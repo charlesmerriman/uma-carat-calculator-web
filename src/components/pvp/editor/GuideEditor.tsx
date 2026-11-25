@@ -23,7 +23,9 @@ import { useSkillList } from "../../../hooks/useSkillList"
 import { withShownSkills } from "../../../utils/skillList"
 import { useCardReleases } from "../../../hooks/useCardReleases"
 import { useGuideDocument } from "../../../hooks/useGuideDocument"
-import { SkillMentionsContext } from "../skillMentionsContext"
+import { SkillMentionsContext, UmaMentionsContext } from "../skillMentionsContext"
+import { PvpGuideView } from "../PvpGuideView"
+import { useRememberedOpen } from "../../../hooks/useRememberedOpen"
 import { GuideEditorContext, type GuideEditorContextType } from "./GuideEditorContext"
 import { Checklist } from "./Checklist"
 import { EditorHeader, type EditorDialog } from "./EditorHeader"
@@ -128,6 +130,9 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 }) {
 	const document = editor.document as NonNullable<Ready["document"]>
 	const releaseFor = useCardReleases(event, index)
+	// The guide drawn beside the form on a wide screen, as visitors will see
+	// it, updating as you type (review item 18, 2026-11-24). Kept until a reload.
+	const [beside, setBeside] = useRememberedOpen("guide-editor-beside")
 	const hydrated = useMemo(() => hydrateGuide(document, index, scenarios, editor.serverGuide), [document, index, scenarios, editor.serverGuide])
 	// The server's refusal when the last save was refused; the editor's own
 	// checks otherwise, so a problem shows while it is typed.
@@ -163,7 +168,9 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 	return (
 		<GuideEditorContext.Provider value={context}>
 			<SkillMentionsContext.Provider value={hydrated.skill_mentions ?? {}}>
-				<div className="flex flex-col gap-3">
+			<UmaMentionsContext.Provider value={hydrated.uma_mentions ?? {}}>
+				<div className={beside ? "2xl:grid 2xl:grid-cols-2 2xl:items-start 2xl:gap-4" : ""}>
+				<div className="flex min-w-0 flex-col gap-3">
 					<EditorHeader
 						visibility={document.visibility}
 						toolsPublic={document.tools_public}
@@ -179,6 +186,8 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 							void editor.saveNow()
 							onViewAsVisitor()
 						}}
+						beside={beside}
+						onBeside={setBeside}
 						onOpen={onDialog}
 					/>
 					<Checklist missing={missing} errors={problemsByTab} onJump={jump} />
@@ -186,6 +195,21 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 					<div role="tabpanel" aria-label={tab === "guide" ? "Guide" : tab}>
 						{tab === "guide" ? <GuideTab /> : <StyleTab style={tab} />}
 					</div>
+				</div>
+				{beside && (
+					<aside
+						aria-label="The guide as visitors will see it"
+						className="sticky top-[calc(var(--pvp-below-tabs,3.5rem)+0.5rem)] hidden max-h-[calc(var(--pvp-viewport-h,100dvh)-var(--pvp-below-tabs,3.5rem)-1rem)] min-w-0 overflow-y-auto rounded-xl border border-gray-700 p-3 2xl:block"
+					>
+						{/* The style follows the editor's tab; the Guide tab shows All. */}
+						<PvpGuideView
+							guide={hydrated}
+							style={tab === "guide" ? "all" : tab}
+							onStyleChange={(style) => onTab(style === "all" ? "guide" : style)}
+							event={event}
+						/>
+					</aside>
+				)}
 				</div>
 
 				{editor.conflict && <ConflictDialog onLoadTheirs={editor.loadTheirs} onKeepMine={editor.keepMine} />}
@@ -227,6 +251,7 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 						onClose={closeDialog}
 					/>
 				)}
+			</UmaMentionsContext.Provider>
 			</SkillMentionsContext.Provider>
 		</GuideEditorContext.Provider>
 	)

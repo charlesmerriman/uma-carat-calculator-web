@@ -14,8 +14,8 @@ import type { PvpStyle } from "./pvpGuide"
  * A set of teams, as shares (backend rankings_shares.team_shares): umas by
  * their share of the teams (and the share each strategy has), cards by their
  * share of member decks (with the share of those that borrowed it), and the
- * exact three-uma teams built most. Shared by the PvP tab (every saved team)
- * and the PvP page's Rankings view (gallery posts).
+ * exact three-uma teams built most. Shared by the PvP tab's two payloads:
+ * every saved team, and the event's gallery posts.
  */
 export interface TeamSharesData {
 	/** `styles`: each strategy's share of every team, so they add up to `share`. */

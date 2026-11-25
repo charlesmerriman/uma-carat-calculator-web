@@ -71,7 +71,7 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
 			)}
 			<div className="min-w-0 flex-1">
 				<div className="flex flex-wrap items-center gap-2">
-					<span className="rounded-full border border-brand/50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand">
+					<span data-size="xs" className="tl-pill border-brand/50 font-semibold uppercase tracking-wide text-brand">
 						{label}
 					</span>
 					{event.is_predicted && <PredictedBadge />}
@@ -86,7 +86,8 @@ function StoryEventRow({ event }: { event: StoryEvent }) {
 						{rewards.map((reward) => (
 							<span
 								key={reward}
-								className="rounded-full border border-gray-600 bg-gray-700 px-2.5 py-0.5 text-[13px] font-semibold whitespace-nowrap text-gray-100"
+								data-size="xs"
+								className="tl-pill border-gray-600 bg-gray-700 px-2.5 text-[13px] font-semibold whitespace-nowrap text-gray-100"
 							>
 								{reward}
 							</span>
@@ -213,7 +214,7 @@ function FreeRewardTile({ kind, id, href, art, name, title, purpose, mustGet, ta
 			{art}
 			<div className="flex min-w-0 flex-col items-start gap-0.5">
 				{mustGet && (
-					<span className="rounded-full border border-brand/55 bg-brand/10 px-2 py-px text-xs font-bold text-brand">
+					<span data-size="xs" className="tl-pill border-brand/55 bg-brand/10 py-px text-xs font-bold text-brand">
 						Must get
 					</span>
 				)}

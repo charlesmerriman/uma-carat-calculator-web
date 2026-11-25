@@ -10,6 +10,7 @@ import { ChevronDown, Lock } from "lucide-react"
 import { useCalculatorData } from "../../../services/CalculatorContext"
 import { useFieldErrors, useGuideEditor } from "./GuideEditorContext"
 import { MentionField } from "./MentionField"
+import { RankingPreview } from "../GuideBand"
 import { SkillSection } from "./SkillSection"
 import { StatsEditor } from "./StatsEditor"
 import { TeamCompsEditor } from "./TeamCompsEditor"
@@ -18,7 +19,7 @@ import { setField, setScenario, setUnderConstruction } from "../../../utils/guid
 import { MAX_LENGTH } from "../../../utils/guideDocument"
 
 export function GuideTab() {
-	const { document, update } = useGuideEditor()
+	const { document, hydrated, update } = useGuideEditor()
 	const { scenarioData } = useCalculatorData()
 	const rankingErrors = useFieldErrors("style_ranking")
 	const descriptionErrors = useFieldErrors("short_description")
@@ -67,6 +68,7 @@ export function GuideTab() {
 					errors={rankingErrors}
 					onChange={(value) => update((doc) => setField(doc, "style_ranking", value))}
 				/>
+				<RankingPreview guide={hydrated} />
 				<MentionField
 					label="Short description"
 					value={document.short_description}

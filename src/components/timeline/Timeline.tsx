@@ -18,6 +18,8 @@ import { motion } from "framer-motion"
 import { RaceEventCard } from "./RaceEventCard"
 import { BannerWindowCard } from "./BannerWindowCard"
 import { EventMarkerCard, EventMarkerPairCard } from "./EventMarkerCard"
+import { TimelineMonthHeading } from "./TimelineCard"
+import { formatMonthName } from "../../utils/dateFormat"
 import { BackToTopButton, FloatingBackToTop } from "../BackToTop"
 import {
 	CATEGORY_LABELS,
@@ -41,6 +43,7 @@ import {
 	spliceMarkerRows,
 	timelineRowKey,
 	timelineRowStart,
+	timelineRowStartDate,
 } from "./timelineShared"
 import type { TimelineFocusProps, TimelineMarker, TimelineRow } from "./timelineShared"
 import { FOCUS_TAILROOM, useFocusScroll } from "../../hooks/useFocusScroll"
@@ -266,19 +269,19 @@ function PaginationControls({
 		<div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
 			<button
 				type="button"
-				className={paginationButtonClass}
+				className={`tl-control ${paginationButtonClass}`}
 				disabled={currentPage === 1}
 				onClick={onPrevious}
 			>
 				<ChevronLeft className="h-4 w-4" />
 				Previous
 			</button>
-			<span className={pageIndicatorClass}>
+			<span className={`tl-readout ${pageIndicatorClass}`}>
 				Page <span className="mx-1 text-brand">{currentPage}</span> of {totalPages}
 			</span>
 			<button
 				type="button"
-				className={paginationButtonClass}
+				className={`tl-control ${paginationButtonClass}`}
 				disabled={currentPage === totalPages}
 				onClick={onNext}
 			>
@@ -844,12 +847,9 @@ export const Timeline = () => {
 	 * continuously, would run on every scroll frame of a page that can hold 250
 	 * image-heavy cards to produce a value wanted once per visit, if ever.
 	 *
-	 * The list container's leading children ARE the rendered cards, one per
-	 * `visibleRows` entry and in the same order — the sentinel, the end-of-list
-	 * line and the tailroom all come after them, and the "No events found." line
-	 * only renders when there are no rows at all (so `limit` is 0 and the loop
-	 * never runs). That correspondence is what lets this find a row without
-	 * threading a data attribute through all three card components.
+	 * Every rendered row carries its `timelineRowKey` as `data-row-key`, so a
+	 * row is found by name. (It used to be found by position, child N of the
+	 * list for row N, which a stray element in the list throws off by one.)
 	 *
 	 * "Topmost" is measured against the BOTTOM OF THE CONTROLS BAND, not the top of
 	 * the viewport. That band is sticky at the app-shell breakpoint, so the first
@@ -867,14 +867,24 @@ export const Timeline = () => {
 		if (!list) return null
 
 		const floor = controlsRef.current?.getBoundingClientRect().bottom ?? 0
-		const limit = Math.min(list.children.length, visibleRows.length)
 
-		for (let index = 0; index < limit; index += 1) {
-			const rect = list.children[index].getBoundingClientRect()
+		// Each row names itself (data-row-key). Counting the list's children
+		// instead, child N for row N, held only while nothing else was ever put
+		// in the list, and the ad script does put a container of its own in
+		// there on some loads: every row after it was then read as its
+		// neighbour, and the wrong card was held (seen 2026-11-24).
+		for (const row of list.querySelectorAll<HTMLElement>(":scope > [data-row-key]")) {
+			const rect = row.getBoundingClientRect()
 			// jsdom reports every rect as zero, so nothing here ever matches under
 			// test and the anchor stays null — which is the pre-existing behaviour.
 			if (rect.bottom > floor) {
-				return { key: timelineRowKey(visibleRows[index]), offset: rect.top }
+				// Where its CARD is, not the row. A row that opens a month starts
+				// with the heading, well above the card, and whether a row opens a
+				// month can differ between the searched list and the full one. The
+				// card's wrapper (tl-anchor) is what gets put back, so it is what
+				// gets measured.
+				const card = row.querySelector(".tl-anchor") ?? row
+				return { key: row.dataset.rowKey ?? "", offset: card.getBoundingClientRect().top }
 			}
 		}
 		return null
@@ -999,10 +1009,16 @@ export const Timeline = () => {
 			    darker band against the page, but 60% of a banner card would show
 			    through it once cards start passing underneath. The two colors are
 			    within a few percent of each other on every theme, so nothing visibly
-			    changes at rest. z-30 sits above the cards, below FloatingBackToTop. */}
+			    changes at rest. z-30 sits above the cards, below FloatingBackToTop.
+
+			    It pins UNDER the Timeline screen's bar (Timeline, Legend Races;
+			    components/ScreenTabs.tsx), which pins at this scroller's top, so
+			    its `top` is that bar's height (--screen-tabs-h, index.css). At
+			    top-0 the two would stack on the same line and this one, later in
+			    the page, would cover the tabs. */}
 			<div
 				ref={controlsRef}
-				className="border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-0 app-shell:z-30 app-shell:bg-gray-950"
+				className="tl-bar border-y border-gray-700/60 bg-gray-950/40 shadow-[0_8px_24px_rgba(0,0,0,0.22)] app-shell:sticky app-shell:top-(--screen-tabs-h) app-shell:z-30 app-shell:bg-gray-950"
 			>
 				{/* Below lg (phones AND tablets), two compact rows and a caption:
 				    the two toggles side by side, then the filter beside the search,
@@ -1024,12 +1040,12 @@ export const Timeline = () => {
 							<BackToTopButton
 								onClick={scrollToTop}
 								disabled={!isAwayFromTop}
-								className={`${controlButtonClass} px-2.5`}
+								className={`tl-control ${controlButtonClass} px-2.5`}
 							/>
 						</span>
 						<button
 							type="button"
-							className={`${controlButtonClass} min-w-0 text-center leading-tight`}
+							className={`tl-control ${controlButtonClass} min-w-0 text-center leading-tight`}
 							onClick={() => { setShowPastOverride(!showPast); resetListWindow() }}
 						>
 							<History className="h-4 w-4 text-brand" />
@@ -1039,7 +1055,7 @@ export const Timeline = () => {
 						    button beside it rather than reading as a state indicator. */}
 						<button
 							type="button"
-							className={`${controlButtonClass} min-w-0 text-center leading-tight`}
+							className={`tl-control ${controlButtonClass} min-w-0 text-center leading-tight`}
 							title={
 								viewMode === "infinite"
 									? "Show a fixed number of events per page"
@@ -1068,7 +1084,7 @@ export const Timeline = () => {
 							/>
 						</div>
 					) : viewMode === "infinite" && timelineRows.length > 0 ? (
-						<span className={countClass}>
+						<span className={`tl-readout ${countClass}`}>
 							Showing <span className="mx-1 text-brand">{visibleRows.length}</span> of{" "}
 							{timelineRows.length}
 						</span>
@@ -1094,7 +1110,7 @@ export const Timeline = () => {
 								</label>
 								<select
 									id="timeline-event-filter"
-									className={`${categorySelectClass} max-w-[45%] shrink-0 lg:max-w-none`}
+									className={`tl-control ${categorySelectClass} max-w-[45%] shrink-0 lg:max-w-none`}
 									value={activeFilter}
 									onChange={(e) => handleFilterChange(e.target.value as EventFilter)}
 								>
@@ -1144,7 +1160,7 @@ export const Timeline = () => {
 							<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 							<input
 								type="text"
-								className={searchInputClass}
+								className={`tl-control ${searchInputClass}`}
 								placeholder="Search characters or events..."
 								value={searchQuery}
 								onChange={(e) => handleSearchChange(e.target.value)}
@@ -1160,6 +1176,13 @@ export const Timeline = () => {
 				)}
 				{visibleRows.map((row, rowIndex) => {
 					const rowKey = timelineRowKey(row)
+					// A heading before the first row of each month, and before the
+					// first row on screen (a page, or a filtered list, starts by
+					// saying where it is). A row with no date gets none.
+					const month = formatMonthName(timelineRowStartDate(row))
+					const opensMonth =
+						month !== "" &&
+						(rowIndex === 0 || month !== formatMonthName(timelineRowStartDate(visibleRows[rowIndex - 1])))
 
 					// THE REF AND THE RING ARE NO LONGER THE SAME QUESTION.
 					//
@@ -1226,6 +1249,8 @@ export const Timeline = () => {
 					return (
 						<motion.div
 							key={rowKey}
+							// How measureAnchorRow finds this row again.
+							data-row-key={rowKey}
 							className="flex w-full flex-col items-center"
 							initial={{ opacity: 0, y: 14 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -1235,6 +1260,7 @@ export const Timeline = () => {
 								delay: (rowIndex % TIMELINE_STAGGER_BATCH) * 0.04,
 							}}
 						>
+							{opensMonth && <TimelineMonthHeading label={month} />}
 							{card}
 						</motion.div>
 					)

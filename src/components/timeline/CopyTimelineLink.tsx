@@ -34,7 +34,8 @@ export const CopyTimelineLink = ({ focus, name }: { focus: TimelineFocus; name: 
 			onClick={copy}
 			// Starts with the visible text, so voice control users can say what they see.
 			aria-label={`Copy link to ${name}`}
-			className="flex w-fit items-center gap-1.5 rounded-full border border-gray-600 bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-100 transition hover:border-brand/60 hover:text-brand"
+			data-size="md"
+			className="tl-pill gap-1.5 border-gray-600 bg-gray-700 font-semibold text-gray-100 transition hover:border-brand/60 hover:text-brand"
 		>
 			<Link2 className="h-4 w-4 text-brand" aria-hidden="true" />
 			Copy link

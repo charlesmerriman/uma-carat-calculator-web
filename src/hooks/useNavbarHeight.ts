@@ -10,7 +10,8 @@
  * Mobile CSS", 2026-11-17). Measured, it is right at every width and wrap.
  *
  * In an effect only: the page is prerendered, and the CSS keeps a fallback
- * (`var(--navbar-h, 7.75rem)`) for the first paint.
+ * (`var(--navbar-h, 4.125rem)`) for the first paint. On a phone the height is
+ * the places row alone: the wordmark row above it scrolls away (Navbar.tsx).
  */
 
 import { useEffect, type RefObject } from "react"

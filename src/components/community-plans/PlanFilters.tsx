@@ -4,9 +4,9 @@
  * beside the list, in the page's flow; below it the page shows a "Filters"
  * button that opens the same controls in a sheet (GalleryModal).
  *
- * Every label, and each spending level's meaning, comes from the feed's
- * `filters` block, so nothing here is hard-coded and a new level needs no
- * client change. The values live in the page's address (CommunityPlansPage
+ * Every label, and each spending level's meaning (written into its option,
+ * spendingOptionLabel), comes from the feed's `filters` block, so nothing
+ * here is hard-coded and a new level needs no client change. The values live in the page's address (CommunityPlansPage
  * reads and writes them); this only draws them.
  *
  * How each matches is the server's (plan_gallery.filtered): Spending and
@@ -17,7 +17,7 @@
 import { useId } from "react"
 import type { PlanFilterChoices, PlanFilters as Filters, PlanSpending, PlanStrategy, PlanSweat } from "../../types/gallery"
 import { NO_PLAN_FILTERS } from "../../types/gallery"
-import { filtersSet } from "../../utils/planFeedView"
+import { filtersSet, spendingOptionLabel } from "../../utils/planFeedView"
 
 const HEADING = "text-[11px] font-bold uppercase tracking-[0.08em] text-gray-400"
 const SELECT =
@@ -28,8 +28,7 @@ export function PlanFilters({ choices, value, onChange }: {
 	value: Filters
 	onChange: (next: Filters) => void
 }) {
-	const ids = { range: useId(), spending: useId(), sweat: useId(), spendingMeaning: useId() }
-	const meaning = choices.spending.find((level) => level.value === value.spending)?.meaning
+	const ids = { range: useId(), spending: useId(), sweat: useId() }
 
 	const toggleStrategy = (style: PlanStrategy, on: boolean) =>
 		onChange({
@@ -84,25 +83,22 @@ export function PlanFilters({ choices, value, onChange }: {
 				<label htmlFor={ids.spending} className={HEADING}>
 					Spending level
 				</label>
+				{/* Each option says what its level means ("Minnow - Daily Carat
+				    Pack only"), so it reads before anything is picked, on a phone
+				    too, where an option's hover title never shows. */}
 				<select
 					id={ids.spending}
 					value={value.spending ?? ""}
-					aria-describedby={meaning ? ids.spendingMeaning : undefined}
 					onChange={(e) => onChange({ ...value, spending: (e.target.value || null) as PlanSpending | null })}
 					className={SELECT}
 				>
 					<option value="">Any</option>
 					{choices.spending.map((level) => (
-						<option key={level.value} value={level.value} title={level.meaning}>
-							{level.label}
+						<option key={level.value} value={level.value}>
+							{spendingOptionLabel(level)}
 						</option>
 					))}
 				</select>
-				{/* The chosen level's meaning in words, since an option's title only
-				    shows on hover with a mouse. */}
-				<p id={ids.spendingMeaning} className="text-xs text-gray-400">
-					{meaning ?? choices.spending.map((level) => level.label).join(", ")}
-				</p>
 			</div>
 
 			<div className="flex flex-col gap-1.5">

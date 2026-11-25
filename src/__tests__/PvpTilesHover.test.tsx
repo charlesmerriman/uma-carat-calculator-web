@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { describe, expect, it } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
-import { InlineNote, SkillChip, UmaTile } from "../components/pvp/PvpTiles"
+import { InlineNote, SkillCell, SkillChip, UmaTile } from "../components/pvp/PvpTiles"
 import { SkillMentionsContext } from "../components/pvp/skillMentionsContext"
 import { useCourseFocus } from "../services/courseMapStore"
 import type { PvpSkillRef } from "../types/pvpGuide"
@@ -100,6 +100,16 @@ describe("an uma's tile and her unique", () => {
 		await user.hover(tile)
 		await waitFor(() => expect(screen.getByTestId("focus")).toHaveTextContent("210:Maruzensky"))
 		await user.unhover(tile)
+		await waitFor(() => expect(screen.getByTestId("focus")).toHaveTextContent("none"))
+	})
+
+	it("lights a reader's skill cell on the course map while hovered, as the editor's chip does", async () => {
+		const user = userEvent.setup()
+		render(inGuide(<><SkillCell skill={skill({ id: 77 })} note="" /><FocusProbe /></>))
+		const cell = screen.getByRole("group", { name: "Dominator" })
+		await user.hover(cell)
+		await waitFor(() => expect(screen.getByTestId("focus")).toHaveTextContent("77:"))
+		await user.unhover(cell)
 		await waitFor(() => expect(screen.getByTestId("focus")).toHaveTextContent("none"))
 	})
 

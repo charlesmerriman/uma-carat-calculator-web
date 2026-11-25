@@ -13,6 +13,10 @@ import {
 	runShape,
 	cmDayAt,
 	emptyContent,
+	beatenBy,
+	placeTallies,
+	setLostTo,
+	setPlace,
 	eventHistory,
 	formatRate,
 	isPastDay,
@@ -371,5 +375,54 @@ describe("a League of Heroes", () => {
 		expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 42, 93, 96].map(ordinal)).toEqual(
 			["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "42nd", "93rd", "96th"]
 		)
+	})
+})
+
+
+describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
+	const runners = [
+		{ position: 0, uma: 11, style: "front" as const },
+		{ position: 1, uma: 12, style: "pace" as const },
+		{ position: 2, uma: 13, style: "end" as const },
+	]
+	const start = () => emptyContent(runners)
+
+	it("makes 1st the winner, and a place on an unlogged race a loss until someone is 1st", () => {
+		let ticket = setPlace(start(), 1, 1, 4)
+		expect(ticket.races).toEqual([{ race: 1, winner: null, places: [{ position: 1, place: 4, loss_reason: "" }] }])
+		ticket = setPlace(ticket, 1, 0, 1)
+		expect(ticket.races[0].winner).toBe(0)
+		// A place another of yours held moves; taking 1st away makes it a loss again.
+		ticket = setPlace(ticket, 1, 2, 4)
+		expect(ticket.races[0].places?.map((place) => [place.position, place.place])).toEqual([[0, 1], [2, 4]])
+		ticket = setPlace(ticket, 1, 0, 3)
+		expect(ticket.races[0].winner).toBeNull()
+	})
+
+	it("keeps a race coherent when its winner is tapped, and a Won by only on a loss", () => {
+		let ticket = setPlace(start(), 1, 0, 2)
+		ticket = setLostTo(ticket, 1, 99)
+		expect(ticket.races[0].lost_to).toBe(99)
+		ticket = logRace(ticket, 1, 0)
+		expect(ticket.races[0]).toEqual({ race: 1, winner: 0, places: [], lost_to: null })
+		// A race that never had places sends none, so the server keeps what it has.
+		expect(logRace(start(), 2, 1).races).toEqual([{ race: 2, winner: 1 }])
+	})
+
+	it("averages places and counts who beat you", () => {
+		const run = {
+			runners,
+			updated_at: "2026-11-25T10:00:00Z",
+			races: [
+				{ race: 1, winner: 0, places: [{ position: 0, place: 1 }, { position: 2, place: 9 }] },
+				{ race: 2, winner: null, places: [{ position: 0, place: 2 }, { position: 2, place: 8 }], lost_to: 99 },
+				{ race: 3, winner: null, lost_to: 99 },
+				{ race: 4, winner: null },
+			],
+		}
+		const places = placeTallies([run])
+		expect(places.get("11:")).toMatchObject({ placed: 2, total: 3, top3: 2 })
+		expect(places.get("13:")).toMatchObject({ placed: 2, total: 17, top3: 0 })
+		expect(beatenBy([run])).toEqual({ umas: [{ uma: 99, losses: 2 }], named: 2 })
 	})
 })

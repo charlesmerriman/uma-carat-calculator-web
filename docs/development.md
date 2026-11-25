@@ -76,8 +76,8 @@ knip treats an export used only inside its own file as fine (`ignoreExportsUsedI
 | `/` | Home |
 | `/app` | The planner: current resources, pull plan, per-banner forecast |
 | `/app/timeline` | Banner, event and campaign calendar |
-| `/app/selectors` | Selector tickets, campaign packs and step-up card picks |
-| `/app/legend-races` | Daily legend races |
+| `/app/selectors` | Selector tickets, campaign packs and step-up card picks (in the Calculator screen's bar, not the navbar) |
+| `/app/legend-races` | Daily legend races (in the Timeline screen's bar, not the navbar) |
 | `/app/pvp` | PvP guides, the team planner and the gallery |
 | `/app/rankings` | Rankings: what the guides recommend most (early access only, `noindex`, not prerendered) |
 | `/app/<public_id>` | A shared plan's landing page (not prerendered) |

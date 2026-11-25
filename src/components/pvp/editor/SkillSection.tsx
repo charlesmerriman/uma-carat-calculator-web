@@ -53,9 +53,14 @@ export function SkillSection({ style, title, hint }: { style: PvpStyle; title: s
 				<h4 className={SECTION_HEADING}>{title}</h4>
 				<span className={SUBTLE}>{hint ?? "By category, then tier. Drag within a tier to reorder."}</span>
 			</div>
-			<div className="flex flex-col gap-3 border-l-2 border-gray-700 pl-3">
+			{/* The eight categories side by side where there is room (review item 15,
+			    2026-11-24): one under the other, an empty guide's block was about
+			    550px of headings and Add buttons down the left edge. A container
+			    query, so the editor beside the guide (half width) gets two columns. */}
+			<div className="@container border-l-2 border-gray-700 pl-3">
+			<div className="grid gap-x-6 gap-y-3 @2xl:grid-cols-2 @6xl:grid-cols-4">
 				{categories.map(({ category, tiers, count }) => (
-					<div key={category}>
+					<div key={category} className="min-w-0">
 						<h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
 							{SKILL_CATEGORY_LABELS[category]}
 							{count > 0 && <span className="ml-1 font-normal normal-case tracking-normal text-gray-500">({count})</span>}
@@ -80,6 +85,7 @@ export function SkillSection({ style, title, hint }: { style: PvpStyle; title: s
 						</div>
 					</div>
 				))}
+			</div>
 			</div>
 
 			{picking && (

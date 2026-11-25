@@ -1,4 +1,4 @@
-/* ===== THE PALETTE THEMES' SHAPES =====
+/* ===== THE THEMES' SHAPES =====
 
    Winning Live and Tracen are the themes that change more than colour
    (notes/theme-options.md). Their COLOURS are tokens in index.css like
@@ -20,7 +20,8 @@
       for this purpose (site-navbar, nav-tab, nav-control, planner-panel-title,
       planner-section-title, add-banner-button, income-value, hero-cta,
       forecast-shortfall, wordmark-second) or a semantic class that already
-      existed (banner-type-tab, banner-stat-box, pull-input). Never `.rounded-md`
+      existed (banner-type-tab, banner-stat-box, pull-input). The Timeline's
+      hooks are the `tl-*` names listed at the top of timeline.css. Never `.rounded-md`
       or `.shadow-sm`: that is how every theme once re-skinned the wrong
       elements (SURFACES, index.css). The one exception is the precedent
       index.css already sets, `.bg-brand.text-black`: the solid brand button.
@@ -33,7 +34,192 @@
    so these rules beat the Tailwind utilities on the same element, which is
    what lets a hook repaint a button that also carries `bg-brand/10`.
 
-   The default themes match nothing in this file. */
+   The file opens with THE DEFAULT FAMILY: the one set of shapes the twelve
+   one-accent themes share, scoped to exclude the two palette themes, whose
+   own sections follow. The three rules above hold for it too. */
+
+
+/* ─────────────────────────── THE DEFAULT FAMILY ───────────────────────────
+   The shapes of every theme that is NOT Winning Live or Tracen: Dark, Gilded,
+   Midnight, Pace, Violet, Teal, Light, Blue, Green, Red, Purple and Pearl
+   (the owner, 2026-11-24: "the other themes that aren't tracen or winning
+   live will need these changes too"; the notes repo's notes/dark-theme-plan.md).
+
+   Not game themed. What it borrows from Tracen is the method, not the look:
+   every colour has one job, and depth comes from solid shapes instead of a
+   hairline around everything.
+
+   EVERY RULE READS ROLE TOKENS (index.css, "The default family's roles") and
+   never a colour of its own, so the same rules draw twelve palettes. A theme
+   changes how it looks here by setting a role in its own block.
+
+   ONE SCOPE, BY EXCLUSION, written out on every rule (no nesting: this file
+   is plain CSS and must not depend on the build flattening it). Never as
+   bare rules for the two palette themes to override: Winning Live has no
+   .planner-section-title::before, so a bare bar would leak into it.
+
+   The brand is spent in FOUR places: the solid primary button, the tab you
+   are on, carats, and links. It is no longer the outline of everything. */
+
+/* A control is a raised key: a face one step above the card, a lit top edge
+   and a seat under it. Shadows, so the 36px control keeps its height. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-control {
+	border-color: var(--key-line);
+	background-color: var(--key-face);
+	box-shadow: inset 0 1px 0 var(--key-lit), 0 1px 0 var(--key-seat);
+}
+
+/* The control's own hover changes its border and its fill with utilities,
+   which the rule above outranks, so both are restated. Its text colour on
+   hover is still the utility's. A disabled control answers nothing. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-control:hover:not(:disabled) {
+	border-color: var(--key-line-hover);
+	background-color: var(--key-face-hover);
+}
+
+/* A control that has something open (the Menu, the Team window's button)
+   says so with a brand border, set by a utility the key's border above
+   outranks. So it is restated: the brand as the edge, and the face a step on,
+   like a key held down. Read off aria-expanded, which both buttons set. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-control[aria-expanded="true"] {
+	border-color: color-mix(in srgb, var(--color-brand) 70%, transparent);
+	background-color: var(--key-face-hover);
+}
+
+/* The tabs sit in a well, and the one you are on is the only solid brand
+   thing in the bar. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-tabs {
+	border-color: var(--key-face);
+	background-color: var(--tabs-well);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .nav-tab--active {
+	border-color: transparent;
+	background-color: var(--color-brand);
+	color: var(--brand-ink);
+	box-shadow: inset 0 1px 0 var(--brand-lit);
+}
+
+/* A planner section's title on a quiet bar, so a panel has structure without
+   lines of brand-coloured text. The bar is a pseudo-element behind the words,
+   3px taller than the line each way and out of the flow: nothing moves. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .planner-section-title {
+	position: relative;
+	z-index: 0;
+	color: var(--color-gray-100);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .planner-section-title::before {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	inset: -3px 0;
+	border-radius: 0.375rem;
+	background-color: var(--bar-fill);
+	box-shadow: inset 0 1px 0 var(--key-lit);
+}
+
+/* The three add-banner buttons say which kind each makes, in the theme's own
+   kind colours: the fill, its ink, and a band of the same hue as the rim and
+   the bottom edge (inset, so the button is the size it was). Two classes on
+   each rule so they outrank the solid-brand rule the Uma button also matches. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .add-banner-button.add-banner-button {
+	border-color: transparent;
+	background-image: none;
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .add-banner-button.add-banner-button--uma {
+	background-color: var(--color-type-uma);
+	color: var(--color-type-uma-ink);
+	box-shadow: inset 0 0 0 1px var(--kind-uma-band), inset 0 -3px 0 var(--kind-uma-band);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .add-banner-button.add-banner-button--support {
+	background-color: var(--color-type-support);
+	color: var(--color-type-support-ink);
+	box-shadow: inset 0 0 0 1px var(--kind-support-band), inset 0 -3px 0 var(--kind-support-band);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .add-banner-button.add-banner-button--step-up {
+	background-color: var(--color-type-step-up);
+	color: var(--color-type-step-up-ink);
+	box-shadow: inset 0 0 0 1px var(--kind-step-up-band), inset 0 -3px 0 var(--kind-step-up-band);
+}
+
+/* Each button's hover was a background utility, which the fills above
+   outrank. A filter answers the mouse on any fill. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .add-banner-button:hover:not(:disabled) {
+	filter: var(--press-filter);
+}
+
+/* A type tile carries the same band along its bottom edge. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .banner-type-tab--uma {
+	box-shadow: inset 0 -4px 0 var(--kind-uma-band);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .banner-type-tab--support {
+	box-shadow: inset 0 -4px 0 var(--kind-support-band);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .banner-type-tab--step-up {
+	box-shadow: inset 0 -4px 0 var(--kind-step-up-band);
+}
+
+/* Numbers sit in wells, one step below the card, in the page's brightest
+   ink. Carats, the thing the site counts, are the one brand-coloured number. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .banner-stat-box {
+	border-color: var(--color-edge);
+	background-color: var(--well-fill);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .banner-stat-box-value {
+	color: var(--color-gray-50);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) [data-income="carats"] .income-value {
+	color: var(--color-brand);
+}
+
+/* The Timeline (its hooks are listed at the top of timeline.css). "Stage
+   banner" is the page's one action, so it is a solid brand button; a banner
+   that can't be staged keeps its outline and its readable words. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .tl-stage[data-status="available"] {
+	border-color: transparent;
+	background-color: var(--color-brand);
+	color: var(--brand-ink);
+	box-shadow: inset 0 1px 0 var(--brand-lit), 0 1px 0 var(--key-seat);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .tl-stage[data-status="available"]:hover {
+	filter: var(--press-filter);
+}
+
+/* The Timeline's bar of controls and its countdown pill are the same keys
+   as the navbar's. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .tl-control {
+	border-color: var(--key-line);
+	background-color: var(--key-face);
+	box-shadow: inset 0 1px 0 var(--key-lit), 0 1px 0 var(--key-seat);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) button.tl-control:hover:not(:disabled),
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) select.tl-control:hover {
+	border-color: var(--key-line-hover);
+	background-color: var(--key-face-hover);
+}
+
+/* The filter and the search field say "focused" with their border alone
+   (focus:outline-none), and the key's border above would paint over it. */
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) select.tl-control:focus,
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) input.tl-control:focus {
+	border-color: var(--color-gray-300);
+}
+
+:root:not([data-theme="tracen"], [data-theme="winning-live"]) .tl-countdown {
+	border-color: var(--key-line);
+	background-color: var(--key-face);
+	box-shadow: inset 0 1px 0 var(--key-lit);
+}
 
 
 /* ─────────────────────────── WINNING LIVE ─────────────────────────── */
@@ -226,6 +412,16 @@
 	background-color: var(--color-gray-700);
 }
 
+/* Open (the Menu, the Team window's button): the key's edge turns the deep
+   green and so do its words. The control's own open look is a pair of
+   utilities, which the key above outranks, colour included. */
+[data-theme="tracen"] .nav-control[aria-expanded="true"] {
+	border-color: #4f9a00;
+	background-color: var(--color-gray-700);
+	color: var(--color-brand);
+	box-shadow: 0 2px 0 #4f9a00;
+}
+
 /* The tabs sit in a grey tray, like the game's side menu, and the one you are
    on is lime. */
 [data-theme="tracen"] .nav-tabs {
@@ -381,4 +577,201 @@
 	border-radius: 9999px;
 	background-color: var(--tracen-shortfall-fill);
 	color: var(--color-pull-over);
+}
+
+/* ───────────────────── THE TIMELINE ON TRACEN ─────────────────────
+   The Timeline's parts in the game's shapes (the owner's picks, 2026-11-24;
+   the notes repo's notes/timeline-visuals-plan.md). Every selector is one of
+   the Timeline's hooks, listed at the top of timeline.css.
+
+   All of it is paint. Where a strip grows into padding, the padding is given
+   back as an equal negative margin, so no box around it moves; the geometry
+   check (docs/timeline.md) is what holds that.
+
+   A rule here is unlayered, so on any property it sets it also beats the
+   element's own `hover:` and `focus:` utilities. Every interactive part
+   repainted below therefore states its hover and its focus again. */
+
+/* "Stage banner" is the page's one action, so it is the game's action button:
+   lime, brown ink, a deep green edge. A banner already staged, already in the
+   calculator or ended is a plain white key with fully readable words. Nothing
+   is faded to say "you can't". */
+[data-theme="tracen"] .tl-stage {
+	border-color: var(--tracen-key-line);
+	background-color: var(--tracen-key-face);
+	color: var(--color-gray-200);
+}
+
+[data-theme="tracen"] .tl-stage[data-status="available"] {
+	border-color: #4f9a00;
+	background-color: #7ecf12;
+	background-image: linear-gradient(180deg, #8fd61a, #76c80e);
+	color: #4f2504;
+	box-shadow: 0 2px 0 #3f8200;
+}
+
+/* The button's own hover is a background utility, which the rule above
+   outranks. Its focus ring is an outline, which nothing here touches. */
+[data-theme="tracen"] .tl-stage[data-status="available"]:hover {
+	filter: brightness(0.97);
+}
+
+/* A panel's title line says which kind it holds, in the planner's colours:
+   blue is Uma, orange is Support. The line becomes a tinted strip with the
+   kind's band under it. The strip is the old 20px line and its 6px gap,
+   starting 6px higher, which is the panel's own padding (6 + 20 + 4 + 2).
+   A recommended panel keeps its gold, so the foil still means one thing. */
+[data-theme="tracen"] .tl-panel[data-kind="uma"]:not(.ssr-panel) > .tl-panel-title,
+[data-theme="tracen"] .tl-panel[data-kind="support"]:not(.ssr-panel) > .tl-panel-title {
+	margin: -0.375rem -0.375rem 0.125rem;
+	padding: 0.375rem 0.375rem 0.25rem;
+	border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0;
+}
+
+[data-theme="tracen"] .tl-panel[data-kind="uma"]:not(.ssr-panel) > .tl-panel-title {
+	background-color: var(--color-type-uma);
+	color: var(--color-type-uma-ink);
+	box-shadow: inset 0 -3px 0 var(--kind-uma-band);
+}
+
+[data-theme="tracen"] .tl-panel[data-kind="support"]:not(.ssr-panel) > .tl-panel-title {
+	background-color: var(--color-type-support);
+	color: var(--color-type-support-ink);
+	box-shadow: inset 0 -3px 0 var(--kind-support-band);
+}
+
+/* The countdown says the window's state by colour as well as by words
+   (data-state, from getCountdownState). Not open yet, or over: a white key.
+   Open: the pale green. Closing within three days: the warning pink. The
+   colours are tokens, so colorblind mode swaps them for its blue and orange. */
+[data-theme="tracen"] .tl-countdown {
+	border-color: var(--tracen-key-line);
+	background-color: var(--tracen-key-face);
+	box-shadow: 0 2px 0 var(--tracen-key-line);
+}
+
+[data-theme="tracen"] .tl-countdown[data-state="open"] {
+	border-color: var(--tracen-open-line);
+	background-color: var(--tracen-open-fill);
+	color: var(--tracen-open-ink);
+	box-shadow: 0 2px 0 var(--tracen-open-line);
+}
+
+[data-theme="tracen"] .tl-countdown[data-state="open"] svg {
+	color: var(--tracen-open-ink);
+}
+
+[data-theme="tracen"] .tl-countdown[data-state="closing"] {
+	border-color: var(--tracen-closing-line);
+	background-color: var(--tracen-closing-fill);
+	color: var(--tracen-closing-ink);
+	box-shadow: 0 2px 0 var(--tracen-closing-line);
+}
+
+[data-theme="tracen"] .tl-countdown[data-state="closing"] svg {
+	color: var(--tracen-closing-ink);
+}
+
+/* The Timeline's own controls as the keys the navbar above them already
+   has: a white face, a slate outline, a thicker bottom edge (a shadow, so a
+   control keeps its height). */
+[data-theme="tracen"] .tl-control {
+	border-color: var(--tracen-key-line);
+	background-color: var(--tracen-key-face);
+	box-shadow: 0 2px 0 var(--tracen-key-line);
+}
+
+[data-theme="tracen"] button.tl-control:hover:not(:disabled),
+[data-theme="tracen"] select.tl-control:hover {
+	background-color: var(--color-gray-700);
+}
+
+/* The filter and the search field say "focused" with their border and
+   nothing else (they carry focus:outline-none), and the key's border above
+   would paint over it. So the key turns green while it has focus. */
+[data-theme="tracen"] select.tl-control:focus,
+[data-theme="tracen"] input.tl-control:focus {
+	border-color: var(--color-brand);
+	box-shadow: 0 2px 0 var(--color-brand);
+}
+
+/* A tile that opens its Encyclopedia page is a key on three sides.
+
+   THE PICTURE AND THE NAME ARE ONE PLANE (timeline.css, tl-plate-skirt), so
+   the fill is left alone and nothing is drawn across the join. The outline
+   goes only where the tile has an outside edge: down both sides of the name
+   block and under it, with the key's thicker bottom edge. The skirt behind
+   the art carries the side lines up to where the art's own frame ends; the
+   art covers the rest of it.
+
+   Nothing is drawn on the tile itself or on the strip above a layered uma,
+   so her ears and hat still leave the frame untouched.
+
+   The line is a variable so hover and keyboard focus can turn it green: the
+   name's own hover colour is a utility and still applies. */
+[data-theme="tracen"] a.tl-tile {
+	--tl-plate-line: var(--tracen-stat-line);
+}
+
+[data-theme="tracen"] a.tl-tile:hover,
+[data-theme="tracen"] a.tl-tile:focus-visible {
+	--tl-plate-line: #4f9a00;
+}
+
+[data-theme="tracen"] a.tl-tile .tl-plate-skirt {
+	box-shadow:
+		inset 1.5px 0 0 var(--tl-plate-line),
+		inset -1.5px 0 0 var(--tl-plate-line);
+}
+
+[data-theme="tracen"] a.tl-tile .tl-plate {
+	box-shadow:
+		inset 1.5px 0 0 var(--tl-plate-line),
+		inset -1.5px 0 0 var(--tl-plate-line),
+		inset 0 -1.5px 0 var(--tl-plate-line),
+		0 2px 0 var(--tl-plate-line);
+}
+
+/* A race card's course boxes as the game's stat panel: a slate header over a
+   white value, in the brown numerals. The header strip is the label's own
+   line plus the box's top padding (8 + 16 = 5 + 16 + 3), given back as
+   negative margin. */
+[data-theme="tracen"] .tl-stat {
+	border-color: var(--tracen-stat-line);
+	background-color: var(--tracen-stat-face);
+}
+
+[data-theme="tracen"] .tl-stat-label {
+	margin: -0.5rem -0.625rem 0;
+	padding: 0.3125rem 0.625rem 0.1875rem;
+	border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+	background-color: var(--tracen-stat-head);
+	color: #ffffff;
+}
+
+[data-theme="tracen"] .tl-stat-value {
+	color: var(--tracen-numeral);
+}
+
+/* The month heading on the game's slanted green rule, the planner's section
+   titles' shape. The label's own fill goes, and a lime tab is laid behind the
+   words: a pseudo-element, out of the flow, that runs 14px past the label's
+   right edge so its slanted end lands on the rule. Nothing changes size. */
+[data-theme="tracen"] .tl-month-label {
+	background-color: transparent;
+	color: #4f2504;
+}
+
+[data-theme="tracen"] .tl-month-label::before {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	inset: 0 -0.875rem 0 0;
+	border-radius: 5px 0 0 5px;
+	background-color: #7ecf12;
+	clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+
+[data-theme="tracen"] .tl-month-rule {
+	background-color: #7ecf12;
 }

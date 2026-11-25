@@ -337,16 +337,16 @@ describe('PlanSwitcher', () => {
 			)
 		}
 
-		it('offers neither the button nor the menu item without early access', async () => {
+		it('offers no menu item without early access', async () => {
 			withAccess(false)
-			expect(screen.queryByRole('link', { name: 'Community plans' })).toBeNull()
 			await openOptions()
 			expect(screen.queryByRole('menuitem', { name: /Post this plan/ })).toBeNull()
 		})
 
-		it('puts the way in on the bar and "Post this plan" in the menu', async () => {
+		it('puts "Post this plan" in the menu, and no Library button on the bar', async () => {
 			withAccess(true)
-			expect(screen.getByRole('link', { name: 'Community plans' })).toHaveAttribute('href', '/app/plans')
+			// The way in is the Calculator screen's own bar now (CalculatorTabs).
+			expect(screen.queryByRole('link', { name: /Pull Plan Library|Library/ })).toBeNull()
 			await openOptions()
 			const item = screen.getByRole('menuitem', { name: 'Post this plan' })
 			expect(within(item).queryByText('Posted')).toBeNull()
@@ -372,7 +372,7 @@ describe('PlanSwitcher', () => {
 			withAccess(true)
 			await openOptions()
 			await userEvent.click(screen.getByRole('menuitem', { name: 'Post this plan' }))
-			expect(screen.getByRole('dialog', { name: 'Post this plan to Community plans' })).toBeInTheDocument()
+			expect(screen.getByRole('dialog', { name: 'Post this plan to the Pull Plan Library' })).toBeInTheDocument()
 		})
 	})
 })

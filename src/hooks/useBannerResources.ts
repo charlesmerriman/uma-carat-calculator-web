@@ -378,7 +378,7 @@ export function projectBannerResources({
 
 		const target = plannedBannerTarget(banner)
 		const isUmaBanner = target.type === "Uma"
-		// The gear menu's switches with this row's own overrides on top
+		// The projection settings' switches with this row's own overrides on top
 		// (utils/rowOptions). Ignored on a step-up, which is paid-only.
 		const spendSettings = rowSpendSettings(banner, userStatsData)
 		const freePulls =

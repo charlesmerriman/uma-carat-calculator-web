@@ -151,10 +151,17 @@ describe("PvpCardPicker", () => {
 		expect(within(screen.getByRole("group", { name: "Rarity" })).getByRole("button", { name: "SR" })).toHaveAttribute("aria-pressed", "true")
 	})
 
-	it("stars the guide's picks and puts them first", () => {
+	it("edges the guide's picks, puts them first, and can show them alone", () => {
 		renderSupportPicker({ recommended: new Set([12]) })
 		expect(tileNames()[0]).toBe("Super Creek")
 		expect(screen.getAllByLabelText("Recommended by the guide")).toHaveLength(1)
+		fireEvent.click(screen.getByRole("checkbox", { name: /Recommended only/ }))
+		expect(tileNames()).toEqual(["Super Creek"])
+	})
+
+	it("offers no Recommended only without a guide's picks", () => {
+		renderSupportPicker({})
+		expect(screen.queryByRole("checkbox", { name: /Recommended only/ })).toBeNull()
 	})
 
 	it("keeps a blocked card in the grid, disabled, with the reason", () => {

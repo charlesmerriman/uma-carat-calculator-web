@@ -1,6 +1,7 @@
 /**
- * A text box that knows the guide's two marks: `==red==` and `[[Skill]]`.
+ * A text box that knows the guide's marks: `==red==`, `[[Skill]]` and `((Uma))`.
  *
+ * Typing `((` offers the catalogue's uma names, and inserts `((Name))`.
  * Typing `[[` offers the catalogue's skill names (skills on global, the only
  * ones a mention may name); picking one inserts `[[Name]]` where the caret
  * is. A multiline box can carry a markdown toolbar (bold, italic, red, skill,
@@ -13,18 +14,16 @@
 import { useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from "react"
 import { Bold, Eye, EyeOff, Highlighter, Italic, Link2, Sparkles } from "lucide-react"
 import { MarkdownContent } from "../../info/MarkdownContent"
-import { SkillMention } from "../PvpTiles"
+import { SkillMention, UmaMention } from "../PvpTiles"
 import { useGuideEditor } from "./GuideEditorContext"
 import { skillMatches, skillSearchWords } from "../../../utils/skillList"
 import { FIELD_ERROR, ICON_BUTTON, INPUT } from "./editorStyles"
 import { isInheritedCopy, mentionName } from "../../../utils/guideDocument"
-import type { CatalogueSkill } from "../../../types/pvpTeam"
+import type { CatalogueSkill, CatalogueUma } from "../../../types/pvpTeam"
+import { FramedUma } from "../../FramedUma"
 
-/** A `[[` suggestion: what it inserts, and the skill it names (for the icon and the kind). */
-interface Suggestion {
-	insert: string
-	skill: CatalogueSkill
-}
+/** A suggestion: what it inserts, and the skill or uma it names (for the picture and the kind). */
+type Suggestion = { insert: string; skill: CatalogueSkill; uma?: undefined } | { insert: string; uma: CatalogueUma; skill?: undefined }
 
 /** The grey word that tells a unique from its inherited copy in the list; nothing for other skills. */
 function kindWord(skill: CatalogueSkill): string {
@@ -38,15 +37,25 @@ const MAX_SUGGESTIONS = 8
 const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
 	<SkillMention name={name} scenarioLink={scenarioLink} />
 )
+const renderUma = (name: string) => <UmaMention name={name} />
 
-/** The `[[fragment` the caret sits in, or null. */
-function openMention(value: string, caret: number): { start: number; query: string } | null {
+/**
+ * The `[[fragment` or `((fragment` the caret sits in, or null: a skill or an
+ * uma (Henry's ((Uma name)), 2026-11-18), whichever opened last. An uma's
+ * fragment may hold her outfit's own "(".
+ */
+function openMention(value: string, caret: number): { start: number; query: string; kind: "skill" | "uma" } | null {
 	const before = value.slice(0, caret)
-	const start = before.lastIndexOf("[[")
-	if (start === -1) return null
+	const skillAt = before.lastIndexOf("[[")
+	const umaAt = before.lastIndexOf("((")
+	if (skillAt === -1 && umaAt === -1) return null
+	const kind = umaAt > skillAt ? "uma" : "skill"
+	const start = kind === "uma" ? umaAt : skillAt
 	const fragment = before.slice(start + 2)
-	if (fragment.includes("]]") || fragment.includes("\n") || fragment.includes("[[")) return null
-	return { start, query: fragment }
+	if (fragment.includes("\n")) return null
+	if (kind === "skill" && (fragment.includes("]]") || fragment.includes("[["))) return null
+	if (kind === "uma" && fragment.includes("))")) return null
+	return { start, query: fragment, kind }
 }
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement
@@ -92,6 +101,14 @@ export function MentionField({
 	const mention = caret === null ? null : openMention(value, caret)
 	const suggestions = useMemo(() => {
 		if (!mention) return []
+		if (mention.kind === "uma") {
+			// Every word typed in the name, in any order ("oguri xmas" finds no one; "oguri christ" does).
+			const words = mention.query.toLowerCase().split(/\s+/).filter(Boolean)
+			return index.catalogue.umas
+				.filter((uma) => words.every((word) => uma.name.toLowerCase().includes(word)))
+				.slice(0, MAX_SUGGESTIONS)
+				.map((uma): Suggestion => ({ insert: uma.name, uma }))
+		}
 		const words = skillSearchWords(mention.query)
 		const found: Suggestion[] = []
 		for (const skill of index.catalogue.skills) {
@@ -105,7 +122,7 @@ export function MentionField({
 			if (found.length >= MAX_SUGGESTIONS) break
 		}
 		return found
-	}, [index.catalogue.skills, mention])
+	}, [index.catalogue.skills, index.catalogue.umas, mention])
 
 	const setValue = (next: string, nextCaret: number) => {
 		onChange(next)
@@ -121,7 +138,8 @@ export function MentionField({
 
 	const insertMention = ({ insert: name }: Suggestion) => {
 		if (!mention || caret === null) return
-		const next = `${value.slice(0, mention.start)}[[${name}]]${value.slice(caret)}`
+		const [open, close] = mention.kind === "uma" ? ["((", "))"] : ["[[", "]]"]
+		const next = `${value.slice(0, mention.start)}${open}${name}${close}${value.slice(caret)}`
 		setValue(next, mention.start + name.length + 4)
 	}
 
@@ -221,7 +239,7 @@ export function MentionField({
 			{preview && multiline ? (
 				<div className="min-h-16 rounded border border-gray-700 bg-gray-900/40 px-3 py-2 text-sm">
 					{value.trim() ? (
-						<MarkdownContent markdown={value} paragraphClassName="mt-2 first:mt-0 leading-relaxed text-gray-300" renderSkill={renderSkill} />
+						<MarkdownContent markdown={value} paragraphClassName="mt-2 first:mt-0 leading-relaxed text-gray-300" renderSkill={renderSkill} renderUma={renderUma} />
 					) : (
 						<p className="text-gray-500">Nothing to preview yet.</p>
 					)}
@@ -237,7 +255,7 @@ export function MentionField({
 						<ul
 							id={listId}
 							role="listbox"
-							aria-label="Skill names"
+							aria-label={mention?.kind === "uma" ? "Uma names" : "Skill names"}
 							className="absolute left-0 top-full z-30 mt-1 max-h-56 w-72 max-w-full overflow-y-auto rounded-lg border border-gray-600 bg-gray-900 py-1 text-sm shadow-lg"
 						>
 							{suggestions.map((suggestion, position) => (
@@ -252,13 +270,15 @@ export function MentionField({
 									}}
 									className={`flex cursor-pointer items-center gap-2 px-3 py-1 ${position === highlighted ? "bg-gray-700 text-brand" : "text-gray-200 hover:bg-gray-800"}`}
 								>
-									{suggestion.skill.image ? (
+									{suggestion.uma ? (
+										<FramedUma src={suggestion.uma.portrait} layers={suggestion.uma.portrait_layers} alt="" className="w-6 shrink-0" />
+									) : suggestion.skill.image ? (
 										<img src={suggestion.skill.image} alt="" className="h-4 w-4 shrink-0" loading="lazy" decoding="async" />
 									) : (
 										<span className="h-4 w-4 shrink-0 rounded-full bg-gray-700" aria-hidden="true" />
 									)}
-									<span className="min-w-0 flex-1 truncate">{suggestion.skill.name}</span>
-									{kindWord(suggestion.skill) && (
+									<span className="min-w-0 flex-1 truncate">{suggestion.uma ? suggestion.uma.name : suggestion.skill.name}</span>
+									{suggestion.skill && kindWord(suggestion.skill) && (
 										<span className="shrink-0 text-xs text-gray-400">{kindWord(suggestion.skill)}</span>
 									)}
 								</li>

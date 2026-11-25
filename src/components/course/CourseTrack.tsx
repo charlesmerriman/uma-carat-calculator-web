@@ -234,15 +234,27 @@ function CalloutBox({ callout, style }: { callout: Callout; style: CSSProperties
 	)
 }
 
-export default function CourseTrack({ course, shape: baseShape, overlays, widthPx = BOX_PX, compact = false, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
+export default function CourseTrack({ course, shape: baseShape, overlays, widthPx: widestPx = BOX_PX, maxHeightPx, compact = false, fewCallouts, showWords = true, colours = "phase", className = "", preview = null, onPreview }: {
 	course: RaceCourse
 	/** The real shape or the schematic, in screen axes (utils/courseSchematic.ts). */
 	shape: Shape
 	overlays?: CourseOverlays
 	/** The box's widest, in px: the guide's 1000, the Timeline drawer's less. */
 	widthPx?: number
+	/**
+	 * The box's tallest, in px: the box narrows until it fits and takes that
+	 * width outright (the stuck bar's track, whose height moves the page's
+	 * sticky rows). Without it the box fills its parent up to `widthPx`.
+	 */
+	maxHeightPx?: number
 	/** Call out only the start, the goal, the spurt, the corners and the final straight (a phone's box). */
 	compact?: boolean
+	/**
+	 * A phone's shorter list of callouts without its padding (the stuck bar's
+	 * track: at about 650px wide the full list's chips ran into each other).
+	 * Defaults to `compact`.
+	 */
+	fewCallouts?: boolean
 	/** False draws the track bare: icon chips with no words (a phone's, until it's tapped). */
 	showWords?: boolean
 	/**
@@ -301,6 +313,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const { shape, box, size, centre, clockwise, track, ringed } = drawing
 	// The outside of the track is the left of travel on a clockwise course.
 	const outside = clockwise ? 1 : -1
+	// Narrowed to fit a height cap, if there is one; the labels size by it.
+	const widthPx = maxHeightPx ? Math.min(widestPx, (maxHeightPx * box.width) / box.height) : widestPx
 	const unitsPerPx = box.width / widthPx
 	const P = (metre: number) => pointAtMetre(shape, metre, distance)
 	// The same metre before the laps are pulled apart into rings: every pass of
@@ -369,8 +383,8 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	const quiet = (span: { key?: string }, base: number) => (previewing && span.key !== preview ? 0.25 : base)
 	const groups = [...new Set(layerSpans.map((span) => span.group ?? "lit"))]
 	const laneOf = (span: CourseSpan) => groups.indexOf(span.group ?? "lit")
-	// The lanes' distance out and stroke, in track widths (layerLanes): beside
-	// its own lap on a course drawn as rings.
+	// The lanes' place across the track and stroke, in track widths
+	// (layerLanes): on the track itself, on every course.
 	const lanes = layerLanes(ringed, groups.length)
 	const laneOffset = (lane: number) => track * lanes.offset(lane) * outside
 	const laneStroke = lanes.stroke
@@ -525,7 +539,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	// the rest. A course that passes its corners twice has no room for them
 	// either: the strip under the track names them.
 	const twoLaps = course.corners.length > 4
-	const worded = compact
+	const worded = (fewCallouts ?? compact)
 		? allCallouts
 			.filter((callout) => ["start", "goal", "spurt", "uphill", "downhill"].includes(callout.tone) || (callout.tone === "corner" && !twoLaps) || callout.key === "final-straight")
 			// Only the spurt keeps its metre: the strip under the track has the rest.
@@ -715,7 +729,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 	})()
 
 	return (
-		<div ref={ref} className={`relative mx-auto w-full ${className}`} style={{ maxWidth: widthPx, aspectRatio: `${box.width} / ${box.height}` }} aria-hidden="true">
+		<div ref={ref} className={`relative mx-auto w-full ${className}`} style={{ maxWidth: widthPx, width: maxHeightPx ? widthPx : undefined, aspectRatio: `${box.width} / ${box.height}` }} aria-hidden="true">
 			<svg viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`} className="absolute inset-0 h-full w-full overflow-visible">
 				{/* The kerb, then the race over it, phase by phase. Butt ends: a
 				    round cap poked a black nub out past the chequer and behind the
@@ -733,9 +747,10 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 						<line {...halfTick(hill.bracket[hill.bracket.length - 1], P(hill.end))} />
 					</g>
 				))}
-				{/* The layers: an arc outside the hills per group, solid where it
-				    fires, dashed for a random point, dotted for the carry-over
-				    window, a dot for a spot. */}
+				{/* The layers: an arc ON the track per group, solid where it fires,
+				    dashed for a random point, dotted for the carry-over window, a dot
+				    for a spot; each over a dark edge so it reads on every phase's
+				    colour. */}
 				{layerSpans.map((span, index) => {
 					const colour = span.colour ?? LIT
 					const offset = laneOffset(laneOf(span))
@@ -745,14 +760,27 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 						return <circle key={`layer-${index}`} cx={x + n[0] * offset} cy={y + n[1] * offset} r={track * 0.28 * Math.max(1, emphasis(span))} fill={colour} opacity={quiet(span, 1)} data-preview={span.key === preview || undefined} onMouseEnter={onPreview && span.key ? () => onPreview(span.key ?? null) : undefined} onMouseLeave={onPreview ? () => onPreview(null) : undefined} />
 					}
 					const section = slice(shape, span.start, Math.max(span.end, span.start + distance / 400), distance)
+					const line = points(parallel(section, offset))
+					const width = (span.kind === "window" ? track * laneStroke * 0.47 : track * laneStroke) * Math.max(1, emphasis(span))
+					const dashes = span.kind === "random" ? `${track * 0.5} ${track * 0.32}` : span.kind === "window" ? `${track * 0.12} ${track * 0.22}` : undefined
 					return (
+						<g key={`layer-${index}`}>
 						<polyline
-							key={`layer-${index}`}
-							points={points(parallel(section, offset))}
+							points={line}
+							fill="none"
+							stroke="var(--color-gray-950)"
+							strokeWidth={width + track * 0.14}
+							strokeDasharray={dashes}
+							strokeLinecap="round"
+							opacity={quiet(span, 0.9)}
+							aria-hidden="true"
+						/>
+						<polyline
+							points={line}
 							fill="none"
 							stroke={colour}
-							strokeWidth={(span.kind === "window" ? track * laneStroke * 0.47 : track * laneStroke) * Math.max(1, emphasis(span))}
-							strokeDasharray={span.kind === "random" ? `${track * 0.5} ${track * 0.32}` : span.kind === "window" ? `${track * 0.12} ${track * 0.22}` : undefined}
+							strokeWidth={width}
+							strokeDasharray={dashes}
 							strokeLinecap="round"
 							opacity={quiet(span, span.kind === "window" ? 0.8 : 1)}
 							data-preview={span.key === preview || undefined}
@@ -761,6 +789,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 						>
 							{span.label && <title>{span.detail ? `${span.label}. ${span.detail}` : span.label}</title>}
 						</polyline>
+						</g>
 					)
 				})}
 				{/* Each lit skill's icon at its arc's start, ringed in its colour; a

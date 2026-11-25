@@ -42,7 +42,7 @@ export const DEFAULT_LIGHT_THEME = "tracen"
 // picker draws the canvas as a disc with the accent as a dot in it, so themes
 // that share an accent (Dark, Gilded and Midnight are all gold) still differ.
 export const THEMES: ThemeConfig[] = [
-	{ id: "gold",           label: "Dark",     mode: "dark",  swatch: "#E6D28A", canvas: "#1a1a22" },
+	{ id: "gold",           label: "Dark",     mode: "dark",  swatch: "#E6D28A", canvas: "#1a1e25" },
 	{ id: "gilded",         label: "Gilded",   mode: "dark",  swatch: "#f2b544", canvas: "#261b10" },
 	{ id: "midnight",       label: "Midnight", mode: "dark",  swatch: "#F6C84F", canvas: "#101f33" },
 	{ id: "race-day",       label: "Pace",     mode: "dark",  swatch: "#7cc8ff", canvas: "#101d2b" },

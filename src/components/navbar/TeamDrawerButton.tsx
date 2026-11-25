@@ -3,7 +3,7 @@
  * (components/pvp/TeamDrawer.tsx).
  *
  * Reads TeamDrawerContext, which only AppShell provides, so outside /app it
- * renders nothing (the SettingsMenu rule). It also stands aside on the PvP
+ * renders nothing. It also stands aside on the PvP
  * page's My team view, where the full builder already shows the team.
  * Icon only below desktop-nav, where the mobile bar is tight.
  */

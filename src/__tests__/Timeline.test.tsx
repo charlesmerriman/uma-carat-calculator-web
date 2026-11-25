@@ -791,16 +791,20 @@ describe('Timeline concurrent banners', () => {
  * jsdom applies no stylesheets. Every tile is in the DOM either way, so
  * asserting on rendered names would have passed before each fix too. What the
  * band assertions below can check structurally is the ONE-LINE guarantee — a
- * band's tiles are all direct children of a single flex row, so counting them
- * proves there is no second row to wrap onto. That is a stronger guard than the
- * class-name sniffing it replaces, which asserted `xl:grid-cols-N` and so was
- * blind to the band collapsing to two columns below 1280px. The widths
- * themselves were checked visually at 420 / 1150 / 1280 / 1600.
+ * band's tiles are all direct children of a single row, so counting them
+ * proves there is no second row to wrap onto. The widths themselves were
+ * checked visually at 420 / 1150 / 1280 / 1600.
+ *
+ * WHICH layout a part has is a fact these tests can read: the component writes
+ * it as an attribute (`data-layout` on a panel, `data-shape` on a section's
+ * row) and `src/timeline.css` turns it into geometry. What that geometry must
+ * never do (clip a panel, pin its rows, change a band at a breakpoint) is
+ * guarded where it now lives, in timelineCss.test.ts.
  */
 describe('Timeline banner categories', () => {
   /** The grid a named card's tile sits in — compact column layout only. */
   function gridFor(name: string): HTMLElement {
-    const grid = screen.getByAltText(name).closest('div.grid')
+    const grid = screen.getByAltText(name).closest('.tl-grid')
     expect(grid, `no grid around ${name}`).not.toBeNull()
     return grid as HTMLElement
   }
@@ -813,12 +817,13 @@ describe('Timeline banner categories', () => {
    * again, tiles land on a second row and the count stops matching.
    */
   function bandFor(name: string): { scroller: HTMLElement; row: HTMLElement } {
-    const scroller = screen.getByAltText(name).closest('div.overflow-x-auto')
+    const scroller = screen.getByAltText(name).closest('.tl-band')
     expect(scroller, `no band scroller around ${name}`).not.toBeNull()
     const row = (scroller as HTMLElement).firstElementChild as HTMLElement
-    expect(row.className).toContain('flex')
-    // A band must never be a grid again — that is what let it wrap at two.
-    expect(row.className).not.toContain('grid')
+    expect(row).toHaveClass('tl-band-row')
+    // A band must never be the two-across grid again — that is what let it wrap.
+    expect(row).not.toHaveClass('tl-grid')
+    expect(scroller!.closest('.tl-panel')).toHaveAttribute('data-layout', 'band')
     return { scroller: scroller as HTMLElement, row }
   }
 
@@ -860,11 +865,14 @@ describe('Timeline banner categories', () => {
     expect(row.children).toHaveLength(REVIVAL_UMAS.length)
     // A line too long to fit scrolls inside its own container, which is what
     // keeps it off the page's horizontal scrollbar.
-    expect(scroller.className).toContain('overflow-x-auto')
-    // The three classes that used to hide nine of them.
-    expect(row.className).not.toContain('grid-rows-1')
-    expect(scroller.className).not.toContain('overflow-hidden')
-    expect(scroller.className).not.toContain('contain:size')
+    expect(scroller).toHaveClass('tl-band')
+    // The three declarations that used to hide nine of them (a row cap, a
+    // clip and size containment) can no longer be typed onto this element:
+    // its layout is `.tl-band` in timeline.css, and timelineCss.test.ts fails
+    // if any of the three appears there. Nothing here carries a utility
+    // that could bring one back either.
+    expect(row.className).toBe('tl-band-row')
+    expect(scroller.className).toBe('tl-band')
   })
 
   it('drops the empty art and support columns a revival would leave behind', () => {
@@ -897,7 +905,8 @@ describe('Timeline banner categories', () => {
     expect(screen.getByText('Rerun')).toBeInTheDocument()
     // Still the ordinary three-column section, art placeholder included.
     expect(screen.getByText('Banner art coming soon')).toBeInTheDocument()
-    expect(gridFor('Gentildonna').className).not.toContain('xl:grid-cols-')
+    expect(gridFor('Gentildonna').closest('.tl-panel')).toHaveAttribute('data-layout', 'column')
+    expect(gridFor('Gentildonna').closest('.tl-row')).toHaveAttribute('data-shape', 'three')
   })
 
   it('degrades a race-prep batch that has no uma at all', () => {
@@ -945,7 +954,8 @@ describe('Timeline banner categories', () => {
     // before these support cards were backfilled. Banding the whole section
     // instead threw the art onto its own row and left one tile adrift in a
     // full-width panel.
-    expect(screen.getByAltText('Satono Crown').closest('div.overflow-x-auto')).toBeNull()
+    expect(screen.getByAltText('Satono Crown').closest('.tl-band')).toBeNull()
+    expect(gridFor('Satono Crown').closest('.tl-panel')).toHaveAttribute('data-layout', 'column')
     expect(gridFor('Satono Crown')).toBeInTheDocument()
     expect(screen.getByText('10 Select 2 Scout')).toBeInTheDocument()
   })
@@ -969,8 +979,11 @@ describe('Timeline banner categories', () => {
     events = [categorised(1, 'standard', ['A', 'B'], ['C', 'D'])]
     renderTimeline()
 
-    expect(gridFor('A').className).not.toContain('xl:grid-cols-')
-    expect(gridFor('C').className).not.toContain('xl:grid-cols-')
+    expect(gridFor('A').closest('.tl-panel')).toHaveAttribute('data-layout', 'column')
+    expect(gridFor('C').closest('.tl-panel')).toHaveAttribute('data-layout', 'column')
+    expect(gridFor('A').closest('.tl-row')).toHaveAttribute('data-shape', 'three')
+    // Two tiles, two across.
+    expect(gridFor('A')).toHaveAttribute('data-columns', '2')
     // Compact sections still show the art placeholder.
     expect(screen.getByText('Banner art coming soon')).toBeInTheDocument()
   })
@@ -989,8 +1002,7 @@ describe('Timeline banner categories', () => {
 
     const { row } = bandFor('D Uma')
     expect(row.children).toHaveLength(4)
-    expect(row.className).not.toContain('grid-cols-2')
-    expect(row.className).not.toContain('grid-rows-1')
+    expect(row).not.toHaveClass('tl-grid')
   })
 })
 
@@ -2049,5 +2061,71 @@ describe('Timeline deep links', () => {
     renderTimeline('/app/timeline?focus=not-a-target')
 
     expect(cardCount()).toBe(10)
+  })
+})
+
+/**
+ * The month headings: "March 2099" before the first card of each month.
+ *
+ * The heading sits INSIDE its row, so the list keeps one child per row; the
+ * keys, the scroll tripwire and the deep-link anchor all count on that.
+ */
+describe('Timeline month headings', () => {
+  function monthHeadings(): string[] {
+    return [...document.querySelectorAll('.tl-month')].map((h) => h.textContent ?? '')
+  }
+
+  it('puts one heading before the first card of each month, and none between cards of the same month', () => {
+    // categorised() opens on day `id` of March 2099; the race in March too; the
+    // scenario in May.
+    events = [
+      categorised(1, 'standard', ['A'], ['B']),
+      categorised(2, 'standard', ['C'], ['D']),
+      raceEvent(1, '20'),
+    ]
+    scenarios = [scenario(4, 'Grand Masters')]
+    renderTimeline()
+
+    expect(monthHeadings()).toEqual(['March 2099', 'May 2099'])
+  })
+
+  it('is a heading a screen reader can jump to, above the card it introduces', () => {
+    events = [categorised(1, 'standard', ['A'], ['B'])]
+    renderTimeline()
+
+    const heading = screen.getByRole('heading', { level: 2, name: 'March 2099' })
+    const row = heading.parentElement as HTMLElement
+    // One row: the heading, then the card's wrapper.
+    expect(row.children).toHaveLength(2)
+    expect(row.firstElementChild).toBe(heading)
+    expect(row.querySelector('.tl-card')).not.toBeNull()
+  })
+
+  it('keeps the list at one child per row, with or without a heading', () => {
+    events = [
+      categorised(1, 'standard', ['A'], ['B']),
+      categorised(2, 'standard', ['C'], ['D']),
+    ]
+    renderTimeline()
+
+    const rows = [...document.querySelectorAll('.tl-card')].map((card) => card.parentElement?.parentElement)
+    expect(new Set(rows).size).toBe(2)
+    // Only the first row carries the heading.
+    expect(rows[0]?.querySelector('.tl-month')).not.toBeNull()
+    expect(rows[1]?.querySelector('.tl-month')).toBeNull()
+  })
+
+  it('says the month again at the top of a filtered list', () => {
+    events = [
+      categorised(1, 'standard', ['A'], ['B']),
+      categorised(2, 'rerun', ['C'], ['D']),
+    ]
+    renderTimeline()
+    expect(monthHeadings()).toEqual(['March 2099'])
+
+    // With the first card filtered away, the one left is now first, and says so.
+    fireEvent.change(screen.getByLabelText('Filter events'), { target: { value: 'rerun' } })
+    expect(monthHeadings()).toEqual(['March 2099'])
+    expect(document.querySelectorAll('.tl-card')).toHaveLength(1)
   })
 })

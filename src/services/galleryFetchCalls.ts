@@ -139,9 +139,14 @@ export interface PlanPublishBody {
 	include_notes: boolean
 	include_income: boolean
 	confirm_public_identity: boolean
+	/**
+	 * True: a new post even though this plan has one (a plan may have several
+	 * since 2026-11-24). False: a posted plan updates its newest post.
+	 */
+	as_new: boolean
 }
 
-/** Post one of your plans, or update its post: 201 the first time, 200 after. */
+/** Post one of your plans, or update its newest post: 201 for a new post, 200 for an update. */
 export function planPublish(planId: number, body: PlanPublishBody): Promise<Response> {
 	return post(`/plans/${planId}/publish`, body)
 }

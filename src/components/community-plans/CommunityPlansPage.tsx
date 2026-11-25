@@ -2,8 +2,9 @@
  * /app/plans: Community plans, pull plans players have posted
  * (notes/pull-plan-database-plan.md, Design 6 to 8).
  *
- * Top to bottom: the heading with "My plans" (the way back to the
- * calculator) and "Post a plan" (the open plan, through PostPlanDialog); the
+ * Top to bottom, under the Calculator screen's bar (CalculatorTabs, the way
+ * back to the calculator): the heading with "Post a plan" (the open plan,
+ * through PostPlanDialog); the
  * sort bar (Top for Today / This week / This month / All
  * time, and New) with the count; then the filter sidebar beside the list.
  * Below `lg` the sidebar is a "Filters" button opening the same controls in a
@@ -27,7 +28,7 @@
  */
 
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { Loader2, SlidersHorizontal } from "lucide-react"
 import { AuthContext } from "../../services/AuthContext"
 import { useCalculatorData } from "../../services/CalculatorContext"
@@ -44,7 +45,7 @@ import { PlanFeedHeading, PlanFeedRow } from "./PlanFeedRow"
 import { PlanFilters } from "./PlanFilters"
 import { PlanPostBody } from "./PlanPostBody"
 
-// Wider than the other tabs' 80rem: the list beside the 16rem sidebar needs
+// Wider than the other tabs' 80rem: the list beside the 17rem sidebar needs
 // 64rem (PlanFeedRow's `@5xl/plans`) to draw the banner pictures, which a
 // 1440 screen gives it at 96rem and an 80rem page never would.
 const CONTAINER = "mx-auto my-3 flex w-[calc(100%-1rem)] max-w-[96rem] flex-col gap-4 sm:w-[calc(100%-2rem)]"
@@ -62,7 +63,7 @@ export const CommunityPlansPage = () => {
 	if (!auth?.account?.early_access) {
 		return (
 			<div className={CONTAINER}>
-				<SupportersFirstNote feature="Community plans are" />
+				<SupportersFirstNote feature="The Pull Plan Library is" />
 			</div>
 		)
 	}
@@ -142,7 +143,7 @@ function CommunityPlansBody() {
 	if (refused) {
 		return (
 			<div className={CONTAINER}>
-				<SupportersFirstNote feature="Community plans are" />
+				<SupportersFirstNote feature="The Pull Plan Library is" />
 			</div>
 		)
 	}
@@ -155,29 +156,30 @@ function CommunityPlansBody() {
 		<div className={CONTAINER}>
 			<header className="flex flex-wrap items-start gap-x-4 gap-y-2">
 				<div className="mr-auto min-w-0">
-					<h1 className="font-display text-xl font-bold text-gray-100 sm:text-2xl">Community plans</h1>
+					<h1 className="font-display text-xl font-bold text-gray-100 sm:text-2xl">Pull Plan Library</h1>
 					<p className="mt-1 text-sm text-gray-400">
 						Pull plans other players have posted. Open one to see every banner and what your own resources would cover, then
 						copy it or take single banners.
 					</p>
 				</div>
-				<div className="flex gap-2">
-					<Link to="/app" className={SECONDARY_BUTTON}>
-						My plans
-					</Link>
-					{activePlan && activePlan.post_public_id !== undefined && (
-						<button type="button" onClick={() => setPosting(true)} className={PRIMARY_BUTTON}>
-							{activePlan.post_public_id ? "Update my post" : "Post a plan"}
-						</button>
-					)}
-				</div>
+				{/* No "My plans" link: the Calculator screen's bar above is the
+				    way back (owner, 2026-11-24). Always "Post a plan": a posted
+				    plan may be posted again, and the dialog asks which. */}
+				{activePlan && activePlan.post_public_id !== undefined && (
+					<button type="button" onClick={() => setPosting(true)} className={PRIMARY_BUTTON}>
+						Post a plan
+					</button>
+				)}
 			</header>
 			{posting && activePlan && <PostPlanDialog plan={activePlan} onClose={() => setPosting(false)} />}
 
 			<SortBar view={view} count={feed.data?.count} onChange={changeView} />
 
 			<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-				<aside className="card-panel hidden w-64 shrink-0 p-3 lg:block" aria-label="Filters">
+				{/* 17rem: the widest spending option, "Minnow - Daily Carat Pack
+				    only", is 197px in Nunito at 14px and must fit the closed
+				    select beside its arrow (16rem left it about 190px). */}
+				<aside className="card-panel hidden w-68 shrink-0 p-3 lg:block" aria-label="Filters">
 					<h2 className="mb-3 text-sm font-semibold text-gray-100">Filters</h2>
 					{feed.data && <PlanFilters choices={feed.data.filters} value={view.filters} onChange={(filters) => changeView({ filters })} />}
 				</aside>
@@ -267,7 +269,7 @@ function FeedList({ feed, isPending, isError, onRetry, openId, onToggle, onClear
 	if (isError && !feed) {
 		return (
 			<div className="card-panel flex flex-col items-start gap-3 p-4 text-sm text-gray-300" role="alert">
-				Community plans didn't load.
+				The Pull Plan Library didn't load.
 				<button type="button" onClick={onRetry} className={SECONDARY_BUTTON}>
 					Try again
 				</button>

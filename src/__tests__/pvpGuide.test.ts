@@ -33,7 +33,7 @@ import {
 	topUmas,
 	umasByStars,
 } from "../utils/pvpGuide"
-import { plainNoteText, splitHighlights, splitNoteText } from "../utils/remarkHighlight"
+import { plainNoteText, splitHighlights, splitNoteText, umaMentionsIn, umaStepName } from "../utils/remarkHighlight"
 import { DEFAULT_CONSTANTS } from "../constants/gameConstants"
 import type { BannerSupport, BannerUma, RaceEvent } from "../types"
 import type { PvpGuide, PvpSkillRecommendation } from "../types/pvpGuide"
@@ -143,6 +143,33 @@ describe("splitHighlights", () => {
 			{ text: "!", highlighted: false },
 		])
 		expect(splitHighlights("a = b == c")).toEqual([{ text: "a = b == c", highlighted: false }])
+	})
+})
+
+describe("((Uma name)) mentions (Henry's ask, review items 6 and C)", () => {
+	it("reads an outfit's own brackets as part of her name", () => {
+		expect(splitNoteText("Run ((Oguri Cap (Christmas))) and ((Copano Rickey)).")).toEqual([
+			{ kind: "text", text: "Run " },
+			{ kind: "uma", name: "Oguri Cap (Christmas)" },
+			{ kind: "text", text: " and " },
+			{ kind: "uma", name: "Copano Rickey" },
+			{ kind: "text", text: "." },
+		])
+		expect(umaMentionsIn("((A)) then (plain words) then ((B (Summer)))")).toEqual(["A", "B (Summer)"])
+	})
+
+	it("finds one inside a highlight, and flattens it to plain words", () => {
+		expect(splitNoteText("==Watch ((Smart Falcon))==")).toEqual([
+			{ kind: "highlight", pieces: [{ kind: "text", text: "Watch " }, { kind: "uma", name: "Smart Falcon" }] },
+		])
+		expect(plainNoteText("Beat ((Oguri Cap (Christmas))) with ==[[Groundwork]]==")).toBe("Beat Oguri Cap (Christmas) with Groundwork")
+	})
+
+	it("names the uma a whole ranking step is, and nothing else", () => {
+		expect(umaStepName("((Copano Rickey))")).toBe("Copano Rickey")
+		expect(umaStepName(" ((Oguri Cap (Christmas))) ")).toBe("Oguri Cap (Christmas)")
+		expect(umaStepName("Rickey")).toBeNull()
+		expect(umaStepName("((Rickey)) fan")).toBeNull()
 	})
 })
 

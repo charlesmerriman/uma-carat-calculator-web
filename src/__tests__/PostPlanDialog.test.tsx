@@ -94,7 +94,9 @@ describe("PostPlanDialog", () => {
 		expect(post).toBeDisabled()
 		fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: "  F2P road  " } })
 		fireEvent.change(screen.getByLabelText(/^Spending level/), { target: { value: "f2p" } })
-		expect(screen.getByText("No purchases")).toBeInTheDocument()
+		// Each level says what it means in its own option, before it is picked.
+		expect(screen.getByRole("option", { name: "Minnow - Daily Carat Pack only" })).toBeInTheDocument()
+		expect(screen.getByLabelText(/^Spending level/)).toHaveValue("f2p")
 		fireEvent.click(screen.getByLabelText("Late"))
 		fireEvent.click(screen.getByLabelText("Front"))
 		expect(post).toBeDisabled()
@@ -103,10 +105,10 @@ describe("PostPlanDialog", () => {
 		await waitFor(() => expect(value.postPlan).toHaveBeenCalled())
 		expect(value.postPlan).toHaveBeenCalledWith(7, {
 			caption: "F2P road", strategy: "", spending: "f2p", sweat: "", strategies: ["front", "late"],
-			include_notes: false, include_income: false, confirm_public_identity: true,
+			include_notes: false, include_income: false, confirm_public_identity: true, as_new: false,
 		})
 		await waitFor(() => expect(onClose).toHaveBeenCalled())
-		expect(toast.success).toHaveBeenCalledWith("Your plan is in Community plans.", expect.anything())
+		expect(toast.success).toHaveBeenCalledWith("Your plan is in the Pull Plan Library.", expect.anything())
 	})
 
 	it("starts an update from the post's words and picks, never its two ticks", async () => {
@@ -121,8 +123,31 @@ describe("PostPlanDialog", () => {
 		expect(screen.getByLabelText(/Include my income/)).not.toBeChecked()
 		fireEvent.click(screen.getByLabelText(/Include my income/))
 		fireEvent.click(screen.getByLabelText("Show my name, picture and tier with this plan"))
+		// Updating is the default for a posted plan.
+		expect(screen.getByLabelText(/Update my post/)).toBeChecked()
 		fireEvent.click(screen.getByRole("button", { name: "Update post" }))
-		await waitFor(() => expect(value.postPlan).toHaveBeenCalledWith(7, expect.objectContaining({ include_income: true, include_notes: false })))
+		await waitFor(() =>
+			expect(value.postPlan).toHaveBeenCalledWith(7, expect.objectContaining({ include_income: true, include_notes: false, as_new: false }))
+		)
+	})
+
+	it("posts a posted plan again as a new post when asked", async () => {
+		const { value } = renderDialog({ plan: { ...PLAN, post_public_id: "Post1234" } })
+		expect(await screen.findByDisplayValue("Skip until the anniversary")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "Take it down" })).toBeInTheDocument()
+		fireEvent.click(screen.getByLabelText(/Post it as a new plan/))
+		// A new post: nothing to take down, and the button says so.
+		expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull()
+		fireEvent.click(screen.getByLabelText("Show my name, picture and tier with this plan"))
+		fireEvent.click(screen.getByRole("button", { name: "Post plan" }))
+		await waitFor(() => expect(value.postPlan).toHaveBeenCalledWith(7, expect.objectContaining({ as_new: true })))
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Your plan is in the Pull Plan Library.", expect.anything()))
+	})
+
+	it("never asks on a plan that isn't posted", async () => {
+		renderDialog()
+		await screen.findByRole("button", { name: "Post plan" })
+		expect(screen.queryByLabelText(/Post it as a new plan/)).toBeNull()
 	})
 
 	it("says what range a new post will have, from the open plan's rows", async () => {

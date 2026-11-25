@@ -5,9 +5,10 @@
  */
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { MemoryRouter } from "react-router-dom"
 import CourseLayersMenu from "../components/course/CourseLayersMenu"
 import CourseSection from "../components/course/CourseSection"
-import { setAccelsOpen, setCourseFocus, setCourseLayers, setStickyMap, useVeteranPicks } from "../services/courseMapStore"
+import { setAccelsOpen, setCourseFocus, setCourseLayers, setStickyMap, setStuckView, useVeteranPicks } from "../services/courseMapStore"
 import { TestQueryProvider } from "../test/TestQueryProvider"
 import type { SkillZoneMap } from "../utils/courseLayers"
 import { CHUKYO_1200 } from "./courseFixtures"
@@ -21,6 +22,7 @@ afterEach(() => {
 		setCourseFocus(null)
 		setAccelsOpen(false)
 		setStickyMap(false)
+		setStuckView("strip")
 	})
 	vi.restoreAllMocks()
 })
@@ -275,6 +277,16 @@ describe("the course map's layers", () => {
 		expect(box).toBeDisabled()
 		expect(screen.getByText("Sign in to show your team's veterans.")).toBeInTheDocument()
 	})
+
+	it("makes a guest's Sign in a link that brings them back", () => {
+		render(
+			<MemoryRouter initialEntries={["/app/pvp?event=cm-22"]}>
+				<CourseLayersMenu signedIn={false} veteransNote={null} />
+			</MemoryRouter>,
+		)
+		fireEvent.click(screen.getByRole("button", { name: "Layers" }))
+		expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
+	})
 })
 
 describe("Stick to top (owner, 2026-11-20)", () => {
@@ -304,6 +316,39 @@ describe("Stick to top (owner, 2026-11-20)", () => {
 		expect(within(bar).getByText("Phase")).toBeInTheDocument()
 		fireEvent.click(within(bar).getByRole("button", { name: "Unstick" }))
 		await waitFor(() => expect(screen.queryByRole("region", { name: "Course map, stuck to the top" })).toBeNull())
+	})
+
+	it("shows the track, the strip or both by the bar's own switch, leaving the map in place as it was", async () => {
+		// No real shape for this course: the schematic, at once.
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("null", { status: 404 }))
+		act(() => setStickyMap(true))
+		onPage(80)
+		const bar = await screen.findByRole("region", { name: "Course map, stuck to the top" })
+		const views = within(bar).getByRole("group", { name: "Stuck map view" })
+		// The strip until the reader picks another.
+		expect(within(views).getByRole("button", { name: "Strip" })).toHaveAttribute("aria-pressed", "true")
+		expect(within(bar).getByText("Phase")).toBeInTheDocument()
+
+		fireEvent.click(within(views).getByRole("button", { name: "Track" }))
+		await waitFor(() => expect(within(bar).queryByText("Phase")).toBeNull())
+		// The track, capped at the bar's height: no taller than 240px.
+		// The track's box: its drawing's parent (the direction arrow is always drawn).
+		const trackBox = () => bar.querySelector('polygon[data-course="direction"]')?.closest("svg")?.parentElement ?? null
+		await waitFor(() => expect(trackBox()).not.toBeNull())
+		// Capped: its width is stated, at most what the bar allows (the height
+		// cap narrows it further; jsdom keeps no aspect-ratio to check). Alone
+		// it is the larger track, with its words.
+		const width = () => parseFloat(trackBox()!.style.width)
+		expect(width()).toBeGreaterThan(480)
+		expect(width()).toBeLessThanOrEqual(900)
+
+		fireEvent.click(within(views).getByRole("button", { name: "Both" }))
+		expect(within(bar).getByText("Phase")).toBeInTheDocument()
+		// Beside the strip, the smaller one.
+		expect(width()).toBeLessThanOrEqual(480)
+		// The map in place is still on its own Strip.
+		const inPlace = screen.getByRole("group", { name: "Map view" })
+		expect(within(inPlace).getByRole("button", { name: "Strip" })).toHaveAttribute("aria-pressed", "true")
 	})
 
 	it("stays in place while the strip is still below the line", () => {

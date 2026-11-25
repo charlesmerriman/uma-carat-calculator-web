@@ -10,6 +10,7 @@ import { Trophy, Gift, Diamond, TrendingUp, Sword, Crown, Carrot, Dumbbell, Tick
 import { useCalculatorData } from "../../services/CalculatorContext"
 import { useAverageMonthlyIncome } from "../../hooks/useAverageMonthlyIncome"
 import { UncapCrystalsPanel } from "./UncapCrystalsPanel"
+import { ProjectionSettings } from "./ProjectionSettings"
 import { ToggleSwitch } from "../ToggleSwitch"
 import { NumberField } from "../NumberField"
 import { CountStepper } from "./CountStepper"
@@ -196,7 +197,8 @@ const ResourceRow = ({ icon, label, value, onChange, stepper = false }: {
  * The two "how many do I buy" boxes beside the Monthly Shop Tickets toggle.
  * Each maps to a nullable count on UserStats, capped at what the shop sells.
  *
- * These lived in the navbar's Projection Settings popover until 2026-10, where
+ * These lived in the navbar's Projection Settings popover (itself gone since
+ * 2026-11-24, see ProjectionSettings.tsx) until 2026-10, where
  * about 3% of players ever changed them: two clicks deep, behind a gear, with
  * nothing on the calculator pointing at them. Purchases is where players
  * already go to say what they buy, so the toggle and its counts sit here now.
@@ -886,6 +888,10 @@ export const IncomeForm = () => {
 							<UncapCrystalsPanel />
 						</div>
 					</div>
+					{/* ── Last row: what the projection assumes ──
+					    The navbar's gear until 2026-11-24. Under the income figures
+					    because these switches are what those figures are built on. */}
+					<ProjectionSettings />
 				</div>
 			</motion.div>
 		</div>

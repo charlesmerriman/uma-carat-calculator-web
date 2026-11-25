@@ -1,0 +1,659 @@
+/* ==========================================================================
+   THE TIMELINE (components/timeline/)
+
+   Everything the Timeline's cards share that is not a one-off utility at the
+   call site. Imported in App.tsx after App.css and encyclopedia.css and
+   before personalityThemes.css, so a theme's shape rules still come last.
+
+   WHAT IS IN THIS FILE, IN ORDER
+   1. The art width          --timeline-art-width, the one width all art has from xl
+   2. Category chips         .category-chip and its two looks
+   3. The Recommended chip   .recommended-chip
+   4. The free-pulls chip    .free-pulls-chip
+   5. Layout                 the numbers (--tl-*), the art, a section's row,
+                             a panel's column or band, the tile caps
+   6. Where a deep link lands   .tl-anchor's scroll margin
+
+   HOOK NAMES (the components carry them; no rule here paints them)
+   A hook is a class or attribute that says what a part IS. It has no rule of
+   its own in this file. Hooks are what personalityThemes.css may select (its
+   rule 2: hooks, never utilities), so a theme can restyle the Timeline
+   without touching a class string in a component.
+
+     tl-bar            the sticky band of controls above the list
+     tl-control        a button, select or search field in that band
+     tl-readout        the "Showing 10 of 190" count and the page indicator
+     tl-anchor         the wrapper around a card that a deep link scrolls to
+     tl-card           a card's panel (banner window, race event, marker)
+     tl-icon-box       the 40px icon square in a card's header
+     tl-title          a card's title
+     tl-pill           any rounded-full label or button in a card; its
+                       shape and its two sizes (data-size) are in section 5
+     tl-countdown      the countdown pill (also a tl-pill); data-state is
+                       where the window stands: "upcoming", "open",
+                       "closing", "ended"
+     tl-panel          a panel inside a card; data-kind says which:
+                       "uma", "support", "course", "rewards"
+     tl-panel-title    a panel's title line
+     tl-tile           one featured uma or support card (the link, or the box)
+     tl-plate          a tile's name block
+     tl-plate-skirt    the strip behind a tile's art that shares the name
+                       block's fill. THE PLATE AND THE SKIRT ARE ONE PLANE:
+                       repaint both or neither, and draw nothing across the
+                       join between the art and the name.
+     tl-stage          the "Stage banner" button; data-status is its state:
+                       "available", "planned", "staged", "expired"
+     tl-stat           a boxed course fact; tl-stat-label and tl-stat-value
+                       are its two lines
+     tl-month          the heading before each month's first card;
+                       tl-month-label is its words, tl-month-rule its line
+
+   RULES THIS FILE KEEPS
+   - The rules below are UNLAYERED, as they were in App.css, so they outrank
+     every Tailwind utility. That is why neither chip sets `display`: both
+     hide and show through container-query utilities on the element.
+   - `@apply` cannot see the custom @theme tokens (index.css); a colour is
+     written as var(--color-...).
+   - A layered uma's ears and hat reach past her frame and past her tile.
+     Nothing on a tile, its panel or a band may clip: no `overflow: hidden`,
+     no `contain`, no `clip-path` on any box between the art and the card.
+   ========================================================================== */
+
+/* ===== 1. THE ART WIDTH ===== */
+
+/* THE ONE WIDTH EVERY PIECE OF TIMELINE ART RENDERS AT ON DESKTOP.
+
+   The ordinary banner row is image | umas | supports at 1.28fr | 0.88fr |
+   0.78fr with two 1rem gaps, so its art is (row - 2rem) * 1.28/2.94 wide.
+   Every other shape used to size its art some other way: the one-panel row
+   gave it half the row, the art-only and marker cards gave it the whole row,
+   and each then hit the 41rem cap somewhere the ordinary row never reaches.
+   Side by side down the list that read as four different banner sizes.
+
+   This is that ordinary fraction, written once as a length so the other
+   shapes can ask for it. 100cqw rather than 100%, because a percentage
+   resolves against the element's own parent and the marker pair's art sits
+   in a half-width column: cqw measures the nearest `@container` instead,
+   which every timeline card panel declares, so the art is the same width
+   however deeply it is nested inside the panel. Read where it is used, not
+   where it is declared: var() substitutes the expression into the using
+   element and cqw resolves there.
+
+   The 41rem cap on the art stays as the ceiling for the single-column
+   layouts below xl, where this variable is not applied. */
+:root {
+	--timeline-art-width: calc((100cqw - 2rem) * 0.4354);
+}
+
+/* ===== 2. CATEGORY CHIPS ===== */
+
+/* ── Banner category chip ─────────────────────────────────────────────────
+   The marker on a timeline section whose banner isn't an ordinary one. A
+   `standard` banner gets no chip at all — most banners are standard, and a
+   badge on every card is noise rather than signal.
+
+   Same @apply restriction as the pull-input classes above: --color-category-*
+   lives in index.css's @theme, which `@reference "tailwindcss"` doesn't load,
+   so the color properties are written against the variables directly. The
+   layout half is plain CSS for the same reason — splitting it across a
+   Tailwind class string and a stylesheet rule would put the chip's padding
+   somewhere other than its color. */
+.category-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	flex-shrink: 0;
+	border-radius: 9999px;
+	border-width: 1px;
+	border-style: solid;
+	padding: 0.125rem 0.625rem;
+	font-size: 0.75rem;
+	line-height: 1.25rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.category-chip--revival {
+	color: var(--color-category-revival);
+	border-color: var(--color-category-revival-border);
+	background-color: var(--color-gray-800);
+}
+
+/* Reruns and race-prep batches. Deliberately achromatic: they are worth
+   labelling but not worth interrupting the scroll for, and leaving the one hue
+   to the revival keeps that signal meaningful. */
+.category-chip--quiet {
+	color: var(--color-gray-300);
+	border-color: var(--color-gray-600);
+	background-color: var(--color-gray-800);
+}
+
+/* Tinted fill behind the same @supports guard as the pull inputs, and for the
+   same reason — see the comment on that guard. Without color-mix the chip keeps
+   its flat card-colored fill and still reads through border and text. */
+@supports (background-color: color-mix(in srgb, red 12%, blue)) {
+	.category-chip--revival {
+		background-color: color-mix(
+			in srgb,
+			var(--color-category-revival-border) 14%,
+			var(--color-gray-800)
+		);
+	}
+}
+
+/* ===== 3. THE RECOMMENDED CHIP ===== */
+
+/* The "★ Recommended" chip in a recommended panel's title line.
+
+   SIZED TO THE TITLE'S LINE BOX: 16px of line-height plus 2px of padding top
+   and bottom, and no border, is exactly the 20px a text-sm title already
+   occupies — so the chip can never make the row taller. It shrinks (label
+   first, via its own truncation) rather than wrapping the title onto a second
+   line, which would.
+
+   It is also the signal that doesn't depend on colour: the SSR surface says
+   "special" to a sighted reader, the word says it to everyone. */
+.recommended-chip {
+	/* No `display` here, for the reason given on .free-pulls-chip below: beside
+	   that chip this one hides and shows through container-query utilities. */
+	align-items: center;
+	gap: 0.25rem;
+	min-width: 0;
+	margin-left: auto;
+	border-radius: 9999px;
+	padding: 0.125rem 0.5rem;
+	font-size: 0.6875rem;
+	line-height: 1rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--color-recommended-ink);
+	background: linear-gradient(
+		135deg,
+		#fff1b8 0%,
+		var(--color-recommended-fill) 45%,
+		#e0a526 100%
+	);
+	box-shadow: 0 0 6px var(--color-ssr-glow);
+}
+
+/* ===== 4. THE FREE-PULLS CHIP ===== */
+
+/* The free-pulls chip that can share the title line with it: a 20px box too
+   (see its padding note below), so it is zero-layout in the same way. The 1px ring is an inset shadow rather than a border because a border
+   would add 2px to the box, and to the title line with it.
+
+   No `display` here on purpose. The chip hides and shows through
+   container-query utilities on the element, and a display set in this file
+   would outrank them — these rules are unlayered, Tailwind's utilities are not. */
+.free-pulls-chip {
+	align-items: center;
+	gap: 0.25rem;
+	flex-shrink: 0;
+	border-radius: 9999px;
+	/* The title's own size (text-sm, 14px on a 20px line), so it reads at a
+	   glance like the words beside it. The box is still 20px: the line-height
+	   IS the box now, with no vertical padding left to add to it. */
+	padding: 0 0.5rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+	color: var(--color-gray-100);
+	background-color: var(--color-gray-800);
+	box-shadow: inset 0 0 0 1px var(--color-gray-600);
+}
+
+/* ===== 5. LAYOUT =====
+
+   The Timeline's geometry: the art, the three section templates, the two
+   panel layouts and the tile caps. It used to be long Tailwind class strings
+   inside the components, the same numbers typed out in several files. Each
+   number is now written once, in the block below, and each shape has a name.
+
+   The components say WHICH shape with an attribute (data-shape, data-layout,
+   data-kind, data-place); this file says what that shape is.
+
+   In @layer components, like .card-panel: a utility on the element can still
+   override a rule here. (The chips above are unlayered and outrank
+   utilities; nothing in this section may be.)
+
+   Breakpoints are written as lengths because this file is plain CSS:
+     40rem = Tailwind's sm    80rem = xl    96rem = 2xl
+
+   THREE THINGS A RULE IN THIS SECTION MUST NEVER DO (timelineCss.test.ts
+   fails the build on each):
+   - A panel never gets `contain`, `grid-template-rows` or `overflow: hidden`.
+     The panel once carried all three, pinned to the art's height, and
+     silently discarded every tile past the first row: an eleven-uma revival
+     showed two umas and hid nine. A card that grows taller is the right trade.
+   - A band never changes at a breakpoint. It is one line at every width.
+   - Nothing between a tile's art and its card clips, because a layered
+     uma's ears and hat reach past her frame and her tile. The band's
+     `overflow-x: auto` is the one scroller, and it is the band's, not the
+     tile's.
+   ===================================================================== */
+
+:root {
+	/* The art's ceiling below xl: just above the widest the art gets in the
+	   ordinary three-column row, so ordinary rows are untouched and only the
+	   single-column layouts clamp. */
+	--tl-art-max: 41rem;
+	/* The art track's floor at the narrow end of xl. */
+	--tl-art-floor: 360px;
+	/* A lone panel: beside the art (the pair shape), or with no art at all. */
+	--tl-panel-max: 28rem;
+
+	/* TILE CAPS. THE SUPPORT CAP IS 7/8 OF THE UMA CAP, SO THE TWO PANELS'
+	   TILES ARE THE SAME HEIGHT in a column. A layered uma tile is 7/6 of its
+	   width tall (the square portrait plus the ear strip, a sixth); a card is
+	   4/3. Equal heights need card = uma x 7/8:
+
+	                 uma cap   card cap   art height, both
+	     xl          10rem     8.75rem    ~187px
+	     2xl         13.5rem   11.75rem   ~252px (11.8125 rounded down)
+
+	   A band keeps the older, smaller support cap, so a full-width row of
+	   cards doesn't grow. */
+	--tl-uma-tile: 10rem;
+	--tl-support-tile: 8.75rem;
+	--tl-support-band-tile: 7.75rem;
+
+	/* Narrowest a band tile shrinks to before its line starts scrolling.
+	   7rem x 9 plus gaps still fits the launch banner's umas on one unscrolled
+	   line at 1150px. A race-prep batch's ten cards fit unscrolled from about
+	   1050px; the launch banner's twenty scroll on any real screen, which is
+	   the intended outcome (20 across a 1490px card is 68px a tile). */
+	--tl-uma-band-min: 7rem;
+	--tl-support-band-min: 6rem;
+}
+
+@media (min-width: 96rem) {
+	:root {
+		--tl-uma-tile: 13.5rem;
+		--tl-support-tile: 11.75rem;
+		--tl-support-band-tile: 9.5rem;
+	}
+}
+
+@layer components {
+	/* ── The art ─────────────────────────────────────────────────────────
+	   BOUNDED BY ITS WIDTH, AND THE HEIGHT FOLLOWS. Every asset is 16:9.
+
+	   The cap is on the WIDTH, never the height, and that is not
+	   interchangeable: `max-height` with a percentage width SQUASHES the
+	   picture (measured: 1030x580 became 1030x368). Capping the width leaves
+	   `height: auto` free to follow the ratio.
+
+	   The 16:9 is DECLARED, not discovered. Stating the ratio reserves the
+	   art's height before a byte arrives; without it a lazy image is 0px
+	   tall until it decodes and seventy cards grow the page by some 26,000px
+	   as you read, which is what used to defeat the planner's deep links.
+	   `object-fit: contain` makes that safe: an asset that is ever not 16:9
+	   letterboxes inside the box instead of stretching.
+
+	   NO border and NO shadow: both would draw the BOX, and the box is only
+	   a layout device (letterbox bars, a cut-out's transparent margins).
+	   Chrome belongs to BannerArtPlaceholder, where the box IS the content. */
+	.tl-art {
+		aspect-ratio: 16 / 9;
+		width: 100%;
+		height: auto;
+		object-fit: contain;
+		border-radius: var(--radius-xl);
+	}
+
+	/* A banner card's art is its own frame: capped, and placed by data-place.
+	     "row"    beside the panels. Centred below xl, where it spans the card
+	              and the cap leaves room either side; hard left from xl, so
+	              its left edge is the section's in every template.
+	     "alone"  every panel banded away, so there is no column edge to line
+	              up with: centred, at the shared width from xl. */
+	.tl-art[data-place] {
+		display: block;
+		max-width: var(--tl-art-max);
+		margin-inline: auto;
+	}
+
+	/* A race or marker card wraps its art in a frame instead (the picture has
+	   no cap of its own there). Same cap, same shared width from xl.
+	     "center"  a lone marker, a pair's scenario, a race with no side panel
+	     "row"     a pair's campaign: hard left from xl, in line with the
+	               banner art in the rows around it */
+	.tl-art-frame {
+		max-width: var(--tl-art-max);
+		margin-inline: auto;
+	}
+
+	/* ── A banner section's row: art | panels ────────────────────────────
+	   THE ART TRACK IS THE SAME IN EVERY TEMPLATE:
+	   minmax(--tl-art-floor, --timeline-art-width). That is what makes the
+	   art one width down the whole list.
+
+	   Below xl every template is one stacked column. With BOTH panels in
+	   columns the two share a row from sm, the art spanning above them (a
+	   lone uma stacked on a tablet was one portrait in a 780px box).
+
+	     "three"        art | umas | supports, the panels at 0.88 : 0.78
+	     "support-led"  the same, weighted to the support grid: a race-prep
+	                    batch is one uma and many cards
+	     "pair"         art | one panel, the other having banded away below */
+	.tl-row {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.tl-row-art {
+		min-width: 0;
+	}
+
+	/* The lone panel's cell in the pair shape. It sits hard against ONE edge
+	   at the width a panel has in the ordinary row, where it would otherwise
+	   balloon into a 740px box around a single tile. WHICH edge is where that
+	   panel sits in the ordinary row: the uma panel is the middle column, so
+	   it stays left, next to the art; the support panel is the far column,
+	   so it stays right. `display: grid` so the panel inside still stretches
+	   to the row's height. */
+	.tl-pair-cell {
+		display: grid;
+		min-width: 0;
+	}
+
+	/* No art and nothing to sit beside: the panel keeps a column's width
+	   and does not stretch across a row it is the only occupant of. */
+	.tl-lone-panel {
+		width: 100%;
+		max-width: var(--tl-panel-max);
+	}
+
+	/* A race card's row: art | course details and rewards. */
+	.tl-race-row {
+		display: grid;
+		gap: 1rem;
+	}
+
+	@media (min-width: 40rem) {
+		.tl-row[data-shape="three"],
+		.tl-row[data-shape="support-led"] {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.tl-row[data-shape="three"] > .tl-row-art,
+		.tl-row[data-shape="support-led"] > .tl-row-art {
+			grid-column: span 2 / span 2;
+		}
+	}
+
+	@media (min-width: 80rem) {
+		.tl-art[data-place="row"] {
+			margin-inline: 0;
+		}
+
+		.tl-art[data-place="alone"] {
+			width: var(--timeline-art-width);
+		}
+
+		.tl-art-frame {
+			width: var(--timeline-art-width);
+		}
+
+		.tl-art-frame[data-place="row"] {
+			margin-inline: 0;
+		}
+
+		.tl-row {
+			align-items: stretch;
+		}
+
+		.tl-row[data-shape="three"] {
+			grid-template-columns:
+				minmax(var(--tl-art-floor), var(--timeline-art-width))
+				minmax(260px, 0.88fr)
+				minmax(260px, 0.78fr);
+		}
+
+		.tl-row[data-shape="support-led"] {
+			grid-template-columns:
+				minmax(var(--tl-art-floor), var(--timeline-art-width))
+				minmax(200px, 0.5fr)
+				minmax(420px, 1.7fr);
+		}
+
+		.tl-row[data-shape="pair"] {
+			grid-template-columns:
+				minmax(var(--tl-art-floor), var(--timeline-art-width))
+				minmax(0, 1fr);
+		}
+
+		.tl-row[data-shape="three"] > .tl-row-art,
+		.tl-row[data-shape="support-led"] > .tl-row-art {
+			grid-column: span 1 / span 1;
+		}
+
+		.tl-pair-cell {
+			width: 100%;
+			max-width: var(--tl-panel-max);
+		}
+
+		.tl-pair-cell[data-side="left"] {
+			margin-right: auto;
+		}
+
+		.tl-pair-cell[data-side="right"] {
+			margin-left: auto;
+		}
+
+		.tl-race-row {
+			grid-template-columns:
+				minmax(var(--tl-art-floor), var(--timeline-art-width))
+				minmax(500px, 1fr);
+			align-items: stretch;
+		}
+	}
+
+	/* ── A panel's tiles: a column or a band ─────────────────────────────
+	   COUNT DRIVES THE LAYOUT (sectionLayout decides; the panel carries the
+	   answer as data-layout).
+
+	   "column": two tiles across and growing downwards. One tile takes the
+	   whole width (data-columns="1"). The two tiles in a row share its
+	   height, so a one-line name beside a two-line one still ends level. */
+	.tl-grid {
+		display: grid;
+		flex: 1;
+		align-content: center;
+		align-items: stretch;
+		gap: 0.375rem;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.tl-grid[data-columns="1"] {
+		grid-template-columns: repeat(1, minmax(0, 1fr));
+	}
+
+	.tl-grid-cell {
+		display: flex;
+		width: 100%;
+		min-width: 0;
+		justify-content: center;
+	}
+
+	/* "band": ONE LINE AT EVERY WIDTH. Nothing about it is breakpoint-driven.
+
+	   The first attempt built the line from grid columns that only existed
+	   above xl; below that a ten-card batch was a 2x5 tower, and twenty
+	   cards were squeezed to 74px each. So the line is a flex row, and the
+	   card count sets a MINIMUM tile width, never an exact one:
+	   - each cell grows to an equal share of the row;
+	   - each cell refuses to shrink past its minimum;
+	   - when the minimums don't fit, the row overflows its own scroller.
+	     Still one line, just one you scroll, and the page never scrolls
+	     sideways.
+
+	   The cap lives on the tile and the growth on the cell around it: the
+	   cell takes its share of the row and the tile sits centred in it.
+
+	   No `justify-content` on the row: the cells always fill it exactly, and
+	   centring a row that DOES overflow strands its first tile off the left
+	   edge where no scrolling reaches it.
+
+	   The bottom padding keeps the tiles' lower edge out of the scroller's
+	   clip: `overflow-x: auto` computes `overflow-y` to auto as well. */
+	.tl-band {
+		flex: 1;
+		overflow-x: auto;
+		padding-bottom: 0.25rem;
+	}
+
+	.tl-band-row {
+		display: flex;
+		align-items: stretch;
+		gap: 0.375rem;
+	}
+
+	.tl-band-cell {
+		display: flex;
+		flex: 1;
+		justify-content: center;
+		min-width: var(--tl-uma-band-min);
+	}
+
+	.tl-panel[data-kind="support"] .tl-band-cell {
+		min-width: var(--tl-support-band-min);
+	}
+
+	/* ── Pills ────────────────────────────────────────────────────────────
+	   Every rounded label or button on a card is a `tl-pill`, in one of two
+	   sizes. The shape and the size are here; the COLOUR, the weight and the
+	   gap stay on the element as utilities, because those are what differ
+	   from one pill to the next and say what each one means.
+
+	     data-size="md"   the pills in a card's header row: a flex row, the
+	                      text at 14px (Copy link, the countdown, PvP guide,
+	                      a legend race or stagger note, Taking part)
+	     data-size="xs"   the small labels: 11px (a marker's kind, a campaign's
+	                      part, a step-up, a story event's kind and rewards)
+
+	   A pill that needs a different padding or size says so with a utility,
+	   which outranks this layer: "Taking part" is tighter to hug its switch,
+	   a story reward is 13px, a story tag is 12px bold.
+
+	   Written the way Tailwind writes them (calc(infinity * 1px), the
+	   --spacing and --text-sm variables), so the computed values are the
+	   ones the utilities gave. */
+	.tl-pill {
+		border-radius: calc(infinity * 1px);
+		border-style: var(--tw-border-style);
+		border-width: 1px;
+	}
+
+	.tl-pill[data-size="md"] {
+		display: flex;
+		width: fit-content;
+		align-items: center;
+		padding-inline: calc(var(--spacing) * 3);
+		padding-block: calc(var(--spacing) * 1);
+		font-size: var(--text-sm);
+		line-height: var(--tw-leading, var(--text-sm--line-height));
+	}
+
+	.tl-pill[data-size="xs"] {
+		padding-inline: calc(var(--spacing) * 2);
+		padding-block: calc(var(--spacing) * 0.5);
+		font-size: 11px;
+	}
+
+	/* ── The month heading ───────────────────────────────────────────────
+	   "December 2026" before the first card of each month: a label and a rule
+	   running to the card column's right edge. The box is the same on every
+	   theme; only the paint differs (the label's fill and the rule's colour
+	   are utilities on the elements, and a theme repaints them by hook).
+
+	   The label is `position: relative` with a stacking context of its own
+	   so a theme can lay a shape BEHIND the words with a pseudo-element
+	   (Tracen's slanted green tab) without touching the box. The rule tucks
+	   4px under the label, so a tab with a slanted end still meets it. */
+	.tl-month {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		margin: 1rem 0 0.125rem;
+		padding: 0 0.5rem;
+	}
+
+	.tl-month-label {
+		position: relative;
+		z-index: 0;
+		padding: 0.125rem 0.875rem;
+		border-radius: var(--radius-md);
+		font-size: 0.9375rem;
+		line-height: 1.5rem;
+		font-weight: var(--font-weight-bold);
+		white-space: nowrap;
+	}
+
+	.tl-month-rule {
+		flex: 1;
+		height: 3px;
+		margin-left: -0.25rem;
+		border-radius: 0 2px 2px 0;
+	}
+
+	/* ── Tile caps (the numbers and their reason are in :root above) ───── */
+	.tl-panel[data-kind="uma"] .tl-tile {
+		max-width: var(--tl-uma-tile);
+	}
+
+	.tl-panel[data-kind="support"] .tl-tile {
+		max-width: var(--tl-support-tile);
+	}
+
+	.tl-panel[data-kind="support"][data-layout="band"] .tl-tile {
+		max-width: var(--tl-support-band-tile);
+	}
+}
+
+/* ===== 6. WHERE A DEEP LINK LANDS =====
+
+   A link to a card (?focus=banner-12, a planner row's link, "View on
+   Timeline") scrolls the card's wrapper, `tl-anchor`, to the top of the list.
+   "The top" is the scroller's edge less its scroll padding, and the padding
+   (index.css) only knows about the screen's tab bar. The Timeline pins a
+   second band under that bar from the app-shell breakpoint, its controls, so
+   a card that lands at "the top" has its first 40px, the title, underneath
+   them. That is what happened until 2026-11-24.
+
+   So the anchor's own scroll margin makes up the difference: the control
+   bar's height where the bar is pinned, and the month heading's where the
+   card has one, so the heading arrives with its card instead of being left
+   behind the bar. `scroll-margin-top` affects nothing but scrollIntoView.
+
+   UNLAYERED, unlike section 5: the wrapper also carries the shared
+   `scroll-mt-6` utility (FOCUS_SCROLL_MARGIN, the 24px that keeps the tail of
+   the previous card in shot), and this has to outrank it. The 1.5rem below IS
+   that 24px. The hook that holds a card in place after a search is cleared
+   sets the margin inline, which outranks this in turn, as it should.
+
+   --tl-bar-h is the control bar on one line: 12px padding each way, a 36px
+   control and its two 1px rules, rounded up. If the bar ever grows a second
+   line at the app-shell width, this is the number to revisit.
+   --tl-month-h is a month heading and the gap under it: 16 + 28 + 2. */
+:root {
+	--tl-bar-h: 3.875rem;
+	--tl-month-h: 2.875rem;
+}
+
+.tl-month + .tl-anchor {
+	scroll-margin-top: calc(1.5rem + var(--tl-month-h));
+}
+
+/* 64rem wide and 32rem tall is `app-shell` (index.css), where the bar pins. */
+@media (min-width: 64rem) and (min-height: 32rem) {
+	.tl-anchor {
+		scroll-margin-top: calc(1.5rem + var(--tl-bar-h));
+	}
+
+	.tl-month + .tl-anchor {
+		scroll-margin-top: calc(1.5rem + var(--tl-bar-h) + var(--tl-month-h));
+	}
+}

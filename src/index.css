@@ -9,8 +9,7 @@
 
    desktop-nav — the navbar's three-column desktop layout, which is already
    over-full below ~900px (the "Sign in to sync" button wraps to 2-3 lines).
-   That is exactly the landscape-phone band. SettingsMenu anchors its panel to a
-   navbar button, so it must switch on this same variant and no other.
+   That is exactly the landscape-phone band.
 
    app-shell — the fixed-height, internally-scrolling desktop shell. It needs
    width AND real vertical room. Applied at 844x390 it produces a ~330px scroll
@@ -27,8 +26,8 @@
 @custom-variant app-shell (@media (min-width: 64rem) and (min-height: 32rem));
 
 /* ===== STICKY NAVBAR OFFSET =====
-   The navbar is `sticky top-0` (components/navbar/Navbar.tsx), so on any page
-   the document scrolls it covers the top of the viewport. scroll-padding-top
+   The navbar is sticky (components/navbar/Navbar.tsx), so on any page the
+   document scrolls it covers the top of the viewport. scroll-padding-top
    tells the browser so: scrollIntoView and #hash jumps then park their target
    below the bar, and each target's own scroll-mt is only the air above it.
 
@@ -36,23 +35,48 @@
    /app shell scrolls an inner div instead, and this does not reach it (nor
    should it: the bar is outside that div).
 
-   Heights, switching on desktop-nav like the navbar itself:
-     mobile  — 56px top row + 1px rule + 65.5px tab row (2 x 8px padding, and
-               48.5px tabs: 16px icon, 2px gap, 16.5px label line, 2 x 6px
-               padding, 2 x 1px border) + 1px bottom border = 122.5px
+   The figure is what STAYS pinned, the same on both layouts:
+     phone   — the places row: 2 x 8px padding, 48.5px tabs (16px icon, 2px
+               gap, 16.5px label line, 2 x 6px padding, 2 x 1px border), and
+               a 1px rule = 65.5px. The wordmark row above it scrolls away
+               (since 2026-11-24), so it is not counted.
      desktop — 64px bar + 1px bottom border = 65px
-   Rounded up a hair. CHANGE THESE IF THE NAVBAR'S HEIGHT CHANGES, or deep
-   links start landing partly under it. The mobile figure is the bar WITH its
-   tab labels: under 440px they go sr-only (Navbar.tsx) and the bar is about
-   17px shorter, so a jump lands that much low there, harmless. The
-   Encyclopedia's jump bar doesn't use these: it sticks at the bar's measured
-   height (--navbar-h, hooks/useNavbarHeight.ts) and keeps these numbers only
-   as its first-paint fallback. */
+   Rounded up a hair. CHANGE THIS IF THE NAVBAR'S HEIGHT CHANGES, or deep
+   links start landing partly under it. The Encyclopedia's jump bar and the
+   screen bars don't use it: they stick at the bar's measured height
+   (--navbar-h, hooks/useNavbarHeight.ts) and keep this number only as
+   their first-paint fallback. */
 html {
-	scroll-padding-top: 7.75rem;
+	scroll-padding-top: 4.125rem;
+}
 
-	@variant desktop-nav {
-		scroll-padding-top: 4.125rem;
+/* ===== SCREEN BAR OFFSET =====
+   A screen's own bar (components/ScreenTabs.tsx: the Calculator's and the
+   Timeline's) pins under the navbar, so it covers the top of the page the
+   same way. Its height is this one variable, read by the bar itself and by
+   everything that has to clear it:
+
+     - the document, where the document scrolls: the navbar's figure above
+       plus the bar;
+     - the desktop /app shell's own scroller, which the navbar sits outside
+       of, so there it is the bar alone;
+     - a band a page pins beneath the bar (the Timeline's controls,
+       `app-shell:top-(--screen-tabs-h)`).
+
+   Without the two scroll paddings a deep link (a planner row's link to its
+   Timeline card, a campaign strip's link to Selectors) parks its target
+   under the bar. 2.375rem = 20px line + 2 x 8px padding + 2px rule. */
+:root {
+	--screen-tabs-h: 2.375rem;
+}
+
+html:has([data-screen-tabs]) {
+	scroll-padding-top: calc(4.125rem + var(--screen-tabs-h));
+}
+
+[data-app-scroller]:has(> [data-screen-tabs]) {
+	@variant app-shell {
+		scroll-padding-top: var(--screen-tabs-h);
 	}
 }
 
@@ -190,7 +214,7 @@ html {
 
 	/* ── Banner category accent ────────────────────────────────────────────
 	   The chip on a Golden Week revival's timeline section (.category-chip--
-	   revival in App.css). Only this one category gets a hue of its own: it is
+	   revival in timeline.css). Only this one category gets a hue of its own: it is
 	   the headline case, the one that visibly breaks the card's usual layout,
 	   and the one a reader most needs to spot while scrolling. Reruns and race-
 	   prep batches use the gray ramp, so they read as annotations rather than
@@ -288,7 +312,7 @@ html {
 
 	/* ── Recommended banner accent ─────────────────────────────────────────
 	   The editorial "Recommended" flag: the SSR panel on the Timeline
-	   (.ssr-panel / .recommended-chip in App.css) and the gold star and wash in
+	   (.ssr-panel in App.css, .recommended-chip in timeline.css) and the gold star and wash in
 	   the planner's banner dropdown (RecommendedMark, withRecommendedOption).
 
 	   Gold, and deliberately NOT the brand gold. On the gold and gilded themes a
@@ -533,11 +557,64 @@ html {
    5. For cards of its own, set --card-shadow (and --color-edge, if the shared
       edge does not suit) in that same block. Never re-skin cards by matching
       utility classes such as `.shadow-md`: see SURFACES above.
+   6. A one-accent theme gets the default family's shapes by itself (THE
+      DEFAULT FAMILY'S ROLES, below). A theme with shapes of its own adds its
+      id to the two exclusion selectors there and to the one in
+      personalityThemes.css.
 */
 
+/* DARK, the default dark theme (id `gold`), redrawn 2026-11-24 (the notes
+   repo's notes/dark-theme-plan.md; the owner: "just a dark theme, but ... a
+   higher quality theme like our light tracen theme is"). Still named Dark, and
+   not game themed.
+
+   Only COLOUR lives here. Its shapes are the default family's, shared with
+   the other eleven one-accent themes (personalityThemes.css).
+
+   - An even graphite ramp with a little blue in it, where the old one was a
+     neutral near-black (still the @theme default above, which a page with no
+     data-theme falls back to).
+   - The creator's gold, unchanged, now spent in four places.
+   - The three kinds at one weight each: a deep fill, a pale ink (9.9:1 or
+     better on the fill) and a bright band.
+   - gray-500 is 4.7:1 on a card, because it carries real words ("Banner
+     ended", "No events found"); the old one measured 2.6:1. (#7c8492, the
+     first value shipped to develop, measured 4.4:1 on the built page.)
+   - Two of the family's roles get Dark's own values: the ink on a solid gold
+     face is a warm near-black instead of pure black, and a well is set by
+     hand a step below this card.
+
+   Measured on the card (#1a1e25): text 14.0:1, secondary 8.5:1, labels
+   5.7:1, the gold 11.1:1, its ink on it 11.9:1. */
 [data-theme="gold"] {
-	/* Default palette — grays inherit from @theme above */
-	--color-brand: #E6D28A;
+	--color-brand: #e6d28a;
+	--color-gray-50:  #f5f6f8;
+	--color-gray-100: #e9ebef;
+	--color-gray-200: #d2d6dd;
+	--color-gray-300: #b3b9c4;
+	--color-gray-400: #8f97a5;
+	--color-gray-500: #808896;
+	--color-gray-600: #363d49;
+	--color-gray-700: #232830;
+	--color-gray-800: #181c22;
+	--color-gray-900: #0e1115;
+	--color-gray-950: #08090c;
+	--color-edge: #2c323c;
+	--card-fill: #1a1e25;
+	--card-shadow: inset 0 1px 0 rgb(255 255 255 / 5%), 0 14px 28px -16px rgb(0 0 0 / 75%);
+
+	--color-type-uma: #16335c;
+	--color-type-uma-ink: #d3e6ff;
+	--color-type-support: #123c2c;
+	--color-type-support-ink: #c8f3dc;
+	--color-type-step-up: #2f2362;
+	--color-type-step-up-ink: #e1d8ff;
+	--kind-uma-band: #4f9bff;
+	--kind-support-band: #34c189;
+	--kind-step-up-band: #9a7bf0;
+
+	--brand-ink: #1c1708;
+	--well-fill: #12151a;
 }
 
 /* Gilded turns the warmth up: the cinematic, amber-lit look that is too
@@ -1032,6 +1109,19 @@ html {
 	--tracen-stat-line: #8f8cab;
 	--tracen-numeral: #8a4a1c;
 	--tracen-shortfall-fill: #ffd6e2;
+	/* The Timeline's parts (personalityThemes.css, "The Timeline on Tracen").
+	   The stat panel's header, and the countdown pill's two coloured states:
+	   OPEN is the theme's good green as a pale fill with deep ink (7.2:1), and
+	   CLOSING is the game's own "Closing in 5d" pink, deepened: white on the
+	   sampled #fc3074 is 3.5:1, on this it is 4.9:1. Pink stays the warning
+	   colour and nothing else (notes/theme-options.md). */
+	--tracen-stat-head: #605c78;
+	--tracen-open-fill: #eef9dc;
+	--tracen-open-ink: #2f5c00;
+	--tracen-open-line: #4f9a00;
+	--tracen-closing-fill: #d81b60;
+	--tracen-closing-ink: #ffffff;
+	--tracen-closing-line: #a50d44;
 }
 
 /* Blue/orange is distinguishable for the common red-green colour vision
@@ -1104,11 +1194,104 @@ html {
 	--kind-support-accent: #fca5a5;
 }
 
+/* Dark names its three bands outright, so colorblind mode has to rename
+   them: the family's formula would have followed the mode's fills by itself,
+   and a fixed green band on a red Support fill is the clash the mode exists
+   to remove. Blue for Uma, red for Support and Step-Up, as the fills go. */
+[data-theme="gold"][data-colorblind-mode="true"] {
+	--kind-uma-band: #60a5fa;
+	--kind-support-band: #f87171;
+	--kind-step-up-band: #f87171;
+}
+
 [data-theme="tracen"][data-colorblind-mode="true"] {
 	--color-type-uma-ink: #1e3a8a;
 	--kind-uma-band: #2563eb;
 	--kind-support-band: #dc2626;
 	--kind-step-up-band: #dc2626;
+	/* The countdown pill: blue for open and orange for closing, the mode's own
+	   pair, never the green and pink it exists to replace. White on the
+	   orange is 5.2:1; the deep blue on its pale fill is 9.6:1. */
+	--tracen-open-fill: #dbeafe;
+	--tracen-open-ink: #1e3a8a;
+	--tracen-open-line: #2563eb;
+	--tracen-closing-fill: #c2410c;
+	--tracen-closing-line: #9a3412;
+}
+
+/* ===== THE DEFAULT FAMILY'S ROLES =====
+   The twelve themes that are not Tracen or Winning Live (Dark, Gilded,
+   Midnight, Pace, Violet, Teal, Light, Blue, Green, Red, Purple, Pearl) share
+   one set of SHAPES, in personalityThemes.css ("The default family"): raised
+   key controls, a solid tab, a bar behind a section title, kind-coloured add
+   buttons, wells for numbers. One set of rules can serve twelve palettes
+   because a shape rule never names a colour. It names a ROLE, defined here,
+   and each role has a value for dark themes and one for light themes.
+
+   WHY TWO BLOCKS AND NOT GRAY TOKENS IN THE RULES. The light ramp is inverted
+   and not symmetrical: gray-800 is the white card, gray-900 the page, and
+   gray-950 a surface LIGHTER than the page. "One step below the card" is
+   near gray-950 on a dark theme and gray-900 on a light one; a rule written
+   with a raw gray would put a well lighter than its card on six themes.
+
+   BOTH BLOCKS ARE WRAPPED IN :where(), WHICH WEIGHS NOTHING, so a theme sets
+   its own value for a role in its ordinary [data-theme="x"] block, the way it
+   already overrides a gray (Dark sets two). Without :where() this selector
+   would outweigh every theme block and a theme's own value would silently
+   lose. The rules that READ the roles keep their full weight; they have to
+   beat utilities.
+
+   Excluded by name, never listed: a new default theme gets the shapes for
+   free, and a new palette theme adds its id to the exclusion here and in
+   personalityThemes.css.
+
+     --brand-ink         text on a solid brand tab or button
+     --brand-lit         the lit top edge of a solid brand face
+     --key-face / -hover a control's face, and a step on from it on hover
+     --key-line / -hover a control's border
+     --key-lit           a key's lit top edge
+     --key-seat          the line a key sits on
+     --press-filter      how a filled button answers the mouse
+     --well-fill         stat boxes: one step below the card
+     --tabs-well         the tray the navbar's tabs sit in
+     --bar-fill          the bar behind a planner section's title
+     --kind-*-band       the band on an add button and a type tile, from the
+                         theme's own kind colours (so colorblind mode's swap
+                         of those colours carries through by itself)
+
+   The three radii are a step rounder than Tailwind's (8 / 10 / 14px). */
+:where(:root:not([data-theme="tracen"], [data-theme="winning-live"])) {
+	--brand-ink: #000000; /* what `bg-brand text-black` already draws on a dark theme */
+	--brand-lit: rgb(255 255 255 / 35%);
+	--key-face: var(--color-gray-700);
+	--key-face-hover: var(--color-gray-600);
+	--key-line: var(--color-gray-600);
+	--key-line-hover: var(--color-gray-500);
+	--key-lit: rgb(255 255 255 / 7%);
+	--key-seat: rgb(0 0 0 / 50%);
+	--press-filter: brightness(1.1);
+	--well-fill: color-mix(in oklab, var(--color-gray-900) 65%, var(--color-gray-800));
+	--tabs-well: var(--color-gray-950);
+	--bar-fill: var(--color-gray-700);
+	--kind-uma-band: color-mix(in oklab, var(--color-type-uma) 45%, white);
+	--kind-support-band: color-mix(in oklab, var(--color-type-support) 45%, white);
+	--kind-step-up-band: color-mix(in oklab, var(--color-type-step-up) 45%, white);
+	--radius-md: 0.5rem;
+	--radius-lg: 0.625rem;
+	--radius-xl: 0.875rem;
+}
+
+:where(:root:not([data-theme="tracen"], [data-theme="winning-live"])[data-theme-mode="light"]) {
+	--brand-ink: var(--light-button-ink);
+	--brand-lit: rgb(255 255 255 / 22%);
+	--key-lit: rgb(255 255 255 / 90%);
+	--key-seat: color-mix(in srgb, var(--color-gray-300) 45%, transparent);
+	--press-filter: brightness(0.96);
+	--well-fill: var(--color-gray-900);
+	--tabs-well: var(--color-gray-700);
+	--kind-uma-band: color-mix(in oklab, var(--color-type-uma-ink) 55%, var(--color-type-uma));
+	--kind-support-band: color-mix(in oklab, var(--color-type-support-ink) 55%, var(--color-type-support));
+	--kind-step-up-band: color-mix(in oklab, var(--color-type-step-up-ink) 55%, var(--color-type-step-up));
 }
 
 /* ===== PAGE GLOW =====

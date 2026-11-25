@@ -19,8 +19,10 @@ import { Users } from "lucide-react"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { FramedUma } from "../FramedUma"
 import { useOshiIds } from "../../hooks/useOshiIds"
-import { InlineNote, SkillMention } from "./PvpTiles"
+import { InlineNote, SkillMention, UmaMention } from "./PvpTiles"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
+import { useUmaMentions } from "./skillMentionsContext"
+import { umaStepName } from "../../utils/remarkHighlight"
 import { STYLE_LABELS, compPlaceColor, compPlaceLetter, parseStyleRanking, parseTeamComp, styleColor, umasByStars, type RankingStep } from "../../utils/pvpGuide"
 import type { PvpGuide, PvpStatConfig, PvpStyle, PvpStyleTab } from "../../types/pvpGuide"
 import { hoverCardProps } from "../../utils/hoverCards"
@@ -29,6 +31,7 @@ import { hoverCardProps } from "../../utils/hoverCards"
 const renderSkill = (name: string, { scenarioLink }: { scenarioLink: boolean }) => (
 	<SkillMention name={name} scenarioLink={scenarioLink} />
 )
+const renderUma = (name: string) => <UmaMention name={name} />
 
 type RankedStyle = Exclude<PvpStyle, "everyone">
 
@@ -77,24 +80,32 @@ function GapMark({ gap }: { gap: RankingStep["gap"] }) {
  * button to its tab; a word that names no style (CM 20's "Blaze") is a plain
  * step.
  */
-function Ladder({ guide, steps, active, onStyleChange }: {
+function Ladder({ guide, steps, active, onStyleChange, label = "Style ranking" }: {
 	guide: PvpGuide
+	/** The list's accessible name; the editor's preview names its own. */
+	label?: string
 	steps: RankingStep[]
 	active: PvpStyleTab | null
 	onStyleChange: (style: PvpStyleTab) => void
 }) {
 	const oshiIds = useOshiIds()
+	const umaMentions = useUmaMentions()
 	const faces = (style: RankedStyle) =>
 		umasByStars(guide.uma_recommendations.filter((row) => row.style === style))
 			.flatMap((group) => group.rows)
 			.slice(0, 3)
 	return (
 		<div className="@container mt-2">
-			<ol aria-label="Style ranking" className="flex flex-col gap-1 @xl:flex-row @xl:items-stretch @xl:gap-0">
+			<ol aria-label={label} className="flex flex-col gap-1 @xl:flex-row @xl:items-stretch @xl:gap-0">
 				{steps.map((step, index) => {
 					const style = step.style
 					const first = index === 0
 					const shown = style ? faces(style) : []
+					// A step written ((Uma name)) names an uma (Henry's ask, review
+					// item 6): her picture where a style's faces go, her name as
+					// the step's. Unmatched, the words stay as written.
+					const umaName = style ? null : umaStepName(step.label)
+					const named = umaName ? (umaMentions[umaName.toLowerCase()] ?? null) : null
 					const rung = `flex min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border bg-gray-800 px-2.5 py-1.5 text-left @xl:flex-col @xl:items-start @xl:gap-1.5 @xl:p-2.5 ${
 						style && active === style ? "border-(--style-color) ring-1 ring-inset ring-(--style-color)" : "border-gray-700"
 					}`
@@ -109,9 +120,22 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 										first ? "text-[19px] @xl:text-2xl" : "text-[17px] @xl:text-xl"
 									}`}
 								>
-									{step.label}
+									{named ? named.name : (umaName ?? step.label)}
 								</span>
 							</span>
+							{named && (
+								<span className="flex shrink-0 gap-1">
+									<span className="inline-block" {...hoverCardProps("uma", named.id)}>
+										<FramedUma
+											src={named.portrait} layers={named.portrait_layers}
+											alt=""
+											title={named.name}
+											oshi={oshiIds.has(named.id)}
+											className={first ? "w-[1.875rem] @xl:w-10" : "w-7 @xl:w-[2.125rem]"}
+										/>
+									</span>
+								</span>
+							)}
 							{shown.length > 0 && (
 								<span className="flex shrink-0 gap-1">
 									{shown.map((row) => (
@@ -157,6 +181,31 @@ function Ladder({ guide, steps, active, onStyleChange }: {
 	)
 }
 
+/** The phone's clamp, as the max-h class writes it: 5.25rem. */
+const CLAMP_REM = 5.25
+
+/**
+ * The height, in px from the box's top, where the last line of text that fits
+ * whole inside the clamp ends. The clamp itself is a rem height, and the box
+ * mixes paragraphs, a heading and margins, so a fixed height lands mid-line
+ * as often as not; reading the lines' own boxes finds the cut that doesn't.
+ * Null when the browser gives no line boxes (jsdom) or nothing fits.
+ */
+function lastWholeLine(box: HTMLElement): number | null {
+	if (typeof document.createRange !== "function") return null
+	const range = document.createRange()
+	range.selectNodeContents(box)
+	if (typeof range.getClientRects !== "function") return null
+	const top = box.getBoundingClientRect().top
+	const limit = CLAMP_REM * parseFloat(getComputedStyle(document.documentElement).fontSize || "16")
+	let best: number | null = null
+	for (const rect of Array.from(range.getClientRects())) {
+		const bottom = rect.bottom - top
+		if (rect.height > 0 && bottom <= limit + 0.5 && (best === null || bottom > best)) best = bottom
+	}
+	return best === null ? null : Math.ceil(best)
+}
+
 /**
  * The short description and the meta analysis. On a phone they start at about
  * three lines with "Read more", when they run longer than that (measured once
@@ -166,12 +215,20 @@ function GuideText({ guide }: { guide: PvpGuide }) {
 	const boxRef = useRef<HTMLDivElement>(null)
 	const [long, setLong] = useState(false)
 	const [open, setOpen] = useState(false)
+	// Where the phone's cut falls: the bottom of the last line that fits whole
+	// in the clamp, so the text stops on a full line with no fade over it
+	// (owner, 2026-11-17: never fade text to cut it). Null until measured,
+	// and in a browser without Range rects, when the plain clamp applies.
+	const [cut, setCut] = useState<number | null>(null)
 	// Measured again whenever the box changes size: a window opened wide (no
 	// clamp, nothing to measure) and then narrowed must still get its "Read more".
 	useEffect(() => {
 		const box = boxRef.current
 		if (!box) return
-		const measure = () => setLong(box.scrollHeight > box.clientHeight + 1)
+		const measure = () => {
+			setLong(box.scrollHeight > box.clientHeight + 1)
+			setCut(lastWholeLine(box))
+		}
 		measure()
 		// No ResizeObserver in jsdom; every browser the site supports has one.
 		if (typeof ResizeObserver === "undefined") return
@@ -182,20 +239,19 @@ function GuideText({ guide }: { guide: PvpGuide }) {
 	if (!guide.short_description && !guide.meta_analysis) return null
 	return (
 		<>
-			{/* Faded at the cut on a phone, so the clamp never ends on half a line. */}
+			{/* Cut at the last whole line on a phone (`--guide-text-cut`), so the clamp never ends on half a line. */}
 			<div
 				ref={boxRef}
-				className={`text-sm ${open ? "" : "max-h-[5.25rem] overflow-hidden sm:max-h-none"} ${
-					long && !open ? "max-sm:[mask-image:linear-gradient(to_bottom,black_55%,transparent)]" : ""
-				}`}
+				className={`text-sm ${open ? "" : "max-h-(--guide-text-cut,5.25rem) overflow-hidden sm:max-h-none"}`}
+				style={cut === null ? undefined : ({ "--guide-text-cut": `${cut}px` } as CSSProperties)}
 			>
 				{guide.short_description && (
-					<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
+					<MarkdownContent markdown={guide.short_description} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} renderUma={renderUma} />
 				)}
 				{guide.meta_analysis && (
 					<div className={guide.short_description ? "mt-3" : "mt-2"}>
 						<h4 className={SUBHEADING}>Meta analysis</h4>
-						<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} />
+						<MarkdownContent markdown={guide.meta_analysis} paragraphClassName={PARAGRAPH} renderSkill={renderSkill} renderUma={renderUma} />
 					</div>
 				)}
 			</div>
@@ -352,6 +408,56 @@ function CompPlaces({ text }: { text: string }) {
 	)
 }
 
+/**
+ * The guide's team comps: a recommended team shape and why, each with its
+ * places as chips. They sit under the Meta analysis in the ranking's box
+ * (review item 5, 2026-11-24): both say what shape of team wins, and the
+ * ranking's box no longer stands half empty beside the taller stats box.
+ * Without a ranking or any text they stay in the stats box.
+ */
+function TeamComps({ guide, className = "" }: { guide: PvpGuide; className?: string }) {
+	return (
+		<div role="group" aria-labelledby="pvp-team-comps" className={className}>
+			<h3 id="pvp-team-comps" className={`flex items-center gap-1.5 ${HEADING}`}>
+				<Users className="h-4 w-4" />
+				Team comps
+			</h3>
+			<ul className="mt-2 space-y-1.5 text-sm text-gray-300">
+				{guide.team_comps.map((comp, index) => (
+					<li key={index} className="flex items-center gap-2.5">
+						<CompPlaces text={comp.text} />
+						<span className="min-w-0">
+							<span className="font-medium text-gray-100">{comp.text}</span>
+							{comp.note && (
+								<>
+									<span className="text-gray-500"> · </span>
+									<InlineNote text={comp.note} />
+								</>
+							)}
+						</span>
+					</li>
+				))}
+			</ul>
+		</div>
+	)
+}
+
+/**
+ * The ranking strip alone, for the guide editor (review item 17, 2026-11-24):
+ * drawn under the Style ranking field from the document as typed, so `>>`,
+ * `>=` and `((Uma name))` show what they become without leaving the editor.
+ * The same Ladder the guide draws; its style steps don't switch tabs here.
+ */
+export function RankingPreview({ guide }: { guide: PvpGuide }) {
+	const steps = parseStyleRanking(guide.style_ranking)
+	if (steps.length === 0) return null
+	return (
+		<div aria-label="How the ranking will look" role="group">
+			<Ladder guide={guide} steps={steps} active={null} onStyleChange={() => {}} label="Ranking preview" />
+		</div>
+	)
+}
+
 export function GuideBand({ guide, active, onStyleChange }: {
 	guide: PvpGuide
 	/** The style tab on screen, for the ladder's pressed step. */
@@ -360,7 +466,10 @@ export function GuideBand({ guide, active, onStyleChange }: {
 }) {
 	const steps = parseStyleRanking(guide.style_ranking)
 	const hasLeft = steps.length > 0 || Boolean(guide.short_description || guide.meta_analysis)
-	const hasRight = guide.stat_configs.length > 0 || guide.scenario !== null || guide.team_comps.length > 0
+	const hasText = steps.length > 0 || Boolean(guide.short_description || guide.meta_analysis)
+	// Team comps join the ranking's box whenever there is one (TeamComps).
+	const compsLeft = hasText && guide.team_comps.length > 0
+	const hasRight = guide.stat_configs.length > 0 || guide.scenario !== null || (!compsLeft && guide.team_comps.length > 0)
 	if (!hasLeft && !hasRight) return null
 	return (
 		// The two boxes stretch to the taller one (a grid's default), so their
@@ -374,6 +483,7 @@ export function GuideBand({ guide, active, onStyleChange }: {
 					<div className={steps.length > 0 ? "mt-1" : ""}>
 						<GuideText guide={guide} />
 					</div>
+					{compsLeft && <TeamComps guide={guide} className="mt-4 border-t border-gray-700/70 pt-3" />}
 				</section>
 			)}
 			{hasRight && (
@@ -397,30 +507,7 @@ export function GuideBand({ guide, active, onStyleChange }: {
 							</div>
 						</div>
 					)}
-					{guide.team_comps.length > 0 && (
-						<div role="group" aria-labelledby="pvp-team-comps">
-							<h3 id="pvp-team-comps" className={`flex items-center gap-1.5 ${HEADING}`}>
-								<Users className="h-4 w-4" />
-								Team comps
-							</h3>
-							<ul className="mt-2 space-y-1.5 text-sm text-gray-300">
-								{guide.team_comps.map((comp, index) => (
-									<li key={index} className="flex items-center gap-2.5">
-										<CompPlaces text={comp.text} />
-										<span className="min-w-0">
-											<span className="font-medium text-gray-100">{comp.text}</span>
-											{comp.note && (
-												<>
-													<span className="text-gray-500"> · </span>
-													<InlineNote text={comp.note} />
-												</>
-											)}
-										</span>
-									</li>
-								))}
-							</ul>
-						</div>
-					)}
+					{!compsLeft && guide.team_comps.length > 0 && <TeamComps guide={guide} />}
 				</section>
 			)}
 		</div>

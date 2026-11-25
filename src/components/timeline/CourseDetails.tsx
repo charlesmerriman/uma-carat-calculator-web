@@ -28,9 +28,9 @@ export function CoursePairs({ event, boxed = false }: { event: RaceEvent; boxed?
 	return (
 		<dl className={`grid grid-cols-2 sm:grid-cols-4 ${boxed ? "gap-2" : "gap-x-4 gap-y-3"}`} aria-label="Course">
 			{pairs.map((pair) => (
-				<div key={pair.label} className={`min-w-0 ${boxed ? "rounded-lg border border-gray-600/80 bg-gray-700/70 px-2.5 py-2" : ""}`}>
-					<dt className="text-xs font-semibold tracking-wider text-gray-400 uppercase">{pair.label}</dt>
-					<dd className={`mt-1 truncate text-[15px] leading-snug font-semibold ${pair.value ? "text-gray-50" : "text-gray-400"}`} title={pair.value ?? undefined}>
+				<div key={pair.label} className={`min-w-0 ${boxed ? "tl-stat rounded-lg border border-gray-600/80 bg-gray-700/70 px-2.5 py-2" : ""}`}>
+					<dt className={`${boxed ? "tl-stat-label " : ""}text-xs font-semibold tracking-wider text-gray-400 uppercase`}>{pair.label}</dt>
+					<dd className={`${boxed ? "tl-stat-value " : ""}mt-1 truncate text-[15px] leading-snug font-semibold ${pair.value ? "text-gray-50" : "text-gray-400"}`} title={pair.value ?? undefined}>
 						{pair.value ?? "TBD"}
 					</dd>
 					{/* Always drawn, so the second line of all four sits on one row. */}
@@ -47,8 +47,8 @@ export function CoursePairs({ event, boxed = false }: { event: RaceEvent; boxed?
 export function CourseDetails({ event }: { event: RaceEvent }) {
 	if (announcedCoursePairs(event).length === 0) return null
 	return (
-		<section className="card-panel p-3">
-			<div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand">
+		<section data-kind="course" className="tl-panel card-panel p-3">
+			<div className="tl-panel-title mb-3 flex items-center gap-2 text-sm font-semibold text-brand">
 				<MapPinned className="h-4 w-4" />
 				<span>Course details</span>
 			</div>

@@ -105,6 +105,28 @@ export function localZoneName(dateStr: string | null | undefined): string {
 	)
 }
 
+const MONTH_NAMES = [
+	"January", "February", "March", "April", "May", "June",
+	"July", "August", "September", "October", "November", "December",
+]
+
+/**
+ * A month and its year in words: "December 2026". For a HEADING that groups
+ * dated things (the Timeline's month headings), where `2026/12` would read as
+ * a fragment of a date.
+ *
+ * In the viewer's own zone, like `formatDate`, so a card is always under the
+ * month its own printed date falls in. English month names, the site's
+ * language, and no locale dependence: every user sees the same words.
+ * Unparseable or missing input is an empty string (no heading).
+ */
+export function formatMonthName(dateStr: string | null | undefined): string {
+	if (dateStr == null) return ""
+	const date = parseApiDate(dateStr)
+	if (!date) return ""
+	return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`
+}
+
 /**
  * Format a UTC month as `YYYY/M`, the month-only sibling of `formatDate`.
  *

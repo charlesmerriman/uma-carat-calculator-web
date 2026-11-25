@@ -168,7 +168,7 @@ export const PrivacyPolicy: React.FC = () => {
 						can see who gave it.
 					</p>
 					<p className={paragraph}>
-						When you post a pull plan to Community plans, its banners and pull counts are shown with
+						When you post a pull plan to the Pull Plan Library, its banners and pull counts are shown with
 						your name, picture and tier. Your notes, and your ranks and income settings, are shown
 						only if you tick the box for each when you post. Your carats, tickets and crystals are
 						never shown. What is shown is a copy from that moment: take the post down, or post again

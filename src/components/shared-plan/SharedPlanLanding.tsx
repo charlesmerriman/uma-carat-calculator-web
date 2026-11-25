@@ -206,7 +206,7 @@ export const SharedPlanLanding = ({ publicId }: { publicId: string }) => {
 				<p className="mt-2 text-sm text-gray-400">
 					Looking for more?{" "}
 					<Link to="/app/plans" className="font-medium text-brand underline-offset-2 hover:underline">
-						Browse community plans
+						Browse the Pull Plan Library
 					</Link>
 				</p>
 			)}

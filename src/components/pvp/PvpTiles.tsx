@@ -15,7 +15,7 @@
 import { useContext, useId, type ReactNode } from "react"
 import { Star } from "lucide-react"
 import { plainNoteText, splitNoteText, type NotePiece } from "../../utils/remarkHighlight"
-import { useSkillMentions } from "./skillMentionsContext"
+import { useSkillMentions, useUmaMentions } from "./skillMentionsContext"
 import type { PvpSkillRef, PvpSupportCardRef, PvpUmaRef } from "../../types/pvpGuide"
 import { GOLD_SKILL_RARITY, type UmaAptitude } from "../../utils/pvpGuide"
 import { JpOnlyTag, SkillDetail } from "./SkillDetail"
@@ -53,6 +53,8 @@ function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 					<span key={index}>{piece.text}</span>
 				) : piece.kind === "skill" ? (
 					<SkillMention key={index} name={piece.name} scenarioLink={piece.scenarioLink} />
+				) : piece.kind === "uma" ? (
+					<UmaMention key={index} name={piece.name} />
 				) : (
 					<mark key={index} className="bg-transparent font-semibold text-highlight">
 						<NotePieces pieces={piece.pieces} />
@@ -63,7 +65,25 @@ function NotePieces({ pieces }: { pieces: NotePiece[] }) {
 	)
 }
 
-/** A one-line note: `==words==` in red, `[[Skill name]]` as a skill, line breaks kept. */
+/**
+ * A `((Uma name))` mention inside text: her framed picture, sized to the text
+ * around it (2.4em: about the style ranking's faces in a guide paragraph, as
+ * Henry asked, and smaller in an 11px deck note), opening her card like every
+ * uma tile. Her name is its accessible name and its title. A name the guide's
+ * map does not hold renders as plain text.
+ */
+export function UmaMention({ name }: { name: string }) {
+	const uma = useUmaMentions()[name.toLowerCase()]
+	const oshiIds = useOshiIds()
+	if (!uma) return <>{name}</>
+	return (
+		<span className="inline-block align-middle" role="img" aria-label={uma.name} {...hoverCardProps("uma", uma.id)}>
+			<FramedUma src={uma.portrait} layers={uma.portrait_layers} alt="" title={uma.name} oshi={oshiIds.has(uma.id)} className="w-[2.4em]" />
+		</span>
+	)
+}
+
+/** A one-line note: `==words==` in red, `[[Skill name]]` as a skill, `((Uma))` as her picture, line breaks kept. */
 export function InlineNote({ text, className = "" }: { text: string; className?: string }) {
 	if (!text) return null
 	return (
@@ -970,12 +990,24 @@ export function SkillCell({ skill, note, size = "regular" }: { skill: PvpSkillRe
 		<>
 			<SkillDetail skill={skill} note={note ? <InlineNote text={note} /> : undefined} />
 			<MentionedSkills text={note} skip={skill.id} />
+			<CourseVerdict skillId={skill.id} />
 		</>
 	)
 	// A small cell (under a deck card) has no room for a caption.
 	const sub = size === "small" ? "" : skill.unique_of ? `(${skill.unique_of})` : note ? plainNoteText(note) : ""
+	// Its detail lights the skill on the course map while open, as the
+	// editor's chip always did (Henry, board "Allow user to pin track view",
+	// 2026-11-24: "only works on edit tab"). With the map stuck to the top, a
+	// skill read far down the guide shows where it fires.
 	return (
-		<WithDetail label={skill.name} detail={detail} className="w-full min-w-0" detailClassName="w-80" interactive={preview && skill.game_id != null}>
+		<WithDetail
+			label={skill.name}
+			detail={detail}
+			className="w-full min-w-0"
+			detailClassName="w-80"
+			onOpenChange={(open) => lightOnCourseMap(skill, open)}
+			interactive={preview && skill.game_id != null}
+		>
 			<SkillFace skill={skill} sub={sub} size={size} />
 		</WithDetail>
 	)

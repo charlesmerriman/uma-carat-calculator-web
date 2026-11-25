@@ -9,7 +9,7 @@
  */
 
 import type { ReactNode } from "react"
-import { ChevronDown, Plus, Star, UserPlus, X } from "lucide-react"
+import { ChevronDown, Plus, UserPlus, X } from "lucide-react"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { MEMBER_STYLES, PVP_BORROW_SLOT, PVP_TEAM_SIZE, memberAt } from "../../utils/pvpTeams"
 import { PageName, ReleaseFlag, type TeamGridProps } from "./TeamGrid"
@@ -75,12 +75,8 @@ export function CompactTeamGrid({
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}
 											</span>
-											{/* Under the number: the guide's star. */}
-											{starred("uma", member.uma, member) && (
-												<span className="pointer-events-none absolute left-1 top-7">
-													<StarBadge />
-												</span>
-											)}
+											{/* The guide's pick: an edge around the tile. */}
+											{starred("uma", member.uma, member) && <PickEdge round="rounded-[10.75%]" />}
 											<span className="absolute bottom-6 left-0">
 												<ReleaseFlag status={releaseFor?.("uma", member.uma)} />
 											</span>
@@ -168,7 +164,7 @@ export function CompactTeamGrid({
 								>
 									{card ? <FramedCard card={card} className="h-full w-full" /> : <Art src={null} />}
 								</button>
-								{starred("support", entry.support_card, member) && <StarBadge small />}
+								{starred("support", entry.support_card, member) && <PickEdge round="rounded-md" />}
 								<ReleaseFlag status={releaseFor?.("support", entry.support_card)} />
 								<ClearButton label={`Remove ${card?.name ?? "this card"}`} onClick={() => onClearCard(position, slot)} small />
 							</div>
@@ -204,18 +200,13 @@ function Art({ src }: { src: string | null }): ReactNode {
 }
 
 /**
- * The guide's star on a pick it recommends for this uma's style: in a card's
- * corner (`small`), or in the uma tile's badge stack under the number.
+ * The guide's mark on a pick it recommends for this uma's style: an edge in
+ * the site's colour around the tile, with nothing drawn on the art (Daptrius,
+ * board 2026-11-20: "probably the border around the box, I don't like having
+ * clutter on the card or Umas itself"; it was a red star in the corner).
  */
-function StarBadge({ small = false }: { small?: boolean }) {
-	return (
-		<span
-			className={`pointer-events-none flex items-center justify-center rounded-full bg-gray-950/85 ${small ? "absolute left-0.5 top-0.5 h-4 w-4" : "h-5 w-5"}`}
-			title="Recommended by the guide"
-		>
-			<Star className={`fill-highlight text-highlight ${small ? "h-2.5 w-2.5" : "h-3 w-3"}`} aria-label="Recommended by the guide" />
-		</span>
-	)
+function PickEdge({ round }: { round: string }) {
+	return <span role="img" aria-label="Recommended by the guide" title="Recommended by the guide" className={`pointer-events-none absolute inset-0 ring-[3px] ring-inset ring-brand ${round}`} />
 }
 
 /** The x in a filled place's corner, on hover and keyboard focus; the picker's Remove does the same on touch. */

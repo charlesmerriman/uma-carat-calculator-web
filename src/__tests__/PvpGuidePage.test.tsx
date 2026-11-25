@@ -135,10 +135,6 @@ vi.mock("../components/pvp/editor/loadGuideEditor", () => ({
 	loadGuideEditor: () =>
 		Promise.resolve({ default: ({ event: shown }: { event: RaceEvent }) => <div data-testid="guide-editor">{`cm-${shown.id}`}</div> }),
 }))
-// Rankings has its own tests (PvpGalleryRankings.test.tsx); here only who gets it.
-vi.mock("../components/pvp/PvpGalleryRankings", () => ({
-	PvpGalleryRankings: ({ event }: { event: { id: number } }) => <div data-testid="rankings-view">{`cm-${event.id}`}</div>,
-}))
 // The gallery has its own tests (PvpGallery.test.tsx); here only which view shows.
 vi.mock("../components/pvp/gallery/GalleryView", () => ({
 	GalleryView: ({ event }: { event: { id: number } }) => <div data-testid="gallery-view">{`cm-${event.id}`}</div>,
@@ -425,12 +421,12 @@ describe("PvpGuidePage views and layout", () => {
 
 	it("gives an editor an Edit guide tab, and nobody else", async () => {
 		respond(200, GUIDE)
-		// An editor is staff, so early access too: Rankings as well.
+		// An editor is staff, so early access too.
 		session.account = { guide_editor: true, early_access: true }
 		try {
 			const { unmount } = renderPage("/app/pvp?event=cm-10")
 			const views = within(screen.getByRole("tablist", { name: "View" }))
-			expect(views.getAllByRole("tab")).toHaveLength(6)
+			expect(views.getAllByRole("tab")).toHaveLength(5)
 			fireEvent.click(views.getByRole("tab", { name: "Edit guide" }))
 			expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&view=editor")
 			expect(await screen.findByTestId("guide-editor")).toHaveTextContent("cm-10")
@@ -444,19 +440,13 @@ describe("PvpGuidePage views and layout", () => {
 		expect(screen.queryByRole("tab", { name: "Edit guide" })).not.toBeInTheDocument()
 	})
 
-	it("draws Rankings for early access only; anyone else never sees the tab", () => {
+	it("has no Rankings view: an old ?view=rankings link lands on Recommendations", () => {
 		respond(200, GUIDE)
-		const { unmount } = renderPage("/app/pvp?event=cm-10&view=rankings")
-		expect(screen.queryByRole("tab", { name: "Rankings" })).not.toBeInTheDocument()
-		// The link alone lands on the guide, with no lock card about Rankings.
-		expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
-		expect(screen.queryByTestId("rankings-view")).not.toBeInTheDocument()
-		unmount()
 		session.account = { early_access: true }
 		try {
 			renderPage("/app/pvp?event=cm-10&view=rankings")
-			expect(screen.getByRole("tab", { name: "Rankings" })).toHaveAttribute("aria-selected", "true")
-			expect(screen.getByTestId("rankings-view")).toHaveTextContent("cm-10")
+			expect(screen.queryByRole("tab", { name: "Rankings" })).not.toBeInTheDocument()
+			expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
 		} finally {
 			session.account = null
 		}
@@ -587,7 +577,10 @@ describe("PvpGuidePage band", () => {
 		const team = within(screen.getByRole("region", { name: "For the whole team" }))
 		expect(team.getByText("Recommended stats")).toBeInTheDocument()
 		expect(team.getByText("Trackblazer")).toBeInTheDocument()
-		expect(team.getByText("2 Front + 1 Late")).toBeInTheDocument()
+		// Team comps sit with the ranking and the Meta analysis (review item 5).
+		expect(team.queryByText("2 Front + 1 Late")).not.toBeInTheDocument()
+		const ranking = within(screen.getByRole("region", { name: "Style ranking" }))
+		expect(ranking.getByText("2 Front + 1 Late")).toBeInTheDocument()
 	})
 
 	it("draws one plain stats row as five tiles, and more rows as the table", async () => {
@@ -947,6 +940,20 @@ describe("PvpGuidePage style links and memory", () => {
 		await screen.findByText("Recommended stats")
 		expect(styleTabs().getByRole("tab", { name: "Front" })).toHaveAttribute("aria-selected", "true")
 		expect(styleTabs().getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Front#2", "End#1"])
+	})
+
+	it("draws a ((Uma name)) ranking step as her picture and name (Henry's ask)", async () => {
+		respond(200, {
+			...GUIDE,
+			style_ranking: "((Gold Ship)) > End >> Front",
+			uma_mentions: { "gold ship": { id: 77, name: "Gold Ship", portrait: "https://example.test/gs.png", portrait_layers: null } },
+		})
+		renderPage("/app/pvp?event=cm-10")
+		const ranking = within(await screen.findByRole("list", { name: "Style ranking" }))
+		const first = ranking.getAllByRole("listitem")[0]
+		expect(first).toHaveTextContent("#1Gold Ship")
+		expect(first).not.toHaveTextContent("((")
+		expect(first.querySelector('[title="Gold Ship"]')).not.toBeNull()
 	})
 
 	it("opens on the first style when the guide ranks none it has", async () => {
