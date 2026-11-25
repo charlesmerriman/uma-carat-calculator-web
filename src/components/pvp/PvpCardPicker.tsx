@@ -483,7 +483,14 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 										>
 											<span className="relative block w-full">
 												{item.portrait ? (
-													<FramedUma src={item.portrait} layers={item.portrait_layers} oshi={oshiIds.has(item.id)} className="w-full" />
+													<FramedUma
+														src={item.portrait}
+														layers={item.portrait_layers}
+														oshi={oshiIds.has(item.id)}
+														// The guide's pick, drawn under her ears and hat.
+														edge={isRecommended ? "Recommended by the guide" : undefined}
+														className="w-full"
+													/>
 												) : item.card ? (
 													<FramedCard card={item.card} className="w-full" />
 												) : item.image ? (
@@ -505,8 +512,9 @@ export function PvpCardPicker(props: PvpCardPickerProps) {
 														</span>
 													)
 												)}
-												{/* The guide's pick: an edge around the art, nothing on it (Daptrius, 2026-11-20). */}
-												{isRecommended && (
+												{/* The guide's pick: an edge around the art, nothing on it (Daptrius, 2026-11-20).
+												    An uma's is drawn inside FramedUma above, under her ears and hat. */}
+												{isRecommended && !item.portrait && (
 													<span
 														role="img"
 														aria-label="Recommended by the guide"

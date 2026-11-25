@@ -70,13 +70,18 @@ export function CompactTeamGrid({
 												onClick={() => onPickUma(position)}
 												className="block h-full w-full rounded-[10.75%] outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<FramedUma src={uma?.portrait ?? uma?.image ?? null} layers={uma?.portrait_layers} oshi={favorite} className="w-full" />
+												<FramedUma
+													src={uma?.portrait ?? uma?.image ?? null}
+													layers={uma?.portrait_layers}
+													oshi={favorite}
+													// The guide's pick: an edge round the tile, under her ears and hat.
+													edge={starred("uma", member.uma, member) ? "Recommended by the guide" : undefined}
+													className="w-full"
+												/>
 											</button>
 											<span className="pointer-events-none absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-black">
 												{position + 1}
 											</span>
-											{/* The guide's pick: an edge around the tile. */}
-											{starred("uma", member.uma, member) && <PickEdge round="rounded-[10.75%]" />}
 											<span className="absolute bottom-6 left-0">
 												<ReleaseFlag status={releaseFor?.("uma", member.uma)} />
 											</span>
