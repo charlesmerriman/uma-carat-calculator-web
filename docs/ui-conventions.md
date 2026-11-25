@@ -2351,7 +2351,7 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
   by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
   by an aptitude, the value by an effect (a value one or two cards reach is merged into a
-  range). Only a list under 12 tiles is one plain grid. A heading is a `role="presentation"` item, so the
+  range). Filters never turn them off (owner, 2026-11-25). A heading is a `role="presentation"` item, so the
   list's items stay the tiles. On the Skills list a
   unique or evolved skill's row ends with its owner's face (`SkillList` `faces`).
 

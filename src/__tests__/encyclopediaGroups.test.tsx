@@ -28,9 +28,9 @@ describe("groupsFor by name", () => {
 		expect([first?.label, first?.items]).toEqual(["#", ["#LookatCurren", "1st Place"]])
 	})
 
-	it("keeps its headings on a filtered list, and is nothing for a handful: that is one plain grid", () => {
-		expect(shape(byLetter(names(15)))).toEqual([["A", 5], ["B", 5], ["C", 5]])
-		expect(byLetter(names(11))).toBeNull()
+	it("keeps its headings on a filtered list however short, and is nothing for an empty one", () => {
+		expect(shape(byLetter(names(3)))).toEqual([["A", 1], ["B", 1], ["C", 1]])
+		expect(byLetter([])).toBeNull()
 	})
 
 	it("gives a key that comes back after another run its own unique id", () => {

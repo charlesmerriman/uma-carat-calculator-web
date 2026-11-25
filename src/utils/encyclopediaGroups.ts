@@ -50,20 +50,15 @@ export interface ListGroup<T> extends GroupKey {
 }
 
 /**
- * The fewest rows a list needs before headings help: about a row and a half
- * of tiles on a wide screen. A search that finds a handful stays one plain
- * grid, where a heading would sit over each tile.
- */
-const MIN_ROWS = 12
-
-/**
  * The list cut into runs of one key, in the order given (so a list turned
- * round runs Z to A, newest to oldest, and so on). Filtered or not: the owner
- * wants the headings kept when a filter is on (2026-11-25; they used to show
- * on the full list only). Null when the list is too short to need them.
+ * round runs Z to A, newest to oldest, and so on). However the list is
+ * filtered and however short: the owner wants the headings kept whenever a
+ * filter is on (2026-11-25; they used to show on the full list only, and a
+ * 12-tile floor would still have dropped them for 14 of the 45 two-aptitude
+ * filters, Dirt + Front among them). Null only for an empty list.
  */
 export function groupsFor<T>(items: T[], keyOf: (item: T) => GroupKey): ListGroup<T>[] | null {
-	if (items.length < MIN_ROWS) return null
+	if (items.length === 0) return null
 	const groups: ListGroup<T>[] = []
 	const seen = new Map<string, number>()
 	for (const item of items) {
