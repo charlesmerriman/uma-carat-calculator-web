@@ -2208,7 +2208,11 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 	const dayRuns = runsOf(runs, {})
 	const { total, umas: tallies } = summarizeRuns(dayRuns)
 	// Places and who beat you (notes/cm-runs-plan-2.md): over every logged race, the Finals included.
-	const places = placeTallies(runs)
+	// Places over the same day tickets as the win rates beside them ("Days 1
+	// to 4. The Finals race counts on its own."): with the Finals in, a line
+	// read "2 of 11 won" over "top 3 in 10 of 10". Beaten by is the whole
+	// event, the Finals too: it answers "who beat me this CM".
+	const places = placeTallies(dayRuns)
 	const beaten = beatenBy(runs)
 	// A ticket with a lineup and nothing raced yet makes a "0 of 0" row: left out.
 	const umas = tallies.filter((tally) => tally.raced > 0)

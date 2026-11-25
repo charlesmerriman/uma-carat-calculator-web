@@ -584,6 +584,18 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		expect(placesOf(lastRaces()[0])).toEqual([[1, 1]])
 	})
 
+	it("averages places over the day tickets, as the win rates beside them do", async () => {
+		const placed = (place: number) => [{ position: 0, place, loss_reason: "" }]
+		runs.list = [
+			logged(1, [{ race: 1, winner: 0, places: placed(1) } as never]),
+			// The Finals race counts on its own: its 9th stays out of Oguri's line.
+			logged(1, [{ race: 1, winner: null, places: placed(9) } as never], { stage: "final", day: null, ticket: null }),
+		]
+		show()
+		const summary = await screen.findByRole("complementary", { name: "Your win rates" })
+		expect(within(summary).getAllByText("Average place 1.0 · top 3 in 1 of 1")).toHaveLength(1)
+	})
+
 	it("has no places in a League of Heroes, where the API refuses them", async () => {
 		runs.list = [logged(1, [{ race: 1, winner: null }], { kind: "loh" })]
 		show(LOH)
