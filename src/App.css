@@ -1179,12 +1179,23 @@
 	display: block;
 }
 
+/* `fill`, never `cover` (Daptrius, 2026-11-25: small cards blocky in Chrome
+   and Edge, smooth in Firefox and on iOS). The box is a hair narrower than
+   the art's 3:4 (0.739 against 0.75), so `cover` cut ~1.5% off the sides, and
+   Chrome draws a CROPPED picture on its GPU path without mipmaps: a 450px-wide
+   texture shrunk 7x to a 61px tile by plain bilinear sampling, which skips
+   most of the source pixels. Measured in headless Chrome on its GPU raster
+   path: the aliasing metric of a 61px tile went from 67 (the unfiltered
+   reference is 68) to 44 (a Lanczos downscale is 54); software raster was
+   fine either way. `fill` squeezes the art 1.5% across instead of cropping,
+   which is what Daptrius's own pipeline does when it scales his padded
+   canvas to 3:4. */
 .card-frame__art {
 	left: 3.0562%;
 	top: 2.3277%;
 	width: 93.8875%;
 	height: 95.3445%;
-	object-fit: cover;
+	object-fit: fill;
 	border-radius: 7.8125% / 5.8594%;
 }
 
