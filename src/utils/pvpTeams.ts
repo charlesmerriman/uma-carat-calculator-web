@@ -492,6 +492,36 @@ export function recommendedIds(guide: PvpGuide | null, style: MemberStyle): { um
 }
 
 /**
+ * The guide's picks for a picker: the place's style's, or with no style yet
+ * (an empty spot) every style's, so nothing reads as Front's by default
+ * (Daptrius, 2026-11-25). `byStyle` is set only then, a group per style the
+ * guide fills, for the picker's sections: each holds the rows filed under that
+ * style alone, so Runaway doesn't repeat Front's.
+ */
+export function recommendedForPlace(guide: PvpGuide | null, style: MemberStyle | null): {
+	umas: Set<number>
+	cards: Set<number>
+	byStyle: { style: MemberStyle; umas: Set<number>; cards: Set<number> }[] | null
+} {
+	if (style !== null) return { ...recommendedIds(guide, style), byStyle: null }
+	const byStyle = MEMBER_STYLES.map((each) => {
+		const umas = new Set<number>()
+		const cards = new Set<number>()
+		for (const row of guide?.uma_recommendations ?? []) if (row.style === each) umas.add(row.uma.id)
+		for (const deck of guide?.decks ?? []) {
+			if (deck.style !== each) continue
+			for (const slot of deck.slots) if (slot.support_card) cards.add(slot.support_card.id)
+		}
+		return { style: each, umas, cards }
+	}).filter((group) => group.umas.size > 0 || group.cards.size > 0)
+	return {
+		umas: new Set(byStyle.flatMap((group) => [...group.umas])),
+		cards: new Set(byStyle.flatMap((group) => [...group.cards])),
+		byStyle,
+	}
+}
+
+/**
  * Every skill the team can get, by skill id, with where from: "Oguri Cap
  * (unique)", "Kitasan Black (hint)". Read from the builder's catalogue, which
  * already leaves out skills that are not on global.

@@ -13,6 +13,7 @@ import {
 	firstOpenCardSlot,
 	memberStyleFrom,
 	recommendedIds,
+	recommendedForPlace,
 	setCard,
 	setMemberUma,
 	setMemberVeteran,
@@ -206,6 +207,15 @@ describe("pvpTeams", () => {
 		expect([...recommendedIds(guide, "front").cards]).toEqual([302])
 		expect([...recommendedIds(guide, "end").cards]).toEqual([400])
 		expect(recommendedIds(null, "end").umas.size).toBe(0)
+		// A place with no style yet reads every style's, grouped by the rows' own
+		// style (no Front repeated under Runaway), never Front's alone.
+		const open = recommendedForPlace(guide, null)
+		expect([...open.umas].sort()).toEqual([1, 3])
+		expect(open.byStyle?.map((group) => [group.style, [...group.umas], [...group.cards]])).toEqual([
+			["front", [3], [302]],
+			["end", [1], [400]],
+		])
+		expect(recommendedForPlace(guide, "end")).toEqual({ ...recommendedIds(guide, "end"), byStyle: null })
 	})
 
 	it("finds the first open owned slot, never the borrow slot", () => {
