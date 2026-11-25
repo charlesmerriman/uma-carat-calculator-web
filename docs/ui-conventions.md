@@ -1931,6 +1931,17 @@ A player's logged Champions Meeting tickets and their win rates (Henry's ask; de
   `PvpCardPicker`) open by themselves only on a loss just logged; an older unnamed loss shows
   a quiet "Won by…", a named one "Won by Kitasan Black · Change". Mid-placing, the race is a
   loss in the data (setPlace's rule) but Won by waits for the third place.
+- **Fill from replays** (`ReplayImport.tsx`, CM only): umadump's race replay files, dropped
+  or chosen (files, or a folder through `webkitdirectory`), read in the browser by
+  `utils/gameImport/umadumpReplays.ts` (by shape; only the player's three and the winning
+  uma ever leave a file), slotted by `utils/replayTickets.ts` (the day from each file's
+  modified time; five races a ticket or a new three; a logged ticket that agrees race for
+  race claims a group, else the next free one, past a ticket skipped whole), previewed per day, then saved ticket by ticket through `useSaveRun`, each
+  change merged again on the ticket as it is at save time. **A tapped result is never
+  overwritten**: a ticket that disagrees is shown and left alone, and the import only adds
+  races, places, loss reasons and a blank Won by. The totals then show "Why she lost" per uma
+  from the day tickets, the codes in words only where confirmed (`lossReasonLabel`). The copy
+  says "if you use umadump" and never tells a player to run it.
 - **The totals** sit in a side column from `lg` (win rate, tickets used, each round's best,
   the Finals, per-uma bars with the veteran link, per day); below `lg` they fall under the
   day. On a phone a three-number strip (`WinRateStrip`) goes above the tabs and the side

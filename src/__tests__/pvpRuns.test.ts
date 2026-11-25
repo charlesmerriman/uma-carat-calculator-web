@@ -15,6 +15,8 @@ import {
 	emptyContent,
 	beatenBy,
 	fullyPlaced,
+	lossReasonLabel,
+	lossReasons,
 	nextRaceToPlace,
 	placeTallies,
 	setLostTo,
@@ -428,6 +430,23 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		expect(places.get("11:")).toMatchObject({ placed: 2, total: 3, top3: 2 })
 		expect(places.get("13:")).toMatchObject({ placed: 2, total: 17, top3: 0 })
 		expect(beatenBy([run])).toEqual({ umas: [{ uma: 99, losses: 2 }], named: 2 })
+	})
+
+	it("counts each uma's loss reasons, leaving out Win, Lose and blank", () => {
+		const placed = (position: number, place: number, loss_reason: string) => ({ position, place, loss_reason })
+		const run = {
+			runners,
+			races: [
+				{ race: 1, winner: null, places: [placed(0, 8, "ProperGround"), placed(1, 2, "Lose"), placed(2, 9, "")] },
+				{ race: 2, winner: 1, places: [placed(0, 7, "ProperGround"), placed(1, 1, "Win"), placed(2, 6, "Stamina")] },
+			],
+		}
+		const reasons = lossReasons([run])
+		expect(reasons.get("11:")).toEqual([{ code: "ProperGround", count: 2 }])
+		expect(reasons.get("12:")).toBeUndefined()
+		expect(reasons.get("13:")).toEqual([{ code: "Stamina", count: 1 }])
+		// Confirmed codes read as words; the rest as the game's own.
+		expect(["ProperGround", "Stamina"].map(lossReasonLabel)).toEqual(["Ground aptitude", "Stamina"])
 	})
 
 	it("puts the most recent loss first on a tie, by day, ticket and race", () => {

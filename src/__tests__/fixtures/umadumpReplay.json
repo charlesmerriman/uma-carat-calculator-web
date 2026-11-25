@@ -1,0 +1,164 @@
+{
+	"raceType": "Champions",
+	"numRaceHorses": 9,
+	"raceHorse": [
+		{
+			"horseIndex": 0,
+			"finishOrder": 0,
+			"defeat": "Win",
+			"trainerName": "Trainer A",
+			"responseHorseData": {
+				"card_id": 100601,
+				"running_style": 3,
+				"trained_chara_id": 9001,
+				"viewer_id": 500009001,
+				"trainer_name": "Trainer A"
+			}
+		},
+		{
+			"horseIndex": 1,
+			"finishOrder": 4,
+			"defeat": "Motivation",
+			"trainerName": "Trainer B",
+			"responseHorseData": {
+				"card_id": 100601,
+				"running_style": 3,
+				"trained_chara_id": 9002,
+				"viewer_id": 500009002,
+				"trainer_name": "Trainer B"
+			}
+		},
+		{
+			"horseIndex": 2,
+			"finishOrder": 7,
+			"defeat": "ProperGround",
+			"trainerName": "Trainer C",
+			"responseHorseData": {
+				"card_id": 106801,
+				"running_style": 1,
+				"trained_chara_id": 1001,
+				"viewer_id": 500001001,
+				"trainer_name": "Trainer C"
+			}
+		},
+		{
+			"horseIndex": 3,
+			"finishOrder": 8,
+			"defeat": "ProperGround",
+			"trainerName": "Trainer C",
+			"responseHorseData": {
+				"card_id": 102001,
+				"running_style": 1,
+				"trained_chara_id": 1002,
+				"viewer_id": 500001002,
+				"trainer_name": "Trainer C"
+			}
+		},
+		{
+			"horseIndex": 4,
+			"finishOrder": 3,
+			"defeat": "Motivation",
+			"trainerName": "Trainer A",
+			"responseHorseData": {
+				"card_id": 103401,
+				"running_style": 4,
+				"trained_chara_id": 9003,
+				"viewer_id": 500009003,
+				"trainer_name": "Trainer A"
+			}
+		},
+		{
+			"horseIndex": 5,
+			"finishOrder": 5,
+			"defeat": "Speed",
+			"trainerName": "Trainer B",
+			"responseHorseData": {
+				"card_id": 104601,
+				"running_style": 1,
+				"trained_chara_id": 9004,
+				"viewer_id": 500009004,
+				"trainer_name": "Trainer B"
+			}
+		},
+		{
+			"horseIndex": 6,
+			"finishOrder": 2,
+			"defeat": "Speed",
+			"trainerName": "Trainer B",
+			"responseHorseData": {
+				"card_id": 101901,
+				"running_style": 3,
+				"trained_chara_id": 9005,
+				"viewer_id": 500009005,
+				"trainer_name": "Trainer B"
+			}
+		},
+		{
+			"horseIndex": 7,
+			"finishOrder": 6,
+			"defeat": "ProperDistance",
+			"trainerName": "Trainer C",
+			"responseHorseData": {
+				"card_id": 101502,
+				"running_style": 2,
+				"trained_chara_id": 1003,
+				"viewer_id": 500001003,
+				"trainer_name": "Trainer C"
+			}
+		},
+		{
+			"horseIndex": 8,
+			"finishOrder": 1,
+			"defeat": "Lose",
+			"trainerName": "Trainer A",
+			"responseHorseData": {
+				"card_id": 105201,
+				"running_style": 3,
+				"trained_chara_id": 9006,
+				"viewer_id": 500009006,
+				"trainer_name": "Trainer A"
+			}
+		}
+	],
+	"playerTeamMemberArray": [
+		{
+			"horseIndex": 2,
+			"finishOrder": 7,
+			"defeat": "ProperGround",
+			"trainerName": "Trainer C",
+			"responseHorseData": {
+				"card_id": 106801,
+				"running_style": 1,
+				"trained_chara_id": 1001,
+				"viewer_id": 500001001,
+				"trainer_name": "Trainer C"
+			}
+		},
+		{
+			"horseIndex": 3,
+			"finishOrder": 8,
+			"defeat": "ProperGround",
+			"trainerName": "Trainer C",
+			"responseHorseData": {
+				"card_id": 102001,
+				"running_style": 1,
+				"trained_chara_id": 1002,
+				"viewer_id": 500001002,
+				"trainer_name": "Trainer C"
+			}
+		},
+		{
+			"horseIndex": 7,
+			"finishOrder": 6,
+			"defeat": "ProperDistance",
+			"trainerName": "Trainer C",
+			"responseHorseData": {
+				"card_id": 101502,
+				"running_style": 2,
+				"trained_chara_id": 1003,
+				"viewer_id": 500001003,
+				"trainer_name": "Trainer C"
+			}
+		}
+	]
+}
