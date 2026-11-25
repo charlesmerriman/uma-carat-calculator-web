@@ -53,9 +53,11 @@ export function nameInitial(name: string): NameInitial {
 }
 
 // A fixed locale, so a reader's browser language can't move a name. Base
-// sensitivity ignores case and accents; `numeric` puts "9" before "10";
-// `ignorePunctuation` lets "Late-Surger" and "Late Surger" sit together.
-const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true, ignorePunctuation: true })
+// sensitivity ignores case and accents; `numeric` puts "9" before "10".
+// Spaces and signs INSIDE a name still count, word by word, as the uma and
+// card lists always sorted: ignoring them filed "K.S.Miracle" after
+// "Kitasan Black" and "Win Variation" after "Winning Ticket".
+const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true })
 
 /**
  * A to Z by name: the section first (so every section is one unbroken run),
