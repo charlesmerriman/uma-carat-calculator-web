@@ -77,7 +77,7 @@ export function UmaMention({ name }: { name: string }) {
 	const oshiIds = useOshiIds()
 	if (!uma) return <>{name}</>
 	return (
-		<span className="inline-block align-middle" role="img" aria-label={uma.name} {...hoverCardProps("uma", uma.id)}>
+		<span className="inline-block align-middle" role="img" aria-label={uma.name} {...hoverCardProps("uma", uma.id, { tap: true })}>
 			<FramedUma src={uma.portrait} layers={uma.portrait_layers} alt="" title={uma.name} oshi={oshiIds.has(uma.id)} className="w-[2.4em]" />
 		</span>
 	)

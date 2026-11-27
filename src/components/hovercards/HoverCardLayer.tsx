@@ -35,7 +35,9 @@
  * is aria-hidden and its links are out of the Tab order (owner, 2026-11-17:
  * phones keep the links). The one exception to touch is a tile marked
  * `tap: true` (hoverCardProps): a PvP guide's deck card on a style tab
- * (Henry, 2026-11-19), where a tap opens the card like the All tab's.
+ * (Henry, 2026-11-19), where a tap opens the card like the All tab's, and a
+ * guide's `((Uma name))` picture (Henry, 2026-11-26), which has no link for a
+ * tap to follow, so without it a tap did nothing.
  *
  * WHERE IT DRAWS: beside the tile, right if there is room and left if not,
  * its top level with the tile's and slid up only as far as the window needs
