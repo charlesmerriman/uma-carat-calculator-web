@@ -639,22 +639,34 @@ const MOVES: ({ swing: number } | { slide: number })[] = [
 // chip (it hides words), then one on the track, then one inside the margin
 // or over a hill's bracket, then a leader that cuts across the track. The
 // cheapest spot wins when none is clear.
-const COST = { outside: 8, chip: 6, track: 5, margin: 2, keepOut: 2, leader: 1 }
+const COST = { outside: 8, chip: 6, track: 5, margin: 2, keepOut: 2, leader: 1, cross: 3 }
 
 /**
- * Where each callout goes so none overlaps another: tried in the order given
- * (most important first), each at its preferred distance out from the track,
- * then further out and swung to either side, taking the first spot that is
- * clear. Sizes are estimates from the text, since nothing on a prerendered
- * page may be measured. Returns the centre of each label.
+ * Where each callout goes so none overlaps another, in two steps.
+ *
+ * FIRST, ONE AT A TIME: tried in the order given (most important first), each
+ * at its preferred distance out from the track, then further out and swung to
+ * either side (`spotsFor`), taking the first spot that is clear. Sizes are
+ * estimates from the text, since nothing on a prerendered page may be
+ * measured. When no spot is clear the label takes the one with the fewest
+ * faults (COST), the earliest on a tie.
+ *
+ * THEN, THE WHOLE MAP AT ONCE (`improve`): placing one at a time can't see
+ * that a chip's first-choice spot sends its leader across a later chip's,
+ * and on a tight bend it left a bunch of leaders crossed (Henry, board
+ * 1572757223967301693, 2026-11-18: Downhill, Corner 3, Position keep ends and
+ * Halfway on Tokyo dirt 1600). So the finished layout is improved: each chip
+ * tries every spot it could have taken, and each crossed pair tries trading
+ * places, and a change stays when it lowers the map's total faults with
+ * crossed leaders counted (COST.cross a pair) and adds no chip on a chip, on
+ * the track or out of the box. That puts a bunch in the order a runner meets
+ * it without being told the order.
  *
  * `track` (optional) is the drawn path and how far either side of it counts
  * as on it: a spot whose box covers a point of it isn't clear either, so a
  * wide chip near a bend moves further out instead of lying across the track.
  * `options` adds the other things a spot must keep clear of (see
- * PlaceLabelsOptions). When no spot is clear the label takes the one with the
- * fewest faults (COST), the earliest on a tie, so with nothing but the track
- * in the way it keeps its first spot, as before.
+ * PlaceLabelsOptions). Returns the centre of each label.
  */
 export function placeLabels(
 	requests: LabelRequest[],
@@ -663,10 +675,6 @@ export function placeLabels(
 	options: PlaceLabelsOptions = {},
 ): Record<string, [number, number]> {
 	const { margin, keepOut = [], bounds, leaderTrack } = options
-	// The chips placed so far, which a spot must keep off. Swapped for "every
-	// chip but these two" while untangling (below), so it is reassigned.
-	let placed: { x: number; y: number; w: number; h: number }[] = []
-	const result: Record<string, [number, number]> = {}
 	// A box centred at (x, y), w by h, comes within `zone.halfWidth` of a point of the zone.
 	const covers = (zone: KeepOut, x: number, y: number, w: number, h: number) =>
 		zone.points.some(([px, py]) => Math.abs(px - x) < w / 2 + zone.halfWidth && Math.abs(py - y) < h / 2 + zone.halfWidth)
@@ -689,75 +697,90 @@ export function placeLabels(
 		}
 		return false
 	}
-	// `beat`: the best cost so far, so the slow leader check runs only when it could change the winner.
-	const cost = (request: LabelRequest, x: number, y: number, beat: number) => {
+
+	/**
+	 * A chip's faults at a spot that don't depend on any other chip: out of
+	 * the box, on the track or in its margin, over a bracket. `severe` counts
+	 * the ones the second step may never add (out of the box, on the track).
+	 * The leader-over-the-track check is apart (`leaderFault`): it is the slow one.
+	 */
+	const ownFaults = (request: LabelRequest, x: number, y: number) => {
 		const { width: w, height: h } = request
-		let total = 0
-		if (outside(x, y, w, h)) total += COST.outside
-		if (placed.some((box) => Math.abs(box.x - x) < (box.w + w) / 2 && Math.abs(box.y - y) < (box.h + h) / 2)) total += COST.chip
+		let faults = 0
+		let severe = 0
+		if (outside(x, y, w, h)) {
+			faults += COST.outside
+			severe += 1
+		}
 		// The chip inside the curve (noMargin) may lie over the track's inner
 		// edge sooner than leave the curve: on a phone's wide oval it can't fit
 		// inside clear of it, and it always sat there before.
-		if (track && covers(track, x, y, w, h)) total += request.noMargin ? COST.margin + 1 : COST.track
-		else if (margin && !request.noMargin && covers(margin, x, y, w, h)) total += COST.margin
-		if (keepOut.some((zone) => covers(zone, x, y, w, h))) total += COST.keepOut
-		// The slowest check last, and only when it could still matter. (Run only
-		// on otherwise clear spots, it let a chip slid out across the course,
-		// whose one other fault was a bracket, beat a spot inside the curve.) A
-		// chip placed inside the curve (noMargin) that would reach a spot across
-		// the far side of the track is as bad as one lying on the track: it has
-		// left the curve, and its leader crosses the course to get back.
-		const crossing = request.noMargin ? COST.track : COST.leader
-		if (total < beat && leaderCrosses(request.anchor, x, y, w, h)) total += crossing
-		return total
+		if (track && covers(track, x, y, w, h)) {
+			faults += request.noMargin ? COST.margin + 1 : COST.track
+			if (!request.noMargin) severe += 1
+		} else if (margin && !request.noMargin && covers(margin, x, y, w, h)) faults += COST.margin
+		if (keepOut.some((zone) => covers(zone, x, y, w, h))) faults += COST.keepOut
+		return { faults, severe }
 	}
-	for (const request of requests) {
-		const [ax, ay] = request.anchor
-		const [dx, dy] = request.direction
-		const out = Math.max(distance, request.reach ?? 0)
+	/**
+	 * A leader that cuts across the track. A chip placed inside the curve
+	 * (noMargin) that would reach a spot across the far side of the track is
+	 * as bad as one lying on the track: it has left the curve, and its leader
+	 * crosses the course to get back.
+	 */
+	const leaderFault = (request: LabelRequest, x: number, y: number) =>
+		leaderCrosses(request.anchor, x, y, request.width, request.height) ? (request.noMargin ? COST.track : COST.leader) : 0
+	const onChip = (a: LabelRequest, at: readonly [number, number], b: LabelRequest, bt: readonly [number, number]) =>
+		Math.abs(at[0] - bt[0]) < (a.width + b.width) / 2 && Math.abs(at[1] - bt[1]) < (a.height + b.height) / 2
+	const crossed = (a: LabelRequest, at: readonly [number, number], b: LabelRequest, bt: readonly [number, number]) =>
+		segmentsCross(a.anchor, at, b.anchor, bt)
+
+	// ── First step: one at a time ──
+	const at: [number, number][] = []
+	requests.forEach((request, index) => {
 		let best: { at: [number, number]; cost: number } | null = null
-		// How far a slide moves the chip: part of its own extent across the direction out.
-		const across = Math.abs(dy) * request.width + Math.abs(dx) * request.height
-		search: for (const reach of REACHES) {
-			for (const move of MOVES) {
-				let x: number
-				let y: number
-				if ("swing" in move) {
-					const cos = Math.cos(move.swing)
-					const sin = Math.sin(move.swing)
-					x = ax + (dx * cos - dy * sin) * out * reach
-					y = ay + (dx * sin + dy * cos) * out * reach
-				} else {
-					// Straight out, then sideways: (-dy, dx) is the direction out turned a quarter.
-					x = ax + dx * out * reach - dy * across * move.slide
-					y = ay + dy * out * reach + dx * across * move.slide
-				}
-				const spot = cost(request, x, y, best?.cost ?? Infinity)
-				if (!best || spot < best.cost) best = { at: [x, y], cost: spot }
-				if (spot === 0) break search
+		for (const spot of spotsFor(request, distance)) {
+			const own = ownFaults(request, spot[0], spot[1]).faults
+			let cost = own
+			if (requests.slice(0, index).some((other, j) => onChip(request, spot, other, at[j]))) cost += COST.chip
+			// The slowest check last, and only when it could still matter. (Run
+			// only on otherwise clear spots, it let a chip slid out across the
+			// course, whose one other fault was a bracket, beat a spot inside the curve.)
+			if (cost < (best?.cost ?? Infinity)) cost += leaderFault(request, spot[0], spot[1])
+			if (!best || cost < best.cost) best = { at: spot, cost }
+			if (cost === 0) break
+		}
+		at.push(best!.at)
+	})
+
+	improve(requests, at, distance, { ownFaults, leaderFault, onChip, crossed })
+	return Object.fromEntries(requests.map((request, index) => [request.key, at[index]]))
+}
+
+/**
+ * Where a chip may go, in the order tried: each reach out from the track, and
+ * at each, straight out, then swung and slid either way (REACHES, MOVES).
+ */
+function spotsFor(request: LabelRequest, distance: number): [number, number][] {
+	const [ax, ay] = request.anchor
+	const [dx, dy] = request.direction
+	const out = Math.max(distance, request.reach ?? 0)
+	// How far a slide moves the chip: part of its own extent across the direction out.
+	const across = Math.abs(dy) * request.width + Math.abs(dx) * request.height
+	const spots: [number, number][] = []
+	for (const reach of REACHES) {
+		for (const move of MOVES) {
+			if ("swing" in move) {
+				const cos = Math.cos(move.swing)
+				const sin = Math.sin(move.swing)
+				spots.push([ax + (dx * cos - dy * sin) * out * reach, ay + (dx * sin + dy * cos) * out * reach])
+			} else {
+				// Straight out, then sideways: (-dy, dx) is the direction out turned a quarter.
+				spots.push([ax + dx * out * reach - dy * across * move.slide, ay + dy * out * reach + dx * across * move.slide])
 			}
 		}
-		const [x, y] = best!.at
-		placed.push({ x, y, w: request.width, h: request.height })
-		result[request.key] = [x, y]
 	}
-	untangleLeaders(requests, result, (moves) => {
-		// What a set of chips costs where `moves` puts them, against every
-		// other chip and against each other: the same faults as placing them.
-		const keys = new Set(moves.map((move) => move.request.key))
-		const saved = placed
-		placed = requests
-			.filter((request) => !keys.has(request.key))
-			.map((request) => ({ x: result[request.key][0], y: result[request.key][1], w: request.width, h: request.height }))
-		let total = 0
-		for (const { request, at } of moves) {
-			total += cost(request, at[0], at[1], Infinity)
-			placed.push({ x: at[0], y: at[1], w: request.width, h: request.height })
-		}
-		placed = saved
-		return total
-	})
-	return result
+	return spots
 }
 
 /** Do the segments p1-p2 and q1-q2 cross? Touching at an end doesn't count. */
@@ -771,47 +794,153 @@ function segmentsCross(
 	return side(p1, p2, q1) * side(p1, p2, q2) < 0 && side(q1, q2, p1) * side(q1, q2, p2) < 0
 }
 
+/** How many rounds of moves `improve` makes at most; it stops sooner once nothing helps. */
+const IMPROVE_ROUNDS = 6
+
 /**
- * Two chips whose leaders cross trade places, so a cluster of callouts reads
- * in the order a runner meets them and no leader runs over another (Henry,
- * board 1572757223967301693, 2026-11-18: Downhill, Corner 3, Position keep
- * ends and Halfway on Chukyo's back bend, placed most important first, had
- * their leaders crossed in a bunch).
- *
- * WHY A SWAP: placeLabels puts each chip in the first clear spot, one at a
- * time, so a later chip can land on the far side of an earlier chip's
- * leader. Swapping the ends of two crossing segments always uncrosses them
- * and makes the two together shorter (each crossing pair forms two triangles,
- * and a triangle's two sides are longer than its third). A swap is taken only
- * when it shortens the leaders' total and leaves the pair no worse placed
- * (`faults`: on another chip, the track, a bracket, out of the box), so the
- * loop always ends; the pass cap is only a guard.
+ * What a leader across the track costs in `improve`: more than a crossed
+ * pair. Placing one chip at a time it is the smallest fault (COST.leader), a
+ * last resort below the margin; but traded against a crossing it read worse
+ * (Chukyo dirt 1800's Corner 3 went to the far side of the bend, its leader
+ * over both straights, to uncross one pair).
  */
-function untangleLeaders(
+const IMPROVE_ACROSS = COST.cross + 1
+
+/**
+ * The faults `improve` may never add, in two counts. HIDDEN: words hidden or
+ * broken (a chip on a chip, on the track, out of the box). LINES: lines in the
+ * way (a leader across the track, a crossed pair of leaders). A move may trade
+ * within a count when the weights say so (two crossings for one leader across
+ * the track), never between them: no crossing is cleared by hiding words.
+ */
+type Severe = [hidden: number, lines: number]
+const addSevere = (a: Severe, b: Severe): Severe => [a[0] + b[0], a[1] + b[1]]
+const worse = (a: Severe, b: Severe) => a[0] > b[0] || a[1] > b[1]
+
+/**
+ * placeLabels' second step: the finished layout made better as a whole.
+ *
+ * A chip's SCORE at a spot is its own faults (ownFaults, leaderFault, cached
+ * per spot since they never change) plus COST.chip for each chip it lies on
+ * and COST.cross for each leader its own crosses. The map's total is the sum,
+ * which counts each pair twice, so a move's change in the total is twice the
+ * moved chip's change. A move is taken when it lowers the total and adds to
+ * neither Severe count. So no move adds a crossing to clear a smaller fault
+ * (Tokyo turf 2400 gained one that way), none hides words to uncross a pair
+ * (Henry's own course put Corner 3 on the track when it could), and a
+ * crossing gives way to a leader across the track only as the weights allow.
+ *
+ * Measured over the 26 courses the events use, real shape and schematic,
+ * desktop and phone (104 maps, 2026-11-27), against the one-at-a-time step
+ * with the old swap pass (web #526): crossed pairs 25 to 8, chips on chips 11
+ * to 6, leaders across the track 80 to 65, chips on the track or out of the
+ * box 23 to 25 (two maps whose first step left one, which the old swaps had
+ * happened to clear).
+ *
+ * Two kinds of move, each round: a chip to any of its own spots (spotsFor),
+ * and two chips whose leaders cross trading places. Every taken move lowers
+ * the total, so it can't cycle; IMPROVE_ROUNDS is a guard on time, since this
+ * runs on every draw of the map.
+ */
+function improve(
 	requests: LabelRequest[],
-	result: Record<string, [number, number]>,
-	faults: (moves: { request: LabelRequest; at: readonly [number, number] }[]) => number,
+	at: [number, number][],
+	distance: number,
+	{ ownFaults, leaderFault, onChip, crossed }: {
+		ownFaults: (request: LabelRequest, x: number, y: number) => { faults: number; severe: number }
+		leaderFault: (request: LabelRequest, x: number, y: number) => number
+		onChip: (a: LabelRequest, at: readonly [number, number], b: LabelRequest, bt: readonly [number, number]) => boolean
+		crossed: (a: LabelRequest, at: readonly [number, number], b: LabelRequest, bt: readonly [number, number]) => boolean
+	},
 ): void {
-	const length = (request: LabelRequest, at: readonly [number, number]) => Math.hypot(at[0] - request.anchor[0], at[1] - request.anchor[1])
-	for (let pass = 0; pass < requests.length; pass++) {
-		let swapped = false
-		for (let i = 0; i < requests.length; i++) {
-			for (let j = i + 1; j < requests.length; j++) {
-				const a = requests[i]
-				const b = requests[j]
-				const atA = result[a.key]
-				const atB = result[b.key]
-				if (!segmentsCross(a.anchor, atA, b.anchor, atB)) continue
-				if (length(a, atB) + length(b, atA) >= length(a, atA) + length(b, atB)) continue
-				const before = faults([{ request: a, at: atA }, { request: b, at: atB }])
-				const after = faults([{ request: a, at: atB }, { request: b, at: atA }])
-				if (after > before) continue
-				result[a.key] = atB
-				result[b.key] = atA
-				swapped = true
+	const count = requests.length
+	const spots = requests.map((request) => spotsFor(request, distance))
+	// Chip i's own faults at a spot (no other chip involved), cached: the cheap
+	// ones, and the slow leader-over-the-track check apart, run only once a
+	// spot could otherwise win (`withLeader`).
+	const ownCache = new Map<string, { faults: number; severe: number }>()
+	const leaderCache = new Map<string, number>()
+	const own = (i: number, spot: readonly [number, number]) => {
+		const key = `${i}:${spot[0]}:${spot[1]}`
+		let found = ownCache.get(key)
+		if (!found) ownCache.set(key, (found = ownFaults(requests[i], spot[0], spot[1])))
+		return found
+	}
+	const leader = (i: number, spot: readonly [number, number]) => {
+		const key = `${i}:${spot[0]}:${spot[1]}`
+		let found = leaderCache.get(key)
+		if (found === undefined) leaderCache.set(key, (found = leaderFault(requests[i], spot[0], spot[1])))
+		return found
+	}
+	/**
+	 * Chip i at `spot` against every chip but i and `skip`: its score and its
+	 * Severe counts. Without `withLeader` it leaves out the leader over the
+	 * track, so it is a floor: a spot whose floor can't win is skipped.
+	 */
+	const score = (i: number, spot: readonly [number, number], skip = -1, withLeader = true) => {
+		const mine = own(i, spot)
+		const across = withLeader && leader(i, spot) > 0 ? Math.max(leader(i, spot), IMPROVE_ACROSS) : 0
+		let total = mine.faults + across
+		const severe: Severe = [mine.severe, across > 0 ? 1 : 0]
+		for (let j = 0; j < count; j++) {
+			if (j === i || j === skip) continue
+			if (onChip(requests[i], spot, requests[j], at[j])) {
+				total += COST.chip
+				severe[0] += 1
+			}
+			if (crossed(requests[i], spot, requests[j], at[j])) {
+				total += COST.cross
+				severe[1] += 1
 			}
 		}
-		if (!swapped) return
+		return { total, severe }
+	}
+	/** The pair i, j at the given spots against each other. */
+	const pair = (i: number, si: readonly [number, number], j: number, sj: readonly [number, number]) => {
+		const lies = onChip(requests[i], si, requests[j], sj)
+		const cuts = crossed(requests[i], si, requests[j], sj)
+		return { total: (lies ? COST.chip : 0) + (cuts ? COST.cross : 0), severe: [lies ? 1 : 0, cuts ? 1 : 0] as Severe }
+	}
+	// A change worth taking lowers the total by more than rounding.
+	const GAIN = 1e-6
+	for (let round = 0; round < IMPROVE_ROUNDS; round++) {
+		let moved = false
+		for (let i = 0; i < count; i++) {
+			// A chip to the best of its own spots.
+			const now = score(i, at[i])
+			let best: { spot: [number, number]; total: number } | null = null
+			for (const spot of spots[i]) {
+				const floor = score(i, spot, -1, false)
+				if (worse(floor.severe, now.severe) || floor.total >= Math.min(now.total, best?.total ?? Infinity) - GAIN) continue
+				const there = score(i, spot)
+				if (worse(there.severe, now.severe) || there.total >= now.total - GAIN) continue
+				if (!best || there.total < best.total) best = { spot, total: there.total }
+			}
+			if (best) {
+				at[i] = best.spot
+				moved = true
+			}
+			// Two chips whose leaders cross, trading places.
+			for (let j = i + 1; j < count; j++) {
+				if (!crossed(requests[i], at[i], requests[j], at[j])) continue
+				const [si, sj] = [at[i], at[j]]
+				const beforeI = score(i, si, j)
+				const beforeJ = score(j, sj, i)
+				const beforePair = pair(i, si, j, sj)
+				const afterI = score(i, sj, j)
+				const afterJ = score(j, si, i)
+				const afterPair = pair(i, sj, j, si)
+				const before = beforeI.total + beforeJ.total + 2 * beforePair.total
+				const after = afterI.total + afterJ.total + 2 * afterPair.total
+				const severeBefore = addSevere(addSevere(beforeI.severe, beforeJ.severe), beforePair.severe)
+				const severeAfter = addSevere(addSevere(afterI.severe, afterJ.severe), afterPair.severe)
+				if (worse(severeAfter, severeBefore) || after >= before - GAIN) continue
+				at[i] = sj
+				at[j] = si
+				moved = true
+			}
+		}
+		if (!moved) return
 	}
 }
 
