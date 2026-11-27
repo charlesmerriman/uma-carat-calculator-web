@@ -18,6 +18,7 @@ import { useRememberedFilter, useRememberedPicks } from "../../hooks/useRemember
 import { Link } from "react-router-dom"
 import { FramedCard } from "../FramedCard"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
+import { allRateUps } from "../../utils/bannerHelpers"
 import { CARD_TYPE_LABELS } from "../../utils/cardTypes"
 import { CARD_TYPE_ICONS } from "../../utils/cardTypeIcons"
 import { cardHref } from "../../utils/encyclopediaRoutes"
@@ -74,7 +75,7 @@ const CardListBody = () => {
 	const banners = useCalculatorDataSafe()?.supportBannerData
 	const catalogueCards = catalogue.status === "ready" ? catalogue.catalogue.support_cards : null
 	const dates = useMemo(
-		() => withGameDates(releaseDates(banners ?? [], (banner) => banner.support_cards), catalogueCards ?? []),
+		() => withGameDates(releaseDates(banners ?? [], allRateUps), catalogueCards ?? []),
 		[banners, catalogueCards]
 	)
 	// The Collection filter and the ticks only for a signed-in player with something in their Collection.

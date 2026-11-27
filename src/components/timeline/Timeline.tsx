@@ -12,7 +12,7 @@ import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { OguriSpinner } from "../OguriSpinner"
 import { useCalculatorData } from "../../services/CalculatorContext"
-import { plannedBannerKey } from "../../utils/bannerHelpers"
+import { allRateUps, plannedBannerKey } from "../../utils/bannerHelpers"
 import { useStageBanner } from "../../hooks/useStageBanner"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { motion } from "framer-motion"
@@ -304,8 +304,9 @@ function eventMatchesSearch(event: TimelineEvent, query: string): boolean {
 			if (nameMatches(query, uma.name)) return true
 		}
 	}
+	// Every rate-up: a search for an SR finds the banner that lists it.
 	for (const banner of bannerEvent.banner_supports) {
-		for (const card of banner.support_cards) {
+		for (const card of allRateUps(banner)) {
 			if (nameMatches(query, card.name)) return true
 		}
 	}

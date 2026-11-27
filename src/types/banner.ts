@@ -177,13 +177,37 @@ export interface BannerUma {
 	rate_overrides?: Record<number, number>
 }
 
+/**
+ * How an SR or R rate-up shows on the Timeline, as the API resolved it
+ * (calculatorapi/banner_rate_ups.py): listed in the "Also on rate-up" row under
+ * the banner card, drawn as a tile beside the SSRs, or left off. The Timeline
+ * only: the odds, release dates and search use every rate-up whatever it says.
+ */
+export type RateUpDisplay = "named" | "picture" | "hidden"
+
+/** An SR or R rate-up on a support banner. See BannerSupport.other_rate_ups. */
+export interface OtherRateUp extends SupportCard {
+	display: RateUpDisplay
+}
+
 /** A support card gacha banner — contains one or more featured support cards */
 export interface BannerSupport {
 	id: number
 	banner_timeline: BannerTimeline
 	name: string
 	admin_comments: string
+	/**
+	 * The banner's SSRs: what a planner row draws, what a selector's "oldest
+	 * featured card" reads, the tiles on the Timeline. A reader that wants EVERY
+	 * rate-up (the odds, a card's first banner, search) goes through
+	 * `allRateUps()` in utils/bannerHelpers.ts.
+	 */
 	support_cards: SupportCard[]
+	/**
+	 * Its SR and R rate-ups, SRs first, each with its Timeline `display`. Absent
+	 * from an API older than this field (notes/banner-sr-r-plan.md).
+	 */
+	other_rate_ups?: OtherRateUp[]
 	free_pulls: number
 	/** See BannerUma.is_recommended. */
 	is_recommended: boolean

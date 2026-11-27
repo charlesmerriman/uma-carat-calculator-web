@@ -18,7 +18,42 @@ import type {
 	BannerStepUp,
 	BannerTimeline,
 	CalculationConstants,
+	OtherRateUp,
+	SupportCard,
 } from "../types"
+
+/**
+ * EVERY rate-up on a support banner: its SSRs (`support_cards`), then its SR
+ * and R rate-ups (`other_rate_ups`, SRs first), whatever their Timeline
+ * `display` says (notes/banner-sr-r-plan.md).
+ *
+ * The readers that want every card come here: the odds (rateUpRates.ts), a
+ * card's first banner and release date (cardRelease.ts, the Encyclopedia's
+ * lists and pages), and search. The readers that DRAW or reason about SSRs
+ * stay on `support_cards` on purpose: a planner row's art, a selector's
+ * "oldest featured card" (a selector grants only an SSR), a step-up's picks,
+ * the PvP guide's "New since", the Rankings' art. That split is why the API
+ * sends two lists, so a new reader that forgets this helper only misses an SR
+ * in a list, never draws one where it doesn't belong.
+ */
+export function allRateUps(banner: Pick<BannerSupport, "support_cards" | "other_rate_ups">): SupportCard[] {
+	return banner.other_rate_ups?.length ? [...banner.support_cards, ...banner.other_rate_ups] : banner.support_cards
+}
+
+/**
+ * The cards the Timeline draws as tiles in a support banner's panel: the SSRs,
+ * then any SR whose `display` is "picture" (the API resolves "auto": an SR
+ * beside one SSR, alone on its banner, gets its picture).
+ */
+export function timelineSupportTiles(banner: Pick<BannerSupport, "support_cards" | "other_rate_ups">): SupportCard[] {
+	const pictured = banner.other_rate_ups?.filter((card) => card.display === "picture") ?? []
+	return pictured.length ? [...banner.support_cards, ...pictured] : banner.support_cards
+}
+
+/** The SRs and Rs the Timeline lists in the "Also on rate-up" row under the card. */
+export function timelineNamedRateUps(banner: Pick<BannerSupport, "other_rate_ups">): OtherRateUp[] {
+	return banner.other_rate_ups?.filter((card) => card.display === "named") ?? []
+}
 
 /**
  * Inputs to the pull-economics strategy for a single banner. All carat/ticket

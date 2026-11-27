@@ -386,13 +386,19 @@ rate = min(rate_up_rate_N, rate_up_pool_N / rate-up cards of rarity N on the ban
 | 9 ★3 rate-ups (the launch uma banner) | 0.333% (3% ÷ 9) |
 | 20 SSR rate-ups (Launch Support) | 0.15% (3% ÷ 20) |
 | A ★2 rate-up | 2.25%, against the ★2 pool, beside any ★3's 0.75% |
-| "10 Select 2" | 0.75% for each of the 2 picks (`rate_up_picks` splits the pool by picks) |
+| "10 Select 2" | 0.75% for each of the 2 picks (`rate_up_picks` splits the SSR pool by picks) |
+| SR and R support cards | their own pair, `support_rate_up_*`: 1 SR 2.25%, 2 SRs 1.5% each, 4 SRs 0.75%; 1 R 3.75%, 3 Rs 1.67% each |
 
 An editor's `rate_overrides` entry wins over the rule (the 2025-07-16 anime-collab doubles
 were 0.5% each). The six numbers are `calculation_constants`, passed in like every other
 constant; `calculateCopyDistribution(pulls, rate)` takes the rate as a parameter for the
 same reason. Which card the strip is about is `primaryRateUpCard`: the first card of the
 banner's highest rarity, so a ★3 + ★2 banner shows the ★3.
+A support banner's cards for the odds are `allRateUps(banner)` (`utils/bannerHelpers.ts`):
+its SSRs (`support_cards`) and its SR and R rate-ups (`other_rate_ups`), whatever the
+Timeline does with them. The ★2 and ★1 SUPPORT cards read `support_rate_up_*`, never the uma
+pair (a ★1 uma is 10%, an R card 3.75%). The row's picker lists them under SSR, SR and R
+headings.
 Background, sources and the admin side: `backend/docs/data-model.md` ("Rate-up rates").
 
 ### Two-card odds
