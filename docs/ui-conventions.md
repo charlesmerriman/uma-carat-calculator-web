@@ -1709,6 +1709,11 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   box, on another chip, on the track, in the margin, over a bracket, a leader across the
   track) and the cheapest wins, so the box's edge never pushes a chip back over the track.
   A chip's first try sits just past the margin; it then swings and slides along the track.
+  **Then the whole map is improved** (`improve`, 2026-11-27, Henry's crossed leaders on
+  Tokyo dirt 1600): each chip tries all its spots and crossed pairs trade places, keeping a
+  move that lowers the total with crossed leaders counted, and adds no hidden words (a chip
+  on a chip, on the track, out of the box) and no lines in the way (crossed leaders, a
+  leader across the track). So a bunch of callouts reads in the order a runner meets them.
   The spurt chip sits inside the curve, and may lie over the track's inner edge sooner
   than leave it. On a phone a hill's chip is its triangle and percent. Each callout's
   leader is a short line in its own colour with a dot on the track. Later laps are rings

@@ -311,27 +311,30 @@ describe("placeLabels", () => {
 		expect(Math.abs(a[0])).toBeGreaterThan(10)
 	})
 
-	it("swaps two chips whose leaders cross, so they read in the track's order", () => {
-		// Two small chips pointing at each other's side: placed one at a time,
-		// each lands in its first spot and their leaders cross at (10, -10).
-		const out = Math.SQRT1_2
-		const left = { key: "left", anchor: [0, 0] as const, direction: [out, -out] as const, width: 4, height: 4 }
-		const right = { key: "right", anchor: [20, 0] as const, direction: [-out, -out] as const, width: 4, height: 4 }
+	// Two small chips pointing at each other's side: placed one at a time, each
+	// lands in its first spot, (14.1, -14.1) and (5.9, -14.1), and their leaders
+	// cross at (10, -10).
+	const out = Math.SQRT1_2
+	const left = { key: "left", anchor: [0, 0] as const, direction: [out, -out] as const, width: 4, height: 4 }
+	const right = { key: "right", anchor: [20, 0] as const, direction: [-out, -out] as const, width: 4, height: 4 }
+	type At = readonly [number, number]
+	const side = (a: At, b: At, c: At) => Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+	const leadersCross = (placed: Record<string, [number, number]>) =>
+		side(left.anchor, placed.left, right.anchor) * side(left.anchor, placed.left, placed.right) < 0 &&
+		side(right.anchor, placed.right, left.anchor) * side(right.anchor, placed.right, placed.left) < 0
+
+	it("moves a chip whose leader crosses another's, so the two read in the track's order", () => {
 		const placed = placeLabels([left, right], 20)
-		// Untangled: the left anchor's chip is the left one.
-		expect(placed.left[0]).toBeLessThan(placed.right[0])
-		expect(placed.left[0]).toBeCloseTo(20 - 20 * out, 6)
-		expect(placed.right[0]).toBeCloseTo(20 * out, 6)
+		expect(leadersCross(placed)).toBe(false)
 	})
 
-	it("leaves crossed leaders alone when the swap would land a chip somewhere worse", () => {
-		const out = Math.SQRT1_2
-		// The left anchor's chip is wide (12): at its own spot it spans x 8.1 to
-		// 20.1, inside a box that starts at x = 0; at the other spot it would
-		// span -0.1 to 11.9, past the box's edge, so the pair stays crossed.
-		const left = { key: "left", anchor: [0, 0] as const, direction: [out, -out] as const, width: 12, height: 4 }
-		const right = { key: "right", anchor: [20, 0] as const, direction: [-out, -out] as const, width: 4, height: 4 }
-		const placed = placeLabels([left, right], 20, undefined, { bounds: { x: 0, y: -40, width: 30, height: 60 } })
+	it("leaves two leaders crossed when every way out would push a chip out of the box", () => {
+		// The left anchor's chip is wide (12). The box just holds both first
+		// spots: swapped, the wide chip would spill past x = 0, and every other
+		// spot either chip could take is above, below or beside the box.
+		const wide = { ...left, width: 12 }
+		const bounds = { x: 0, y: -17, width: 21, height: 6 }
+		const placed = placeLabels([wide, right], 20, undefined, { bounds })
 		expect(placed.left[0]).toBeCloseTo(20 * out, 6)
 		expect(placed.right[0]).toBeCloseTo(20 - 20 * out, 6)
 	})
