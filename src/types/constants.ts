@@ -98,6 +98,15 @@ export interface CalculationConstants {
 	rate_up_pool_2: number
 	rate_up_rate_1: number
 	rate_up_pool_1: number
+	/**
+	 * The same pair for SR (2) and R (1) SUPPORT cards, which the game rates
+	 * differently from ★2 and ★1 umas. The six above serve umas, and SSRs of
+	 * both kinds.
+	 */
+	support_rate_up_rate_2: number
+	support_rate_up_pool_2: number
+	support_rate_up_rate_1: number
+	support_rate_up_pool_1: number
 
 	// Throughout-carat decay curve
 	throughout_end_offset_days: number

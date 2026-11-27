@@ -6,6 +6,7 @@
  */
 
 import type { BannerSupport, BannerUma } from "../types"
+import { allRateUps } from "./bannerHelpers"
 import { parseApiDate } from "./dateFormat"
 import { timelineFocusHref } from "./timelineFocus"
 import type { PortraitLayers } from "../types/portraitLayers"
@@ -82,4 +83,5 @@ export const umaReleases = (banners: BannerUma[], umaId: number): Releases =>
 	releases(banners, (banner) => banner.umas, umaId, "uma")
 
 export const cardReleases = (banners: BannerSupport[], cardId: number): Releases =>
-	releases(banners, (banner) => banner.support_cards, cardId, "card")
+	// Every rate-up: an SR or R lists the banners it was on, too.
+	releases(banners, allRateUps, cardId, "card")

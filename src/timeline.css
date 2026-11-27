@@ -41,6 +41,8 @@
                        block's fill. THE PLATE AND THE SKIRT ARE ONE PLANE:
                        repaint both or neither, and draw nothing across the
                        join between the art and the name.
+     tl-rate-ups       the "Also on rate-up" row beneath a banner card, first
+                       in the strip the story events use (RateUpRow)
      tl-stage          the "Stage banner" button; data-status is its state:
                        "available", "planned", "staged", "expired"
      tl-stat           a boxed course fact; tl-stat-label and tl-stat-value

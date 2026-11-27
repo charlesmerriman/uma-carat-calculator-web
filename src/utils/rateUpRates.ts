@@ -1,5 +1,5 @@
 import type { CalculationConstants } from "../types/constants"
-import type { PlannedBannerTarget } from "./bannerHelpers"
+import { allRateUps, type PlannedBannerTarget } from "./bannerHelpers"
 
 /**
  * Per-pull chance of each rate-up card on an ordinary uma or support banner.
@@ -40,30 +40,43 @@ export interface RateUpCard {
 }
 
 /**
- * The rate-up rate and pool for a rarity. Anything outside 1..3 is treated as
- * ★3/SSR, the same default a missing rarity gets.
+ * The rate-up rate and pool for a rarity on a banner of `kind`. Anything
+ * outside 1..3 is treated as ★3/SSR, the same default a missing rarity gets.
+ *
+ * SR and R SUPPORT cards read their own pair: the game rates them differently
+ * from ★2 and ★1 umas (an R card 3.75%, a ★1 uma 10%), so one set of numbers
+ * can't serve both. SSRs share one pair whatever the banner.
  */
 function rarityRule(
 	rarity: number,
+	kind: RateUpTarget["type"],
 	constants: CalculationConstants
 ): { rate: number; pool: number } {
+	const support = kind === "Support"
 	switch (rarity) {
 		case 1:
-			return { rate: constants.rate_up_rate_1, pool: constants.rate_up_pool_1 }
+			return support
+				? { rate: constants.support_rate_up_rate_1, pool: constants.support_rate_up_pool_1 }
+				: { rate: constants.rate_up_rate_1, pool: constants.rate_up_pool_1 }
 		case 2:
-			return { rate: constants.rate_up_rate_2, pool: constants.rate_up_pool_2 }
+			return support
+				? { rate: constants.support_rate_up_rate_2, pool: constants.support_rate_up_pool_2 }
+				: { rate: constants.rate_up_rate_2, pool: constants.rate_up_pool_2 }
 		default:
 			return { rate: constants.rate_up_rate_3, pool: constants.rate_up_pool_3 }
 	}
 }
 
-/** Every featured card on the banner, with its rate, in the banner's order. */
+/**
+ * Every rate-up card on the banner, with its rate, in the banner's order: a
+ * support banner's SSRs, then its SRs and Rs (`allRateUps`).
+ */
 export function rateUpCards(
 	target: RateUpTarget,
 	constants: CalculationConstants
 ): RateUpCard[] {
 	const cards =
-		target.type === "Uma" ? target.banner.umas : target.banner.support_cards
+		target.type === "Uma" ? target.banner.umas : allRateUps(target.banner)
 	const overrides = target.banner.rate_overrides ?? {}
 	const picks = target.banner.rate_up_picks ?? null
 
@@ -78,8 +91,10 @@ export function rateUpCards(
 	}
 
 	return withRarity.map(({ card, rarity }) => {
-		const { rate, pool } = rarityRule(rarity, constants)
-		const shares = picks ?? sharing.get(rarity) ?? 1
+		const { rate, pool } = rarityRule(rarity, target.type, constants)
+		// A select banner's picks are SSRs, so they split the SSR pool only;
+		// its SRs and Rs share theirs by count like anywhere else.
+		const shares = (rarity === 3 ? picks : null) ?? sharing.get(rarity) ?? 1
 
 		return {
 			id: card.id,

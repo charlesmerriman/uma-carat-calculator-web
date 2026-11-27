@@ -348,6 +348,12 @@ export const DEFAULT_CONSTANTS: CalculationConstants = {
 	rate_up_pool_2: 0.03,
 	rate_up_rate_1: 0.0375,
 	rate_up_pool_1: 0.05,
+	// SR and R support cards, from the same tables: 1 SR 2.25%, 2 SRs 1.5%
+	// each; 1 R 3.75%, 3 Rs 1.667% each.
+	support_rate_up_rate_2: 0.0225,
+	support_rate_up_pool_2: 0.03,
+	support_rate_up_rate_1: 0.0375,
+	support_rate_up_pool_1: 0.05,
 
 	throughout_end_offset_days: THROUGHOUT_END_OFFSET_DAYS,
 	throughout_filter_grace_days: THROUGHOUT_FILTER_GRACE_DAYS,

@@ -2161,3 +2161,46 @@ describe('Timeline month headings', () => {
     expect(document.querySelectorAll('.tl-card')).toHaveLength(1)
   })
 })
+
+describe('Timeline SR and R rate-ups', () => {
+  /** A one-SSR support banner with SRs and Rs beside it, each with the display the API resolved. */
+  function withRateUps(others: Array<[number, string, 1 | 2, 'named' | 'picture' | 'hidden']>) {
+    const row = categorised(2, 'standard', ['Neo Universe'], ['Symboli Rudolf'])
+    row.banner_supports[0].other_rate_ups = others.map(([id, name, rarity, display]) => ({
+      ...card<SupportCard>(id, name), rarity, game_id: 20000 + id, display,
+    }))
+    events = [row]
+  }
+
+  it("draws a pictured SR as a tile beside the SSR, and lists the rest under the card", () => {
+    withRateUps([[61, 'Gold Ship', 2, 'picture'], [91, 'Katsuragi Ace', 1, 'named']])
+    renderTimeline()
+    expect(screen.getByAltText('Gold Ship')).toBeInTheDocument()
+    expect(screen.queryByAltText('Katsuragi Ace')).toBeNull()
+    const row = screen.getByRole('region', { name: 'Also on rate-up' })
+    expect(row).toHaveTextContent('R Katsuragi Ace')
+    expect(row).not.toHaveTextContent('Gold Ship')
+    // A link to the card's page that opens the card popup on a click.
+    const link = screen.getByRole('link', { name: 'Katsuragi Ace' })
+    expect(link).toHaveAttribute('href', '/app/cards/20091')
+    expect(link).toHaveAttribute('data-hover-card', 'card:91')
+  })
+
+  it('leaves a hidden one off the Timeline, and draws no row with nothing to list', () => {
+    withRateUps([[91, 'Katsuragi Ace', 1, 'hidden']])
+    renderTimeline()
+    expect(screen.queryByRole('region', { name: 'Also on rate-up' })).toBeNull()
+    expect(screen.queryByText('Katsuragi Ace')).toBeNull()
+  })
+
+  it("finds the banner by a listed SR's name", () => {
+    withRateUps([[56, 'Mejiro Dober', 2, 'named']])
+    events = [...events, categorised(3, 'standard', ['Kitasan Black'])]
+    renderTimeline()
+    fireEvent.change(screen.getByPlaceholderText('Search characters or events...'), {
+      target: { value: 'dober' },
+    })
+    expect(screen.getByAltText('Neo Universe')).toBeInTheDocument()
+    expect(screen.queryByAltText('Kitasan Black')).toBeNull()
+  })
+})

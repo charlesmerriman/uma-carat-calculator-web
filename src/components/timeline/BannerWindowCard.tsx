@@ -6,6 +6,8 @@ import { DateTimeRange } from "./DateTimeRange"
 import { AnniversaryEventStrip } from "./AnniversaryEventStrip"
 import { LegendRaceNote } from "./LegendRaceNote"
 import { StoryEventStrip } from "./StoryEventStrip"
+import { RateUpRow } from "./RateUpRow"
+import { timelineNamedRateUps } from "../../utils/bannerHelpers"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import { BannerSection } from "./BannerSection"
 import { TimelineCard, TimelineCardHeader, TimelineCountdown } from "./TimelineCard"
@@ -82,6 +84,13 @@ export function BannerWindowCard({
 		)
 	)
 
+	// The support banners with SRs or Rs to list under the card, one row each.
+	// A row names its banner only when the card holds more than one such row.
+	const rateUpBanners = sections.flatMap((section) =>
+		section.supportWindow.banner_supports.filter((banner) => timelineNamedRateUps(banner).length > 0)
+	)
+	const hasStrip = storyEvents.length > 0 || rateUpBanners.length > 0
+
 	// How each side of a staggered release differs from the window in the
 	// header, e.g. "Support banner starts 2026/10/27". A side that matches the
 	// header says nothing.
@@ -124,10 +133,20 @@ export function BannerWindowCard({
 		<TimelineCard
 			focusRef={focusRef}
 			isFocused={isFocused}
-			panelClassName={`${attachedEvent ? "rounded-t-none" : ""} ${storyEvents.length > 0 ? "rounded-b-none" : ""}`}
+			panelClassName={`${attachedEvent ? "rounded-t-none" : ""} ${hasStrip ? "rounded-b-none" : ""}`}
 			before={attachedEvent && <AnniversaryEventStrip event={attachedEvent} stepUps={stepUps} />}
 			// Outside the panel, so the art row above can't grow.
-			after={storyEvents.length > 0 && <StoryEventStrip events={storyEvents} />}
+			// The rate-up rows come first in the strip, above the story events.
+			after={
+				hasStrip && (
+					<StoryEventStrip
+						events={storyEvents}
+						lead={rateUpBanners.map((banner) => (
+							<RateUpRow key={banner.id} banner={banner} label={rateUpBanners.length > 1 ? banner.name : null} />
+						))}
+					/>
+				)
+			}
 		>
 			<TimelineCardHeader
 				icon={CalendarDays}

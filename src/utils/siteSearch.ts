@@ -30,6 +30,7 @@ import { formatDate, parseApiDate } from "./dateFormat"
 import { pvpEventHref, refForRaceEvent, shortEventName } from "./pvpEvent"
 import { timelineFocusHref } from "./timelineFocus"
 import type { AnniversaryEvent, BannerStepUp, BannerSupport, BannerUma, RaceEvent, Scenario } from "../types"
+import { allRateUps } from "./bannerHelpers"
 import type { CatalogueSkill, CatalogueSupportCard, CatalogueUma, PvpCatalogue } from "../types/pvpTeam"
 import { cardLine } from "./encyclopedia"
 import { UMA_LIST_PATH, cardHref, umaHref } from "./encyclopediaRoutes"
@@ -148,7 +149,7 @@ function bannerEntries(sources: SearchSources, now: Date): SearchEntry[] {
 			...onBanner("Uma banner", pickBanner(banners, now)),
 		})
 	}
-	for (const { card, banners } of groupByCard(sources.supportBanners, (banner) => banner.support_cards).values()) {
+	for (const { card, banners } of groupByCard(sources.supportBanners, allRateUps).values()) {
 		entries.push({
 			id: `card-${card.id}`,
 			kind: "card",
@@ -170,7 +171,7 @@ function encyclopediaEntries(
 	sources: SearchSources, umas: CatalogueUma[], cards: CatalogueSupportCard[], now: Date,
 ): SearchEntry[] {
 	const umaBanners = groupByCard(sources.umaBanners, (banner) => banner.umas)
-	const cardBanners = groupByCard(sources.supportBanners, (banner) => banner.support_cards)
+	const cardBanners = groupByCard(sources.supportBanners, allRateUps)
 	const where = (onGlobal: boolean | undefined) => (onGlobal === false ? " · JP only" : "")
 	const entries: SearchEntry[] = []
 	for (const uma of umas) {

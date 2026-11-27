@@ -36,9 +36,14 @@ import { cardFrameArt } from "../../utils/cardFrame"
  * Display only. The rewards are the event's own, for reading; the planner's
  * income comes from elsewhere (GameEvent), so nothing here is counted twice.
  */
-export function StoryEventStrip({ events }: { events: StoryEvent[] }) {
+export function StoryEventStrip({ events, lead }: {
+	events: StoryEvent[]
+	/** Rows drawn first in the same strip: the banner's "Also on rate-up" row (RateUpRow). */
+	lead?: ReactNode
+}) {
 	return (
 		<div className="flex flex-col divide-y divide-gray-700/70 rounded-b-xl border border-t-0 border-edge bg-gray-800 shadow-(--card-shadow)">
+			{lead}
 			{events.map((event) => (
 				<StoryEventRow key={event.id} event={event} />
 			))}

@@ -18,6 +18,8 @@ export type {
 	BannerCategory,
 	Uma,
 	SupportCard,
+	OtherRateUp,
+	RateUpDisplay,
 	BannerUma,
 	BannerSupport,
 	BannerStepUp,

@@ -395,6 +395,17 @@ step-up banners exist until you press the calculator's third Add button. Because
 step-up's FK points at the campaign **Part** it runs in, the chip lands on exactly one
 card per campaign with no filtering.
 
+### SR and R rate-ups: a tile, a row under the card, or nothing
+
+A support banner sends its SSRs as `support_cards` and its SRs and Rs as `other_rate_ups`, each
+with `display`, which the API resolves (notes/banner-sr-r-plan.md). The panel draws
+`timelineSupportTiles()`: the SSRs plus any `picture` SR (an SR alone on a one-SSR banner, by
+default). `RateUpRow` lists the `named` ones (`timelineNamedRateUps()`) as "Also on rate-up",
+first in the strip below, one row per banner that has any, named by its banner only when the
+card holds two such banners. Each name links to its Encyclopedia page with the card popup
+(`hoverCardProps`). `hidden` ones are on neither, and the Timeline's search finds a banner by
+any of its rate-ups (`allRateUps()`).
+
 ### Free card events sit flush beneath their banner's card
 
 `StoryEventStrip` (`components/timeline/StoryEventStrip.tsx`) draws each free card event
