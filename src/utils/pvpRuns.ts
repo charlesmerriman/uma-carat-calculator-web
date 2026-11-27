@@ -368,6 +368,19 @@ export function tallyPoints(runs: Array<Pick<PvpRun, "races" | "runners">>): Poi
 	return tally
 }
 
+/**
+ * The points every League of Heroes player holds before spending a ticket
+ * (Daptrius, 2026-11-25), so an empty run reads 4,000, not 0. It counts only in
+ * the event's total (eventPoints): a ticket's, a day's and an uma's points stay
+ * what her races earned.
+ */
+export const LOH_STARTING_POINTS = 4000
+
+/** The event's running total: the starting points plus every scored race. */
+export function eventPoints(tally: PointsTally): number {
+	return LOH_STARTING_POINTS + tally.points
+}
+
 /** "1,240": points read with a thousands comma. */
 export function formatPoints(points: number): string {
 	return points.toLocaleString("en-US")

@@ -105,6 +105,7 @@ import {
 	setRace,
 	summarizeRuns,
 	tallyPoints,
+	eventPoints,
 	tallyRun,
 	ticketCounts,
 	ticketNumber,
@@ -261,7 +262,10 @@ function SignedInRuns({ event, onOpenMyTeam }: { event: RaceEvent; onOpenMyTeam:
 	const oshiIds = useOshiIds()
 	// The account's veterans, for "which veteran ran" under each runner.
 	const veterans = useTrainedUmas(true).data ?? NO_VETERANS
-	const [logPlaces, setLogPlaces] = useLogPlaces()
+	// A CM and a LoH keep their own "Log places": a LoH is scored by places, so it starts on.
+	const cmPlaces = useLogPlaces()
+	const lohPlaces = useLohLogPlaces()
+	const [logPlaces, setLogPlaces] = shape.points ? lohPlaces : cmPlaces
 	// The catalogue's umas, for the Won by picker.
 	const catalogueById = catalogue.status === "ready" ? catalogue.umasById : null
 	const catalogueUmas = useMemo(() => [...(catalogueById?.values() ?? [])], [catalogueById])
@@ -1370,6 +1374,12 @@ function deviceSwitch(key: string, fallback: boolean): () => [boolean, (on: bool
 const useLogPlaces = deviceSwitch("uma-runs-log-places", false)
 
 /**
+ * A League of Heroes' "Log places": on to start (Daptrius, 2026-11-25), since
+ * its points come only from places. Its own key, so a CM's choice doesn't carry over.
+ */
+const useLohLogPlaces = deviceSwitch("uma-runs-log-places-loh", true)
+
+/**
  * The "Fill from replays" panel open or folded, per device (owner, 2026-11-25:
  * it took a lot of room). Open to start, so a player finds it once.
  */
@@ -2338,7 +2348,7 @@ function WinRateStrip({ event, runs, today, shape }: { event: RaceEvent; runs: P
 				{shape.points ? (
 					<div>
 						<dt className="text-[11px] text-gray-400">Points</dt>
-						<dd className="mt-0.5 font-display text-[30px] font-bold leading-none text-gray-50">{points.scored ? formatPoints(points.points) : "–"}</dd>
+						<dd className="mt-0.5 font-display text-[30px] font-bold leading-none text-gray-50">{formatPoints(eventPoints(points))}</dd>
 						<dd className="mt-1 text-[11px] text-gray-400">{perTicketText(points) ?? "Log places to count"}</dd>
 					</div>
 				) : (
@@ -2416,7 +2426,7 @@ function Summary({ runs, event, shape, umasById, oshiIds, veterans }: {
 				</div>
 				{shape.points ? (
 					<div className="flex items-end gap-3">
-						<span className="font-display text-[56px] font-bold leading-[0.9] text-gray-50">{points.scored ? formatPoints(points.points) : "–"}</span>
+						<span className="font-display text-[56px] font-bold leading-[0.9] text-gray-50">{formatPoints(eventPoints(points))}</span>
 						<span className="flex flex-col gap-0.5 pb-0.5">
 							<span className="text-sm font-semibold text-gray-200">points</span>
 							<span className="text-[13px] text-gray-400">{perTicketText(points) ?? "Log places to count them"}</span>
