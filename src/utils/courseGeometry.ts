@@ -663,7 +663,9 @@ export function placeLabels(
 	options: PlaceLabelsOptions = {},
 ): Record<string, [number, number]> {
 	const { margin, keepOut = [], bounds, leaderTrack } = options
-	const placed: { x: number; y: number; w: number; h: number }[] = []
+	// The chips placed so far, which a spot must keep off. Swapped for "every
+	// chip but these two" while untangling (below), so it is reassigned.
+	let placed: { x: number; y: number; w: number; h: number }[] = []
 	const result: Record<string, [number, number]> = {}
 	// A box centred at (x, y), w by h, comes within `zone.halfWidth` of a point of the zone.
 	const covers = (zone: KeepOut, x: number, y: number, w: number, h: number) =>
@@ -739,7 +741,78 @@ export function placeLabels(
 		placed.push({ x, y, w: request.width, h: request.height })
 		result[request.key] = [x, y]
 	}
+	untangleLeaders(requests, result, (moves) => {
+		// What a set of chips costs where `moves` puts them, against every
+		// other chip and against each other: the same faults as placing them.
+		const keys = new Set(moves.map((move) => move.request.key))
+		const saved = placed
+		placed = requests
+			.filter((request) => !keys.has(request.key))
+			.map((request) => ({ x: result[request.key][0], y: result[request.key][1], w: request.width, h: request.height }))
+		let total = 0
+		for (const { request, at } of moves) {
+			total += cost(request, at[0], at[1], Infinity)
+			placed.push({ x: at[0], y: at[1], w: request.width, h: request.height })
+		}
+		placed = saved
+		return total
+	})
 	return result
+}
+
+/** Do the segments p1-p2 and q1-q2 cross? Touching at an end doesn't count. */
+function segmentsCross(
+	p1: readonly [number, number], p2: readonly [number, number],
+	q1: readonly [number, number], q2: readonly [number, number],
+): boolean {
+	// Which side of the line a-b the point c is on: the sign of the cross product.
+	const side = (a: readonly [number, number], b: readonly [number, number], c: readonly [number, number]) =>
+		Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+	return side(p1, p2, q1) * side(p1, p2, q2) < 0 && side(q1, q2, p1) * side(q1, q2, p2) < 0
+}
+
+/**
+ * Two chips whose leaders cross trade places, so a cluster of callouts reads
+ * in the order a runner meets them and no leader runs over another (Henry,
+ * board 1572757223967301693, 2026-11-18: Downhill, Corner 3, Position keep
+ * ends and Halfway on Chukyo's back bend, placed most important first, had
+ * their leaders crossed in a bunch).
+ *
+ * WHY A SWAP: placeLabels puts each chip in the first clear spot, one at a
+ * time, so a later chip can land on the far side of an earlier chip's
+ * leader. Swapping the ends of two crossing segments always uncrosses them
+ * and makes the two together shorter (each crossing pair forms two triangles,
+ * and a triangle's two sides are longer than its third). A swap is taken only
+ * when it shortens the leaders' total and leaves the pair no worse placed
+ * (`faults`: on another chip, the track, a bracket, out of the box), so the
+ * loop always ends; the pass cap is only a guard.
+ */
+function untangleLeaders(
+	requests: LabelRequest[],
+	result: Record<string, [number, number]>,
+	faults: (moves: { request: LabelRequest; at: readonly [number, number] }[]) => number,
+): void {
+	const length = (request: LabelRequest, at: readonly [number, number]) => Math.hypot(at[0] - request.anchor[0], at[1] - request.anchor[1])
+	for (let pass = 0; pass < requests.length; pass++) {
+		let swapped = false
+		for (let i = 0; i < requests.length; i++) {
+			for (let j = i + 1; j < requests.length; j++) {
+				const a = requests[i]
+				const b = requests[j]
+				const atA = result[a.key]
+				const atB = result[b.key]
+				if (!segmentsCross(a.anchor, atA, b.anchor, atB)) continue
+				if (length(a, atB) + length(b, atA) >= length(a, atA) + length(b, atB)) continue
+				const before = faults([{ request: a, at: atA }, { request: b, at: atB }])
+				const after = faults([{ request: a, at: atB }, { request: b, at: atA }])
+				if (after > before) continue
+				result[a.key] = atB
+				result[b.key] = atA
+				swapped = true
+			}
+		}
+		if (!swapped) return
+	}
 }
 
 /**
