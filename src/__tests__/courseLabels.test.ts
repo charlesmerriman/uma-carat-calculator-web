@@ -91,6 +91,22 @@ describe("placeLabels, one chip", () => {
 		expect(placeLabels([either], 20, above).a[1]).toBeGreaterThan(0)
 	})
 
+	it("keeps a chip that belongs inside the curve inside it, even when the only clear place is across the track", () => {
+		// The spurt chip's set-up: the loop's two sides are the lines x = 30
+		// (its own, where its leader starts) and x = -50 (the far side). Its
+		// anchor is inside, at x = 10, and it reaches left, across the infield.
+		const spurt = { key: "spurt", anchor: [10, 0] as const, direction: [-1, 0] as const, width: 10, height: 6, noMargin: true, from: [30, 0] as const }
+		const line = (x: number) => Array.from({ length: 201 }, (_, i) => [x, i - 100] as const)
+		const leaderTrack = { points: [...line(30), ...line(-50)], halfWidth: 2 }
+		// Every place inside the loop lies on track; past the far side is clear.
+		const inside: (readonly [number, number])[] = []
+		for (let x = -48; x <= 28; x += 4) for (let y = -100; y <= 100; y += 4) inside.push([x, y])
+		const placed = placeLabels([spurt], 20, { points: inside, halfWidth: 2 }, { leaderTrack })
+		// Over the track's edge inside its curve, sooner than clean outside it.
+		expect(placed.spurt[0]).toBeGreaterThan(-50)
+		expect(placed.spurt[0]).toBeLessThan(30)
+	})
+
 	it("keeps its first spot when every spot is on the track", () => {
 		// Track everywhere: a grid over the whole neighbourhood.
 		const points = Array.from({ length: 81 * 81 }, (_, i) => [(i % 81) * 5 - 200, Math.floor(i / 81) * 5 - 200] as const)

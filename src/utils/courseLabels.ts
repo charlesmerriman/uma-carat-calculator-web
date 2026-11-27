@@ -9,15 +9,17 @@
  * WHAT "BEST" MEANS: one score for the whole map, compared level by level, a
  * higher level always winning over everything below it (`LEVEL`):
  *
- *   1. hidden   words hidden or broken: a chip on a chip or on the track (a
- *               place past the box's edge is scored where it slides back to)
+ *   1. hidden   words hidden or broken: a chip on a chip (their clear air
+ *               counted) or on the track (a place past the box's edge is
+ *               scored where it slides back to), or the spurt chip outside
+ *               the curve it belongs in
  *   2. order    two neighbours whose chips sit the other way round from the
  *               order a runner meets them
  *   3. lines    a leader crossing another leader, or running through
- *               another chip
+ *               another chip; the spurt chip over its own track's edge
  *   4. across   a leader that leaves the track and comes back over it
- *   5. mild     a chip in the clear air round the track, over a hill's
- *               bracket, or nearly touching another; a leader over a bracket
+ *   5. mild     a chip in the clear air round the track or over a hill's
+ *               bracket; a leader over a bracket
  *   6. rank     how far down its own list of places each chip went
  *
  * So no number of tangled lines is traded for hidden words, and so on down.
@@ -52,13 +54,17 @@
  * go round in circles.
  *
  * HOW GOOD IT IS (2026-11-27, the 26 courses the events use, drawn the 8 ways
- * the app draws them: 208 maps). Chips on chips 20 to 0, on the track 46 to
- * 0, past the edge 30 to 0, crossed leaders 47 to 0, leaders through chips
- * 266 to 1, neighbours out of order 239 to 0, leaders across the track 243
- * to 91 (at least 62 of those are on every layout there is). An exhaustive
- * search with no step limit to speak of proved 190 of the 208 layouts the
- * best possible over their places, and found nothing better on the other 18.
- * The harness that measured this is in the notes repo (course-map-labels).
+ * the app draws them: 208 maps, counted from what is drawn). Chips on chips
+ * 20 to 0, on the track 46 to 0, past the edge 30 to 0, crossed leaders 47 to
+ * 0, leaders through chips 266 to 3, neighbours out of order 239 to 0,
+ * leaders across the track 243 to 124 (at least 68 are on every layout there
+ * is), the spurt chip outside its curve 17 to 0 and over its track's edge 40
+ * to 44 (nearly all a phone's, whose chip is wider than its curve). No map
+ * worse at any level. An exhaustive search with 750 times the steps proved
+ * 185 of the 208 layouts the best possible over their places, found nothing
+ * better on 18, and found a slightly better one on 5 (one tangle and three
+ * leaders across the track between them) that this file's step limit misses.
+ * The harness that measured all this is in the notes repo (course-map-labels).
  *
  * Sizes are estimates from the text: nothing on a prerendered page may be
  * measured. The same input always gives the same layout (no randomness).
@@ -144,7 +150,7 @@ const MOVES: ({ swing: number } | { slide: number })[] = [
  * spill into the next:
  *
  *   rank    4,096   (a map of 25 chips at their LAST places is 2,325)
- *   mild      512   units of 2^12 (a chip's own are at most 12)
+ *   mild      512   units of 2^12 (a chip's own are at most 9)
  *   across     32   one a chip
  *   lines   1,024   three a pair at most
  *   order     256   one a pair of neighbours
@@ -163,13 +169,11 @@ const LEVEL = {
 	mild: 2 ** 12,
 	rank: 1,
 }
-// Mild faults, in units of LEVEL.mild. The spurt chip (noMargin) over the
-// track's inner edge is the worst of them: on a phone's wide oval it can't
-// fit inside the curve clear of it, and it always sat there before.
+// Mild faults, in units of LEVEL.mild.
 // A chip on the other side of the track from its own costs as much as two
 // of the others, so it goes there to clear a real fault (a leader across the
 // track, a tangle), not to tidy a mild one.
-const MILD = { margin: 2, keepOut: 2, nearChip: 2, insideOnTrack: 3, leaderOverBracket: 1, otherSide: 4 }
+const MILD = { margin: 2, keepOut: 2, leaderOverBracket: 1, otherSide: 4 }
 // Two neighbours count as out of order only when their chips are the wrong
 // way round by more than this share of the smaller chip's extent along the
 // track: chips stacked across the direction of travel are neither way round.
@@ -365,7 +369,12 @@ function labelModel(requests: LabelRequest[], distance: number, track: KeepOut |
 			let base = rank * LEVEL.rank
 			if (rank >= ownSide) base += MILD.otherSide * LEVEL.mild
 			if (trackZone.inBox(x, y, w / 2 + trackZone.halfWidth, h / 2 + trackZone.halfWidth)) {
-				base += request.noMargin ? MILD.insideOnTrack * LEVEL.mild : LEVEL.hidden
+				// A chip on the track hides it. The spurt chip (noMargin) is let off
+				// more lightly: on a phone's oval it can't fit inside its curve clear of
+				// the track's inner edge, so there it counts with the tangled lines,
+				// which is still more than a leader across the track (as a mild fault,
+				// other chips' leaders pushed it onto the track on 22 more maps).
+				base += request.noMargin ? LEVEL.lines : LEVEL.hidden
 			} else if (!request.noMargin && marginZone.inBox(x, y, w / 2 + marginZone.halfWidth, h / 2 + marginZone.halfWidth)) {
 				base += MILD.margin * LEVEL.mild
 			}
@@ -381,6 +390,25 @@ function labelModel(requests: LabelRequest[], distance: number, track: KeepOut |
 	})
 
 	/**
+	 * Has a chip that belongs inside the curve (noMargin: the spurt chip) left
+	 * it? Walked from its anchor, which is inside the curve, to its centre: any
+	 * step on the track's centre line means the chip is on the far side, or
+	 * lying right across the track. As bad as hidden words: the spurt chip
+	 * marks the most important point on the course and never gives up its
+	 * place inside (notes/course-map-plan-2.md), though it may lie over the
+	 * track's inner edge when the curve is tight (a "lines" fault, set in `spots`).
+	 */
+	const leftItsCurve = (i: number, spot: Spot) => {
+		if (!requests[i].noMargin || leaderTrack.empty) return false
+		const [ax, ay] = requests[i].anchor
+		const length = Math.hypot(spot.x - ax, spot.y - ay)
+		const steps = Math.max(1, Math.ceil(length / (leaderTrack.halfWidth * 0.4)))
+		for (let k = 0; k <= steps; k++) {
+			if (leaderTrack.near(ax + ((spot.x - ax) * k) / steps, ay + ((spot.y - ay) * k) / steps, leaderTrack.halfWidth * 0.5)) return true
+		}
+		return false
+	}
+	/**
 	 * A leader's own faults: across the track, over a bracket. Walked in short
 	 * steps from where the line starts to the edge of its own chip. Each zone is
 	 * met only once the line has been clear of it: the spurt chip's leader starts
@@ -389,6 +417,7 @@ function labelModel(requests: LabelRequest[], distance: number, track: KeepOut |
 	 */
 	const leaderFaults = (i: number, spot: Spot) => {
 		if (leaderTrack.empty && leaderAvoid.empty) return 0
+		if (leftItsCurve(i, spot)) return LEVEL.hidden
 		const length = Math.hypot(spot.x - spot.startX, spot.y - spot.startY)
 		const step = Math.max(leaderTrack.halfWidth, leaderAvoid.halfWidth, 1e-6) * 0.4
 		const steps = Math.ceil(length / step)
@@ -460,10 +489,10 @@ function labelModel(requests: LabelRequest[], distance: number, track: KeepOut |
 		}
 		// Their chips and leaders nowhere near each other: nothing else to check.
 		if (a.minX > b.maxX || b.minX > a.maxX || a.minY > b.maxY || b.minY > a.maxY) return cost
-		const gapX = Math.abs(a.x - b.x)
-		const gapY = Math.abs(a.y - b.y)
-		if (gapX < (wordsW[i] + wordsW[j]) / 2 && gapY < (wordsH[i] + wordsH[j]) / 2) cost += LEVEL.hidden
-		else if (gapX < (requests[i].width + requests[j].width) / 2 && gapY < (requests[i].height + requests[j].height) / 2) cost += MILD.nearChip * LEVEL.mild
+		// One chip on another, by their boxes WITH their clear air: the sizes are
+		// estimates from the text, and the air is what keeps a chip that turns
+		// out a little wider than its estimate off its neighbour.
+		if (Math.abs(a.x - b.x) < (requests[i].width + requests[j].width) / 2 && Math.abs(a.y - b.y) < (requests[i].height + requests[j].height) / 2) cost += LEVEL.hidden
 		if (segmentsCross(a.startX, a.startY, a.x, a.y, b.startX, b.startY, b.x, b.y)) cost += LEVEL.lines
 		if (segmentInBox(a.startX, a.startY, a.x, a.y, b.x, b.y, wordsW[j], wordsH[j])) cost += LEVEL.lines
 		if (segmentInBox(b.startX, b.startY, b.x, b.y, a.x, a.y, wordsW[i], wordsH[i])) cost += LEVEL.lines
@@ -507,8 +536,9 @@ const ROUNDS = 8
 const TRIPLES = 24
 // How many steps the exhaustive last step may take (`exhaust`). Most maps need
 // none: the search above already sits on the least any layout could cost. Of
-// the 208 maps measured, 169 took none and 14 finished inside 138; on the
-// rest, 1,500 steps found nothing 200 hadn't.
+// the 208 maps measured, about 170 took none; 600 steps cleared one more
+// leader across the track than 200 and 2,000 cleared two, at one and a half
+// and three times the slowest map's time.
 const EXHAUST_STEPS = 200
 // A three-chip re-placement looks at each chip's best few places, not all of
 // them: 94 x 94 x 94 is too many to try, and a place that is poor for a chip

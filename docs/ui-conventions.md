@@ -1706,25 +1706,29 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   laps' metres), placed by `placeLabels` (`utils/courseLabels.ts`, its own module since
   2026-11-27) from size estimates. **A layout is one place per chip out of each chip's fixed
   list, and the placer finds the one with the lowest score, compared level by level**
-  (`LEVEL`): hidden words (a chip on a chip or on the track) outrank neighbours out of travel
-  order, which outrank tangled lines (a leader across another leader or through another
-  chip), which outrank a leader that leaves the track and comes back over it, which outranks
-  the mild faults (a chip within a track and a half of the kerb, Henry and Daptrius
-  2026-11-06; over a hill's bracket; nearly touching another). The score is of WHAT IS DRAWN:
-  the leader from the callout's own point, lifted to the kerb's edge, and a place past the
-  box's edge counted where it slides back to (CourseTrack no longer clamps afterwards). The
-  search places one chip at a time, then improves the whole map (one chip, then troubled
-  pairs and threes re-placed together), then takes up to 200 steps of an exhaustive search
-  when the layout is still above its floor; every step lowers one whole-number score. A chip
-  may also sit on the OTHER side of the track from its own (`otherSide`: inside the loop)
-  when that clears a real fault, which is where a lapped course's Goal and inner-ring corners
-  go. Each layout is worked out once (`PLACED` in CourseTrack), not on every draw. Measured
-  on what is drawn over the 26 event courses in 8 configurations (208 maps, 2026-11-27):
-  chips on chips 20 to 0, on the track 46 to 0, past the edge 30 to 0, crossed leaders 47
-  to 0, leaders through chips 266 to 1, out of order 239 to 0, leaders across the track 243
-  to 91; an offline exhaustive search proves 190 of the 208 optimal over their places and
-  finds nothing better on the other 18. The measuring harness is kept in the notes repo,
-  `notes/course-map-labels/`: re-run it before changing the score or the places.
+  (`LEVEL`): hidden words (a chip on a chip, their clear air counted; a chip on the track;
+  the spurt chip outside its curve) outrank neighbours out of travel order, which outrank
+  tangled lines (a leader across another leader or through another chip; the spurt chip over
+  its track's edge), which outrank a leader that leaves the track and comes back over it,
+  which outranks the mild faults (a chip within a track and a half of the kerb, Henry and
+  Daptrius 2026-11-06; over a hill's bracket). The score is of WHAT IS DRAWN: the leader from
+  the callout's own point, lifted to the kerb's edge, and a place past the box's edge counted
+  where it slides back to (CourseTrack no longer clamps afterwards). The search places one
+  chip at a time, then improves the whole map (one chip, then troubled pairs and threes
+  re-placed together), then takes up to 200 steps of an exhaustive search when the layout is
+  still above its floor; every step lowers one whole-number score. A chip may also sit on
+  the OTHER side of the track from its own (`otherSide`: inside the loop) when that clears a
+  real fault, which is where a lapped course's Goal and inner-ring corners go; the spurt chip
+  never leaves its side, and on a course whose spurt starts on an outer lap it is placed from
+  the innermost pass. Each layout is worked out once (`PLACED` in CourseTrack), not on every
+  draw. Measured on what is drawn over the 26 event courses in 8 configurations (208 maps,
+  2026-11-27): chips on chips 20 to 0, on the track 46 to 0, past the edge 30 to 0, crossed
+  leaders 47 to 0, leaders through chips 266 to 3, out of order 239 to 0, leaders across the
+  track 243 to 124, the spurt chip outside its curve 17 to 0; no map worse at any level. An
+  offline exhaustive search proves 185 of the 208 optimal over their places, finds nothing
+  better on 18, and a slightly better layout on 5 that the 200-step limit misses. The
+  measuring harness is kept in the notes repo, `notes/course-map-labels/`: re-run it before
+  changing the score or the places.
   The spurt chip sits inside the curve, and may lie over the track's inner edge sooner
   than leave it. On a phone a hill's chip is its triangle and percent. Each callout's
   leader is a short line in its own colour with a dot on the track. Later laps are rings

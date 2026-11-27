@@ -614,7 +614,13 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		const direction = callout.inward ? [-ox, -oy] as const : [ox, oy] as const
 		// The chip is placed from the outermost pass at its spot; the leader
 		// still starts at the callout's own point, across the passes outside it.
-		const out = callout.inward ? 0 : outerPasses(callout.at, callout.point, direction)
+		// The spurt chip, the other way: from the INNERMOST pass, and as far
+		// inside that one as it sits inside its own (a track and a half and a
+		// bit, see its callout). Nakayama 3600's spurt starts on the outer lap,
+		// and placed from there its only room "inside its curve" was the gap
+		// between two rings, over the track.
+		const past = outerPasses(callout.at, callout.point, direction)
+		const out = callout.inward && past > 0 ? past + track * 1.6 : past
 		const anchor = [callout.point[0] + direction[0] * out, callout.point[1] + direction[1] * out] as const
 		// A few px of air round each chip when checking for clashes: the
 		// widths are estimates from the text, and a chip moved off an inner
