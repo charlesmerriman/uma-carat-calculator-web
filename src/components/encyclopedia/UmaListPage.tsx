@@ -14,7 +14,7 @@ import { useOshiIds } from "../../hooks/useOshiIds"
 import { usePvpCatalogue } from "../../hooks/usePvpCatalogue"
 import { umaHref } from "../../utils/encyclopediaRoutes"
 import { splitOutfit } from "../../utils/umaName"
-import { EncyclopediaFrame, EncyclopediaTabs } from "./EncyclopediaTabs"
+import { EncyclopediaFrame } from "./EncyclopediaTabs"
 import { GroupedGrid } from "./groups"
 import { gradeKey, groupsFor, letterKey, releaseKey, umaIdKey } from "../../utils/encyclopediaGroups"
 import { Chips, Count, GradeSelect, PickChips, SearchBox, SortControl, Toolbar } from "./listFilters"
@@ -119,7 +119,6 @@ const UmaListBody = () => {
 
 	return (
 		<div className={PAGE_CONTAINER}>
-			<EncyclopediaTabs />
 			<Toolbar
 				pinned
 				scope="umas"

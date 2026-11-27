@@ -106,8 +106,10 @@ function PinnedToolbar({ search, end, scope, children }: { search: ReactNode; en
 			const finder = finderRef.current
 			if (!finder) return
 			const bar = finder.getBoundingClientRect()
-			// Pinned: sitting right under the screen's bar (ScreenTabs), whichever scroller moves.
-			const tabs = document.querySelector("[data-screen-tabs]")?.getBoundingClientRect()
+			// Pinned: sitting right under the screen's bar, whichever scroller moves. Read off
+			// the bar's ruler, which is the bar's full height whether or not the bar has
+			// shown yet (components/ScreenHeader.tsx, `data-screen-bar-line`).
+			const tabs = document.querySelector("[data-screen-bar-line]")?.getBoundingClientRect()
 			const pinnedNow = tabs !== undefined && bar.height > 0 && Math.abs(bar.top - tabs.bottom) < 1
 			const panel = panelRef.current?.getBoundingClientRect()
 			const panelInSight = panel !== undefined && panel.height > 0 && panel.bottom > bar.bottom + 8

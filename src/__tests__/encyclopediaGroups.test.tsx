@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
-import { EncyclopediaTabs } from "../components/encyclopedia/EncyclopediaTabs"
+import { EncyclopediaScreenTabs } from "../components/encyclopedia/EncyclopediaScreenTabs"
 import {
-	cardIdKey, costKey, effectKey, firstRows, gradeKey, groupsFor, indexEntries, letterKey, mergeSmallGroups, releaseKey, rowsBefore,
+	cardIdKey, costKey, effectKey, firstRows, gradeKey, groupsFor, indexEntries, letterKey, MIN_GROUPED_TILES, mergeSmallGroups, releaseKey, rowsBefore,
 	skillIdKey, umaIdKey,
 } from "../utils/encyclopediaGroups"
 import { sortList } from "../utils/encyclopedia"
@@ -30,8 +30,10 @@ describe("groupsFor by name", () => {
 		expect(letterKey("#LookatCurren")).toMatchObject({ label: "L", key: "L" })
 	})
 
-	it("keeps its headings on a filtered list however short, and is nothing for an empty one", () => {
-		expect(shape(byLetter(names(3)))).toEqual([["A", 1], ["B", 1], ["C", 1]])
+	it("keeps its headings on a long filtered list, and is nothing under 50 tiles: that is one plain grid", () => {
+		expect(shape(byLetter(names(MIN_GROUPED_TILES)))).toEqual([["A", 17], ["B", 17], ["C", 16]])
+		expect(byLetter(names(MIN_GROUPED_TILES - 1))).toBeNull()
+		expect(byLetter(names(5))).toBeNull()
 		expect(byLetter([])).toBeNull()
 	})
 
@@ -53,7 +55,7 @@ describe("the other sorts' keys", () => {
 
 	it("notes a quarter as estimated once any of its dates is the site's estimate", () => {
 		const day = (date: number) => ({ global: new Date(2027, 0, date).getTime(), jp: null })
-		const items = Array.from({ length: 40 }, (_, index) => ({ ...day(index % 28 + 1), predicted: index === 7 }))
+		const items = Array.from({ length: MIN_GROUPED_TILES }, (_, index) => ({ ...day(index % 28 + 1), predicted: index === 7 }))
 		expect(groupsFor(items, releaseKey)?.[0]).toMatchObject({ label: "Q1 2027", mark: "estimated" })
 	})
 
@@ -98,7 +100,9 @@ describe("the Skills list's keys", () => {
 
 	it("sorts and files by one reading, so every section is one unbroken run either way round", () => {
 		for (const reversed of [false, true]) {
-			const sorted = sortList(ODD.map((name, id) => ({ id, name })), "name", undefined, reversed)
+			// Each name five times over, to clear the headings' floor (MIN_GROUPED_TILES).
+			const rows = ODD.flatMap((name) => Array.from({ length: 5 }, () => name)).map((name, id) => ({ id, name }))
+			const sorted = sortList(rows, "name", undefined, reversed)
 			const groups = groupsFor(sorted, (row) => letterKey(row.name)) ?? []
 			// A key that comes back gets a "~" suffix (groupsFor); none may.
 			expect(groups.filter((group) => group.key.includes("~"))).toEqual([])
@@ -176,9 +180,11 @@ describe("indexEntries", () => {
 })
 
 describe("the masthead", () => {
-	it("is the title alone: the screen bar names the lists now (owner, 2026-11-25)", () => {
-		render(<MemoryRouter><EncyclopediaTabs /></MemoryRouter>)
+	it("is the shared screen header: the title, and the three lists by name (owner, 2026-11-25)", () => {
+		render(<MemoryRouter initialEntries={["/app/cards"]}><EncyclopediaScreenTabs /></MemoryRouter>)
 		expect(screen.getByRole("heading", { level: 1, name: "Encyclopedia" })).toBeInTheDocument()
-		expect(screen.queryByRole("link")).not.toBeInTheDocument()
+		const lists = screen.getByRole("navigation", { name: "Encyclopedia lists" })
+		expect([...lists.querySelectorAll("a")].map((link) => link.getAttribute("href"))).toEqual(["/app/umas", "/app/cards", "/app/skills"])
+		expect(screen.getByRole("link", { name: "Support cards" })).toHaveAttribute("aria-current", "page")
 	})
 })

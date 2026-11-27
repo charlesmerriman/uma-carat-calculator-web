@@ -711,4 +711,15 @@ describe("places and Won by (notes/cm-runs-plan-2.md)", () => {
 		// 10 + 60 + 20 = 90, and the ticket is 140 + 90.
 		expect(within(ticket).getByRole("button", { name: /^Ticket 1, .*, 230 points$/ })).toBeTruthy()
 	})
+
+	it("starts a blank League of Heroes at 4,000 points, with Log places on", async () => {
+		runs.list = [logged(1, [], { kind: "loh" })]
+		show(LOH)
+		const ticket = await screen.findByRole("region", { name: "Ticket 1" })
+		// No placesOn(): a LoH's switch starts on by itself.
+		expect(within(ticket).getByRole("switch", { name: "Log places" })).toHaveAttribute("aria-checked", "true")
+		// The event's total is the 4,000 held before any ticket, not 0 or a dash.
+		const summary = screen.getByRole("complementary", { name: "Your points" })
+		expect(within(summary).getByText("4,000")).toBeInTheDocument()
+	})
 })

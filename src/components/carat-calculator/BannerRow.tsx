@@ -471,6 +471,7 @@ export const BannerRow = ({
 				onPrimaryChange={handlePrimaryCardChange}
 				onSecondChange={handleSecondCardChange}
 				onTargetChange={handleTargetChange}
+				groupByRarity={target.type === "Support"}
 				layout={layout}
 				className={className}
 			/>

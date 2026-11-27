@@ -51,9 +51,10 @@ html {
 }
 
 /* ===== SCREEN BAR OFFSET =====
-   A screen's own bar (components/ScreenTabs.tsx: the Calculator's and the
-   Timeline's) pins under the navbar, so it covers the top of the page the
-   same way. Its height is this one variable, read by the bar itself and by
+   A screen's pinned bar (components/ScreenHeader.tsx: the Calculator's, the
+   Timeline's, the Encyclopedia lists' and Rankings') pins under the navbar
+   (on a phone always; on a computer once the screen's masthead scrolls away),
+   so it covers the top of the page the same way. Its height is this one variable, read by the bar itself and by
    everything that has to clear it:
 
      - the document, where the document scrolls: the navbar's figure above
@@ -65,18 +66,51 @@ html {
 
    Without the two scroll paddings a deep link (a planner row's link to its
    Timeline card, a campaign strip's link to Selectors) parks its target
-   under the bar. 2.375rem = 20px line + 2 x 8px padding + 2px rule. */
+   under the bar.
+
+   ONE FIGURE PER SHAPE (encyclopedia.css, ".enc-head--mast"). Below 64rem the
+   header is itself the bar, one row of the pages with a finger's room:
+   2.75rem. From 64rem it is the compact bar that pins once the masthead has
+   scrolled away: 2.375rem, as it was, so nothing pinned under it on a
+   computer moved. The breakpoint here and the one there are the same on
+   purpose; change them together. */
 :root {
-	--screen-tabs-h: 2.375rem;
+	--screen-tabs-h: 2.75rem;
+}
+@media (width >= 64rem) {
+	:root {
+		--screen-tabs-h: 2.375rem;
+	}
 }
 
 html:has([data-screen-tabs]) {
 	scroll-padding-top: calc(4.125rem + var(--screen-tabs-h));
 }
 
-[data-app-scroller]:has(> [data-screen-tabs]) {
+/* Anywhere inside, not a direct child: the bar's box sits in its zero-height
+   sticky anchor, and Rankings mounts its header in the page area. */
+[data-app-scroller]:has([data-screen-tabs]) {
 	@variant app-shell {
 		scroll-padding-top: var(--screen-tabs-h);
+	}
+}
+
+/* The pinned bar's tabs slide in as the masthead goes. They mount on each show,
+   so the animation runs every time. The CHILD moves, never the box itself: the
+   hover cards read the box's rect, and a transform shows in it. Off for reduced
+   motion. */
+@keyframes screen-bar-in {
+	from {
+		opacity: 0;
+		transform: translateY(-0.375rem);
+	}
+}
+[data-screen-tabs] > * {
+	animation: screen-bar-in 0.16s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+	[data-screen-tabs] > * {
+		animation: none;
 	}
 }
 

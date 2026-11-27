@@ -103,7 +103,13 @@ export function useBackToTop(thresholdPx: number = BACK_TO_TOP_THRESHOLD_PX): Ba
 			typeof window.matchMedia === "function" &&
 			window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-		node.scrollIntoView({ block: "start", behavior: prefersReducedMotion ? "auto" : "smooth" })
+		// A screen's header (components/ScreenHeader.tsx) sits ABOVE the page's own
+		// anchor, mounted by AppShell over the page, so on those screens the top is
+		// the header's top marker. The marker, never the header itself: on a phone
+		// the header is the pinned bar, already in view, and scrolling "to" a stuck
+		// element goes nowhere. Read here, in a handler, never at render.
+		const target = document.querySelector<HTMLElement>("[data-screen-top]") ?? node
+		target.scrollIntoView({ block: "start", behavior: prefersReducedMotion ? "auto" : "smooth" })
 	}, [])
 
 	return { topRef, isAwayFromTop, scrollToTop }

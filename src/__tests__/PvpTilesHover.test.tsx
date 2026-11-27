@@ -4,7 +4,8 @@ import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { AuthContext, type AuthContextType } from "../services/AuthContext"
 import { InlineNote, SkillCell, SkillChip, UmaTile } from "../components/pvp/PvpTiles"
-import { SkillMentionsContext } from "../components/pvp/skillMentionsContext"
+import { SkillMentionsContext, UmaMentionsContext } from "../components/pvp/skillMentionsContext"
+import { TAP_ATTRIBUTE } from "../utils/hoverCards"
 import { useCourseFocus } from "../services/courseMapStore"
 import type { PvpSkillRef } from "../types/pvpGuide"
 
@@ -173,5 +174,18 @@ describe("the drawn popup", () => {
 
 		await user.keyboard("{Escape}")
 		await waitFor(() => expect(drawnPopup()).toBeNull())
+	})
+})
+
+describe("an uma mention in a guide", () => {
+	it("asks the hover layer for her card on a tap, since a tap has no link to follow (Henry, 2026-11-26)", () => {
+		render(inGuide(
+			<UmaMentionsContext.Provider value={{ "oguri cap": { id: 9, name: "Oguri Cap", portrait: null } }}>
+				<InlineNote text="Watch out for ((Oguri Cap))." />
+			</UmaMentionsContext.Provider>
+		))
+		const picture = screen.getByRole("img", { name: "Oguri Cap" })
+		expect(picture).toHaveAttribute("data-hover-card", "uma:9")
+		expect(picture).toHaveAttribute(TAP_ATTRIBUTE, "on")
 	})
 })

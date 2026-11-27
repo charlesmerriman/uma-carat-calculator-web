@@ -30,6 +30,7 @@
  */
 
 import type { BannerSupport, BannerUma, RaceEvent } from "../types"
+import { allRateUps } from "./bannerHelpers"
 import type { StoryEvent } from "../types/storyEvent"
 import type { CatalogueSupportCard } from "../types/pvpTeam"
 import { formatDate, parseApiDate } from "./dateFormat"
@@ -83,7 +84,8 @@ export function cardReleases(
 		]),
 		// Typed by the shape both sources share: banner cards and story event cards differ otherwise.
 		supports: firstStarts<{ id: number }>([
-			...supportBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: banner.support_cards })),
+			// Every rate-up, SRs and Rs included: their first banner is their release date.
+			...supportBanners.map((banner) => ({ start: banner.banner_timeline.start_date, cards: allRateUps(banner) })),
 			// An event with no date yet dates nothing (firstStarts skips an unparseable start).
 			...storyEvents.map((event) => ({ start: event.start_date ?? "", cards: event.cards })),
 		]),

@@ -9,10 +9,14 @@
    guide's hover: a hero, a filter bar, tiles, skill rows, the aptitude
    letters, the stat bars, the career rail and the skill card.
 
-   THE RANKINGS PAGE WEARS THIS LOOK TOO (notes/rankings-polish-plan.md): the
-   masthead (.enc-head, .enc-tabs), the hero (Hero, .enc-hero), the flagged
-   heading (.enc-section__title) and the silk, with its own sizes in
-   rankings.css. A change to those rules shows on both pages: look at both.
+   THE SCREEN HEADER (.enc-head--mast, .enc-tabs, .enc-pin) IS EVERY SCREEN'S:
+   the shared ScreenHeader (components/ScreenHeader.tsx) draws it for the
+   Calculator, the Timeline, the Encyclopedia's lists and Rankings (owner,
+   2026-11-25). A change to it shows on all four, in both its shapes (one bar
+   below 64rem, the masthead from there): look at all four, at both widths.
+   THE RANKINGS PAGE ALSO WEARS the hero (Hero, .enc-hero), the flagged
+   heading (.enc-section__title) and the silk (notes/rankings-polish-plan.md),
+   with its own sizes in rankings.css. A change to those shows on both pages.
 
    RULES THIS FILE KEEPS
    - Every colour is a theme token (var(--color-*), --card-fill), so all
@@ -38,43 +42,31 @@
    ========================================================================== */
 
 @layer components {
-	/* ---- The frame: the masthead and its tabs --------------------------------
-	   The title large in the display face, one line saying what this is, and
-	   the three lists as tabs whose headline is how many each holds. The open
-	   tab is a raised panel with the brand's rule under it. */
+	/* ---- The screen header and its tabs (components/ScreenHeader.tsx) --------
+	   Every screen's header since 2026-11-25, in two shapes (the owner's pick
+	   from the canvas, the notes repo's notes/screen-header-options/):
 
-	.enc-head {
-		display: flex;
-		flex-direction: column;
-		gap: 0.625rem;
-	}
-	.enc-head--mast {
-		gap: 0.75rem;
-		border-bottom: 1px solid var(--color-edge);
-	}
-	.enc-head__title {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		font-family: var(--font-display);
-		font-size: 2.125rem;
-		font-weight: 700;
-		line-height: 1;
-		letter-spacing: -0.02em;
-		color: var(--color-gray-50);
-	}
-	.enc-head__title svg {
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
-		color: var(--color-brand);
-	}
-	.enc-head__sub {
-		margin-top: 0.5rem;
-		font-size: 0.9375rem;
-		line-height: 1.5;
-		color: var(--color-gray-400);
-	}
+	     BELOW 64rem, ONE BAR. A single row of the pages, edge to edge, that is
+	     itself what sticks under the navbar: the same at rest and pinned. The
+	     title is in the page but not drawn. 64rem is where the navbar turns into
+	     its phone layout (`desktop-nav`, index.css), and the place is lit in the
+	     row right above.
+
+	     FROM 64rem, THE MASTHEAD. The title large in the display face at the
+	     left, the pages at the right on the rule, one line each. It scrolls
+	     away, and the compact bar (.enc-pin) pins in its place: an equal
+	     column a tab, the same tab.
+
+	   ONE TAB (.enc-tab) IN ALL THREE ROWS: an icon, a name, a chip for a badge
+	   where the row has room. Every tab is at full strength (nothing is dimmed
+	   to make the open one stand out); the open one is pointed at with white
+	   ink, the brand's colour on its icon and the brand's rule under it, and in
+	   the masthead and the compact bar a raised panel behind it.
+
+	   `position: sticky` ON THE HEADER IS ALSO A SIGNAL: ScreenHeader reads it
+	   to know the header is the bar (and so never mounts the compact copy over
+	   it). Keep it on the bar's shape and off the masthead's. */
+
 	.enc-tabs {
 		display: flex;
 		gap: 0.25rem;
@@ -83,39 +75,29 @@
 		position: relative;
 		display: flex;
 		min-width: 0;
-		flex: 1;
-		flex-direction: column;
-		/* A tab whose count isn't known yet keeps its name on the same line as the others'. */
-		justify-content: flex-end;
-		/* And the count's line is held from the first paint (padding, the count, the gap and
-		   the name), so the masthead doesn't grow when the numbers arrive a beat after the page. */
-		min-height: calc(1.25rem + 1.375rem + 0.1rem + 1.21875rem);
-		gap: 0.1rem;
-		padding: 0.5rem 0.75rem 0.75rem;
-		border-radius: 0.9rem 0.9rem 0 0;
-		font-size: 0.8125rem;
+		align-items: center;
+		justify-content: center;
 		font-weight: 600;
-		color: var(--color-gray-400);
+		color: var(--color-gray-300);
 		transition: color 0.15s;
 	}
-	/* A tab's headline number, when it has one (the Encyclopedia's count tabs went 2026-11-25). */
+	/* A tab's icon. */
 	.enc-tab b {
-		font-family: var(--font-display);
-		font-size: 1.375rem;
-		font-weight: 700;
-		line-height: 1;
-		font-variant-numeric: tabular-nums;
-		color: var(--color-gray-300);
+		display: flex;
+		flex-shrink: 0;
+	}
+	.enc-tab b svg {
+		width: 1rem;
+		height: 1rem;
+		stroke-width: 2.2;
 	}
 	.enc-tab:hover {
 		color: var(--color-gray-100);
 	}
-	/* The open tab: a link here (aria-current), a button on the Rankings page
-	   (aria-selected), which wears this masthead too (rankings.css). */
+	/* The open tab: a link (aria-current), or a button on the Rankings page (aria-selected). */
 	.enc-tab[aria-current="page"],
 	.enc-tab[aria-selected="true"] {
-		background: var(--card-fill);
-		color: var(--color-gray-100);
+		color: var(--color-gray-50);
 	}
 	.enc-tab[aria-current="page"] b,
 	.enc-tab[aria-selected="true"] b {
@@ -124,45 +106,152 @@
 	.enc-tab[aria-current="page"]::after,
 	.enc-tab[aria-selected="true"]::after {
 		position: absolute;
-		right: 0.75rem;
+		right: 0.5rem;
 		bottom: -1px;
-		left: 0.75rem;
+		left: 0.5rem;
 		height: 3px;
 		border-radius: 3px 3px 0 0;
 		background: var(--color-brand);
 		content: "";
 	}
-	@media (min-width: 48rem) {
+	/* A badge ("51", "CM 22"), after the name. Only the masthead has room for it. */
+	.enc-tab__chip {
+		display: none;
+		flex-shrink: 0;
+		padding: 0.125rem 0.45rem;
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-gray-900) 70%, var(--color-gray-700));
+		box-shadow: inset 0 0 0 1px var(--color-edge);
+		font-family: var(--font-display);
+		font-size: 0.75rem;
+		font-weight: 700;
+		line-height: 1.2;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		color: var(--color-gray-100);
+	}
+
+	/* The bar: below 64rem the header is one row of the pages and sticks. */
+	@media (width < 64rem) {
 		.enc-head--mast {
-			flex-direction: row;
+			position: sticky;
+			top: calc(var(--navbar-h, 4.125rem) + var(--navbar-reveal, 0px));
+			/* With the compact bar's anchor: over the page and whatever pins under it. */
+			z-index: 30;
+			/* AppShell's scroller is a flex column, which would squash a fixed height. */
+			flex-shrink: 0;
+			height: var(--screen-tabs-h);
+			border-bottom: 1px solid var(--color-edge);
+			/* Opaque, edge to edge, or the page shows through and beside it. */
+			background: var(--color-gray-900);
+		}
+		.enc-head__in {
+			height: 100%;
+		}
+		/* In the page for a screen reader, and as its <h1>; not drawn. */
+		.enc-head__title {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+		.enc-tabs {
+			height: 100%;
+		}
+		/* Sized by their words, like the places in the row above. */
+		.enc-tab {
+			flex: 1 1 auto;
+			gap: 0.3rem;
+			padding: 0 0.125rem;
+			font-size: 0.8125rem;
+		}
+	}
+	/* Four names and four icons don't fit the narrowest phones (under 360px, where
+	   the navbar's own places drop a size): a row of four or more goes by its
+	   names alone there. Rankings' is the one such row today. */
+	@media (width < 22.5rem) {
+		.enc-tabs:has(> :nth-child(4)) .enc-tab b {
+			display: none;
+		}
+	}
+
+	/* The masthead, and the compact bar that pins once it has scrolled away. */
+	@media (width >= 64rem) {
+		.enc-head--mast {
+			margin-top: 1.25rem;
+		}
+		.enc-head__in {
+			display: flex;
 			align-items: flex-end;
 			justify-content: space-between;
 			gap: 2rem;
-			padding-top: 0.5rem;
+			border-bottom: 1px solid var(--color-edge);
 		}
 		.enc-head__title {
-			font-size: 3rem;
+			display: flex;
+			align-items: center;
+			gap: 0.6rem;
+			padding-bottom: 0.7rem;
+			font-family: var(--font-display);
+			font-size: 2.75rem;
+			font-weight: 700;
+			line-height: 1;
+			letter-spacing: -0.02em;
+			color: var(--color-gray-50);
 		}
 		.enc-head__title svg {
 			width: 2.25rem;
 			height: 2.25rem;
-		}
-		.enc-head--mast .enc-head__sub {
-			margin-bottom: 1rem;
+			flex-shrink: 0;
+			color: var(--color-brand);
 		}
 		.enc-tab {
-			min-width: 9.5rem;
-			flex: none;
-			padding: 0.6rem 1.1rem 0.9rem;
-			font-size: 0.875rem;
+			flex: 0 0 auto;
+			gap: 0.5rem;
+			height: 3rem;
+			padding: 0 1.25rem;
+			border-radius: 0.75rem 0.75rem 0 0;
+			font-size: 0.9375rem;
 		}
-		.enc-tab b {
-			font-size: 1.875rem;
+		.enc-tab b svg {
+			width: 1.0625rem;
+			height: 1.0625rem;
+		}
+		.enc-tab[aria-current="page"],
+		.enc-tab[aria-selected="true"] {
+			background: var(--card-fill);
 		}
 		.enc-tab[aria-current="page"]::after,
 		.enc-tab[aria-selected="true"]::after {
-			right: 1.1rem;
-			left: 1.1rem;
+			right: 1.25rem;
+			left: 1.25rem;
+		}
+		.enc-tab__chip {
+			display: inline;
+		}
+
+		/* The compact bar (the box is ScreenHeader's `data-screen-tabs`): today's
+		   height, an equal column a tab, the masthead's tab a size down. */
+		.enc-pinbox {
+			box-shadow: 0 10px 24px -12px rgb(0 0 0 / 45%);
+		}
+		.enc-pin {
+			height: var(--screen-tabs-h);
+			align-items: end;
+			gap: 0.25rem;
+			border-bottom: 1px solid var(--color-edge);
+		}
+		.enc-pin .enc-tab {
+			height: calc(var(--screen-tabs-h) - 0.25rem);
+			padding: 0 0.75rem;
+			font-size: 0.8125rem;
+		}
+		.enc-pin .enc-tab[aria-current="page"]::after,
+		.enc-pin .enc-tab[aria-selected="true"]::after {
+			right: 0.75rem;
+			left: 0.75rem;
 		}
 	}
 
@@ -195,7 +284,7 @@
 
 	/* ---- The pinned finder (Toolbar's `pinned`, the three lists) -----------
 	   The search box, the count and a Filters button, pinned under the
-	   screen's bar (ScreenTabs) while a list scrolls (Daptrius, board
+	   screen's bar (ScreenHeader) while a list scrolls (Daptrius, board
 	   "Encyclopedia sticky nav", 2026-11-25). Its top is the screen bar's
 	   own offset plus the bar: the navbar's measured height and the phone's
 	   wordmark row where the document scrolls, the scroller's top in the

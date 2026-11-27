@@ -53,15 +53,23 @@ export interface ListGroup<T> extends GroupKey {
 }
 
 /**
+ * The fewest tiles a list needs before it gets headings. Below it the list is
+ * one plain grid: five SSR cards filtered by type drew five letter headings
+ * over one card each (Daptrius, board 1575664986355933294, 2026-11-26; the
+ * owner took his 50 to 100 the next day, from 2026-11-25's "never turn them
+ * off"). 50 is the low end: a long filtered list still gets its headings and
+ * its jump index. One floor for every sort, so the rule reads the same on
+ * each.
+ */
+export const MIN_GROUPED_TILES = 50
+
+/**
  * The list cut into runs of one key, in the order given (so a list turned
- * round runs Z to A, newest to oldest, and so on). However the list is
- * filtered and however short: the owner wants the headings kept whenever a
- * filter is on (2026-11-25; they used to show on the full list only, and a
- * 12-tile floor would still have dropped them for 14 of the 45 two-aptitude
- * filters, Dirt + Front among them). Null only for an empty list.
+ * round runs Z to A, newest to oldest, and so on), filtered or not. Null for a
+ * list under MIN_GROUPED_TILES, which draws as one plain grid.
  */
 export function groupsFor<T>(items: T[], keyOf: (item: T) => GroupKey): ListGroup<T>[] | null {
-	if (items.length === 0) return null
+	if (items.length < MIN_GROUPED_TILES) return null
 	const groups: ListGroup<T>[] = []
 	const seen = new Map<string, number>()
 	for (const item of items) {

@@ -12,7 +12,7 @@ import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { OguriSpinner } from "../OguriSpinner"
 import { useCalculatorData } from "../../services/CalculatorContext"
-import { plannedBannerKey } from "../../utils/bannerHelpers"
+import { allRateUps, plannedBannerKey } from "../../utils/bannerHelpers"
 import { useStageBanner } from "../../hooks/useStageBanner"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { motion } from "framer-motion"
@@ -304,8 +304,9 @@ function eventMatchesSearch(event: TimelineEvent, query: string): boolean {
 			if (nameMatches(query, uma.name)) return true
 		}
 	}
+	// Every rate-up: a search for an SR finds the banner that lists it.
 	for (const banner of bannerEvent.banner_supports) {
-		for (const card of banner.support_cards) {
+		for (const card of allRateUps(banner)) {
 			if (nameMatches(query, card.name)) return true
 		}
 	}
@@ -1036,7 +1037,7 @@ export const Timeline = () => {
 			    changes at rest. z-30 sits above the cards, below FloatingBackToTop.
 
 			    It pins UNDER the Timeline screen's bar (Timeline, Legend Races;
-			    components/ScreenTabs.tsx), which pins at this scroller's top, so
+			    components/ScreenHeader.tsx), which pins at this scroller's top, so
 			    its `top` is that bar's height (--screen-tabs-h, index.css). At
 			    top-0 the two would stack on the same line and this one, later in
 			    the page, would cover the tabs. */}

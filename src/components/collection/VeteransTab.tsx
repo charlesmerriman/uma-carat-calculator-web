@@ -128,9 +128,15 @@ export function VeteransTab({ editing, onEditing, onImport }: {
 				/>
 			</div>
 			{open && (
+				// Her card scrolls on its own beside the list. Its height leaves out
+				// the navbar: on a computer the page scrolls in the shell's scroller,
+				// below the navbar, so a full 100vh pushed the card's foot (Delete) out
+				// of view until the page reached its end (Daptrius, 2026-11-24). A short
+				// window scrolls the document instead, with the navbar over its top, so
+				// there the card also pins below it.
 				<div
 					ref={cardRef}
-					className={`min-w-0 scroll-mt-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-lg lg:shrink-0 lg:overflow-y-auto ${
+					className={`min-w-0 scroll-mt-4 lg:sticky lg:top-[calc(var(--navbar-h,4.125rem)_+_1rem)] lg:max-h-[calc(100dvh_-_var(--navbar-h,4.125rem)_-_2rem)] lg:w-lg lg:shrink-0 lg:overflow-y-auto app-shell:top-4 ${
 						chosen ? "" : "hidden lg:block"
 					}`}
 				>

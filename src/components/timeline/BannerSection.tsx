@@ -1,6 +1,6 @@
 import { Dumbbell, Flower2, Repeat, Sparkles, Star, Ticket } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
-import { bannerKey } from "../../utils/bannerHelpers"
+import { bannerKey, timelineSupportTiles } from "../../utils/bannerHelpers"
 import type { BannerKey } from "../../utils/bannerHelpers"
 import { formatDate } from "../../utils/dateFormat"
 import { cardHref, umaHref } from "../../utils/encyclopediaRoutes"
@@ -130,12 +130,16 @@ export function BannerSection({
 
 	// Which shape the section takes, and where each panel goes: one pure
 	// function (sectionLayout.ts), decided by the card counts.
+	// The SSRs, plus any SR drawn as a picture (its `display`, resolved by the
+	// API). The other SRs and Rs are listed under the card instead
+	// (RateUpRow), so they never change the panel or the layout.
+	const supportTiles = supportBanner ? timelineSupportTiles(supportBanner) : []
 	const layout = sectionLayout({
 		category: banner.banner_category,
 		hasUmaBanner: !!umaBanner,
 		umaCount: umaBanner?.umas.length ?? 0,
 		hasSupportBanner: !!supportBanner,
-		supportCount: supportBanner?.support_cards.length ?? 0,
+		supportCount: supportTiles.length,
 		hasImage: !!section.image,
 	})
 	const umaInColumn = layout.uma === "column"
@@ -170,7 +174,7 @@ export function BannerSection({
 			icon={Ticket}
 			kind="support"
 			title="Featured Support Cards"
-			items={supportBanner?.support_cards ?? []}
+			items={supportTiles}
 			pageHref={cardHref}
 			hasBanner={!!supportBanner}
 			emptyText="No Support Banner"

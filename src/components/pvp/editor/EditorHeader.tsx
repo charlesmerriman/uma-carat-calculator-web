@@ -10,7 +10,7 @@ import { CloudAlert, CloudCheck, Columns2, Eye, Globe, Heart, Loader2, Lock, Mor
 import type { GuideSaveState } from "../../../hooks/useGuideDocument"
 import type { GuideVisibility } from "../../../types/pvpGuide"
 import { visibilityLabel } from "../../../utils/guideDocument"
-import { ACTION_BUTTON, ICON_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./editorStyles"
+import { ACTION_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./editorStyles"
 
 export type EditorDialog = "visibility" | "copy" | "sheet" | "greens" | "revisions" | "delete"
 
@@ -85,11 +85,15 @@ export function EditorHeader({ visibility, toolsPublic, saveState, saveError, pr
 			</span>
 			<SaveLine saveState={saveState} saveError={saveError} problems={problems} />
 			<span className="ml-auto flex flex-wrap items-center gap-1.5">
-				<button type="button" className={ICON_BUTTON} aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={onUndo}>
-					<Undo2 className="h-4 w-4" />
+				{/* Named, not bare arrows: as icons they went unseen (Henry asked
+				    for undo and redo, board 1575585787553128458, 2026-11-26). */}
+				<button type="button" className={ACTION_BUTTON} title="Ctrl+Z" disabled={!canUndo} onClick={onUndo}>
+					<Undo2 className="h-4 w-4" aria-hidden="true" />
+					Undo
 				</button>
-				<button type="button" className={ICON_BUTTON} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={onRedo}>
-					<Redo2 className="h-4 w-4" />
+				<button type="button" className={ACTION_BUTTON} title="Ctrl+Shift+Z" disabled={!canRedo} onClick={onRedo}>
+					<Redo2 className="h-4 w-4" aria-hidden="true" />
+					Redo
 				</button>
 				{(saveState === "pending" || saveState === "error") && (
 					<button type="button" className={SECONDARY_BUTTON} onClick={onSaveNow}>

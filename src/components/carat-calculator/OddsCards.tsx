@@ -86,6 +86,12 @@ interface OddsCardsPanelProps {
 	/** Copies to take the first card to: one of `targetChoices`. */
 	onTargetChange: (copies: number) => void
 	/**
+	 * A support banner's pickers list its SRs and Rs after the SSRs, under a
+	 * rarity heading each (notes/banner-sr-r-plan.md). Off for an uma banner,
+	 * whose cards are all one rarity in practice.
+	 */
+	groupByRarity?: boolean
+	/**
 	 * "inline" is the phone card's sentence row ("Odds for 1x [card]  Also
 	 * show [card]"). "stacked" is the desktop drawer's Odds column: a labelled
 	 * form whose controls match the row options' 36px fields.
@@ -93,6 +99,9 @@ interface OddsCardsPanelProps {
 	layout?: "inline" | "stacked"
 	className?: string
 }
+
+/** A support card's rarity as the game names it. */
+const RARITY_NAMES: Record<number, string> = { 3: "SSR", 2: "SR", 1: "R" }
 
 /** "once", "2 times", ... : the target as a count, the same on both banner types. */
 const timesWord = (copies: number): string => (copies === 1 ? "once" : `${copies} times`)
@@ -109,6 +118,7 @@ export const OddsCardsPanel = ({
 	onPrimaryChange,
 	onSecondChange,
 	onTargetChange,
+	groupByRarity = false,
 	layout = "inline",
 	className = "",
 }: OddsCardsPanelProps) => {
@@ -124,6 +134,17 @@ export const OddsCardsPanel = ({
 			{card.name} ({formatRate(card.rate)})
 		</option>
 	)
+	// One heading per rarity once a list holds more than one (an SSR and an SR
+	// can share a name, as Jungle Pocket does); a single rarity stays a plain list.
+	const options = (list: RateUpCard[]) => {
+		const rarities = [...new Set(list.map((card) => card.rarity))].sort((a, b) => b - a)
+		if (!groupByRarity || rarities.length < 2) return list.map(option)
+		return rarities.map((rarity) => (
+			<optgroup key={rarity} label={RARITY_NAMES[rarity] ?? "SSR"}>
+				{list.filter((card) => card.rarity === rarity).map(option)}
+			</optgroup>
+		))
+	}
 
 	const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-gray-400"
 	const tallSelect =
@@ -175,7 +196,7 @@ export const OddsCardsPanel = ({
 			onChange={(event) => onSecondChange(Number(event.target.value))}
 			className={tallSelect}
 		>
-			{others.map(option)}
+			{options(others)}
 		</select>
 	)
 	// Two lines reserved either way, so ticking "Also show" never changes the drawer's height.
@@ -193,7 +214,7 @@ export const OddsCardsPanel = ({
 				{/* Under the column's "Odds" heading the row says "Card"; the select keeps "Odds for" as its name. */}
 				<label htmlFor={primarySelectId} className={`cursor-pointer ${LABEL}`}>Card</label>
 				<select id={primarySelectId} aria-label="Odds for" value={primary.id} onChange={(event) => onPrimaryChange(Number(event.target.value))} className={tallSelect}>
-					{cards.map(option)}
+					{options(cards)}
 				</select>
 				{alsoShow}
 				{secondSelect}
@@ -265,7 +286,7 @@ export const OddsCardsPanel = ({
 					onChange={(event) => onPrimaryChange(Number(event.target.value))}
 					className={selectClass}
 				>
-					{cards.map(option)}
+					{options(cards)}
 				</select>
 			</div>
 
@@ -288,7 +309,7 @@ export const OddsCardsPanel = ({
 					onChange={(event) => onSecondChange(Number(event.target.value))}
 					className={selectClass}
 				>
-					{others.map(option)}
+					{options(others)}
 				</select>
 			</div>
 
