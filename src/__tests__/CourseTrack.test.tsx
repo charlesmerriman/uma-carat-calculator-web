@@ -134,10 +134,13 @@ describe("CourseTrack", () => {
 		expect(screen.queryByText("3,425–3,535m")).not.toBeInTheDocument()
 	})
 
-	it("puts a chip anchored on an inner pass outside the passes beyond it (Nakayama 3600's Start)", () => {
+	it("keeps a chip anchored on an inner pass clear of every pass (Nakayama 3600's Start)", () => {
 		// Later laps run outside on Nakayama 3600, so the gate is on the
 		// innermost of three passes along the bottom; its chip used to land on
-		// the outermost (the red final straight). Now it sits below all three.
+		// the outermost (the red final straight). It then sat below all three,
+		// its leader across the two outer passes; since the placer counts a
+		// leader across the track (2026-11-27) it sits inside the loop, above
+		// its own pass, with a leader that crosses nothing. Either side is clear.
 		// The live course draws later laps outside (the fixture's default is inside).
 		const course = { ...NAKAYAMA_3600, later_laps: "outside" as const }
 		const base = schematicShape(course)
@@ -154,11 +157,17 @@ describe("CourseTrack", () => {
 		const boxTop = ringedBox.minY - pad
 		const boxHeight = ringedBox.height + 2 * pad
 		const boxWidth = ringedBox.width + 2 * pad
-		// The chip's top edge (its centre less half its 24 px, in a 1000 px box)
-		// must clear the pass's outer edge (half the track, 2% of the box, out).
+		// The gate's own pass, the innermost: the race's first point.
+		const innerY = ringed[0][1]
+		// The chip's edges (its centre, half its 24 px either way, in a 1000 px
+		// box) must clear a pass's edge (half the track, 2% of the box, out):
+		// its top below the outermost pass, or its bottom above the gate's own.
 		const chip = screen.getByText("Start").closest("div") as HTMLElement
-		const chipTop = boxTop + (parseFloat(chip.style.top) / 100) * boxHeight - 12 * (boxWidth / 1000)
-		expect(chipTop).toBeGreaterThan(outerY + boxWidth * 0.01)
+		const centre = boxTop + (parseFloat(chip.style.top) / 100) * boxHeight
+		const half = 12 * (boxWidth / 1000)
+		const below = centre - half > outerY + boxWidth * 0.01
+		const inside = centre + half < innerY - boxWidth * 0.01
+		expect(below || inside).toBe(true)
 	})
 })
 
