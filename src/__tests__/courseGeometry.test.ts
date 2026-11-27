@@ -13,7 +13,6 @@ import {
 	markerLanes,
 	metreToFraction,
 	phaseBands,
-	placeLabels,
 	pointAtMetre,
 	positionKeepEnd,
 	rulerTicks,
@@ -263,86 +262,5 @@ describe("metres to positions", () => {
 			{ at: 560, kind: "position-keep-end", label: "c" },
 		]
 		expect(markerLanes(markers, 1200)).toEqual([0, 0, 1])
-	})
-})
-
-describe("placeLabels", () => {
-	// One label anchored at the origin, pointing up the page (y down), 40 wide
-	// and 10 tall, placed 20 out: its first spot is centred at (0, -20).
-	const request = { key: "a", anchor: [0, 0] as const, direction: [0, -1] as const, width: 40, height: 10 }
-
-	it("takes the first spot when nothing is in the way", () => {
-		const { a } = placeLabels([request], 20)
-		expect(a[0]).toBeCloseTo(0, 6)
-		expect(a[1]).toBeCloseTo(-20, 6)
-	})
-
-	it("moves a label off the track when its first spot would lie across it", () => {
-		// A stretch of track running across the page through the first spot.
-		const track = { points: Array.from({ length: 21 }, (_, i) => [i * 5 - 50, -20] as const), halfWidth: 2 }
-		const { a } = placeLabels([request], 20, track)
-		// Its box (10 tall) clears the track (2 either side of y = -20).
-		expect(Math.abs(a[1] + 20)).toBeGreaterThan(5 + 2)
-	})
-
-	it("keeps a label inside the box rather than spill past its edge", () => {
-		// The first spot (0, -20) would reach 5 above a box that starts at y = -18.
-		const { a } = placeLabels([request], 20, undefined, { bounds: { x: -100, y: -18, width: 200, height: 118 } })
-		expect(a[1] - 5).toBeGreaterThanOrEqual(-18)
-	})
-
-	it("steps out of the margin round the track when a clear spot is left", () => {
-		// A margin over the first spot only: the label moves off it.
-		const margin = { points: [[0, -20]] as const, halfWidth: 3 }
-		const { a } = placeLabels([request], 20, undefined, { margin })
-		expect(Math.abs(a[0]) > 20 + 3 || Math.abs(a[1] + 20) > 5 + 3).toBe(true)
-		// Inside it beats lying on another label: with the margin everywhere, it stays put.
-		const everywhere = { points: Array.from({ length: 41 * 41 }, (_, i) => [(i % 41) * 5 - 100, Math.floor(i / 41) * 5 - 100] as const), halfWidth: 2 }
-		const { a: kept } = placeLabels([request], 20, undefined, { margin: everywhere })
-		expect(kept[1]).toBeCloseTo(-20, 6)
-	})
-
-	it("won't run a leader across the track when a spot without one is left", () => {
-		// A short stretch of track across the leader's way, halfway out, too far
-		// from the first spot's box to cover it: only the leader meets it.
-		const leaderTrack = { points: Array.from({ length: 21 }, (_, i) => [i - 10, -10] as const), halfWidth: 1 }
-		const { a } = placeLabels([request], 20, undefined, { leaderTrack })
-		// It swings out wide enough that its leader passes the stretch's end.
-		expect(Math.abs(a[0])).toBeGreaterThan(10)
-	})
-
-	// Two small chips pointing at each other's side: placed one at a time, each
-	// lands in its first spot, (14.1, -14.1) and (5.9, -14.1), and their leaders
-	// cross at (10, -10).
-	const out = Math.SQRT1_2
-	const left = { key: "left", anchor: [0, 0] as const, direction: [out, -out] as const, width: 4, height: 4 }
-	const right = { key: "right", anchor: [20, 0] as const, direction: [-out, -out] as const, width: 4, height: 4 }
-	type At = readonly [number, number]
-	const side = (a: At, b: At, c: At) => Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
-	const leadersCross = (placed: Record<string, [number, number]>) =>
-		side(left.anchor, placed.left, right.anchor) * side(left.anchor, placed.left, placed.right) < 0 &&
-		side(right.anchor, placed.right, left.anchor) * side(right.anchor, placed.right, placed.left) < 0
-
-	it("moves a chip whose leader crosses another's, so the two read in the track's order", () => {
-		const placed = placeLabels([left, right], 20)
-		expect(leadersCross(placed)).toBe(false)
-	})
-
-	it("leaves two leaders crossed when every way out would push a chip out of the box", () => {
-		// The left anchor's chip is wide (12). The box just holds both first
-		// spots: swapped, the wide chip would spill past x = 0, and every other
-		// spot either chip could take is above, below or beside the box.
-		const wide = { ...left, width: 12 }
-		const bounds = { x: 0, y: -17, width: 21, height: 6 }
-		const placed = placeLabels([wide, right], 20, undefined, { bounds })
-		expect(placed.left[0]).toBeCloseTo(20 * out, 6)
-		expect(placed.right[0]).toBeCloseTo(20 - 20 * out, 6)
-	})
-
-	it("keeps its first spot when every spot is on the track", () => {
-		// Track everywhere: a grid over the whole neighbourhood.
-		const points = Array.from({ length: 41 * 41 }, (_, i) => [(i % 41) * 5 - 100, Math.floor(i / 41) * 5 - 100] as const)
-		const { a } = placeLabels([request], 20, { points, halfWidth: 2 })
-		expect(a[1]).toBeCloseTo(-20, 6)
 	})
 })

@@ -15,9 +15,9 @@
  * (withLapRings).
  *
  * Callouts are HTML over the SVG, placed by percentage (the box keeps the
- * shape's aspect ratio), so their text is the page's own; placeLabels keeps
- * them apart from size estimates, since nothing is measured, and a chip near
- * the edge slides back inside the box. The layers draw one arc per group
+ * shape's aspect ratio), so their text is the page's own; placeLabels
+ * (utils/courseLabels.ts) finds each its place from size estimates, since
+ * nothing is measured, always inside the box. The layers draw one arc per group
  * (the lit skill, each veteran) just outside the hills, in the group's
  * colour, with the skill's name at its start. The draw-in traces the track
  * gate to finish once, on a motion value: no React render per frame. (Walk the course was shelved, owner 2026-11-03;
@@ -33,7 +33,6 @@ import {
 	formatMetres,
 	metreToFraction,
 	phaseStarts,
-	placeLabels,
 	pointAtMetre,
 	shapeBounds,
 	slopeParts,
@@ -44,6 +43,7 @@ import {
 	type CourseSpan,
 	type Shape,
 } from "../../utils/courseGeometry"
+import { placeLabels } from "../../utils/courseLabels"
 import type { TrackColours } from "../../services/courseShapeStore"
 import CourseIcon, { type CourseIconName } from "./CourseIcon"
 import { useDrawIn } from "./useDrawIn"
@@ -68,6 +68,13 @@ const KERB_HALF = 0.775
 // Henry asked for one and a half (2026-11-06), the final straight's chip
 // especially, which sat on the track's edge.
 const CHIP_CLEAR_TRACKS = 1.5
+// The placer's answer for each layout asked for, newest last, so a redraw of
+// the same map costs a lookup (see `layout` in the component).
+const PLACED = new Map<string, Record<string, [number, number]>>()
+const PLACED_KEPT = 32
+// Where a leader starts: this far out from its spot on the centre line,
+// towards its chip, in track widths. Just past the kerb's edge (KERB_HALF).
+const LEADER_LIFT_TRACKS = 0.8
 // And from a hill's bracket and its ticks, which are thinner.
 const BRACKET_CLEAR_TRACKS = 0.9
 // Centre to centre between one lap's ring and the next, in track widths: the
@@ -598,29 +605,50 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		}
 		return reach
 	}
-	const positions = placeLabels(
-		callouts.map((callout) => {
-			// Away from the middle of the drawing, except on a straight course,
-			// where that points along the track and every chip queued off its
-			// ends (Niigata 1000's on a phone sat on each other): there, the
-			// side of the track (up, the spurt chip down).
-			const [ox, oy] = course.direction === "straight" ? [0, -1] : awayFromMiddle(callout.point)
-			const direction = callout.inward ? [-ox, -oy] as const : [ox, oy] as const
-			// The chip is placed from the outermost pass at its spot; the leader
-			// still starts at the callout's own point, across the passes outside it.
-			const out = callout.inward ? 0 : outerPasses(callout.at, callout.point, direction)
-			const anchor = [callout.point[0] + direction[0] * out, callout.point[1] + direction[1] * out] as const
-			// A few px of air round each chip when checking for clashes: the
-			// widths are estimates from the text, and a chip moved off an inner
-			// pass otherwise met its neighbour edge to edge (Goal and Corner 1 on Oi 2000).
-			const { width, height } = estimate(callout)
-			// Its first try sits just clear of the track: the kerb, the clear air,
-			// then half the chip's own depth that way. A shared distance put a
-			// wide chip back on the track and a small one too far out.
-			const depth = (Math.abs(direction[0]) * width + Math.abs(direction[1]) * height) / 2
-			const reach = callout.inward ? 0 : track * (KERB_HALF + CHIP_CLEAR_TRACKS + 0.25) + depth
-			return { key: callout.key, anchor, direction, width: width + CHIP_GAP_PX * unitsPerPx, height: height + (CHIP_GAP_PX / 1.5) * unitsPerPx, reach, noMargin: callout.inward }
-		}),
+	const requests = callouts.map((callout) => {
+		// Away from the middle of the drawing, except on a straight course,
+		// where that points along the track and every chip queued off its
+		// ends (Niigata 1000's on a phone sat on each other): there, the
+		// side of the track (up, the spurt chip down).
+		const [ox, oy] = course.direction === "straight" ? [0, -1] : awayFromMiddle(callout.point)
+		const direction = callout.inward ? [-ox, -oy] as const : [ox, oy] as const
+		// The chip is placed from the outermost pass at its spot; the leader
+		// still starts at the callout's own point, across the passes outside it.
+		const out = callout.inward ? 0 : outerPasses(callout.at, callout.point, direction)
+		const anchor = [callout.point[0] + direction[0] * out, callout.point[1] + direction[1] * out] as const
+		// A few px of air round each chip when checking for clashes: the
+		// widths are estimates from the text, and a chip moved off an inner
+		// pass otherwise met its neighbour edge to edge (Goal and Corner 1 on Oi 2000).
+		const { width, height } = estimate(callout)
+		// Its first try sits just clear of the track: the kerb, the clear air,
+		// then half the chip's own depth that way. A shared distance put a
+		// wide chip back on the track and a small one too far out.
+		const depth = (Math.abs(direction[0]) * width + Math.abs(direction[1]) * height) / 2
+		const reach = callout.inward ? 0 : track * (KERB_HALF + CHIP_CLEAR_TRACKS + 0.25) + depth
+		// What the placer scores is what is drawn below: the leader from the
+		// callout's own point (the spurt's, from its line), lifted to the kerb's
+		// edge for a chip whose point is on the track (edgeTowards).
+		const offTrack = ["layer", "uphill", "downhill"].includes(callout.tone)
+		const air = [CHIP_GAP_PX * unitsPerPx, (CHIP_GAP_PX / 1.5) * unitsPerPx] as const
+		return {
+			key: callout.key, anchor, direction, width: width + air[0], height: height + air[1], reach, noMargin: callout.inward, air,
+			from: callout.leaderFrom ?? callout.point,
+			lift: callout.leaderFrom || offTrack ? 0 : track * LEADER_LIFT_TRACKS,
+			// It may sit across the track too (inside the loop) when that clears a
+			// fault: as far in from its point as it sits out, and a hill's from its
+			// bracket, which is already a track and a quarter outside.
+			otherSide: callout.inward ? undefined : reach + (offTrack ? track * 1.25 : 0),
+			travel: frameAt(shape, callout.at, distance).t,
+		}
+	})
+	// Worked out once per layout, not once per draw: the track redraws on every
+	// frame of its draw-in and on every hover over a layer's arc, and the
+	// placer is a search. The requests say everything a layout depends on
+	// (every point in them comes off the shape), with the box and the track's
+	// width beside them.
+	const layout = JSON.stringify([requests, labelReach, track, box])
+	const positions = PLACED.get(layout) ?? placeLabels(
+		requests,
 		labelReach,
 		// No chip lies across the track and its kerb (a wide chip at a bend,
 		// like Nakayama 3600's "Final straight 3,290m (1,615m a lap before)",
@@ -638,21 +666,19 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 			// back in, onto whatever was there (Corner 4 and the final straight
 			// on a phone's Chukyo 1200 landed on the track).
 			bounds: box,
-			// And a leader that would cut across another stretch of the track is
-			// a last resort.
-			// A last resort too: a leader across a hill's bracket.
-			leaderTrack: { points: [...trackPoints, ...bracketPoints], halfWidth: track * KERB_HALF },
+			// A leader that leaves the track and comes back over it is a fault of
+			// its own level; one over a hill's bracket, a mild one.
+			leaderTrack: { points: trackPoints, halfWidth: track * KERB_HALF },
+			leaderAvoid: { points: bracketPoints, halfWidth: track * 0.35 },
 		},
 	)
-	// Nothing may spill past the box: a chip near the edge slides back in.
-	for (const callout of callouts) {
-		const { width, height } = estimate(callout)
-		const [x, y] = positions[callout.key]
-		positions[callout.key] = [
-			Math.min(box.x + box.width - width / 2, Math.max(box.x + width / 2, x)),
-			Math.min(box.y + box.height - height / 2, Math.max(box.y + height / 2, y)),
-		]
+	if (!PLACED.has(layout)) {
+		// The oldest goes first: a Map keeps its keys in the order they were set.
+		if (PLACED.size >= PLACED_KEPT) PLACED.delete(PLACED.keys().next().value as string)
+		PLACED.set(layout, positions)
 	}
+	// (No chip is slid back into the box here any more: the placer scores a
+	// place past the edge where it would slide to, so what it returns is inside.)
 	// A layer's name chip that still sits on another chip is dropped (the
 	// strip names every span); the course's own callouts always stay.
 	const placed: { x: number; y: number; w: number; h: number }[] = []
@@ -674,7 +700,7 @@ export default function CourseTrack({ course, shape: baseShape, overlays, widthP
 		const dx = chip[0] - spot[0]
 		const dy = chip[1] - spot[1]
 		const length = Math.hypot(dx, dy) || 1
-		return [spot[0] + (dx / length) * track * 0.8, spot[1] + (dy / length) * track * 0.8]
+		return [spot[0] + (dx / length) * track * LEADER_LIFT_TRACKS, spot[1] + (dy / length) * track * LEADER_LIFT_TRACKS]
 	}
 	const halfTick = (from: [number, number], to: readonly [number, number]) => ({ x1: from[0], y1: from[1], x2: (from[0] + to[0]) / 2, y2: (from[1] + to[1]) / 2 })
 
