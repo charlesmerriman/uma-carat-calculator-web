@@ -125,7 +125,7 @@ function Ladder({ guide, steps, active, onStyleChange, label = "Style ranking" }
 							</span>
 							{named && (
 								<span className="flex shrink-0 gap-1">
-									<span className="inline-block" {...hoverCardProps("uma", named.id)}>
+									<span className="inline-block" {...hoverCardProps("uma", named.id, { tap: true })}>
 										<FramedUma
 											src={named.portrait} layers={named.portrait_layers}
 											alt=""

@@ -75,7 +75,8 @@ export function hoverCardProps(
 		 * following the tile's link. Off everywhere but a PvP guide's deck
 		 * cards on a style tab (Henry, 2026-11-19: the All tab's cards open a
 		 * popup on a tap and a style tab's went to the page; "only fix this
-		 * one instance"). Phones otherwise keep the links (owner, 2026-11-17;
+		 * one instance"), and a guide's ((Uma name)) picture, which has no
+		 * link (Henry, 2026-11-26). Phones otherwise keep the links (owner, 2026-11-17;
 		 * Daptrius prefers links for umas and cards).
 		 */
 		tap?: boolean
