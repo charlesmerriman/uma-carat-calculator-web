@@ -137,8 +137,8 @@ export function StyleChip({ style }: { style: MemberStyle }) {
  * A post's vote: an up arrow, the score and a down arrow (Henry, 2026-10-26).
  * Pressing the arrow you already chose takes the vote back; pressing the
  * other one switches. A guest is asked to sign in; your own post shows the
- * score alone. Staff see the real split under the score (row) or in its
- * title (column), since the score never shows below 0.
+ * score alone. Staff see the real split in the score's title, since the
+ * score never shows below 0.
  *
  *   column  the feed: up, score, down, stacked at the row's edge
  *   row     the post panel, beside the other numbers
@@ -154,10 +154,11 @@ export function GalleryVote({ post, layout }: { post: GalleryRowBase; layout: "c
 	const split = splitText(post.stats.split)
 	const shape = layout === "column" ? "w-12 flex-col py-1" : "gap-0.5 px-1"
 	const box = `flex shrink-0 items-center rounded-lg border text-sm font-semibold tabular-nums ${shape}`
+	// The total only. Staff keep the split in the hover title (notes/thumbs-down-plan.md);
+	// the grey line under it is gone (Daptrius, 2026-11-26), as on a comment's score.
 	const number = (
-		<span className="flex flex-col items-center px-1 leading-tight" title={split}>
+		<span className="px-1 leading-tight" title={split}>
 			{score}
-			{split && layout === "row" && <span className="text-[10px] font-medium text-gray-400">{split}</span>}
 		</span>
 	)
 
