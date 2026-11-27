@@ -5,8 +5,8 @@
  * quarter, an id block, a rarity, a grade or a value for the other sorts
  * (utils/encyclopediaGroups.ts says which).
  *
- * However the list is filtered (owner, 2026-11-25). `groupsFor` decides;
- * with no groups (an empty list) this draws the plain grid.
+ * Filtered or not, once the list has MIN_GROUPED_TILES tiles. `groupsFor`
+ * decides; with no groups (a shorter list) this draws the plain grid.
  */
 
 import { Fragment, type ReactNode } from "react"

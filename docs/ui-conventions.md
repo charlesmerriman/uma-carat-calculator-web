@@ -2402,7 +2402,7 @@ stats in rows of four, stats are separate boxes with Growth named, and Daptrius'
   `utils/encyclopediaGroups.ts`, one key function per sort): letters by name, quarters (index
   by year) by release date, a thousand ids (umas) or the rarity (cards) by game ID, the grade
   by an aptitude, the value by an effect (a value one or two cards reach is merged into a
-  range). Filters never turn them off (owner, 2026-11-25). A heading is a `role="presentation"` item, so the
+  range). Filtered or not, a list under 50 tiles (`MIN_GROUPED_TILES`) is one plain grid (owner, 2026-11-27, after Daptrius). A heading is a `role="presentation"` item, so the
   list's items stay the tiles. **A to Z is one helper, `utils/nameOrder.ts`**: `compareNames`
   sorts and `letterKey` files by the same reading of a name (a leading sign skipped, so
   "#LookatCurren" is an L; a digit under "#", first; another script under "あ", last), so a
