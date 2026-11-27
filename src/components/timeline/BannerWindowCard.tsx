@@ -7,7 +7,7 @@ import { AnniversaryEventStrip } from "./AnniversaryEventStrip"
 import { LegendRaceNote } from "./LegendRaceNote"
 import { StoryEventStrip } from "./StoryEventStrip"
 import { RateUpRow } from "./RateUpRow"
-import { timelineNamedRateUps } from "../../utils/bannerHelpers"
+import { timelineNamedRateUps, timelineSupportTiles } from "../../utils/bannerHelpers"
 import { CopyTimelineLink } from "./CopyTimelineLink"
 import { BannerSection } from "./BannerSection"
 import { TimelineCard, TimelineCardHeader, TimelineCountdown } from "./TimelineCard"
@@ -80,7 +80,8 @@ export function BannerWindowCard({
 	const title = featuredTitle(
 		sections.flatMap((section) => section.umaWindow.banner_umas.flatMap((b) => b.umas.map((uma) => uma.name))),
 		sections.flatMap((section) =>
-			section.supportWindow.banner_supports.flatMap((b) => b.support_cards.map((card) => card.name))
+			// What the card draws: the SSRs and any pictured SR, as the link preview names them.
+			section.supportWindow.banner_supports.flatMap((b) => timelineSupportTiles(b).map((card) => card.name))
 		)
 	)
 
