@@ -311,6 +311,31 @@ describe("placeLabels", () => {
 		expect(Math.abs(a[0])).toBeGreaterThan(10)
 	})
 
+	it("swaps two chips whose leaders cross, so they read in the track's order", () => {
+		// Two small chips pointing at each other's side: placed one at a time,
+		// each lands in its first spot and their leaders cross at (10, -10).
+		const out = Math.SQRT1_2
+		const left = { key: "left", anchor: [0, 0] as const, direction: [out, -out] as const, width: 4, height: 4 }
+		const right = { key: "right", anchor: [20, 0] as const, direction: [-out, -out] as const, width: 4, height: 4 }
+		const placed = placeLabels([left, right], 20)
+		// Untangled: the left anchor's chip is the left one.
+		expect(placed.left[0]).toBeLessThan(placed.right[0])
+		expect(placed.left[0]).toBeCloseTo(20 - 20 * out, 6)
+		expect(placed.right[0]).toBeCloseTo(20 * out, 6)
+	})
+
+	it("leaves crossed leaders alone when the swap would land a chip somewhere worse", () => {
+		const out = Math.SQRT1_2
+		// The left anchor's chip is wide (12): at its own spot it spans x 8.1 to
+		// 20.1, inside a box that starts at x = 0; at the other spot it would
+		// span -0.1 to 11.9, past the box's edge, so the pair stays crossed.
+		const left = { key: "left", anchor: [0, 0] as const, direction: [out, -out] as const, width: 12, height: 4 }
+		const right = { key: "right", anchor: [20, 0] as const, direction: [-out, -out] as const, width: 4, height: 4 }
+		const placed = placeLabels([left, right], 20, undefined, { bounds: { x: 0, y: -40, width: 30, height: 60 } })
+		expect(placed.left[0]).toBeCloseTo(20 * out, 6)
+		expect(placed.right[0]).toBeCloseTo(20 - 20 * out, 6)
+	})
+
 	it("keeps its first spot when every spot is on the track", () => {
 		// Track everywhere: a grid over the whole neighbourhood.
 		const points = Array.from({ length: 41 * 41 }, (_, i) => [(i % 41) * 5 - 100, Math.floor(i / 41) * 5 - 100] as const)
