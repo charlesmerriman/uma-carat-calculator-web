@@ -171,6 +171,11 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 			<UmaMentionsContext.Provider value={hydrated.uma_mentions ?? {}}>
 				<div className={beside ? "2xl:grid 2xl:grid-cols-2 2xl:items-start 2xl:gap-4" : ""}>
 				<div className="flex min-w-0 flex-col gap-3">
+					{/* The strip pins under the View tabs as the form scrolls, so Undo,
+					    Redo and the save line stay in reach halfway down a deck
+					    (Henry, 2026-11-26). Opaque behind, like the reader's style
+					    tabs. Not on a phone, where it wraps to several rows. */}
+					<div className="md:sticky md:top-(--pvp-below-tabs,0px) md:z-20 md:-mt-1 md:bg-gray-900 md:pt-1">
 					<EditorHeader
 						visibility={document.visibility}
 						toolsPublic={document.tools_public}
@@ -190,6 +195,7 @@ function ReadyEditor({ event, editor, index, scenarios, tab, onTab, dialog, onDi
 						onBeside={setBeside}
 						onOpen={onDialog}
 					/>
+					</div>
 					<Checklist missing={missing} errors={problemsByTab} onJump={jump} />
 					<EditorTabs tabs={editorTabsFor(document)} tab={tab} rows={rows} errors={problemsByTab} onChange={onTab} />
 					<div role="tabpanel" aria-label={tab === "guide" ? "Guide" : tab}>

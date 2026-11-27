@@ -156,6 +156,21 @@ describe("GuideEditor", () => {
 		expect((puts()[1].body as GuideDocument).version).toBe(4)
 	})
 
+	it("undoes and redoes an edit from the named buttons in the strip", async () => {
+		renderEditor()
+		const ranking = await screen.findByLabelText("Style ranking")
+		const undo = screen.getByRole("button", { name: "Undo" })
+		const redo = screen.getByRole("button", { name: "Redo" })
+		expect(undo).toBeDisabled()
+		fireEvent.change(ranking, { target: { value: "End >> Front" } })
+		fireEvent.click(undo)
+		expect(ranking).toHaveValue("Front >> End")
+		expect(undo).toBeDisabled()
+		fireEvent.click(redo)
+		expect(ranking).toHaveValue("End >> Front")
+		expect(redo).toBeDisabled()
+	})
+
 	it("draws the style ranking under its field as the guide will (review item 17)", async () => {
 		renderEditor()
 		const ranking = await screen.findByLabelText("Style ranking")
