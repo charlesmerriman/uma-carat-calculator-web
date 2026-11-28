@@ -855,38 +855,26 @@ describe("PvpGuidePage recommended skills", () => {
 		}
 	})
 
-	it("puts the general skills under the style tabs on a phone's All tab (Henry, 2026-11-17)", async () => {
+	it("puts the general skills above the style tabs on a phone, on a style tab and on All (Henry, 2026-11-17, 2026-11-28)", async () => {
 		const original = window.matchMedia
 		window.matchMedia = ((query: string) => ({ ...original(query), matches: query.includes("max-width") })) as typeof window.matchMedia
 		try {
 			respond(200, GUIDE)
 			renderPage()
 			await screen.findByText("Recommended stats")
-			fireEvent.click(within(screen.getByRole("tablist", { name: "Running style" })).getByRole("tab", { name: /^All/ }))
-			const general = screen.getByRole("region", { name: "General skills" })
-			// Inside the style column, after its tabs: not in the side column at the end.
-			expect(general.closest('[aria-label="For every position"]')).toBeNull()
-			const tabs = screen.getByRole("tablist", { name: "Running style" })
-			expect(tabs.compareDocumentPosition(general) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		} finally {
-			window.matchMedia = original
-		}
-	})
-
-	it("puts the general skills above a style's own picks and decks on a phone (Henry, 2026-11-28)", async () => {
-		const original = window.matchMedia
-		window.matchMedia = ((query: string) => ({ ...original(query), matches: query.includes("max-width") })) as typeof window.matchMedia
-		try {
-			respond(200, GUIDE)
-			renderPage()
-			await screen.findByText("Recommended stats")
+			const aboveTheTabs = () => {
+				const general = screen.getByRole("region", { name: "General skills" })
+				// Not in the side column, which a phone draws at the end.
+				expect(general.closest('[aria-label="For every position"]')).toBeNull()
+				const tabs = screen.getByRole("tablist", { name: "Running style" })
+				expect(general.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+				expect(general.querySelector("details")).toHaveAttribute("open")
+			}
 			// The guide opens on its first style, a style tab, not All.
-			const pane = screen.getByRole("tabpanel", { name: "Front" })
-			const general = screen.getByRole("region", { name: "General skills" })
-			expect(general.closest('[aria-label="For every position"]')).toBeNull()
-			// Before the style's pane, so before its decks.
-			expect(general.compareDocumentPosition(pane) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-			expect(general.querySelector("details")).toHaveAttribute("open")
+			expect(screen.getByRole("tabpanel", { name: "Front" })).toBeInTheDocument()
+			aboveTheTabs()
+			fireEvent.click(within(screen.getByRole("tablist", { name: "Running style" })).getByRole("tab", { name: /^All/ }))
+			aboveTheTabs()
 		} finally {
 			window.matchMedia = original
 		}
