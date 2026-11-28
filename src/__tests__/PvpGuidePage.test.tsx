@@ -873,6 +873,25 @@ describe("PvpGuidePage recommended skills", () => {
 		}
 	})
 
+	it("puts the general skills above a style's own picks and decks on a phone (Henry, 2026-11-28)", async () => {
+		const original = window.matchMedia
+		window.matchMedia = ((query: string) => ({ ...original(query), matches: query.includes("max-width") })) as typeof window.matchMedia
+		try {
+			respond(200, GUIDE)
+			renderPage()
+			await screen.findByText("Recommended stats")
+			// The guide opens on its first style, a style tab, not All.
+			const pane = screen.getByRole("tabpanel", { name: "Front" })
+			const general = screen.getByRole("region", { name: "General skills" })
+			expect(general.closest('[aria-label="For every position"]')).toBeNull()
+			// Before the style's pane, so before its decks.
+			expect(general.compareDocumentPosition(pane) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+			expect(general.querySelector("details")).toHaveAttribute("open")
+		} finally {
+			window.matchMedia = original
+		}
+	})
+
 	it("shows the general skills once, beside the style, and each position's tab only its own", async () => {
 		respond(200, GUIDE)
 		renderPage()
