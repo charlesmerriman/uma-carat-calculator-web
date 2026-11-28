@@ -626,9 +626,7 @@ function StyleTabs({ styles, active, onChange, label, ranks }: {
 	)
 }
 
-function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event, onUseDeck, allTop = null }: {
-	/** Under the tabs and above the style boxes, on the All tab only (a phone's General skills). */
-	allTop?: ReactNode
+function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, event, onUseDeck }: {
 	guide: PvpGuide
 	styles: Array<Exclude<PvpStyle, "everyone">>
 	style: PvpStyleTab | null
@@ -654,10 +652,7 @@ function StyleColumn({ guide, styles, style, onStyleChange, budget, onBudget, ev
 			{shown === ALL_STYLES_TAB ? (
 				// Every style at a glance (owner, 2026-10-24): a box per style in
 				// the tabs' order, faces, top skills and every deck one line each.
-				<>
-					{allTop}
-					<AllStylesPreview guide={guide} styles={styles} onStyleChange={onStyleChange} scenarioName={guide.scenario?.name ?? null} />
-				</>
+				<AllStylesPreview guide={guide} styles={styles} onStyleChange={onStyleChange} scenarioName={guide.scenario?.name ?? null} />
 			) : (
 				<div role="tabpanel" aria-label={STYLE_LABELS[shown]} className={SECTION}>
 					{/* Keyed by style: another style is another pane, drawn at once.
@@ -731,10 +726,13 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 	const hasSide = generalSkills.length > 0
 	// The tab on screen, the same pick StyleColumn makes, for the band's ladder.
 	const shownStyle = pickStyle(styles, style)
-	// On a phone's All tab the general skills come right under the style tabs,
-	// above the style boxes (Henry, 2026-11-17); on a style's own tab, and on a
-	// tablet's, after the style as before.
-	const generalUp = narrow && shownStyle === ALL_STYLES_TAB
+	// Below xl the general skills come ABOVE the style tabs: they hold for every
+	// position, like the band above them, so they sit with the team-wide part of
+	// the page and stay put whichever tab is picked (Henry, 2026-11-17 and
+	// 2026-11-28: they were below the decks, then under the tabs on All only,
+	// and the guide reopens on the reader's own style). From xl they stay in
+	// the side column.
+	const generalUp = narrow
 	const generalSection = generalSkills.length > 0 ? (
 		<section className={SECTION} aria-labelledby="pvp-general-skills">
 			<details open={!narrow || generalOpen} onToggle={(toggle) => narrow && setGeneralOpen(toggle.currentTarget.open)} className="group/general">
@@ -805,9 +803,13 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 						: "flex flex-col gap-4"
 				}
 			>
+				{/* Below xl, the first item of the one-column grid: above the style
+				    tabs. From xl generalUp is false and the side column holds it. */}
+				{generalUp && generalSection}
+
 				{hasSide && (
-					// Below xl the column follows the style: on a phone the general
-					// skills (folded) and the whole guide's thread come after it.
+					// Below xl the column follows the style: on a phone only the whole
+					// guide's thread comes after it (the general skills sit above).
 					<aside ref={sideRef} className="pvp-side-sticky order-last flex min-w-0 flex-col gap-4 xl:order-none" aria-label="For every position">
 						{!generalUp && generalSection}
 
@@ -818,7 +820,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 				)}
 
 				{styles.length > 0 && (
-					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} onUseDeck={onUseDeck} allTop={generalUp ? generalSection : null} />
+					<StyleColumn guide={guide} styles={styles} style={style} onStyleChange={onStyleChange} budget={budget} onBudget={chooseBudget} event={event} onUseDeck={onUseDeck} />
 				)}
 			</div>
 			{/* A guide with no side column still has a thread for the whole guide. */}
