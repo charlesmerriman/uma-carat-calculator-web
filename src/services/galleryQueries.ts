@@ -35,6 +35,7 @@ import {
 	planFeedFetch,
 	refusalText,
 } from "./galleryFetchCalls"
+import { guideFeedFetch } from "./guideGalleryFetchCalls"
 import { HttpError } from "./queryClient"
 import type { PvpEventRef } from "../utils/pvpEvent"
 import type {
@@ -45,6 +46,9 @@ import type {
 	GalleryRowBase,
 	GallerySort,
 	GalleryThread,
+	GuideFeed,
+	GuidePost,
+	GuideSort,
 	PlanFeed,
 	PlanFilters,
 	PlanPost,
@@ -89,6 +93,12 @@ export const galleryKeys = {
 			"gallery", "feed", "plans", sort, sort === "top" ? window : null,
 			filters.range, filters.strategies.join(","), filters.spending, filters.sweat, limit,
 		] as const,
+	/**
+	 * One event's community guides, under the same "feed" prefix so a vote,
+	 * a take-down or a new post reaches it through the same calls. "guides" in
+	 * the place of an event kind keeps it apart from the team feeds.
+	 */
+	guideFeed: (ref: PvpEventRef, sort: GuideSort) => ["gallery", "feed", "guides", ref.kind, ref.id, sort] as const,
 	post: (publicId: string) => ["gallery", "post", publicId] as const,
 	comments: (publicId: string) => ["gallery", "comments", publicId] as const,
 	mine: () => ["gallery", "mine"] as const,
@@ -150,6 +160,38 @@ export function usePlanPost(publicId: string | null) {
 	return useQuery({
 		queryKey: galleryKeys.post(publicId ?? ""),
 		queryFn: async () => readJson<PlanPost>(await galleryPostFetch(publicId ?? ""), "The plan didn't load."),
+		enabled: publicId !== null,
+	})
+}
+
+/**
+ * One event's community guides. While the other sort loads, the rows on
+ * screen stay, within the same event only. `enabled` is false for a reader
+ * the switch is not drawn for, so nothing is asked that the API would refuse.
+ */
+export function useGuideFeed(ref: PvpEventRef, sort: GuideSort, enabled = true) {
+	return useQuery({
+		queryKey: galleryKeys.guideFeed(ref, sort),
+		queryFn: async () =>
+			readJson<GuideFeed>(await guideFeedFetch(ref, sort), "The community guides didn't load."),
+		placeholderData: (previous, previousQuery) =>
+			previousQuery && previousQuery.queryKey[3] === ref.kind && previousQuery.queryKey[4] === ref.id
+				? previous
+				: undefined,
+		// The count on the switch: kept a minute, so moving between views doesn't refetch it.
+		staleTime: 60_000,
+		enabled,
+	})
+}
+
+/**
+ * One community guide in full, with the guide drawn for this reader. The
+ * same cache entry as any post (galleryKeys.post), so patchPost reaches it.
+ */
+export function useGuidePost(publicId: string | null) {
+	return useQuery({
+		queryKey: galleryKeys.post(publicId ?? ""),
+		queryFn: async () => readJson<GuidePost>(await galleryPostFetch(publicId ?? ""), "The guide didn't load."),
 		enabled: publicId !== null,
 	})
 }
@@ -251,7 +293,7 @@ function patched<T extends GalleryRowBase>(row: T, patch: PostPatch): T {
  * Any cached feed: an event's teams or Community plans. Both hold their rows
  * in `results`, and a patch only touches what every row has.
  */
-type AnyFeed = GalleryFeed | PlanFeed
+type AnyFeed = GalleryFeed | PlanFeed | GuideFeed
 
 /** `feed` with each row passed through `change`, typed for either kind of feed. */
 function mapRows(feed: AnyFeed, change: (row: GalleryRowBase) => GalleryRowBase | null): AnyFeed {

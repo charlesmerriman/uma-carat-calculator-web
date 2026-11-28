@@ -38,6 +38,7 @@ import {
 	dropCard,
 	setMemberUma,
 	cardBlockReason,
+	deckRequestDeck,
 	deckRequestId,
 	deckToMemberCards,
 	umaBlockReason,
@@ -237,11 +238,17 @@ function ReadyBuilder({ event, teamsState, index }: {
 	const location = useLocation()
 	const navigate = useNavigate()
 	const [deckId, setDeckId] = useState<number | null>(() => deckRequestId(location.state))
+	// A community guide hands over the deck itself (its ids are its own).
+	const [handedDeck, setHandedDeck] = useState(() => deckRequestDeck(location.state))
 	const handedOver = deckRequestId(location.state) !== null
 	useEffect(() => {
 		if (handedOver) navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null })
 	}, [handedOver, location.pathname, location.search, navigate])
-	const deck = deckId !== null ? (guide?.decks.find((candidate) => candidate.id === deckId) ?? null) : null
+	const deck = deckId !== null ? (handedDeck ?? guide?.decks.find((candidate) => candidate.id === deckId) ?? null) : null
+	const dropDeck = () => {
+		setDeckId(null)
+		setHandedDeck(null)
+	}
 	// The spot an uma is being picked for, to take the deck.
 	const [deckUmaSpot, setDeckUmaSpot] = useState<number | null>(null)
 	// The dealing animation (TeamGrid's DeckDeal): a count per spot, bumped by
@@ -271,7 +278,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 		const fill = deckToMemberCards(deck, member, index, releaseFor)
 		const before = members
 		const key = applyMembers(base.map((each) => (each.position === position ? { ...each, style: deckStyle ?? each.style, cards: fill.cards } : each)))
-		setDeckId(null)
+		dropDeck()
 		setDeal((current) => ({ counts: { ...current.counts, [position]: (current.counts[position] ?? 0) + 1 }, now: position }))
 		const notes = [
 			...fill.skipped.map((skip) => `Left out ${skip.name}: ${skip.reason}.`),
@@ -433,7 +440,7 @@ function ReadyBuilder({ event, teamsState, index }: {
 								setSelectedKey(key)
 								setDeckUmaSpot(0)
 							}}
-							onCancel={() => setDeckId(null)}
+							onCancel={dropDeck}
 						/>
 					)}
 					<TeamToolbar

@@ -14,6 +14,7 @@
 import { Suspense, lazy, useState } from "react"
 import { ChevronDown, Loader2, MessageSquare } from "lucide-react"
 import { loadGalleryComments } from "./gallery/loadGallery"
+import { useIsCommunityGuide } from "./communityGuideContext"
 import { guideCommentCount, guideRef, guideThread } from "../../services/guideComments"
 import type { PvpGuide } from "../../types/pvpGuide"
 
@@ -35,7 +36,10 @@ export function GuideComments({ guide, section, label, placeholder, className = 
 	className?: string
 }) {
 	const [open, setOpen] = useState(false)
+	const community = useIsCommunityGuide()
 	const count = guideCommentCount(guide, section)
+	// A community guide's thread is its post's, drawn once under the guide.
+	if (community) return null
 	return (
 		<section aria-label={label} className={className}>
 			<button

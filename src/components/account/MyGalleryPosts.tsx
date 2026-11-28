@@ -25,7 +25,7 @@ import { formatTimeAgo } from "../../utils/relativeDate"
 import { countLabel } from "../../utils/plural"
 import { STYLE_LABELS } from "../../utils/pvpGuide"
 import { hoverCardProps } from "../../utils/hoverCards"
-import { isTeamPost, planPostHref } from "../../utils/galleryPost"
+import { guidePostHref, isGuidePost, isTeamPost, planPostHref } from "../../utils/galleryPost"
 import { planTotalsLine, plural } from "../../utils/planTotals"
 import type { AnyGalleryPost } from "../../types/gallery"
 
@@ -36,6 +36,9 @@ function postPlace(post: AnyGalleryPost): { href: string; label: string } {
 			href: `/app/pvp?event=${post.event.kind}-${post.event.id}&view=gallery&post=${post.public_id}`,
 			label: post.event.label,
 		}
+	}
+	if (isGuidePost(post)) {
+		return { href: guidePostHref(post.event, post.public_id), label: `Community guide, ${post.event.label}` }
 	}
 	return { href: planPostHref(post.public_id), label: "Pull Plan Library" }
 }
@@ -114,6 +117,17 @@ export function MyGalleryPosts({ className, titleClassName }: { className: strin
 											<UmaPortrait uma={uma} className="w-12" frame={false} />
 											<span className="w-full truncate text-[11px] text-gray-300">{uma?.name ?? ""}</span>
 											<span className="text-[11px] text-gray-500">{STYLE_LABELS[member.style]}</span>
+										</li>
+									)
+								})}
+							</ul> : isGuidePost(post) ? <ul className="flex gap-3" aria-label="Umas">
+								{post.umas.map((member) => {
+									const uma = pictures.get(member.uma)
+									return (
+										<li key={member.uma} className="flex w-16 flex-col items-center gap-0.5 text-center" {...hoverCardProps("uma", member.uma)}>
+											{/* The account page is an owner-named exception to the frame rule. */}
+											<UmaPortrait uma={uma} className="w-12" frame={false} />
+											<span className="w-full truncate text-[11px] text-gray-300">{uma?.name ?? ""}</span>
 										</li>
 									)
 								})}

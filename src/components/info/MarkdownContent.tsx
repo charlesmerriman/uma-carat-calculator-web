@@ -5,6 +5,7 @@ import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { childrenToText, slugify } from "../../utils/guideMarkdown"
 import { remarkHighlight } from "../../utils/remarkHighlight"
+import { useUntrustedText } from "./untrustedText"
 
 // Same text-style vocabulary as the legal pages, so every public content page
 // reads the same whether its words come from a component or from the admin.
@@ -40,6 +41,23 @@ function isInternalHref(href: string): boolean {
  * chip styling from a fenced block, since react-markdown routes both through `code`.
  */
 function buildComponents(
+	paragraph: string,
+	renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode,
+	renderUma?: (name: string) => ReactNode,
+	untrusted = false,
+): Components {
+	const components = trustedComponents(paragraph, renderSkill, renderUma)
+	if (!untrusted) return components
+	// A player's text (untrustedText.ts): no picture from any host, and a link
+	// is its words only.
+	return {
+		...components,
+		img: () => null,
+		a: ({ children }) => <span>{children}</span>,
+	}
+}
+
+function trustedComponents(
 	paragraph: string,
 	renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode,
 	renderUma?: (name: string) => ReactNode,
@@ -145,6 +163,7 @@ export function MarkdownContent({
 	paragraphClassName = PARAGRAPH,
 	renderSkill,
 	renderUma,
+	untrusted,
 }: {
 	markdown: string
 	paragraphClassName?: string
@@ -152,8 +171,18 @@ export function MarkdownContent({
 	renderSkill?: (name: string, options: { scenarioLink: boolean }) => ReactNode
 	/** Renders a `((Uma name))` mention. Without it the bare name shows. */
 	renderUma?: (name: string) => ReactNode
+	/**
+	 * A player wrote it: no pictures, links as plain words. Read from
+	 * UntrustedTextContext when not given (untrustedText.ts).
+	 */
+	untrusted?: boolean
 }) {
-	const components = useMemo(() => buildComponents(paragraphClassName, renderSkill, renderUma), [paragraphClassName, renderSkill, renderUma])
+	const inPlayerText = useUntrustedText()
+	const playerText = untrusted ?? inPlayerText
+	const components = useMemo(
+		() => buildComponents(paragraphClassName, renderSkill, renderUma, playerText),
+		[paragraphClassName, renderSkill, renderUma, playerText]
+	)
 	return (
 		<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
 			{escapeMentions(markdown)}
