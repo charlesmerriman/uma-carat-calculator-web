@@ -119,6 +119,11 @@ import { TeamBuilder } from "./TeamBuilder"
 import { RunsView } from "./RunsView"
 import { loadGalleryView } from "./gallery/loadGallery"
 import { loadGuideEditor } from "./editor/loadGuideEditor"
+import { loadCommunityGuides } from "./community/loadCommunityGuides"
+import { useGuideFeed } from "../../services/galleryQueries"
+import { galleryShareUrl } from "../../services/galleryFetchCalls"
+import { COMMUNITY_GUIDES, GUIDES_PARAM, GUIDE_PARAM } from "../../utils/galleryPost"
+import type { GuideSort } from "../../types/gallery"
 import type { BannerSupport, BannerUma, RaceEvent } from "../../types"
 import type { PvpGuide, PvpStyleTab } from "../../types/pvpGuide"
 import type { UseDeckRequest } from "../../utils/pvpTeams"
@@ -174,6 +179,10 @@ function parseView(value: string | null, reader: Reader): PvpView {
 const GuideEditor = lazy(loadGuideEditor)
 // The gallery is a chunk of its own too (gallery/loadGallery.ts).
 const GalleryView = lazy(() => loadGalleryView().then((module) => ({ default: module.GalleryView })))
+// And community guides (community/loadCommunityGuides.ts).
+const CommunityGuides = lazy(() => loadCommunityGuides().then((module) => ({ default: module.CommunityGuides })))
+/** Community guides' sort on the list: Top (the default, left out of the address) or New. */
+const GUIDE_SORT_PARAM = "sort"
 
 /** The page's own parameters, in the order an address names them. "Copy link" builds the same order. */
 const PARAM_ORDER = [PVP_EVENT_PARAM, VIEW_PARAM, PVP_STYLE_PARAM]
@@ -230,6 +239,9 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	// again, so this only decides what is on screen.
 	const { account } = useAccount()
 	const isEditor = Boolean(account?.guide_editor)
+	// Whether this reader gets community guides (players' own guides; early
+	// access for now). The API refuses everyone else on every route anyway.
+	const canReadCommunity = Boolean(account?.community_guides)
 
 	// One clock reading per mount, so every label measures from the same "now".
 	const now = useMemo(() => new Date(), [])
@@ -315,8 +327,30 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	// (or the event) instead of stepping back through every tab clicked.
 	const selectStyle = (next: PvpStyleTab) => setParam(PVP_STYLE_PARAM, next, { replace: true })
 
+	// Community guides: `?guides=community` swaps the site's guide for the
+	// event's list, `&guide=<id>` opens one (notes/community-guides-plan.md).
+	// A link to them for a reader without access shows the early-access card.
+	const community = view === "recommendations" && searchParams.get(GUIDES_PARAM) === COMMUNITY_GUIDES
+	const openGuide = community ? searchParams.get(GUIDE_PARAM) : null
+	const guideSort: GuideSort = searchParams.get(GUIDE_SORT_PARAM) === "new" ? "new" : "top"
+	/** Several parameters at once; null deletes one. The event stays named, as setParam keeps it. */
+	const setParams = (changes: Record<string, string | null>, options?: NavigateOptions) =>
+		setSearchParams((params) => {
+			for (const [key, value] of Object.entries(changes)) {
+				if (value === null) params.delete(key)
+				else params.set(key, value)
+			}
+			if (event && !params.has(PVP_EVENT_PARAM)) params.set(PVP_EVENT_PARAM, formatPvpEvent(refForRaceEvent(event)))
+			return inPageOrder(params)
+		}, options)
+	const guideHref = (publicId: string) => {
+		const params = new URLSearchParams(searchParams)
+		params.set(GUIDE_PARAM, publicId)
+		return `?${inPageOrder(params)}`
+	}
+
 	// Fetched only on the view that shows it (usePvpGuide caches it).
-	const guideState = usePvpGuide(event && view === "recommendations" && !viewLocked ? refForRaceEvent(event) : null)
+	const guideState = usePvpGuide(event && view === "recommendations" && !viewLocked && !community ? refForRaceEvent(event) : null)
 
 	// The intro shows in full until a guide has been on screen once on this
 	// device, then folds behind a link (services/pvpPageMemory.ts). Read once
@@ -353,10 +387,17 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 	const copyLink = async (shown: RaceEvent) => {
 		const eventKey = formatPvpEvent(refForRaceEvent(shown))
 		const gallery = new URLSearchParams({ [PVP_EVENT_PARAM]: eventKey, [VIEW_PARAM]: "gallery" })
+		const guides = new URLSearchParams({ [PVP_EVENT_PARAM]: eventKey, [GUIDES_PARAM]: COMMUNITY_GUIDES })
+		// A community guide's own link is its post's, /post/<id> (unfurled
+		// with the site and the event only); the list's is the page's address.
 		const url =
-			view === "gallery"
-				? `${window.location.origin}/app/pvp?${gallery}`
-				: `${window.location.origin}${guideLinkPath(eventKey, view === "recommendations" ? shownStyle : null)}`
+			openGuide !== null
+				? galleryShareUrl(openGuide)
+				: community
+					? `${window.location.origin}/app/pvp?${guides}`
+					: view === "gallery"
+						? `${window.location.origin}/app/pvp?${gallery}`
+						: `${window.location.origin}${guideLinkPath(eventKey, view === "recommendations" ? shownStyle : null)}`
 		try {
 			await navigator.clipboard.writeText(url)
 			toast.success("Link copied.")
@@ -433,8 +474,40 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 							{(viewLocked || (view === "recommendations" && guideState.status === "locked")) && (
 								<PvpEarlyAccess pending={false} freeEvent={locked ? lockedLandingEvent(events, now) : null} />
 							)}
-							{view === "recommendations" && (
+							{community && !viewLocked && !canReadCommunity && (
+								<PvpEarlyAccess pending={false} freeEvent={null} />
+							)}
+							{community && !viewLocked && canReadCommunity && (
+								<Suspense
+									fallback={
+										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading the community guides…
+										</div>
+									}
+								>
+									<CommunityGuides
+										event={event}
+										sort={guideSort}
+										onSort={(next) => setParams({ [GUIDE_SORT_PARAM]: next === "top" ? null : next }, { replace: true })}
+										openGuide={openGuide}
+										guideHref={guideHref}
+										onBack={() => setParams({ [GUIDE_PARAM]: null })}
+										style={wantedStyle}
+										onStyleChange={selectStyle}
+										// The deck itself goes along: a community guide's deck ids are its own.
+										onUseDeck={teamLocked ? undefined : (deck) => setParam(VIEW_PARAM, "team", { state: { useDeck: { deckId: deck.id, deck } } satisfies UseDeckRequest })}
+										top={<GuideSwitch event={event} community onChange={(next) => setParams({ [GUIDES_PARAM]: next ? COMMUNITY_GUIDES : null, [GUIDE_PARAM]: null, [GUIDE_SORT_PARAM]: null })} />}
+									/>
+								</Suspense>
+							)}
+							{view === "recommendations" && !community && (
 								<div className="flex flex-col gap-4">
+									{canReadCommunity && !viewLocked && (
+										<div className="flex flex-wrap items-center gap-2">
+											<GuideSwitch event={event} community={false} onChange={(next) => setParams({ [GUIDES_PARAM]: next ? COMMUNITY_GUIDES : null, [GUIDE_PARAM]: null })} />
+										</div>
+									)}
 									{guideState.status === "loading" && (
 										<div className="flex items-center gap-2 text-sm text-gray-400" role="status">
 											<Loader2 className="h-4 w-4 animate-spin" />
@@ -512,6 +585,47 @@ const PvpGuide = ({ locked }: { locked: boolean }) => {
 
 function prefetchGallery() {
 	void loadGalleryView().catch(() => {})
+}
+
+function prefetchCommunityGuides() {
+	void loadCommunityGuides().catch(() => {})
+}
+
+/**
+ * "Site guide / Community guides": the first row of the Recommendations view
+ * (the owner's pick, 2026-11-27: under the tabs, where the Gallery keeps its
+ * sort pills and the editor its strip). The site's guide stays the default.
+ * The count is the event's community guides, from the list's own route
+ * (kept a minute), drawn once it arrives.
+ */
+function GuideSwitch({ event, community, onChange }: { event: RaceEvent; community: boolean; onChange: (community: boolean) => void }) {
+	const feed = useGuideFeed(refForRaceEvent(event), "top")
+	const count = feed.data?.count
+	const pill = (active: boolean) =>
+		`rounded-md px-3 py-1.5 text-sm font-medium transition ${active ? "bg-gray-700 text-brand shadow-sm" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"}`
+	return (
+		<div className="flex gap-1 rounded-lg bg-gray-900/70 p-1" role="group" aria-label="Whose guide">
+			<button type="button" aria-pressed={!community} onClick={() => onChange(false)} className={pill(!community)}>
+				Site guide
+			</button>
+			<button
+				type="button"
+				aria-pressed={community}
+				onClick={() => onChange(true)}
+				onPointerEnter={prefetchCommunityGuides}
+				onFocus={prefetchCommunityGuides}
+				className={pill(community)}
+			>
+				Community guides
+				{count !== undefined && (
+					<>
+						{" "}
+						<span className="ml-1 font-normal tabular-nums text-gray-400">{count}</span>
+					</>
+				)}
+			</button>
+		</div>
+	)
 }
 
 const GRID_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5" }

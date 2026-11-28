@@ -1860,6 +1860,33 @@ words for screen readers (`CourseFactsList`, `sr-only`; the strip is `aria-hidde
   verdict card slides in from the headline's side through `AnimatePresence` (a fade under
   reduced motion). Nothing loops that the reader can see change state, and nothing autoplays.
 
+### Community guides (`components/pvp/community/`)
+
+Players' own PvP guides (notes/community-guides-plan.md, 2026-11-28), inside the
+Recommendations view, never a tab of their own (owner, 2026-11-27).
+
+- **The switch.** "Site guide / Community guides" is the first row of Recommendations, drawn
+  only when `account.community_guides` is true (early access for now; the API refuses everyone
+  else on every route). The site's guide is the default. `GuideSwitch` (in `PvpGuidePage`)
+  shows the event's count from the list's own route (`useGuideFeed`, kept a minute).
+- **The address.** `?guides=community` is the list, `&guide=<public_id>` one guide, `&sort=new`
+  the list's other order (Top is the default and stays out of the address). A link to them for
+  a reader without access shows the early-access card. "Copy link" copies the post's
+  `/post/<public_id>` while a guide is open, else the list's address.
+- **One lazy chunk** (`loadCommunityGuides.ts`): the list, its rows and the reader. A row is the
+  gallery's row with the guide's title leading, three lead umas (most stars first, from the API)
+  and no style chips. A supporter's row wears their gallery look.
+- **The reader** draws the post's `guide` with `PvpGuideView` as it draws the site's guide: the
+  API sends it already in the reader's shape (backend `guide_gallery.render_post`), so nothing is
+  rebuilt on the client. Two contexts mark it as a player's: `UntrustedTextContext`
+  (`components/info/untrustedText.ts`; `MarkdownContent` then draws no pictures and turns links
+  into their words) and `CommunityGuideContext` (`GuideComments` and the whole-guide thread
+  stand aside). Its ONE thread is the post's, under the guide. A band on top: the vote, the
+  title, the writer (their card), views and comments, Copy link, Report or Take down.
+- **"Use this deck"** hands the deck ITSELF to My team in the router state
+  (`UseDeckRequest.useDeck.deck`): a community guide's deck ids are its own, and My team would
+  otherwise look the id up in the site's guide. The press counts as a copy (`guideDeckUsed`).
+
 ### Guide editor view (`components/pvp/editor/`)
 
 `?view=editor`, the fourth tab, drawn only when `account.guide_editor` is true (staff

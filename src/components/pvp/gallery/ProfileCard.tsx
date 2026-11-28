@@ -19,7 +19,7 @@ import { profileCardFetch, refusalText } from "../../../services/galleryFetchCal
 import { HttpError } from "../../../services/queryClient"
 import { planTotalsLine, plural } from "../../../utils/planTotals"
 import { pvpEventHref } from "../../../utils/pvpEvent"
-import { isPlanPost, isTeamPost, planPostHref } from "../../../utils/galleryPost"
+import { guidePostHref, isGuidePost, isPlanPost, isTeamPost, planPostHref } from "../../../utils/galleryPost"
 import { FramedUma } from "../../FramedUma"
 import { GalleryModal } from "./GalleryModal"
 import type { ProfileCardData, ProfileCardTarget } from "../../../types/gallery"
@@ -68,6 +68,8 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 	const oshiIds = useOshiIds()
 	const teams = card.posts.filter(isTeamPost)
 	const postedPlans = card.posts.filter(isPlanPost)
+	// Listed only to a reader who may open them: the API leaves them out otherwise.
+	const guides = card.posts.filter(isGuidePost)
 	return (
 		<>
 			{card.favorites.length > 0 && (
@@ -101,11 +103,31 @@ function CardBody({ card, onClose }: { card: ProfileCardData; onClose: () => voi
 						))}
 					</ul>
 				</section>
-			) : postedPlans.length === 0 ? (
+			) : postedPlans.length === 0 && guides.length === 0 ? (
 				// Only when there is nothing at all: someone who posts plans and
 				// no teams shouldn't read "no teams" above their plans.
 				<p className="text-sm text-gray-400">No gallery teams yet.</p>
 			) : null}
+			{guides.length > 0 && (
+				<section className="flex flex-col gap-2">
+					<h3 className={HEADING}>Community guides</h3>
+					<ul className="flex flex-col gap-1.5">
+						{guides.map((post) => (
+							<li key={post.public_id}>
+								<Link to={guidePostHref(post.event, post.public_id)} onClick={onClose} className={ROW}>
+									<span className="min-w-0">
+										<span className="block truncate text-sm font-medium text-gray-100">{post.caption}</span>
+										<span className="block truncate text-xs text-gray-400">{post.event.label}</span>
+									</span>
+									<span className="shrink-0 text-sm font-semibold text-gray-100" title={`Score ${post.score}`}>
+										▲ {post.score}
+									</span>
+								</Link>
+							</li>
+						))}
+					</ul>
+				</section>
+			)}
 			{postedPlans.length > 0 && (
 				<section className="flex flex-col gap-2">
 					<h3 className={HEADING}>Pull Plan Library</h3>

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
 import { MarkdownContent } from "../components/info/MarkdownContent"
+import { UntrustedTextContext } from "../components/info/untrustedText"
 
 function renderMarkdown(markdown: string) {
 	return render(
@@ -10,6 +11,42 @@ function renderMarkdown(markdown: string) {
 		</MemoryRouter>,
 	)
 }
+
+describe("MarkdownContent, a player's text", () => {
+	const PLAYER_TEXT = "Read ![pixel](https://tracker.example/p.gif) this [guide](https://elsewhere.example) and [the FAQ](/faq)."
+
+	it("draws no picture and no link, by prop", () => {
+		const { container } = render(
+			<MemoryRouter>
+				<MarkdownContent markdown={PLAYER_TEXT} untrusted />
+			</MemoryRouter>
+		)
+		expect(container.querySelector("img")).toBeNull()
+		expect(screen.queryByRole("link")).not.toBeInTheDocument()
+		expect(screen.getByText("guide")).toBeInTheDocument()
+		expect(screen.getByText("the FAQ")).toBeInTheDocument()
+	})
+
+	it("draws no picture and no link inside UntrustedTextContext, and both outside it", () => {
+		const { container, unmount } = render(
+			<MemoryRouter>
+				<UntrustedTextContext.Provider value={true}>
+					<MarkdownContent markdown={PLAYER_TEXT} />
+				</UntrustedTextContext.Provider>
+			</MemoryRouter>
+		)
+		expect(container.querySelector("img")).toBeNull()
+		expect(screen.queryByRole("link")).not.toBeInTheDocument()
+		unmount()
+		const site = render(
+			<MemoryRouter>
+				<MarkdownContent markdown={PLAYER_TEXT} />
+			</MemoryRouter>
+		)
+		expect(site.container.querySelector("img")).not.toBeNull()
+		expect(screen.getAllByRole("link")).toHaveLength(2)
+	})
+})
 
 describe("MarkdownContent", () => {
 	it("renders a site-relative link as a router link, with its anchor intact", () => {

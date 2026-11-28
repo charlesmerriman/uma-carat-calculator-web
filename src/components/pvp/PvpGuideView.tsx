@@ -22,6 +22,7 @@ import { Construction, Eye, Layers } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { MarkdownContent } from "../info/MarkdownContent"
 import { GuideComments } from "./GuideComments"
+import { useIsCommunityGuide } from "./communityGuideContext"
 import { GuideBand } from "./GuideBand"
 import { AllStylesPreview } from "./AllStylesPreview"
 import { HEADING, PARAGRAPH, SECTION, SUBHEADING } from "./guideStyles"
@@ -724,6 +725,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 	// The general skills (and the whole guide's thread) stand beside the style
 	// from xl; the band above holds the rest of what is team-wide.
 	const hasSide = generalSkills.length > 0
+	const community = useIsCommunityGuide()
 	// The tab on screen, the same pick StyleColumn makes, for the band's ladder.
 	const shownStyle = pickStyle(styles, style)
 	// Below xl the general skills come ABOVE the style tabs: they hold for every
@@ -813,9 +815,12 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 					<aside ref={sideRef} className="pvp-side-sticky order-last flex min-w-0 flex-col gap-4 xl:order-none" aria-label="For every position">
 						{!generalUp && generalSection}
 
-						<div className={SECTION}>
-							<GuideComments guide={guide} section="" label={WHOLE_GUIDE_LABEL} placeholder={WHOLE_GUIDE_PROMPT} className="" />
-						</div>
+						{/* A community guide's one thread is its post's, under the whole guide. */}
+						{!community && (
+							<div className={SECTION}>
+								<GuideComments guide={guide} section="" label={WHOLE_GUIDE_LABEL} placeholder={WHOLE_GUIDE_PROMPT} className="" />
+							</div>
+						)}
 					</aside>
 				)}
 
@@ -824,7 +829,7 @@ export function PvpGuideView({ guide, style, onStyleChange, event = null, onUseD
 				)}
 			</div>
 			{/* A guide with no side column still has a thread for the whole guide. */}
-			{!hasSide && (
+			{!hasSide && !community && (
 				<div className={SECTION}>
 					<GuideComments guide={guide} section="" label={WHOLE_GUIDE_LABEL} placeholder={WHOLE_GUIDE_PROMPT} className="" />
 				</div>

@@ -20,7 +20,7 @@ import { useEncyclopediaHrefs } from "../../../hooks/useEncyclopediaHrefs"
 import { ProfileCard } from "./ProfileCard"
 import type { PvpCatalogueIndex } from "../../../hooks/usePvpCatalogue"
 import type { GalleryPoster, GalleryRowBase, ProfileCardTarget } from "../../../types/gallery"
-import { isPlanPost } from "../../../utils/galleryPost"
+import { isGuidePost, isPlanPost } from "../../../utils/galleryPost"
 import type { CatalogueUma, MemberStyle, PvpTeamMember } from "../../../types/pvpTeam"
 import { hoverCardProps } from "../../../utils/hoverCards"
 import { FramedCard } from "../../FramedCard"
@@ -148,7 +148,7 @@ export function StyleChip({ style }: { style: MemberStyle }) {
  */
 export function GalleryVote({ post, layout }: { post: GalleryRowBase; layout: "column" | "row" }) {
 	const vote = useGalleryVote()
-	const thing = isPlanPost(post) ? "plan" : "team"
+	const thing = isPlanPost(post) ? "plan" : isGuidePost(post) ? "guide" : "team"
 	const { prompt } = useSignInPrompt()
 	const score = post.stats.score
 	const split = splitText(post.stats.split)

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -124,7 +125,9 @@ vi.mock("../hooks/usePvpAccess", async () => ({
 	usePvpAccess: () => access.value,
 }))
 // Nobody signed in unless a test says so (the Edit guide tab is for editors).
-const session = vi.hoisted(() => ({ account: null as null | { guide_editor?: boolean; early_access?: boolean } }))
+const session = vi.hoisted(() => ({
+	account: null as null | { guide_editor?: boolean; early_access?: boolean; community_guides?: boolean },
+}))
 vi.mock("../services/AuthContext", async () => ({
 	...(await vi.importActual<typeof import("../services/AuthContext")>("../services/AuthContext")),
 	useAccount: () => ({ isLoggedIn: session.account !== null, status: session.account ? "ready" : "anonymous", account: session.account }),
@@ -134,6 +137,16 @@ vi.mock("../services/AuthContext", async () => ({
 vi.mock("../components/pvp/editor/loadGuideEditor", () => ({
 	loadGuideEditor: () =>
 		Promise.resolve({ default: ({ event: shown }: { event: RaceEvent }) => <div data-testid="guide-editor">{`cm-${shown.id}`}</div> }),
+}))
+// Community guides have their own tests (CommunityGuides.test.tsx); here only
+// which guide shows, and what the page hands them.
+vi.mock("../components/pvp/community/CommunityGuides", () => ({
+	CommunityGuides: ({ openGuide, top }: { openGuide: string | null; top: ReactNode }) => (
+		<div data-testid="community-guides">
+			{top}
+			{openGuide ?? "the list"}
+		</div>
+	),
 }))
 // The gallery has its own tests (PvpGallery.test.tsx); here only which view shows.
 vi.mock("../components/pvp/gallery/GalleryView", () => ({
@@ -438,6 +451,54 @@ describe("PvpGuidePage views and layout", () => {
 		renderPage("/app/pvp?event=cm-10&view=editor")
 		expect(screen.getAllByRole("tab", { name: "Recommendations" })[0]).toHaveAttribute("aria-selected", "true")
 		expect(screen.queryByRole("tab", { name: "Edit guide" })).not.toBeInTheDocument()
+	})
+
+	it("offers community guides only with community_guides, and the switch swaps the site's guide for them", async () => {
+		// The site's guide for its route; the event's community guides, three, for theirs.
+		fetchMock.mockImplementation((url: string) =>
+			Promise.resolve(
+				new Response(
+					JSON.stringify(url.includes("/pvp-guide-gallery/") ? { count: 3, sort: "top", has_more: false, results: [] } : GUIDE),
+					{ status: 200 }
+				)
+			)
+		)
+		session.account = { early_access: true }
+		try {
+			const { unmount } = renderPage("/app/pvp?event=cm-10")
+			await screen.findByRole("heading", { name: /Style ranking/i })
+			expect(screen.queryByRole("group", { name: "Whose guide" })).not.toBeInTheDocument()
+			unmount()
+
+			session.account = { early_access: true, community_guides: true }
+			renderPage("/app/pvp?event=cm-10")
+			const whose = await screen.findByRole("group", { name: "Whose guide" })
+			expect(within(whose).getByRole("button", { name: "Site guide" })).toHaveAttribute("aria-pressed", "true")
+			// The count arrives from the list's own route.
+			expect(await within(whose).findByRole("button", { name: "Community guides 3" })).toBeInTheDocument()
+			fireEvent.click(within(whose).getByRole("button", { name: /Community guides/ }))
+			expect(screen.getByTestId("location").textContent).toBe("/app/pvp?event=cm-10&guides=community")
+			expect(await screen.findByTestId("community-guides")).toHaveTextContent("the list")
+			expect(fetchMock.mock.calls.some(([url]) => /\/pvp-guide-gallery\/cm\/10\?sort=top$/.test(String(url)))).toBe(true)
+		} finally {
+			session.account = null
+		}
+	})
+
+	it("opens one community guide from its link, and shows the card to a reader without them", async () => {
+		respond(200, { count: 0, sort: "top", has_more: false, results: [] })
+		session.account = { early_access: true, community_guides: true }
+		try {
+			const { unmount } = renderPage("/app/pvp?event=cm-10&guides=community&guide=AbCd1234")
+			expect(await screen.findByTestId("community-guides")).toHaveTextContent("AbCd1234")
+			unmount()
+			session.account = { early_access: true }
+			renderPage("/app/pvp?event=cm-10&guides=community&guide=AbCd1234")
+			expect(await screen.findByText(/Our Patreon supporters/)).toBeInTheDocument()
+			expect(screen.queryByTestId("community-guides")).not.toBeInTheDocument()
+		} finally {
+			session.account = null
+		}
 	})
 
 	it("has no Rankings view: an old ?view=rankings link lands on Recommendations", () => {

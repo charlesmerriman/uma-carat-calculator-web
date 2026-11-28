@@ -14,6 +14,7 @@ import type { UserStats } from "./user"
 import type { PvpEventKind } from "../utils/pvpEvent"
 import type { MemberStyle, PvpTeamMember } from "./pvpTeam"
 import type { PortraitLayers } from "./portraitLayers"
+import type { PvpGuide } from "./pvpGuide"
 
 /**
  * A supporter's look on a post, by tier: the game's rarity ladder at the top
@@ -57,6 +58,7 @@ export interface ProfileCardData {
 	posts: Array<
 		| { kind?: "pvp_team"; public_id: string; caption: string; score: number; event: { kind: PvpEventKind; id: number; label: string } }
 		| { kind: "plan"; public_id: string; caption: string; score: number; totals: { row_count: number; pull_count: number; step_count: number } }
+		| { kind: "pvp_guide"; public_id: string; caption: string; score: number; event: { kind: PvpEventKind; id: number; label: string } }
 	>
 	/** Their shared plans' totals. Empty unless they turned that on. */
 	plans: { public_id: string; row_count: number; pull_count: number; step_count: number }[]
@@ -82,8 +84,8 @@ export interface GalleryStats {
 /** What every post's row carries, a team's or a plan's. */
 export interface GalleryRowBase {
 	public_id: string
-	/** "pvp_team" or "plan". Optional on a team only for an API older than plans. */
-	kind?: "pvp_team" | "plan"
+	/** "pvp_team", "plan" or "pvp_guide". Optional on a team only for an API older than plans. */
+	kind?: "pvp_team" | "plan" | "pvp_guide"
 	caption: string
 	published_at: string
 	content_updated_at: string
@@ -247,8 +249,47 @@ export interface PlanPost extends PlanPostRow {
 	income: PostedIncome | null
 }
 
-/** Either kind of post in full: the account page's list holds both. */
-export type AnyGalleryPost = GalleryPost | PlanPost
+// ── Community guides ─────────────────────────────────────────────────────
+// A player's own PvP guide, posted (backend guide_gallery.py,
+// notes/community-guides-plan.md). Read, voted on, commented on, reported and
+// taken down through the shared /gallery/posts routes, as a team is.
+
+export type GuideSort = "top" | "new"
+export const GUIDE_SORTS: Array<{ id: GuideSort; label: string }> = [
+	{ id: "top", label: "Top" },
+	{ id: "new", label: "New" },
+]
+
+/** A community guide on its event's list. `caption` is the guide's title. */
+export interface GuidePostRow extends GalleryRowBase {
+	kind: "pvp_guide"
+	event: { kind: PvpEventKind; id: number; label: string }
+	/** The umas the row draws: most stars first, at most three. */
+	umas: Array<{ uma: number }>
+}
+
+/** One community guide in full. */
+export interface GuidePost extends GuidePostRow {
+	strategy: string
+	hidden: boolean
+	stats: GalleryStats & { copies: number }
+	/**
+	 * The guide itself, in the reader's own shape (exactly what the site's
+	 * guide route sends), drawn by the server for this reader. Only on the
+	 * post's own route: "Your posts" never carries it.
+	 */
+	guide?: PvpGuide
+}
+
+export interface GuideFeed {
+	count: number
+	sort: GuideSort
+	has_more: boolean
+	results: GuidePostRow[]
+}
+
+/** Any kind of post in full: the account page's list holds all three. */
+export type AnyGalleryPost = GalleryPost | PlanPost | GuidePost
 
 /** Every choice the sidebar offers, from the API so nothing is hard-coded. */
 export interface PlanFilterChoices {

@@ -138,6 +138,13 @@ export interface Account {
 	 * than the field sends nothing.
 	 */
 	guide_editor?: boolean
+	/**
+	 * Whether the PvP page offers community guides (players' own guides;
+	 * backend guide_gallery.can_use, early access for now). Draws the
+	 * "Site guide / Community guides" switch; every route checks again.
+	 * Absent from an API older than the feature.
+	 */
+	community_guides?: boolean
 	linked_providers: LinkedProvider[]
 	supporter: SupporterStatus
 }

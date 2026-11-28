@@ -385,15 +385,26 @@ export function deckToMemberCards(
 	return fill
 }
 
-/** The deck "Use this deck" hands to My team, in the router state (never the URL). */
+/**
+ * The deck "Use this deck" hands to My team, in the router state (never the
+ * URL). The site's guide sends its id, and My team finds it in the event's
+ * guide. A community guide sends the deck itself as well: its ids are its
+ * own, and the event's guide is a different guide.
+ */
 export interface UseDeckRequest {
-	useDeck: { deckId: number }
+	useDeck: { deckId: number; deck?: PvpDeck }
 }
 
 /** The handed-over deck's id from a location's state, or null. */
 export function deckRequestId(state: unknown): number | null {
 	const id = (state as Partial<UseDeckRequest> | null)?.useDeck?.deckId
 	return typeof id === "number" ? id : null
+}
+
+/** The handed-over deck itself, when the guide sent it (a community guide), or null. */
+export function deckRequestDeck(state: unknown): PvpDeck | null {
+	const deck = (state as Partial<UseDeckRequest> | null)?.useDeck?.deck
+	return deck && Array.isArray(deck.slots) ? deck : null
 }
 
 /**
