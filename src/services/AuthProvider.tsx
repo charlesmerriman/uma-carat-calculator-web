@@ -111,9 +111,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	// "error" leave <body> as the inline script in index.html set it from the
 	// last answer, so a slow or failed fetch never flips a supporter's page to
 	// ads. An effect, never the render body: it touches document.
+	//
+	// "anonymous" alone is not proof of a guest. A prerendered page HYDRATES,
+	// and during hydration useSyncExternalStore answers with the server
+	// snapshot (no token), so the first commit says "anonymous" even for a
+	// signed-in supporter. Acting on it stripped the class the head-start
+	// script had just added (and deleted the hint) until /account answered,
+	// and Raptive's script, reading the class in that window, sometimes
+	// served an interstitial. So the class comes off only when the device
+	// really holds no token: sign-out and a 401 both clear it first.
 	useEffect(() => {
 		if (status === "ready") applyAdFreeClass(account?.ad_free ?? false)
-		else if (status === "anonymous") applyAdFreeClass(false)
+		else if (status === "anonymous" && getAuthToken() === null) applyAdFreeClass(false)
 	}, [status, account])
 
 	const refresh = useCallback((): void => {
